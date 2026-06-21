@@ -15,7 +15,7 @@
 | **Active phase** | Phase 4 — POS settlement + credit cards |
 | **Active slice** | Phase 4 complete — pending owner sign-off |
 | **Last completed slice** | Credit card payment + bank fee GL posting |
-| **Last commit/tag** | pending / `v0.25.0-phase4-cc-payment-bank-fee-gl` |
+| **Last commit/tag** | `9a8a927` / `v0.25.0-phase4-cc-payment-bank-fee-gl` |
 | **Next up** | Phase 4 owner sign-off; then Phase 5 |
 
 ---

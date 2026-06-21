@@ -8,7 +8,7 @@
 | **Last completed slice** | Credit card payment + bank fee GL posting |
 | **Next slice** | Phase 4 owner sign-off |
 | **Branch** | `main` |
-| **Last tag** | `v0.25.0-phase4-cc-payment-bank-fee-gl` (pending commit) |
+| **Last tag** | `9a8a927` / `v0.25.0-phase4-cc-payment-bank-fee-gl` |
 
 ## Resume point
 
