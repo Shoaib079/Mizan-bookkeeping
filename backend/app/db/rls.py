@@ -3,7 +3,13 @@
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-RLS_TABLES = ("entity_settings", "accounts", "journal_entries", "journal_entry_lines")
+RLS_TABLES = (
+    "entity_settings",
+    "accounts",
+    "journal_entries",
+    "journal_entry_lines",
+    "ledger_audit_events",
+)
 
 
 def apply_entity_rls(connection: Connection) -> None:

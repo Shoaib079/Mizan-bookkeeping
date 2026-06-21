@@ -7,7 +7,7 @@ from app.db.base import Base
 from app.db.rls import apply_entity_rls
 from app.features.entities.models import Entity, EntitySetting  # noqa: F401
 from app.core.chart_of_accounts.models import Account  # noqa: F401
-from app.core.ledger.models import JournalEntry, JournalEntryLine  # noqa: F401
+from app.core.ledger.models import JournalEntry, JournalEntryLine, LedgerAuditEvent  # noqa: F401
 
 
 def ensure_mizan_role_and_databases() -> None:

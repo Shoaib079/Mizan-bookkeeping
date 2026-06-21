@@ -17,3 +17,5 @@ Phase 0 — **Opening-balances plan**: `docs/OPENING_BALANCES.md`; default resta
 Phase 1 — **Chart of accounts + entity scoping**: persisted `accounts` per entity; seed/list API; Alembic `002_accounts_rls`; RLS isolation tests (27 pytest total).
 
 Phase 1 — **Double-entry posting service**: `journal_entries` + `journal_entry_lines`; `post_journal_entry()` single posting boundary; `POST /entities/{id}/ledger/entries`; Alembic `003_journal_rls`, `004_accounts_posting_lookup`; balanced/unbalanced/zero/cross-entity tests (37 pytest total).
+
+Phase 1 — **Ledger immutability, void/reverse, audit trail**: posted entries immutable (ORM + DB triggers); `void_journal_entry()` posts linked reversal; `ledger_audit_events` with `actor_id`; `POST /entities/{id}/ledger/entries/{entry_id}/void`; Alembic `005_ledger_void_audit` (44 pytest total).

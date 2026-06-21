@@ -10,7 +10,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_default_chart.py` | Default chart includes Opening Balance Equity; no inventory | pass |
 | `backend/tests/test_opening_balances.py` | OB validation, equity offset, validate API; **blocks FX/partner/unmodeled** | pass |
 | `backend/tests/test_chart_of_accounts.py` | Per-entity chart seed, RLS isolation, API | pass |
-| `backend/tests/test_ledger_posting.py` | Single posting boundary — balanced/unbalanced/zero/cross-entity, API | pass |
+| `backend/tests/test_ledger_posting.py` | Single posting boundary — balanced/unbalanced/zero/cross-entity, immutability, void/reverse, audit, API | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 

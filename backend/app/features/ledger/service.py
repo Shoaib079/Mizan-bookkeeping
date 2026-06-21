@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
 
 from sqlalchemy.orm import Session
 
 from app.core.ledger.models import JournalEntry
-from app.core.ledger.posting import PostingLine, post_journal_entry
+from app.core.ledger.posting import PostingLine, post_journal_entry, void_journal_entry
 from app.features.entities import service as entity_service
-from app.features.ledger.schema import PostJournalEntryRequest
+from app.features.ledger.schema import PostJournalEntryRequest, VoidJournalEntryRequest
 
 
 def create_journal_entry(
@@ -32,4 +31,23 @@ def create_journal_entry(
         payload.entry_date,
         payload.description,
         lines,
+        actor_id=payload.actor_id,
+    )
+
+
+def void_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+) -> tuple[JournalEntry, JournalEntry]:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+    return void_journal_entry(
+        session,
+        entity_id,
+        entry_id,
+        actor_id=payload.actor_id,
+        reason=payload.reason,
+        void_date=payload.void_date,
     )

@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
-| **Active slice** | Audit trail on all changes |
-| **Last completed slice** | Double-entry posting service (single boundary) |
-| **Last commit/tag** | `a138cd7` / `v0.6.0-phase1-ledger-posting` |
-| **Next up** | Audit trail on all changes |
+| **Active slice** | Basic manual journals |
+| **Last completed slice** | Ledger immutability, void/reverse, audit trail |
+| **Last commit/tag** | (pending) / `v0.7.0-phase1-ledger-void-audit` |
+| **Next up** | Basic manual journals |
 
 ---
 
@@ -43,8 +43,8 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 |-------|--------|-------|
 | Chart of accounts + entity scoping | done | Persisted `accounts` table, seed API, RLS |
 | Double-entry posting service (single boundary) | done | `post_journal_entry`, journal tables, RLS, 6 tests |
-| Audit trail on all changes | not started | |
-| Void / reverse (no hard deletes) | not started | |
+| Audit trail on all changes | done | `ledger_audit_events`; actor_id on post/void; RLS |
+| Void / reverse (no hard deletes) | done | `void_journal_entry`, immutability ORM + DB triggers, 7 tests |
 | Basic manual journals | not started | |
 | Read e-Fatura invoice (PDF) into draft | not started | |
 
