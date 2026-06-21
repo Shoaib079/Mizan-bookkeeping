@@ -9,6 +9,7 @@ from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.features.onboarding.opening_balances import (
     OpeningBalanceError,
     OpeningBalanceLine,
+    OpeningBalanceNotSupportedError,
     build_day_one_journal,
     validate_opening_balance_lines,
 )
@@ -37,14 +38,45 @@ def test_rejects_wrong_side_for_account() -> None:
 
 def test_rejects_opening_balance_on_equity_account() -> None:
     lines = [OpeningBalanceLine("3900", 100, AccountNormalBalance.CREDIT)]
-    with pytest.raises(OpeningBalanceError, match="does not accept opening balances"):
+    with pytest.raises(OpeningBalanceNotSupportedError, match="not supported yet"):
         validate_opening_balance_lines(lines)
 
 
 def test_rejects_revenue_account_opening_balance() -> None:
     lines = [OpeningBalanceLine("4000", 100, AccountNormalBalance.CREDIT)]
-    with pytest.raises(OpeningBalanceError, match="does not accept opening balances"):
+    with pytest.raises(OpeningBalanceNotSupportedError, match="not supported yet"):
         validate_opening_balance_lines(lines)
+
+
+def test_rejects_fx_wallet_opening_balance() -> None:
+    lines = [OpeningBalanceLine("1010", 100_00, AccountNormalBalance.DEBIT)]
+    with pytest.raises(OpeningBalanceNotSupportedError, match="FX wallet opening balances are not supported yet"):
+        validate_opening_balance_lines(lines)
+
+
+def test_rejects_partner_payable_opening_balance() -> None:
+    lines = [OpeningBalanceLine("2150", 50_000, AccountNormalBalance.CREDIT)]
+    with pytest.raises(OpeningBalanceNotSupportedError, match="Partner reimbursement opening balances are not supported yet"):
+        validate_opening_balance_lines(lines)
+
+
+def test_rejects_sub_account_code_not_supported_yet() -> None:
+    lines = [OpeningBalanceLine("1101", 100, AccountNormalBalance.DEBIT)]
+    with pytest.raises(OpeningBalanceError, match="unknown account code"):
+        validate_opening_balance_lines(lines)
+
+
+def test_api_rejects_fx_opening_balance(client: TestClient, restaurant_a) -> None:
+    response = client.post(
+        f"/onboarding/entities/{restaurant_a.id}/opening-balances/validate",
+        json={
+            "lines": [
+                {"account_code": "1020", "amount_kurus": 10000, "side": "debit"},
+            ]
+        },
+    )
+    assert response.status_code == 422
+    assert "not supported yet" in response.json()["detail"].lower()
 
 
 def test_api_validate_opening_balances(client: TestClient, restaurant_a) -> None:

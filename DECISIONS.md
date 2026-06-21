@@ -18,3 +18,9 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Plan:** `docs/OPENING_BALANCES.md`. Posting lands in Phase 1 `core/ledger`.
 
+## 2026-06-21 — Opening balance validate API blocks unmodeled categories
+
+**Choice:** Whitelist aggregate codes only; refuse FX (`1010`–`1030`), partner (`2150`), and future sub-account codes with explicit **not supported yet** errors.
+
+**Why:** Block, don't guess — especially FX as plain kuruş (Decisions §15 quantity model).
+

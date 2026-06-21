@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 
 OPENING_BALANCE_EQUITY_CODE = "3900"
+PARTNER_REIMBURSEMENT_PAYABLE_CODE = "2150"
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +36,14 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
     # Liabilities
     DefaultAccount("2000", "Accounts Payable", "Borçlar (Tedarikçi)", AccountType.LIABILITY, AccountNormalBalance.CREDIT, True),
     DefaultAccount("2100", "Credit Card Payable", "Kredi Kartı Borcu", AccountType.LIABILITY, AccountNormalBalance.CREDIT, True),
+    DefaultAccount(
+        "2150",
+        "Partner Reimbursements Payable",
+        "Ortak Masraf Borçları",
+        AccountType.LIABILITY,
+        AccountNormalBalance.CREDIT,
+        False,
+    ),
     DefaultAccount("2200", "Loans Payable", "Krediler", AccountType.LIABILITY, AccountNormalBalance.CREDIT, True),
     # Equity
     DefaultAccount("3000", "Owner Capital", "Sermaye", AccountType.EQUITY, AccountNormalBalance.CREDIT, False),
