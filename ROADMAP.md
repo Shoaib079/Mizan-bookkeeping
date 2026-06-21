@@ -15,7 +15,7 @@
 | **Active phase** | Phase 2 — Suppliers & payables |
 | **Active slice** | Invoice → payable posting (next) |
 | **Last completed slice** | Payables ledger & balance |
-| **Last commit/tag** | TBD / `v0.11.0-phase2-payables-ledger` |
+| **Last commit/tag** | `48dbdd7` / `v0.11.0-phase2-payables-ledger` |
 | **Next up** | Invoice → payable posting |
 
 ---
@@ -176,7 +176,7 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Chart of accounts + entity scoping | `781b7f0` / `v0.5.0-phase1-chart-of-accounts` | Persisted accounts, seed/list API, RLS isolation |
 | 2026-06-21 | Read e-Fatura invoice into draft | `a952821` / `v0.9.0-phase1-efatura-draft` | invoice_drafts, UBL-TR XML, PDF heuristics, 70 pytest |
 | 2026-06-21 | Supplier master (per entity) | `63ed5cf` / `v0.10.0-phase2-supplier-master` | suppliers CRUD, VKN lookup, entity isolation, 85 pytest |
-| 2026-06-21 | Payables ledger & balance | TBD / `v0.11.0-phase2-payables-ledger` | supplier_ledger_entries, running balance, payables API, 97 pytest |
+| 2026-06-21 | Payables ledger & balance | `48dbdd7` / `v0.11.0-phase2-payables-ledger` | supplier_ledger_entries, running balance, payables API, 97 pytest |
 
 ---
 

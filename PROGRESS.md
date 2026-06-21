@@ -8,7 +8,7 @@
 | **Last completed slice** | Payables ledger & balance |
 | **Next slice** | Invoice → payable posting |
 | **Branch** | `main` |
-| **Last tag** | `v0.11.0-phase2-payables-ledger` |
+| **Last tag** | `v0.11.0-phase2-payables-ledger` (`48dbdd7`) |
 
 ## Resume point
 
