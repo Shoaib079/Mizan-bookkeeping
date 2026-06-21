@@ -70,3 +70,13 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Why:** Block, don't guess — especially FX as plain kuruş (Decisions §15 quantity model).
 
+## 2026-06-21 — Supplier master per entity (Phase 2)
+
+**Choice:** `features/suppliers/` with `suppliers` table (entity-scoped RLS). One supplier record per VKN per entity; same real-world supplier across restaurants = separate rows. VKN is 10–11 digits, immutable after create. Deactivate via `is_active=false` only — no hard delete.
+
+**Why:** Decisions §8 — suppliers tracked per restaurant/entity; VKN from e-Fatura for matching; no heavy name-matching. Slice is **master data only** — no payables ledger, posting, or payments yet.
+
+**API:** `POST/GET/PATCH /entities/{id}/suppliers`; `GET .../suppliers/by-vkn/{vkn}` for future draft→supplier linking. Duplicate VKN within entity → HTTP 409.
+
+**Unique constraint:** `(entity_id, vkn)`. Cross-entity: same VKN allowed (separate books per entity).
+

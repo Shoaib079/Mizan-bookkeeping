@@ -12,11 +12,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 1 — Ledger core + supplier invoices |
-| **Active slice** | Phase 1 sign-off (all slices done) |
-| **Last completed slice** | Read e-Fatura invoice (PDF) into draft |
-| **Last commit/tag** | `a952821` / `v0.9.0-phase1-efatura-draft` |
-| **Next up** | Phase 2 — Supplier master (after owner sign-off) |
+| **Active phase** | Phase 2 — Suppliers & payables |
+| **Active slice** | Payables ledger & balance (next) |
+| **Last completed slice** | Supplier master (per entity) |
+| **Last commit/tag** | (pending) / `v0.10.0-phase2-supplier-master` |
+| **Next up** | Payables ledger & balance |
 
 ---
 
@@ -57,7 +57,7 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| Supplier master (per entity) | not started | |
+| Supplier master (per entity) | done | `suppliers` table, VKN unique per entity, CRUD API, RLS, 15 tests |
 | Payables ledger & balance | not started | |
 | Invoice → payable posting | not started | |
 | Payment reduces payable | not started | |
@@ -174,7 +174,8 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
 | 2026-06-21 | Opening-balances plan | `451c57f` / `v0.4.0-phase0-complete` | Default chart, OB validation, wizard plan, Phase 0 done |
 | 2026-06-21 | Chart of accounts + entity scoping | `781b7f0` / `v0.5.0-phase1-chart-of-accounts` | Persisted accounts, seed/list API, RLS isolation |
-| 2026-06-21 | Basic manual journals | `4b12469` / `v0.8.0-phase1-manual-journals` | Entry source typing, manual-journals CRUD API, 59 pytest |
+| 2026-06-21 | Read e-Fatura invoice into draft | `a952821` / `v0.9.0-phase1-efatura-draft` | invoice_drafts, UBL-TR XML, PDF heuristics, 70 pytest |
+| 2026-06-21 | Supplier master (per entity) | (pending) / `v0.10.0-phase2-supplier-master` | suppliers CRUD, VKN lookup, entity isolation, 85 pytest |
 
 ---
 

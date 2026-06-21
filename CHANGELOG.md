@@ -25,3 +25,5 @@ Phase 1 — **Ledger DB immutability (bootstrap + void gate)**: centralized `app
 Phase 1 — **Basic manual journals**: `JournalEntrySource` column on `journal_entries`; dedicated `manual-journals` API (create, list, get, void) with account enrichment on lines; `post_journal_entry(..., source=...)`; generic `POST .../ledger/entries` removed in favour of typed routes; 7 manual-journal tests (59 pytest total). Tag `v0.8.0-phase1-manual-journals`.
 
 Phase 1 — **Read e-Fatura invoice into draft**: `invoice_drafts` table with entity RLS; UBL-TR XML extraction; PDF v1 (fixture registry + pypdf heuristics); SHA256 duplicate detection; math validation; multipart upload API; local file storage adapter; 11 e-Fatura tests (70 pytest total). Tag `v0.9.0-phase1-efatura-draft`. **Phase 1 complete** (pending owner sign-off).
+
+Phase 2 — **Supplier master (per entity)**: `suppliers` table with entity RLS; unique `(entity_id, vkn)`; CRUD + VKN lookup API; deactivate-only (no hard delete); 15 supplier tests (85 pytest total). Tag `v0.10.0-phase2-supplier-master`.
