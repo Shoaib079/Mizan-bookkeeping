@@ -15,7 +15,7 @@
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
 | **Active slice** | Basic manual journals |
 | **Last completed slice** | Ledger immutability, void/reverse, audit trail |
-| **Last commit/tag** | (pending) / `v0.7.0-phase1-ledger-void-audit` |
+| **Last commit/tag** | `13e38a9` / `v0.7.0-phase1-ledger-void-audit` |
 | **Next up** | Basic manual journals |
 
 ---

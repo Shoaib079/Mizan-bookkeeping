@@ -8,7 +8,7 @@
 | **Last completed slice** | Ledger immutability, void/reverse, audit trail |
 | **Next slice** | Basic manual journals |
 | **Branch** | `main` |
-| **Last tag** | `v0.7.0-phase1-ledger-void-audit` (pending commit) |
+| **Last tag** | `v0.7.0-phase1-ledger-void-audit` (`13e38a9`) |
 
 ## Resume point
 
