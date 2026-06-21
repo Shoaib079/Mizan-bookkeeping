@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 2 — Suppliers & payables |
-| **Active slice** | Invoice → payable posting (next) |
-| **Last completed slice** | Payables ledger & balance |
-| **Last commit/tag** | `48dbdd7` / `v0.11.0-phase2-payables-ledger` |
-| **Next up** | Invoice → payable posting |
+| **Active slice** | Invoice → payable posting (draft-to-ledger) (next) |
+| **Last completed slice** | Payment reduces payable |
+| **Last commit/tag** | (slice 3) / `v0.14.0-phase2-payment-reduces-payable` |
+| **Next up** | Invoice → payable posting (draft-to-ledger) |
 
 ---
 
@@ -59,8 +59,10 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 |-------|--------|-------|
 | Supplier master (per entity) | done | `suppliers` table, VKN unique per entity, CRUD API, RLS, 15 tests |
 | Payables ledger & balance | done | `supplier_ledger_entries`, `record_supplier_movement()`, payables API, RLS + immutability, 12 tests |
-| Invoice → payable posting | not started | |
-| Payment reduces payable | not started | |
+| Draft → supplier linking | done | `supplier_id` FK on `invoice_drafts`, VKN auto-link on upload, link/unlink API, 8 tests |
+| Draft review / confirm workflow | done | `confirmed` status, confirm/reject API, `?status=` filter, confirmed immutable, 6 tests |
+| Payment reduces payable | done | `record_supplier_payment()`, payments API, overpayment rejected, payables-only (no GL), 6 tests |
+| Invoice → payable posting (draft-to-ledger) | not started | Confirmed draft → payable movement + GL journal; **do not start until owner sign-off on slices above** |
 
 **Phase 2 complete when:** all slices above done, tested, committed, owner sign-off.
 

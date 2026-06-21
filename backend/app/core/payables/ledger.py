@@ -30,6 +30,10 @@ class DisallowedMovementTypeError(PayablesLedgerError):
     """Movement type not allowed in this slice."""
 
 
+class OverpaymentError(PayablesLedgerError):
+    """Payment would exceed current payable balance."""
+
+
 def record_supplier_movement(
     session: Session,
     entity_id: uuid.UUID,
@@ -93,6 +97,52 @@ def current_balance_kurus(
             )
         )
         return int(total or 0)
+
+
+def record_supplier_payment(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    *,
+    payment_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    reference_type: str | None = None,
+    reference_id: uuid.UUID | None = None,
+) -> SupplierLedgerEntry:
+    """Record a supplier payment — positive API amount stored as negative movement."""
+    if amount_kurus <= 0:
+        raise ZeroMovementError("Payment amount_kurus must be positive")
+
+    current = current_balance_kurus(session, entity_id, supplier_id)
+    if current - amount_kurus < 0:
+        raise OverpaymentError(
+            f"Payment of {amount_kurus} kuruş exceeds payable balance of {current} kuruş"
+        )
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        supplier = session.get(Supplier, supplier_id)
+        if supplier is None:
+            raise LookupError("Supplier not found")
+
+        entry = SupplierLedgerEntry(
+            supplier_id=supplier_id,
+            movement_date=payment_date,
+            movement_type=SupplierMovementType.PAYMENT,
+            amount_kurus=-amount_kurus,
+            description=description,
+            actor_id=actor_id,
+            reference_type=reference_type,
+            reference_id=reference_id,
+        )
+        session.add(entry)
+        session.commit()
+        session.refresh(entry)
+        return entry
 
 
 def list_ledger_entries(

@@ -92,3 +92,29 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Balance:** `current_balance_kurus(supplier_id)` = SUM(`amount_kurus`); entity total = sum across active suppliers.
 
+## 2026-06-21 — Draft → supplier linking (Phase 2)
+
+**Choice:** Nullable `supplier_id` FK on `invoice_drafts` → `suppliers`. On upload, auto-link when extracted VKN matches an existing supplier via `find_by_vkn`. Manual link via `POST .../link-supplier` (explicit `supplier_id` or auto by draft VKN); unlink via `POST .../unlink-supplier`.
+
+**Why:** Decisions §8 — match e-Fatura supplier VKN to supplier master before review/posting. No ledger posting this slice.
+
+**API:** Draft responses include `supplier_id`, `linked_supplier_name`, `linked_supplier_vkn` when linked.
+
+## 2026-06-21 — Draft review / confirm workflow (Phase 2)
+
+**Choice:** Extend `InvoiceDraftStatus` with `confirmed`. Confirm requires linked `supplier_id`, status `draft` or `needs_review`, and `actor_id`; stamps `confirmed_at` / `confirmed_by`. Reject sets `needs_review` with optional `review_reason`. Confirmed drafts are immutable (no relink/unlink/reject).
+
+**Why:** Decisions §7/§8 — review gate before posting; confirmed = ready for future draft-to-ledger slice.
+
+**API:** `POST .../confirm`, `POST .../reject`; list drafts supports `?status=`.
+
+## 2026-06-21 — Payment reduces payable (Phase 2)
+
+**Choice:** Dedicated `record_supplier_payment()` in `core/payables/ledger.py`. API accepts positive `amount_kurus`; stored as negative payables movement with type `payment`. Overpayment rejected when payment would make balance negative. **No GL or bank posting** — payables ledger movement only.
+
+**Why:** Decisions §8 — payments reduce supplier payable balance; ledger/balance-based model. GL bank posting deferred to banking phase.
+
+**API:** `POST /entities/{id}/suppliers/{supplier_id}/payments` with `payment_date`, `amount_kurus`, `description`, `actor_id`, optional `reference`.
+
+**Overpayment policy:** Reject if `current_balance - payment < 0` (no negative payable balance).
+

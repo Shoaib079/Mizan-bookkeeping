@@ -29,3 +29,9 @@ Phase 1 — **Read e-Fatura invoice into draft**: `invoice_drafts` table with en
 Phase 2 — **Supplier master (per entity)**: `suppliers` table with entity RLS; unique `(entity_id, vkn)`; CRUD + VKN lookup API; deactivate-only (no hard delete); 15 supplier tests (85 pytest total). Tag `v0.10.0-phase2-supplier-master`.
 
 Phase 2 — **Payables ledger & balance**: `supplier_ledger_entries` append-only ledger; `record_supplier_movement()` single write boundary in `core/payables/`; signed kuruş amounts; `opening_balance` + `adjustment` via API; payables summary + supplier ledger routes; RLS + DB immutability triggers; 12 payables tests (97 pytest total). Tag `v0.11.0-phase2-payables-ledger`.
+
+Phase 2 — **Draft → supplier linking**: nullable `supplier_id` FK on `invoice_drafts`; VKN auto-link on upload; manual link/unlink API; linked supplier name/VKN in responses; 8 tests (105 pytest total). Tag `v0.12.0-phase2-draft-supplier-link`.
+
+Phase 2 — **Draft review / confirm workflow**: `confirmed` status with `confirmed_at` / `confirmed_by`; confirm requires linked supplier; reject → `needs_review` with optional reason; confirmed drafts immutable; list filter `?status=`; 6 tests (111 pytest total). Tag `v0.13.0-phase2-draft-review`.
+
+Phase 2 — **Payment reduces payable**: `record_supplier_payment()` writes negative payables movement; `POST .../suppliers/{id}/payments`; overpayment rejected; payables list reflects new balance; **no GL posting**; 6 tests (117 pytest total). Tag `v0.14.0-phase2-payment-reduces-payable`.

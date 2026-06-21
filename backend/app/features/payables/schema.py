@@ -10,6 +10,21 @@ from pydantic import BaseModel, Field, field_validator
 from app.core.payables.types import SupplierMovementType
 
 
+class SupplierPaymentCreate(BaseModel):
+    payment_date: date
+    amount_kurus: int
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID
+    reference: str | None = Field(default=None, max_length=64)
+
+    @field_validator("amount_kurus")
+    @classmethod
+    def amount_positive(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("amount_kurus must be positive")
+        return value
+
+
 class SupplierMovementCreate(BaseModel):
     movement_date: date
     movement_type: SupplierMovementType

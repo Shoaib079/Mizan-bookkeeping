@@ -70,3 +70,26 @@ def record_movement(
         description=description,
         actor_id=actor_id,
     )
+
+
+def record_payment(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    *,
+    payment_date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    reference: str | None = None,
+):
+    return payables_ledger.record_supplier_payment(
+        session,
+        entity_id,
+        supplier_id,
+        payment_date=payment_date,
+        amount_kurus=amount_kurus,
+        description=description,
+        actor_id=actor_id,
+        reference_type=reference,
+    )

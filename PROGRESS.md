@@ -5,22 +5,18 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 2 — Suppliers & payables |
-| **Last completed slice** | Payables ledger & balance |
-| **Next slice** | Invoice → payable posting |
+| **Last completed slice** | Payment reduces payable |
+| **Next slice** | Invoice → payable posting (draft-to-ledger) |
 | **Branch** | `main` |
-| **Last tag** | `v0.11.0-phase2-payables-ledger` (`48dbdd7`) |
+| **Last tag** | `v0.14.0-phase2-payment-reduces-payable` |
 
 ## Resume point
 
-Start Phase 2 — Invoice → payable posting (payables ledger complete).
+Start Phase 2 — **Invoice → payable posting (draft-to-ledger)**: confirmed draft posts payable movement + GL journal entry. Do **not** implement until owner sign-off on payment slice.
 
 ## Session notes
 
-- **Payables ledger:** `supplier_ledger_entries` table with RLS; append-only (ORM + DB triggers)
-- **Write boundary:** `record_supplier_movement()` in `core/payables/ledger.py` — only path to write ledger rows
-- **Movement types:** `opening_balance`, `adjustment` writable this slice; `invoice`, `payment`, `credit_note` reserved
-- **Signed amounts:** positive = payable up (owe more); negative = payable down
-- **Balance:** `SUM(amount_kurus)` per supplier; entity total on payables list
-- **API:** `GET .../payables`, `GET .../suppliers/{id}/ledger`, `POST .../suppliers/{id}/ledger/movements`
-- **Alembic:** `010_supplier_ledger`
-- **97 pytest** green
+- **Draft → supplier linking:** nullable `supplier_id` FK; auto-link on upload when VKN matches; `POST .../link-supplier` / `POST .../unlink-supplier`; Alembic `011`
+- **Draft review:** `confirmed` status; `confirmed_at` / `confirmed_by`; confirm requires linked supplier; reject → `needs_review`; confirmed drafts immutable; list filter `?status=`; Alembic `012`
+- **Payment reduces payable:** `record_supplier_payment()` — positive API amount stored as negative movement; overpayment rejected (balance cannot go negative); payables ledger only — **no GL/bank posting**; `POST .../suppliers/{id}/payments`
+- **117 pytest** green

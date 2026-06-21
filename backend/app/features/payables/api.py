@@ -7,13 +7,18 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.payables.ledger import DisallowedMovementTypeError, ZeroMovementError
+from app.core.payables.ledger import (
+    DisallowedMovementTypeError,
+    OverpaymentError,
+    ZeroMovementError,
+)
 from app.db.session import get_session
 from app.features.payables import service
 from app.features.payables.schema import (
     PayablesSummaryRead,
     SupplierLedgerRead,
     SupplierMovementCreate,
+    SupplierPaymentCreate,
     SupplierPayableBalanceRead,
     SupplierLedgerEntryRead,
 )
@@ -90,6 +95,38 @@ def record_supplier_movement(
     except ZeroMovementError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DisallowedMovementTypeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return SupplierLedgerEntryRead.model_validate(entry)
+
+
+@router.post(
+    "/suppliers/{supplier_id}/payments",
+    response_model=SupplierLedgerEntryRead,
+    status_code=201,
+)
+def record_supplier_payment(
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    payload: SupplierPaymentCreate,
+    session: Session = Depends(get_session),
+) -> SupplierLedgerEntryRead:
+    try:
+        entry = service.record_payment(
+            session,
+            entity_id,
+            supplier_id,
+            payment_date=payload.payment_date,
+            amount_kurus=payload.amount_kurus,
+            description=payload.description,
+            actor_id=payload.actor_id,
+            reference=payload.reference,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ZeroMovementError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OverpaymentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     return SupplierLedgerEntryRead.model_validate(entry)
