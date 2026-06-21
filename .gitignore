@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+.netlify
+__pycache__/
+node_modules/
+.DS_Store

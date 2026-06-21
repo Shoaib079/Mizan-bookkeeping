@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mizan — app preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#2563EB; --blue-strong:#1D4ED8; --blue-tint:#E8EFFE; --blue-chip:#EEF3FF;
+  --bg:#FFFFFF; --ink:#1F2330; --muted:#5E6472; --faint:#9AA0AC; --line:#ECECF2; --line2:#F4F4F8;
+  --green:#15803D; --green-bg:#E7F6EC; --amber:#B45309; --amber-bg:#FBF0DC; --red:#DC2626; --red-bg:#FBEAEA;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--bg);font-size:14px;-webkit-font-smoothing:antialiased}
+.shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.body{flex:1;display:flex;min-height:0}
+.sidebar{width:212px;flex:none;border-right:1px solid var(--line);padding:12px;display:flex;flex-direction:column;overflow:auto}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.vdiv{width:1px;height:24px;background:var(--line)}
+.newbtn{width:100%;justify-content:flex-start;margin:2px 0 10px}
+.pagehead{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.brand{display:flex;align-items:center;gap:9px}
+.brand .logo{width:26px;height:26px;border-radius:8px;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff}
+.brand .nm{font-size:16px;font-weight:600}
+.switch{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin:0;max-width:240px}
+.switch .nm{flex:1;min-width:0;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.switch .sub{font-size:10.5px;color:var(--faint)}
+.navlabel{font-size:11px;color:var(--faint);padding:12px 10px 5px;letter-spacing:.4px}
+.nav{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;color:var(--muted);cursor:pointer;font-size:13px;margin-bottom:1px;user-select:none}
+.nav:hover{background:var(--line2)}
+.nav.active{background:var(--blue-tint);color:var(--blue-strong);font-weight:500}
+.nav i{width:17px;height:17px}
+.nav .count{margin-left:auto;font-size:11px;background:var(--amber-bg);color:var(--amber);border-radius:20px;padding:1px 7px}
+.spacer{flex:1}
+.loginlink{font-size:11.5px;color:var(--faint);padding:8px 10px;cursor:pointer}
+.loginlink:hover{color:var(--blue-strong)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
+.topbar{height:56px;flex:none;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#fff;z-index:5}
+.topsearch{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;padding:0 11px;height:34px;width:230px;color:var(--faint)}
+.topsearch input{border:none;outline:none;font-size:13px;width:100%;font-family:inherit;color:var(--ink);background:transparent}
+.topsearch i{width:15px}
+.ticon{width:18px;color:var(--muted);cursor:pointer}
+.views{display:flex;gap:6px}
+.view{font-size:12px;padding:5px 11px;border-radius:8px;color:var(--muted);cursor:pointer}
+.view.active{background:var(--blue-tint);color:var(--blue-strong);font-weight:500}
+.view:hover{background:var(--line2)}
+.title{font-size:18px;font-weight:600}
+.tbright{display:flex;align-items:center;gap:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:6px 11px}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--blue-tint);color:var(--blue-strong);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500}
+.btn{font-size:13px;border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 13px;cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;gap:7px}
+.btn:hover{background:var(--line2)}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-strong)}
+.btn i{width:15px;height:15px}
+.content{padding:18px 20px;display:flex;flex-direction:column;gap:16px;overflow:auto;flex:1;min-height:0}
+.page{display:none;flex-direction:column;gap:16px}
+.page.active{display:flex}
+.card{border:1px solid var(--line);border-radius:14px;background:#fff}
+.pad{padding:14px 16px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{border:1px solid var(--line);border-radius:13px;padding:13px}
+.kpi .lbl{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.kpi .val{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:7px;font-family:var(--mono)}
+.kpi .sub{font-size:11px;color:var(--faint);margin-top:2px}
+.iconchip{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+.iconchip i{width:14px;height:14px}
+.sect{font-size:11.5px;color:var(--faint);letter-spacing:.4px;margin-bottom:9px}
+.row{display:flex;gap:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:400;color:var(--faint);text-align:left;padding:9px 15px;font-size:12px}
+td{padding:10px 15px;border-top:1px solid var(--line2)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.badge{font-size:11px;border-radius:20px;padding:2px 9px;white-space:nowrap}
+.b-green{background:var(--green-bg);color:var(--green)}
+.b-amber{background:var(--amber-bg);color:var(--amber)}
+.b-blue{background:var(--blue-chip);color:var(--blue-strong)}
+.b-red{background:var(--red-bg);color:var(--red)}
+.b-gray{background:var(--line2);color:var(--muted)}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.tablewrap{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.thead{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;border-bottom:1px solid var(--line);font-size:13px;font-weight:500}
+tr.click{cursor:pointer}
+tr.click:hover{background:var(--blue-chip)}
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.report-card{border:1px solid var(--line);border-radius:13px;padding:13px 14px}
+.report-card .h{display:flex;align-items:flex-start;justify-content:space-between}
+.report-card .ttl{font-size:14px;font-weight:500;margin-top:10px}
+.report-card .ds{font-size:12px;color:var(--faint);margin-top:2px}
+.report-card .acts{display:flex;gap:8px;margin-top:11px}
+.tag{font-size:10.5px;color:var(--muted);background:var(--line2);border-radius:6px;padding:2px 8px}
+/* login */
+#login{display:none;min-height:100vh;align-items:center;justify-content:center;background:#fff}
+#login.active{display:flex}
+.login-card{width:330px;border:1px solid var(--line);border-radius:16px;padding:26px}
+.login-card .lg{display:flex;align-items:center;gap:9px;margin-bottom:16px}
+.field{width:100%;height:38px;border:1px solid var(--line);border-radius:9px;padding:0 11px;font-size:13px;margin:6px 0 13px;background:#fff}
+.field:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-tint)}
+.lbl-sm{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="shell" id="app">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand"><span class="logo"><i data-lucide="scale"></i></span><span class="nm">Mizan</span></div>
+      <div class="vdiv"></div>
+      <div class="switch"><i data-lucide="store" style="width:16px;color:var(--blue-strong)"></i><div style="min-width:0"><div class="nm">Meze Kadıköy</div><div class="sub">Limited şirket · TR</div></div><i data-lucide="chevrons-up-down" style="width:14px;color:var(--faint)"></i></div>
+    </div>
+    <div class="tbright">
+      <div class="topsearch"><i data-lucide="search"></i><input placeholder="Search anything…" /></div>
+      <i data-lucide="bell" class="ticon"></i>
+      <i data-lucide="help-circle" class="ticon"></i>
+      <div class="avatar">EK</div>
+    </div>
+  </header>
+  <div class="body">
+  <aside class="sidebar">
+    <button class="btn btn-primary newbtn"><i data-lucide="plus"></i> New <i data-lucide="chevron-down" style="width:13px;margin-left:auto"></i></button>
+    <div class="navlabel">Workspace</div>
+    <div class="nav active" data-page="overview"><i data-lucide="layout-dashboard"></i> Overview</div>
+    <div class="navlabel">Books</div>
+    <div class="nav" data-page="sales"><i data-lucide="shopping-bag"></i> Sales</div>
+    <div class="nav" data-page="suppliers"><i data-lucide="truck"></i> Suppliers</div>
+    <div class="nav" data-page="banking"><i data-lucide="landmark"></i> Banking</div>
+    <div class="navlabel">Reports</div>
+    <div class="nav" data-page="reports"><i data-lucide="bar-chart-3"></i> Reports</div>
+    <div class="spacer"></div>
+    <div class="nav" data-page="review"><i data-lucide="inbox"></i> Needs review <span class="count">7</span></div>
+    <div class="nav" data-page="settings"><i data-lucide="settings"></i> Settings</div>
+    <div class="loginlink" onclick="showLogin()">View login screen →</div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <div class="pagehead"><div class="title" id="pageTitle">Overview</div><span class="chip"><i data-lucide="calendar" style="width:14px"></i> 01.10 – 31.10.2026</span></div>
+
+      <!-- OVERVIEW -->
+      <section class="page active" data-page="overview">
+        <div class="kpis">
+          <div class="kpi"><div class="lbl"><span class="iconchip" style="background:var(--blue-chip)"><i data-lucide="shopping-bag" style="color:var(--blue-strong)"></i></span> Sales</div><div class="val">482.350,00 ₺</div><div class="sub" style="color:var(--green)">+12,4% vs önceki</div></div>
+          <div class="kpi"><div class="lbl"><span class="iconchip" style="background:var(--amber-bg)"><i data-lucide="receipt" style="color:var(--amber)"></i></span> Expenses</div><div class="val">318.920,50 ₺</div><div class="sub">143 kayıt</div></div>
+          <div class="kpi"><div class="lbl"><span class="iconchip" style="background:var(--blue-chip)"><i data-lucide="trending-up" style="color:var(--blue-strong)"></i></span> Net result</div><div class="val" style="color:var(--blue-strong)">163.429,50 ₺</div><div class="sub" style="color:var(--green)">+18,7%</div></div>
+          <div class="kpi"><div class="lbl"><span class="iconchip" style="background:var(--red-bg)"><i data-lucide="clock" style="color:var(--red)"></i></span> Payables</div><div class="val">96.200,00 ₺</div><div class="sub">3 tedarikçi</div></div>
+        </div>
+        <div class="row">
+          <div class="card pad" style="flex:2">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;font-weight:500">Revenue vs expenses</span><span class="faint" style="font-size:10.5px"><span style="color:var(--blue)">■</span> Revenue &nbsp; <span style="color:#BFD3FB">■</span> Expenses</span></div>
+            <svg viewBox="0 0 300 130" width="100%" height="130" role="img" aria-label="chart">
+              <line x1="6" y1="115" x2="294" y2="115" stroke="#ECECF2"/>
+              <rect x="10" y="55" width="13" height="60" rx="2" fill="#2563EB"/><rect x="25" y="70" width="13" height="45" rx="2" fill="#BFD3FB"/>
+              <rect x="58" y="47" width="13" height="68" rx="2" fill="#2563EB"/><rect x="73" y="65" width="13" height="50" rx="2" fill="#BFD3FB"/>
+              <rect x="106" y="51" width="13" height="64" rx="2" fill="#2563EB"/><rect x="121" y="67" width="13" height="48" rx="2" fill="#BFD3FB"/>
+              <rect x="154" y="35" width="13" height="80" rx="2" fill="#2563EB"/><rect x="169" y="60" width="13" height="55" rx="2" fill="#BFD3FB"/>
+              <rect x="202" y="37" width="13" height="78" rx="2" fill="#2563EB"/><rect x="217" y="57" width="13" height="58" rx="2" fill="#BFD3FB"/>
+              <rect x="250" y="20" width="13" height="95" rx="2" fill="#2563EB"/><rect x="265" y="53" width="13" height="62" rx="2" fill="#BFD3FB"/>
+              <text x="23" y="127" font-size="9" fill="#9AA0AC" text-anchor="middle">Oca</text><text x="71" y="127" font-size="9" fill="#9AA0AC" text-anchor="middle">Şub</text><text x="119" y="127" font-size="9" fill="#9AA0AC" text-anchor="middle">Mar</text><text x="167" y="127" font-size="9" fill="#9AA0AC" text-anchor="middle">Nis</text><text x="215" y="127" font-size="9" fill="#9AA0AC" text-anchor="middle">May</text><text x="263" y="127" font-size="9" fill="#9AA0AC" text-anchor="middle">Haz</text>
+            </svg>
+          </div>
+          <div class="card pad" style="flex:1">
+            <div style="font-size:13px;font-weight:500;margin-bottom:10px">Money on hand</div>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+              <div style="display:flex;justify-content:space-between"><span class="muted">Garanti ••12</span><span class="num">61.900,00</span></div>
+              <div style="display:flex;justify-content:space-between"><span class="muted">İş Bank ••84</span><span class="num">28.400,00</span></div>
+              <div style="display:flex;justify-content:space-between"><span class="muted">Cash drawer</span><span class="num">41.300,00</span></div>
+              <div style="display:flex;justify-content:space-between;border-top:1px solid var(--line2);padding-top:9px"><span class="muted">USD</span><span class="num">$ 2.400</span></div>
+              <div style="display:flex;justify-content:space-between"><span class="muted">EUR</span><span class="num">€ 1.150</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <div class="thead"><span>Recent activity</span><span style="font-size:11.5px;color:var(--blue-strong)">View all</span></div>
+          <table>
+            <thead><tr><th style="width:90px">Date</th><th>Description</th><th style="width:120px">Category</th><th style="width:96px">Status</th><th style="width:120px;text-align:right">Amount</th></tr></thead>
+            <tbody>
+              <tr><td class="muted">12.10.2026</td><td>Anadolu Et Tedarik</td><td class="muted">Et / Tavuk</td><td><span class="badge b-green">Confirmed</span></td><td class="num">− 18.450,75 ₺</td></tr>
+              <tr><td class="muted">12.10.2026</td><td>Akşam servis cirosu</td><td class="muted">Satış</td><td><span class="badge b-green">Confirmed</span></td><td class="num">+ 24.180,00 ₺</td></tr>
+              <tr><td class="muted">11.10.2026</td><td>Migros Toptan</td><td class="muted">Sebze / Meyve</td><td><span class="badge b-amber">Review</span></td><td class="num">− 3.210,40 ₺</td></tr>
+              <tr><td class="muted">11.10.2026</td><td>Efes İçecek A.Ş.</td><td class="muted">İçecek</td><td><span class="badge b-green">Confirmed</span></td><td class="num">− 8.920,00 ₺</td></tr>
+              <tr><td class="muted">10.10.2026</td><td>Personel maaş — Ekim</td><td class="muted">Maaş</td><td><span class="badge b-green">Confirmed</span></td><td class="num">− 42.500,00 ₺</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SALES (list) -->
+      <section class="page" data-page="sales">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="views"><span class="view active">All</span><span class="view">Needs review</span><span class="view">This month</span></div>
+          <div style="flex:1"></div>
+          <span class="chip"><i data-lucide="sliders-horizontal" style="width:14px"></i> Filter</span>
+          <button class="btn"><i data-lucide="download"></i> Excel</button>
+        </div>
+        <div class="tablewrap">
+          <div class="thead"><span>Daily sales</span><span class="faint" style="font-size:12px">October 2026</span></div>
+          <table>
+            <thead><tr><th style="width:96px">Date</th><th style="text-align:right;width:120px">Cash</th><th style="text-align:right;width:120px">POS / Card</th><th style="text-align:right;width:130px">Total</th><th style="width:96px">Status</th></tr></thead>
+            <tbody>
+              <tr><td class="muted">12.10.2026</td><td class="num">9.860,00</td><td class="num">24.180,00</td><td class="num">34.040,00</td><td><span class="badge b-green">Confirmed</span></td></tr>
+              <tr><td class="muted">11.10.2026</td><td class="num">8.120,00</td><td class="num">21.450,00</td><td class="num">29.570,00</td><td><span class="badge b-green">Confirmed</span></td></tr>
+              <tr><td class="muted">10.10.2026</td><td class="num">7.540,00</td><td class="num">19.870,00</td><td class="num">27.410,00</td><td><span class="badge b-amber">Review</span></td></tr>
+              <tr><td class="muted">09.10.2026</td><td class="num">10.230,00</td><td class="num">26.110,00</td><td class="num">36.340,00</td><td><span class="badge b-green">Confirmed</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SUPPLIERS (list) -->
+      <section class="page" data-page="suppliers">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="views"><span class="view active">All</span><span class="view">With balance</span><span class="view">Recently active</span></div>
+          <div style="flex:1"></div>
+          <span class="chip"><i data-lucide="sliders-horizontal" style="width:14px"></i> Filter</span>
+        </div>
+        <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+          <div class="kpi"><div class="lbl">Total payable</div><div class="val">96.200,00 ₺</div></div>
+          <div class="kpi"><div class="lbl">Suppliers</div><div class="val">12</div></div>
+          <div class="kpi"><div class="lbl">This month invoices</div><div class="val">43</div></div>
+          <div class="kpi"><div class="lbl">This month payments</div><div class="val">38</div></div>
+        </div>
+        <div class="tablewrap">
+          <div class="thead"><span>Suppliers — balances</span><button class="btn" style="font-size:12px;padding:5px 11px"><i data-lucide="download"></i> Excel</button></div>
+          <table>
+            <thead><tr><th>Supplier</th><th style="text-align:right;width:120px">Invoices</th><th style="text-align:right;width:120px">Payments</th><th style="text-align:right;width:120px">Balance</th><th style="width:30px"></th></tr></thead>
+            <tbody>
+              <tr class="click" onclick="showPage('ledger')"><td>Anadolu Et Tedarik</td><td class="num">38.400,00</td><td class="num">34.400,00</td><td class="num" style="font-weight:500">4.000,00</td><td><i data-lucide="chevron-right" style="width:15px;color:var(--faint)"></i></td></tr>
+              <tr class="click" onclick="showPage('ledger')"><td>Migros Toptan</td><td class="num">52.000,00</td><td class="num">42.000,00</td><td class="num" style="font-weight:500">10.000,00</td><td><i data-lucide="chevron-right" style="width:15px;color:var(--faint)"></i></td></tr>
+              <tr class="click" onclick="showPage('ledger')"><td>Efes İçecek A.Ş.</td><td class="num">29.500,00</td><td class="num">22.000,00</td><td class="num" style="font-weight:500">7.500,00</td><td><i data-lucide="chevron-right" style="width:15px;color:var(--faint)"></i></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="faint" style="font-size:12px">Click a supplier to open the ledger →</div>
+      </section>
+
+      <!-- LEDGER (supplier detail) -->
+      <section class="page" data-page="ledger">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)"><span style="cursor:pointer;color:var(--blue-strong)" onclick="showPage('suppliers')">Suppliers</span> / Anadolu Et Tedarik</div>
+        <div class="card pad" style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:36px;height:36px;border-radius:9px;background:var(--blue-tint);color:var(--blue-strong);display:flex;align-items:center;justify-content:center;font-weight:600">AE</span><div><div style="font-weight:500">Anadolu Et Tedarik</div><div class="faint" style="font-size:11.5px">VKN 1234567890 · TR58 0001 ...</div></div></div>
+          <span class="badge b-amber" style="font-size:12px;padding:3px 11px">Payable 4.000,00 ₺</span>
+        </div>
+        <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+          <div class="kpi"><div class="lbl">Invoices</div><div class="val">38.400,00</div></div>
+          <div class="kpi"><div class="lbl">KDV</div><div class="val">6.400,00</div></div>
+          <div class="kpi"><div class="lbl">Payments</div><div class="val">34.400,00</div></div>
+        </div>
+        <div class="tablewrap">
+          <div class="thead"><span>Ledger</span><span class="faint" style="font-size:12px">running balance</span></div>
+          <table>
+            <thead><tr><th style="width:90px">Date</th><th>Document</th><th style="text-align:right;width:110px">Change</th><th style="text-align:right;width:110px">Balance</th></tr></thead>
+            <tbody>
+              <tr><td class="muted">12.06.2026</td><td>Fatura A-2291</td><td class="num" style="color:var(--red)">+ 12.480,00</td><td class="num">16.000,00</td></tr>
+              <tr><td class="muted">14.06.2026</td><td>Banka ödemesi</td><td class="num" style="color:var(--green)">− 12.000,00</td><td class="num">4.000,00</td></tr>
+              <tr><td class="muted">18.06.2026</td><td>Fatura A-2317</td><td class="num" style="color:var(--red)">+ 8.900,00</td><td class="num">12.900,00</td></tr>
+              <tr><td class="muted">22.06.2026</td><td>Banka ödemesi</td><td class="num" style="color:var(--green)">− 8.900,00</td><td class="num">4.000,00</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- BANKING (list) -->
+      <section class="page" data-page="banking">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span class="chip">Garanti ••12</span><span class="chip">İş Bank ••84</span><div style="flex:1"></div><button class="btn"><i data-lucide="download"></i> Excel</button>
+        </div>
+        <div class="tablewrap">
+          <div class="thead"><span>Bank transactions — Garanti ••12</span><span class="faint" style="font-size:12px">Closing 61.900,00 ₺</span></div>
+          <table>
+            <thead><tr><th style="width:90px">Date</th><th>Description</th><th style="width:130px">Classified as</th><th style="text-align:right;width:120px">Amount</th></tr></thead>
+            <tbody>
+              <tr><td class="muted">12.10.2026</td><td>POS GUNSONU GARANTI</td><td><span class="badge b-blue">Settlement</span></td><td class="num" style="color:var(--green)">+ 19.870,00</td></tr>
+              <tr><td class="muted">12.10.2026</td><td>ANADOLU ET ODEME</td><td><span class="badge b-gray">Supplier pmt</span></td><td class="num" style="color:var(--red)">− 12.000,00</td></tr>
+              <tr><td class="muted">11.10.2026</td><td>HAVALE — KENDI HESAP</td><td><span class="badge b-gray">Transfer</span></td><td class="num" style="color:var(--red)">− 20.000,00</td></tr>
+              <tr><td class="muted">10.10.2026</td><td>EFT 904421</td><td><span class="badge b-amber">Needs review</span></td><td class="num" style="color:var(--red)">− 3.500,00</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- REPORTS (hub) -->
+      <section class="page" data-page="reports">
+        <div class="card pad">
+          <div style="font-size:16px;font-weight:500">Period summary</div>
+          <div class="faint" style="font-size:12px;margin-bottom:12px">October 2026 · Meze Kadıköy</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+            <div><div class="faint" style="font-size:11px;letter-spacing:.3px">SALES</div><div class="num" style="font-size:19px;font-weight:500;text-align:left">482.350,00 ₺</div></div>
+            <div><div class="faint" style="font-size:11px;letter-spacing:.3px">EXPENSES</div><div class="num" style="font-size:19px;font-weight:500;text-align:left;color:var(--amber)">318.920,50 ₺</div></div>
+            <div><div class="faint" style="font-size:11px;letter-spacing:.3px">NET RESULT</div><div class="num" style="font-size:19px;font-weight:500;text-align:left;color:var(--blue-strong)">163.429,50 ₺</div></div>
+          </div>
+        </div>
+        <div><div class="sect">FINANCIAL STATEMENTS</div>
+          <div class="report-grid">
+            <div class="report-card"><div class="h"><span class="iconchip" style="background:var(--blue-chip)"><i data-lucide="file-text" style="color:var(--blue-strong)"></i></span><span class="tag">Oct 2026</span></div><div class="ttl">Profit &amp; loss</div><div class="ds">Sales, expenses, net result</div><div class="acts"><button class="btn" style="padding:5px 12px;font-size:12px">Open</button><button class="btn" style="padding:5px 10px;font-size:12px;border:none"><i data-lucide="download"></i> Excel</button></div></div>
+            <div class="report-card"><div class="h"><span class="iconchip" style="background:var(--blue-chip)"><i data-lucide="scale" style="color:var(--blue-strong)"></i></span><span class="tag">Oct 2026</span></div><div class="ttl">Balance sheet</div><div class="ds">Assets, liabilities, equity</div><div class="acts"><button class="btn" style="padding:5px 12px;font-size:12px">Open</button><button class="btn" style="padding:5px 10px;font-size:12px;border:none"><i data-lucide="download"></i> Excel</button></div></div>
+          </div>
+        </div>
+        <div><div class="sect">TAX &amp; LEDGERS</div>
+          <div class="report-grid">
+            <div class="report-card"><div class="h"><span class="iconchip" style="background:var(--amber-bg)"><i data-lucide="percent" style="color:var(--amber)"></i></span><span class="tag">Q3 2026</span></div><div class="ttl">KDV — supplier invoices</div><div class="ds">Input VAT only (no declaration yet)</div><div class="acts"><button class="btn" style="padding:5px 12px;font-size:12px">Open</button><button class="btn" style="padding:5px 10px;font-size:12px;border:none"><i data-lucide="download"></i> Excel</button></div></div>
+            <div class="report-card"><div class="h"><span class="iconchip" style="background:var(--blue-chip)"><i data-lucide="clock" style="color:var(--blue-strong)"></i></span><span class="tag">Snapshot</span></div><div class="ttl">Payables — supplier balances</div><div class="ds">Current balance per supplier</div><div class="acts"><button class="btn" style="padding:5px 12px;font-size:12px">Open</button><button class="btn" style="padding:5px 10px;font-size:12px;border:none"><i data-lucide="download"></i> Excel</button></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- REVIEW -->
+      <section class="page" data-page="review">
+        <div style="font-size:13px" class="muted">Needs review · supplier invoice</div>
+        <div class="row">
+          <div class="card pad" style="width:200px;flex:none">
+            <div class="faint" style="font-size:10.5px;margin-bottom:8px">e-Arşiv Fatura</div>
+            <div style="height:8px;background:var(--line);border-radius:4px;width:70%;margin-bottom:6px"></div>
+            <div style="height:8px;background:var(--line2);border-radius:4px;margin-bottom:6px"></div>
+            <div style="height:8px;background:var(--line2);border-radius:4px;width:85%;margin-bottom:6px"></div>
+            <div style="height:8px;background:var(--line2);border-radius:4px;width:60%;margin-bottom:18px"></div>
+            <div style="height:8px;background:var(--line);border-radius:4px;width:50%;margin-left:auto;margin-bottom:6px"></div>
+            <div style="height:8px;background:var(--line);border-radius:4px;width:40%;margin-left:auto"></div>
+          </div>
+          <div class="card pad" style="flex:1">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line2);font-size:13px"><span class="muted">Supplier</span><span>Migros Toptan <i data-lucide="check-circle-2" style="width:15px;color:var(--green);vertical-align:-3px"></i></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line2);font-size:13px"><span class="muted">Date</span><span class="num">12.10.2026 <i data-lucide="check-circle-2" style="width:15px;color:var(--green);vertical-align:-3px"></i></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line2);font-size:13px"><span class="muted">Net</span><span class="num">2.675,33 ₺</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 9px;font-size:13px;background:var(--amber-bg);border-radius:8px;margin:6px 0"><span style="color:var(--amber)">KDV — please confirm</span><span class="num" style="color:var(--amber)">535,07 <i data-lucide="alert-triangle" style="width:15px;vertical-align:-3px"></i></span></div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--red);margin:8px 0 12px"><i data-lucide="copy" style="width:14px"></i> Possible duplicate of A-2231</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary"><i data-lucide="check"></i> Confirm &amp; post</button><button class="btn">Edit</button><button class="btn" style="color:var(--red)">Duplicate</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="page" data-page="settings">
+        <div style="display:flex;gap:16px;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:0">
+          <span style="padding:8px 0;border-bottom:2px solid var(--blue);color:var(--blue-strong);font-weight:500">Users</span>
+          <span class="muted" style="padding:8px 0">Roles</span>
+          <span class="muted" style="padding:8px 0">General</span>
+          <span class="muted" style="padding:8px 0">Backup</span>
+        </div>
+        <div class="tablewrap">
+          <div class="thead"><span>Users &amp; access</span><button class="btn" style="font-size:12px;padding:5px 11px"><i data-lucide="plus"></i> Add user</button></div>
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th style="width:130px">Role</th><th style="width:90px">Status</th></tr></thead>
+            <tbody>
+              <tr><td>Elif Kaya</td><td class="muted">elif@meze.co</td><td><span class="badge b-blue">Owner</span></td><td><span class="badge b-green">Active</span></td></tr>
+              <tr><td>Can Yılmaz</td><td class="muted">can@meze.co</td><td><span class="badge b-blue">Partner</span></td><td><span class="badge b-green">Active</span></td></tr>
+              <tr><td>Mert Demir</td><td class="muted">mert@meze.co</td><td><span class="badge b-gray">Cashier</span></td><td><span class="badge b-green">Active</span></td></tr>
+              <tr><td>Deniz Arslan</td><td class="muted">deniz@meze.co</td><td><span class="badge b-gray">View only</span></td><td><span class="badge b-amber">Inactive</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <div class="lg"><span style="width:28px;height:28px;border-radius:8px;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="scale" style="width:16px"></i></span><span style="font-size:18px;font-weight:600">Mizan</span></div>
+    <div class="muted" style="font-size:13px;margin-bottom:16px">Sign in to your books</div>
+    <div class="lbl-sm">Email</div>
+    <input class="field" value="owner@meze.co" />
+    <div class="lbl-sm">Password</div>
+    <input class="field" type="password" value="123456789" />
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="hideLogin()">Sign in</button>
+    <div style="display:flex;justify-content:space-between;margin-top:13px;font-size:11.5px"><span style="color:var(--blue-strong);cursor:pointer">Forgot password?</span><span class="faint">TR / EN</span></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+  const titles = {overview:'Overview', sales:'Sales', suppliers:'Suppliers', ledger:'Supplier ledger', banking:'Banking', reports:'Reports', review:'Needs review', settings:'Settings'};
+  function showPage(id){
+    document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.dataset.page===id));
+    document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active', n.dataset.page===id));
+    document.getElementById('pageTitle').textContent = titles[id] || '';
+    document.querySelector('.content').scrollTop = 0;
+  }
+  document.querySelectorAll('.nav[data-page]').forEach(n=>n.addEventListener('click',()=>showPage(n.dataset.page)));
+  function showLogin(){ document.getElementById('app').style.display='none'; document.getElementById('login').classList.add('active'); }
+  function hideLogin(){ document.getElementById('login').classList.remove('active'); document.getElementById('app').style.display='flex'; }
+  if(window.lucide) lucide.createIcons();
+</script>
+</body>
+</html>
