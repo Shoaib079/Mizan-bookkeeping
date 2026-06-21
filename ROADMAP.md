@@ -15,7 +15,7 @@
 | **Active phase** | Phase 5 — Cash drawer, forex, staff, partner reimbursements, receivables |
 | **Active slice** | Forex (FX holdings, conversions) |
 | **Last completed slice** | Cash drawer |
-| **Last commit/tag** | pending — `v0.26.0-phase5-cash-drawer` |
+| **Last commit/tag** | `ea0867c` / `v0.26.0-phase5-cash-drawer` |
 | **Next up** | Phase 5 Slice 2 — Forex |
 
 ---

@@ -8,7 +8,7 @@
 | **Last completed slice** | Cash drawer |
 | **Next slice** | Forex (FX holdings, conversions) |
 | **Branch** | `main` |
-| **Last tag** | pending — `v0.26.0-phase5-cash-drawer` |
+| **Last tag** | `ea0867c` / `v0.26.0-phase5-cash-drawer` |
 
 ## Resume point
 
