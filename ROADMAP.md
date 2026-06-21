@@ -15,7 +15,7 @@
 | **Active phase** | Phase 2 — Suppliers & payables |
 | **Active slice** | Phase 2 complete (pending owner sign-off) |
 | **Last completed slice** | Supplier payment GL posting |
-| **Last commit/tag** | *(pending commit)* / `v0.16.0-phase2-supplier-payment-gl` |
+| **Last commit/tag** | `a08e703` / `v0.16.0-phase2-supplier-payment-gl` |
 | **Next up** | Phase 3 — Banking hub + bank statements |
 
 ---
@@ -181,7 +181,7 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Supplier master (per entity) | `63ed5cf` / `v0.10.0-phase2-supplier-master` | suppliers CRUD, VKN lookup, entity isolation, 85 pytest |
 | 2026-06-21 | Payables ledger & balance | `48dbdd7` / `v0.11.0-phase2-payables-ledger` | supplier_ledger_entries, running balance, payables API, 97 pytest |
 | 2026-06-21 | Invoice → payable posting (draft-to-ledger) | `3f367f5` / `v0.15.0-phase2-draft-to-ledger` | confirmed draft → GL + payables; Input VAT 1500; 127 pytest |
-| 2026-06-21 | Supplier payment GL posting | *(pending)* / `v0.16.0-phase2-supplier-payment-gl` | `post_supplier_payment()` Dr AP Cr bank/cash + subledger; Phase 2 complete |
+| 2026-06-21 | Supplier payment GL posting | `a08e703` / `v0.16.0-phase2-supplier-payment-gl` | `post_supplier_payment()` Dr AP Cr bank/cash + subledger; Phase 2 complete |
 
 ---
 
