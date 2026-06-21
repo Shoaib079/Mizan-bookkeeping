@@ -1,4 +1,4 @@
-"""Bank/cash account tree service — GL sub-accounts + money_accounts (Decisions §12)."""
+"""Bank/cash/credit-card account tree service — GL sub-accounts + money_accounts (Decisions §12)."""
 
 from __future__ import annotations
 
@@ -293,5 +293,8 @@ def get_account_tree(
             ),
             cash=_build_branch(
                 session, MoneyAccountKind.CASH, include_inactive=include_inactive
+            ),
+            credit_cards=_build_branch(
+                session, MoneyAccountKind.CREDIT_CARD, include_inactive=include_inactive
             ),
         )

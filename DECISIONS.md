@@ -2,6 +2,16 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-21 — Credit card clearing accounts (Phase 4)
+
+**Choice:** Extend `MoneyAccountKind` with `CREDIT_CARD`; reuse `create_money_account()` to create GL sub-accounts `2101+` under parent `2100` Credit Card Payable (LIABILITY, CREDIT normal balance, `accepts_opening_balance=True`). Tree API returns `credit_cards` branch alongside `banks`/`cash`. Opening balance lines via `money_account_id` post on the GL account's `normal_balance` side (not hardcoded DEBIT) — CREDIT for credit cards, DEBIT for bank/cash. Reject aggregate `2100` when active credit card money accounts exist (mirrors `1100`/`1000` rule). Metadata: `bank_name` as card issuer label, `last_four` for card digits.
+
+**Why:** Decisions §12 — credit cards branch in banking hub; OPENING_BALANCES.md — per-card sub-accounts under liability bucket `2100`.
+
+**Migration:** Alembic `020` — extend `money_account_kind` enum length for `credit_card` value.
+
+**Not in slice:** Credit card statement import, `credit_card_payment` GL classify, card sales reconciliation, UI.
+
 ## 2026-06-21 — POS settlement intake (Phase 4)
 
 **Choice:** `post_pos_settlement()` in `core/pos/posting.py` — single atomic transaction through `prepare_journal_entry(..., source=pos_settlement)`. GL pattern: **Dr** bank GL sub-account (from `money_account_id`), **Cr** `1400` Card Sales Clearing. Persist `pos_settlements` row with unique `journal_entry_id`. Statement classify `pos_settlement` requires inflow (`amount_kurus > 0`) and `actor_id`; posts GL (not classify-only). Optional `commission_kurus` column on model for future slice 3 — net deposit only in this slice.

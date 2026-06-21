@@ -25,8 +25,9 @@ FX_WALLET_CODES = frozenset({"1010", "1020", "1030"})
 
 BANK_BUCKET_CODE = "1100"
 CASH_BUCKET_CODE = "1000"
+CREDIT_CARD_BUCKET_CODE = "2100"
 
-# Aggregate-only codes allowed when no per-bank/cash sub-accounts exist
+# Aggregate-only codes allowed when no per-bank/cash/credit-card sub-accounts exist
 ALLOWED_AGGREGATE_OB_CODES = frozenset(
     {
         "1000",  # TRY cash (aggregate when no cash sub-accounts)
@@ -35,7 +36,7 @@ ALLOWED_AGGREGATE_OB_CODES = frozenset(
         "1300",  # employee advances (aggregate until Phase 5 per-employee)
         "1400",  # card sales clearing
         "2000",  # supplier AP (aggregate when no per-supplier lines)
-        "2100",  # credit card payable (aggregate until Phase 3 per-card)
+        "2100",  # credit card payable (aggregate when no credit card sub-accounts)
         "2200",  # loans
     }
 )
@@ -178,6 +179,7 @@ def _validate_opening_balance_lines_in_context(
     active_kinds = _active_money_account_kinds(session)
     has_bank_sub_accounts = MoneyAccountKind.BANK in active_kinds
     has_cash_sub_accounts = MoneyAccountKind.CASH in active_kinds
+    has_credit_card_sub_accounts = MoneyAccountKind.CREDIT_CARD in active_kinds
 
     seen_account_codes: set[str] = set()
     seen_money_accounts: set[uuid.UUID] = set()
@@ -201,6 +203,11 @@ def _validate_opening_balance_lines_in_context(
                 raise OpeningBalanceError(
                     "aggregate account 1000 is not allowed when cash sub-accounts exist; "
                     "use money_account_id for each cash balance"
+                )
+            if line.account_code == CREDIT_CARD_BUCKET_CODE and has_credit_card_sub_accounts:
+                raise OpeningBalanceError(
+                    "aggregate account 2100 is not allowed when credit card sub-accounts exist; "
+                    "use money_account_id for each credit card balance"
                 )
             if line.account_code == ACCOUNTS_PAYABLE_CODE and any(
                 other.supplier_id is not None for other in lines
@@ -292,7 +299,7 @@ def _resolve_journal_lines(
                     account_code=gl_account.code,
                     account_id=gl_account.id,
                     amount_kurus=line.amount_kurus,
-                    side=AccountNormalBalance.DEBIT,
+                    side=gl_account.normal_balance,
                 )
             )
         else:

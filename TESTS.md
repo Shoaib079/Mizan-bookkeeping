@@ -8,8 +8,8 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_money.py` | Integer kuruş, Turkish format, loose parse (Decisions §5) | pass |
 | `backend/tests/test_entity_isolation.py` | Cross-entity isolation — RLS + entity_context | pass |
 | `backend/tests/test_default_chart.py` | Default chart includes Opening Balance Equity; no inventory | pass |
-| `backend/tests/test_opening_balances.py` | OB validation — equity offset, aggregate codes, money_account_id + supplier_id lines, reject aggregate 1100/1000 when sub-accounts exist, validate API | pass |
-| `backend/tests/test_opening_balances_post.py` | OB posting — GL + supplier subledger atomicity, AP control = subledger sum, bank GL debited, double post 409, entity isolation, post API E2E | pass |
+| `backend/tests/test_opening_balances.py` | OB validation — equity offset, aggregate codes, money_account_id + supplier_id lines, reject aggregate 1100/1000/2100 when sub-accounts exist, validate API | pass |
+| `backend/tests/test_opening_balances_post.py` | OB posting — GL + supplier subledger atomicity, AP control = subledger sum, bank GL debited, credit card GL credited, double post 409, entity isolation, post API E2E | pass |
 | `backend/tests/test_chart_of_accounts.py` | Per-entity chart seed, RLS isolation, API | pass |
 | `backend/tests/test_ledger_posting.py` | Single posting boundary — balanced/unbalanced/zero/cross-entity, immutability, void/reverse, audit, API | pass |
 | `backend/tests/test_ledger_db_immutability.py` | PostgreSQL triggers block raw SQL UPDATE/DELETE on entries, lines, audit; void gate | pass |
@@ -21,7 +21,8 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_payables.py` | Payables ledger — balance, opening balance, payments reduce balance + GL link, overpayment rejected, API | pass |
 | `backend/tests/test_invoice_posting.py` | Draft-to-ledger — GL + payables posting, `journal_entry_id` on subledger, VAT lines, reject guards, cross-entity, API E2E | pass |
 | `backend/tests/test_supplier_payment_gl.py` | Supplier payment GL — AP control account = subledger, bank credited, `journal_entry_id` link, non-asset rejected, API E2E | pass |
-| `backend/tests/test_banking_accounts.py` | Bank/cash account tree — GL sub-accounts, codes, balances, rollup, RLS isolation, API CRUD + tree, supplier payment to sub-account | pass |
+| `backend/tests/test_banking_accounts.py` | Bank/cash account tree — GL sub-accounts, codes, balances, rollup, RLS isolation, API CRUD + tree (incl. credit_cards branch), supplier payment to sub-account | pass |
+| `backend/tests/test_credit_card_accounts.py` | Credit card clearing accounts — GL sub-accounts under 2100, LIABILITY/CREDIT, tree branch + balance rollup, OB credit side, reject aggregate 2100, cross-entity isolation, API E2E | pass |
 | `backend/tests/test_bank_statement_import.py` | Bank statement CSV import + classify — lines stored, duplicate fingerprint 409, supplier payment GL post, link existing payment (no double journal), near-match → needs_review, confirm link, re-classify rejected, bank fee no GL, cross-entity isolation, API E2E | pass |
 | `backend/tests/test_banking_near_match.py` | Near-match date window helpers (±3 days, excludes exact date) | pass |
 | `backend/tests/test_account_transfers.py` | Own-account transfers — manual GL Dr/Cr asset only, statement outflow post, inflow link-or-post (single journal), same-from/to rejected, cross-entity rejected, re-classify rejected, RLS isolation, API E2E | pass |

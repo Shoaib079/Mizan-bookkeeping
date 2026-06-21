@@ -1,4 +1,4 @@
-"""Money account persistence — entity-scoped bank/cash sub-accounts (Decisions §12)."""
+"""Money account persistence — entity-scoped bank/cash/credit-card sub-accounts (Decisions §12)."""
 
 from __future__ import annotations
 
@@ -15,14 +15,17 @@ from app.db.base import Base, EntityScopedMixin, utcnow
 class MoneyAccountKind(str, enum.Enum):
     BANK = "bank"
     CASH = "cash"
+    CREDIT_CARD = "credit_card"
 
 
 BANK_BUCKET_CODE = "1100"
 CASH_BUCKET_CODE = "1000"
+CREDIT_CARD_BUCKET_CODE = "2100"
 
 BUCKET_CODE_BY_KIND: dict[MoneyAccountKind, str] = {
     MoneyAccountKind.BANK: BANK_BUCKET_CODE,
     MoneyAccountKind.CASH: CASH_BUCKET_CODE,
+    MoneyAccountKind.CREDIT_CARD: CREDIT_CARD_BUCKET_CODE,
 }
 
 
@@ -35,7 +38,7 @@ class MoneyAccount(EntityScopedMixin, Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     account_kind: Mapped[MoneyAccountKind] = mapped_column(
-        Enum(MoneyAccountKind, name="money_account_kind", native_enum=False, length=8),
+        Enum(MoneyAccountKind, name="money_account_kind", native_enum=False, length=12),
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)

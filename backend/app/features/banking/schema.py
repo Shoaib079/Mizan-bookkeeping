@@ -17,7 +17,11 @@ from app.features.banking.statement_models import (
 class MoneyAccountCreate(BaseModel):
     account_kind: MoneyAccountKind
     name: str = Field(min_length=1, max_length=255)
-    bank_name: str | None = Field(default=None, max_length=255)
+    bank_name: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Bank name for bank accounts; card issuer label for credit cards",
+    )
     iban: str | None = Field(default=None, max_length=34)
     last_four: str | None = Field(default=None, min_length=4, max_length=4)
 
@@ -73,6 +77,7 @@ class MoneyAccountTreeBranch(BaseModel):
 class MoneyAccountTree(BaseModel):
     banks: MoneyAccountTreeBranch
     cash: MoneyAccountTreeBranch
+    credit_cards: MoneyAccountTreeBranch
 
 
 class BankStatementLineRead(BaseModel):

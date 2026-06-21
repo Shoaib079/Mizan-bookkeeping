@@ -174,6 +174,39 @@ def test_bank_sub_account_gl_debited(db_session, seeded_entity) -> None:
     assert balance == 500_000
 
 
+def _credit_card(db_session, entity):
+    return banking_service.create_money_account(
+        db_session,
+        entity.id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.CREDIT_CARD,
+            name="Garanti Business Card",
+            bank_name="Garanti BBVA",
+            last_four="4321",
+        ),
+    )
+
+
+def test_credit_card_sub_account_gl_credited(db_session, seeded_entity) -> None:
+    card = _credit_card(db_session, seeded_entity)
+    post_opening_balances(
+        db_session,
+        seeded_entity.id,
+        go_live_date=GO_LIVE,
+        lines=[OpeningBalanceLineInput(money_account_id=card.id, amount_kurus=300_000)],
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, seeded_entity.id):
+        gl_account = db_session.get(Account, card.gl_account_id)
+        assert gl_account is not None
+        assert gl_account.normal_balance == AccountNormalBalance.CREDIT
+        balance = banking_service.gl_balance_kurus(
+            db_session, gl_account.id, gl_account.normal_balance
+        )
+    assert balance == 300_000
+
+
 def test_double_post_rejected(db_session, seeded_entity) -> None:
     lines = [
         OpeningBalanceLineInput(

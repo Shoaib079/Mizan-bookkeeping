@@ -190,6 +190,28 @@ def test_validate_rejects_aggregate_1000_when_cash_sub_accounts_exist(
         validate_opening_balance_lines(db_session, seeded_entity.id, lines)
 
 
+def test_validate_rejects_aggregate_2100_when_credit_card_sub_accounts_exist(
+    db_session, seeded_entity
+) -> None:
+    banking_service.create_money_account(
+        db_session,
+        seeded_entity.id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.CREDIT_CARD,
+            name="Business Card",
+        ),
+    )
+    lines = [
+        OpeningBalanceLineInput(
+            account_code="2100",
+            amount_kurus=100,
+            side=AccountNormalBalance.CREDIT,
+        )
+    ]
+    with pytest.raises(OpeningBalanceError, match="credit card sub-accounts exist"):
+        validate_opening_balance_lines(db_session, seeded_entity.id, lines)
+
+
 def test_api_rejects_fx_opening_balance(client: TestClient, restaurant_a, seeded_entity) -> None:
     response = client.post(
         f"/onboarding/entities/{restaurant_a.id}/opening-balances/validate",

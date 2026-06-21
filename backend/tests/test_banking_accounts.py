@@ -191,6 +191,7 @@ def test_api_crud_and_tree(
     tree = tree_resp.json()
     assert tree["banks"]["bucket_code"] == "1100"
     assert tree["cash"]["bucket_code"] == "1000"
+    assert tree["credit_cards"]["bucket_code"] == "2100"
     assert len(tree["banks"]["accounts"]) == 1
 
     patch_resp = client.patch(

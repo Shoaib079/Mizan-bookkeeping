@@ -61,11 +61,11 @@ Day-one journal posts the FX wallet at entered TRY cost (or a documented two-lin
 | Sub-account type | Example | Phase | Notes |
 |------------------|---------|-------|-------|
 | **Per bank** | Garanti TRY, İşbank TRY | **Phase 3** | Banking hub tree; OB line per named bank account |
-| **Per card** | Visa •••1234, Amex | **Phase 3** | Under card payable tree |
+| **Per card** | Visa •••1234, Amex | **Phase 4** | Under `2100` card payable tree; `money_account_id` OB line |
 | **Per supplier** | Metro, Coca-Cola | **Phase 2** | Supplier master + payables ledger; OB per supplier balance |
 | **Per staff** | Ali, Ayşe (TRY or FX pay currency) | **Phase 5** | Employee ledger; FX-paid staff use quantity model above |
 
-**Until sub-accounts exist:** validate API accepts **aggregate** codes only (`1100`, `2100`, `2000`, `1300`). Any other code (e.g. future `1101`, `2001`) returns **not supported yet**.
+**Until sub-accounts exist:** validate API accepts **aggregate** codes only (`1100`, `2100`, `2000`, `1300`). Reject aggregate `1100`/`1000`/`2100` when named bank/cash/credit-card sub-accounts exist — use `money_account_id` instead.
 
 ### Allowed aggregate codes (validate API whitelist)
 
