@@ -15,7 +15,7 @@
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
 | **Active slice** | Basic manual journals |
 | **Last completed slice** | Ledger DB immutability (bootstrap + void gate) |
-| **Last commit/tag** | (pending) / `v0.7.1-phase1-ledger-db-immutability` |
+| **Last commit/tag** | `46869cf` / `v0.7.1-phase1-ledger-db-immutability` |
 | **Next up** | Basic manual journals |
 
 ---

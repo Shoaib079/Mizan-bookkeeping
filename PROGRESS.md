@@ -8,7 +8,7 @@
 | **Last completed slice** | Ledger DB immutability (bootstrap + void gate) |
 | **Next slice** | Basic manual journals |
 | **Branch** | `main` |
-| **Last tag** | `v0.7.1-phase1-ledger-db-immutability` (pending) |
+| **Last tag** | `v0.7.1-phase1-ledger-db-immutability` (`46869cf`) |
 
 ## Resume point
 
