@@ -15,7 +15,7 @@
 | **Active phase** | Phase 3 — Banking hub + bank statements |
 | **Active slice** | Phase 3 complete — pending owner sign-off |
 | **Last completed slice** | Opening balances |
-| **Last commit/tag** | pending / `v0.20.0-phase3-opening-balances` |
+| **Last commit/tag** | `10fca0a` / `v0.20.0-phase3-opening-balances` |
 | **Next up** | Phase 4 — POS settlement + credit cards |
 
 ---
