@@ -8,7 +8,7 @@
 | **Last completed slice** | Supplier master (per entity) |
 | **Next slice** | Payables ledger & balance |
 | **Branch** | `main` |
-| **Last tag** | `v0.10.0-phase2-supplier-master` (pending push) |
+| **Last tag** | `v0.10.0-phase2-supplier-master` (`63ed5cf`) |
 
 ## Resume point
 
