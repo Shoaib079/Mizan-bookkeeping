@@ -4,15 +4,15 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | 2 — Suppliers & payables |
-| **Last completed slice** | Supplier payment GL posting |
-| **Next slice** | Phase 3 — Banking hub + bank statements |
+| **Phase** | 3 — Banking hub + bank statements |
+| **Last completed slice** | Supplier payment GL posting (Phase 2) |
+| **Next slice** | Bank/cash account tree (per entity) |
 | **Branch** | `main` |
 | **Last tag** | `v0.16.0-phase2-supplier-payment-gl` |
 
 ## Resume point
 
-Phase 2 slices are complete pending owner sign-off. Next: Phase 3 — **Bank/cash account tree (per entity)**. Do not start Phase 3 until owner signs off Phase 2.
+Phase 2 owner sign-off: **2026-06-21**. Next: Phase 3 — **Bank/cash account tree (per entity)**.
 
 ## Session notes
 

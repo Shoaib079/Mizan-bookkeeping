@@ -12,11 +12,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 2 — Suppliers & payables |
-| **Active slice** | Phase 2 complete (pending owner sign-off) |
+| **Active phase** | Phase 3 — Banking hub + bank statements |
+| **Active slice** | Bank/cash account tree (per entity) — not started |
 | **Last completed slice** | Supplier payment GL posting |
 | **Last commit/tag** | `a08e703` / `v0.16.0-phase2-supplier-payment-gl` |
-| **Next up** | Phase 3 — Banking hub + bank statements |
+| **Next up** | Bank/cash account tree (per entity) |
 
 ---
 
@@ -65,7 +65,7 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 | Invoice → payable posting (draft-to-ledger) | done | `post_confirmed_draft()`, GL + payables in one transaction; `posted` status; Input VAT `1500`; 10 tests |
 | Supplier payment GL posting | done | `post_supplier_payment()` atomic GL+subledger (Dr AP, Cr bank/cash); `journal_entry_id` on subledger; `payment_account_id` required; AP control-account tests; 5 GL tests + updated payables tests; 132 pytest |
 
-**Phase 2 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 2 COMPLETE (pending owner sign-off).**
+**Phase 2 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 2 COMPLETE ✓ (owner signed off).**
 
 ---
 

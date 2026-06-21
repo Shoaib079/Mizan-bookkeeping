@@ -39,3 +39,5 @@ Phase 2 — **Payment reduces payable**: `record_supplier_payment()` writes nega
 Phase 2 — **Invoice → payable posting (draft-to-ledger)**: `post_confirmed_draft()` posts balanced GL journal (`source=invoice`) and supplier payables invoice movement atomically; draft status → `posted`; default chart adds Input VAT `1500`; Alembic `013`; `POST .../invoices/drafts/{id}/post`; 10 posting tests (127 pytest total). Tag `v0.15.0-phase2-draft-to-ledger`.
 
 Phase 2 — **Supplier payment GL posting**: `post_supplier_payment()` in `core/payables/posting.py` atomically posts GL (`source=payment`, debit AP, credit bank/cash asset) and negative payables movement; `journal_entry_id` on subledger rows; Alembic `014`; `payment_account_id` required on payments API; AP control-account reconciliation tests; overpayment guard retained; 5 GL tests + updated payables tests (132 pytest total). Tag `v0.16.0-phase2-supplier-payment-gl`. **Phase 2 complete** (pending owner sign-off).
+
+**Phase 2 owner sign-off** (2026-06-21): Suppliers & payables phase officially complete; active work moves to Phase 3 — Banking hub + bank statements.
