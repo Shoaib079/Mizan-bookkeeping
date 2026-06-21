@@ -12,11 +12,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 4 — POS settlement + credit cards |
-| **Active slice** | Phase 4 complete — pending owner sign-off |
-| **Last completed slice** | Credit card payment + bank fee GL posting |
+| **Active phase** | Phase 5 — Cash drawer, forex, staff, partner reimbursements, receivables |
+| **Active slice** | Cash drawer |
+| **Last completed slice** | Phase 4 complete (owner signed off) |
 | **Last commit/tag** | `9a8a927` / `v0.25.0-phase4-cc-payment-bank-fee-gl` |
-| **Next up** | Phase 4 owner sign-off; then Phase 5 |
+| **Next up** | Phase 5 Slice 1 — Cash drawer |
 
 ---
 
@@ -115,7 +115,7 @@ Every statement-line classification that represents a **real GL event** must pos
 | Card sales → bank deposit reconciliation | done | `card_sales_batches` table; `post_card_sales_batch()` Dr `1400` / Cr `4000`; settlement commission (explicit or inferred from linked batch) Dr bank + Dr `5300` / Cr `1400` gross; `GET .../pos/clearing-reconciliation`; Alembic `021`; 8 tests; 205 pytest |
 | Credit card payment + bank fee GL | done | `credit_card_payment` classify + `post_credit_card_payment()` Dr CC payable / Cr bank; `post_bank_fee()` Dr `5300` / Cr bank; `credit_card_payments` table; statement-line linking; Alembic `022`; 10 tests |
 
-**Phase 4 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 4 COMPLETE (pending owner sign-off).**
+**Phase 4 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 4 COMPLETE ✓ (owner signed off).**
 
 ---
 
@@ -123,7 +123,7 @@ Every statement-line classification that represents a **real GL event** must pos
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| Cash drawer | not started | |
+| Cash drawer | in progress | EOD close + movements + over/short GL |
 | Forex (FX holdings, conversions) | not started | |
 | Staff (salary vs advance — no double-count) | not started | |
 | Partner reimbursements | not started | |
