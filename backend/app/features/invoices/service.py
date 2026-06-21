@@ -18,6 +18,7 @@ from app.adapters.ocr_ai.efatura import (
     extraction_to_payload,
 )
 from app.adapters.storage.local import save_upload
+from app.db.base import utcnow
 from app.db.session import entity_context
 from app.features.entities import service as entity_service
 from app.features.invoices.models import (
@@ -43,6 +44,14 @@ class DraftNotLinkableError(Exception):
 
 class SupplierLinkError(Exception):
     """Raised when supplier link preconditions fail."""
+
+
+class DraftConfirmError(Exception):
+    """Raised when draft cannot be confirmed."""
+
+
+class DraftImmutableError(Exception):
+    """Raised when a confirmed draft is modified."""
 
 
 def _require_entity(session: Session, entity_id: uuid.UUID) -> None:
@@ -115,6 +124,9 @@ def _to_out(
         vat_breakdown=draft.vat_breakdown,
         currency=draft.currency,
         extraction_payload=draft.extraction_payload,
+        review_reason=draft.review_reason,
+        confirmed_at=draft.confirmed_at,
+        confirmed_by=draft.confirmed_by,
         created_at=draft.created_at,
     )
 
@@ -160,9 +172,13 @@ def _resolve_supplier_for_link(
 
 
 def _ensure_draft_linkable(draft: InvoiceDraft) -> None:
-    """Block link/unlink on immutable drafts (confirmed added in review slice)."""
-    if hasattr(InvoiceDraftStatus, "CONFIRMED") and draft.status == InvoiceDraftStatus.CONFIRMED:
+    if draft.status == InvoiceDraftStatus.CONFIRMED:
         raise DraftNotLinkableError("Confirmed drafts cannot be modified")
+
+
+def _ensure_draft_mutable(draft: InvoiceDraft) -> None:
+    if draft.status == InvoiceDraftStatus.CONFIRMED:
+        raise DraftImmutableError("Confirmed drafts are immutable")
 
 
 def _find_by_fingerprint(
@@ -241,14 +257,24 @@ def create_efatura_draft_from_upload(
     return _draft_out(session, entity_id, draft)
 
 
-def list_invoice_drafts(session: Session, entity_id: uuid.UUID) -> tuple[list[InvoiceDraftOut], int]:
+def list_invoice_drafts(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    status: InvoiceDraftStatus | None = None,
+) -> tuple[list[InvoiceDraftOut], int]:
     _require_entity(session, entity_id)
 
     with entity_context(session, entity_id):
-        total = session.scalar(select(func.count()).select_from(InvoiceDraft)) or 0
+        count_query = select(func.count()).select_from(InvoiceDraft)
+        list_query = select(InvoiceDraft)
+        if status is not None:
+            count_query = count_query.where(InvoiceDraft.status == status)
+            list_query = list_query.where(InvoiceDraft.status == status)
+        total = session.scalar(count_query) or 0
         drafts = list(
             session.scalars(
-                select(InvoiceDraft).order_by(
+                list_query.order_by(
                     InvoiceDraft.created_at.desc(),
                     InvoiceDraft.invoice_date.desc(),
                 )
@@ -299,6 +325,57 @@ def unlink_supplier_from_draft(
 
     with entity_context(session, entity_id):
         draft.supplier_id = None
+        session.commit()
+        session.refresh(draft)
+
+    return _draft_out(session, entity_id, draft)
+
+
+def confirm_invoice_draft(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+) -> InvoiceDraftOut:
+    _require_entity(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    if draft.status not in {InvoiceDraftStatus.DRAFT, InvoiceDraftStatus.NEEDS_REVIEW}:
+        raise DraftConfirmError(
+            f"Draft status {draft.status.value!r} cannot be confirmed"
+        )
+    if draft.supplier_id is None:
+        raise DraftConfirmError("Supplier must be linked before confirm")
+
+    with entity_context(session, entity_id):
+        draft.status = InvoiceDraftStatus.CONFIRMED
+        draft.confirmed_at = utcnow()
+        draft.confirmed_by = actor_id
+        draft.review_reason = None
+        session.commit()
+        session.refresh(draft)
+
+    return _draft_out(session, entity_id, draft)
+
+
+def reject_invoice_draft(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    *,
+    reason: str | None = None,
+) -> InvoiceDraftOut:
+    _require_entity(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    _ensure_draft_mutable(draft)
+    if draft.status == InvoiceDraftStatus.DUPLICATE:
+        raise DraftConfirmError("Duplicate drafts cannot be rejected for review")
+
+    with entity_context(session, entity_id):
+        draft.status = InvoiceDraftStatus.NEEDS_REVIEW
+        draft.review_reason = reason
         session.commit()
         session.refresh(draft)
 

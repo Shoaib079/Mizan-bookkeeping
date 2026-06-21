@@ -4,13 +4,20 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.adapters.ocr_ai.efatura import EfaturaPdfUnsupportedError
 from app.db.session import get_session
 from app.features.invoices import service
-from app.features.invoices.schema import InvoiceDraftListOut, InvoiceDraftOut, LinkSupplierRequest
+from app.features.invoices.models import InvoiceDraftStatus
+from app.features.invoices.schema import (
+    ConfirmDraftRequest,
+    InvoiceDraftListOut,
+    InvoiceDraftOut,
+    LinkSupplierRequest,
+    RejectDraftRequest,
+)
 
 router = APIRouter(prefix="/entities/{entity_id}/invoices", tags=["invoices"])
 
@@ -52,10 +59,11 @@ async def upload_efatura_draft(
 @router.get("/drafts", response_model=InvoiceDraftListOut)
 def list_invoice_drafts(
     entity_id: uuid.UUID,
+    status: InvoiceDraftStatus | None = Query(default=None),
     session: Session = Depends(get_session),
 ) -> InvoiceDraftListOut:
     try:
-        items, total = service.list_invoice_drafts(session, entity_id)
+        items, total = service.list_invoice_drafts(session, entity_id, status=status)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return InvoiceDraftListOut(items=items, total=total)
@@ -106,4 +114,40 @@ def unlink_supplier_from_draft(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.DraftNotLinkableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/confirm", response_model=InvoiceDraftOut)
+def confirm_invoice_draft(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    payload: ConfirmDraftRequest,
+    session: Session = Depends(get_session),
+) -> InvoiceDraftOut:
+    try:
+        return service.confirm_invoice_draft(
+            session, entity_id, draft_id, actor_id=payload.actor_id
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.DraftConfirmError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/reject", response_model=InvoiceDraftOut)
+def reject_invoice_draft(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    payload: RejectDraftRequest,
+    session: Session = Depends(get_session),
+) -> InvoiceDraftOut:
+    try:
+        return service.reject_invoice_draft(
+            session, entity_id, draft_id, reason=payload.reason
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.DraftConfirmError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except service.DraftImmutableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

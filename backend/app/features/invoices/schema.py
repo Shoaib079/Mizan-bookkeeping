@@ -21,6 +21,14 @@ class LinkSupplierRequest(BaseModel):
     supplier_id: uuid.UUID | None = None
 
 
+class ConfirmDraftRequest(BaseModel):
+    actor_id: uuid.UUID
+
+
+class RejectDraftRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=512)
+
+
 class InvoiceDraftOut(BaseModel):
     id: uuid.UUID
     entity_id: uuid.UUID
@@ -39,6 +47,9 @@ class InvoiceDraftOut(BaseModel):
     vat_breakdown: list[VatBreakdownOut]
     currency: str
     extraction_payload: dict[str, Any]
+    review_reason: str | None = None
+    confirmed_at: datetime | None = None
+    confirmed_by: uuid.UUID | None = None
     created_at: datetime
 
 
