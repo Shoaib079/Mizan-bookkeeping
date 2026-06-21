@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-21 — Bank/cash account tree (Phase 3)
+
+**Choice:** `features/banking/` — `money_accounts` table (entity RLS) links named bank/cash accounts to auto-created GL sub-accounts under bucket `1100` (bank TRY) / `1000` (cash TRY). `accounts.parent_account_id` FK to bucket; codes auto-assigned `1101+` / `1001+`; inherit type/normal balance; `accepts_opening_balance=true`. Parent bucket balance in tree API = sum of active child GL balances (rollup helper). Aggregate `1100`/`1000` remain valid `payment_account_id` targets for backward compat.
+
+**Why:** Decisions §12 — banking hub tree per entity; `docs/OPENING_BALANCES.md` wizard step 4 (named sub-accounts).
+
+**API:** `POST/GET/PATCH /entities/{id}/banking/accounts`, `GET .../tree`. Create requires seeded chart (409 if not).
+
+**Not in slice:** credit cards (`2100`), FX cash, statement import, transfers, opening balance posting, UI.
+
+**Migration:** Alembic `015`.
+
 ## 2026-06-21 — Entity isolation via PostgreSQL RLS
 
 **Choice:** Enforce multi-restaurant isolation at the **database** with PostgreSQL row-level security (`FORCE ROW LEVEL SECURITY`) on every entity-scoped table, plus application `entity_context()` setting `app.current_entity_id`.

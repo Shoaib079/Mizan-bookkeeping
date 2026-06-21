@@ -12,6 +12,7 @@ RLS_TABLES = (
     "invoice_drafts",
     "suppliers",
     "supplier_ledger_entries",
+    "money_accounts",
 )
 
 

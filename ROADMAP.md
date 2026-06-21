@@ -75,7 +75,7 @@ Account tree, import & classify, transfer linking, opening balances. **Statement
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| Bank/cash account tree (per entity) | not started | |
+| Bank/cash account tree (per entity) | done | `money_accounts` + GL sub-accounts under `1100`/`1000`; tree API with balances |
 | Statement import & classify | not started | |
 | Transfer linking (own-account, not income/expense) | not started | |
 | Opening balances | not started | |

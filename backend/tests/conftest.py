@@ -35,7 +35,7 @@ def db_session(test_engine) -> Session:
     session.rollback()
     session.execute(
         text(
-            "TRUNCATE ledger_audit_events, journal_entry_lines, journal_entries, accounts, "
+            "TRUNCATE ledger_audit_events, journal_entry_lines, journal_entries, money_accounts, accounts, "
             "invoice_drafts, supplier_ledger_entries, suppliers, entity_settings, entities CASCADE"
         )
     )

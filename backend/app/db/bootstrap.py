@@ -13,6 +13,7 @@ from app.core.ledger.models import JournalEntry, JournalEntryLine, LedgerAuditEv
 from app.features.invoices.models import InvoiceDraft  # noqa: F401
 from app.features.suppliers.models import Supplier  # noqa: F401
 from app.core.payables.models import SupplierLedgerEntry  # noqa: F401
+from app.features.banking.models import MoneyAccount  # noqa: F401
 
 
 def ensure_mizan_role_and_databases() -> None:

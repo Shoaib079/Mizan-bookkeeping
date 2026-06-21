@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Enum, String, UniqueConstraint, Uuid
+from sqlalchemy import Boolean, Enum, ForeignKey, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
@@ -29,5 +29,11 @@ class Account(EntityScopedMixin, Base):
         nullable=False,
     )
     accepts_opening_balance: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    parent_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

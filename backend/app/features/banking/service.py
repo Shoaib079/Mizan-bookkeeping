@@ -1,0 +1,297 @@
+"""Bank/cash account tree service — GL sub-accounts + money_accounts (Decisions §12)."""
+
+from __future__ import annotations
+
+import uuid
+
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.core.chart_of_accounts.models import Account
+from app.core.chart_of_accounts.types import AccountNormalBalance
+from app.core.ledger.models import JournalEntryLine
+from app.db.session import entity_context, require_entity_context
+from app.features.banking.models import (
+    BUCKET_CODE_BY_KIND,
+    MoneyAccount,
+    MoneyAccountKind,
+)
+from app.features.banking.schema import (
+    MoneyAccountCreate,
+    MoneyAccountRead,
+    MoneyAccountTree,
+    MoneyAccountTreeBranch,
+    MoneyAccountTreeLeaf,
+    MoneyAccountUpdate,
+)
+from app.features.entities import service as entity_service
+
+
+class ChartNotSeededError(ValueError):
+    """Entity chart must be seeded before creating money accounts."""
+
+
+class DuplicateMoneyAccountError(Exception):
+    """Raised when a money account name already exists for the entity."""
+
+
+def gl_balance_kurus(
+    session: Session, account_id: uuid.UUID, normal_balance: AccountNormalBalance
+) -> int:
+    """Signed GL balance for one account from posted journal lines."""
+    rows = session.execute(
+        select(JournalEntryLine.side, func.coalesce(func.sum(JournalEntryLine.amount_kurus), 0))
+        .where(JournalEntryLine.account_id == account_id)
+        .group_by(JournalEntryLine.side)
+    ).all()
+    debits = credits = 0
+    for side, total in rows:
+        if side == AccountNormalBalance.DEBIT:
+            debits = int(total)
+        else:
+            credits = int(total)
+    if normal_balance == AccountNormalBalance.DEBIT:
+        return debits - credits
+    return credits - debits
+
+
+def rollup_child_balances(balances: list[int]) -> int:
+    """Parent bucket balance = sum of active child GL balances."""
+    return sum(balances)
+
+
+def _next_sub_account_code(session: Session, parent: Account) -> str:
+    parent_num = int(parent.code)
+    child_codes = session.scalars(
+        select(Account.code).where(Account.parent_account_id == parent.id)
+    ).all()
+    if not child_codes:
+        return str(parent_num + 1)
+    return str(max(int(code) for code in child_codes) + 1)
+
+
+def _get_bucket_account(session: Session, kind: MoneyAccountKind) -> Account:
+    bucket_code = BUCKET_CODE_BY_KIND[kind]
+    bucket = session.scalar(select(Account).where(Account.code == bucket_code))
+    if bucket is None:
+        raise ChartNotSeededError(
+            f"Chart not seeded — bucket account {bucket_code} not found. "
+            "Seed the chart of accounts before creating money accounts."
+        )
+    return bucket
+
+
+def _to_read(session: Session, money_account: MoneyAccount, gl_account: Account) -> MoneyAccountRead:
+    balance = gl_balance_kurus(session, gl_account.id, gl_account.normal_balance)
+    return MoneyAccountRead(
+        id=money_account.id,
+        entity_id=money_account.entity_id,
+        account_kind=money_account.account_kind,
+        name=money_account.name,
+        gl_account_id=gl_account.id,
+        gl_account_code=gl_account.code,
+        bank_name=money_account.bank_name,
+        iban=money_account.iban,
+        last_four=money_account.last_four,
+        is_active=money_account.is_active,
+        balance_kurus=balance,
+        created_at=money_account.created_at,
+        updated_at=money_account.updated_at,
+    )
+
+
+def create_money_account(
+    session: Session, entity_id: uuid.UUID, payload: MoneyAccountCreate
+) -> MoneyAccountRead:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        bucket = _get_bucket_account(session, payload.account_kind)
+        code = _next_sub_account_code(session, bucket)
+
+        gl_account = Account(
+            code=code,
+            name_en=payload.name,
+            name_tr=payload.name,
+            account_type=bucket.account_type,
+            normal_balance=bucket.normal_balance,
+            accepts_opening_balance=True,
+            parent_account_id=bucket.id,
+        )
+        session.add(gl_account)
+        session.flush()
+
+        money_account = MoneyAccount(
+            account_kind=payload.account_kind,
+            name=payload.name,
+            gl_account_id=gl_account.id,
+            bank_name=payload.bank_name,
+            iban=payload.iban,
+            last_four=payload.last_four,
+        )
+        session.add(money_account)
+        try:
+            session.commit()
+        except IntegrityError as exc:
+            session.rollback()
+            raise DuplicateMoneyAccountError(
+                f"Money account named {payload.name!r} already exists for this entity"
+            ) from exc
+        session.refresh(money_account)
+        session.refresh(gl_account)
+        return _to_read(session, money_account, gl_account)
+
+
+def list_money_accounts(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    account_kind: MoneyAccountKind | None = None,
+    include_inactive: bool = False,
+) -> list[MoneyAccountRead]:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        query = select(MoneyAccount).order_by(MoneyAccount.name)
+        if account_kind is not None:
+            query = query.where(MoneyAccount.account_kind == account_kind)
+        if not include_inactive:
+            query = query.where(MoneyAccount.is_active.is_(True))
+
+        results: list[MoneyAccountRead] = []
+        for money_account in session.scalars(query):
+            gl_account = session.get(Account, money_account.gl_account_id)
+            assert gl_account is not None
+            results.append(_to_read(session, money_account, gl_account))
+        return results
+
+
+def get_money_account(
+    session: Session, entity_id: uuid.UUID, money_account_id: uuid.UUID
+) -> MoneyAccountRead:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        money_account = session.get(MoneyAccount, money_account_id)
+        if money_account is None:
+            raise LookupError("Money account not found")
+        gl_account = session.get(Account, money_account.gl_account_id)
+        assert gl_account is not None
+        return _to_read(session, money_account, gl_account)
+
+
+def update_money_account(
+    session: Session,
+    entity_id: uuid.UUID,
+    money_account_id: uuid.UUID,
+    payload: MoneyAccountUpdate,
+) -> MoneyAccountRead:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        money_account = session.get(MoneyAccount, money_account_id)
+        if money_account is None:
+            raise LookupError("Money account not found")
+
+        gl_account = session.get(Account, money_account.gl_account_id)
+        assert gl_account is not None
+
+        if payload.name is not None:
+            money_account.name = payload.name
+            gl_account.name_en = payload.name
+            gl_account.name_tr = payload.name
+        if payload.bank_name is not None:
+            money_account.bank_name = payload.bank_name
+        if payload.iban is not None:
+            money_account.iban = payload.iban
+        if payload.last_four is not None:
+            money_account.last_four = payload.last_four
+        if payload.is_active is not None:
+            money_account.is_active = payload.is_active
+            gl_account.is_active = payload.is_active
+
+        try:
+            session.commit()
+        except IntegrityError as exc:
+            session.rollback()
+            raise DuplicateMoneyAccountError(
+                f"Money account named {payload.name!r} already exists for this entity"
+            ) from exc
+        session.refresh(money_account)
+        session.refresh(gl_account)
+        return _to_read(session, money_account, gl_account)
+
+
+def _build_branch(
+    session: Session,
+    kind: MoneyAccountKind,
+    *,
+    include_inactive: bool = False,
+) -> MoneyAccountTreeBranch:
+    bucket = _get_bucket_account(session, kind)
+    query = (
+        select(MoneyAccount)
+        .where(MoneyAccount.account_kind == kind)
+        .order_by(MoneyAccount.name)
+    )
+    if not include_inactive:
+        query = query.where(MoneyAccount.is_active.is_(True))
+
+    leaves: list[MoneyAccountTreeLeaf] = []
+    child_balances: list[int] = []
+    for money_account in session.scalars(query):
+        gl_account = session.get(Account, money_account.gl_account_id)
+        assert gl_account is not None
+        balance = gl_balance_kurus(session, gl_account.id, gl_account.normal_balance)
+        child_balances.append(balance)
+        leaves.append(
+            MoneyAccountTreeLeaf(
+                id=money_account.id,
+                name=money_account.name,
+                account_kind=money_account.account_kind,
+                gl_account_id=gl_account.id,
+                gl_account_code=gl_account.code,
+                bank_name=money_account.bank_name,
+                iban=money_account.iban,
+                last_four=money_account.last_four,
+                is_active=money_account.is_active,
+                balance_kurus=balance,
+            )
+        )
+
+    return MoneyAccountTreeBranch(
+        bucket_code=bucket.code,
+        bucket_name_en=bucket.name_en,
+        bucket_name_tr=bucket.name_tr,
+        bucket_gl_account_id=bucket.id,
+        balance_kurus=rollup_child_balances(child_balances),
+        accounts=leaves,
+    )
+
+
+def get_account_tree(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    include_inactive: bool = False,
+) -> MoneyAccountTree:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        return MoneyAccountTree(
+            banks=_build_branch(
+                session, MoneyAccountKind.BANK, include_inactive=include_inactive
+            ),
+            cash=_build_branch(
+                session, MoneyAccountKind.CASH, include_inactive=include_inactive
+            ),
+        )
