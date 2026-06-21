@@ -52,6 +52,17 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Immutability:** `source` is immutable after post (ORM + DB trigger). No PATCH on entries.
 
+## 2026-06-21 — e-Fatura read into draft (no posting)
+
+**Choice:** `features/invoices/` with `invoice_drafts` table (entity-scoped RLS). Upload via `POST .../invoices/efatura/draft` (multipart). Prefer UBL-TR XML (`extract_efatura_xml`); PDF v1 uses fixture registry for tests and optional `pypdf` text + regex heuristics for common GİB layouts. Unknown/unreadable PDFs return 422 — full vision OCR deferred.
+
+**Why:** Decisions §7 — supplier invoices from e-Fatura; prefer XML, fall back to PDF; per-rate KDV breakdown; net + VAT = gross check. Decisions §8 — SHA256 `file_fingerprint` for duplicate detection per entity. Slice is **read into draft only** — no ledger posting, payables, or supplier master.
+
+**Duplicate handling:** Same fingerprint + entity → HTTP 409 with `existing_draft_id`. Cross-entity: same file allowed (fingerprint scoped per entity).
+
+**Math:** `validate_invoice_totals()` — integer kuruş, zero tolerance.
+
+**Storage:** `adapters/storage/local.py` writes to configurable `upload_dir` (default `data/uploads/`).
 
 ## 2026-06-21 — Opening balance validate API blocks unmodeled categories
 

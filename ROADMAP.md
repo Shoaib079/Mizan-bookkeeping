@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
-| **Active slice** | Read e-Fatura invoice (PDF) into draft |
-| **Last completed slice** | Basic manual journals |
-| **Last commit/tag** | `4b12469` / `v0.8.0-phase1-manual-journals` |
-| **Next up** | Read e-Fatura invoice (PDF) into draft |
+| **Active slice** | Phase 1 sign-off (all slices done) |
+| **Last completed slice** | Read e-Fatura invoice (PDF) into draft |
+| **Last commit/tag** | pending / `v0.9.0-phase1-efatura-draft` |
+| **Next up** | Phase 2 — Supplier master (after owner sign-off) |
 
 ---
 
@@ -47,9 +47,9 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 | Void / reverse (no hard deletes) | done | `void_journal_entry`, immutability ORM + DB triggers, 7 tests |
 | Ledger DB immutability (bootstrap + void gate) | done | `ledger_immutability.py`, bootstrap triggers, audit append-only, raw SQL tests |
 | Basic manual journals | done | `JournalEntrySource`, `POST/GET .../manual-journals`, void; generic post removed |
-| Read e-Fatura invoice (PDF) into draft | not started | |
+| Read e-Fatura invoice (PDF) into draft | done | `invoice_drafts`, UBL-TR XML parser, PDF stub/heuristics, duplicate fingerprint, 11 tests |
 
-**Phase 1 complete when:** all slices above done, tested, committed, owner sign-off.
+**Phase 1 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 1 COMPLETE (pending owner sign-off).**
 
 ---
 

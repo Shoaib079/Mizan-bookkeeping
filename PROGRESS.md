@@ -5,20 +5,21 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 1 — Ledger core + supplier invoices |
-| **Last completed slice** | Basic manual journals |
-| **Next slice** | Read e-Fatura invoice (PDF) into draft |
+| **Last completed slice** | Read e-Fatura invoice (PDF) into draft |
+| **Next slice** | Phase 2 — Supplier master (after owner sign-off) |
 | **Branch** | `main` |
-| **Last tag** | `v0.8.0-phase1-manual-journals` (`4b12469`) |
+| **Last tag** | `v0.9.0-phase1-efatura-draft` (pending commit) |
 
 ## Resume point
 
-After sign-off: implement read e-Fatura invoice (PDF) into draft slice.
+After sign-off: start Phase 2 — Supplier master (per entity).
 
 ## Session notes
 
-- **Manual journals:** `JournalEntrySource` on `journal_entries` (`manual`, `opening_balance`, `invoice`, `system`); manual flow stamps `manual`; void reversals stamp `system`
-- **API:** `POST/GET /entities/{id}/manual-journals`, `GET .../{entry_id}`, `POST .../{entry_id}/void`; list filters `status`, `from`, `to`; lines include account code/name
-- **Posting:** `post_journal_entry(..., source=...)` required; single boundary unchanged
-- **Deprecated:** `POST /entities/{id}/ledger/entries` removed — use manual-journals; ledger void route retained
-- **Alembic:** `007_journal_entry_source`
-- **59 pytest** green
+- **Invoice drafts:** `invoice_drafts` table with RLS; SHA256 `file_fingerprint` per entity; status `draft` / `duplicate` / `needs_review`
+- **Extraction:** UBL-TR XML via `adapters/ocr_ai/efatura.py` (stdlib `xml.etree`); PDF v1 via fixture registry + optional `pypdf` text heuristics; full vision OCR deferred
+- **Validation:** integer kuruş math — `net + sum(vat) == gross`; duplicate upload → HTTP 409
+- **API:** `POST .../invoices/efatura/draft` (multipart), `GET .../invoices/drafts`, `GET .../invoices/drafts/{id}`
+- **Storage:** `adapters/storage/local.py` → `data/uploads/{entity_id}/{fingerprint}.{ext}`
+- **Alembic:** `008_invoice_drafts`
+- **70 pytest** green

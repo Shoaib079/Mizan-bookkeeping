@@ -7,6 +7,7 @@ from app.features.entities.api import router as entities_router
 from app.features.chart_of_accounts.api import router as chart_of_accounts_router
 from app.features.ledger.api import router as ledger_router
 from app.features.manual_journals.api import router as manual_journals_router
+from app.features.invoices.api import router as invoices_router
 from app.features.onboarding.api import router as onboarding_router
 from app.features.onboarding.chart_api import router as chart_router
 
@@ -31,6 +32,7 @@ app.include_router(entities_router)
 app.include_router(chart_of_accounts_router)
 app.include_router(ledger_router)
 app.include_router(manual_journals_router)
+app.include_router(invoices_router)
 app.include_router(onboarding_router)
 app.include_router(chart_router)
 

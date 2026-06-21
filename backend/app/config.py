@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan"
     test_database_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan_test"
     database_admin_url: str = "postgresql+psycopg://postgres@localhost:5432/postgres"
+    upload_dir: str = "data/uploads"
 
 
 settings = Settings()
