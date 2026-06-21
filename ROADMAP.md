@@ -15,7 +15,7 @@
 | **Active phase** | Phase 3 — Banking hub + bank statements |
 | **Active slice** | Opening balances — not started |
 | **Last completed slice** | Transfer linking (own-account) |
-| **Last commit/tag** | (pending commit) / `v0.19.0-phase3-transfer-linking` |
+| **Last commit/tag** | `be3a063` / `v0.19.0-phase3-transfer-linking` |
 | **Next up** | Opening balances |
 
 ---
