@@ -15,7 +15,7 @@
 | **Active phase** | Phase 4 — POS settlement + credit cards |
 | **Active slice** | Phase 4 Slice 3 complete — pending owner sign-off |
 | **Last completed slice** | Card sales → bank deposit reconciliation |
-| **Last commit/tag** | pending / `v0.24.0-phase4-card-sales-reconciliation` |
+| **Last commit/tag** | `74ac0b3` / `v0.24.0-phase4-card-sales-reconciliation` |
 | **Next up** | Phase 4 owner sign-off; then Phase 5 or deferred Phase 4 items (`bank_fee`, `credit_card_payment`) |
 
 ---
