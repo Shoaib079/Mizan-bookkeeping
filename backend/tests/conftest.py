@@ -33,7 +33,7 @@ def db_session(test_engine) -> Session:
     session = sessionmaker(bind=test_engine, autoflush=False, autocommit=False)()
     yield session
     session.rollback()
-    session.execute(text("TRUNCATE entity_settings, entities CASCADE"))
+    session.execute(text("TRUNCATE accounts, entity_settings, entities CASCADE"))
     session.commit()
     session.close()
 

@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
-| **Active slice** | Chart of accounts + entity scoping |
-| **Last completed slice** | Opening-balances plan (Phase 0 complete) |
-| **Last commit/tag** | `451c57f` / `v0.4.0-phase0-complete` |
-| **Next up** | Phase 1: persist chart per entity, then posting service |
+| **Active slice** | Double-entry posting service |
+| **Last completed slice** | Chart of accounts + entity scoping |
+| **Last commit/tag** | *(this commit — v0.5.0-phase1-chart-of-accounts)* |
+| **Next up** | Single posting boundary in core/ledger |
 
 ---
 
@@ -41,7 +41,7 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| Chart of accounts + entity scoping | not started | |
+| Chart of accounts + entity scoping | done | Persisted `accounts` table, seed API, RLS |
 | Double-entry posting service (single boundary) | not started | |
 | Audit trail on all changes | not started | |
 | Void / reverse (no hard deletes) | not started | |
@@ -172,6 +172,7 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
 | 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
 | 2026-06-21 | Opening-balances plan | `451c57f` / `v0.4.0-phase0-complete` | Default chart, OB validation, wizard plan, Phase 0 done |
+| 2026-06-21 | Chart of accounts + entity scoping | *(this commit)* / `v0.5.0-phase1-chart-of-accounts` | Persisted accounts, seed/list API, RLS isolation |
 
 ---
 

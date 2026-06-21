@@ -31,7 +31,7 @@ Each line uses the account’s **natural balance side** (debit for assets, credi
 ## Onboarding wizard (order)
 
 1. **Entity created** — registry row (`entities` table) ✓ Phase 0
-2. **Seed chart** — copy default chart into entity-scoped `accounts` (Phase 1)
+2. **Seed chart** — copy default chart into entity-scoped `accounts` (Phase 1) ✓ `POST .../chart-of-accounts/seed`
 3. **Delivery settings** — entity settings: enabled platforms (Getir, Yemeksepeti, Trendyol)
 4. **Bank / card / cash accounts** — named sub-accounts under tree (Phase 3)
 5. **Opening balances** — enter figures per account; validate via API

@@ -3,7 +3,7 @@
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-RLS_TABLES = ("entity_settings",)
+RLS_TABLES = ("entity_settings", "accounts")
 
 
 def apply_entity_rls(connection: Connection) -> None:

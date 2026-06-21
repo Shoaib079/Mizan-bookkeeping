@@ -13,3 +13,5 @@ Phase 0 — **App scaffold & repo setup**: FastAPI backend with `core/` layout a
 Phase 0 — **Multi-restaurant foundation**: `Entity` registry; `EntityScopedMixin`; PostgreSQL RLS; `entity_context()`; 6 isolation tests (12 pytest total).
 
 Phase 0 — **Opening-balances plan**: `docs/OPENING_BALANCES.md`; default restaurant chart seed; opening balance validation + day-one journal draft; onboarding validate API; **Phase 0 complete** (21 pytest total).
+
+Phase 1 — **Chart of accounts + entity scoping**: persisted `accounts` per entity; seed/list API; Alembic `002_accounts_rls`; RLS isolation tests (27 pytest total).
