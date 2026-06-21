@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
-| **Active slice** | Basic manual journals |
-| **Last completed slice** | Ledger DB immutability (bootstrap + void gate) |
-| **Last commit/tag** | `46869cf` / `v0.7.1-phase1-ledger-db-immutability` |
-| **Next up** | Basic manual journals |
+| **Active slice** | Read e-Fatura invoice (PDF) into draft |
+| **Last completed slice** | Basic manual journals |
+| **Last commit/tag** | (pending) / `v0.8.0-phase1-manual-journals` |
+| **Next up** | Read e-Fatura invoice (PDF) into draft |
 
 ---
 
@@ -46,7 +46,7 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 | Audit trail on all changes | done | `ledger_audit_events`; actor_id on post/void; RLS |
 | Void / reverse (no hard deletes) | done | `void_journal_entry`, immutability ORM + DB triggers, 7 tests |
 | Ledger DB immutability (bootstrap + void gate) | done | `ledger_immutability.py`, bootstrap triggers, audit append-only, raw SQL tests |
-| Basic manual journals | not started | |
+| Basic manual journals | done | `JournalEntrySource`, `POST/GET .../manual-journals`, void; generic post removed |
 | Read e-Fatura invoice (PDF) into draft | not started | |
 
 **Phase 1 complete when:** all slices above done, tested, committed, owner sign-off.
@@ -174,6 +174,7 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
 | 2026-06-21 | Opening-balances plan | `451c57f` / `v0.4.0-phase0-complete` | Default chart, OB validation, wizard plan, Phase 0 done |
 | 2026-06-21 | Chart of accounts + entity scoping | `781b7f0` / `v0.5.0-phase1-chart-of-accounts` | Persisted accounts, seed/list API, RLS isolation |
+| 2026-06-21 | Basic manual journals | (pending) / `v0.8.0-phase1-manual-journals` | Entry source typing, manual-journals CRUD API, 59 pytest |
 
 ---
 

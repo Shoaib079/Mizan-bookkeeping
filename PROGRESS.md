@@ -5,21 +5,20 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 1 — Ledger core + supplier invoices |
-| **Last completed slice** | Ledger DB immutability (bootstrap + void gate) |
-| **Next slice** | Basic manual journals |
+| **Last completed slice** | Basic manual journals |
+| **Next slice** | Read e-Fatura invoice (PDF) into draft |
 | **Branch** | `main` |
-| **Last tag** | `v0.7.1-phase1-ledger-db-immutability` (`46869cf`) |
+| **Last tag** | `v0.8.0-phase1-manual-journals` (pending commit) |
 
 ## Resume point
 
-After sign-off: implement basic manual journals UI/API slice.
+After sign-off: implement read e-Fatura invoice (PDF) into draft slice.
 
 ## Session notes
 
-- **DB immutability:** centralized `apply_ledger_immutability()` in bootstrap + Alembic `006`; void metadata gate via `app.journal_void_update`; `ledger_audit_events` append-only at DB
-- **Immutability:** posted `journal_entries` / lines cannot be edited or deleted (ORM events + PostgreSQL triggers); void metadata updates only via `void_journal_entry` with gate
-- **Void/reverse:** `void_journal_entry()` posts balanced reversing entry linked via `reverses_entry_id` / `reversed_by_entry_id`; original marked `voided`
-- **Audit:** `ledger_audit_events` records post/void with `actor_id`, timestamp, optional reason; entity-scoped RLS
-- **API:** `POST /entities/{id}/ledger/entries` (requires `actor_id`); `POST /entities/{id}/ledger/entries/{entry_id}/void`
-- **Alembic:** `005_ledger_void_audit`, `006_ledger_immutability_bootstrap`
-- **52 pytest** green
+- **Manual journals:** `JournalEntrySource` on `journal_entries` (`manual`, `opening_balance`, `invoice`, `system`); manual flow stamps `manual`; void reversals stamp `system`
+- **API:** `POST/GET /entities/{id}/manual-journals`, `GET .../{entry_id}`, `POST .../{entry_id}/void`; list filters `status`, `from`, `to`; lines include account code/name
+- **Posting:** `post_journal_entry(..., source=...)` required; single boundary unchanged
+- **Deprecated:** `POST /entities/{id}/ledger/entries` removed — use manual-journals; ledger void route retained
+- **Alembic:** `007_journal_entry_source`
+- **59 pytest** green

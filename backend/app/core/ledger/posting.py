@@ -15,6 +15,7 @@ from app.core.ledger.models import (
     ImmutableJournalError,
     JournalEntry,
     JournalEntryLine,
+    JournalEntrySource,
     JournalEntryStatus,
     LedgerAuditAction,
     LedgerAuditEvent,
@@ -124,11 +125,13 @@ def _persist_journal_entry(
     description: str,
     lines: list[PostingLine],
     *,
+    source: JournalEntrySource,
     reverses_entry_id: uuid.UUID | None = None,
 ) -> JournalEntry:
     entry = JournalEntry(
         entry_date=entry_date,
         description=description,
+        source=source,
         reverses_entry_id=reverses_entry_id,
     )
     session.add(entry)
@@ -174,6 +177,7 @@ def post_journal_entry(
     lines: list[PostingLine],
     *,
     actor_id: uuid.UUID,
+    source: JournalEntrySource,
 ) -> JournalEntry:
     """The ONE posting boundary. Requires entity_context(entity_id) via wrapper."""
     validate_posting_lines(lines)
@@ -182,7 +186,9 @@ def post_journal_entry(
         require_entity_context()
         _validate_accounts(session, entity_id, lines)
 
-        entry = _persist_journal_entry(session, entry_date, description, lines)
+        entry = _persist_journal_entry(
+            session, entry_date, description, lines, source=source
+        )
         _record_audit_event(session, entry.id, LedgerAuditAction.POST, actor_id)
 
         session.commit()
@@ -230,6 +236,7 @@ def void_journal_entry(
             effective_void_date,
             f"Void: {original.description}",
             reversal_lines,
+            source=JournalEntrySource.SYSTEM,
             reverses_entry_id=original.id,
         )
         _record_audit_event(

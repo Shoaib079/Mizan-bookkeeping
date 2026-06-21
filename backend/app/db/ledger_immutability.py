@@ -28,6 +28,7 @@ BEGIN
     IF OLD.entry_date IS DISTINCT FROM NEW.entry_date
        OR OLD.description IS DISTINCT FROM NEW.description
        OR OLD.entity_id IS DISTINCT FROM NEW.entity_id
+       OR OLD.source IS DISTINCT FROM NEW.source
        OR OLD.created_at IS DISTINCT FROM NEW.created_at
        OR OLD.reverses_entry_id IS DISTINCT FROM NEW.reverses_entry_id
     THEN

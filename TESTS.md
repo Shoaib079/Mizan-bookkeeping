@@ -12,6 +12,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_chart_of_accounts.py` | Per-entity chart seed, RLS isolation, API | pass |
 | `backend/tests/test_ledger_posting.py` | Single posting boundary — balanced/unbalanced/zero/cross-entity, immutability, void/reverse, audit, API | pass |
 | `backend/tests/test_ledger_db_immutability.py` | PostgreSQL triggers block raw SQL UPDATE/DELETE on entries, lines, audit; void gate | pass |
+| `backend/tests/test_manual_journals.py` | Manual journal API — source=manual, list/get filters, cross-entity isolation, void | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 

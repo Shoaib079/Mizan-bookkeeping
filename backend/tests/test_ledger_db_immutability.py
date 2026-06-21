@@ -11,7 +11,7 @@ from sqlalchemy.exc import DBAPIError
 
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
-from app.core.ledger.models import JournalEntry, JournalEntryLine, LedgerAuditAction, LedgerAuditEvent
+from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource, LedgerAuditAction, LedgerAuditEvent
 from app.core.ledger.posting import PostingLine, post_journal_entry, void_journal_entry
 from app.db.session import entity_context
 
@@ -44,6 +44,7 @@ def _post_sample_entry(db_session, restaurant_a, seeded_accounts, actor_id) -> J
             PostingLine(ap_id, 100_00, AccountNormalBalance.CREDIT),
         ],
         actor_id=actor_id,
+        source=JournalEntrySource.MANUAL,
     )
 
 

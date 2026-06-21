@@ -21,3 +21,5 @@ Phase 1 — **Double-entry posting service**: `journal_entries` + `journal_entry
 Phase 1 — **Ledger immutability, void/reverse, audit trail**: posted entries immutable (ORM + DB triggers); `void_journal_entry()` posts linked reversal; `ledger_audit_events` with `actor_id`; `POST /entities/{id}/ledger/entries/{entry_id}/void`; Alembic `005_ledger_void_audit` (44 pytest total). Tag `v0.7.0-phase1-ledger-void-audit`.
 
 Phase 1 — **Ledger DB immutability (bootstrap + void gate)**: centralized `apply_ledger_immutability()` wired into test/dev bootstrap and Alembic `006`; void metadata updates require transaction-local `app.journal_void_update` gate; `ledger_audit_events` append-only at DB; 8 raw-SQL immutability tests (52 pytest total). Tag `v0.7.1-phase1-ledger-db-immutability`.
+
+Phase 1 — **Basic manual journals**: `JournalEntrySource` column on `journal_entries`; dedicated `manual-journals` API (create, list, get, void) with account enrichment on lines; `post_journal_entry(..., source=...)`; generic `POST .../ledger/entries` removed in favour of typed routes; 7 manual-journal tests (59 pytest total). Tag `v0.8.0-phase1-manual-journals`.

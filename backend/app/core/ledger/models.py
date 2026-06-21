@@ -40,6 +40,13 @@ class JournalEntryStatus(str, enum.Enum):
     VOIDED = "voided"
 
 
+class JournalEntrySource(str, enum.Enum):
+    MANUAL = "manual"
+    OPENING_BALANCE = "opening_balance"
+    INVOICE = "invoice"
+    SYSTEM = "system"
+
+
 class LedgerAuditAction(str, enum.Enum):
     POST = "post"
     VOID = "void"
@@ -55,6 +62,11 @@ class JournalEntry(EntityScopedMixin, Base):
         Enum(JournalEntryStatus, name="journal_entry_status", native_enum=False, length=16),
         nullable=False,
         default=JournalEntryStatus.POSTED,
+    )
+    source: Mapped[JournalEntrySource] = mapped_column(
+        Enum(JournalEntrySource, name="journal_entry_source", native_enum=False, length=32),
+        nullable=False,
+        default=JournalEntrySource.MANUAL,
     )
     reverses_entry_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),

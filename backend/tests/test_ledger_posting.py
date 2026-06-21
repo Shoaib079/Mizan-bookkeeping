@@ -15,6 +15,7 @@ from app.core.ledger.models import (
     ImmutableJournalError,
     JournalEntry,
     JournalEntryLine,
+    JournalEntrySource,
     JournalEntryStatus,
     LedgerAuditAction,
     LedgerAuditEvent,
@@ -60,6 +61,7 @@ def test_balanced_post_succeeds(db_session, restaurant_a, seeded_accounts, actor
             PostingLine(ap_id, 1_000_000, AccountNormalBalance.CREDIT),
         ],
         actor_id=actor_id,
+        source=JournalEntrySource.MANUAL,
     )
     assert entry.entity_id == restaurant_a.id
     assert entry.status == JournalEntryStatus.POSTED
@@ -87,6 +89,7 @@ def test_unbalanced_post_rejected(db_session, restaurant_a, seeded_accounts, act
                 PostingLine(ap_id, 999_999, AccountNormalBalance.CREDIT),
             ],
             actor_id=actor_id,
+            source=JournalEntrySource.MANUAL,
         )
 
 
@@ -104,6 +107,7 @@ def test_zero_amount_rejected(db_session, restaurant_a, seeded_accounts, actor_i
                 PostingLine(ap_id, 100, AccountNormalBalance.CREDIT),
             ],
             actor_id=actor_id,
+            source=JournalEntrySource.MANUAL,
         )
 
 
@@ -131,6 +135,7 @@ def test_cross_entity_account_rejected(
                 PostingLine(a_ap_id, 500_00, AccountNormalBalance.CREDIT),
             ],
             actor_id=actor_id,
+            source=JournalEntrySource.MANUAL,
         )
 
 
@@ -149,6 +154,7 @@ def test_entity_b_cannot_see_entity_a_journal(
             PostingLine(equity_id, 100_00, AccountNormalBalance.CREDIT),
         ],
         actor_id=actor_id,
+        source=JournalEntrySource.MANUAL,
     )
     seed_default_chart(db_session, restaurant_b.id)
 
@@ -161,7 +167,7 @@ def test_api_post_entry(client: TestClient, restaurant_a, seeded_accounts, actor
     bank_id = seeded_accounts["1100"]
     ap_id = seeded_accounts["2000"]
     response = client.post(
-        f"/entities/{restaurant_a.id}/ledger/entries",
+        f"/entities/{restaurant_a.id}/manual-journals",
         json={
             "entry_date": "2026-01-01",
             "description": "Test post",
@@ -184,7 +190,9 @@ def test_api_post_entry(client: TestClient, restaurant_a, seeded_accounts, actor
     body = response.json()
     assert body["entity_id"] == str(restaurant_a.id)
     assert body["status"] == "posted"
+    assert body["source"] == "manual"
     assert len(body["lines"]) == 2
+    assert body["lines"][0]["account_code"] == "1100"
 
 
 def test_posted_entry_cannot_be_edited(
@@ -202,6 +210,7 @@ def test_posted_entry_cannot_be_edited(
             PostingLine(ap_id, 100_00, AccountNormalBalance.CREDIT),
         ],
         actor_id=actor_id,
+        source=JournalEntrySource.MANUAL,
     )
     entry.description = "Changed"
     with entity_context(db_session, restaurant_a.id):
@@ -224,6 +233,7 @@ def test_posted_entry_cannot_be_deleted(
             PostingLine(ap_id, 100_00, AccountNormalBalance.CREDIT),
         ],
         actor_id=actor_id,
+        source=JournalEntrySource.MANUAL,
     )
     with entity_context(db_session, restaurant_a.id):
         db_session.delete(entry)
@@ -246,6 +256,7 @@ def test_posted_line_cannot_be_edited(
             PostingLine(ap_id, 100_00, AccountNormalBalance.CREDIT),
         ],
         actor_id=actor_id,
+        source=JournalEntrySource.MANUAL,
     )
     line = entry.lines[0]
     line.amount_kurus = 200_00
@@ -287,6 +298,7 @@ def test_void_reversal_nets_to_zero_and_both_visible(
             PostingLine(ap_id, 500_00, AccountNormalBalance.CREDIT),
         ],
         actor_id=actor_id,
+        source=JournalEntrySource.MANUAL,
     )
 
     voided, reversal = void_journal_entry(
@@ -325,6 +337,7 @@ def test_void_twice_rejected(db_session, restaurant_a, seeded_accounts, actor_id
             PostingLine(ap_id, 100_00, AccountNormalBalance.CREDIT),
         ],
         actor_id=actor_id,
+        source=JournalEntrySource.MANUAL,
     )
     void_journal_entry(
         db_session, restaurant_a.id, original.id, actor_id=actor_id
@@ -350,6 +363,7 @@ def test_audit_trail_on_post_and_void(
             PostingLine(ap_id, 300_00, AccountNormalBalance.CREDIT),
         ],
         actor_id=actor_id,
+        source=JournalEntrySource.MANUAL,
     )
 
     with entity_context(db_session, restaurant_a.id):
@@ -403,7 +417,7 @@ def test_api_void_entry(client: TestClient, restaurant_a, seeded_accounts, actor
     bank_id = seeded_accounts["1100"]
     ap_id = seeded_accounts["2000"]
     post_response = client.post(
-        f"/entities/{restaurant_a.id}/ledger/entries",
+        f"/entities/{restaurant_a.id}/manual-journals",
         json={
             "entry_date": "2026-01-01",
             "description": "API void test",
@@ -417,7 +431,7 @@ def test_api_void_entry(client: TestClient, restaurant_a, seeded_accounts, actor
     entry_id = post_response.json()["id"]
 
     void_response = client.post(
-        f"/entities/{restaurant_a.id}/ledger/entries/{entry_id}/void",
+        f"/entities/{restaurant_a.id}/manual-journals/{entry_id}/void",
         json={"actor_id": str(actor_id), "reason": "Test void"},
     )
     assert void_response.status_code == 200

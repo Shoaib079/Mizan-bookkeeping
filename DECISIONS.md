@@ -42,6 +42,16 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Why:** v0.7.0 triggers existed only via Alembic; test/dev bootstrap used `create_all` without triggers, so raw SQL could bypass ORM listeners. Hardening closes that gap without new product surface.
 
+## 2026-06-21 — Manual journals via dedicated API + entry source typing
+
+**Choice:** Add `JournalEntrySource` on `journal_entries` (`manual`, `opening_balance`, `invoice`, `system`). Accountant adjustments use `features/manual_journals/` with `POST/GET /entities/{id}/manual-journals` (list/get/void). All posts go through `post_journal_entry(..., source=...)`. Void reversals stamp `source=system`.
+
+**Why:** Decisions §1 — manual journals are a distinct, audited flow; source typing lets list/filter exclude automated entries (invoices, opening balances, void reversals) without ad-hoc flags.
+
+**API migration:** Removed generic `POST .../ledger/entries` (no source typing). Kept `POST .../ledger/entries/{id}/void` for ledger-wide void; manual-journals also exposes `POST .../manual-journals/{id}/void` with enriched response (account code/name on lines).
+
+**Immutability:** `source` is immutable after post (ORM + DB trigger). No PATCH on entries.
+
 
 ## 2026-06-21 — Opening balance validate API blocks unmodeled categories
 

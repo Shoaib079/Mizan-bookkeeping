@@ -1,4 +1,4 @@
-"""Ledger API schemas."""
+"""Manual journal API schemas."""
 
 from __future__ import annotations
 
@@ -9,38 +9,27 @@ from pydantic import BaseModel, Field
 
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntrySource, JournalEntryStatus
+from app.features.ledger.schema import PostingLineIn, VoidJournalEntryRequest
 
 
-class PostingLineIn(BaseModel):
-    account_id: uuid.UUID
-    amount_kurus: int = Field(gt=0)
-    side: AccountNormalBalance
-
-
-class PostJournalEntryRequest(BaseModel):
+class CreateManualJournalRequest(BaseModel):
     entry_date: date
     description: str = Field(max_length=512)
     lines: list[PostingLineIn] = Field(min_length=2)
     actor_id: uuid.UUID
 
 
-class VoidJournalEntryRequest(BaseModel):
-    actor_id: uuid.UUID
-    reason: str | None = Field(default=None, max_length=512)
-    void_date: date | None = None
-
-
-class JournalEntryLineOut(BaseModel):
+class ManualJournalLineOut(BaseModel):
     id: uuid.UUID
     account_id: uuid.UUID
+    account_code: str
+    account_name_en: str
     amount_kurus: int
     side: AccountNormalBalance
     line_number: int
 
-    model_config = {"from_attributes": True}
 
-
-class JournalEntryOut(BaseModel):
+class ManualJournalOut(BaseModel):
     id: uuid.UUID
     entity_id: uuid.UUID
     entry_date: date
@@ -51,11 +40,24 @@ class JournalEntryOut(BaseModel):
     reversed_by_entry_id: uuid.UUID | None
     voided_at: datetime | None
     created_at: datetime
-    lines: list[JournalEntryLineOut]
-
-    model_config = {"from_attributes": True}
+    lines: list[ManualJournalLineOut]
 
 
-class VoidJournalEntryOut(BaseModel):
-    original: JournalEntryOut
-    reversal: JournalEntryOut
+class ManualJournalListOut(BaseModel):
+    items: list[ManualJournalOut]
+    total: int
+
+
+class ManualJournalVoidOut(BaseModel):
+    original: ManualJournalOut
+    reversal: ManualJournalOut
+
+
+__all__ = [
+    "CreateManualJournalRequest",
+    "ManualJournalLineOut",
+    "ManualJournalListOut",
+    "ManualJournalOut",
+    "ManualJournalVoidOut",
+    "VoidJournalEntryRequest",
+]
