@@ -12,7 +12,10 @@ from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 OPENING_BALANCE_EQUITY_CODE = "3900"
 INPUT_VAT_CODE = "1500"
 ACCOUNTS_PAYABLE_CODE = "2000"
+SALARIES_PAYABLE_CODE = "2250"
 PARTNER_REIMBURSEMENT_PAYABLE_CODE = "2150"
+SALARY_EXPENSE_CODE = "5100"
+EMPLOYEE_ADVANCES_CODE = "1300"
 CARD_SALES_CLEARING_CODE = "1400"
 SALES_REVENUE_CODE = "4000"
 BANK_CHARGES_CODE = "5300"
@@ -59,6 +62,14 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
         False,
     ),
     DefaultAccount("2200", "Loans Payable", "Krediler", AccountType.LIABILITY, AccountNormalBalance.CREDIT, True),
+    DefaultAccount(
+        SALARIES_PAYABLE_CODE,
+        "Salaries Payable",
+        "Ödenecek Maaşlar",
+        AccountType.LIABILITY,
+        AccountNormalBalance.CREDIT,
+        True,
+    ),
     # Equity
     DefaultAccount("3000", "Owner Capital", "Sermaye", AccountType.EQUITY, AccountNormalBalance.CREDIT, False),
     DefaultAccount("3100", "Retained Earnings", "Geçmiş Yıl Karları", AccountType.EQUITY, AccountNormalBalance.CREDIT, False),

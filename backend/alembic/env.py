@@ -19,6 +19,9 @@ from app.features.banking.transfer_models import AccountTransfer  # noqa: F401
 from app.features.pos.models import CardSalesBatch, PosSettlement  # noqa: F401
 from app.features.banking.credit_card_payment_models import CreditCardPayment  # noqa: F401
 from app.features.cash.models import CashDrawerSession, CashMovement  # noqa: F401
+from app.core.fx.models import FxLedgerEntry  # noqa: F401
+from app.features.staff.models import Employee  # noqa: F401
+from app.core.staff.models import StaffLedgerEntry  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

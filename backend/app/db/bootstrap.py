@@ -7,6 +7,7 @@ from app.db.base import Base
 from app.db.fx_immutability import apply_fx_immutability
 from app.db.ledger_immutability import apply_ledger_immutability
 from app.db.payables_immutability import apply_payables_immutability
+from app.db.staff_immutability import apply_staff_immutability
 from app.db.rls import apply_entity_rls
 from app.features.entities.models import Entity, EntitySetting  # noqa: F401
 from app.core.chart_of_accounts.models import Account  # noqa: F401
@@ -19,6 +20,8 @@ from app.features.banking.statement_models import BankStatement, BankStatementLi
 from app.features.banking.transfer_models import AccountTransfer  # noqa: F401
 from app.core.fx.models import FxLedgerEntry  # noqa: F401
 from app.features.cash.models import CashDrawerSession, CashMovement  # noqa: F401
+from app.features.staff.models import Employee  # noqa: F401
+from app.core.staff.models import StaffLedgerEntry  # noqa: F401
 
 
 def ensure_mizan_role_and_databases() -> None:
@@ -53,6 +56,7 @@ def init_database(url: str | None = None) -> None:
         apply_ledger_immutability(connection)
         apply_payables_immutability(connection)
         apply_fx_immutability(connection)
+        apply_staff_immutability(connection)
     engine.dispose()
 
 

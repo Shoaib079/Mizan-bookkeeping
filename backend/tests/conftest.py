@@ -38,6 +38,7 @@ def db_session(test_engine) -> Session:
             "TRUNCATE ledger_audit_events, journal_entry_lines, journal_entries, "
             "bank_statement_lines, bank_statements, account_transfers, pos_settlements, "
             "card_sales_batches, credit_card_payments, fx_ledger_entries, "
+            "staff_ledger_entries, employees, "
             "cash_movements, cash_drawer_sessions, "
             "money_accounts, accounts, "
             "invoice_drafts, supplier_ledger_entries, suppliers, entity_settings, entities CASCADE"

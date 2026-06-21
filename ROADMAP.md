@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 5 — Cash drawer, forex, staff, partner reimbursements, receivables |
-| **Active slice** | Staff (salary vs advance) |
-| **Last completed slice** | Forex (FX purchase / holding) |
-| **Last commit/tag** | `v0.27.0-phase5-forex-purchase` |
-| **Next up** | Phase 5 Slice 3 — Staff |
+| **Active slice** | Partner reimbursements |
+| **Last completed slice** | Staff (salary vs advance) |
+| **Last commit/tag** | `v0.28.0-phase5-staff` |
+| **Next up** | Phase 5 Slice 4 — Partner reimbursements |
 
 ---
 
@@ -125,7 +125,7 @@ Every statement-line classification that represents a **real GL event** must pos
 |-------|--------|-------|
 | Cash drawer | done | `post_cash_movement()` Dr/Cr cash GL + offset; EOD close posts over/short to `5400`; `cash_drawer_sessions` + `cash_movements`; day locked on close; Alembic `023`; 9 tests; 224 pytest |
 | Forex (FX purchase / holding) | done | `MoneyAccountKind.FOREIGN_CURRENCY` + `currency`; GL sub-accounts under `1010`/`1020`/`1030` (TRY cost kuruş); `fx_ledger_entries` subledger (native quantity + try_cost_kurus); `post_fx_purchase()` Dr FX / Cr TRY cash; tree `foreign_currency` branch; Alembic `024`; 10 tests; 234 pytest |
-| Staff (salary vs advance — no double-count) | not started | |
+| Staff (salary vs advance — no double-count) | done | `employees` + `staff_ledger_entries`; `2250` Salaries Payable; TRY accrual Dr `5100`/Cr `2250`; advance Dr `1300`/Cr cash; payment Dr `2250`/Cr `1300`+cash (atomic advance offset); FX accrual subledger-only; FX payment Dr `5100`/Cr FX GL + `fx_ledger` spend; Alembic `025`; 9 tests; 243 pytest |
 | Partner reimbursements | not started | |
 | Receivables | not started | |
 

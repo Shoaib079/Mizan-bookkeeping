@@ -36,10 +36,18 @@ def record_fx_movement(
     journal_entry_id: uuid.UUID,
 ) -> FxLedgerEntry:
     """Persist one FX subledger row — caller must hold entity_context and commit."""
-    if native_quantity <= 0:
-        raise ZeroFxMovementError("native_quantity must be positive")
-    if try_cost_kurus <= 0:
-        raise ZeroFxMovementError("try_cost_kurus must be positive")
+    if movement_type == FxMovementType.PURCHASE:
+        if native_quantity <= 0:
+            raise ZeroFxMovementError("purchase native_quantity must be positive")
+        if try_cost_kurus <= 0:
+            raise ZeroFxMovementError("purchase try_cost_kurus must be positive")
+    elif movement_type == FxMovementType.SPEND:
+        if native_quantity >= 0:
+            raise ZeroFxMovementError("spend native_quantity must be negative")
+        if try_cost_kurus >= 0:
+            raise ZeroFxMovementError("spend try_cost_kurus must be negative")
+    else:
+        raise ZeroFxMovementError(f"unsupported movement type {movement_type.value!r}")
 
     money_account = session.get(MoneyAccount, fx_money_account_id)
     if money_account is None:

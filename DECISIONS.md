@@ -276,3 +276,25 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Updated:** Supplier payment GL posting slice adds bank/cash GL credit via `post_supplier_payment()` — see DECISIONS payment GL entry.
 
+## 2026-06-21 — Staff salary vs advance (Phase 5 Slice 3, Decisions §16)
+
+**Choice:** Mirror supplier payables pattern — entity-wide control accounts (`2250` Salaries Payable, `1300` Employee Advances) reconciled to per-employee `staff_ledger_entries` subledger. Expense hits `5100` once: at accrual for TRY workers; at payment for FX workers (owner-entered `try_cost_kurus`).
+
+**Why:** Decisions §16 — salary is the cost; advance and payment are settlement movements. AP-style liability (`2250`) avoids double-counting expense on payment. FX ledger stays in native minor units for stability; TRY wage reporting uses `try_cost_kurus` captured at payment (and advance) time.
+
+**GL patterns (TRY):**
+1. Accrual: Dr `5100` / Cr `2250`; subledger `+amount_minor` (kuruş)
+2. Advance: Dr `1300` / Cr bank/cash GL; subledger `-amount_minor`
+3. Payment: Dr `2250` (payable cleared = cash + advance applied) / Cr `1300` (advance portion) / Cr cash (remainder); subledger `-amount_minor`; **no `5100` line**
+
+**GL patterns (FX):**
+1. Accrual: subledger `+amount_minor` (native cents) only — no GL
+2. Advance: Dr `1300` (try_cost) / Cr FX GL; `fx_ledger` spend (negative quantity/cost); subledger `-amount_minor`
+3. Payment: Dr `5100` (try_cost + advance try recognized) / Cr `1300` if advance / Cr FX GL; `fx_ledger` spend; subledger `-amount_minor`
+
+**Chart:** Added `2250` Salaries Payable (`accepts_opening_balance=true`). Alembic `025` backfills for existing entities.
+
+**API:** `/entities/{id}/staff/employees` CRUD; `POST .../accruals`, `.../advances`, `.../payments`; `GET .../ledger`.
+
+**Deferred:** Staff opening balances wizard; payroll/SGK; tips; reports UI; per-employee GL sub-accounts.
+
