@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 
 from app.config import settings
 from app.db.base import Base
+from app.db.ledger_immutability import apply_ledger_immutability
 from app.db.rls import apply_entity_rls
 from app.features.entities.models import Entity, EntitySetting  # noqa: F401
 from app.core.chart_of_accounts.models import Account  # noqa: F401
@@ -39,6 +40,7 @@ def init_database(url: str | None = None) -> None:
     Base.metadata.create_all(engine)
     with engine.begin() as connection:
         apply_entity_rls(connection)
+        apply_ledger_immutability(connection)
     engine.dispose()
 
 

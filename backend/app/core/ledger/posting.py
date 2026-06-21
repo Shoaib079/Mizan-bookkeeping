@@ -236,7 +236,7 @@ def void_journal_entry(
             session, reversal.id, LedgerAuditAction.POST, actor_id, reason=reason
         )
 
-        with journal_void_update_allowed():
+        with journal_void_update_allowed(session):
             original.status = JournalEntryStatus.VOIDED
             original.reversed_by_entry_id = reversal.id
             original.voided_at = utcnow()

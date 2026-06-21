@@ -14,8 +14,8 @@
 |-------|-------|
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
 | **Active slice** | Basic manual journals |
-| **Last completed slice** | Ledger immutability, void/reverse, audit trail |
-| **Last commit/tag** | `13e38a9` / `v0.7.0-phase1-ledger-void-audit` |
+| **Last completed slice** | Ledger DB immutability (bootstrap + void gate) |
+| **Last commit/tag** | (pending) / `v0.7.1-phase1-ledger-db-immutability` |
 | **Next up** | Basic manual journals |
 
 ---
@@ -45,6 +45,7 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 | Double-entry posting service (single boundary) | done | `post_journal_entry`, journal tables, RLS, 6 tests |
 | Audit trail on all changes | done | `ledger_audit_events`; actor_id on post/void; RLS |
 | Void / reverse (no hard deletes) | done | `void_journal_entry`, immutability ORM + DB triggers, 7 tests |
+| Ledger DB immutability (bootstrap + void gate) | done | `ledger_immutability.py`, bootstrap triggers, audit append-only, raw SQL tests |
 | Basic manual journals | not started | |
 | Read e-Fatura invoice (PDF) into draft | not started | |
 

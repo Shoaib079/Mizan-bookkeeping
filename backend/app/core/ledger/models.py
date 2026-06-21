@@ -8,8 +8,8 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import date, datetime
 
-from sqlalchemy import Date, Enum, ForeignKey, Integer, String, Uuid, event
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Date, Enum, ForeignKey, Integer, String, Uuid, event, text
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.db.base import Base, EntityScopedMixin, utcnow
@@ -22,12 +22,16 @@ class ImmutableJournalError(RuntimeError):
 
 
 @contextmanager
-def journal_void_update_allowed():
+def journal_void_update_allowed(session: Session | None = None):
     """Allow void-related updates on an otherwise immutable journal entry."""
     token = _allow_journal_void_update.set(True)
+    if session is not None:
+        session.execute(text("SELECT set_config('app.journal_void_update', '1', true)"))
     try:
         yield
     finally:
+        if session is not None:
+            session.execute(text("SELECT set_config('app.journal_void_update', '', true)"))
         _allow_journal_void_update.reset(token)
 
 
