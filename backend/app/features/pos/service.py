@@ -1,20 +1,30 @@
-"""POS settlement service — manual intake and listing (Decisions §13)."""
+"""POS service — card sales batches, settlements, reconciliation (Decisions §13)."""
 
 from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.pos.posting import post_pos_settlement
+from app.core.chart_of_accounts.default_chart import CARD_SALES_CLEARING_CODE
+from app.core.chart_of_accounts.models import Account
+from app.core.chart_of_accounts.types import AccountNormalBalance
+from app.core.pos.posting import post_card_sales_batch, post_pos_settlement
 from app.db.session import entity_context, require_entity_context
+from app.features.banking import service as banking_service
 from app.features.entities import service as entity_service
-from app.features.pos.models import PosSettlement
-from app.features.pos.schema import PosSettlementCreate, PosSettlementRead
+from app.features.pos.models import CardSalesBatch, PosSettlement
+from app.features.pos.schema import (
+    CardSalesBatchCreate,
+    CardSalesBatchRead,
+    ClearingReconciliationRead,
+    PosSettlementCreate,
+    PosSettlementRead,
+)
 
 
-def _to_read(settlement: PosSettlement) -> PosSettlementRead:
+def _to_settlement_read(settlement: PosSettlement) -> PosSettlementRead:
     return PosSettlementRead(
         id=settlement.id,
         entity_id=settlement.entity_id,
@@ -28,8 +38,57 @@ def _to_read(settlement: PosSettlement) -> PosSettlementRead:
         reference_id=settlement.reference_id,
         bank_statement_line_id=settlement.bank_statement_line_id,
         commission_kurus=settlement.commission_kurus,
+        commission_inferred=settlement.commission_inferred,
+        card_sales_batch_id=settlement.card_sales_batch_id,
         created_at=settlement.created_at,
     )
+
+
+def _to_batch_read(batch: CardSalesBatch) -> CardSalesBatchRead:
+    return CardSalesBatchRead(
+        id=batch.id,
+        entity_id=batch.entity_id,
+        sales_date=batch.sales_date,
+        gross_amount_kurus=batch.gross_amount_kurus,
+        description=batch.description,
+        actor_id=batch.actor_id,
+        journal_entry_id=batch.journal_entry_id,
+        created_at=batch.created_at,
+    )
+
+
+def create_card_sales_batch(
+    session: Session,
+    entity_id: uuid.UUID,
+    payload: CardSalesBatchCreate,
+) -> CardSalesBatchRead:
+    result = post_card_sales_batch(
+        session,
+        entity_id,
+        sales_date=payload.sales_date,
+        gross_amount_kurus=payload.gross_amount_kurus,
+        description=payload.description,
+        actor_id=payload.actor_id,
+    )
+    return _to_batch_read(result.card_sales_batch)
+
+
+def list_card_sales_batches(
+    session: Session,
+    entity_id: uuid.UUID,
+) -> list[CardSalesBatchRead]:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        batches = session.scalars(
+            select(CardSalesBatch).order_by(
+                CardSalesBatch.sales_date.desc(),
+                CardSalesBatch.created_at.desc(),
+            )
+        ).all()
+        return [_to_batch_read(batch) for batch in batches]
 
 
 def create_pos_settlement(
@@ -45,8 +104,10 @@ def create_pos_settlement(
         amount_kurus=payload.amount_kurus,
         description=payload.description,
         actor_id=payload.actor_id,
+        commission_kurus=payload.commission_kurus,
+        card_sales_batch_id=payload.card_sales_batch_id,
     )
-    return _to_read(result.pos_settlement)
+    return _to_settlement_read(result.pos_settlement)
 
 
 def list_pos_settlements(
@@ -67,7 +128,7 @@ def list_pos_settlements(
         if money_account_id is not None:
             query = query.where(PosSettlement.money_account_id == money_account_id)
         settlements = session.scalars(query).all()
-        return [_to_read(settlement) for settlement in settlements]
+        return [_to_settlement_read(settlement) for settlement in settlements]
 
 
 def get_pos_settlement(
@@ -83,4 +144,66 @@ def get_pos_settlement(
         settlement = session.get(PosSettlement, settlement_id)
         if settlement is None:
             raise LookupError("POS settlement not found")
-        return _to_read(settlement)
+        return _to_settlement_read(settlement)
+
+
+def get_clearing_reconciliation(
+    session: Session,
+    entity_id: uuid.UUID,
+) -> ClearingReconciliationRead:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+
+        clearing_account = session.scalar(
+            select(Account).where(Account.code == CARD_SALES_CLEARING_CODE)
+        )
+        if clearing_account is None:
+            raise LookupError("Card sales clearing account not found")
+
+        clearing_balance_kurus = banking_service.gl_balance_kurus(
+            session,
+            clearing_account.id,
+            AccountNormalBalance.DEBIT,
+        )
+
+        total_card_sales_kurus = int(
+            session.scalar(
+                select(func.coalesce(func.sum(CardSalesBatch.gross_amount_kurus), 0))
+            )
+            or 0
+        )
+        batch_count = int(
+            session.scalar(select(func.count()).select_from(CardSalesBatch)) or 0
+        )
+
+        total_settled_gross_kurus = int(
+            session.scalar(
+                select(
+                    func.coalesce(
+                        func.sum(
+                            PosSettlement.amount_kurus
+                            + func.coalesce(PosSettlement.commission_kurus, 0)
+                        ),
+                        0,
+                    )
+                )
+            )
+            or 0
+        )
+        settlement_count = int(
+            session.scalar(select(func.count()).select_from(PosSettlement)) or 0
+        )
+
+        in_transit_kurus = total_card_sales_kurus - total_settled_gross_kurus
+
+        return ClearingReconciliationRead(
+            clearing_balance_kurus=clearing_balance_kurus,
+            total_card_sales_kurus=total_card_sales_kurus,
+            total_settled_gross_kurus=total_settled_gross_kurus,
+            in_transit_kurus=in_transit_kurus,
+            card_sales_batch_count=batch_count,
+            pos_settlement_count=settlement_count,
+        )

@@ -17,6 +17,7 @@ RLS_TABLES = (
     "bank_statement_lines",
     "account_transfers",
     "pos_settlements",
+    "card_sales_batches",
 )
 
 

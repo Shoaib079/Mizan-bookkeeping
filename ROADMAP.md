@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 4 — POS settlement + credit cards |
-| **Active slice** | Phase 4 Slice 2 complete — pending owner sign-off |
-| **Last completed slice** | Credit card clearing accounts |
-| **Last commit/tag** | `4eecef0` / `v0.23.0-phase4-credit-card-accounts` |
-| **Next up** | Phase 4 Slice 3 — Card sales → bank deposit reconciliation |
+| **Active slice** | Phase 4 Slice 3 complete — pending owner sign-off |
+| **Last completed slice** | Card sales → bank deposit reconciliation |
+| **Last commit/tag** | pending / `v0.24.0-phase4-card-sales-reconciliation` |
+| **Next up** | Phase 4 owner sign-off; then Phase 5 or deferred Phase 4 items (`bank_fee`, `credit_card_payment`) |
 
 ---
 
@@ -112,9 +112,9 @@ Every statement-line classification that represents a **real GL event** must pos
 |-------|--------|-------|
 | POS settlement intake | done | `post_pos_settlement()` Dr bank / Cr `1400`; `pos_settlements` table; `JournalEntrySource.POS_SETTLEMENT`; statement classify `pos_settlement` (inflow only); manual + list/detail API; Alembic `019`; 8 tests; 187 pytest |
 | Credit card clearing accounts | done | `MoneyAccountKind.CREDIT_CARD` under `2100`; tree API `credit_cards` branch; OB via `money_account_id` uses GL normal balance (CREDIT for cards); reject aggregate `2100` when card sub-accounts exist; Alembic `020`; 10 tests; 197 pytest |
-| Card sales → bank deposit reconciliation | not started | |
+| Card sales → bank deposit reconciliation | done | `card_sales_batches` table; `post_card_sales_batch()` Dr `1400` / Cr `4000`; settlement commission (explicit or inferred from linked batch) Dr bank + Dr `5300` / Cr `1400` gross; `GET .../pos/clearing-reconciliation`; Alembic `021`; 8 tests; 205 pytest |
 
-**Phase 4 complete when:** all slices above done, tested, committed, owner sign-off.
+**Phase 4 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 4 COMPLETE (pending owner sign-off).**
 
 ---
 

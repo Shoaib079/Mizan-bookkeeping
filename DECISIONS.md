@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-21 — Card sales → bank deposit reconciliation (Phase 4)
+
+**Choice:** Manual `card_sales_batches` intake posts **Dr** `1400` Card Sales Clearing / **Cr** `4000` Sales Revenue (`JournalEntrySource.CARD_SALES`). Extend `post_pos_settlement()` with optional `commission_kurus` and `card_sales_batch_id`. Net-only (commission 0/null, no inference): unchanged 2-line journal (backward compat). With commission: single 3-line entry — **Dr** bank (net), **Dr** `5300` Bank Charges (commission), **Cr** `1400` (gross = net + commission). Inferred commission when batch linked and `commission_kurus` omitted: `commission = batch.gross - net`, `commission_inferred=True`; reject if gross < net. Reconciliation read API: clearing GL balance, total sales, total settled gross, in-transit (sales − settled gross), batch/settlement counts.
+
+**Why:** Decisions §13 — card sales debit clearing, settlements credit clearing, commission as shortfall; reconcile clearing balance against sales vs deposits.
+
+**Migration:** Alembic `021` — `card_sales_batches` table with entity RLS; `card_sales_batch_id`, `commission_inferred` on `pos_settlements`.
+
+**API:** `POST/GET .../pos/card-sales`; extended `POST .../pos/settlements` body; `GET .../pos/clearing-reconciliation`.
+
+**Not in slice:** POS photo OCR (Phase 6), near-match for settlements, `bank_fee` GL classify, UI.
+
 ## 2026-06-21 — Credit card clearing accounts (Phase 4)
 
 **Choice:** Extend `MoneyAccountKind` with `CREDIT_CARD`; reuse `create_money_account()` to create GL sub-accounts `2101+` under parent `2100` Credit Card Payable (LIABILITY, CREDIT normal balance, `accepts_opening_balance=True`). Tree API returns `credit_cards` branch alongside `banks`/`cash`. Opening balance lines via `money_account_id` post on the GL account's `normal_balance` side (not hardcoded DEBIT) — CREDIT for credit cards, DEBIT for bank/cash. Reject aggregate `2100` when active credit card money accounts exist (mirrors `1100`/`1000` rule). Metadata: `bank_name` as card issuer label, `last_four` for card digits.

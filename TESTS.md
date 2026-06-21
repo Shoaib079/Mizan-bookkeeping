@@ -27,6 +27,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_banking_near_match.py` | Near-match date window helpers (±3 days, excludes exact date) | pass |
 | `backend/tests/test_account_transfers.py` | Own-account transfers — manual GL Dr/Cr asset only, statement outflow post, inflow link-or-post (single journal), same-from/to rejected, cross-entity rejected, re-classify rejected, RLS isolation, API E2E | pass |
 | `backend/tests/test_pos_settlement.py` | POS settlement intake — manual GL Dr bank / Cr 1400, clearing credit reduces debit balance, statement inflow classify posts GL, zero/negative rejected, cross-entity isolation, outflow classify rejected, API E2E | pass |
+| `backend/tests/test_card_sales_reconciliation.py` | Card sales batches Dr 1400 / Cr 4000; settlement with explicit/inferred commission zeros clearing; reconciliation in-transit after sale; net-only settlement unchanged; gross < net rejected; cross-entity isolation; API E2E | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
