@@ -15,7 +15,7 @@
 | **Active phase** | Phase 4 — POS settlement + credit cards |
 | **Active slice** | Phase 4 Slice 2 complete — pending owner sign-off |
 | **Last completed slice** | Credit card clearing accounts |
-| **Last commit/tag** | pending / `v0.23.0-phase4-credit-card-accounts` |
+| **Last commit/tag** | `4eecef0` / `v0.23.0-phase4-credit-card-accounts` |
 | **Next up** | Phase 4 Slice 3 — Card sales → bank deposit reconciliation |
 
 ---
