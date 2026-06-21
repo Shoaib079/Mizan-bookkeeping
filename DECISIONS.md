@@ -118,3 +118,19 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Overpayment policy:** Reject if `current_balance - payment < 0` (no negative payable balance).
 
+## 2026-06-21 — Invoice draft-to-ledger posting (Phase 2)
+
+**Choice:** `core/invoices/posting.py` — `post_confirmed_draft()` atomically: balanced GL journal via `prepare_journal_entry(..., source=invoice)` + supplier payables via `persist_supplier_invoice_entry()` (type `invoice`, positive gross kuruş). Draft status becomes `posted` with `journal_entry_id` FK — prevents re-post.
+
+**Why:** Decisions §7/§11 — confirmed supplier invoice posts to double-entry ledger and increases payable; one transaction, one posting boundary per subsystem.
+
+**GL pattern:** Credit AP `2000` (gross); debit caller-selected expense account (net); debit Input VAT `1500` — one line per `vat_breakdown` entry (or aggregated if breakdown empty but gross − net > 0). Integer kuruş; debits = credits validated before post.
+
+**Chart:** Added `1500` Input VAT to default chart (`accepts_opening_balance=false`). Alembic `013` idempotently inserts `1500` for entities that already have a chart.
+
+**API:** `POST /entities/{id}/invoices/drafts/{draft_id}/post` with `actor_id`, `expense_account_id`. Returns posted draft, journal entry summary, supplier ledger entry id, payable balance.
+
+**Guards:** Confirmed + linked supplier only; expense account must be active EXPENSE type; already-posted rejected.
+
+**Not in scope:** void posted invoice; auto expense categorization; bank payment GL.
+

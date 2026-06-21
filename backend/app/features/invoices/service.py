@@ -26,7 +26,8 @@ from app.features.invoices.models import (
     InvoiceDraftStatus,
     InvoiceSourceType,
 )
-from app.features.invoices.schema import InvoiceDraftOut
+from app.core.invoices.posting import DraftPostError, post_confirmed_draft
+from app.features.invoices.schema import InvoiceDraftOut, PostInvoiceDraftOut
 from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
 from app.features.suppliers import service as supplier_service
 from app.features.suppliers.models import Supplier
@@ -127,6 +128,9 @@ def _to_out(
         review_reason=draft.review_reason,
         confirmed_at=draft.confirmed_at,
         confirmed_by=draft.confirmed_by,
+        posted_at=draft.posted_at,
+        posted_by=draft.posted_by,
+        journal_entry_id=draft.journal_entry_id,
         created_at=draft.created_at,
     )
 
@@ -171,14 +175,18 @@ def _resolve_supplier_for_link(
     return supplier
 
 
+def _draft_status(draft: InvoiceDraft) -> InvoiceDraftStatus:
+    return InvoiceDraftStatus(draft.status)
+
+
 def _ensure_draft_linkable(draft: InvoiceDraft) -> None:
-    if draft.status == InvoiceDraftStatus.CONFIRMED:
-        raise DraftNotLinkableError("Confirmed drafts cannot be modified")
+    if _draft_status(draft) in {InvoiceDraftStatus.CONFIRMED, InvoiceDraftStatus.POSTED}:
+        raise DraftNotLinkableError("Confirmed or posted drafts cannot be modified")
 
 
 def _ensure_draft_mutable(draft: InvoiceDraft) -> None:
-    if draft.status == InvoiceDraftStatus.CONFIRMED:
-        raise DraftImmutableError("Confirmed drafts are immutable")
+    if _draft_status(draft) in {InvoiceDraftStatus.CONFIRMED, InvoiceDraftStatus.POSTED}:
+        raise DraftImmutableError("Confirmed or posted drafts are immutable")
 
 
 def _find_by_fingerprint(
@@ -341,9 +349,9 @@ def confirm_invoice_draft(
     _require_entity(session, entity_id)
 
     draft = _get_draft_row(session, entity_id, draft_id)
-    if draft.status not in {InvoiceDraftStatus.DRAFT, InvoiceDraftStatus.NEEDS_REVIEW}:
+    if _draft_status(draft) not in {InvoiceDraftStatus.DRAFT, InvoiceDraftStatus.NEEDS_REVIEW}:
         raise DraftConfirmError(
-            f"Draft status {draft.status.value!r} cannot be confirmed"
+            f"Draft status {_draft_status(draft).value!r} cannot be confirmed"
         )
     if draft.supplier_id is None:
         raise DraftConfirmError("Supplier must be linked before confirm")
@@ -370,7 +378,7 @@ def reject_invoice_draft(
 
     draft = _get_draft_row(session, entity_id, draft_id)
     _ensure_draft_mutable(draft)
-    if draft.status == InvoiceDraftStatus.DUPLICATE:
+    if _draft_status(draft) == InvoiceDraftStatus.DUPLICATE:
         raise DraftConfirmError("Duplicate drafts cannot be rejected for review")
 
     with entity_context(session, entity_id):
@@ -380,3 +388,32 @@ def reject_invoice_draft(
         session.refresh(draft)
 
     return _draft_out(session, entity_id, draft)
+
+
+def post_invoice_draft(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    *,
+    expense_account_id: uuid.UUID,
+    actor_id: uuid.UUID,
+) -> PostInvoiceDraftOut:
+    _require_entity(session, entity_id)
+
+    result = post_confirmed_draft(
+        session,
+        entity_id,
+        draft_id,
+        expense_account_id=expense_account_id,
+        actor_id=actor_id,
+    )
+    draft = _get_draft_row(session, entity_id, draft_id)
+    return PostInvoiceDraftOut(
+        draft=_draft_out(session, entity_id, draft),
+        journal_entry_id=result.journal_entry.id,
+        journal_entry_date=result.journal_entry.entry_date,
+        journal_entry_description=result.journal_entry.description,
+        journal_entry_source=result.journal_entry.source,
+        supplier_ledger_entry_id=result.supplier_ledger_entry.id,
+        payable_balance_kurus=result.payable_balance_kurus,
+    )

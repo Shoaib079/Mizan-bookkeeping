@@ -169,6 +169,29 @@ def _record_audit_event(
     return event
 
 
+def prepare_journal_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    entry_date: date,
+    description: str,
+    lines: list[PostingLine],
+    *,
+    actor_id: uuid.UUID,
+    source: JournalEntrySource,
+) -> JournalEntry:
+    """Validate and persist a journal entry without committing — caller owns the transaction."""
+    validate_posting_lines(lines)
+    require_entity_context()
+    _validate_accounts(session, entity_id, lines)
+    entry = _persist_journal_entry(
+        session, entry_date, description, lines, source=source
+    )
+    _record_audit_event(session, entry.id, LedgerAuditAction.POST, actor_id)
+    session.flush()
+    _ = list(entry.lines)
+    return entry
+
+
 def post_journal_entry(
     session: Session,
     entity_id: uuid.UUID,
@@ -180,17 +203,16 @@ def post_journal_entry(
     source: JournalEntrySource,
 ) -> JournalEntry:
     """The ONE posting boundary. Requires entity_context(entity_id) via wrapper."""
-    validate_posting_lines(lines)
-
     with entity_context(session, entity_id):
-        require_entity_context()
-        _validate_accounts(session, entity_id, lines)
-
-        entry = _persist_journal_entry(
-            session, entry_date, description, lines, source=source
+        entry = prepare_journal_entry(
+            session,
+            entity_id,
+            entry_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=source,
         )
-        _record_audit_event(session, entry.id, LedgerAuditAction.POST, actor_id)
-
         session.commit()
         session.refresh(entry)
         _ = list(entry.lines)

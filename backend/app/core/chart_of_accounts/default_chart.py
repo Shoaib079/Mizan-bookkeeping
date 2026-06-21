@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 
 OPENING_BALANCE_EQUITY_CODE = "3900"
+INPUT_VAT_CODE = "1500"
+ACCOUNTS_PAYABLE_CODE = "2000"
 PARTNER_REIMBURSEMENT_PAYABLE_CODE = "2150"
 
 
@@ -33,6 +35,14 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
     DefaultAccount("1200", "Accounts Receivable", "Alacaklar", AccountType.ASSET, AccountNormalBalance.DEBIT, True),
     DefaultAccount("1300", "Employee Advances", "Personel Avansları", AccountType.ASSET, AccountNormalBalance.DEBIT, True),
     DefaultAccount("1400", "Card Sales Clearing", "POS Kart Takas", AccountType.ASSET, AccountNormalBalance.DEBIT, True),
+    DefaultAccount(
+        INPUT_VAT_CODE,
+        "Input VAT",
+        "Indirilecek KDV",
+        AccountType.ASSET,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
     # Liabilities
     DefaultAccount("2000", "Accounts Payable", "Borçlar (Tedarikçi)", AccountType.LIABILITY, AccountNormalBalance.CREDIT, True),
     DefaultAccount("2100", "Credit Card Payable", "Kredi Kartı Borcu", AccountType.LIABILITY, AccountNormalBalance.CREDIT, True),

@@ -34,6 +34,73 @@ class OverpaymentError(PayablesLedgerError):
     """Payment would exceed current payable balance."""
 
 
+def persist_supplier_invoice_entry(
+    session: Session,
+    supplier_id: uuid.UUID,
+    *,
+    movement_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    reference_type: str,
+    reference_id: uuid.UUID,
+) -> SupplierLedgerEntry:
+    """Persist invoice payables movement without commit — caller must hold entity_context."""
+    if amount_kurus <= 0:
+        raise ZeroMovementError("Invoice amount_kurus must be positive")
+
+    supplier = session.get(Supplier, supplier_id)
+    if supplier is None:
+        raise LookupError("Supplier not found")
+
+    entry = SupplierLedgerEntry(
+        supplier_id=supplier_id,
+        movement_date=movement_date,
+        movement_type=SupplierMovementType.INVOICE,
+        amount_kurus=amount_kurus,
+        description=description,
+        actor_id=actor_id,
+        reference_type=reference_type,
+        reference_id=reference_id,
+    )
+    session.add(entry)
+    session.flush()
+    session.refresh(entry)
+    return entry
+
+
+def record_supplier_invoice(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    *,
+    movement_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    reference_type: str,
+    reference_id: uuid.UUID,
+) -> SupplierLedgerEntry:
+    """Record invoice increasing payable — internal to invoice posting boundary only."""
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        entry = persist_supplier_invoice_entry(
+            session,
+            supplier_id,
+            movement_date=movement_date,
+            amount_kurus=amount_kurus,
+            description=description,
+            actor_id=actor_id,
+            reference_type=reference_type,
+            reference_id=reference_id,
+        )
+        session.commit()
+        session.refresh(entry)
+        return entry
+
+
 def record_supplier_movement(
     session: Session,
     entity_id: uuid.UUID,

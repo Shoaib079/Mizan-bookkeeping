@@ -11,11 +11,15 @@ from app.adapters.ocr_ai.efatura import EfaturaPdfUnsupportedError
 from app.db.session import get_session
 from app.features.invoices import service
 from app.features.invoices.models import InvoiceDraftStatus
+from app.core.invoices.posting import DraftPostError
+from app.core.ledger.posting import InvalidAccountError
 from app.features.invoices.schema import (
     ConfirmDraftRequest,
     InvoiceDraftListOut,
     InvoiceDraftOut,
     LinkSupplierRequest,
+    PostInvoiceDraftOut,
+    PostInvoiceDraftRequest,
     RejectDraftRequest,
 )
 
@@ -151,3 +155,26 @@ def reject_invoice_draft(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except service.DraftImmutableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/post", response_model=PostInvoiceDraftOut)
+def post_invoice_draft(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    payload: PostInvoiceDraftRequest,
+    session: Session = Depends(get_session),
+) -> PostInvoiceDraftOut:
+    try:
+        return service.post_invoice_draft(
+            session,
+            entity_id,
+            draft_id,
+            expense_account_id=payload.expense_account_id,
+            actor_id=payload.actor_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DraftPostError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

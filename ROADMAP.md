@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 2 — Suppliers & payables |
-| **Active slice** | Invoice → payable posting (draft-to-ledger) (next) |
-| **Last completed slice** | Payment reduces payable |
-| **Last commit/tag** | `aa96552` / `v0.14.0-phase2-payment-reduces-payable` |
-| **Next up** | Invoice → payable posting (draft-to-ledger) |
+| **Active slice** | Phase 2 complete (pending owner sign-off) |
+| **Last completed slice** | Invoice → payable posting (draft-to-ledger) |
+| **Last commit/tag** | `879aacb` / `v0.15.0-phase2-draft-to-ledger` |
+| **Next up** | Phase 3 — Banking hub + bank statements |
 
 ---
 
@@ -62,9 +62,9 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 | Draft → supplier linking | done | `supplier_id` FK on `invoice_drafts`, VKN auto-link on upload, link/unlink API, 8 tests |
 | Draft review / confirm workflow | done | `confirmed` status, confirm/reject API, `?status=` filter, confirmed immutable, 6 tests |
 | Payment reduces payable | done | `record_supplier_payment()`, payments API, overpayment rejected, payables-only (no GL), 6 tests |
-| Invoice → payable posting (draft-to-ledger) | not started | Confirmed draft → payable movement + GL journal; **do not start until owner sign-off on slices above** |
+| Invoice → payable posting (draft-to-ledger) | done | `post_confirmed_draft()`, GL + payables in one transaction; `posted` status; Input VAT `1500`; 10 tests |
 
-**Phase 2 complete when:** all slices above done, tested, committed, owner sign-off.
+**Phase 2 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 2 COMPLETE (pending owner sign-off).**
 
 ---
 
@@ -179,6 +179,7 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Read e-Fatura invoice into draft | `a952821` / `v0.9.0-phase1-efatura-draft` | invoice_drafts, UBL-TR XML, PDF heuristics, 70 pytest |
 | 2026-06-21 | Supplier master (per entity) | `63ed5cf` / `v0.10.0-phase2-supplier-master` | suppliers CRUD, VKN lookup, entity isolation, 85 pytest |
 | 2026-06-21 | Payables ledger & balance | `48dbdd7` / `v0.11.0-phase2-payables-ledger` | supplier_ledger_entries, running balance, payables API, 97 pytest |
+| 2026-06-21 | Invoice → payable posting (draft-to-ledger) | `879aacb` / `v0.15.0-phase2-draft-to-ledger` | confirmed draft → GL + payables; Input VAT 1500; 127 pytest |
 
 ---
 

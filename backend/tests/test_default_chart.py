@@ -15,6 +15,14 @@ def test_default_chart_includes_opening_balance_equity() -> None:
     assert equity.accepts_opening_balance is False
 
 
+def test_default_chart_includes_input_vat() -> None:
+    codes = {a.code for a in DEFAULT_CHART}
+    assert "1500" in codes
+    vat = next(a for a in DEFAULT_CHART if a.code == "1500")
+    assert vat.name_en == "Input VAT"
+    assert vat.accepts_opening_balance is False
+
+
 def test_inventory_not_in_default_chart() -> None:
     names = {a.name_en.lower() for a in DEFAULT_CHART}
     assert "inventory" not in names

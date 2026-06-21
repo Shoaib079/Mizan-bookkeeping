@@ -18,6 +18,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_draft_review.py` | Draft confirm/reject — supplier required, confirmed immutable, status filter, needs_review flow | pass |
 | `backend/tests/test_suppliers.py` | Supplier master — VKN uniqueness per entity, CRUD, deactivate, cross-entity isolation, API | pass |
 | `backend/tests/test_payables.py` | Payables ledger — balance, opening balance, payments reduce balance, overpayment rejected, API | pass |
+| `backend/tests/test_invoice_posting.py` | Draft-to-ledger — GL + payables posting, VAT lines, reject guards, cross-entity, API E2E | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 

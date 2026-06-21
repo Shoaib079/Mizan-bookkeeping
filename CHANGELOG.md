@@ -35,3 +35,5 @@ Phase 2 — **Draft → supplier linking**: nullable `supplier_id` FK on `invoic
 Phase 2 — **Draft review / confirm workflow**: `confirmed` status with `confirmed_at` / `confirmed_by`; confirm requires linked supplier; reject → `needs_review` with optional reason; confirmed drafts immutable; list filter `?status=`; 6 tests (111 pytest total). Tag `v0.13.0-phase2-draft-review`.
 
 Phase 2 — **Payment reduces payable**: `record_supplier_payment()` writes negative payables movement; `POST .../suppliers/{id}/payments`; overpayment rejected; payables list reflects new balance; **no GL posting**; 6 tests (117 pytest total). Tag `v0.14.0-phase2-payment-reduces-payable`.
+
+Phase 2 — **Invoice → payable posting (draft-to-ledger)**: `post_confirmed_draft()` posts balanced GL journal (`source=invoice`) and supplier payables invoice movement atomically; draft status → `posted`; default chart adds Input VAT `1500`; Alembic `013`; `POST .../invoices/drafts/{id}/post`; 10 posting tests (127 pytest total). Tag `v0.15.0-phase2-draft-to-ledger`. **Phase 2 complete** (pending owner sign-off).

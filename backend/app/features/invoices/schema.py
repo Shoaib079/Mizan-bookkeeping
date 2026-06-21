@@ -9,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.features.invoices.models import InvoiceDraftStatus, InvoiceSourceType
+from app.core.ledger.models import JournalEntrySource
 
 
 class VatBreakdownOut(BaseModel):
@@ -27,6 +28,21 @@ class ConfirmDraftRequest(BaseModel):
 
 class RejectDraftRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=512)
+
+
+class PostInvoiceDraftRequest(BaseModel):
+    actor_id: uuid.UUID
+    expense_account_id: uuid.UUID
+
+
+class PostInvoiceDraftOut(BaseModel):
+    draft: InvoiceDraftOut
+    journal_entry_id: uuid.UUID
+    journal_entry_date: date
+    journal_entry_description: str
+    journal_entry_source: JournalEntrySource
+    supplier_ledger_entry_id: uuid.UUID
+    payable_balance_kurus: int
 
 
 class InvoiceDraftOut(BaseModel):
@@ -50,6 +66,9 @@ class InvoiceDraftOut(BaseModel):
     review_reason: str | None = None
     confirmed_at: datetime | None = None
     confirmed_by: uuid.UUID | None = None
+    posted_at: datetime | None = None
+    posted_by: uuid.UUID | None = None
+    journal_entry_id: uuid.UUID | None = None
     created_at: datetime
 
 

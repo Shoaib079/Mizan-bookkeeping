@@ -18,6 +18,7 @@ class InvoiceDraftStatus(str, enum.Enum):
     DUPLICATE = "duplicate"
     NEEDS_REVIEW = "needs_review"
     CONFIRMED = "confirmed"
+    POSTED = "posted"
 
 
 class InvoiceSourceType(str, enum.Enum):
@@ -58,5 +59,13 @@ class InvoiceDraft(EntityScopedMixin, Base):
     extraction_payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     confirmed_at: Mapped[datetime | None] = mapped_column(nullable=True)
     confirmed_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    posted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    posted_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    journal_entry_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("journal_entries.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     review_reason: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
