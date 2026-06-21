@@ -181,6 +181,7 @@ def post_confirmed_draft(
             amount_kurus=draft.gross_kurus,
             description=description,
             actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
             reference_type="invoice_draft",
             reference_id=draft.id,
         )

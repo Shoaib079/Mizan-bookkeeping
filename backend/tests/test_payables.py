@@ -9,7 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 
+from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.payables import ledger as payables_ledger
+from app.core.payables import posting as payables_posting
 from app.core.payables.ledger import (
     DisallowedMovementTypeError,
     OverpaymentError,
@@ -24,6 +26,16 @@ from app.features.suppliers.schema import SupplierCreate
 
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
+
+
+@pytest.fixture
+def seeded_accounts(db_session, restaurant_a):
+    seed_default_chart(db_session, restaurant_a.id)
+    with entity_context(db_session, restaurant_a.id):
+        from app.core.chart_of_accounts.models import Account
+
+        accounts = list(db_session.scalars(select(Account)))
+    return {account.code: account.id for account in accounts}
 
 
 def _supplier(db_session, entity, *, name="Metro Tedarik", vkn="1234567890"):
@@ -287,7 +299,7 @@ def test_api_disallowed_movement_type_returns_422(
     assert response.status_code == 422
 
 
-def test_payment_reduces_balance(db_session, restaurant_a) -> None:
+def test_payment_reduces_balance(db_session, restaurant_a, seeded_accounts) -> None:
     supplier = _supplier(db_session, restaurant_a)
     supplier_id = supplier.id
     _record(
@@ -299,7 +311,7 @@ def test_payment_reduces_balance(db_session, restaurant_a) -> None:
         description="Opening",
     )
 
-    entry = payables_ledger.record_supplier_payment(
+    entry = payables_posting.post_supplier_payment(
         db_session,
         restaurant_a.id,
         supplier_id,
@@ -307,15 +319,17 @@ def test_payment_reduces_balance(db_session, restaurant_a) -> None:
         amount_kurus=40_000,
         description="Bank transfer",
         actor_id=ACTOR_ID,
-    )
+        payment_account_id=seeded_accounts["1100"],
+    ).supplier_ledger_entry
     assert entry.movement_type == SupplierMovementType.PAYMENT
     assert entry.amount_kurus == -40_000
+    assert entry.journal_entry_id is not None
     assert payables_ledger.current_balance_kurus(
         db_session, restaurant_a.id, supplier_id
     ) == 60_000
 
 
-def test_payment_zero_amount_rejected(db_session, restaurant_a) -> None:
+def test_payment_zero_amount_rejected(db_session, restaurant_a, seeded_accounts) -> None:
     supplier = _supplier(db_session, restaurant_a)
     supplier_id = supplier.id
     _record(
@@ -325,8 +339,8 @@ def test_payment_zero_amount_rejected(db_session, restaurant_a) -> None:
         amount_kurus=10_000,
         movement_type=SupplierMovementType.OPENING_BALANCE,
     )
-    with pytest.raises(ZeroMovementError):
-        payables_ledger.record_supplier_payment(
+    with pytest.raises(ValueError):
+        payables_posting.post_supplier_payment(
             db_session,
             restaurant_a.id,
             supplier_id,
@@ -334,10 +348,11 @@ def test_payment_zero_amount_rejected(db_session, restaurant_a) -> None:
             amount_kurus=0,
             description="Zero",
             actor_id=ACTOR_ID,
+            payment_account_id=seeded_accounts["1100"],
         )
 
 
-def test_overpayment_rejected(db_session, restaurant_a) -> None:
+def test_overpayment_rejected(db_session, restaurant_a, seeded_accounts) -> None:
     supplier = _supplier(db_session, restaurant_a)
     supplier_id = supplier.id
     _record(
@@ -348,7 +363,7 @@ def test_overpayment_rejected(db_session, restaurant_a) -> None:
         movement_type=SupplierMovementType.OPENING_BALANCE,
     )
     with pytest.raises(OverpaymentError):
-        payables_ledger.record_supplier_payment(
+        payables_posting.post_supplier_payment(
             db_session,
             restaurant_a.id,
             supplier_id,
@@ -356,10 +371,13 @@ def test_overpayment_rejected(db_session, restaurant_a) -> None:
             amount_kurus=60_000,
             description="Too much",
             actor_id=ACTOR_ID,
+            payment_account_id=seeded_accounts["1100"],
         )
 
 
-def test_api_payment_reduces_payables_list(client: TestClient, restaurant_a) -> None:
+def test_api_payment_reduces_payables_list(
+    client: TestClient, restaurant_a, seeded_accounts
+) -> None:
     create = client.post(
         f"/entities/{restaurant_a.id}/suppliers",
         json={"name": "Pay Vendor", "vkn": "6666666666"},
@@ -384,12 +402,14 @@ def test_api_payment_reduces_payables_list(client: TestClient, restaurant_a) -> 
             "amount_kurus": 30000,
             "description": "Partial pay",
             "actor_id": str(ACTOR_ID),
+            "payment_account_id": str(seeded_accounts["1100"]),
             "reference": "TRF-001",
         },
     )
     assert payment.status_code == 201
-    assert payment.json()["movement_type"] == "payment"
-    assert payment.json()["amount_kurus"] == -30000
+    assert payment.json()["supplier_ledger_entry"]["movement_type"] == "payment"
+    assert payment.json()["supplier_ledger_entry"]["amount_kurus"] == -30000
+    assert payment.json()["journal_entry_id"]
 
     ledger = client.get(
         f"/entities/{restaurant_a.id}/suppliers/{supplier_id}/ledger"
@@ -400,7 +420,9 @@ def test_api_payment_reduces_payables_list(client: TestClient, restaurant_a) -> 
     assert payables.json()["total_payables_kurus"] == 50_000
 
 
-def test_api_payment_zero_returns_422(client: TestClient, restaurant_a) -> None:
+def test_api_payment_zero_returns_422(
+    client: TestClient, restaurant_a, seeded_accounts
+) -> None:
     create = client.post(
         f"/entities/{restaurant_a.id}/suppliers",
         json={"name": "Zero Pay", "vkn": "7777777777"},
@@ -414,12 +436,15 @@ def test_api_payment_zero_returns_422(client: TestClient, restaurant_a) -> None:
             "amount_kurus": 0,
             "description": "Zero",
             "actor_id": str(ACTOR_ID),
+            "payment_account_id": str(seeded_accounts["1100"]),
         },
     )
     assert response.status_code == 422
 
 
-def test_api_overpayment_returns_422(client: TestClient, restaurant_a) -> None:
+def test_api_overpayment_returns_422(
+    client: TestClient, restaurant_a, seeded_accounts
+) -> None:
     create = client.post(
         f"/entities/{restaurant_a.id}/suppliers",
         json={"name": "Over Pay", "vkn": "8888888888"},
@@ -444,6 +469,7 @@ def test_api_overpayment_returns_422(client: TestClient, restaurant_a) -> None:
             "amount_kurus": 20000,
             "description": "Too much",
             "actor_id": str(ACTOR_ID),
+            "payment_account_id": str(seeded_accounts["1100"]),
         },
     )
     assert response.status_code == 422

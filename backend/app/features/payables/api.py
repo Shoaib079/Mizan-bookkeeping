@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.payables.ledger import (
     DisallowedMovementTypeError,
     OverpaymentError,
@@ -19,6 +20,7 @@ from app.features.payables.schema import (
     SupplierLedgerRead,
     SupplierMovementCreate,
     SupplierPaymentCreate,
+    SupplierPaymentRead,
     SupplierPayableBalanceRead,
     SupplierLedgerEntryRead,
 )
@@ -102,17 +104,17 @@ def record_supplier_movement(
 
 @router.post(
     "/suppliers/{supplier_id}/payments",
-    response_model=SupplierLedgerEntryRead,
+    response_model=SupplierPaymentRead,
     status_code=201,
 )
-def record_supplier_payment(
+def post_supplier_payment(
     entity_id: uuid.UUID,
     supplier_id: uuid.UUID,
     payload: SupplierPaymentCreate,
     session: Session = Depends(get_session),
-) -> SupplierLedgerEntryRead:
+) -> SupplierPaymentRead:
     try:
-        entry = service.record_payment(
+        result = service.record_payment(
             session,
             entity_id,
             supplier_id,
@@ -120,13 +122,24 @@ def record_supplier_payment(
             amount_kurus=payload.amount_kurus,
             description=payload.description,
             actor_id=payload.actor_id,
+            payment_account_id=payload.payment_account_id,
             reference=payload.reference,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ZeroMovementError as exc:
+    except (ZeroMovementError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverpaymentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    return SupplierLedgerEntryRead.model_validate(entry)
+    return SupplierPaymentRead(
+        journal_entry_id=result.journal_entry.id,
+        supplier_ledger_entry=SupplierLedgerEntryRead.model_validate(
+            result.supplier_ledger_entry
+        ),
+        payable_balance_kurus=result.payable_balance_kurus,
+    )

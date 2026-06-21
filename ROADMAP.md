@@ -14,8 +14,8 @@
 |-------|-------|
 | **Active phase** | Phase 2 — Suppliers & payables |
 | **Active slice** | Phase 2 complete (pending owner sign-off) |
-| **Last completed slice** | Invoice → payable posting (draft-to-ledger) |
-| **Last commit/tag** | `3f367f5` / `v0.15.0-phase2-draft-to-ledger` |
+| **Last completed slice** | Supplier payment GL posting |
+| **Last commit/tag** | *(pending commit)* / `v0.16.0-phase2-supplier-payment-gl` |
 | **Next up** | Phase 3 — Banking hub + bank statements |
 
 ---
@@ -61,8 +61,9 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 | Payables ledger & balance | done | `supplier_ledger_entries`, `record_supplier_movement()`, payables API, RLS + immutability, 12 tests |
 | Draft → supplier linking | done | `supplier_id` FK on `invoice_drafts`, VKN auto-link on upload, link/unlink API, 8 tests |
 | Draft review / confirm workflow | done | `confirmed` status, confirm/reject API, `?status=` filter, confirmed immutable, 6 tests |
-| Payment reduces payable | done | `record_supplier_payment()`, payments API, overpayment rejected, payables-only (no GL), 6 tests |
+| Payment reduces payable | done | Superseded by supplier payment GL slice — was payables-only subledger |
 | Invoice → payable posting (draft-to-ledger) | done | `post_confirmed_draft()`, GL + payables in one transaction; `posted` status; Input VAT `1500`; 10 tests |
+| Supplier payment GL posting | done | `post_supplier_payment()` atomic GL+subledger (Dr AP, Cr bank/cash); `journal_entry_id` on subledger; `payment_account_id` required; AP control-account tests; 5 GL tests + updated payables tests; 132 pytest |
 
 **Phase 2 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 2 COMPLETE (pending owner sign-off).**
 
@@ -180,6 +181,7 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Supplier master (per entity) | `63ed5cf` / `v0.10.0-phase2-supplier-master` | suppliers CRUD, VKN lookup, entity isolation, 85 pytest |
 | 2026-06-21 | Payables ledger & balance | `48dbdd7` / `v0.11.0-phase2-payables-ledger` | supplier_ledger_entries, running balance, payables API, 97 pytest |
 | 2026-06-21 | Invoice → payable posting (draft-to-ledger) | `3f367f5` / `v0.15.0-phase2-draft-to-ledger` | confirmed draft → GL + payables; Input VAT 1500; 127 pytest |
+| 2026-06-21 | Supplier payment GL posting | *(pending)* / `v0.16.0-phase2-supplier-payment-gl` | `post_supplier_payment()` Dr AP Cr bank/cash + subledger; Phase 2 complete |
 
 ---
 

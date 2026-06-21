@@ -15,6 +15,7 @@ class SupplierPaymentCreate(BaseModel):
     amount_kurus: int
     description: str = Field(min_length=1, max_length=512)
     actor_id: uuid.UUID
+    payment_account_id: uuid.UUID
     reference: str | None = Field(default=None, max_length=64)
 
     @field_validator("amount_kurus")
@@ -51,6 +52,7 @@ class SupplierLedgerEntryRead(BaseModel):
     actor_id: uuid.UUID
     reference_type: str | None
     reference_id: uuid.UUID | None
+    journal_entry_id: uuid.UUID | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -67,6 +69,12 @@ class SupplierPayableBalanceRead(BaseModel):
     supplier_name: str
     vkn: str
     balance_kurus: int
+
+
+class SupplierPaymentRead(BaseModel):
+    journal_entry_id: uuid.UUID
+    supplier_ledger_entry: SupplierLedgerEntryRead
+    payable_balance_kurus: int
 
 
 class PayablesSummaryRead(BaseModel):

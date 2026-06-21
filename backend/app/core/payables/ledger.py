@@ -42,6 +42,7 @@ def persist_supplier_invoice_entry(
     amount_kurus: int,
     description: str,
     actor_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
     reference_type: str,
     reference_id: uuid.UUID,
 ) -> SupplierLedgerEntry:
@@ -60,6 +61,7 @@ def persist_supplier_invoice_entry(
         amount_kurus=amount_kurus,
         description=description,
         actor_id=actor_id,
+        journal_entry_id=journal_entry_id,
         reference_type=reference_type,
         reference_id=reference_id,
     )
@@ -67,38 +69,6 @@ def persist_supplier_invoice_entry(
     session.flush()
     session.refresh(entry)
     return entry
-
-
-def record_supplier_invoice(
-    session: Session,
-    entity_id: uuid.UUID,
-    supplier_id: uuid.UUID,
-    *,
-    movement_date: date,
-    amount_kurus: int,
-    description: str,
-    actor_id: uuid.UUID,
-    reference_type: str,
-    reference_id: uuid.UUID,
-) -> SupplierLedgerEntry:
-    """Record invoice increasing payable — internal to invoice posting boundary only."""
-    if entity_service.get_entity(session, entity_id) is None:
-        raise LookupError("Entity not found")
-
-    with entity_context(session, entity_id):
-        entry = persist_supplier_invoice_entry(
-            session,
-            supplier_id,
-            movement_date=movement_date,
-            amount_kurus=amount_kurus,
-            description=description,
-            actor_id=actor_id,
-            reference_type=reference_type,
-            reference_id=reference_id,
-        )
-        session.commit()
-        session.refresh(entry)
-        return entry
 
 
 def record_supplier_movement(
@@ -164,52 +134,6 @@ def current_balance_kurus(
             )
         )
         return int(total or 0)
-
-
-def record_supplier_payment(
-    session: Session,
-    entity_id: uuid.UUID,
-    supplier_id: uuid.UUID,
-    *,
-    payment_date: date,
-    amount_kurus: int,
-    description: str,
-    actor_id: uuid.UUID,
-    reference_type: str | None = None,
-    reference_id: uuid.UUID | None = None,
-) -> SupplierLedgerEntry:
-    """Record a supplier payment — positive API amount stored as negative movement."""
-    if amount_kurus <= 0:
-        raise ZeroMovementError("Payment amount_kurus must be positive")
-
-    current = current_balance_kurus(session, entity_id, supplier_id)
-    if current - amount_kurus < 0:
-        raise OverpaymentError(
-            f"Payment of {amount_kurus} kuruş exceeds payable balance of {current} kuruş"
-        )
-
-    if entity_service.get_entity(session, entity_id) is None:
-        raise LookupError("Entity not found")
-
-    with entity_context(session, entity_id):
-        supplier = session.get(Supplier, supplier_id)
-        if supplier is None:
-            raise LookupError("Supplier not found")
-
-        entry = SupplierLedgerEntry(
-            supplier_id=supplier_id,
-            movement_date=payment_date,
-            movement_type=SupplierMovementType.PAYMENT,
-            amount_kurus=-amount_kurus,
-            description=description,
-            actor_id=actor_id,
-            reference_type=reference_type,
-            reference_id=reference_id,
-        )
-        session.add(entry)
-        session.commit()
-        session.refresh(entry)
-        return entry
 
 
 def list_ledger_entries(

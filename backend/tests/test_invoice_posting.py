@@ -107,6 +107,7 @@ def test_post_confirmed_draft_happy_path(
     assert result.journal_entry.source == JournalEntrySource.INVOICE
     assert result.supplier_ledger_entry.movement_type == SupplierMovementType.INVOICE
     assert result.supplier_ledger_entry.amount_kurus == 12_000_000
+    assert result.supplier_ledger_entry.journal_entry_id == result.journal_entry.id
     assert result.payable_balance_kurus == 12_000_000
 
     with entity_context(db_session, restaurant_a.id):

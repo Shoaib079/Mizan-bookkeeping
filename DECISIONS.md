@@ -110,13 +110,29 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 ## 2026-06-21 — Payment reduces payable (Phase 2)
 
-**Choice:** Dedicated `record_supplier_payment()` in `core/payables/ledger.py`. API accepts positive `amount_kurus`; stored as negative payables movement with type `payment`. Overpayment rejected when payment would make balance negative. **No GL or bank posting** — payables ledger movement only.
+**Choice (superseded):** Initial slice used payables-only subledger movement without GL. Replaced by supplier payment GL posting slice below.
 
-**Why:** Decisions §8 — payments reduce supplier payable balance; ledger/balance-based model. GL bank posting deferred to banking phase.
+**Why:** Interim step before banking phase; GL integration now complete.
 
-**API:** `POST /entities/{id}/suppliers/{supplier_id}/payments` with `payment_date`, `amount_kurus`, `description`, `actor_id`, optional `reference`.
+## 2026-06-21 — Supplier payment GL posting (Phase 2)
 
-**Overpayment policy:** Reject if `current_balance - payment < 0` (no negative payable balance).
+**Choice:** `core/payables/posting.py` — `post_supplier_payment()` atomically: balanced GL journal via `prepare_journal_entry(..., source=payment)` (debit AP `2000`, credit caller-selected bank/cash asset) + negative payables movement via `persist_supplier_payment_entry()` with linked `journal_entry_id`. Removed `record_supplier_payment()` from ledger boundary.
+
+**Why:** Decisions §8/§11 — supplier payments must post to double-entry ledger and reduce payable in one transaction; AP control account must reconcile to subledger total.
+
+**GL pattern:** Debit AP for payment amount; credit active ASSET account (`payment_account_id`). Non-asset accounts rejected.
+
+**Subledger:** Payment stored as negative kuruş with type `payment`; `journal_entry_id` FK links to GL entry. Invoice subledger rows also require `journal_entry_id`.
+
+**API:** `POST /entities/{id}/suppliers/{supplier_id}/payments` with `payment_date`, `amount_kurus`, `description`, `actor_id`, **`payment_account_id`** (required), optional `reference`. Returns `journal_entry_id`, `supplier_ledger_entry`, `payable_balance_kurus`.
+
+**Overpayment policy:** Reject if `current_balance - payment < 0` (unchanged).
+
+**Not GL-posted:** `opening_balance` and `adjustment` subledger movements remain payables-only; control-account tests use invoice post + payment path.
+
+**Phase 3 constraint:** Bank-statement supplier payment classification reuses `post_supplier_payment()` OR links to an existing payment (match supplier/amount/date) — never posts twice.
+
+**Migration:** Alembic `014` adds nullable `journal_entry_id` FK on `supplier_ledger_entries`.
 
 ## 2026-06-21 — Invoice draft-to-ledger posting (Phase 2)
 
@@ -133,4 +149,6 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 **Guards:** Confirmed + linked supplier only; expense account must be active EXPENSE type; already-posted rejected.
 
 **Not in scope:** void posted invoice; auto expense categorization; bank payment GL.
+
+**Updated:** Supplier payment GL posting slice adds bank/cash GL credit via `post_supplier_payment()` — see DECISIONS payment GL entry.
 

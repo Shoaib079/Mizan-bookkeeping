@@ -8,6 +8,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.payables import ledger as payables_ledger
+from app.core.payables import posting as payables_posting
+from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
 from app.db.session import entity_context, require_entity_context
@@ -81,9 +83,10 @@ def record_payment(
     amount_kurus: int,
     description: str,
     actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
     reference: str | None = None,
 ):
-    return payables_ledger.record_supplier_payment(
+    return payables_posting.post_supplier_payment(
         session,
         entity_id,
         supplier_id,
@@ -91,5 +94,6 @@ def record_payment(
         amount_kurus=amount_kurus,
         description=description,
         actor_id=actor_id,
+        payment_account_id=payment_account_id,
         reference_type=reference,
     )
