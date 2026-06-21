@@ -15,7 +15,7 @@
 | **Active phase** | Phase 4 — POS settlement + credit cards |
 | **Active slice** | Phase 4 Slice 1 complete — pending owner sign-off |
 | **Last completed slice** | POS settlement intake |
-| **Last commit/tag** | (pending commit) / `v0.22.0-phase4-pos-settlement-intake` |
+| **Last commit/tag** | `bb02c02` / `v0.22.0-phase4-pos-settlement-intake` |
 | **Next up** | Phase 4 Slice 2 — Credit card clearing accounts |
 
 ---
