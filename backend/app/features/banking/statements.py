@@ -15,6 +15,7 @@ from app.adapters.storage.local import save_upload
 from app.core.banking import posting as banking_posting
 from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_date_bounds
 from app.core.payables import posting as payables_posting
+from app.core.pos import posting as pos_posting
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
 from app.db.session import entity_context, require_entity_context
@@ -75,6 +76,7 @@ def _to_line_read(line: BankStatementLine) -> BankStatementLineRead:
         journal_entry_id=line.journal_entry_id,
         supplier_ledger_entry_id=line.supplier_ledger_entry_id,
         account_transfer_id=line.account_transfer_id,
+        pos_settlement_id=line.pos_settlement_id,
         review_reason=line.review_reason,
         candidate_supplier_ledger_entry_id=line.candidate_supplier_ledger_entry_id,
         candidate_account_transfer_id=line.candidate_account_transfer_id,
@@ -741,6 +743,16 @@ def classify_statement_line(
                 if counterpart is None:
                     raise LookupError("Counterpart money account not found")
 
+        elif classification == StatementLineClassification.POS_SETTLEMENT:
+            if line.amount_kurus <= 0:
+                raise InvalidClassificationError(
+                    "pos_settlement classification requires an inflow (positive amount_kurus)"
+                )
+            if actor_id is None:
+                raise InvalidClassificationError(
+                    "actor_id is required for pos_settlement"
+                )
+
         elif classification in (
             StatementLineClassification.BANK_FEE,
             StatementLineClassification.UNKNOWN,
@@ -788,6 +800,42 @@ def classify_statement_line(
             line.supplier_id = supplier_id
             line.journal_entry_id = journal_id
             line.supplier_ledger_entry_id = supplier_ledger_id
+            session.commit()
+            session.refresh(line)
+
+        return ClassifyStatementLineResult(
+            line=_to_line_read(line),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.POS_SETTLEMENT:
+        settlement_amount = line.amount_kurus
+        assert actor_id is not None
+        result = pos_posting.post_pos_settlement(
+            session,
+            entity_id,
+            money_account_id=statement.money_account_id,
+            settlement_date=line.transaction_date,
+            amount_kurus=settlement_amount,
+            description=line.description,
+            actor_id=actor_id,
+            reference_type=BANK_STATEMENT_LINE_REF,
+            reference_id=line.id,
+            bank_statement_line_id=line.id,
+        )
+        journal_id = result.journal_entry.id
+        settlement_id = result.pos_settlement.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.POS_SETTLEMENT
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            line.pos_settlement_id = settlement_id
             session.commit()
             session.refresh(line)
 

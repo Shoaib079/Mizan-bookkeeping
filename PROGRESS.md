@@ -4,19 +4,19 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | 3 — Banking hub + bank statements |
-| **Last completed slice** | Near-match payment/transfer detection |
-| **Next slice** | Phase 4 — POS settlement + credit cards |
+| **Phase** | 4 — POS settlement + credit cards |
+| **Last completed slice** | POS settlement intake |
+| **Next slice** | Credit card clearing accounts |
 | **Branch** | `main` |
-| **Last tag** | `v0.21.0-phase3-near-match-review` |
+| **Last tag** | `v0.22.0-phase4-pos-settlement-intake` |
 
 ## Resume point
 
-Phase 3 complete pending owner sign-off. **Near-match slice approved 2026-06-21** — commit `v0.21.0-phase3-near-match-review`. Next: **Phase 4 — POS settlement + credit cards**.
+Phase 4 Slice 1 complete pending owner sign-off. **POS settlement intake** — commit/tag `v0.22.0-phase4-pos-settlement-intake`. Next: **Phase 4 Slice 2 — Credit card clearing accounts**.
 
 ## Session notes
 
-- **Opening balances:** `post_opening_balances()` in `core/onboarding/posting.py` — extended validate/post for aggregate codes, `money_account_id` (bank/cash GL sub-accounts), and `supplier_id` (aggregated AP `2000` control line); `3900` equity offset; supplier subledger rows with `journal_entry_id`; one-time post guard; `POST .../opening-balances/post`; optional `go_live_date` entity setting
+- **POS settlement intake:** `post_pos_settlement()` in `core/pos/posting.py` — Dr bank GL sub-account / Cr `1400` Card Sales Clearing; `pos_settlements` table with `journal_entry_id`; statement classify `pos_settlement` (inflow only, posts GL); manual + list/detail API at `POST/GET .../pos/settlements`; Alembic `019`
 - **Near-match detection:** ±3 day window; exact date auto-link; near-match → `needs_review` (no second GL post); confirm via `confirm_supplier_ledger_entry_id` / `confirm_account_transfer_id`; Alembic `018`
-- **GL posting policy:** ROADMAP + DECISIONS table — all real-event classifications must post in their slice (`bank_fee` etc. deferred to Phase 4+)
-- **179 pytest** green
+- **GL posting policy:** ROADMAP + DECISIONS table — all real-event classifications must post in their slice
+- **187 pytest** green

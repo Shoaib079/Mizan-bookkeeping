@@ -18,6 +18,7 @@ from app.features.banking.statements_api import (
     statements_router as banking_statements_router,
 )
 from app.features.banking.transfers_api import router as banking_transfers_router
+from app.features.pos.api import router as pos_router
 
 app = FastAPI(
     title="Mizan API",
@@ -49,6 +50,7 @@ app.include_router(banking_router)
 app.include_router(banking_statements_accounts_router)
 app.include_router(banking_statements_router)
 app.include_router(banking_transfers_router)
+app.include_router(pos_router)
 
 
 @app.get("/health")

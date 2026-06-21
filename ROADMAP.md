@@ -12,11 +12,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 3 — Banking hub + bank statements |
-| **Active slice** | Phase 3 complete — pending owner sign-off |
-| **Last completed slice** | Near-match payment/transfer detection |
-| **Last commit/tag** | `51305cd` / `v0.21.0-phase3-near-match-review` |
-| **Next up** | Phase 4 — POS settlement + credit cards |
+| **Active phase** | Phase 4 — POS settlement + credit cards |
+| **Active slice** | Phase 4 Slice 1 complete — pending owner sign-off |
+| **Last completed slice** | POS settlement intake |
+| **Last commit/tag** | (pending commit) / `v0.22.0-phase4-pos-settlement-intake` |
+| **Next up** | Phase 4 Slice 2 — Credit card clearing accounts |
 
 ---
 
@@ -93,7 +93,7 @@ Every statement-line classification that represents a **real GL event** must pos
 | `transfer` | Dr destination / Cr source — link exact or near-match, else post | done |
 | `bank_fee` | Dr bank charges `5300` / Cr bank | **Phase 4** (bank fee GL posting) |
 | `credit_card_payment` | Dr CC payable / Cr bank | **Phase 4** (credit card hub) |
-| `pos_settlement` / card deposit | Dr bank / Cr card clearing `1400` | **Phase 4** (POS settlement) |
+| `pos_settlement` / card deposit | Dr bank / Cr card clearing `1400` | done (Phase 4 Slice 1) |
 | `delivery_settlement` | Dr bank / Cr platform clearing | **Phase 4/6** (delivery clearing) |
 | `rent_utility` | Dr expense / Cr bank | **Phase 6** (expenses) |
 | `tax_payment` | Dr tax liability / Cr bank | **Phase 5/7** (tax module) |
@@ -110,7 +110,7 @@ Every statement-line classification that represents a **real GL event** must pos
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| POS settlement intake | not started | |
+| POS settlement intake | done | `post_pos_settlement()` Dr bank / Cr `1400`; `pos_settlements` table; `JournalEntrySource.POS_SETTLEMENT`; statement classify `pos_settlement` (inflow only); manual + list/detail API; Alembic `019`; 8 tests; 187 pytest |
 | Credit card clearing accounts | not started | |
 | Card sales → bank deposit reconciliation | not started | |
 

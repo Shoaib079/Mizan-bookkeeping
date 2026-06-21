@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-21
 
+**Phase 4 — POS settlement intake:** `post_pos_settlement()` posts Dr bank / Cr `1400` Card Sales Clearing; `pos_settlements` table with entity RLS; `JournalEntrySource.POS_SETTLEMENT`; statement classify `pos_settlement` (inflow only, posts GL); manual + list/detail API. Alembic `019`. Tag `v0.22.0-phase4-pos-settlement-intake`. 187 pytest green.
+
 **Banking hardening — near-match detection:** Supplier payment and transfer classify use exact date match first, then ±3 day near-match; ambiguous cases route to `needs_review` with candidate FKs instead of posting a second GL entry; owner confirms link via classify PATCH. Alembic `018`. **GL posting policy** documented in ROADMAP/DECISIONS — all real-event statement classifications must post in their delivery slice (`bank_fee` → Phase 4, etc.). Tag `v0.21.0-phase3-near-match-review`. 179 pytest green.
 
 Initial planning package committed to git (docs, rules, roadmap, design system, preview).

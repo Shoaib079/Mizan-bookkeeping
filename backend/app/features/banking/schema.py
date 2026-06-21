@@ -90,6 +90,7 @@ class BankStatementLineRead(BaseModel):
     journal_entry_id: uuid.UUID | None
     supplier_ledger_entry_id: uuid.UUID | None
     account_transfer_id: uuid.UUID | None
+    pos_settlement_id: uuid.UUID | None = None
     review_reason: str | None = None
     candidate_supplier_ledger_entry_id: uuid.UUID | None = None
     candidate_account_transfer_id: uuid.UUID | None = None

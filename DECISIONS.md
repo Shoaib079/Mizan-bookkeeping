@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-21 — POS settlement intake (Phase 4)
+
+**Choice:** `post_pos_settlement()` in `core/pos/posting.py` — single atomic transaction through `prepare_journal_entry(..., source=pos_settlement)`. GL pattern: **Dr** bank GL sub-account (from `money_account_id`), **Cr** `1400` Card Sales Clearing. Persist `pos_settlements` row with unique `journal_entry_id`. Statement classify `pos_settlement` requires inflow (`amount_kurus > 0`) and `actor_id`; posts GL (not classify-only). Optional `commission_kurus` column on model for future slice 3 — net deposit only in this slice.
+
+**Why:** Decisions §13 — card settlement deposits reduce the clearing receivable; money movement must flow through the single posting boundary to financial statements.
+
+**Migration:** Alembic `019` — `pos_settlements` table with entity RLS; `pos_settlement_id` FK on `bank_statement_lines`; `StatementLineClassification.POS_SETTLEMENT`.
+
+**API:** `POST/GET /entities/{id}/pos/settlements`, `GET .../pos/settlements/{id}`.
+
+**Not in slice:** Credit card clearing sub-accounts, commission GL split, card sales debit to 1400 (Phase 6), near-match linking for settlements.
+
 ## 2026-06-21 — Near-match payment/transfer detection (Banking)
 
 **Choice:** Supplier payment and transfer auto-match uses **exact date first**, then **near-match** within ±`NEAR_MATCH_DATE_WINDOW_DAYS` (3). Exact match → auto-link (no GL post). Near-match (same supplier/amount or same transfer accounts/amount, date within window but not exact) → `status=needs_review` with `review_reason` and optional `candidate_*_id` — **never posts a second entry**. Owner confirms link via classify PATCH with `confirm_supplier_ledger_entry_id` or `confirm_account_transfer_id`. Multiple near candidates → needs_review without single candidate; owner picks on confirm.
@@ -16,7 +28,7 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Why:** Decisions §1 / §12 — classify-only lines do not flow to financial statements; owner requirement as banking continues.
 
-**Next GL slices:** `bank_fee` → Phase 4; POS/delivery/card settlement → Phase 4; rent/utility → Phase 6; tax/owner/customer/partner → Phase 5+.
+**Next GL slices:** `bank_fee` → Phase 4; delivery settlement → Phase 4/6; rent/utility → Phase 6; tax/owner/customer/partner → Phase 5+. `pos_settlement` done in Phase 4 Slice 1.
 
 ## 2026-06-21 — Opening balances posting (Phase 3)
 
