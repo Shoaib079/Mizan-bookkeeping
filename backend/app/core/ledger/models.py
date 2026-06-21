@@ -45,6 +45,7 @@ class JournalEntrySource(str, enum.Enum):
     OPENING_BALANCE = "opening_balance"
     INVOICE = "invoice"
     PAYMENT = "payment"
+    TRANSFER = "transfer"
     SYSTEM = "system"
 
 

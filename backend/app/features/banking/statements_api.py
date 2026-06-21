@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.bank_parsers.csv_simple import CsvParseError
 from app.core.payables.ledger import OverpaymentError
+from app.core.banking.posting import InvalidTransferError
 from app.db.session import get_session
 from app.features.banking import statements as statement_service
 from app.features.banking.schema import (
@@ -113,6 +114,7 @@ def classify_statement_line(
             line_id,
             classification=payload.classification,
             supplier_id=payload.supplier_id,
+            counterpart_money_account_id=payload.counterpart_money_account_id,
             actor_id=payload.actor_id,
         )
     except LookupError as exc:
@@ -120,6 +122,8 @@ def classify_statement_line(
     except statement_service.LineAlreadyResolvedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except OverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidTransferError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except statement_service.InvalidClassificationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

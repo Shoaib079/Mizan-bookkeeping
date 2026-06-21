@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 3 — Banking hub + bank statements |
-| **Active slice** | Transfer linking (own-account) — not started |
-| **Last completed slice** | Statement import & classify |
-| **Last commit/tag** | `6133506` / `v0.18.0-phase3-statement-import-classify` |
-| **Next up** | Transfer linking (own-account, not income/expense) |
+| **Active slice** | Opening balances — not started |
+| **Last completed slice** | Transfer linking (own-account) |
+| **Last commit/tag** | (pending commit) / `v0.19.0-phase3-transfer-linking` |
+| **Next up** | Opening balances |
 
 ---
 
@@ -77,7 +77,7 @@ Account tree, import & classify, transfer linking, opening balances. **Statement
 |-------|--------|-------|
 | Bank/cash account tree (per entity) | done | `money_accounts` + GL sub-accounts under `1100`/`1000`; tree API with balances |
 | Statement import & classify | done | CSV import, duplicate fingerprint + overlap rejection, supplier payment classify (link or post), bank fee/unknown store-only; Alembic `016`; 8 tests; 151 pytest |
-| Transfer linking (own-account, not income/expense) | not started | |
+| Transfer linking (own-account, not income/expense) | done | `post_account_transfer()` Dr destination / Cr source (`source=transfer`); `account_transfers` table; statement classify outflow post + inflow link-or-post; manual transfer API; Alembic `017`; 9 tests; 160 pytest |
 | Opening balances | not started | |
 
 **Phase 3 complete when:** all slices above done, tested, committed, owner sign-off.

@@ -15,6 +15,7 @@ from app.db.base import Base, EntityScopedMixin, utcnow
 class StatementLineClassification(str, enum.Enum):
     UNCLASSIFIED = "unclassified"
     SUPPLIER_PAYMENT = "supplier_payment"
+    TRANSFER = "transfer"
     BANK_FEE = "bank_fee"
     UNKNOWN = "unknown"
 
@@ -101,6 +102,12 @@ class BankStatementLine(EntityScopedMixin, Base):
     supplier_ledger_entry_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("supplier_ledger_entries.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    account_transfer_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("account_transfers.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )

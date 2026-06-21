@@ -5,17 +5,16 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 3 — Banking hub + bank statements |
-| **Last completed slice** | Statement import & classify (Phase 3) |
-| **Next slice** | Transfer linking (own-account) |
+| **Last completed slice** | Transfer linking (own-account) |
+| **Next slice** | Opening balances |
 | **Branch** | `main` |
-| **Last tag** | `v0.18.0-phase3-statement-import-classify` |
+| **Last tag** | `v0.19.0-phase3-transfer-linking` |
 
 ## Resume point
 
-Phase 3 Slice 2 complete: **2026-06-21**. Next: **Transfer linking (own-account, not income/expense)**.
+Phase 3 Slice 3 complete: **2026-06-21**. Next: **Opening balances**.
 
 ## Session notes
 
-- **Statement import & classify:** `bank_statements` + `bank_statement_lines` (entity RLS); CSV parser `adapters/bank_parsers/csv_simple.py`; duplicate SHA256 fingerprint + overlapping period rejection; classify supplier payment links existing manual payment (supplier/amount/date) or calls `post_supplier_payment()`; bank fee/unknown store classification only; Alembic `016`
-- **API:** `POST/GET .../banking/accounts/{id}/statements`, `GET .../banking/statements/{id}`, `PATCH .../lines/{id}/classify`
-- **151 pytest** green
+- **Transfer linking:** `post_account_transfer()` in `core/banking/posting.py` — Dr destination asset GL, Cr source asset GL (`JournalEntrySource.TRANSFER`); `account_transfers` with statement line FKs; classify outflow posts transfer; inflow links existing outflow transfer (same amount/date/counterpart) or posts if none; manual `POST/GET .../banking/transfers`; Alembic `017`
+- **160 pytest** green

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.bank_parsers.csv_simple import CsvParseError, parse_csv_simple
 from app.adapters.storage.local import save_upload
+from app.core.banking import posting as banking_posting
 from app.core.payables import posting as payables_posting
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
@@ -29,6 +30,7 @@ from app.features.banking.statement_models import (
     StatementLineStatus,
 )
 from app.features.entities import service as entity_service
+from app.features.banking.transfer_models import AccountTransfer
 from app.features.suppliers.models import Supplier
 
 BANK_STATEMENT_LINE_REF = "bank_statement_line"
@@ -71,6 +73,7 @@ def _to_line_read(line: BankStatementLine) -> BankStatementLineRead:
         supplier_id=line.supplier_id,
         journal_entry_id=line.journal_entry_id,
         supplier_ledger_entry_id=line.supplier_ledger_entry_id,
+        account_transfer_id=line.account_transfer_id,
     )
 
 
@@ -145,6 +148,30 @@ def _find_matching_payment(
         .order_by(SupplierLedgerEntry.created_at)
         .limit(1)
     )
+
+
+def _find_matching_transfer(
+    session: Session,
+    *,
+    to_money_account_id: uuid.UUID,
+    amount_kurus: int,
+    transfer_date: date,
+    from_money_account_id: uuid.UUID | None = None,
+    exclude_line_id: uuid.UUID | None = None,
+) -> AccountTransfer | None:
+    """Find an outflow-posted transfer awaiting inflow link on the destination account."""
+    query = select(AccountTransfer).where(
+        AccountTransfer.to_money_account_id == to_money_account_id,
+        AccountTransfer.amount_kurus == amount_kurus,
+        AccountTransfer.transfer_date == transfer_date,
+        AccountTransfer.to_statement_line_id.is_(None),
+        AccountTransfer.from_statement_line_id.isnot(None),
+    )
+    if from_money_account_id is not None:
+        query = query.where(AccountTransfer.from_money_account_id == from_money_account_id)
+    if exclude_line_id is not None:
+        query = query.where(AccountTransfer.from_statement_line_id != exclude_line_id)
+    return session.scalar(query.order_by(AccountTransfer.created_at).limit(1))
 
 
 def import_bank_statement(
@@ -295,6 +322,7 @@ def classify_statement_line(
     *,
     classification: StatementLineClassification,
     supplier_id: uuid.UUID | None = None,
+    counterpart_money_account_id: uuid.UUID | None = None,
     actor_id: uuid.UUID | None = None,
 ) -> ClassifyStatementLineResult:
     if entity_service.get_entity(session, entity_id) is None:
@@ -349,8 +377,52 @@ def classify_statement_line(
                 return ClassifyStatementLineResult(
                     line=_to_line_read(line),
                     linked_existing_payment=True,
+                    linked_existing_transfer=False,
                     journal_entry_id=existing.journal_entry_id,
                 )
+
+        elif classification == StatementLineClassification.TRANSFER:
+            transfer_amount = abs(line.amount_kurus)
+            if line.amount_kurus < 0:
+                if counterpart_money_account_id is None or actor_id is None:
+                    raise InvalidClassificationError(
+                        "counterpart_money_account_id and actor_id are required "
+                        "for transfer outflow"
+                    )
+                counterpart = session.get(MoneyAccount, counterpart_money_account_id)
+                if counterpart is None:
+                    raise LookupError("Counterpart money account not found")
+            else:
+                existing_transfer = _find_matching_transfer(
+                    session,
+                    to_money_account_id=statement.money_account_id,
+                    amount_kurus=transfer_amount,
+                    transfer_date=line.transaction_date,
+                    from_money_account_id=counterpart_money_account_id,
+                    exclude_line_id=line.id,
+                )
+                if existing_transfer is not None:
+                    line.classification = classification
+                    line.status = StatementLineStatus.LINKED
+                    line.journal_entry_id = existing_transfer.journal_entry_id
+                    line.account_transfer_id = existing_transfer.id
+                    existing_transfer.to_statement_line_id = line.id
+                    session.commit()
+                    session.refresh(line)
+                    return ClassifyStatementLineResult(
+                        line=_to_line_read(line),
+                        linked_existing_payment=False,
+                        linked_existing_transfer=True,
+                        journal_entry_id=existing_transfer.journal_entry_id,
+                    )
+                if counterpart_money_account_id is None or actor_id is None:
+                    raise InvalidClassificationError(
+                        "counterpart_money_account_id and actor_id are required "
+                        "for transfer inflow when no matching outflow transfer exists"
+                    )
+                counterpart = session.get(MoneyAccount, counterpart_money_account_id)
+                if counterpart is None:
+                    raise LookupError("Counterpart money account not found")
 
         elif classification in (
             StatementLineClassification.BANK_FEE,
@@ -363,6 +435,7 @@ def classify_statement_line(
             return ClassifyStatementLineResult(
                 line=_to_line_read(line),
                 linked_existing_payment=False,
+                linked_existing_transfer=False,
                 journal_entry_id=None,
             )
         elif classification == StatementLineClassification.UNCLASSIFIED:
@@ -372,38 +445,88 @@ def classify_statement_line(
         else:
             raise InvalidClassificationError(f"Unsupported classification: {classification}")
 
-    if classification != StatementLineClassification.SUPPLIER_PAYMENT:
+    if classification == StatementLineClassification.SUPPLIER_PAYMENT:
+        payment_amount = abs(line.amount_kurus)
+        result = payables_posting.post_supplier_payment(
+            session,
+            entity_id,
+            supplier_id,
+            payment_date=line.transaction_date,
+            amount_kurus=payment_amount,
+            description=line.description,
+            actor_id=actor_id,
+            payment_account_id=money_account.gl_account_id,
+            reference_type=BANK_STATEMENT_LINE_REF,
+            reference_id=line.id,
+        )
+        journal_id = result.journal_entry.id
+        supplier_ledger_id = result.supplier_ledger_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.SUPPLIER_PAYMENT
+            line.status = StatementLineStatus.POSTED
+            line.supplier_id = supplier_id
+            line.journal_entry_id = journal_id
+            line.supplier_ledger_entry_id = supplier_ledger_id
+            session.commit()
+            session.refresh(line)
+
+        return ClassifyStatementLineResult(
+            line=_to_line_read(line),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification != StatementLineClassification.TRANSFER:
         raise RuntimeError("unreachable")
 
-    payment_amount = abs(line.amount_kurus)
-    result = payables_posting.post_supplier_payment(
+    transfer_amount = abs(line.amount_kurus)
+    if line.amount_kurus < 0:
+        from_money_account_id = statement.money_account_id
+        to_money_account_id = counterpart_money_account_id
+        from_line_id = line.id
+        to_line_id = None
+    else:
+        from_money_account_id = counterpart_money_account_id
+        to_money_account_id = statement.money_account_id
+        from_line_id = None
+        to_line_id = line.id
+
+    assert from_money_account_id is not None
+    assert to_money_account_id is not None
+    assert actor_id is not None
+
+    result = banking_posting.post_account_transfer(
         session,
         entity_id,
-        supplier_id,
-        payment_date=line.transaction_date,
-        amount_kurus=payment_amount,
+        from_money_account_id=from_money_account_id,
+        to_money_account_id=to_money_account_id,
+        transfer_date=line.transaction_date,
+        amount_kurus=transfer_amount,
         description=line.description,
         actor_id=actor_id,
-        payment_account_id=money_account.gl_account_id,
-        reference_type=BANK_STATEMENT_LINE_REF,
-        reference_id=line.id,
+        from_statement_line_id=from_line_id,
+        to_statement_line_id=to_line_id,
     )
     journal_id = result.journal_entry.id
-    supplier_ledger_id = result.supplier_ledger_entry.id
+    transfer_id = result.account_transfer.id
 
     with entity_context(session, entity_id):
         line = session.get(BankStatementLine, line_id)
         assert line is not None
-        line.classification = StatementLineClassification.SUPPLIER_PAYMENT
+        line.classification = StatementLineClassification.TRANSFER
         line.status = StatementLineStatus.POSTED
-        line.supplier_id = supplier_id
         line.journal_entry_id = journal_id
-        line.supplier_ledger_entry_id = supplier_ledger_id
+        line.account_transfer_id = transfer_id
         session.commit()
         session.refresh(line)
 
     return ClassifyStatementLineResult(
         line=_to_line_read(line),
         linked_existing_payment=False,
+        linked_existing_transfer=False,
         journal_entry_id=journal_id,
     )

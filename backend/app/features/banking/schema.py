@@ -89,6 +89,7 @@ class BankStatementLineRead(BaseModel):
     supplier_id: uuid.UUID | None
     journal_entry_id: uuid.UUID | None
     supplier_ledger_entry_id: uuid.UUID | None
+    account_transfer_id: uuid.UUID | None
 
 
 class BankStatementRead(BaseModel):
@@ -109,10 +110,38 @@ class BankStatementRead(BaseModel):
 class ClassifyStatementLineRequest(BaseModel):
     classification: StatementLineClassification
     supplier_id: uuid.UUID | None = None
+    counterpart_money_account_id: uuid.UUID | None = None
     actor_id: uuid.UUID | None = None
 
 
 class ClassifyStatementLineResult(BaseModel):
     line: BankStatementLineRead
     linked_existing_payment: bool
+    linked_existing_transfer: bool = False
     journal_entry_id: uuid.UUID | None
+
+
+class AccountTransferCreate(BaseModel):
+    from_money_account_id: uuid.UUID
+    to_money_account_id: uuid.UUID
+    transfer_date: date
+    amount_kurus: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID
+
+
+class AccountTransferRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    entity_id: uuid.UUID
+    from_money_account_id: uuid.UUID
+    to_money_account_id: uuid.UUID
+    amount_kurus: int
+    transfer_date: date
+    description: str
+    actor_id: uuid.UUID
+    journal_entry_id: uuid.UUID
+    from_statement_line_id: uuid.UUID | None
+    to_statement_line_id: uuid.UUID | None
+    created_at: datetime

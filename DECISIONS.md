@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-21 — Own-account transfer linking (Phase 3)
+
+**Choice:** `post_account_transfer()` in `core/banking/posting.py` — single GL journal (`JournalEntrySource.TRANSFER`): debit destination money account GL sub-account, credit source (asset-to-asset only; no revenue/expense). `account_transfers` table links from/to money accounts, journal entry, and optional statement line FKs (`from_statement_line_id`, `to_statement_line_id`); `bank_statement_lines.account_transfer_id` for line lookup. Classify `transfer` on outflows: post transfer from statement account to `counterpart_money_account_id`. Inflows: match existing transfer (`to_money_account` = current, same amount/date, `to_statement_line_id` NULL, outflow already posted) → `status=linked`, no new GL; else post with counterpart as source. Manual transfers via dedicated API. Posted/linked lines cannot be re-classified.
+
+**Why:** Decisions §12 — transfers between own accounts are one movement, not income/expense.
+
+**API:** `POST/GET .../banking/transfers`; classify PATCH accepts `counterpart_money_account_id` when `classification=transfer`.
+
+**Not in slice:** opening balances, multi-entity transfers, FX conversion, UI, auto-detect from description.
+
+**Migration:** Alembic `017`.
+
 ## 2026-06-21 — Bank statement import & classify (Phase 3)
 
 **Choice:** `bank_statements` + `bank_statement_lines` (entity RLS). CSV v1 format: `transaction_date` (YYYY-MM-DD), signed `amount_kurus` (outflows negative), `description`, optional `reference`. Parser in `adapters/bank_parsers/csv_simple.py`. Import rejects duplicate `(entity_id, file_fingerprint)` and overlapping periods for the same bank money account. Classify `supplier_payment` on outflows: first match existing `SupplierLedgerEntry` (`movement_type=payment`, same supplier, `abs(amount)`, exact date); if found → `status=linked` with FKs, no GL post; else → `post_supplier_payment()` with `payment_account_id` = money account GL sub-account and `reference_type=bank_statement_line`. `bank_fee` / `unknown` set `status=classified` only (no GL this slice). Posted/linked lines cannot be re-classified.
