@@ -373,9 +373,10 @@ def test_double_classify_posted_line_rejected(db_session, bank_setup) -> None:
 
 
 def test_bank_fee_classification_no_journal(db_session, bank_setup) -> None:
+    """Unknown stays classify-only; bank_fee now posts GL — see test_statement_event_posting."""
     entity_id = bank_setup["entity_id"]
     statement = bank_setup["statement"]
-    fee_line = statement.lines[1]
+    refund_line = statement.lines[2]
 
     with entity_context(db_session, entity_id):
         journal_before = db_session.scalar(select(func.count()).select_from(JournalEntry))
@@ -384,8 +385,8 @@ def test_bank_fee_classification_no_journal(db_session, bank_setup) -> None:
         db_session,
         entity_id,
         statement.id,
-        fee_line.id,
-        classification=StatementLineClassification.BANK_FEE,
+        refund_line.id,
+        classification=StatementLineClassification.UNKNOWN,
     )
 
     assert result.line.status == StatementLineStatus.CLASSIFIED

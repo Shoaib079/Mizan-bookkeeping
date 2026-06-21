@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-21
 
+**Phase 4 — Credit card payment + bank fee GL:** `credit_card_payment` statement classification posts Dr CC payable (2100 sub-account) / Cr bank — liability reduction, never expense; `post_bank_fee()` Dr `5300` / Cr bank (replaces classify-only `bank_fee`); `credit_card_payments` table + statement-line linking; Alembic `022`. Tag `v0.25.0-phase4-cc-payment-bank-fee-gl`. 215 pytest green.
+
 **Phase 4 — Card sales → bank deposit reconciliation:** `card_sales_batches` table; `post_card_sales_batch()` Dr `1400` / Cr `4000`; settlement commission (explicit or inferred from linked batch) 3-line GL Dr bank + Dr `5300` / Cr `1400` gross; net-only settlements unchanged; `GET .../pos/clearing-reconciliation`; Alembic `021`. Tag `v0.24.0-phase4-card-sales-reconciliation`. 205 pytest green.
 
 **Phase 4 — Credit card clearing accounts:** `MoneyAccountKind.CREDIT_CARD` with per-card GL sub-accounts under `2100` Credit Card Payable (`2101+`); tree API extended with `credit_cards` branch; opening balance `money_account_id` lines use GL `normal_balance` (CREDIT for liability cards, DEBIT for bank/cash); reject aggregate `2100` when active card sub-accounts exist. Reuses `bank_name`/`last_four` metadata for issuer/card label. Alembic `020`. Tag `v0.23.0-phase4-credit-card-accounts`. 197 pytest green.

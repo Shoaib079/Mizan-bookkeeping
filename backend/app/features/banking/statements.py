@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.adapters.bank_parsers.csv_simple import CsvParseError, parse_csv_simple
 from app.adapters.storage.local import save_upload
 from app.core.banking import posting as banking_posting
+from app.core.banking import statement_posting
 from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_date_bounds
 from app.core.payables import posting as payables_posting
 from app.core.pos import posting as pos_posting
@@ -77,6 +78,7 @@ def _to_line_read(line: BankStatementLine) -> BankStatementLineRead:
         supplier_ledger_entry_id=line.supplier_ledger_entry_id,
         account_transfer_id=line.account_transfer_id,
         pos_settlement_id=line.pos_settlement_id,
+        credit_card_payment_id=line.credit_card_payment_id,
         review_reason=line.review_reason,
         candidate_supplier_ledger_entry_id=line.candidate_supplier_ledger_entry_id,
         candidate_account_transfer_id=line.candidate_account_transfer_id,
@@ -514,6 +516,7 @@ def classify_statement_line(
     classification: StatementLineClassification,
     supplier_id: uuid.UUID | None = None,
     counterpart_money_account_id: uuid.UUID | None = None,
+    credit_card_money_account_id: uuid.UUID | None = None,
     actor_id: uuid.UUID | None = None,
     confirm_supplier_ledger_entry_id: uuid.UUID | None = None,
     confirm_account_transfer_id: uuid.UUID | None = None,
@@ -753,10 +756,34 @@ def classify_statement_line(
                     "actor_id is required for pos_settlement"
                 )
 
-        elif classification in (
-            StatementLineClassification.BANK_FEE,
-            StatementLineClassification.UNKNOWN,
-        ):
+        elif classification == StatementLineClassification.BANK_FEE:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "bank_fee classification requires an outflow (negative amount_kurus)"
+                )
+            if actor_id is None:
+                raise InvalidClassificationError("actor_id is required for bank_fee")
+
+        elif classification == StatementLineClassification.CREDIT_CARD_PAYMENT:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "credit_card_payment classification requires an outflow "
+                    "(negative amount_kurus)"
+                )
+            if credit_card_money_account_id is None or actor_id is None:
+                raise InvalidClassificationError(
+                    "credit_card_money_account_id and actor_id are required "
+                    "for credit_card_payment"
+                )
+            card_account = session.get(MoneyAccount, credit_card_money_account_id)
+            if card_account is None:
+                raise LookupError("Credit card money account not found")
+            if card_account.account_kind != MoneyAccountKind.CREDIT_CARD:
+                raise InvalidClassificationError(
+                    "credit_card_payment requires a credit_card money account"
+                )
+
+        elif classification == StatementLineClassification.UNKNOWN:
             line.classification = classification
             line.status = StatementLineStatus.CLASSIFIED
             session.commit()
@@ -836,6 +863,73 @@ def classify_statement_line(
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
             line.pos_settlement_id = settlement_id
+            session.commit()
+            session.refresh(line)
+
+        return ClassifyStatementLineResult(
+            line=_to_line_read(line),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.BANK_FEE:
+        fee_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        result = statement_posting.post_bank_fee(
+            session,
+            entity_id,
+            bank_money_account_id=statement.money_account_id,
+            fee_date=line.transaction_date,
+            amount_kurus=fee_amount,
+            description=line.description,
+            actor_id=actor_id,
+        )
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.BANK_FEE
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
+        return ClassifyStatementLineResult(
+            line=_to_line_read(line),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.CREDIT_CARD_PAYMENT:
+        payment_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        assert credit_card_money_account_id is not None
+        result = statement_posting.post_credit_card_payment(
+            session,
+            entity_id,
+            credit_card_money_account_id=credit_card_money_account_id,
+            bank_money_account_id=statement.money_account_id,
+            payment_date=line.transaction_date,
+            amount_kurus=payment_amount,
+            description=line.description,
+            actor_id=actor_id,
+            bank_statement_line_id=line.id,
+        )
+        journal_id = result.journal_entry.id
+        payment_id = result.credit_card_payment.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.CREDIT_CARD_PAYMENT
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            line.credit_card_payment_id = payment_id
             session.commit()
             session.refresh(line)
 

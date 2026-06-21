@@ -96,6 +96,7 @@ class BankStatementLineRead(BaseModel):
     supplier_ledger_entry_id: uuid.UUID | None
     account_transfer_id: uuid.UUID | None
     pos_settlement_id: uuid.UUID | None = None
+    credit_card_payment_id: uuid.UUID | None = None
     review_reason: str | None = None
     candidate_supplier_ledger_entry_id: uuid.UUID | None = None
     candidate_account_transfer_id: uuid.UUID | None = None
@@ -120,6 +121,7 @@ class ClassifyStatementLineRequest(BaseModel):
     classification: StatementLineClassification
     supplier_id: uuid.UUID | None = None
     counterpart_money_account_id: uuid.UUID | None = None
+    credit_card_money_account_id: uuid.UUID | None = None
     actor_id: uuid.UUID | None = None
     confirm_supplier_ledger_entry_id: uuid.UUID | None = None
     confirm_account_transfer_id: uuid.UUID | None = None
