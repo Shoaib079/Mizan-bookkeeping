@@ -15,7 +15,7 @@
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
 | **Active slice** | Audit trail on all changes |
 | **Last completed slice** | Double-entry posting service (single boundary) |
-| **Last commit/tag** | (pending) / `v0.6.0-phase1-ledger-posting` |
+| **Last commit/tag** | `a138cd7` / `v0.6.0-phase1-ledger-posting` |
 | **Next up** | Audit trail on all changes |
 
 ---

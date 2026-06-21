@@ -8,7 +8,7 @@
 | **Last completed slice** | Double-entry posting service (single boundary) |
 | **Next slice** | Audit trail on all changes |
 | **Branch** | `main` |
-| **Last tag** | `v0.6.0-phase1-ledger-posting` (pending push) |
+| **Last tag** | `v0.6.0-phase1-ledger-posting` (`a138cd7`) |
 
 ## Resume point
 
