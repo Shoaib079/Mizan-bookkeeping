@@ -10,4 +10,6 @@ Initial planning package committed to git (docs, rules, roadmap, design system, 
 
 Phase 0 — **App scaffold & repo setup**: FastAPI backend with `core/` layout and integer kuruş money type; Next.js frontend with Mizan design tokens and app shell; PostgreSQL via docker-compose; dev guide and Cursor rules wired; 6 backend tests passing.
 
-Phase 0 — **Multi-restaurant foundation**: `Entity` registry; `EntityScopedMixin` (mandatory `entity_id` on business tables); PostgreSQL row-level security; `entity_context()` for scoped reads/writes; entity settings API; Alembic migration; 6 isolation tests proving Restaurant A data never visible to Restaurant B (12 pytest total).
+Phase 0 — **Multi-restaurant foundation**: `Entity` registry; `EntityScopedMixin`; PostgreSQL RLS; `entity_context()`; 6 isolation tests (12 pytest total).
+
+Phase 0 — **Opening-balances plan**: `docs/OPENING_BALANCES.md`; default restaurant chart seed; opening balance validation + day-one journal draft; onboarding validate API; **Phase 0 complete** (21 pytest total).

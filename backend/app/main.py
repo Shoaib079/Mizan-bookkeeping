@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.features.entities.api import router as entities_router
+from app.features.onboarding.api import router as onboarding_router
+from app.features.onboarding.chart_api import router as chart_router
 
 app = FastAPI(
     title="Mizan API",
@@ -23,6 +25,8 @@ app.add_middleware(
 )
 
 app.include_router(entities_router)
+app.include_router(onboarding_router)
+app.include_router(chart_router)
 
 
 @app.get("/health")

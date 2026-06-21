@@ -12,11 +12,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 0 — Setup |
-| **Active slice** | Opening-balances plan |
-| **Last completed slice** | Multi-restaurant foundation |
-| **Last commit/tag** | `29ce4a3` / `v0.2.0-phase0-entity-isolation` |
-| **Next up** | Opening-balances plan, then Phase 1 ledger core |
+| **Active phase** | Phase 1 — Ledger core + supplier invoices |
+| **Active slice** | Chart of accounts + entity scoping |
+| **Last completed slice** | Opening-balances plan (Phase 0 complete) |
+| **Last commit/tag** | *(this commit — v0.4.0-phase0-complete)* |
+| **Next up** | Phase 1: persist chart per entity, then posting service |
 
 ---
 
@@ -29,9 +29,9 @@ Project, rulebook, logs, multi-restaurant foundation, opening-balances plan.
 | Project rules & docs (`CURSOR_RULES`, `ROADMAP`, logs) | done | Rules, ROADMAP, record-keeping stubs, git remote |
 | App scaffold & repo setup | done | FastAPI backend, Next.js shell, Postgres docker, pytest, `.cursor/rules` |
 | Multi-restaurant foundation | done | Entity model, RLS, entity_context, isolation tests |
-| Opening-balances plan | not started | |
+| Opening-balances plan | done | Plan doc, default chart, validate API, wizard steps |
 
-**Phase 0 complete when:** all slices above done, tested, committed, owner sign-off.
+**Phase 0 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 0 COMPLETE (pending owner sign-off on this slice).**
 
 ---
 
@@ -171,6 +171,7 @@ Not in current build order — track here when scoped:
 |------|-------|------------|---------|
 | 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
 | 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
+| 2026-06-21 | Opening-balances plan | *(this commit)* / `v0.4.0-phase0-complete` | Default chart, OB validation, wizard plan, Phase 0 done |
 
 ---
 

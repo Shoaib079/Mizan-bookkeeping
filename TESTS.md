@@ -6,7 +6,9 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 |-----------|----------------|--------|
 | `backend/tests/test_health.py` | API liveness for deploy/dev | pass |
 | `backend/tests/test_money.py` | Integer kuruş, Turkish format, loose parse (Decisions §5) | pass |
-| `backend/tests/test_entity_isolation.py` | **Cross-entity isolation** — RLS + entity_context; A never visible to B (Decisions §2) | pass |
+| `backend/tests/test_entity_isolation.py` | Cross-entity isolation — RLS + entity_context | pass |
+| `backend/tests/test_default_chart.py` | Default chart includes Opening Balance Equity; no inventory | pass |
+| `backend/tests/test_opening_balances.py` | OB validation, equity offset, validate API (Decisions §19) | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 

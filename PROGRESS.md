@@ -6,39 +6,29 @@ Current phase/slice, resume point, session notes. Update when starting, pausing,
 
 | Field | Value |
 |-------|-------|
-| **Phase** | 0 — Setup (in progress) |
-| **Completed slices** | Project rules & docs · App scaffold · **Multi-restaurant foundation** |
-| **Next slice** | **Opening-balances plan** |
+| **Phase** | **1 — Ledger core** (next, after sign-off) |
+| **Phase 0** | **Complete** — all four slices done |
+| **Last completed slice** | Opening-balances plan |
 | **Branch** | `main` |
-| **Last tag** | `v0.2.0-phase0-entity-isolation` (`29ce4a3`) |
+| **Last tag** | *(this commit — v0.4.0-phase0-complete)* |
 
 ## Resume point
 
-After owner sign-off on **multi-restaurant foundation**:
-1. Document opening-balances onboarding approach (Decisions §19)
-2. Then Phase 1 — ledger core + chart of accounts
+After owner sign-off on **opening-balances plan**:
+1. Phase 1 slice 1: **Chart of accounts + entity scoping** (persist default chart per entity)
+2. Then double-entry posting service (single boundary)
+3. See `ROADMAP.md` Phase 1 and `docs/OPENING_BALANCES.md`
 
 ## Session notes (2026-06-21)
 
-- **Multi-restaurant foundation:** `Entity` registry, `EntitySetting` (entity-scoped), `EntityScopedMixin`, PostgreSQL **RLS** on scoped tables, `entity_context()` for automatic query scoping, Alembic migration `001_entities_rls`
-- **Isolation tests:** 6 tests prove Restaurant A data invisible to B (ORM, raw SQL, API, cross-write blocked)
-- **12 pytest tests** green
+- **Opening-balances plan:** `docs/OPENING_BALANCES.md`, default chart seed, validation logic, validate API, wizard step list
+- **21 pytest tests** green
+- **Phase 0 complete**
 
-## Record-keeping logs (all present)
+## Record-keeping logs
 
-| File | Purpose |
-|------|---------|
-| `PROGRESS.md` | This file — resume point |
-| `CHANGELOG.md` | Dated change history |
-| `BUGLOG.md` | Bugs + root cause + guarding tests |
-| `DECISIONS.md` | Technical decision log |
-| `TESTS.md` | Test register |
-| `ROADMAP.md` | Phase/slice tracker |
+`PROGRESS.md` · `CHANGELOG.md` · `BUGLOG.md` · `DECISIONS.md` · `TESTS.md` · `ROADMAP.md`
 
-## Core reference docs (repo root)
+## Core reference docs
 
-| File | Role |
-|------|------|
-| `Restaurant_Bookkeeping_App_Decisions.md` | WHAT to build |
-| `ARCHITECTURE.md` | Code structure |
-| `DESIGN_SYSTEM.md` | Look + UX |
+`Restaurant_Bookkeeping_App_Decisions.md` · `ARCHITECTURE.md` · `DESIGN_SYSTEM.md` · `docs/OPENING_BALANCES.md`

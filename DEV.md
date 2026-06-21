@@ -52,4 +52,4 @@ frontend/    Next.js — shared design system + app shell
 docs/        Planning markdown at repo root (Decisions, ROADMAP, etc.)
 ```
 
-Build rules: `CURSOR_RULES.md`. Progress: `ROADMAP.md`.
+Build rules: `CURSOR_RULES.md`. Progress: `ROADMAP.md`. Opening balances: `docs/OPENING_BALANCES.md`.

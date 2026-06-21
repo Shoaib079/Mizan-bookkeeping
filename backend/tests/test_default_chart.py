@@ -1,0 +1,27 @@
+"""Tests for default chart seed — Opening Balance Equity and OB-eligible accounts."""
+
+from app.core.chart_of_accounts.default_chart import (
+    DEFAULT_CHART,
+    OPENING_BALANCE_EQUITY_CODE,
+    opening_balance_accounts,
+)
+
+
+def test_default_chart_includes_opening_balance_equity() -> None:
+    codes = {a.code for a in DEFAULT_CHART}
+    assert OPENING_BALANCE_EQUITY_CODE in codes
+    equity = next(a for a in DEFAULT_CHART if a.code == OPENING_BALANCE_EQUITY_CODE)
+    assert equity.name_en == "Opening Balance Equity"
+    assert equity.accepts_opening_balance is False
+
+
+def test_inventory_not_in_default_chart() -> None:
+    names = {a.name_en.lower() for a in DEFAULT_CHART}
+    assert "inventory" not in names
+
+
+def test_opening_balance_accounts_are_balance_sheet() -> None:
+    ob = opening_balance_accounts()
+    assert len(ob) >= 5
+    assert all(a.accepts_opening_balance for a in ob)
+    assert all(a.code != OPENING_BALANCE_EQUITY_CODE for a in ob)

@@ -10,3 +10,11 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Pattern for new tables:** inherit `EntityScopedMixin`, add table name to `app/db/rls.py` `RLS_TABLES`, include in Alembic migration.
 
+## 2026-06-21 — Opening balances offset via Opening Balance Equity
+
+**Choice:** User enters natural-side opening figures per balance-sheet account; system generates **Opening Balance Equity (`3900`)** offset so the day-one journal balances.
+
+**Why:** Decisions §19 — running business go-live; standard accounting practice.
+
+**Plan:** `docs/OPENING_BALANCES.md`. Posting lands in Phase 1 `core/ledger`.
+
