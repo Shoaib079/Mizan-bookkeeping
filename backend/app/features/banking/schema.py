@@ -90,6 +90,9 @@ class BankStatementLineRead(BaseModel):
     journal_entry_id: uuid.UUID | None
     supplier_ledger_entry_id: uuid.UUID | None
     account_transfer_id: uuid.UUID | None
+    review_reason: str | None = None
+    candidate_supplier_ledger_entry_id: uuid.UUID | None = None
+    candidate_account_transfer_id: uuid.UUID | None = None
 
 
 class BankStatementRead(BaseModel):
@@ -112,12 +115,15 @@ class ClassifyStatementLineRequest(BaseModel):
     supplier_id: uuid.UUID | None = None
     counterpart_money_account_id: uuid.UUID | None = None
     actor_id: uuid.UUID | None = None
+    confirm_supplier_ledger_entry_id: uuid.UUID | None = None
+    confirm_account_transfer_id: uuid.UUID | None = None
 
 
 class ClassifyStatementLineResult(BaseModel):
     line: BankStatementLineRead
     linked_existing_payment: bool
     linked_existing_transfer: bool = False
+    routed_to_needs_review: bool = False
     journal_entry_id: uuid.UUID | None
 
 

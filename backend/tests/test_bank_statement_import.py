@@ -244,6 +244,109 @@ def test_classify_links_existing_manual_payment(
     assert payment_count == 1
 
 
+def test_classify_near_match_payment_routes_to_needs_review(
+    db_session, restaurant_a, seeded_accounts, upload_dir
+) -> None:
+    bank = _bank_account(db_session, restaurant_a.id)
+    with entity_context(db_session, restaurant_a.id):
+        accounts = {a.code: a.id for a in db_session.scalars(select(Account))}
+    supplier_id = _supplier_and_payable(db_session, restaurant_a, accounts)
+
+    manual = payables_posting.post_supplier_payment(
+        db_session,
+        restaurant_a.id,
+        supplier_id,
+        payment_date=date(2026, 2, 2),
+        amount_kurus=5_000_000,
+        description="Manual EFT",
+        actor_id=ACTOR_ID,
+        payment_account_id=bank.gl_account_id,
+    )
+    manual_ledger_id = manual.supplier_ledger_entry.id
+
+    statement = _import_sample(db_session, restaurant_a.id, bank.id)
+    payment_line = statement.lines[0]
+    assert payment_line.transaction_date == date(2026, 2, 1)
+
+    with entity_context(db_session, restaurant_a.id):
+        journal_before = db_session.scalar(select(func.count()).select_from(JournalEntry))
+
+    result = statement_service.classify_statement_line(
+        db_session,
+        restaurant_a.id,
+        statement.id,
+        payment_line.id,
+        classification=StatementLineClassification.SUPPLIER_PAYMENT,
+        supplier_id=supplier_id,
+        actor_id=ACTOR_ID,
+    )
+
+    assert result.routed_to_needs_review is True
+    assert result.line.status == StatementLineStatus.NEEDS_REVIEW
+    assert result.line.candidate_supplier_ledger_entry_id == manual_ledger_id
+    assert result.journal_entry_id is None
+
+    with entity_context(db_session, restaurant_a.id):
+        journal_after = db_session.scalar(select(func.count()).select_from(JournalEntry))
+    assert journal_after == journal_before
+
+
+def test_confirm_needs_review_payment_links_without_new_journal(
+    db_session, restaurant_a, seeded_accounts, upload_dir
+) -> None:
+    bank = _bank_account(db_session, restaurant_a.id)
+    with entity_context(db_session, restaurant_a.id):
+        accounts = {a.code: a.id for a in db_session.scalars(select(Account))}
+    supplier_id = _supplier_and_payable(db_session, restaurant_a, accounts)
+
+    manual = payables_posting.post_supplier_payment(
+        db_session,
+        restaurant_a.id,
+        supplier_id,
+        payment_date=date(2026, 2, 3),
+        amount_kurus=5_000_000,
+        description="Manual EFT",
+        actor_id=ACTOR_ID,
+        payment_account_id=bank.gl_account_id,
+    )
+
+    manual_ledger_id = manual.supplier_ledger_entry.id
+
+    statement = _import_sample(db_session, restaurant_a.id, bank.id)
+    payment_line = statement.lines[0]
+
+    review = statement_service.classify_statement_line(
+        db_session,
+        restaurant_a.id,
+        statement.id,
+        payment_line.id,
+        classification=StatementLineClassification.SUPPLIER_PAYMENT,
+        supplier_id=supplier_id,
+        actor_id=ACTOR_ID,
+    )
+    assert review.routed_to_needs_review is True
+
+    with entity_context(db_session, restaurant_a.id):
+        journal_before = db_session.scalar(select(func.count()).select_from(JournalEntry))
+
+    confirmed = statement_service.classify_statement_line(
+        db_session,
+        restaurant_a.id,
+        statement.id,
+        payment_line.id,
+        classification=StatementLineClassification.SUPPLIER_PAYMENT,
+        confirm_supplier_ledger_entry_id=manual_ledger_id,
+    )
+
+    assert confirmed.line.status == StatementLineStatus.LINKED
+    assert confirmed.linked_existing_payment is True
+    assert confirmed.line.supplier_ledger_entry_id == manual_ledger_id
+
+    with entity_context(db_session, restaurant_a.id):
+        journal_after = db_session.scalar(select(func.count()).select_from(JournalEntry))
+    assert journal_after == journal_before
+
+
 def test_double_classify_posted_line_rejected(db_session, bank_setup) -> None:
     entity_id = bank_setup["entity_id"]
     statement = bank_setup["statement"]

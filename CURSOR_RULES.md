@@ -98,7 +98,7 @@ A slice is NOT done if any of the above is missing — even if the feature "work
 ## 4. Git discipline (commit, tag, push — only when gates pass)
 
 - **Commit and tag ONLY after:** audit is done, full `pytest` passes, and `ROADMAP.md` is updated. Never commit failing tests or a partial slice unless the owner has explicitly agreed to a WIP branch for that work.
-- **Commit at the end of every completed slice** (and at safe checkpoints within a long slice). Never leave large amounts of uncommitted work.
+- **Commit/tag/push before sign-off:** Finished, tested slices must be committed and tagged (and pushed) before pausing for owner sign-off — never leave completed work uncommitted in the working tree.
 - **Clear commit messages** describing what and why, e.g. `feat(invoices): read e-Fatura PDF into draft (Decisions §7)` or `fix(payables): payment now reduces supplier balance (BugLog #12)`.
 - **Push to the owner's git remote after every commit**, so a local crash never loses committed work.
 - **Tag milestones.** Tag the completion of each phase/major slice with a sensible name (e.g. `v0.1-ledger-core`, `v0.2-supplier-invoices`). Tags are recovery anchors.

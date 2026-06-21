@@ -2,6 +2,22 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-21 — Near-match payment/transfer detection (Banking)
+
+**Choice:** Supplier payment and transfer auto-match uses **exact date first**, then **near-match** within ±`NEAR_MATCH_DATE_WINDOW_DAYS` (3). Exact match → auto-link (no GL post). Near-match (same supplier/amount or same transfer accounts/amount, date within window but not exact) → `status=needs_review` with `review_reason` and optional `candidate_*_id` — **never posts a second entry**. Owner confirms link via classify PATCH with `confirm_supplier_ledger_entry_id` or `confirm_account_transfer_id`. Multiple near candidates → needs_review without single candidate; owner picks on confirm.
+
+**Why:** Decisions §12 / CURSOR_RULES §1 — manually recorded payments often clear on a different bank date; exact-only matching caused double-count risk.
+
+**Migration:** Alembic `018` — `review_reason`, candidate FK columns on `bank_statement_lines`; `StatementLineStatus.NEEDS_REVIEW`.
+
+## 2026-06-21 — Statement classification GL posting policy (Banking)
+
+**Choice:** Every statement-line classification that represents a real GL event must **post or link** to an existing journal in its delivery slice — none left classify-only indefinitely. See ROADMAP Phase 3 “Banking classification GL posting policy” table. Current temporary exceptions: `bank_fee` and `unknown` (classify-only until their GL slices land). `supplier_payment`, `transfer`, and opening balances already dual-write or link.
+
+**Why:** Decisions §1 / §12 — classify-only lines do not flow to financial statements; owner requirement as banking continues.
+
+**Next GL slices:** `bank_fee` → Phase 4; POS/delivery/card settlement → Phase 4; rent/utility → Phase 6; tax/owner/customer/partner → Phase 5+.
+
 ## 2026-06-21 — Opening balances posting (Phase 3)
 
 **Choice:** `post_opening_balances()` in `core/onboarding/posting.py` — single atomic transaction through `prepare_journal_entry(..., source=opening_balance)` with `3900` Opening Balance Equity offset. Validate + post accept three mutually exclusive line targets: aggregate `account_code` (whitelist), `money_account_id` (debit bank/cash GL sub-account), `supplier_id` (credit aggregated AP `2000` control line). Per-supplier subledger rows via `persist_supplier_opening_entry()` with `journal_entry_id`. Reject aggregate `1100`/`1000` when active bank/cash money accounts exist; reject aggregate `2000` combined with supplier lines. One-time guard: 409 if entity already has posted `opening_balance` journal. Store `go_live_date` in `entity_settings` on post. No new tables — guard checks existing `journal_entries` by source.

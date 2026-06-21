@@ -14,8 +14,8 @@
 |-------|-------|
 | **Active phase** | Phase 3 — Banking hub + bank statements |
 | **Active slice** | Phase 3 complete — pending owner sign-off |
-| **Last completed slice** | Opening balances |
-| **Last commit/tag** | `10fca0a` / `v0.20.0-phase3-opening-balances` |
+| **Last completed slice** | Near-match payment/transfer detection |
+| **Last commit/tag** | _(set on commit)_ / `v0.21.0-phase3-near-match-review` |
 | **Next up** | Phase 4 — POS settlement + credit cards |
 
 ---
@@ -76,11 +76,33 @@ Account tree, import & classify, transfer linking, opening balances. **Statement
 | Slice | Status | Notes |
 |-------|--------|-------|
 | Bank/cash account tree (per entity) | done | `money_accounts` + GL sub-accounts under `1100`/`1000`; tree API with balances |
-| Statement import & classify | done | CSV import, duplicate fingerprint + overlap rejection, supplier payment classify (link or post), bank fee/unknown store-only; Alembic `016`; 8 tests; 151 pytest |
+| Statement import & classify | done | CSV import; supplier payment link-or-post; near-match → needs_review; transfer classify; bank fee/unknown classify-only (GL deferred — see policy table) |
 | Transfer linking (own-account, not income/expense) | done | `post_account_transfer()` Dr destination / Cr source (`source=transfer`); `account_transfers` table; statement classify outflow post + inflow link-or-post; manual transfer API; Alembic `017`; 9 tests; 160 pytest |
 | Opening balances | done | `post_opening_balances()` — aggregate + `money_account_id` + `supplier_id` lines; GL offset `3900`; supplier subledger with `journal_entry_id`; one-time guard; validate + post API; `go_live_date` setting; 22 tests; 172 pytest |
+| Near-match payment/transfer detection | done | ±3 day window; exact date → auto-link; near date → `needs_review` + candidate FK (no second GL post); confirm via classify PATCH; Alembic `018` |
 
 **Phase 3 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 3 COMPLETE (pending owner sign-off).**
+
+### Banking classification GL posting policy (ongoing)
+
+Every statement-line classification that represents a **real GL event** must post (or link to an existing journal) in its delivery slice — **never left classify-only**.
+
+| Classification | GL in slice | Status |
+|----------------|-------------|--------|
+| `supplier_payment` | Dr AP / Cr bank — link exact or near-match, else post | done |
+| `transfer` | Dr destination / Cr source — link exact or near-match, else post | done |
+| `bank_fee` | Dr bank charges `5300` / Cr bank | **Phase 4** (bank fee GL posting) |
+| `credit_card_payment` | Dr CC payable / Cr bank | **Phase 4** (credit card hub) |
+| `pos_settlement` / card deposit | Dr bank / Cr card clearing `1400` | **Phase 4** (POS settlement) |
+| `delivery_settlement` | Dr bank / Cr platform clearing | **Phase 4/6** (delivery clearing) |
+| `rent_utility` | Dr expense / Cr bank | **Phase 6** (expenses) |
+| `tax_payment` | Dr tax liability / Cr bank | **Phase 5/7** (tax module) |
+| `owner_draw` | Dr equity / Cr bank | **Phase 5** (owner movements) |
+| `customer_payment` | Dr bank / Cr AR | **Phase 5** (receivables) |
+| `partner_reimbursement` | Dr partner payable / Cr bank | **Phase 5** (partners) |
+| `unknown` | No GL — stays in Needs Review until reclassified | by design |
+
+**Rule:** `bank_fee` and `unknown` are temporary classify-only paths; each gets a GL posting slice before Phase 3 sign-off is final unless explicitly deferred with owner approval.
 
 ---
 

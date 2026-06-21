@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.adapters.bank_parsers.csv_simple import CsvParseError, parse_csv_simple
 from app.adapters.storage.local import save_upload
 from app.core.banking import posting as banking_posting
+from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_date_bounds
 from app.core.payables import posting as payables_posting
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
@@ -74,6 +75,9 @@ def _to_line_read(line: BankStatementLine) -> BankStatementLineRead:
         journal_entry_id=line.journal_entry_id,
         supplier_ledger_entry_id=line.supplier_ledger_entry_id,
         account_transfer_id=line.account_transfer_id,
+        review_reason=line.review_reason,
+        candidate_supplier_ledger_entry_id=line.candidate_supplier_ledger_entry_id,
+        candidate_account_transfer_id=line.candidate_account_transfer_id,
     )
 
 
@@ -121,6 +125,17 @@ def _period_overlaps(
     return existing is not None
 
 
+def _used_supplier_ledger_entry_ids(
+    session: Session, *, exclude_line_id: uuid.UUID | None = None
+):
+    query = select(BankStatementLine.supplier_ledger_entry_id).where(
+        BankStatementLine.supplier_ledger_entry_id.isnot(None)
+    )
+    if exclude_line_id is not None:
+        query = query.where(BankStatementLine.id != exclude_line_id)
+    return query
+
+
 def _find_matching_payment(
     session: Session,
     *,
@@ -130,11 +145,7 @@ def _find_matching_payment(
     exclude_line_id: uuid.UUID | None = None,
 ) -> SupplierLedgerEntry | None:
     payment_amount = abs(amount_kurus)
-    used_entry_ids = select(BankStatementLine.supplier_ledger_entry_id).where(
-        BankStatementLine.supplier_ledger_entry_id.isnot(None)
-    )
-    if exclude_line_id is not None:
-        used_entry_ids = used_entry_ids.where(BankStatementLine.id != exclude_line_id)
+    used_entry_ids = _used_supplier_ledger_entry_ids(session, exclude_line_id=exclude_line_id)
 
     return session.scalar(
         select(SupplierLedgerEntry)
@@ -148,6 +159,82 @@ def _find_matching_payment(
         .order_by(SupplierLedgerEntry.created_at)
         .limit(1)
     )
+
+
+def _find_near_matching_payments(
+    session: Session,
+    *,
+    supplier_id: uuid.UUID,
+    amount_kurus: int,
+    transaction_date: date,
+    exclude_line_id: uuid.UUID | None = None,
+) -> list[SupplierLedgerEntry]:
+    payment_amount = abs(amount_kurus)
+    used_entry_ids = _used_supplier_ledger_entry_ids(session, exclude_line_id=exclude_line_id)
+    low, high = near_match_date_bounds(transaction_date)
+
+    return list(
+        session.scalars(
+            select(SupplierLedgerEntry)
+            .where(
+                SupplierLedgerEntry.supplier_id == supplier_id,
+                SupplierLedgerEntry.movement_type == SupplierMovementType.PAYMENT,
+                SupplierLedgerEntry.movement_date >= low,
+                SupplierLedgerEntry.movement_date <= high,
+                SupplierLedgerEntry.movement_date != transaction_date,
+                SupplierLedgerEntry.amount_kurus == -payment_amount,
+                SupplierLedgerEntry.id.not_in(used_entry_ids),
+            )
+            .order_by(SupplierLedgerEntry.movement_date, SupplierLedgerEntry.created_at)
+        )
+    )
+
+
+def _link_payment_to_line(
+    line: BankStatementLine,
+    *,
+    supplier_id: uuid.UUID,
+    classification: StatementLineClassification,
+    payment_entry: SupplierLedgerEntry,
+) -> None:
+    line.classification = classification
+    line.status = StatementLineStatus.LINKED
+    line.supplier_id = supplier_id
+    line.journal_entry_id = payment_entry.journal_entry_id
+    line.supplier_ledger_entry_id = payment_entry.id
+    line.review_reason = None
+    line.candidate_supplier_ledger_entry_id = None
+    line.candidate_account_transfer_id = None
+
+
+def _route_payment_needs_review(
+    line: BankStatementLine,
+    *,
+    supplier_id: uuid.UUID,
+    classification: StatementLineClassification,
+    candidates: list[SupplierLedgerEntry],
+) -> None:
+    line.classification = classification
+    line.status = StatementLineStatus.NEEDS_REVIEW
+    line.supplier_id = supplier_id
+    line.journal_entry_id = None
+    line.supplier_ledger_entry_id = None
+    if len(candidates) == 1:
+        candidate = candidates[0]
+        line.review_reason = (
+            f"Near-match payment on {candidate.movement_date.isoformat()} "
+            f"(statement date {line.transaction_date.isoformat()}, "
+            f"window ±{NEAR_MATCH_DATE_WINDOW_DAYS} days)"
+        )
+        line.candidate_supplier_ledger_entry_id = candidate.id
+    else:
+        dates = ", ".join(c.movement_date.isoformat() for c in candidates)
+        line.review_reason = (
+            f"Multiple near-match payments within ±{NEAR_MATCH_DATE_WINDOW_DAYS} days "
+            f"({dates}) — confirm which to link"
+        )
+        line.candidate_supplier_ledger_entry_id = None
+    line.candidate_account_transfer_id = None
 
 
 def _find_matching_transfer(
@@ -172,6 +259,108 @@ def _find_matching_transfer(
     if exclude_line_id is not None:
         query = query.where(AccountTransfer.from_statement_line_id != exclude_line_id)
     return session.scalar(query.order_by(AccountTransfer.created_at).limit(1))
+
+
+def _find_near_matching_transfers(
+    session: Session,
+    *,
+    to_money_account_id: uuid.UUID,
+    amount_kurus: int,
+    transfer_date: date,
+    from_money_account_id: uuid.UUID | None = None,
+    exclude_line_id: uuid.UUID | None = None,
+) -> list[AccountTransfer]:
+    low, high = near_match_date_bounds(transfer_date)
+    query = select(AccountTransfer).where(
+        AccountTransfer.to_money_account_id == to_money_account_id,
+        AccountTransfer.amount_kurus == amount_kurus,
+        AccountTransfer.transfer_date >= low,
+        AccountTransfer.transfer_date <= high,
+        AccountTransfer.transfer_date != transfer_date,
+        AccountTransfer.to_statement_line_id.is_(None),
+        AccountTransfer.from_statement_line_id.isnot(None),
+    )
+    if from_money_account_id is not None:
+        query = query.where(AccountTransfer.from_money_account_id == from_money_account_id)
+    if exclude_line_id is not None:
+        query = query.where(AccountTransfer.from_statement_line_id != exclude_line_id)
+    return list(session.scalars(query.order_by(AccountTransfer.transfer_date, AccountTransfer.created_at)))
+
+
+def _find_near_matching_outflow_transfers(
+    session: Session,
+    *,
+    from_money_account_id: uuid.UUID,
+    amount_kurus: int,
+    transfer_date: date,
+    to_money_account_id: uuid.UUID | None = None,
+    exclude_line_id: uuid.UUID | None = None,
+) -> list[AccountTransfer]:
+    """Manual or unlinked transfers that may match a statement outflow on a nearby date."""
+    low, high = near_match_date_bounds(transfer_date)
+    query = select(AccountTransfer).where(
+        AccountTransfer.from_money_account_id == from_money_account_id,
+        AccountTransfer.amount_kurus == amount_kurus,
+        AccountTransfer.transfer_date >= low,
+        AccountTransfer.transfer_date <= high,
+        AccountTransfer.transfer_date != transfer_date,
+        AccountTransfer.from_statement_line_id.is_(None),
+    )
+    if to_money_account_id is not None:
+        query = query.where(AccountTransfer.to_money_account_id == to_money_account_id)
+    if exclude_line_id is not None:
+        query = query.where(
+            (AccountTransfer.from_statement_line_id.is_(None))
+            | (AccountTransfer.from_statement_line_id != exclude_line_id)
+        )
+    return list(session.scalars(query.order_by(AccountTransfer.transfer_date, AccountTransfer.created_at)))
+
+
+def _link_transfer_to_line(
+    line: BankStatementLine,
+    *,
+    transfer: AccountTransfer,
+    as_inflow: bool,
+) -> None:
+    line.classification = StatementLineClassification.TRANSFER
+    line.status = StatementLineStatus.LINKED
+    line.journal_entry_id = transfer.journal_entry_id
+    line.account_transfer_id = transfer.id
+    line.review_reason = None
+    line.candidate_supplier_ledger_entry_id = None
+    line.candidate_account_transfer_id = None
+    if as_inflow:
+        transfer.to_statement_line_id = line.id
+    else:
+        transfer.from_statement_line_id = line.id
+
+
+def _route_transfer_needs_review(
+    line: BankStatementLine,
+    *,
+    candidates: list[AccountTransfer],
+    as_inflow: bool,
+) -> None:
+    line.classification = StatementLineClassification.TRANSFER
+    line.status = StatementLineStatus.NEEDS_REVIEW
+    line.journal_entry_id = None
+    line.account_transfer_id = None
+    if len(candidates) == 1:
+        candidate = candidates[0]
+        line.review_reason = (
+            f"Near-match transfer on {candidate.transfer_date.isoformat()} "
+            f"(statement date {line.transaction_date.isoformat()}, "
+            f"window ±{NEAR_MATCH_DATE_WINDOW_DAYS} days)"
+        )
+        line.candidate_account_transfer_id = candidate.id
+    else:
+        dates = ", ".join(c.transfer_date.isoformat() for c in candidates)
+        line.review_reason = (
+            f"Multiple near-match transfers within ±{NEAR_MATCH_DATE_WINDOW_DAYS} days "
+            f"({dates}) — confirm which to link"
+        )
+        line.candidate_account_transfer_id = None
+    line.candidate_supplier_ledger_entry_id = None
 
 
 def import_bank_statement(
@@ -324,6 +513,8 @@ def classify_statement_line(
     supplier_id: uuid.UUID | None = None,
     counterpart_money_account_id: uuid.UUID | None = None,
     actor_id: uuid.UUID | None = None,
+    confirm_supplier_ledger_entry_id: uuid.UUID | None = None,
+    confirm_account_transfer_id: uuid.UUID | None = None,
 ) -> ClassifyStatementLineResult:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -346,6 +537,62 @@ def classify_statement_line(
 
         money_account = _get_bank_money_account(session, statement.money_account_id)
 
+        if line.status == StatementLineStatus.NEEDS_REVIEW:
+            if confirm_supplier_ledger_entry_id is not None:
+                payment_entry = session.get(
+                    SupplierLedgerEntry, confirm_supplier_ledger_entry_id
+                )
+                if payment_entry is None:
+                    raise LookupError("Supplier ledger entry not found")
+                if (
+                    line.candidate_supplier_ledger_entry_id is not None
+                    and payment_entry.id != line.candidate_supplier_ledger_entry_id
+                ):
+                    raise InvalidClassificationError(
+                        "confirm_supplier_ledger_entry_id does not match review candidate"
+                    )
+                _link_payment_to_line(
+                    line,
+                    supplier_id=payment_entry.supplier_id,
+                    classification=StatementLineClassification.SUPPLIER_PAYMENT,
+                    payment_entry=payment_entry,
+                )
+                session.commit()
+                session.refresh(line)
+                return ClassifyStatementLineResult(
+                    line=_to_line_read(line),
+                    linked_existing_payment=True,
+                    linked_existing_transfer=False,
+                    routed_to_needs_review=False,
+                    journal_entry_id=payment_entry.journal_entry_id,
+                )
+            if confirm_account_transfer_id is not None:
+                transfer = session.get(AccountTransfer, confirm_account_transfer_id)
+                if transfer is None:
+                    raise LookupError("Account transfer not found")
+                if (
+                    line.candidate_account_transfer_id is not None
+                    and transfer.id != line.candidate_account_transfer_id
+                ):
+                    raise InvalidClassificationError(
+                        "confirm_account_transfer_id does not match review candidate"
+                    )
+                as_inflow = line.amount_kurus > 0
+                _link_transfer_to_line(line, transfer=transfer, as_inflow=as_inflow)
+                session.commit()
+                session.refresh(line)
+                return ClassifyStatementLineResult(
+                    line=_to_line_read(line),
+                    linked_existing_payment=False,
+                    linked_existing_transfer=True,
+                    routed_to_needs_review=False,
+                    journal_entry_id=transfer.journal_entry_id,
+                )
+            raise InvalidClassificationError(
+                "needs_review line requires confirm_supplier_ledger_entry_id or "
+                "confirm_account_transfer_id to complete linking"
+            )
+
         if classification == StatementLineClassification.SUPPLIER_PAYMENT:
             if line.amount_kurus >= 0:
                 raise InvalidClassificationError(
@@ -367,18 +614,44 @@ def classify_statement_line(
                 exclude_line_id=line.id,
             )
             if existing is not None:
-                line.classification = classification
-                line.status = StatementLineStatus.LINKED
-                line.supplier_id = supplier_id
-                line.journal_entry_id = existing.journal_entry_id
-                line.supplier_ledger_entry_id = existing.id
+                _link_payment_to_line(
+                    line,
+                    supplier_id=supplier_id,
+                    classification=classification,
+                    payment_entry=existing,
+                )
                 session.commit()
                 session.refresh(line)
                 return ClassifyStatementLineResult(
                     line=_to_line_read(line),
                     linked_existing_payment=True,
                     linked_existing_transfer=False,
+                    routed_to_needs_review=False,
                     journal_entry_id=existing.journal_entry_id,
+                )
+
+            near_matches = _find_near_matching_payments(
+                session,
+                supplier_id=supplier_id,
+                amount_kurus=line.amount_kurus,
+                transaction_date=line.transaction_date,
+                exclude_line_id=line.id,
+            )
+            if near_matches:
+                _route_payment_needs_review(
+                    line,
+                    supplier_id=supplier_id,
+                    classification=classification,
+                    candidates=near_matches,
+                )
+                session.commit()
+                session.refresh(line)
+                return ClassifyStatementLineResult(
+                    line=_to_line_read(line),
+                    linked_existing_payment=False,
+                    linked_existing_transfer=False,
+                    routed_to_needs_review=True,
+                    journal_entry_id=None,
                 )
 
         elif classification == StatementLineClassification.TRANSFER:
@@ -392,6 +665,28 @@ def classify_statement_line(
                 counterpart = session.get(MoneyAccount, counterpart_money_account_id)
                 if counterpart is None:
                     raise LookupError("Counterpart money account not found")
+
+                near_outflows = _find_near_matching_outflow_transfers(
+                    session,
+                    from_money_account_id=statement.money_account_id,
+                    amount_kurus=transfer_amount,
+                    transfer_date=line.transaction_date,
+                    to_money_account_id=counterpart_money_account_id,
+                    exclude_line_id=line.id,
+                )
+                if near_outflows:
+                    _route_transfer_needs_review(
+                        line, candidates=near_outflows, as_inflow=False
+                    )
+                    session.commit()
+                    session.refresh(line)
+                    return ClassifyStatementLineResult(
+                        line=_to_line_read(line),
+                        linked_existing_payment=False,
+                        linked_existing_transfer=False,
+                        routed_to_needs_review=True,
+                        journal_entry_id=None,
+                    )
             else:
                 existing_transfer = _find_matching_transfer(
                     session,
@@ -402,19 +697,41 @@ def classify_statement_line(
                     exclude_line_id=line.id,
                 )
                 if existing_transfer is not None:
-                    line.classification = classification
-                    line.status = StatementLineStatus.LINKED
-                    line.journal_entry_id = existing_transfer.journal_entry_id
-                    line.account_transfer_id = existing_transfer.id
-                    existing_transfer.to_statement_line_id = line.id
+                    _link_transfer_to_line(
+                        line, transfer=existing_transfer, as_inflow=True
+                    )
                     session.commit()
                     session.refresh(line)
                     return ClassifyStatementLineResult(
                         line=_to_line_read(line),
                         linked_existing_payment=False,
                         linked_existing_transfer=True,
+                        routed_to_needs_review=False,
                         journal_entry_id=existing_transfer.journal_entry_id,
                     )
+
+                near_inflows = _find_near_matching_transfers(
+                    session,
+                    to_money_account_id=statement.money_account_id,
+                    amount_kurus=transfer_amount,
+                    transfer_date=line.transaction_date,
+                    from_money_account_id=counterpart_money_account_id,
+                    exclude_line_id=line.id,
+                )
+                if near_inflows:
+                    _route_transfer_needs_review(
+                        line, candidates=near_inflows, as_inflow=True
+                    )
+                    session.commit()
+                    session.refresh(line)
+                    return ClassifyStatementLineResult(
+                        line=_to_line_read(line),
+                        linked_existing_payment=False,
+                        linked_existing_transfer=False,
+                        routed_to_needs_review=True,
+                        journal_entry_id=None,
+                    )
+
                 if counterpart_money_account_id is None or actor_id is None:
                     raise InvalidClassificationError(
                         "counterpart_money_account_id and actor_id are required "
@@ -436,6 +753,7 @@ def classify_statement_line(
                 line=_to_line_read(line),
                 linked_existing_payment=False,
                 linked_existing_transfer=False,
+                routed_to_needs_review=False,
                 journal_entry_id=None,
             )
         elif classification == StatementLineClassification.UNCLASSIFIED:
@@ -477,6 +795,7 @@ def classify_statement_line(
             line=_to_line_read(line),
             linked_existing_payment=False,
             linked_existing_transfer=False,
+            routed_to_needs_review=False,
             journal_entry_id=journal_id,
         )
 
@@ -528,5 +847,6 @@ def classify_statement_line(
         line=_to_line_read(line),
         linked_existing_payment=False,
         linked_existing_transfer=False,
+        routed_to_needs_review=False,
         journal_entry_id=journal_id,
     )

@@ -23,6 +23,7 @@ class StatementLineClassification(str, enum.Enum):
 class StatementLineStatus(str, enum.Enum):
     IMPORTED = "imported"
     CLASSIFIED = "classified"
+    NEEDS_REVIEW = "needs_review"
     POSTED = "posted"
     LINKED = "linked"
 
@@ -106,6 +107,19 @@ class BankStatementLine(EntityScopedMixin, Base):
         index=True,
     )
     account_transfer_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("account_transfers.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    review_reason: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    candidate_supplier_ledger_entry_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("supplier_ledger_entries.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    candidate_account_transfer_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("account_transfers.id", ondelete="RESTRICT"),
         nullable=True,
