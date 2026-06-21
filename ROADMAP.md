@@ -15,7 +15,7 @@
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
 | **Active slice** | Phase 1 sign-off (all slices done) |
 | **Last completed slice** | Read e-Fatura invoice (PDF) into draft |
-| **Last commit/tag** | pending / `v0.9.0-phase1-efatura-draft` |
+| **Last commit/tag** | `a952821` / `v0.9.0-phase1-efatura-draft` |
 | **Next up** | Phase 2 — Supplier master (after owner sign-off) |
 
 ---

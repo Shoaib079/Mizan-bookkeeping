@@ -8,7 +8,7 @@
 | **Last completed slice** | Read e-Fatura invoice (PDF) into draft |
 | **Next slice** | Phase 2 — Supplier master (after owner sign-off) |
 | **Branch** | `main` |
-| **Last tag** | `v0.9.0-phase1-efatura-draft` (pending commit) |
+| **Last tag** | `v0.9.0-phase1-efatura-draft` (`a952821`) |
 
 ## Resume point
 
