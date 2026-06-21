@@ -7,7 +7,7 @@ Everything we worked out, in one place. Read in this order.
 2. **`CURSOR_RULES.md`** — **HOW to build it (process).** The rulebook for the AI builder: work in slices, completion gate, no dead code, git commit/tag/push, the mandatory crash-recovery protocol, the root-cause bug protocol, meaningful tests, and the record-keeping logs.
 3. **`ROADMAP.md`** — **WHERE we are.** Phase-by-phase, slice-by-slice build tracker (mirrors Decisions §27). Updated after every slice — current status, what's done, what's next.
 4. **`ARCHITECTURE.md`** — **HOW it's structured (so it never becomes a monolith).** Feature-based modules, the isolated accounting core + single posting boundary, adapters for messy inputs, and the anti-`app.py` rules.
-5. **`DESIGN_SYSTEM.md`** — **HOW it looks.** The locked visual system: white background, **blue** accent, Inter type, Lucide icons, components, the app shell, and the page archetypes (including the Reports card-library layout).
+5. **`DESIGN_SYSTEM.md`** — **HOW it looks.** The locked visual system: white background, **blue** accent, Inter type, Lucide icons, components, the app shell, and the page archetypes (including the Reports card-library layout). **§0** has copy-paste Cursor prompts: standing theme rule (structure first) and theme-refinement-only.
 6. **`app_preview.html`** — **a live, openable preview.** Double-click to open in a browser and click through the pages (dashboard, list, supplier ledger, review, reports, settings, login) in the real look.
 
 ## Ideas for later

@@ -3,6 +3,26 @@
 **Status:** Locked. This file defines the **visual language only** — the look, the structure, the components.
 **Important:** We follow the **look and structure** of the approved design sheet ("Restaurant Defteri" style). We do **NOT** copy the placeholder content shown in those mockups (the sample VAT declaration, aging buckets, generic role names, etc.). All accounting *behaviour* comes from `Restaurant_Bookkeeping_App_Decisions.md`; all build rules from `CURSOR_RULES.md`. If look and behaviour ever seem to conflict, behaviour (Decisions) wins — restyle, don't re-spec.
 
+**Build structure first; refine the theme later.** All pages and functionality ship against the current default tokens. The look (colors, fonts, spacing, radius) can be changed or fully replaced afterward by editing **only** the one shadcn/ui token file — zero page rework — as long as pages never hardcode styles.
+
+---
+
+## 0. Copy-paste instructions for Cursor
+
+Use these verbatim when starting UI work or when polishing the look later.
+
+### Standing rule — paste at the **start** of every UI build session
+
+```
+Build the whole app using a single theme token file (shadcn/ui tokens) for all colors, fonts, spacing, and radius. Every component and page must read styles from that token file and the shared component library — never hardcode a color or style inside a page. Use the palette and rules in DESIGN_SYSTEM.md as the starting theme. Build all pages and functionality first; we will refine or replace the visual theme later by editing only the token file, with no page changes.
+```
+
+### Theme refinement only — paste when improving the look (not structure)
+
+```
+Improve only the visual theme — do not change any page logic, layout, or structure. Edit only the design token file (colors, typography, spacing, radius) so the whole app re-skins at once. Keep it clean, modern, professional, white background, blue accent, consistent across every page, per DESIGN_SYSTEM.md. Show me before/after on a couple of pages. Do not hardcode styles in pages; everything stays in the token file.
+```
+
 ---
 
 ## 1. The look in one line
