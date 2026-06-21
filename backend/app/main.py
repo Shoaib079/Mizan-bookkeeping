@@ -23,6 +23,8 @@ from app.features.pos.api import (
     reconciliation_router,
     settlements_router,
 )
+from app.features.cash.api import movements_router as cash_movements_router
+from app.features.cash.api import sessions_router as cash_sessions_router
 
 app = FastAPI(
     title="Mizan API",
@@ -57,6 +59,8 @@ app.include_router(banking_transfers_router)
 app.include_router(settlements_router)
 app.include_router(card_sales_router)
 app.include_router(reconciliation_router)
+app.include_router(cash_movements_router)
+app.include_router(cash_sessions_router)
 
 
 @app.get("/health")

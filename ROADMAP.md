@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 5 — Cash drawer, forex, staff, partner reimbursements, receivables |
-| **Active slice** | Cash drawer |
-| **Last completed slice** | Phase 4 complete (owner signed off) |
-| **Last commit/tag** | `9a8a927` / `v0.25.0-phase4-cc-payment-bank-fee-gl` |
-| **Next up** | Phase 5 Slice 1 — Cash drawer |
+| **Active slice** | Forex (FX holdings, conversions) |
+| **Last completed slice** | Cash drawer |
+| **Last commit/tag** | pending — `v0.26.0-phase5-cash-drawer` |
+| **Next up** | Phase 5 Slice 2 — Forex |
 
 ---
 
@@ -123,7 +123,7 @@ Every statement-line classification that represents a **real GL event** must pos
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| Cash drawer | in progress | EOD close + movements + over/short GL |
+| Cash drawer | done | `post_cash_movement()` Dr/Cr cash GL + offset; EOD close posts over/short to `5400`; `cash_drawer_sessions` + `cash_movements`; day locked on close; Alembic `023`; 9 tests; 224 pytest |
 | Forex (FX holdings, conversions) | not started | |
 | Staff (salary vs advance — no double-count) | not started | |
 | Partner reimbursements | not started | |

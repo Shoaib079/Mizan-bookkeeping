@@ -14,6 +14,18 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** POS photo OCR (Phase 6), near-match for settlements, `bank_fee` GL classify, UI.
 
+## 2026-06-21 — Cash drawer (Phase 5)
+
+**Choice:** `post_cash_movement()` in `core/cash/posting.py` — cash in Dr cash GL / Cr offset; cash out Dr offset / Cr cash GL. Auto-open `cash_drawer_sessions` per `(money_account_id, session_date)` on first movement. `close_cash_drawer_session()` reads GL expected balance, compares owner counted balance; over posts Dr cash / Cr `5400`, short posts Dr `5400` / Cr cash; zero variance = no close journal; session status → closed (no further movements). Reuses Phase 3 `MoneyAccountKind.CASH` under bucket `1000`.
+
+**Why:** Decisions §14 — running drawer balance via GL; EOD Z-close with over/short and day lock.
+
+**Migration:** Alembic `023` — `cash_drawer_sessions`, `cash_movements` with entity RLS.
+
+**API:** `POST/GET .../cash/movements`; `GET .../cash/drawer-sessions`, `GET .../{id}`, `POST .../{id}/close`.
+
+**Not in slice:** Typed movement categories (cash sales, tips, owner draw), FX purchases, UI, locked-period enforcement beyond session close.
+
 ## 2026-06-21 — Credit card clearing accounts (Phase 4)
 
 **Choice:** Extend `MoneyAccountKind` with `CREDIT_CARD`; reuse `create_money_account()` to create GL sub-accounts `2101+` under parent `2100` Credit Card Payable (LIABILITY, CREDIT normal balance, `accepts_opening_balance=True`). Tree API returns `credit_cards` branch alongside `banks`/`cash`. Opening balance lines via `money_account_id` post on the GL account's `normal_balance` side (not hardcoded DEBIT) — CREDIT for credit cards, DEBIT for bank/cash. Reject aggregate `2100` when active credit card money accounts exist (mirrors `1100`/`1000` rule). Metadata: `bank_name` as card issuer label, `last_four` for card digits.

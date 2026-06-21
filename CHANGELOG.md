@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-21
 
+**Phase 5 — Cash drawer:** `post_cash_movement()` posts cash in (Dr cash / Cr offset) or out (Dr offset / Cr cash) on `MoneyAccountKind.CASH` sub-accounts; auto-opens per-day `cash_drawer_sessions`; EOD close compares counted vs GL expected balance; over/short posts to `5400` Cash Over/Short; day locked after close; `cash_movements` table; `JournalEntrySource.CASH_MOVEMENT` / `CASH_DRAWER_CLOSE`; API `POST .../cash/movements`, `GET .../cash/drawer-sessions`, `POST .../close`; Alembic `023`. Tag `v0.26.0-phase5-cash-drawer`. 224 pytest green.
+
 **Phase 4 owner sign-off:** POS settlement + credit cards phase officially complete; active work moves to Phase 5 — Cash drawer, forex, staff, partner reimbursements, receivables. Last tag remains `v0.25.0-phase4-cc-payment-bank-fee-gl` / `9a8a927`.
 
 **Phase 4 — Credit card payment + bank fee GL:** `credit_card_payment` statement classification posts Dr CC payable (2100 sub-account) / Cr bank — liability reduction, never expense; `post_bank_fee()` Dr `5300` / Cr bank (replaces classify-only `bank_fee`); `credit_card_payments` table + statement-line linking; Alembic `022`. Tag `v0.25.0-phase4-cc-payment-bank-fee-gl`. 215 pytest green.

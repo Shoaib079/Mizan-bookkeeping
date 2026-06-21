@@ -1,0 +1,145 @@
+"""Cash drawer service — movements and EOD close (Decisions §14)."""
+
+from __future__ import annotations
+
+import uuid
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.core.cash.posting import close_cash_drawer_session, post_cash_movement
+from app.db.session import entity_context, require_entity_context
+from app.features.cash.models import CashDrawerSession, CashMovement
+from app.features.cash.schema import (
+    CashDrawerCloseResponse,
+    CashDrawerSessionDetail,
+    CashDrawerSessionRead,
+    CashMovementCreate,
+    CashMovementRead,
+)
+from app.features.entities import service as entity_service
+
+
+def _to_movement_read(movement: CashMovement) -> CashMovementRead:
+    return CashMovementRead(
+        id=movement.id,
+        entity_id=movement.entity_id,
+        session_id=movement.session_id,
+        money_account_id=movement.money_account_id,
+        movement_date=movement.movement_date,
+        direction=movement.direction,
+        amount_kurus=movement.amount_kurus,
+        offset_account_id=movement.offset_account_id,
+        description=movement.description,
+        actor_id=movement.actor_id,
+        journal_entry_id=movement.journal_entry_id,
+        created_at=movement.created_at,
+    )
+
+
+def _to_session_read(drawer_session: CashDrawerSession) -> CashDrawerSessionRead:
+    return CashDrawerSessionRead(
+        id=drawer_session.id,
+        entity_id=drawer_session.entity_id,
+        money_account_id=drawer_session.money_account_id,
+        session_date=drawer_session.session_date,
+        status=drawer_session.status,
+        expected_balance_kurus=drawer_session.expected_balance_kurus,
+        counted_balance_kurus=drawer_session.counted_balance_kurus,
+        over_short_kurus=drawer_session.over_short_kurus,
+        closed_at=drawer_session.closed_at,
+        closed_by=drawer_session.closed_by,
+        close_journal_entry_id=drawer_session.close_journal_entry_id,
+        created_at=drawer_session.created_at,
+    )
+
+
+def create_cash_movement(
+    session: Session,
+    entity_id: uuid.UUID,
+    payload: CashMovementCreate,
+) -> CashMovementRead:
+    result = post_cash_movement(
+        session,
+        entity_id,
+        money_account_id=payload.money_account_id,
+        movement_date=payload.movement_date,
+        direction=payload.direction,
+        amount_kurus=payload.amount_kurus,
+        offset_account_id=payload.offset_account_id,
+        description=payload.description,
+        actor_id=payload.actor_id,
+    )
+    return _to_movement_read(result.cash_movement)
+
+
+def list_cash_drawer_sessions(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    money_account_id: uuid.UUID | None = None,
+) -> list[CashDrawerSessionRead]:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        query = select(CashDrawerSession).order_by(
+            CashDrawerSession.session_date.desc(),
+            CashDrawerSession.created_at.desc(),
+        )
+        if money_account_id is not None:
+            query = query.where(CashDrawerSession.money_account_id == money_account_id)
+        sessions = session.scalars(query).all()
+        return [_to_session_read(item) for item in sessions]
+
+
+def get_cash_drawer_session(
+    session: Session,
+    entity_id: uuid.UUID,
+    session_id: uuid.UUID,
+) -> CashDrawerSessionDetail:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        drawer_session = session.get(CashDrawerSession, session_id)
+        if drawer_session is None:
+            raise LookupError("Cash drawer session not found")
+
+        movements = session.scalars(
+            select(CashMovement)
+            .where(CashMovement.session_id == session_id)
+            .order_by(CashMovement.created_at.asc())
+        ).all()
+
+        return CashDrawerSessionDetail(
+            **_to_session_read(drawer_session).model_dump(),
+            movements=[_to_movement_read(movement) for movement in movements],
+        )
+
+
+def close_cash_drawer(
+    session: Session,
+    entity_id: uuid.UUID,
+    session_id: uuid.UUID,
+    *,
+    counted_balance_kurus: int,
+    actor_id: uuid.UUID,
+    description: str = "Cash drawer EOD close",
+) -> CashDrawerCloseResponse:
+    result = close_cash_drawer_session(
+        session,
+        entity_id,
+        session_id=session_id,
+        counted_balance_kurus=counted_balance_kurus,
+        actor_id=actor_id,
+        description=description,
+    )
+    return CashDrawerCloseResponse(
+        session=_to_session_read(result.session),
+        close_journal_entry_id=(
+            result.close_journal_entry.id if result.close_journal_entry is not None else None
+        ),
+    )
