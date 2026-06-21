@@ -15,7 +15,7 @@
 | **Active phase** | Phase 3 — Banking hub + bank statements |
 | **Active slice** | Transfer linking (own-account) — not started |
 | **Last completed slice** | Statement import & classify |
-| **Last commit/tag** | (pending) / `v0.18.0-phase3-statement-import-classify` |
+| **Last commit/tag** | `6133506` / `v0.18.0-phase3-statement-import-classify` |
 | **Next up** | Transfer linking (own-account, not income/expense) |
 
 ---
@@ -183,7 +183,7 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Invoice → payable posting (draft-to-ledger) | `3f367f5` / `v0.15.0-phase2-draft-to-ledger` | confirmed draft → GL + payables; Input VAT 1500; 127 pytest |
 | 2026-06-21 | Supplier payment GL posting | `a08e703` / `v0.16.0-phase2-supplier-payment-gl` | `post_supplier_payment()` Dr AP Cr bank/cash + subledger; Phase 2 complete |
 | 2026-06-21 | Bank/cash account tree | — / `v0.17.0-phase3-bank-cash-tree` | `money_accounts` + GL sub-accounts; tree API; 143 pytest |
-| 2026-06-21 | Statement import & classify | — / `v0.18.0-phase3-statement-import-classify` | CSV import + classify; link-or-post supplier payments; 151 pytest |
+| 2026-06-21 | Statement import & classify | `6133506` / `v0.18.0-phase3-statement-import-classify` | CSV import + classify; link-or-post supplier payments; 151 pytest |
 
 ---
 
