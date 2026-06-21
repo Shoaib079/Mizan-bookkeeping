@@ -180,6 +180,7 @@ def _validate_opening_balance_lines_in_context(
     has_bank_sub_accounts = MoneyAccountKind.BANK in active_kinds
     has_cash_sub_accounts = MoneyAccountKind.CASH in active_kinds
     has_credit_card_sub_accounts = MoneyAccountKind.CREDIT_CARD in active_kinds
+    has_fx_sub_accounts = MoneyAccountKind.FOREIGN_CURRENCY in active_kinds
 
     seen_account_codes: set[str] = set()
     seen_money_accounts: set[uuid.UUID] = set()
@@ -209,6 +210,11 @@ def _validate_opening_balance_lines_in_context(
                     "aggregate account 2100 is not allowed when credit card sub-accounts exist; "
                     "use money_account_id for each credit card balance"
                 )
+            if line.account_code in FX_WALLET_CODES and has_fx_sub_accounts:
+                raise OpeningBalanceError(
+                    f"aggregate account {line.account_code} is not allowed when FX sub-accounts exist; "
+                    "use money_account_id with quantity model (not supported yet)"
+                )
             if line.account_code == ACCOUNTS_PAYABLE_CODE and any(
                 other.supplier_id is not None for other in lines
             ):
@@ -230,6 +236,10 @@ def _validate_opening_balance_lines_in_context(
             if money_account is None or not money_account.is_active:
                 raise OpeningBalanceError(
                     f"money account not found or inactive: {line.money_account_id}"
+                )
+            if money_account.account_kind == MoneyAccountKind.FOREIGN_CURRENCY:
+                raise OpeningBalanceNotSupportedError(
+                    "FX wallet opening balances require quantity + TRY cost model — not supported yet"
                 )
 
         else:

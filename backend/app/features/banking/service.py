@@ -14,10 +14,13 @@ from app.core.ledger.models import JournalEntryLine
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import (
     BUCKET_CODE_BY_KIND,
+    FX_BUCKET_CODE_BY_CURRENCY,
     MoneyAccount,
     MoneyAccountKind,
+    SUPPORTED_FX_CURRENCIES,
 )
 from app.features.banking.schema import (
+    ForeignCurrencyTree,
     MoneyAccountCreate,
     MoneyAccountRead,
     MoneyAccountTree,
@@ -34,6 +37,10 @@ class ChartNotSeededError(ValueError):
 
 class DuplicateMoneyAccountError(Exception):
     """Raised when a money account name already exists for the entity."""
+
+
+class InvalidMoneyAccountError(ValueError):
+    """Money account payload failed validation."""
 
 
 def gl_balance_kurus(
@@ -72,7 +79,15 @@ def _next_sub_account_code(session: Session, parent: Account) -> str:
 
 
 def _get_bucket_account(session: Session, kind: MoneyAccountKind) -> Account:
+    if kind == MoneyAccountKind.FOREIGN_CURRENCY:
+        raise InvalidMoneyAccountError(
+            "foreign currency accounts require an explicit currency bucket"
+        )
     bucket_code = BUCKET_CODE_BY_KIND[kind]
+    return _get_bucket_by_code(session, bucket_code)
+
+
+def _get_bucket_by_code(session: Session, bucket_code: str) -> Account:
     bucket = session.scalar(select(Account).where(Account.code == bucket_code))
     if bucket is None:
         raise ChartNotSeededError(
@@ -84,10 +99,19 @@ def _get_bucket_account(session: Session, kind: MoneyAccountKind) -> Account:
 
 def _to_read(session: Session, money_account: MoneyAccount, gl_account: Account) -> MoneyAccountRead:
     balance = gl_balance_kurus(session, gl_account.id, gl_account.normal_balance)
+    native_quantity: int | None = None
+    if money_account.account_kind == MoneyAccountKind.FOREIGN_CURRENCY:
+        from app.core.fx.ledger import native_quantity_balance
+
+        native_quantity = native_quantity_balance(
+            session, money_account.entity_id, money_account.id
+        )
+
     return MoneyAccountRead(
         id=money_account.id,
         entity_id=money_account.entity_id,
         account_kind=money_account.account_kind,
+        currency=money_account.currency,
         name=money_account.name,
         gl_account_id=gl_account.id,
         gl_account_code=gl_account.code,
@@ -96,6 +120,7 @@ def _to_read(session: Session, money_account: MoneyAccount, gl_account: Account)
         last_four=money_account.last_four,
         is_active=money_account.is_active,
         balance_kurus=balance,
+        native_quantity=native_quantity,
         created_at=money_account.created_at,
         updated_at=money_account.updated_at,
     )
@@ -107,9 +132,25 @@ def create_money_account(
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    currency: str | None = None
+    if payload.account_kind == MoneyAccountKind.FOREIGN_CURRENCY:
+        if payload.currency is None:
+            raise InvalidMoneyAccountError("currency is required for foreign currency accounts")
+        currency = payload.currency.upper()
+        if currency not in SUPPORTED_FX_CURRENCIES:
+            raise InvalidMoneyAccountError(
+                f"unsupported FX currency {currency!r}; use one of {sorted(SUPPORTED_FX_CURRENCIES)}"
+            )
+    elif payload.currency is not None:
+        raise InvalidMoneyAccountError("currency is only allowed for foreign currency accounts")
+
     with entity_context(session, entity_id):
         require_entity_context()
-        bucket = _get_bucket_account(session, payload.account_kind)
+        if payload.account_kind == MoneyAccountKind.FOREIGN_CURRENCY:
+            assert currency is not None
+            bucket = _get_bucket_by_code(session, FX_BUCKET_CODE_BY_CURRENCY[currency])
+        else:
+            bucket = _get_bucket_account(session, payload.account_kind)
         code = _next_sub_account_code(session, bucket)
 
         gl_account = Account(
@@ -126,6 +167,7 @@ def create_money_account(
 
         money_account = MoneyAccount(
             account_kind=payload.account_kind,
+            currency=currency,
             name=payload.name,
             gl_account_id=gl_account.id,
             bank_name=payload.bank_name,
@@ -233,14 +275,30 @@ def _build_branch(
     session: Session,
     kind: MoneyAccountKind,
     *,
+    currency: str | None = None,
     include_inactive: bool = False,
 ) -> MoneyAccountTreeBranch:
-    bucket = _get_bucket_account(session, kind)
-    query = (
-        select(MoneyAccount)
-        .where(MoneyAccount.account_kind == kind)
-        .order_by(MoneyAccount.name)
-    )
+    if kind == MoneyAccountKind.FOREIGN_CURRENCY:
+        if currency is None:
+            raise InvalidMoneyAccountError("currency is required for foreign currency branch")
+        bucket_code = FX_BUCKET_CODE_BY_CURRENCY[currency]
+        bucket = _get_bucket_by_code(session, bucket_code)
+        query = (
+            select(MoneyAccount)
+            .where(
+                MoneyAccount.account_kind == kind,
+                MoneyAccount.currency == currency,
+            )
+            .order_by(MoneyAccount.name)
+        )
+    else:
+        bucket = _get_bucket_account(session, kind)
+        query = (
+            select(MoneyAccount)
+            .where(MoneyAccount.account_kind == kind)
+            .order_by(MoneyAccount.name)
+        )
+
     if not include_inactive:
         query = query.where(MoneyAccount.is_active.is_(True))
 
@@ -251,11 +309,19 @@ def _build_branch(
         assert gl_account is not None
         balance = gl_balance_kurus(session, gl_account.id, gl_account.normal_balance)
         child_balances.append(balance)
+        native_quantity: int | None = None
+        if kind == MoneyAccountKind.FOREIGN_CURRENCY:
+            from app.core.fx.ledger import native_quantity_balance
+
+            native_quantity = native_quantity_balance(
+                session, money_account.entity_id, money_account.id
+            )
         leaves.append(
             MoneyAccountTreeLeaf(
                 id=money_account.id,
                 name=money_account.name,
                 account_kind=money_account.account_kind,
+                currency=money_account.currency,
                 gl_account_id=gl_account.id,
                 gl_account_code=gl_account.code,
                 bank_name=money_account.bank_name,
@@ -263,6 +329,7 @@ def _build_branch(
                 last_four=money_account.last_four,
                 is_active=money_account.is_active,
                 balance_kurus=balance,
+                native_quantity=native_quantity,
             )
         )
 
@@ -296,5 +363,25 @@ def get_account_tree(
             ),
             credit_cards=_build_branch(
                 session, MoneyAccountKind.CREDIT_CARD, include_inactive=include_inactive
+            ),
+            foreign_currency=ForeignCurrencyTree(
+                usd=_build_branch(
+                    session,
+                    MoneyAccountKind.FOREIGN_CURRENCY,
+                    currency="USD",
+                    include_inactive=include_inactive,
+                ),
+                eur=_build_branch(
+                    session,
+                    MoneyAccountKind.FOREIGN_CURRENCY,
+                    currency="EUR",
+                    include_inactive=include_inactive,
+                ),
+                gbp=_build_branch(
+                    session,
+                    MoneyAccountKind.FOREIGN_CURRENCY,
+                    currency="GBP",
+                    include_inactive=include_inactive,
+                ),
             ),
         )

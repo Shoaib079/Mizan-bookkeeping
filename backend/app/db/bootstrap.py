@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 
 from app.config import settings
 from app.db.base import Base
+from app.db.fx_immutability import apply_fx_immutability
 from app.db.ledger_immutability import apply_ledger_immutability
 from app.db.payables_immutability import apply_payables_immutability
 from app.db.rls import apply_entity_rls
@@ -16,7 +17,8 @@ from app.core.payables.models import SupplierLedgerEntry  # noqa: F401
 from app.features.banking.models import MoneyAccount  # noqa: F401
 from app.features.banking.statement_models import BankStatement, BankStatementLine  # noqa: F401
 from app.features.banking.transfer_models import AccountTransfer  # noqa: F401
-from app.features.pos.models import CardSalesBatch, PosSettlement  # noqa: F401
+from app.core.fx.models import FxLedgerEntry  # noqa: F401
+from app.features.cash.models import CashDrawerSession, CashMovement  # noqa: F401
 
 
 def ensure_mizan_role_and_databases() -> None:
@@ -50,6 +52,7 @@ def init_database(url: str | None = None) -> None:
         apply_entity_rls(connection)
         apply_ledger_immutability(connection)
         apply_payables_immutability(connection)
+        apply_fx_immutability(connection)
     engine.dispose()
 
 

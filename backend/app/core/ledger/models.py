@@ -52,6 +52,7 @@ class JournalEntrySource(str, enum.Enum):
     CREDIT_CARD_PAYMENT = "credit_card_payment"
     CASH_MOVEMENT = "cash_movement"
     CASH_DRAWER_CLOSE = "cash_drawer_close"
+    FX_PURCHASE = "fx_purchase"
     SYSTEM = "system"
 
 

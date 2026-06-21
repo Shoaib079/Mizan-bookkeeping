@@ -16,11 +16,19 @@ class MoneyAccountKind(str, enum.Enum):
     BANK = "bank"
     CASH = "cash"
     CREDIT_CARD = "credit_card"
+    FOREIGN_CURRENCY = "foreign_currency"
 
 
 BANK_BUCKET_CODE = "1100"
 CASH_BUCKET_CODE = "1000"
 CREDIT_CARD_BUCKET_CODE = "2100"
+
+FX_BUCKET_CODE_BY_CURRENCY: dict[str, str] = {
+    "USD": "1010",
+    "EUR": "1020",
+    "GBP": "1030",
+}
+SUPPORTED_FX_CURRENCIES = frozenset(FX_BUCKET_CODE_BY_CURRENCY)
 
 BUCKET_CODE_BY_KIND: dict[MoneyAccountKind, str] = {
     MoneyAccountKind.BANK: BANK_BUCKET_CODE,
@@ -38,9 +46,10 @@ class MoneyAccount(EntityScopedMixin, Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     account_kind: Mapped[MoneyAccountKind] = mapped_column(
-        Enum(MoneyAccountKind, name="money_account_kind", native_enum=False, length=12),
+        Enum(MoneyAccountKind, name="money_account_kind", native_enum=False, length=16),
         nullable=False,
     )
+    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     gl_account_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),

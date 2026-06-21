@@ -14,6 +14,20 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** POS photo OCR (Phase 6), near-match for settlements, `bank_fee` GL classify, UI.
 
+## 2026-06-21 — Forex purchase (Phase 5 Slice 2)
+
+**Choice:** `MoneyAccountKind.FOREIGN_CURRENCY` with nullable `currency` column (`USD`/`EUR`/`GBP`) on `money_accounts`. FX wallets are GL sub-accounts under chart buckets `1010`/`1020`/`1030`; GL holds **TRY book cost in kuruş** (DEBIT normal balance). Native quantity tracked separately in append-only `fx_ledger_entries` subledger (`native_quantity` in foreign minor units, `try_cost_kurus` per movement). `post_fx_purchase()` atomically posts **Dr Cash&lt;CUR&gt; GL / Cr TRY cash GL** plus one subledger row. Tree API adds `foreign_currency` branch (`usd`/`eur`/`gbp`) with `native_quantity` on leaves — never live-converted.
+
+**Why:** Decisions §15 — track FX by quantity in native currency; owner-entered TRY cost only; no online rates; average-cost foundation via per-purchase `try_cost_kurus`.
+
+**Migration:** Alembic `024` — extend `money_account_kind`, `currency` column, `fx_ledger_entries` with entity RLS + immutability triggers.
+
+**API:** `POST .../fx/purchases`; `GET .../fx/accounts/{id}/ledger`; `GET .../fx/accounts/{id}/balance`; FX wallet creation via existing `POST .../banking/accounts` with `account_kind=foreign_currency` + `currency`.
+
+**Control accounts:** `SUM(fx_ledger_entries.try_cost_kurus)` = FX GL balance; `SUM(native_quantity)` = wallet quantity balance.
+
+**Not in slice:** Spending FX, conversion back to TRY, salaries, gain/loss, live rates, FX opening balances (quantity model), UI.
+
 ## 2026-06-21 — Cash drawer (Phase 5)
 
 **Choice:** `post_cash_movement()` in `core/cash/posting.py` — cash in Dr cash GL / Cr offset; cash out Dr offset / Cr cash GL. Auto-open `cash_drawer_sessions` per `(money_account_id, session_date)` on first movement. `close_cash_drawer_session()` reads GL expected balance, compares owner counted balance; over posts Dr cash / Cr `5400`, short posts Dr `5400` / Cr cash; zero variance = no close journal; session status → closed (no further movements). Reuses Phase 3 `MoneyAccountKind.CASH` under bucket `1000`.

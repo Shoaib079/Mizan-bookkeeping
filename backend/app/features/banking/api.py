@@ -34,6 +34,8 @@ def create_money_account(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except service.DuplicateMoneyAccountError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except service.InvalidMoneyAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("", response_model=list[MoneyAccountRead])

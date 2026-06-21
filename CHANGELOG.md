@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-21
 
+**Phase 5 — Forex purchase:** `MoneyAccountKind.FOREIGN_CURRENCY` with `currency` (USD/EUR/GBP); GL sub-accounts under `1010`/`1020`/`1030` hold TRY book cost in kuruş; `fx_ledger_entries` append-only subledger tracks `native_quantity` + `try_cost_kurus`; `post_fx_purchase()` Dr FX GL / Cr TRY cash GL atomically with subledger row; tree API `foreign_currency` branch with quantity on leaves; API `POST .../fx/purchases`, `GET .../ledger`, `GET .../balance`; Alembic `024`. Tag `v0.27.0-phase5-forex-purchase`. 234 pytest green.
+
 **Phase 5 — Cash drawer:** `post_cash_movement()` posts cash in (Dr cash / Cr offset) or out (Dr offset / Cr cash) on `MoneyAccountKind.CASH` sub-accounts; auto-opens per-day `cash_drawer_sessions`; EOD close compares counted vs GL expected balance; over/short posts to `5400` Cash Over/Short; day locked after close; `cash_movements` table; `JournalEntrySource.CASH_MOVEMENT` / `CASH_DRAWER_CLOSE`; API `POST .../cash/movements`, `GET .../cash/drawer-sessions`, `POST .../close`; Alembic `023`. Tag `v0.26.0-phase5-cash-drawer`. 224 pytest green.
 
 **Phase 4 owner sign-off:** POS settlement + credit cards phase officially complete; active work moves to Phase 5 — Cash drawer, forex, staff, partner reimbursements, receivables. Last tag remains `v0.25.0-phase4-cc-payment-bank-fee-gl` / `9a8a927`.

@@ -16,6 +16,12 @@ from app.features.banking.statement_models import (
 
 class MoneyAccountCreate(BaseModel):
     account_kind: MoneyAccountKind
+    currency: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=3,
+        description="ISO currency code — required for foreign_currency accounts (USD, EUR, GBP)",
+    )
     name: str = Field(min_length=1, max_length=255)
     bank_name: str | None = Field(
         default=None,
@@ -40,6 +46,7 @@ class MoneyAccountRead(BaseModel):
     id: uuid.UUID
     entity_id: uuid.UUID
     account_kind: MoneyAccountKind
+    currency: str | None = None
     name: str
     gl_account_id: uuid.UUID
     gl_account_code: str
@@ -48,6 +55,7 @@ class MoneyAccountRead(BaseModel):
     last_four: str | None
     is_active: bool
     balance_kurus: int
+    native_quantity: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -56,6 +64,7 @@ class MoneyAccountTreeLeaf(BaseModel):
     id: uuid.UUID
     name: str
     account_kind: MoneyAccountKind
+    currency: str | None = None
     gl_account_id: uuid.UUID
     gl_account_code: str
     bank_name: str | None
@@ -63,6 +72,7 @@ class MoneyAccountTreeLeaf(BaseModel):
     last_four: str | None
     is_active: bool
     balance_kurus: int
+    native_quantity: int | None = None
 
 
 class MoneyAccountTreeBranch(BaseModel):
@@ -74,10 +84,17 @@ class MoneyAccountTreeBranch(BaseModel):
     accounts: list[MoneyAccountTreeLeaf]
 
 
+class ForeignCurrencyTree(BaseModel):
+    usd: MoneyAccountTreeBranch
+    eur: MoneyAccountTreeBranch
+    gbp: MoneyAccountTreeBranch
+
+
 class MoneyAccountTree(BaseModel):
     banks: MoneyAccountTreeBranch
     cash: MoneyAccountTreeBranch
     credit_cards: MoneyAccountTreeBranch
+    foreign_currency: ForeignCurrencyTree
 
 
 class BankStatementLineRead(BaseModel):
