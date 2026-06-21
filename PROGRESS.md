@@ -10,7 +10,7 @@ Current phase/slice, resume point, session notes. Update when starting, pausing,
 | **Phase 0** | **Complete** — all four slices done |
 | **Last completed slice** | Opening-balances plan |
 | **Branch** | `main` |
-| **Last tag** | *(this commit — v0.4.0-phase0-complete)* |
+| **Last tag** | `v0.4.0-phase0-complete` (`451c57f`) |
 
 ## Resume point
 

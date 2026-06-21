@@ -15,7 +15,7 @@
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
 | **Active slice** | Chart of accounts + entity scoping |
 | **Last completed slice** | Opening-balances plan (Phase 0 complete) |
-| **Last commit/tag** | *(this commit — v0.4.0-phase0-complete)* |
+| **Last commit/tag** | `451c57f` / `v0.4.0-phase0-complete` |
 | **Next up** | Phase 1: persist chart per entity, then posting service |
 
 ---
@@ -171,7 +171,7 @@ Not in current build order — track here when scoped:
 |------|-------|------------|---------|
 | 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
 | 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
-| 2026-06-21 | Opening-balances plan | *(this commit)* / `v0.4.0-phase0-complete` | Default chart, OB validation, wizard plan, Phase 0 done |
+| 2026-06-21 | Opening-balances plan | `451c57f` / `v0.4.0-phase0-complete` | Default chart, OB validation, wizard plan, Phase 0 done |
 
 ---
 
