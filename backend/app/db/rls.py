@@ -13,6 +13,8 @@ RLS_TABLES = (
     "suppliers",
     "supplier_ledger_entries",
     "money_accounts",
+    "bank_statements",
+    "bank_statement_lines",
 )
 
 

@@ -21,6 +21,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_invoice_posting.py` | Draft-to-ledger — GL + payables posting, `journal_entry_id` on subledger, VAT lines, reject guards, cross-entity, API E2E | pass |
 | `backend/tests/test_supplier_payment_gl.py` | Supplier payment GL — AP control account = subledger, bank credited, `journal_entry_id` link, non-asset rejected, API E2E | pass |
 | `backend/tests/test_banking_accounts.py` | Bank/cash account tree — GL sub-accounts, codes, balances, rollup, RLS isolation, API CRUD + tree, supplier payment to sub-account | pass |
+| `backend/tests/test_bank_statement_import.py` | Bank statement CSV import + classify — lines stored, duplicate fingerprint 409, supplier payment GL post, link existing payment (no double journal), re-classify rejected, bank fee no GL, cross-entity isolation, API E2E | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 

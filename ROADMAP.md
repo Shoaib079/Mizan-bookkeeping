@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 3 — Banking hub + bank statements |
-| **Active slice** | Bank/cash account tree (per entity) — not started |
-| **Last completed slice** | Supplier payment GL posting |
-| **Last commit/tag** | `a08e703` / `v0.16.0-phase2-supplier-payment-gl` |
-| **Next up** | Bank/cash account tree (per entity) |
+| **Active slice** | Transfer linking (own-account) — not started |
+| **Last completed slice** | Statement import & classify |
+| **Last commit/tag** | (pending) / `v0.18.0-phase3-statement-import-classify` |
+| **Next up** | Transfer linking (own-account, not income/expense) |
 
 ---
 
@@ -76,7 +76,7 @@ Account tree, import & classify, transfer linking, opening balances. **Statement
 | Slice | Status | Notes |
 |-------|--------|-------|
 | Bank/cash account tree (per entity) | done | `money_accounts` + GL sub-accounts under `1100`/`1000`; tree API with balances |
-| Statement import & classify | not started | |
+| Statement import & classify | done | CSV import, duplicate fingerprint + overlap rejection, supplier payment classify (link or post), bank fee/unknown store-only; Alembic `016`; 8 tests; 151 pytest |
 | Transfer linking (own-account, not income/expense) | not started | |
 | Opening balances | not started | |
 
@@ -182,6 +182,8 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Payables ledger & balance | `48dbdd7` / `v0.11.0-phase2-payables-ledger` | supplier_ledger_entries, running balance, payables API, 97 pytest |
 | 2026-06-21 | Invoice → payable posting (draft-to-ledger) | `3f367f5` / `v0.15.0-phase2-draft-to-ledger` | confirmed draft → GL + payables; Input VAT 1500; 127 pytest |
 | 2026-06-21 | Supplier payment GL posting | `a08e703` / `v0.16.0-phase2-supplier-payment-gl` | `post_supplier_payment()` Dr AP Cr bank/cash + subledger; Phase 2 complete |
+| 2026-06-21 | Bank/cash account tree | — / `v0.17.0-phase3-bank-cash-tree` | `money_accounts` + GL sub-accounts; tree API; 143 pytest |
+| 2026-06-21 | Statement import & classify | — / `v0.18.0-phase3-statement-import-classify` | CSV import + classify; link-or-post supplier payments; 151 pytest |
 
 ---
 

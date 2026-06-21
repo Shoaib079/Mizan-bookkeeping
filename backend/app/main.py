@@ -13,6 +13,10 @@ from app.features.onboarding.chart_api import router as chart_router
 from app.features.suppliers.api import router as suppliers_router
 from app.features.payables.api import router as payables_router
 from app.features.banking.api import router as banking_router
+from app.features.banking.statements_api import (
+    accounts_router as banking_statements_accounts_router,
+    statements_router as banking_statements_router,
+)
 
 app = FastAPI(
     title="Mizan API",
@@ -41,6 +45,8 @@ app.include_router(chart_router)
 app.include_router(suppliers_router)
 app.include_router(payables_router)
 app.include_router(banking_router)
+app.include_router(banking_statements_accounts_router)
+app.include_router(banking_statements_router)
 
 
 @app.get("/health")

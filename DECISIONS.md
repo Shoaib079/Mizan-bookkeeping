@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-21 — Bank statement import & classify (Phase 3)
+
+**Choice:** `bank_statements` + `bank_statement_lines` (entity RLS). CSV v1 format: `transaction_date` (YYYY-MM-DD), signed `amount_kurus` (outflows negative), `description`, optional `reference`. Parser in `adapters/bank_parsers/csv_simple.py`. Import rejects duplicate `(entity_id, file_fingerprint)` and overlapping periods for the same bank money account. Classify `supplier_payment` on outflows: first match existing `SupplierLedgerEntry` (`movement_type=payment`, same supplier, `abs(amount)`, exact date); if found → `status=linked` with FKs, no GL post; else → `post_supplier_payment()` with `payment_account_id` = money account GL sub-account and `reference_type=bank_statement_line`. `bank_fee` / `unknown` set `status=classified` only (no GL this slice). Posted/linked lines cannot be re-classified.
+
+**Why:** Decisions §12 statement-first banking; Phase 3 constraint — never double-post supplier payments.
+
+**API:** `POST/GET .../banking/accounts/{money_account_id}/statements`, `GET .../banking/statements/{statement_id}`, `PATCH .../statements/{id}/lines/{line_id}/classify`.
+
+**Not in slice:** transfers, opening balances, credit card statements, PDF/OFX, auto-classify, UI.
+
+**Migration:** Alembic `016`.
+
 ## 2026-06-21 — Bank/cash account tree (Phase 3)
 
 **Choice:** `features/banking/` — `money_accounts` table (entity RLS) links named bank/cash accounts to auto-created GL sub-accounts under bucket `1100` (bank TRY) / `1000` (cash TRY). `accounts.parent_account_id` FK to bucket; codes auto-assigned `1101+` / `1001+`; inherit type/normal balance; `accepts_opening_balance=true`. Parent bucket balance in tree API = sum of active child GL balances (rollup helper). Aggregate `1100`/`1000` remain valid `payment_account_id` targets for backward compat.

@@ -1,13 +1,17 @@
-"""Money account API schemas."""
+"""Money account and bank statement API schemas."""
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.features.banking.models import MoneyAccountKind
+from app.features.banking.statement_models import (
+    StatementLineClassification,
+    StatementLineStatus,
+)
 
 
 class MoneyAccountCreate(BaseModel):
@@ -69,3 +73,46 @@ class MoneyAccountTreeBranch(BaseModel):
 class MoneyAccountTree(BaseModel):
     banks: MoneyAccountTreeBranch
     cash: MoneyAccountTreeBranch
+
+
+class BankStatementLineRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    statement_id: uuid.UUID
+    transaction_date: date
+    amount_kurus: int
+    description: str
+    reference: str | None
+    classification: StatementLineClassification
+    status: StatementLineStatus
+    supplier_id: uuid.UUID | None
+    journal_entry_id: uuid.UUID | None
+    supplier_ledger_entry_id: uuid.UUID | None
+
+
+class BankStatementRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    entity_id: uuid.UUID
+    money_account_id: uuid.UUID
+    file_fingerprint: str
+    period_start: date
+    period_end: date
+    original_filename: str
+    line_count: int
+    imported_at: datetime
+    lines: list[BankStatementLineRead]
+
+
+class ClassifyStatementLineRequest(BaseModel):
+    classification: StatementLineClassification
+    supplier_id: uuid.UUID | None = None
+    actor_id: uuid.UUID | None = None
+
+
+class ClassifyStatementLineResult(BaseModel):
+    line: BankStatementLineRead
+    linked_existing_payment: bool
+    journal_entry_id: uuid.UUID | None

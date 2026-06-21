@@ -1,0 +1,4 @@
+transaction_date,amount_kurus,description,reference
+2026-02-01,-5000000,Payment to Metro Gida,EFT-001
+2026-02-03,-25000,Bank service fee,FEE-FEB
+2026-02-05,1000000,Customer refund reversal,REF-99
