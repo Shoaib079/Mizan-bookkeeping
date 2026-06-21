@@ -15,7 +15,7 @@
 | **Active phase** | Phase 3 — Banking hub + bank statements |
 | **Active slice** | Phase 3 complete — pending owner sign-off |
 | **Last completed slice** | Near-match payment/transfer detection |
-| **Last commit/tag** | _(set on commit)_ / `v0.21.0-phase3-near-match-review` |
+| **Last commit/tag** | `51305cd` / `v0.21.0-phase3-near-match-review` |
 | **Next up** | Phase 4 — POS settlement + credit cards |
 
 ---
