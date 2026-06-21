@@ -36,6 +36,14 @@ cd backend && .venv/bin/pytest -v
 cd frontend && npm run build
 ```
 
+Tests use `mizan_test` database. On first run, bootstrap creates the `mizan` role and databases (uses `DATABASE_ADMIN_URL`, default `postgres@localhost`).
+
+## Migrations
+
+```bash
+cd backend && .venv/bin/alembic upgrade head
+```
+
 ## Project layout
 
 ```

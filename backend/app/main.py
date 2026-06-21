@@ -3,6 +3,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.features.entities.api import router as entities_router
+
 app = FastAPI(
     title="Mizan API",
     description="Restaurant bookkeeping API",
@@ -19,6 +21,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(entities_router)
 
 
 @app.get("/health")

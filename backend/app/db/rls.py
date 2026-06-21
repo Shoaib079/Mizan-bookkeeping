@@ -1,0 +1,28 @@
+"""PostgreSQL row-level security policies for entity isolation."""
+
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
+
+RLS_TABLES = ("entity_settings",)
+
+
+def apply_entity_rls(connection: Connection) -> None:
+    """Enable RLS and policies: rows visible only when entity_id matches session setting."""
+    for table in RLS_TABLES:
+        connection.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
+        connection.execute(text(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY"))
+        connection.execute(text(f"DROP POLICY IF EXISTS {table}_entity_isolation ON {table}"))
+        connection.execute(
+            text(
+                f"""
+                CREATE POLICY {table}_entity_isolation ON {table}
+                FOR ALL
+                USING (
+                    entity_id = NULLIF(current_setting('app.current_entity_id', true), '')::uuid
+                )
+                WITH CHECK (
+                    entity_id = NULLIF(current_setting('app.current_entity_id', true), '')::uuid
+                )
+                """
+            )
+        )

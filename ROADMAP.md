@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 0 — Setup |
-| **Active slice** | Multi-restaurant foundation |
-| **Last completed slice** | App scaffold & repo setup |
-| **Last commit/tag** | `d91ccec` / `v0.1.0-phase0-scaffold` |
-| **Next up** | Entity model + DB scoping; then opening-balances plan |
+| **Active slice** | Opening-balances plan |
+| **Last completed slice** | Multi-restaurant foundation |
+| **Last commit/tag** | *(this commit — v0.2.0-phase0-entity-isolation)* |
+| **Next up** | Opening-balances plan, then Phase 1 ledger core |
 
 ---
 
@@ -28,7 +28,7 @@ Project, rulebook, logs, multi-restaurant foundation, opening-balances plan.
 |-------|--------|-------|
 | Project rules & docs (`CURSOR_RULES`, `ROADMAP`, logs) | done | Rules, ROADMAP, record-keeping stubs, git remote |
 | App scaffold & repo setup | done | FastAPI backend, Next.js shell, Postgres docker, pytest, `.cursor/rules` |
-| Multi-restaurant foundation | not started | Entity isolation from day one |
+| Multi-restaurant foundation | done | Entity model, RLS, entity_context, isolation tests |
 | Opening-balances plan | not started | |
 
 **Phase 0 complete when:** all slices above done, tested, committed, owner sign-off.
@@ -170,6 +170,7 @@ Not in current build order — track here when scoped:
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
 | 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
+| 2026-06-21 | Multi-restaurant foundation | *(this commit)* / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
 
 ---
 
