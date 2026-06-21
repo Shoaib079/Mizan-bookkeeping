@@ -6,7 +6,7 @@ import enum
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, Integer, String, UniqueConstraint, Uuid
+from sqlalchemy import Date, ForeignKey, Integer, String, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +42,12 @@ class InvoiceDraft(EntityScopedMixin, Base):
     file_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     supplier_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
     supplier_vkn: Mapped[str | None] = mapped_column(String(11), nullable=True)
+    supplier_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("suppliers.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     invoice_number: Mapped[str] = mapped_column(String(128), nullable=False)
     invoice_date: Mapped[date] = mapped_column(Date, nullable=False)
     net_kurus: Mapped[int] = mapped_column(Integer, nullable=False)

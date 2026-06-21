@@ -17,6 +17,10 @@ class VatBreakdownOut(BaseModel):
     vat_kurus: int
 
 
+class LinkSupplierRequest(BaseModel):
+    supplier_id: uuid.UUID | None = None
+
+
 class InvoiceDraftOut(BaseModel):
     id: uuid.UUID
     entity_id: uuid.UUID
@@ -25,6 +29,9 @@ class InvoiceDraftOut(BaseModel):
     file_fingerprint: str
     supplier_name: str | None
     supplier_vkn: str | None
+    supplier_id: uuid.UUID | None = None
+    linked_supplier_name: str | None = None
+    linked_supplier_vkn: str | None = None
     invoice_number: str
     invoice_date: date
     net_kurus: int

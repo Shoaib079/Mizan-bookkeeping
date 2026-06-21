@@ -27,12 +27,22 @@ from app.features.invoices.models import (
 )
 from app.features.invoices.schema import InvoiceDraftOut
 from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
+from app.features.suppliers import service as supplier_service
+from app.features.suppliers.models import Supplier
 
 
 class DuplicateInvoiceDraftError(Exception):
     def __init__(self, existing: InvoiceDraft) -> None:
         self.existing = existing
         super().__init__("Duplicate invoice document for this entity")
+
+
+class DraftNotLinkableError(Exception):
+    """Raised when a draft cannot be linked or unlinked (e.g. confirmed)."""
+
+
+class SupplierLinkError(Exception):
+    """Raised when supplier link preconditions fail."""
 
 
 def _require_entity(session: Session, entity_id: uuid.UUID) -> None:
@@ -81,7 +91,12 @@ def extract_document(content: bytes, source_type: InvoiceSourceType) -> EInvoice
     return extract_efatura_pdf(content)
 
 
-def _to_out(draft: InvoiceDraft) -> InvoiceDraftOut:
+def _to_out(
+    draft: InvoiceDraft,
+    *,
+    linked_name: str | None = None,
+    linked_vkn: str | None = None,
+) -> InvoiceDraftOut:
     return InvoiceDraftOut(
         id=draft.id,
         entity_id=draft.entity_id,
@@ -90,6 +105,9 @@ def _to_out(draft: InvoiceDraft) -> InvoiceDraftOut:
         file_fingerprint=draft.file_fingerprint,
         supplier_name=draft.supplier_name,
         supplier_vkn=draft.supplier_vkn,
+        supplier_id=draft.supplier_id,
+        linked_supplier_name=linked_name,
+        linked_supplier_vkn=linked_vkn,
         invoice_number=draft.invoice_number,
         invoice_date=draft.invoice_date,
         net_kurus=draft.net_kurus,
@@ -99,6 +117,52 @@ def _to_out(draft: InvoiceDraft) -> InvoiceDraftOut:
         extraction_payload=draft.extraction_payload,
         created_at=draft.created_at,
     )
+
+
+def _draft_out(session: Session, entity_id: uuid.UUID, draft: InvoiceDraft) -> InvoiceDraftOut:
+    linked_name: str | None = None
+    linked_vkn: str | None = None
+    if draft.supplier_id is not None:
+        with entity_context(session, entity_id):
+            supplier = session.get(Supplier, draft.supplier_id)
+            if supplier is not None:
+                linked_name = supplier.name
+                linked_vkn = supplier.vkn
+    return _to_out(draft, linked_name=linked_name, linked_vkn=linked_vkn)
+
+
+def _get_draft_row(
+    session: Session, entity_id: uuid.UUID, draft_id: uuid.UUID
+) -> InvoiceDraft:
+    with entity_context(session, entity_id):
+        draft = session.get(InvoiceDraft, draft_id)
+        if draft is None:
+            raise LookupError("Invoice draft not found")
+        return draft
+
+
+def _resolve_supplier_for_link(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft: InvoiceDraft,
+    supplier_id: uuid.UUID | None,
+) -> Supplier:
+    if supplier_id is not None:
+        return supplier_service.get_supplier(session, entity_id, supplier_id)
+
+    if not draft.supplier_vkn:
+        raise SupplierLinkError("Draft has no supplier VKN for auto-link")
+
+    supplier = supplier_service.find_by_vkn(session, entity_id, draft.supplier_vkn)
+    if supplier is None:
+        raise LookupError("No supplier found matching draft VKN")
+    return supplier
+
+
+def _ensure_draft_linkable(draft: InvoiceDraft) -> None:
+    """Block link/unlink on immutable drafts (confirmed added in review slice)."""
+    if hasattr(InvoiceDraftStatus, "CONFIRMED") and draft.status == InvoiceDraftStatus.CONFIRMED:
+        raise DraftNotLinkableError("Confirmed drafts cannot be modified")
 
 
 def _find_by_fingerprint(
@@ -148,6 +212,12 @@ def create_efatura_draft_from_upload(
     payload = extraction_to_payload(extraction)
     payload["stored_path"] = stored_path
 
+    linked_supplier: Supplier | None = None
+    if extraction.supplier_vkn:
+        linked_supplier = supplier_service.find_by_vkn(
+            session, entity_id, extraction.supplier_vkn
+        )
+
     with entity_context(session, entity_id):
         draft = InvoiceDraft(
             status=status,
@@ -155,6 +225,7 @@ def create_efatura_draft_from_upload(
             file_fingerprint=fingerprint,
             supplier_name=extraction.supplier_name,
             supplier_vkn=extraction.supplier_vkn,
+            supplier_id=linked_supplier.id if linked_supplier else None,
             invoice_number=extraction.invoice_number,
             invoice_date=extraction.invoice_date,
             net_kurus=extraction.net_kurus,
@@ -167,7 +238,7 @@ def create_efatura_draft_from_upload(
         session.commit()
         session.refresh(draft)
 
-    return _to_out(draft)
+    return _draft_out(session, entity_id, draft)
 
 
 def list_invoice_drafts(session: Session, entity_id: uuid.UUID) -> tuple[list[InvoiceDraftOut], int]:
@@ -184,7 +255,7 @@ def list_invoice_drafts(session: Session, entity_id: uuid.UUID) -> tuple[list[In
             )
         )
 
-    return [_to_out(draft) for draft in drafts], total
+    return [_draft_out(session, entity_id, draft) for draft in drafts], total
 
 
 def get_invoice_draft(
@@ -192,9 +263,43 @@ def get_invoice_draft(
 ) -> InvoiceDraftOut:
     _require_entity(session, entity_id)
 
-    with entity_context(session, entity_id):
-        draft = session.get(InvoiceDraft, draft_id)
-        if draft is None:
-            raise LookupError("Invoice draft not found")
+    draft = _get_draft_row(session, entity_id, draft_id)
+    return _draft_out(session, entity_id, draft)
 
-    return _to_out(draft)
+
+def link_supplier_to_draft(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    *,
+    supplier_id: uuid.UUID | None = None,
+) -> InvoiceDraftOut:
+    _require_entity(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    _ensure_draft_linkable(draft)
+
+    supplier = _resolve_supplier_for_link(session, entity_id, draft, supplier_id)
+
+    with entity_context(session, entity_id):
+        draft.supplier_id = supplier.id
+        session.commit()
+        session.refresh(draft)
+
+    return _draft_out(session, entity_id, draft)
+
+
+def unlink_supplier_from_draft(
+    session: Session, entity_id: uuid.UUID, draft_id: uuid.UUID
+) -> InvoiceDraftOut:
+    _require_entity(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    _ensure_draft_linkable(draft)
+
+    with entity_context(session, entity_id):
+        draft.supplier_id = None
+        session.commit()
+        session.refresh(draft)
+
+    return _draft_out(session, entity_id, draft)

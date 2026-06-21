@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.adapters.ocr_ai.efatura import EfaturaPdfUnsupportedError
 from app.db.session import get_session
 from app.features.invoices import service
-from app.features.invoices.schema import InvoiceDraftListOut, InvoiceDraftOut
+from app.features.invoices.schema import InvoiceDraftListOut, InvoiceDraftOut, LinkSupplierRequest
 
 router = APIRouter(prefix="/entities/{entity_id}/invoices", tags=["invoices"])
 
@@ -71,3 +71,39 @@ def get_invoice_draft(
         return service.get_invoice_draft(session, entity_id, draft_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/link-supplier", response_model=InvoiceDraftOut)
+def link_supplier_to_draft(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    payload: LinkSupplierRequest,
+    session: Session = Depends(get_session),
+) -> InvoiceDraftOut:
+    try:
+        return service.link_supplier_to_draft(
+            session,
+            entity_id,
+            draft_id,
+            supplier_id=payload.supplier_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.SupplierLinkError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except service.DraftNotLinkableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/unlink-supplier", response_model=InvoiceDraftOut)
+def unlink_supplier_from_draft(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    session: Session = Depends(get_session),
+) -> InvoiceDraftOut:
+    try:
+        return service.unlink_supplier_from_draft(session, entity_id, draft_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.DraftNotLinkableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
