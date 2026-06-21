@@ -15,7 +15,7 @@
 | **Active phase** | Phase 0 — Setup |
 | **Active slice** | Multi-restaurant foundation |
 | **Last completed slice** | App scaffold & repo setup |
-| **Last commit/tag** | *(pending owner sign-off after this push)* |
+| **Last commit/tag** | `d91ccec` / `v0.1.0-phase0-scaffold` |
 | **Next up** | Entity model + DB scoping; then opening-balances plan |
 
 ---
@@ -169,7 +169,7 @@ Not in current build order — track here when scoped:
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| 2026-06-21 | App scaffold & repo setup | *(this commit)* | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
+| 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
 
 ---
 
