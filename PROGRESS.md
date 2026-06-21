@@ -8,7 +8,7 @@
 | **Last completed slice** | Chart of accounts + entity scoping |
 | **Next slice** | Double-entry posting service (single boundary) |
 | **Branch** | `main` |
-| **Last tag** | *(this commit — v0.5.0-phase1-chart-of-accounts)* |
+| **Last tag** | `v0.5.0-phase1-chart-of-accounts` (`781b7f0`) |
 
 ## Resume point
 
