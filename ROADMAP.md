@@ -15,7 +15,7 @@
 | **Active phase** | Phase 2 — Suppliers & payables |
 | **Active slice** | Invoice → payable posting (draft-to-ledger) (next) |
 | **Last completed slice** | Payment reduces payable |
-| **Last commit/tag** | (slice 3) / `v0.14.0-phase2-payment-reduces-payable` |
+| **Last commit/tag** | `aa96552` / `v0.14.0-phase2-payment-reduces-payable` |
 | **Next up** | Invoice → payable posting (draft-to-ledger) |
 
 ---
