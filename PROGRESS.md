@@ -8,7 +8,7 @@
 | **Last completed slice** | Basic manual journals |
 | **Next slice** | Read e-Fatura invoice (PDF) into draft |
 | **Branch** | `main` |
-| **Last tag** | `v0.8.0-phase1-manual-journals` (pending commit) |
+| **Last tag** | `v0.8.0-phase1-manual-journals` (`4b12469`) |
 
 ## Resume point
 

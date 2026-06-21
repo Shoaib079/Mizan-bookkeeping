@@ -15,7 +15,7 @@
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
 | **Active slice** | Read e-Fatura invoice (PDF) into draft |
 | **Last completed slice** | Basic manual journals |
-| **Last commit/tag** | (pending) / `v0.8.0-phase1-manual-journals` |
+| **Last commit/tag** | `4b12469` / `v0.8.0-phase1-manual-journals` |
 | **Next up** | Read e-Fatura invoice (PDF) into draft |
 
 ---
@@ -174,7 +174,7 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
 | 2026-06-21 | Opening-balances plan | `451c57f` / `v0.4.0-phase0-complete` | Default chart, OB validation, wizard plan, Phase 0 done |
 | 2026-06-21 | Chart of accounts + entity scoping | `781b7f0` / `v0.5.0-phase1-chart-of-accounts` | Persisted accounts, seed/list API, RLS isolation |
-| 2026-06-21 | Basic manual journals | (pending) / `v0.8.0-phase1-manual-journals` | Entry source typing, manual-journals CRUD API, 59 pytest |
+| 2026-06-21 | Basic manual journals | `4b12469` / `v0.8.0-phase1-manual-journals` | Entry source typing, manual-journals CRUD API, 59 pytest |
 
 ---
 
