@@ -15,7 +15,7 @@
 | **Active phase** | Phase 2 — Suppliers & payables |
 | **Active slice** | Phase 2 complete (pending owner sign-off) |
 | **Last completed slice** | Invoice → payable posting (draft-to-ledger) |
-| **Last commit/tag** | `879aacb` / `v0.15.0-phase2-draft-to-ledger` |
+| **Last commit/tag** | `3f367f5` / `v0.15.0-phase2-draft-to-ledger` |
 | **Next up** | Phase 3 — Banking hub + bank statements |
 
 ---
@@ -179,7 +179,7 @@ Not in current build order — track here when scoped:
 | 2026-06-21 | Read e-Fatura invoice into draft | `a952821` / `v0.9.0-phase1-efatura-draft` | invoice_drafts, UBL-TR XML, PDF heuristics, 70 pytest |
 | 2026-06-21 | Supplier master (per entity) | `63ed5cf` / `v0.10.0-phase2-supplier-master` | suppliers CRUD, VKN lookup, entity isolation, 85 pytest |
 | 2026-06-21 | Payables ledger & balance | `48dbdd7` / `v0.11.0-phase2-payables-ledger` | supplier_ledger_entries, running balance, payables API, 97 pytest |
-| 2026-06-21 | Invoice → payable posting (draft-to-ledger) | `879aacb` / `v0.15.0-phase2-draft-to-ledger` | confirmed draft → GL + payables; Input VAT 1500; 127 pytest |
+| 2026-06-21 | Invoice → payable posting (draft-to-ledger) | `3f367f5` / `v0.15.0-phase2-draft-to-ledger` | confirmed draft → GL + payables; Input VAT 1500; 127 pytest |
 
 ---
 
