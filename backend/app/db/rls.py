@@ -11,6 +11,7 @@ RLS_TABLES = (
     "ledger_audit_events",
     "invoice_drafts",
     "suppliers",
+    "supplier_ledger_entries",
 )
 
 

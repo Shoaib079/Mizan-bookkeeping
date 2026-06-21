@@ -5,12 +5,14 @@ from sqlalchemy import create_engine, text
 from app.config import settings
 from app.db.base import Base
 from app.db.ledger_immutability import apply_ledger_immutability
+from app.db.payables_immutability import apply_payables_immutability
 from app.db.rls import apply_entity_rls
 from app.features.entities.models import Entity, EntitySetting  # noqa: F401
 from app.core.chart_of_accounts.models import Account  # noqa: F401
 from app.core.ledger.models import JournalEntry, JournalEntryLine, LedgerAuditEvent  # noqa: F401
 from app.features.invoices.models import InvoiceDraft  # noqa: F401
 from app.features.suppliers.models import Supplier  # noqa: F401
+from app.core.payables.models import SupplierLedgerEntry  # noqa: F401
 
 
 def ensure_mizan_role_and_databases() -> None:
@@ -43,6 +45,7 @@ def init_database(url: str | None = None) -> None:
     with engine.begin() as connection:
         apply_entity_rls(connection)
         apply_ledger_immutability(connection)
+        apply_payables_immutability(connection)
     engine.dispose()
 
 

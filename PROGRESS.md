@@ -5,20 +5,22 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 2 — Suppliers & payables |
-| **Last completed slice** | Supplier master (per entity) |
-| **Next slice** | Payables ledger & balance |
+| **Last completed slice** | Payables ledger & balance |
+| **Next slice** | Invoice → payable posting |
 | **Branch** | `main` |
-| **Last tag** | `v0.10.0-phase2-supplier-master` (`63ed5cf`) |
+| **Last tag** | `v0.11.0-phase2-payables-ledger` |
 
 ## Resume point
 
-Start Phase 2 — Payables ledger & balance (supplier master complete).
+Start Phase 2 — Invoice → payable posting (payables ledger complete).
 
 ## Session notes
 
-- **Supplier master:** `suppliers` table with RLS; unique `(entity_id, vkn)`; soft deactivate via `is_active=false` (no hard delete)
-- **VKN:** 10–11 digit Turkish tax ID; immutable after create
-- **API:** `POST/GET/PATCH /entities/{id}/suppliers`, `GET .../suppliers/by-vkn/{vkn}`
-- **Isolation:** same VKN allowed across entities; duplicate VKN within entity → HTTP 409
-- **Alembic:** `009_suppliers`
-- **85 pytest** green
+- **Payables ledger:** `supplier_ledger_entries` table with RLS; append-only (ORM + DB triggers)
+- **Write boundary:** `record_supplier_movement()` in `core/payables/ledger.py` — only path to write ledger rows
+- **Movement types:** `opening_balance`, `adjustment` writable this slice; `invoice`, `payment`, `credit_note` reserved
+- **Signed amounts:** positive = payable up (owe more); negative = payable down
+- **Balance:** `SUM(amount_kurus)` per supplier; entity total on payables list
+- **API:** `GET .../payables`, `GET .../suppliers/{id}/ledger`, `POST .../suppliers/{id}/ledger/movements`
+- **Alembic:** `010_supplier_ledger`
+- **97 pytest** green

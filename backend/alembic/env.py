@@ -12,6 +12,7 @@ from app.core.chart_of_accounts.models import Account  # noqa: F401
 from app.core.ledger.models import JournalEntry, JournalEntryLine, LedgerAuditEvent  # noqa: F401
 from app.features.invoices.models import InvoiceDraft  # noqa: F401
 from app.features.suppliers.models import Supplier  # noqa: F401
+from app.core.payables.models import SupplierLedgerEntry  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

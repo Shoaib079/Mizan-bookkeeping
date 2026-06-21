@@ -27,3 +27,5 @@ Phase 1 — **Basic manual journals**: `JournalEntrySource` column on `journal_e
 Phase 1 — **Read e-Fatura invoice into draft**: `invoice_drafts` table with entity RLS; UBL-TR XML extraction; PDF v1 (fixture registry + pypdf heuristics); SHA256 duplicate detection; math validation; multipart upload API; local file storage adapter; 11 e-Fatura tests (70 pytest total). Tag `v0.9.0-phase1-efatura-draft`. **Phase 1 complete** (pending owner sign-off).
 
 Phase 2 — **Supplier master (per entity)**: `suppliers` table with entity RLS; unique `(entity_id, vkn)`; CRUD + VKN lookup API; deactivate-only (no hard delete); 15 supplier tests (85 pytest total). Tag `v0.10.0-phase2-supplier-master`.
+
+Phase 2 — **Payables ledger & balance**: `supplier_ledger_entries` append-only ledger; `record_supplier_movement()` single write boundary in `core/payables/`; signed kuruş amounts; `opening_balance` + `adjustment` via API; payables summary + supplier ledger routes; RLS + DB immutability triggers; 12 payables tests (97 pytest total). Tag `v0.11.0-phase2-payables-ledger`.
