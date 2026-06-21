@@ -5,16 +5,18 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 1 — Ledger core + supplier invoices |
-| **Last completed slice** | Chart of accounts + entity scoping |
-| **Next slice** | Double-entry posting service (single boundary) |
+| **Last completed slice** | Double-entry posting service (single boundary) |
+| **Next slice** | Audit trail on all changes |
 | **Branch** | `main` |
-| **Last tag** | `v0.5.0-phase1-chart-of-accounts` (`781b7f0`) |
+| **Last tag** | `v0.6.0-phase1-ledger-posting` (pending push) |
 
 ## Resume point
 
-After sign-off: implement `core/ledger` posting service — debits = credits, entity-scoped, single boundary.
+After sign-off: implement audit trail on all ledger/chart changes.
 
 ## Session notes
 
-- **Chart of accounts:** `accounts` table with RLS; `POST/GET /entities/{id}/chart-of-accounts`; seed from default chart (22 accounts)
-- **27 pytest** green
+- **Ledger posting:** `journal_entries` + `journal_entry_lines`; `post_journal_entry()` in `core/ledger` — single boundary; debits = credits, integer kuruş, entity-stamped; rejects unbalanced/zero/cross-entity/invalid accounts
+- **API:** `POST /entities/{id}/ledger/entries`
+- **RLS:** journal tables + `accounts_posting_lookup` policy for cross-entity validation inside posting only
+- **37 pytest** green

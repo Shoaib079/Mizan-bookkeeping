@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 1 — Ledger core + supplier invoices |
-| **Active slice** | Double-entry posting service |
-| **Last completed slice** | Chart of accounts + entity scoping |
-| **Last commit/tag** | `781b7f0` / `v0.5.0-phase1-chart-of-accounts` |
-| **Next up** | Single posting boundary in core/ledger |
+| **Active slice** | Audit trail on all changes |
+| **Last completed slice** | Double-entry posting service (single boundary) |
+| **Last commit/tag** | (pending) / `v0.6.0-phase1-ledger-posting` |
+| **Next up** | Audit trail on all changes |
 
 ---
 
@@ -42,7 +42,7 @@ Double-entry engine + chart of accounts, audit trail, soft-delete/void, basic ma
 | Slice | Status | Notes |
 |-------|--------|-------|
 | Chart of accounts + entity scoping | done | Persisted `accounts` table, seed API, RLS |
-| Double-entry posting service (single boundary) | not started | |
+| Double-entry posting service (single boundary) | done | `post_journal_entry`, journal tables, RLS, 6 tests |
 | Audit trail on all changes | not started | |
 | Void / reverse (no hard deletes) | not started | |
 | Basic manual journals | not started | |

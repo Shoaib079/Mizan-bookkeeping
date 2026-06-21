@@ -3,7 +3,7 @@
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-RLS_TABLES = ("entity_settings", "accounts")
+RLS_TABLES = ("entity_settings", "accounts", "journal_entries", "journal_entry_lines")
 
 
 def apply_entity_rls(connection: Connection) -> None:
@@ -26,3 +26,14 @@ def apply_entity_rls(connection: Connection) -> None:
                 """
             )
         )
+
+    connection.execute(text("DROP POLICY IF EXISTS accounts_posting_lookup ON accounts"))
+    connection.execute(
+        text(
+            """
+            CREATE POLICY accounts_posting_lookup ON accounts
+            FOR SELECT
+            USING (current_setting('app.posting_lookup', true) = '1')
+            """
+        )
+    )

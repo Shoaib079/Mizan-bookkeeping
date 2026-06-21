@@ -55,6 +55,16 @@ def entity_context(session: Session, entity_id: uuid.UUID):
             session.execute(text("SELECT set_config('app.current_entity_id', '', false)"))
 
 
+@contextmanager
+def posting_account_lookup(session: Session):
+    """Allow cross-entity account reads inside the posting boundary for validation only."""
+    session.execute(text("SELECT set_config('app.posting_lookup', '1', true)"))
+    try:
+        yield session
+    finally:
+        session.execute(text("SELECT set_config('app.posting_lookup', '', true)"))
+
+
 def require_entity_context() -> uuid.UUID:
     entity_id = get_current_entity_id()
     if entity_id is None:

@@ -18,6 +18,15 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Plan:** `docs/OPENING_BALANCES.md`. Posting lands in Phase 1 `core/ledger`.
 
+## 2026-06-21 — Single posting boundary in core/ledger
+
+**Choice:** All ledger writes go through `post_journal_entry()` in `core/ledger/posting.py`. Journal tables inherit `EntityScopedMixin`; amounts are integer kuruş; validation rejects unbalanced entries, zero lines, inactive/unknown accounts, and cross-entity account references.
+
+**Why:** Decisions §1 / CURSOR_RULES §1 #10 — one boundary prevents bypass paths. Feature APIs delegate to core; no direct journal inserts elsewhere.
+
+**Cross-entity account check:** RLS normally hides other entities' accounts. Posting uses transaction-local `app.posting_lookup` + `accounts_posting_lookup` SELECT policy so the boundary can detect entity mismatch without exposing accounts to normal queries.
+
+
 ## 2026-06-21 — Opening balance validate API blocks unmodeled categories
 
 **Choice:** Whitelist aggregate codes only; refuse FX (`1010`–`1030`), partner (`2150`), and future sub-account codes with explicit **not supported yet** errors.
