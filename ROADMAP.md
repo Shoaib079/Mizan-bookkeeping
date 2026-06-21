@@ -15,7 +15,7 @@
 | **Active phase** | Phase 0 — Setup |
 | **Active slice** | Opening-balances plan |
 | **Last completed slice** | Multi-restaurant foundation |
-| **Last commit/tag** | *(this commit — v0.2.0-phase0-entity-isolation)* |
+| **Last commit/tag** | `29ce4a3` / `v0.2.0-phase0-entity-isolation` |
 | **Next up** | Opening-balances plan, then Phase 1 ledger core |
 
 ---
@@ -170,7 +170,7 @@ Not in current build order — track here when scoped:
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
 | 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
-| 2026-06-21 | Multi-restaurant foundation | *(this commit)* / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
+| 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
 
 ---
 

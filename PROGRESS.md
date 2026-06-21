@@ -10,7 +10,7 @@ Current phase/slice, resume point, session notes. Update when starting, pausing,
 | **Completed slices** | Project rules & docs · App scaffold · **Multi-restaurant foundation** |
 | **Next slice** | **Opening-balances plan** |
 | **Branch** | `main` |
-| **Last tag** | *(pending commit — v0.2.0-phase0-entity-isolation)* |
+| **Last tag** | `v0.2.0-phase0-entity-isolation` (`29ce4a3`) |
 
 ## Resume point
 
