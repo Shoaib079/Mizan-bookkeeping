@@ -1,4 +1,4 @@
-"""Default restaurant chart of accounts seed (IDEAS_FROM_PREVIOUS_APP.md, Decisions §1).
+"""Default restaurant chart of accounts seed (Decisions §1).
 
 Inventory excluded — out of v1 scope (Decisions §28).
 """

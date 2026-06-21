@@ -11,8 +11,7 @@ Everything we worked out, in one place. Read in this order.
 6. **`app_preview.html`** — **a live, openable preview.** Double-click to open in a browser and click through the pages (dashboard, list, supplier ledger, review, reports, settings, login) in the real look.
 
 ## Ideas for later
-- **`FUTURE_IDEAS.md`** — a pocket backlog of features to add as the business grows (deeper accounting, scheduled reports, bank feeds, approvals, etc.). Not part of v1 — just so good ideas don't get lost.
-- **`IDEAS_FROM_PREVIOUS_APP.md`** — good ideas mined from your earlier Streamlit app (default chart of accounts, card-sales clearing, end-of-day close, etc.) plus the cautionary lessons on why it became a mess.
+- **`FUTURE_IDEAS.md`** — pocket backlog of features to add as the business grows (deeper accounting, bank feeds, recipe costing, receipt AI learning, etc.). Not part of the current slice until promoted into the Decisions doc. Cautionary lessons from the previous app are in **`ARCHITECTURE.md`**, not here.
 
 ## Prompts for design help (optional)
 - **`THEME_BRIEF_for_design_agent.md`** — paste into a design AI to generate the full theme in our style.
