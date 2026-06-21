@@ -5,16 +5,16 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 3 — Banking hub + bank statements |
-| **Last completed slice** | Transfer linking (own-account) |
-| **Next slice** | Opening balances |
+| **Last completed slice** | Opening balances |
+| **Next slice** | Phase 4 — POS settlement + credit cards |
 | **Branch** | `main` |
-| **Last tag** | `v0.19.0-phase3-transfer-linking` |
+| **Last tag** | `v0.20.0-phase3-opening-balances` |
 
 ## Resume point
 
-Phase 3 Slice 3 complete: **2026-06-21**. Next: **Opening balances**.
+Phase 3 Slice 4 complete: **2026-06-21**. Phase 3 complete pending owner sign-off. Next: **Phase 4 — POS settlement + credit cards**.
 
 ## Session notes
 
-- **Transfer linking:** `post_account_transfer()` in `core/banking/posting.py` — Dr destination asset GL, Cr source asset GL (`JournalEntrySource.TRANSFER`); `account_transfers` with statement line FKs; classify outflow posts transfer; inflow links existing outflow transfer (same amount/date/counterpart) or posts if none; manual `POST/GET .../banking/transfers`; Alembic `017`
-- **160 pytest** green
+- **Opening balances:** `post_opening_balances()` in `core/onboarding/posting.py` — extended validate/post for aggregate codes, `money_account_id` (bank/cash GL sub-accounts), and `supplier_id` (aggregated AP `2000` control line); `3900` equity offset; supplier subledger rows with `journal_entry_id`; one-time post guard; `POST .../opening-balances/post`; optional `go_live_date` entity setting
+- **172 pytest** green

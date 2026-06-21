@@ -34,6 +34,43 @@ class OverpaymentError(PayablesLedgerError):
     """Payment would exceed current payable balance."""
 
 
+def persist_supplier_opening_entry(
+    session: Session,
+    supplier_id: uuid.UUID,
+    *,
+    movement_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    reference_type: str,
+    reference_id: uuid.UUID,
+) -> SupplierLedgerEntry:
+    """Persist opening balance payables movement without commit — caller must hold entity_context."""
+    if amount_kurus <= 0:
+        raise ZeroMovementError("Opening balance amount_kurus must be positive")
+
+    supplier = session.get(Supplier, supplier_id)
+    if supplier is None:
+        raise LookupError("Supplier not found")
+
+    entry = SupplierLedgerEntry(
+        supplier_id=supplier_id,
+        movement_date=movement_date,
+        movement_type=SupplierMovementType.OPENING_BALANCE,
+        amount_kurus=amount_kurus,
+        description=description,
+        actor_id=actor_id,
+        journal_entry_id=journal_entry_id,
+        reference_type=reference_type,
+        reference_id=reference_id,
+    )
+    session.add(entry)
+    session.flush()
+    session.refresh(entry)
+    return entry
+
+
 def persist_supplier_invoice_entry(
     session: Session,
     supplier_id: uuid.UUID,

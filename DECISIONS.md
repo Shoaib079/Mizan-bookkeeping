@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-21 — Opening balances posting (Phase 3)
+
+**Choice:** `post_opening_balances()` in `core/onboarding/posting.py` — single atomic transaction through `prepare_journal_entry(..., source=opening_balance)` with `3900` Opening Balance Equity offset. Validate + post accept three mutually exclusive line targets: aggregate `account_code` (whitelist), `money_account_id` (debit bank/cash GL sub-account), `supplier_id` (credit aggregated AP `2000` control line). Per-supplier subledger rows via `persist_supplier_opening_entry()` with `journal_entry_id`. Reject aggregate `1100`/`1000` when active bank/cash money accounts exist; reject aggregate `2000` combined with supplier lines. One-time guard: 409 if entity already has posted `opening_balance` journal. Store `go_live_date` in `entity_settings` on post. No new tables — guard checks existing `journal_entries` by source.
+
+**Why:** Decisions §19 — day-one go-live figures per entity through the single posting boundary; GL AP control account must match supplier subledger sum.
+
+**API:** Extended `POST .../opening-balances/validate`; new `POST .../opening-balances/post`.
+
+**Not in slice:** FX quantity model, partner `2150`, per-card sub-accounts, void opening balance, trial balance UI.
+
+**Migration:** None (Alembic `018` not needed).
+
 ## 2026-06-21 — Own-account transfer linking (Phase 3)
 
 **Choice:** `post_account_transfer()` in `core/banking/posting.py` — single GL journal (`JournalEntrySource.TRANSFER`): debit destination money account GL sub-account, credit source (asset-to-asset only; no revenue/expense). `account_transfers` table links from/to money accounts, journal entry, and optional statement line FKs (`from_statement_line_id`, `to_statement_line_id`); `bank_statement_lines.account_transfer_id` for line lookup. Classify `transfer` on outflows: post transfer from statement account to `counterpart_money_account_id`. Inflows: match existing transfer (`to_money_account` = current, same amount/date, `to_statement_line_id` NULL, outflow already posted) → `status=linked`, no new GL; else post with counterpart as source. Manual transfers via dedicated API. Posted/linked lines cannot be re-classified.

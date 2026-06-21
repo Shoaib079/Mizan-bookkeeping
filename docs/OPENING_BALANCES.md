@@ -1,8 +1,8 @@
 # Opening Balances — Plan (Decisions §19)
 
-**Status:** Locked plan for Phase 0. Implementation posts in **Phase 1** (ledger core) and **Phase 3** (bank account tree). Entity-scoped throughout.
+**Status:** Validate + post implemented (Phase 3 Slice 4). Entity-scoped throughout.
 
-**Safety rule:** The validate API **refuses** opening-balance lines for categories that are not modeled yet. It returns a clear **"not supported yet"** error — **block, don't guess.** Never silently accept a wrong value (especially FX as plain kuruş).
+**Safety rule:** The validate/post API **refuses** opening-balance lines for categories that are not modeled yet. It returns a clear **"not supported yet"** error — **block, don't guess.** Never silently accept a wrong value (especially FX as plain kuruş).
 
 ---
 
@@ -14,13 +14,13 @@ When a restaurant goes live on Mizan, it is already running. Day one needs **ope
 
 ## What the owner enters (per restaurant) — Decisions §19
 
-| Category | Plan status | Account(s) today | Validate API today |
-|----------|-------------|------------------|-------------------|
-| Supplier payables | Aggregate only | `2000` AP | **Allowed** (aggregate) |
-| Customer receivables | Aggregate | `1200` AR | **Allowed** |
-| Each bank balance | Sub-accounts Phase 3 | `1100` TRY bucket | **Allowed** (one combined TRY bank line only) |
-| Each card balance | Sub-accounts Phase 3 | `2100` CC Payable | **Allowed** (one combined card line only) |
-| Cash in drawer (TRY) | Yes | `1000` | **Allowed** |
+| Category | Plan status | Account(s) today | Validate/post API today |
+|----------|-------------|------------------|-------------------------|
+| Supplier payables | Per-supplier | `2000` AP control + subledger | **`supplier_id` lines** (aggregated GL credit to `2000`) |
+| Customer receivables | Aggregate | `1200` AR | **Allowed** (aggregate) |
+| Each bank balance | Sub-accounts Phase 3 | `1100` TRY bucket + `1101+` | **`money_account_id`** (rejects aggregate `1100` when bank sub-accounts exist) |
+| Each card balance | Sub-accounts Phase 3 | `2100` CC Payable | **Allowed** (aggregate `2100` only until per-card) |
+| Cash in drawer (TRY) | Sub-accounts Phase 3 | `1000` + `1001+` | **`money_account_id`** (rejects aggregate `1000` when cash sub-accounts exist) |
 | USD/EUR/GBP holdings | **Not modeled** | `1010`–`1030` in chart | **Refused** — FX quantity model required |
 | Staff balances | Aggregate only | `1300` Employee Advances | **Allowed** (one combined line; per-employee Phase 5) |
 | Partner reimbursement balances | **Not modeled** | `2150` Partner Reimbursements Payable | **Refused** until Phase 5 |
@@ -81,11 +81,11 @@ Code: `backend/app/features/onboarding/opening_balances.py` → `ALLOWED_AGGREGA
 2. **Seed chart** — copy default chart into entity-scoped `accounts` (Phase 1) ✓ `POST .../chart-of-accounts/seed`
 3. **Delivery settings** — entity settings: enabled platforms (Getir, Yemeksepeti, Trendyol)
 4. **Bank / card / cash accounts** — named sub-accounts under tree (Phase 3)
-5. **Opening balances** — enter figures per account; validate via API
-6. **Review trial balance** — must balance to zero (Phase 1 report)
-7. **Post day-one journal** — single posting through `core/ledger` (Phase 1)
+5. **Opening balances** — enter figures per account; validate + post via API
+6. **Review trial balance** — must balance to zero (Phase 7 report)
+7. ~~**Post day-one journal**~~ — done via `POST .../opening-balances/post`
 
-API: `GET /onboarding/wizard-steps`, `GET /chart-of-accounts/default`, `POST /onboarding/entities/{id}/opening-balances/validate`.
+API: `GET /onboarding/wizard-steps`, `GET /chart-of-accounts/default`, `POST /onboarding/entities/{id}/opening-balances/validate`, `POST /onboarding/entities/{id}/opening-balances/post`.
 
 ---
 
@@ -100,12 +100,16 @@ API: `GET /onboarding/wizard-steps`, `GET /chart-of-accounts/default`, `POST /on
 
 ---
 
-## Validation (implemented)
+## Validation + posting (implemented)
 
 - **Block** FX (`1010`–`1030`), partner (`2150`), and non-whitelist codes — **not supported yet**
-- Allowed aggregate: side must match account normal balance; no duplicates; journal balances
+- Aggregate codes: side must match natural balance; no duplicates
+- **`money_account_id`**: implied debit; rejects aggregate `1100`/`1000` when sub-accounts exist
+- **`supplier_id`**: implied credit; aggregated GL credit to `2000`; per-supplier subledger on post
+- One-time post per entity (409 on double post)
+- Journal balances via `3900` offset
 
-Code: `backend/app/features/onboarding/opening_balances.py`
+Code: `backend/app/features/onboarding/opening_balances.py`, `backend/app/core/onboarding/posting.py`
 
 ---
 

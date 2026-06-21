@@ -8,7 +8,8 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_money.py` | Integer kuruş, Turkish format, loose parse (Decisions §5) | pass |
 | `backend/tests/test_entity_isolation.py` | Cross-entity isolation — RLS + entity_context | pass |
 | `backend/tests/test_default_chart.py` | Default chart includes Opening Balance Equity; no inventory | pass |
-| `backend/tests/test_opening_balances.py` | OB validation, equity offset, validate API; **blocks FX/partner/unmodeled** | pass |
+| `backend/tests/test_opening_balances.py` | OB validation — equity offset, aggregate codes, money_account_id + supplier_id lines, reject aggregate 1100/1000 when sub-accounts exist, validate API | pass |
+| `backend/tests/test_opening_balances_post.py` | OB posting — GL + supplier subledger atomicity, AP control = subledger sum, bank GL debited, double post 409, entity isolation, post API E2E | pass |
 | `backend/tests/test_chart_of_accounts.py` | Per-entity chart seed, RLS isolation, API | pass |
 | `backend/tests/test_ledger_posting.py` | Single posting boundary — balanced/unbalanced/zero/cross-entity, immutability, void/reverse, audit, API | pass |
 | `backend/tests/test_ledger_db_immutability.py` | PostgreSQL triggers block raw SQL UPDATE/DELETE on entries, lines, audit; void gate | pass |
