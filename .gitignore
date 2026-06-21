@@ -3,5 +3,13 @@
 !.env.example
 .netlify
 __pycache__/
+.pytest_cache/
+.venv/
+*.pyc
 node_modules/
+.next/
+out/
 .DS_Store
+backend/.venv/
+backend/*.egg-info/
+frontend/.next/

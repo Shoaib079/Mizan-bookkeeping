@@ -1,0 +1,18 @@
+---
+description: Mizan build rules — always follow CURSOR_RULES.md
+globs:
+alwaysApply: true
+---
+
+Follow `CURSOR_RULES.md` in this repo on every task. Before any code change in a new session, run the Recovery Protocol in CURSOR_RULES §5.
+
+Key references:
+- WHAT: `Restaurant_Bookkeeping_App_Decisions.md`
+- HOW (process): `CURSOR_RULES.md`
+- WHERE (progress): `ROADMAP.md`
+- STRUCTURE: `ARCHITECTURE.md`
+- LOOK: `DESIGN_SYSTEM.md` (§0 copy-paste theme rules)
+
+Slice gate: Characterize → Audit → Test → Fix → API → Verify → ROADMAP → Commit/tag.
+
+FUTURE_IDEAS.md is out of scope until promoted to Decisions.

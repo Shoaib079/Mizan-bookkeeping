@@ -223,6 +223,7 @@ Maintain these files and update them as part of every slice — they are how wor
 
 - **One design language** (Section 25 of Decisions): same components, styles, pickers, date pickers, validation everywhere. Reuse shared components; don't reinvent per screen.
 - **Consistent structure and naming** across the codebase. New code matches the patterns already there.
+- **Keep files small and single-purpose.** Split anything past ~300–400 lines; **never put business logic in the entry/`main` file**; follow the feature-module + adapter structure in `ARCHITECTURE.md`. **No god-files** — the previous app's 1.1 MB `app.py` is the cautionary tale.
 - **Every record carries:** its entity (restaurant) id, created/updated timestamps, and the user who acted — for isolation and audit.
 - **Pickers read from saved lists** (suppliers, accounts, cards, categories) scoped to the current entity — never empty, never free-text-first.
 - **Modern-UX behaviors live in the shared components** — Enter submits, type-or-pick date picker, type-to-filter pickers, inline validation, autosave drafts — built once so every screen inherits them (see `DESIGN_SYSTEM.md` §10).

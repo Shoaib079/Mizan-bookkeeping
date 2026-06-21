@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mizan-db
+    environment:
+      POSTGRES_USER: mizan
+      POSTGRES_PASSWORD: mizan_dev
+      POSTGRES_DB: mizan
+    ports:
+      - "5432:5432"
+    volumes:
+      - mizan_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mizan -d mizan"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mizan_pg_data:

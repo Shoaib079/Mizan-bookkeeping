@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 0 — Setup |
-| **Active slice** | *(none — project rules phase)* |
-| **Last completed slice** | *(none)* |
-| **Last commit/tag** | *(none)* |
-| **Next up** | Finish project setup (rules, logs, foundation) |
+| **Active slice** | Multi-restaurant foundation |
+| **Last completed slice** | App scaffold & repo setup |
+| **Last commit/tag** | *(pending owner sign-off after this push)* |
+| **Next up** | Entity model + DB scoping; then opening-balances plan |
 
 ---
 
@@ -26,8 +26,8 @@ Project, rulebook, logs, multi-restaurant foundation, opening-balances plan.
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| Project rules & docs (`CURSOR_RULES`, `ROADMAP`, logs) | in progress | Rules updated; ROADMAP stub created |
-| App scaffold & repo setup | not started | |
+| Project rules & docs (`CURSOR_RULES`, `ROADMAP`, logs) | done | Rules, ROADMAP, record-keeping stubs, git remote |
+| App scaffold & repo setup | done | FastAPI backend, Next.js shell, Postgres docker, pytest, `.cursor/rules` |
 | Multi-restaurant foundation | not started | Entity isolation from day one |
 | Opening-balances plan | not started | |
 
@@ -167,11 +167,9 @@ Not in current build order — track here when scoped:
 
 ## Slice log (recent completions)
 
-*(Add a row here when a slice completes: date, slice name, commit/tag, one-line summary.)*
-
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| — | — | — | — |
+| 2026-06-21 | App scaffold & repo setup | *(this commit)* | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
 
 ---
 

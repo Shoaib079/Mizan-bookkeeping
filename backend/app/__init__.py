@@ -1,0 +1,1 @@
+"""Mizan backend application package."""
