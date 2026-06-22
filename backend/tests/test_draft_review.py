@@ -11,26 +11,25 @@ SAMPLE_XML = FIXTURES / "sample.xml"
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 
-def _upload(client, entity_id, tmp_path, monkeypatch):
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
+def _upload(client, entity_id):
     return client.post(
         f"/entities/{entity_id}/invoices/efatura/draft",
         files={"file": ("sample.xml", SAMPLE_XML.read_bytes(), "application/xml")},
     )
 
 
-def _linked_draft(client, entity_id, tmp_path, monkeypatch):
+def _linked_draft(client, entity_id):
     client.post(
         f"/entities/{entity_id}/suppliers",
         json={"name": "Metro Gida", "vkn": "1234567890"},
     )
-    upload = _upload(client, entity_id, tmp_path, monkeypatch)
+    upload = _upload(client, entity_id)
     assert upload.status_code == 201
     return upload.json()
 
 
-def test_confirm_requires_supplier(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    upload = _upload(client, restaurant_a.id, tmp_path, monkeypatch)
+def test_confirm_requires_supplier(client, restaurant_a) -> None:
+    upload = _upload(client, restaurant_a.id)
     draft_id = upload.json()["id"]
 
     response = client.post(
@@ -41,8 +40,8 @@ def test_confirm_requires_supplier(client, restaurant_a, tmp_path, monkeypatch) 
     assert "Supplier must be linked" in response.json()["detail"]
 
 
-def test_confirm_draft_with_supplier(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    draft = _linked_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+def test_confirm_draft_with_supplier(client, restaurant_a) -> None:
+    draft = _linked_draft(client, restaurant_a.id)
     draft_id = draft["id"]
 
     confirm = client.post(
@@ -56,8 +55,8 @@ def test_confirm_draft_with_supplier(client, restaurant_a, tmp_path, monkeypatch
     assert body["confirmed_at"] is not None
 
 
-def test_confirmed_draft_immutable(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    draft = _linked_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+def test_confirmed_draft_immutable(client, restaurant_a) -> None:
+    draft = _linked_draft(client, restaurant_a.id)
     draft_id = draft["id"]
 
     confirm = client.post(
@@ -84,8 +83,8 @@ def test_confirmed_draft_immutable(client, restaurant_a, tmp_path, monkeypatch) 
     assert reject.status_code == 409
 
 
-def test_reject_marks_needs_review(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    upload = _upload(client, restaurant_a.id, tmp_path, monkeypatch)
+def test_reject_marks_needs_review(client, restaurant_a) -> None:
+    upload = _upload(client, restaurant_a.id)
     draft_id = upload.json()["id"]
 
     reject = client.post(
@@ -98,8 +97,8 @@ def test_reject_marks_needs_review(client, restaurant_a, tmp_path, monkeypatch) 
     assert body["review_reason"] == "Totals look wrong"
 
 
-def test_confirm_from_needs_review(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    draft = _linked_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+def test_confirm_from_needs_review(client, restaurant_a) -> None:
+    draft = _linked_draft(client, restaurant_a.id)
     draft_id = draft["id"]
 
     reject = client.post(
@@ -116,8 +115,8 @@ def test_confirm_from_needs_review(client, restaurant_a, tmp_path, monkeypatch) 
     assert confirm.json()["status"] == "confirmed"
 
 
-def test_list_drafts_filter_by_status(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    draft = _linked_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+def test_list_drafts_filter_by_status(client, restaurant_a) -> None:
+    draft = _linked_draft(client, restaurant_a.id)
     draft_id = draft["id"]
 
     client.post(

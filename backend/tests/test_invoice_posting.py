@@ -64,8 +64,7 @@ def _confirmed_draft(db_session, entity, supplier_id) -> InvoiceDraft:
         return draft
 
 
-def _upload(client, entity_id, tmp_path, monkeypatch, *, content=None):
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
+def _upload(client, entity_id, *, content=None):
     content = content or SAMPLE_XML.read_bytes()
     return client.post(
         f"/entities/{entity_id}/invoices/efatura/draft",
@@ -73,12 +72,12 @@ def _upload(client, entity_id, tmp_path, monkeypatch, *, content=None):
     )
 
 
-def _linked_confirmed(client, entity_id, tmp_path, monkeypatch):
+def _linked_confirmed(client, entity_id):
     client.post(
         f"/entities/{entity_id}/suppliers",
         json={"name": "Metro Gida", "vkn": "1234567890"},
     )
-    upload = _upload(client, entity_id, tmp_path, monkeypatch)
+    upload = _upload(client, entity_id)
     assert upload.status_code == 201
     draft_id = upload.json()["id"]
     confirm = client.post(
@@ -312,9 +311,9 @@ def test_cross_entity_isolation(
 
 
 def test_api_post_end_to_end(
-    client, restaurant_a, tmp_path, monkeypatch, seeded_accounts
+    client, restaurant_a, seeded_accounts
 ) -> None:
-    draft_id = _linked_confirmed(client, restaurant_a.id, tmp_path, monkeypatch)
+    draft_id = _linked_confirmed(client, restaurant_a.id)
 
     post = client.post(
         f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/post",
@@ -342,10 +341,10 @@ def test_api_post_end_to_end(
 
 
 def test_api_post_unconfirmed_returns_422(
-    client, restaurant_a, tmp_path, monkeypatch, seeded_accounts
+    client, restaurant_a, seeded_accounts
 ) -> None:
     client.post(f"/entities/{restaurant_a.id}/suppliers", json={"name": "Metro Gida", "vkn": "1234567890"})
-    upload = _upload(client, restaurant_a.id, tmp_path, monkeypatch)
+    upload = _upload(client, restaurant_a.id)
     draft_id = upload.json()["id"]
 
     post = client.post(

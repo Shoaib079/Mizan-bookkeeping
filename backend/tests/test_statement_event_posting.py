@@ -38,13 +38,6 @@ ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 GO_LIVE = date(2026, 1, 1)
 
 
-@pytest.fixture
-def upload_dir(tmp_path, monkeypatch):
-    path = tmp_path / "uploads"
-    monkeypatch.setattr("app.config.settings.upload_dir", str(path))
-    return path
-
-
 def _bank_account(db_session, entity_id):
     return banking_service.create_money_account(
         db_session,
@@ -71,7 +64,7 @@ def _credit_card(db_session, entity_id):
 
 
 @pytest.fixture
-def fee_setup(db_session, restaurant_a, upload_dir):
+def fee_setup(db_session, restaurant_a):
     seed_default_chart(db_session, restaurant_a.id)
     bank = _bank_account(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):
@@ -84,7 +77,7 @@ def fee_setup(db_session, restaurant_a, upload_dir):
 
 
 @pytest.fixture
-def card_payment_setup(db_session, restaurant_a, upload_dir):
+def card_payment_setup(db_session, restaurant_a):
     seed_default_chart(db_session, restaurant_a.id)
     bank = _bank_account(db_session, restaurant_a.id)
     card = _credit_card(db_session, restaurant_a.id)

@@ -17,6 +17,14 @@ from app.features.entities.models import Entity, EntitySetting
 from app.main import app
 
 
+@pytest.fixture(scope="session", autouse=True)
+def isolated_upload_dir(tmp_path_factory):
+    """Keep uploads off backend/data/ — one temp dir per pytest run."""
+    path = tmp_path_factory.mktemp("uploads")
+    settings.upload_dir = str(path)
+    yield path
+
+
 @pytest.fixture(scope="session")
 def test_engine():
     ensure_test_database()

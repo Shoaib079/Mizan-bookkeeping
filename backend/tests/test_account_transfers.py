@@ -152,9 +152,8 @@ def test_manual_transfer_gl_debits_destination_credits_source(
 
 
 def test_statement_outflow_classify_transfer_posts(
-    db_session, transfer_setup, tmp_path, monkeypatch
+    db_session, transfer_setup
 ) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
     entity_id = transfer_setup["entity_id"]
     bank_a = transfer_setup["bank_a"]
     bank_b = transfer_setup["bank_b"]
@@ -197,9 +196,8 @@ def test_statement_outflow_classify_transfer_posts(
 
 
 def test_statement_inflow_links_prior_outflow_single_journal(
-    db_session, transfer_setup, tmp_path, monkeypatch
+    db_session, transfer_setup
 ) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
     entity_id = transfer_setup["entity_id"]
     bank_a = transfer_setup["bank_a"]
     bank_b = transfer_setup["bank_b"]
@@ -265,9 +263,8 @@ def test_statement_inflow_links_prior_outflow_single_journal(
 
 
 def test_statement_inflow_without_prior_outflow_posts(
-    db_session, transfer_setup, tmp_path, monkeypatch
+    db_session, transfer_setup
 ) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
     entity_id = transfer_setup["entity_id"]
     bank_a = transfer_setup["bank_a"]
     bank_b = transfer_setup["bank_b"]
@@ -338,9 +335,8 @@ def test_cross_entity_rejected(db_session, restaurant_b, transfer_setup) -> None
 
 
 def test_reclassify_posted_transfer_line_rejected(
-    db_session, transfer_setup, tmp_path, monkeypatch
+    db_session, transfer_setup
 ) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
     entity_id = transfer_setup["entity_id"]
     csv = _transfer_csv(
         "transaction_date,amount_kurus,description,reference\n"

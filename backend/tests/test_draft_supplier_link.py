@@ -15,8 +15,7 @@ SAMPLE_XML = FIXTURES / "sample.xml"
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 
-def _upload_draft(client, entity_id, tmp_path, monkeypatch, *, content=None):
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
+def _upload_draft(client, entity_id, *, content=None):
     content = content or SAMPLE_XML.read_bytes()
     return client.post(
         f"/entities/{entity_id}/invoices/efatura/draft",
@@ -32,12 +31,12 @@ def _create_supplier(client, entity_id, *, name="Metro Gida", vkn="1234567890"):
 
 
 def test_auto_link_on_upload_when_vkn_matches(
-    client, restaurant_a, tmp_path, monkeypatch
+    client, restaurant_a
 ) -> None:
     supplier = _create_supplier(client, restaurant_a.id)
     assert supplier.status_code == 201
 
-    upload = _upload_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+    upload = _upload_draft(client, restaurant_a.id)
     assert upload.status_code == 201
     body = upload.json()
     assert body["supplier_id"] == supplier.json()["id"]
@@ -46,16 +45,16 @@ def test_auto_link_on_upload_when_vkn_matches(
     assert body["supplier_vkn"] == "1234567890"
 
 
-def test_no_auto_link_when_vkn_unknown(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    upload = _upload_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+def test_no_auto_link_when_vkn_unknown(client, restaurant_a) -> None:
+    upload = _upload_draft(client, restaurant_a.id)
     assert upload.status_code == 201
     body = upload.json()
     assert body["supplier_id"] is None
     assert body["linked_supplier_name"] is None
 
 
-def test_manual_link_supplier(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    upload = _upload_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+def test_manual_link_supplier(client, restaurant_a) -> None:
+    upload = _upload_draft(client, restaurant_a.id)
     draft_id = upload.json()["id"]
 
     supplier = _create_supplier(
@@ -75,8 +74,8 @@ def test_manual_link_supplier(client, restaurant_a, tmp_path, monkeypatch) -> No
     assert body["linked_supplier_vkn"] == "9999999999"
 
 
-def test_auto_link_by_draft_vkn(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    upload = _upload_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+def test_auto_link_by_draft_vkn(client, restaurant_a) -> None:
+    upload = _upload_draft(client, restaurant_a.id)
     draft_id = upload.json()["id"]
     assert upload.json()["supplier_id"] is None
 
@@ -91,9 +90,9 @@ def test_auto_link_by_draft_vkn(client, restaurant_a, tmp_path, monkeypatch) -> 
     assert link.json()["supplier_id"] == supplier.json()["id"]
 
 
-def test_unlink_supplier(client, restaurant_a, tmp_path, monkeypatch) -> None:
+def test_unlink_supplier(client, restaurant_a) -> None:
     _create_supplier(client, restaurant_a.id)
-    upload = _upload_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+    upload = _upload_draft(client, restaurant_a.id)
     draft_id = upload.json()["id"]
     assert upload.json()["supplier_id"] is not None
 
@@ -106,9 +105,9 @@ def test_unlink_supplier(client, restaurant_a, tmp_path, monkeypatch) -> None:
 
 
 def test_link_unknown_supplier_returns_404(
-    client, restaurant_a, tmp_path, monkeypatch
+    client, restaurant_a
 ) -> None:
-    upload = _upload_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+    upload = _upload_draft(client, restaurant_a.id)
     draft_id = upload.json()["id"]
 
     response = client.post(
@@ -119,9 +118,9 @@ def test_link_unknown_supplier_returns_404(
 
 
 def test_cross_entity_supplier_link_rejected(
-    client, restaurant_a, restaurant_b, tmp_path, monkeypatch
+    client, restaurant_a, restaurant_b
 ) -> None:
-    upload = _upload_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+    upload = _upload_draft(client, restaurant_a.id)
     draft_id = upload.json()["id"]
 
     supplier_b = _create_supplier(
@@ -137,9 +136,9 @@ def test_cross_entity_supplier_link_rejected(
 
 
 def test_auto_link_no_matching_vkn_returns_404(
-    client, restaurant_a, tmp_path, monkeypatch
+    client, restaurant_a
 ) -> None:
-    upload = _upload_draft(client, restaurant_a.id, tmp_path, monkeypatch)
+    upload = _upload_draft(client, restaurant_a.id)
     draft_id = upload.json()["id"]
 
     response = client.post(

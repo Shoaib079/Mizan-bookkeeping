@@ -43,13 +43,6 @@ def seeded_accounts(db_session, restaurant_a):
     return restaurant_a.id
 
 
-@pytest.fixture
-def upload_dir(tmp_path, monkeypatch):
-    path = tmp_path / "uploads"
-    monkeypatch.setattr("app.config.settings.upload_dir", str(path))
-    return path
-
-
 def _bank_account(db_session, entity_id):
     return banking_service.create_money_account(
         db_session,
@@ -103,7 +96,7 @@ def _import_sample(db_session, entity_id, bank_account_id) -> BankStatementRead:
 
 
 @pytest.fixture
-def bank_setup(db_session, restaurant_a, seeded_accounts, upload_dir):
+def bank_setup(db_session, restaurant_a, seeded_accounts):
     bank = _bank_account(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):
         accounts = {account.code: account.id for account in db_session.scalars(select(Account))}
@@ -130,7 +123,7 @@ def test_import_csv_stores_lines(bank_setup) -> None:
 
 
 def test_duplicate_fingerprint_rejected(
-    db_session, restaurant_a, seeded_accounts, upload_dir
+    db_session, restaurant_a, seeded_accounts
 ) -> None:
     bank = _bank_account(db_session, restaurant_a.id)
     content = SAMPLE_CSV.read_bytes()
@@ -192,7 +185,7 @@ def test_classify_supplier_payment_posts_gl_and_subledger(
 
 
 def test_classify_links_existing_manual_payment(
-    db_session, restaurant_a, seeded_accounts, upload_dir
+    db_session, restaurant_a, seeded_accounts
 ) -> None:
     bank = _bank_account(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):
@@ -245,7 +238,7 @@ def test_classify_links_existing_manual_payment(
 
 
 def test_classify_near_match_payment_routes_to_needs_review(
-    db_session, restaurant_a, seeded_accounts, upload_dir
+    db_session, restaurant_a, seeded_accounts
 ) -> None:
     bank = _bank_account(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):
@@ -292,7 +285,7 @@ def test_classify_near_match_payment_routes_to_needs_review(
 
 
 def test_confirm_needs_review_payment_links_without_new_journal(
-    db_session, restaurant_a, seeded_accounts, upload_dir
+    db_session, restaurant_a, seeded_accounts
 ) -> None:
     bank = _bank_account(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):
@@ -398,7 +391,7 @@ def test_bank_fee_classification_no_journal(db_session, bank_setup) -> None:
 
 
 def test_cross_entity_isolation(
-    db_session, restaurant_a, restaurant_b, seeded_accounts, upload_dir
+    db_session, restaurant_a, restaurant_b, seeded_accounts
 ) -> None:
     seed_default_chart(db_session, restaurant_b.id)
     bank = _bank_account(db_session, restaurant_a.id)
@@ -413,7 +406,6 @@ def test_api_import_and_classify(
     db_session,
     restaurant_a,
     seeded_accounts,
-    upload_dir,
 ) -> None:
     bank = _bank_account(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):

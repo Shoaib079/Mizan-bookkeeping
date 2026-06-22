@@ -229,10 +229,7 @@ def test_api_payment_requires_payment_account_and_ties_control_account(
     db_session,
     restaurant_a,
     seeded_accounts,
-    tmp_path,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
     supplier_id = _supplier_id(db_session, restaurant_a)
     draft = _confirmed_draft(db_session, restaurant_a, supplier_id)
     bank_id = seeded_accounts["1100"]

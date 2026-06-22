@@ -118,9 +118,8 @@ def test_clearing_account_credit_reduces_debit_balance(db_session, pos_setup) ->
 
 
 def test_classify_statement_inflow_pos_settlement_posts_gl(
-    db_session, pos_setup, tmp_path, monkeypatch
+    db_session, pos_setup
 ) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
     entity_id = pos_setup["entity_id"]
     bank = pos_setup["bank"]
     clearing_id = pos_setup["accounts"][CARD_SALES_CLEARING_CODE]
@@ -251,9 +250,8 @@ def test_pos_settlement_api_e2e(client: TestClient, db_session, pos_setup) -> No
 
 
 def test_classify_pos_settlement_rejects_outflow(
-    db_session, pos_setup, tmp_path, monkeypatch
+    db_session, pos_setup
 ) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
     entity_id = pos_setup["entity_id"]
     bank = pos_setup["bank"]
 

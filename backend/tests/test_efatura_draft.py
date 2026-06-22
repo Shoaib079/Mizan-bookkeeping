@@ -52,8 +52,7 @@ def test_extract_xml_rejects_bad_totals() -> None:
         extract_efatura_xml(content)
 
 
-def test_upload_xml_creates_draft(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
+def test_upload_xml_creates_draft(client, restaurant_a) -> None:
     content = SAMPLE_XML.read_bytes()
 
     response = client.post(
@@ -72,8 +71,7 @@ def test_upload_xml_creates_draft(client, restaurant_a, tmp_path, monkeypatch) -
     assert "stored_path" in body["extraction_payload"]
 
 
-def test_duplicate_upload_returns_409(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
+def test_duplicate_upload_returns_409(client, restaurant_a) -> None:
     content = SAMPLE_XML.read_bytes()
     url = f"/entities/{restaurant_a.id}/invoices/efatura/draft"
 
@@ -86,8 +84,7 @@ def test_duplicate_upload_returns_409(client, restaurant_a, tmp_path, monkeypatc
     assert second.json()["detail"]["existing_draft_id"] == existing_id
 
 
-def test_list_and_get_draft(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
+def test_list_and_get_draft(client, restaurant_a) -> None:
     content = SAMPLE_XML.read_bytes()
     create = client.post(
         f"/entities/{restaurant_a.id}/invoices/efatura/draft",
@@ -106,9 +103,8 @@ def test_list_and_get_draft(client, restaurant_a, tmp_path, monkeypatch) -> None
 
 
 def test_cross_entity_draft_isolation(
-    client, restaurant_a, restaurant_b, tmp_path, monkeypatch
+    client, restaurant_a, restaurant_b
 ) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
     content = SAMPLE_XML.read_bytes()
     create = client.post(
         f"/entities/{restaurant_a.id}/invoices/efatura/draft",
@@ -125,9 +121,8 @@ def test_cross_entity_draft_isolation(
 
 
 def test_same_file_allowed_for_different_entities(
-    client, restaurant_a, restaurant_b, tmp_path, monkeypatch
+    client, restaurant_a, restaurant_b
 ) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
     content = SAMPLE_XML.read_bytes()
 
     a = client.post(
@@ -144,8 +139,7 @@ def test_same_file_allowed_for_different_entities(
     assert a.json()["file_fingerprint"] == b.json()["file_fingerprint"]
 
 
-def test_rls_hides_other_entity_drafts(db_session, restaurant_a, restaurant_b, tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
+def test_rls_hides_other_entity_drafts(db_session, restaurant_a, restaurant_b) -> None:
     from app.features.invoices import service
 
     content = SAMPLE_XML.read_bytes()
@@ -156,8 +150,7 @@ def test_rls_hides_other_entity_drafts(db_session, restaurant_a, restaurant_b, t
         assert visible == []
 
 
-def test_pdf_fixture_registry(client, restaurant_a, tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr("app.config.settings.upload_dir", str(tmp_path / "uploads"))
+def test_pdf_fixture_registry(client, restaurant_a) -> None:
     pdf_bytes = b"%PDF-1.4 test-fixture-pdf-content"
     register_pdf_fixture(
         pdf_bytes,
