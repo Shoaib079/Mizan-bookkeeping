@@ -16,5 +16,65 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: mizan-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  celery-worker:
+    profiles: ["workers"]
+    image: python:3.12-slim-bookworm
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - mizan_uploads:/app/data/uploads
+      - mizan_backups:/app/data/backups
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://mizan:mizan_dev@db:5432/mizan
+      DATABASE_ADMIN_URL: postgresql+psycopg://postgres:mizan_dev@db:5432/postgres
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_URL: redis://redis:6379/0
+    command: >
+      sh -c "pip install -q -e '.[dev]' &&
+             celery -A app.workers.celery_app worker --loglevel=info"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    profiles: ["workers"]
+    image: python:3.12-slim-bookworm
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://mizan:mizan_dev@db:5432/mizan
+      DATABASE_ADMIN_URL: postgresql+psycopg://postgres:mizan_dev@db:5432/postgres
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      BACKUP_SCHEDULE_HOUR: "3"
+      BACKUP_SCHEDULE_MINUTE: "0"
+    command: >
+      sh -c "pip install -q -e '.[dev]' &&
+             celery -A app.workers.celery_app beat --loglevel=info"
+    depends_on:
+      redis:
+        condition: service_healthy
+
 volumes:
   mizan_pg_data:
+  mizan_uploads:
+  mizan_backups:

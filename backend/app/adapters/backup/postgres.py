@@ -1,0 +1,143 @@
+"""PostgreSQL pg_dump / pg_restore and scratch-database helpers (Phase 8)."""
+
+from __future__ import annotations
+
+import subprocess
+import uuid
+from dataclasses import dataclass
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
+
+
+def pg_tool_database_url(sqlalchemy_url: str) -> str:
+    """Convert SQLAlchemy URL to a libpq-compatible connection string."""
+    url = make_url(sqlalchemy_url)
+    driver = url.drivername.split("+", 1)[0]
+    if driver != "postgresql":
+        raise ValueError(f"unsupported database driver for pg_dump: {url.drivername}")
+    return url.render_as_string(hide_password=False)
+
+
+def parse_database_name(sqlalchemy_url: str) -> str:
+    return make_url(sqlalchemy_url).database or "postgres"
+
+
+@dataclass(frozen=True, slots=True)
+class RowCounts:
+    counts: dict[str, int]
+
+    def as_dict(self) -> dict[str, int]:
+        return dict(self.counts)
+
+
+KEY_TABLES: tuple[str, ...] = (
+    "entities",
+    "journal_entries",
+    "journal_entry_lines",
+    "suppliers",
+    "supplier_ledger_entries",
+    "customers",
+    "customer_ledger_entries",
+    "partners",
+    "partner_ledger_entries",
+    "employees",
+    "staff_ledger_entries",
+    "invoice_drafts",
+    "bank_statements",
+)
+
+
+def collect_row_counts(database_url: str) -> RowCounts:
+    """Row counts for manifest — uses admin-visible connection."""
+    engine = create_engine(database_url, pool_pre_ping=True)
+    counts: dict[str, int] = {}
+    with engine.connect() as conn:
+        for table in KEY_TABLES:
+            counts[table] = int(
+                conn.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar_one()
+            )
+    engine.dispose()
+    return RowCounts(counts=counts)
+
+
+def run_pg_dump(database_url: str, output_path: str) -> None:
+    """Custom-format compressed dump (-Fc) via pg_dump."""
+    url = pg_tool_database_url(database_url)
+    result = subprocess.run(
+        ["pg_dump", "--format=custom", "--no-owner", "--no-acl", f"--dbname={url}", f"--file={output_path}"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"pg_dump failed: {result.stderr.strip() or result.stdout.strip()}")
+
+
+def run_pg_restore(database_url: str, dump_path: str) -> None:
+    """Restore a custom-format dump into the target database."""
+    url = pg_tool_database_url(database_url)
+    result = subprocess.run(
+        ["pg_restore", "--no-owner", "--no-acl", f"--dbname={url}", dump_path],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode not in (0, 1):
+        raise RuntimeError(f"pg_restore failed: {result.stderr.strip() or result.stdout.strip()}")
+
+
+def scratch_database_name(prefix: str = "mizan_restore_verify") -> str:
+    suffix = uuid.uuid4().hex[:12]
+    return f"{prefix}_{suffix}"
+
+
+def create_scratch_database(admin_url: str, db_name: str) -> None:
+    """Create an empty database owned by the mizan role."""
+    engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    safe_name = db_name.replace('"', "")
+    with engine.connect() as conn:
+        exists = conn.execute(
+            text("SELECT 1 FROM pg_database WHERE datname = :name"),
+            {"name": safe_name},
+        ).scalar()
+        if exists:
+            raise RuntimeError(f"scratch database already exists: {safe_name}")
+        conn.execute(text(f'CREATE DATABASE "{safe_name}" OWNER mizan'))
+    engine.dispose()
+
+
+def drop_scratch_database(admin_url: str, db_name: str) -> None:
+    engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    safe_name = db_name.replace('"', "")
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                """
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = :name AND pid <> pg_backend_pid()
+                """
+            ),
+            {"name": safe_name},
+        )
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{safe_name}"'))
+    engine.dispose()
+
+
+def scratch_database_url(base_url: str, db_name: str) -> str:
+    url = make_url(base_url)
+    return url.set(database=db_name).render_as_string(hide_password=False)
+
+
+def pg_tools_available() -> bool:
+    for tool in ("pg_dump", "pg_restore"):
+        try:
+            subprocess.run([tool, "--version"], capture_output=True, check=True)
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            return False
+    return True
+
+
+def replace_database_in_url(sqlalchemy_url: str, database: str) -> str:
+    return make_url(sqlalchemy_url).set(database=database).render_as_string(hide_password=False)
