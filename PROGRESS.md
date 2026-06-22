@@ -8,7 +8,7 @@
 | **Last completed slice** | Delivery platform reports |
 | **Next slice** | Commission e-Faturas (vendor pipeline) |
 | **Branch** | `main` |
-| **Last tag** | (pending) / `v0.33.0-phase6-delivery-platform-reports` |
+| **Last tag** | `56940e4` / `v0.33.0-phase6-delivery-platform-reports` |
 
 ## Resume point
 

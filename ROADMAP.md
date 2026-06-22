@@ -15,7 +15,7 @@
 | **Active phase** | Phase 6 — Sales intake + tips + expenses |
 | **Active slice** | Commission e-Faturas (vendor pipeline) |
 | **Last completed slice** | Delivery platform reports |
-| **Last commit/tag** | (pending) / `v0.33.0-phase6-delivery-platform-reports` |
+| **Last commit/tag** | `56940e4` / `v0.33.0-phase6-delivery-platform-reports` |
 | **Next up** | Commission e-Faturas (vendor pipeline) |
 
 ---
