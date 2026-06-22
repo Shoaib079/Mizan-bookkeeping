@@ -86,6 +86,20 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** Period comparison, Excel export, P&L/Balance Sheet, UI, tax-department payments.
 
+## 2026-06-22 — P&L & Balance Sheet (Phase 7)
+
+**Choice:** Read-only **Profit & Loss** and **Balance Sheet** per entity from posted GL. Shared `core/ledger/balances.py` — `period_activity_kurus()` (inclusive date range, natural sign by normal balance) and `balance_as_of_kurus()` (cumulative through `as_of`). **Posted only** (`status=posted`); **void reversals excluded** (`reverses_entry_id IS NULL`) so voided originals net to zero without double-counting the reversal entry.
+
+**P&L:** All active `revenue` + `expense` accounts (including zero activity), ordered by `code`. Totals: `total_revenue_kurus`, `total_expenses_kurus`, `net_income_kurus`.
+
+**Balance Sheet:** Active `asset`, `liability`, `equity` accounts in sections with subtotals. **Unclosed net income:** no year-end closing entries yet — cumulative revenue minus expense through `as_of` exposed as `unclosed_net_income_kurus` in the equity section (synthetic line, not a GL account). `total_liabilities_and_equity_kurus` = liabilities + equity GL + unclosed net income; `accounting_equation_balanced` when assets equal that sum.
+
+**API:** `GET /entities/{id}/reports/profit-and-loss?from=&to=`; `GET /entities/{id}/reports/balance-sheet?as_of=`; tag `reports`; `from > to` → 422; missing entity → 404.
+
+**Why:** Decisions §10 — ledger rolls up into financial statements; owner needs formal P&L and balance sheet before cash flow and export slices.
+
+**Not in slice:** Cash flow statement, trial balance report, period comparison, Excel export, UI, year-end closing entries.
+
 ## 2026-06-22 — Delivery platform reports (Phase 6 Slice 2)
 
 **Choice:** `delivery_reports` table (entity RLS, unique `entity_id` + `file_fingerprint`, partial unique on posted `entity_id` + `delivery_platform_id` + `report_date`). Manual JSON intake stores gross/commission/net kuruş; math check `gross - commission = net` — mismatch → `needs_review` (post blocked until corrected). `post_delivery_report()` posts **Dr** platform clearing GL / **Cr** `4000` Sales Revenue for **gross only** — commission stored on report row for reconciliation but **not** posted yet (deferred to commission e-Fatura slice). Platforms are **user-managed** (`delivery_platforms` + sub-accounts under `1450`); legacy fixed codes migrated in `032`. `delivery_settlements` + `post_delivery_settlement()` **Dr** bank / **Cr** platform clearing for net payout. Entity setting `delivery_enabled` guards intake. Bank statement classify `delivery_settlement` (inflow only, `delivery_platform_id` required).

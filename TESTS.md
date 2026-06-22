@@ -43,10 +43,11 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_expenses.py` | Daily expenses — manual Dr expense/Cr bank (no AP); `has_source_document=false`; Turkish alias memory; fuzzy → needs_review (no GL); confirm posts + alias; merge items; `rent_utility` bank classify; cross-entity RLS | pass |
 | `backend/tests/test_delivery_sales_report.py` | Delivery sales report — gross per platform + total from posted reports only; date range filter; draft/needs_review/rejected excluded; inactive platform with history; zero rows for platforms without reports; `delivery_enabled` + `from>to` → 422; cross-entity RLS; API E2E | pass |
 | `backend/tests/test_dashboard.py` | Entity dashboard — period sales by source, expenses, net result, payables preview ordering + supplier filter, receivables, delivery in-transit clearing, needs-review counts, TRY position vs FX separate, optional expense/money account filters, `from>to` → 422, API E2E, cross-entity RLS | pass |
+| `backend/tests/test_financial_statements.py` | P&L & Balance Sheet — revenue/expense/net from card/cash/delivery/expense postings, date range exclusion, voided entry excluded, opening-balance as-of balances, unclosed net income balances accounting equation, `from>to` → 422, API E2E, cross-entity RLS | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
-**Count:** 339 pytest (last run 2026-06-22).
+**Count:** 347 pytest (last run 2026-06-22).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 
