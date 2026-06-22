@@ -15,7 +15,7 @@
 | **Active phase** | Phase 5 — Cash drawer, forex, staff, partner reimbursements, receivables |
 | **Active slice** | FX spend / conversion |
 | **Last completed slice** | Receivables |
-| **Last commit/tag** | pending / `v0.31.0-phase5-fx-spend` |
+| **Last commit/tag** | `ce1e965` / `v0.31.0-phase5-fx-spend` |
 | **Next up** | Phase 5 owner sign-off (after FX spend slice) |
 
 ---

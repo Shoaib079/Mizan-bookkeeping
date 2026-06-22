@@ -8,7 +8,7 @@
 | **Last completed slice** | FX spend / conversion |
 | **Next slice** | Phase 5 owner sign-off |
 | **Branch** | `main` |
-| **Last tag** | `v0.31.0-phase5-fx-spend` (pending commit) |
+| **Last tag** | `ce1e965` / `v0.31.0-phase5-fx-spend` |
 
 ## Resume point
 
