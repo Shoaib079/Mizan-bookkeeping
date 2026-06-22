@@ -16,6 +16,18 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Scheduling:** Later enhancement — after core build (Phase 6–8 + sign-off). Not in current slice order.
 
+## 2026-06-22 — Delivery platform reports (Phase 6 Slice 2)
+
+**Choice:** `delivery_reports` table (entity RLS, unique `entity_id` + `file_fingerprint`, partial unique on posted `entity_id` + `platform` + `report_date`). Manual JSON intake stores gross/commission/net kuruş; math check `gross - commission = net` — mismatch → `needs_review` (post blocked until corrected). `post_delivery_report()` posts **Dr** platform clearing / **Cr** `4000` Sales Revenue for **gross only** — commission stored on report row for reconciliation but **not** posted as expense/AP (deferred to commission e-Fatura slice). Per-platform clearing accounts `1410` Getir, `1420` Yemeksepeti, `1430` Trendyol (asset/debit, seeded in default chart + idempotent migration for existing entities). `delivery_settlements` + `post_delivery_settlement()` **Dr** bank / **Cr** platform clearing for net payout; remaining clearing balance = commission in transit. Entity settings `delivery_enabled` + comma-separated `delivery_platforms` guard all intake/settlement. Bank statement classify `delivery_settlement` (inflow only, `delivery_platform` required).
+
+**Why:** Decisions §9 — per-platform portal reports are authoritative; clearing pattern mirrors card sales; irregular payout schedules reconciled via clearing balance.
+
+**Migration:** Alembic `030` — `delivery_reports`, `delivery_settlements`, `delivery_settlement_id` on `bank_statement_lines`, clearing account seed.
+
+**API:** `POST/GET .../delivery/reports`; `GET .../{id}`; `POST .../{id}/post`; `POST .../{id}/reject`; `POST/GET .../delivery/settlements`; `GET .../delivery/clearing-reconciliation`.
+
+**Not in slice:** Commission e-Fatura posting, OCR/portal import, UI, locked-period enforcement.
+
 ## 2026-06-22 — POS daily-summary photo intake (Phase 6 Slice 1)
 
 **Choice:** `pos_daily_summaries` table (entity RLS, unique `entity_id` + `file_fingerprint`). OCR v1 in `adapters/ocr_ai/pos_summary.py` — fixture registry (SHA256) + UTF-8 text heuristics for Turkish POS Z-report labels (Nakit/Kart/Toplam). Upload creates `draft` when cash + card = total, else `needs_review` with reason. Confirm (draft or needs_review with corrected `cash_kurus`/`card_kurus`) calls `confirm_pos_daily_summary()` — single transaction: card portion → `post_card_sales_batch()` pattern (Dr `1400` / Cr `4000`); cash portion → `post_cash_movement()` IN (Dr cash GL / Cr `4000`). **Never** posts POS aggregate total as one GL line. Links `card_sales_batch_id` and `cash_movement_id` on summary row. Reject → `rejected`. Duplicate upload → 409.

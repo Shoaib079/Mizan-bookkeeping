@@ -121,6 +121,7 @@ def classify_statement_line(
             actor_id=payload.actor_id,
             confirm_supplier_ledger_entry_id=payload.confirm_supplier_ledger_entry_id,
             confirm_account_transfer_id=payload.confirm_account_transfer_id,
+            delivery_platform=payload.delivery_platform,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

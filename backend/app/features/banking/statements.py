@@ -18,6 +18,13 @@ from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_da
 from app.core.receivables import posting as receivables_posting
 from app.core.payables import posting as payables_posting
 from app.core.pos import posting as pos_posting
+from app.core.delivery import posting as delivery_posting
+from app.core.delivery.platforms import DeliveryPlatform, parse_platform
+from app.features.delivery.settings import (
+    DeliveryNotEnabledError,
+    DeliveryPlatformNotEnabledError,
+    require_platform_enabled,
+)
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
 from app.db.session import entity_context, require_entity_context
@@ -80,6 +87,7 @@ def _to_line_read(line: BankStatementLine) -> BankStatementLineRead:
         supplier_ledger_entry_id=line.supplier_ledger_entry_id,
         account_transfer_id=line.account_transfer_id,
         pos_settlement_id=line.pos_settlement_id,
+        delivery_settlement_id=line.delivery_settlement_id,
         credit_card_payment_id=line.credit_card_payment_id,
         customer_id=line.customer_id,
         customer_ledger_entry_id=line.customer_ledger_entry_id,
@@ -525,6 +533,7 @@ def classify_statement_line(
     actor_id: uuid.UUID | None = None,
     confirm_supplier_ledger_entry_id: uuid.UUID | None = None,
     confirm_account_transfer_id: uuid.UUID | None = None,
+    delivery_platform: str | None = None,
 ) -> ClassifyStatementLineResult:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -761,6 +770,29 @@ def classify_statement_line(
                     "actor_id is required for pos_settlement"
                 )
 
+        elif classification == StatementLineClassification.DELIVERY_SETTLEMENT:
+            if line.amount_kurus <= 0:
+                raise InvalidClassificationError(
+                    "delivery_settlement classification requires an inflow "
+                    "(positive amount_kurus)"
+                )
+            if actor_id is None:
+                raise InvalidClassificationError(
+                    "actor_id is required for delivery_settlement"
+                )
+            if delivery_platform is None:
+                raise InvalidClassificationError(
+                    "delivery_platform is required for delivery_settlement"
+                )
+            try:
+                platform = parse_platform(delivery_platform)
+            except ValueError as exc:
+                raise InvalidClassificationError(str(exc)) from exc
+            try:
+                require_platform_enabled(session, entity_id, platform)
+            except (DeliveryNotEnabledError, DeliveryPlatformNotEnabledError) as exc:
+                raise InvalidClassificationError(str(exc)) from exc
+
         elif classification == StatementLineClassification.BANK_FEE:
             if line.amount_kurus >= 0:
                 raise InvalidClassificationError(
@@ -919,6 +951,45 @@ def classify_statement_line(
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
             line.pos_settlement_id = settlement_id
+            session.commit()
+            session.refresh(line)
+
+        return ClassifyStatementLineResult(
+            line=_to_line_read(line),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.DELIVERY_SETTLEMENT:
+        settlement_amount = line.amount_kurus
+        assert actor_id is not None
+        assert delivery_platform is not None
+        platform = parse_platform(delivery_platform)
+        result = delivery_posting.post_delivery_settlement(
+            session,
+            entity_id,
+            platform=platform,
+            money_account_id=statement.money_account_id,
+            settlement_date=line.transaction_date,
+            amount_kurus=settlement_amount,
+            description=line.description,
+            actor_id=actor_id,
+            reference_type=BANK_STATEMENT_LINE_REF,
+            reference_id=line.id,
+            bank_statement_line_id=line.id,
+        )
+        journal_id = result.journal_entry.id
+        settlement_id = result.delivery_settlement.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.DELIVERY_SETTLEMENT
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            line.delivery_settlement_id = settlement_id
             session.commit()
             session.refresh(line)
 

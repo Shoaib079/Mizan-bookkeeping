@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 6 — Sales intake + tips + expenses |
-| **Active slice** | Delivery platform reports |
-| **Last completed slice** | POS daily-summary photo intake |
-| **Last commit/tag** | `4a529b3` / `v0.32.0-phase6-pos-daily-summary-intake` |
-| **Next up** | Delivery platform reports (gross / commission / net) |
+| **Active slice** | Commission e-Faturas (vendor pipeline) |
+| **Last completed slice** | Delivery platform reports |
+| **Last commit/tag** | (pending) / `v0.33.0-phase6-delivery-platform-reports` |
+| **Next up** | Commission e-Faturas (vendor pipeline) |
 
 ---
 
@@ -94,7 +94,7 @@ Every statement-line classification that represents a **real GL event** must pos
 | `bank_fee` | Dr bank charges `5300` / Cr bank | done (Phase 4 Slice 4) |
 | `credit_card_payment` | Dr CC payable / Cr bank | done (Phase 4 Slice 4) |
 | `pos_settlement` / card deposit | Dr bank / Cr card clearing `1400` | done (Phase 4 Slice 1) |
-| `delivery_settlement` | Dr bank / Cr platform clearing | **Phase 4/6** (delivery clearing) |
+| `delivery_settlement` | Dr bank / Cr platform clearing | done (Phase 6 Slice 2) |
 | `rent_utility` | Dr expense / Cr bank | **Phase 6** (expenses) |
 | `tax_payment` | Dr tax liability / Cr bank | **Phase 5/7** (tax module) |
 | `owner_draw` | Dr equity / Cr bank | **Phase 5** (owner movements) |
@@ -140,8 +140,8 @@ POS daily-summary photo + delivery platform reports; commission e-Faturas via ve
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| POS daily-summary photo intake | done | `pos_daily_summaries`; OCR v1 fixture + text heuristics; math check → `needs_review`; confirm posts card batch Dr `1400`/Cr `4000` + cash in Dr cash/Cr `4000` (never total line); duplicate fingerprint 409; Alembic `028`; 9 tests; 275 pytest |
-| Delivery platform reports (gross / commission / net) | not started | Per-platform clearing balances |
+| POS daily-summary photo intake | done | `pos_daily_summaries`; OCR v1 fixture + text heuristics; math check → `needs_review`; confirm posts card batch Dr `1400`/Cr `4000` + cash in Dr cash/Cr `4000` (never total line); duplicate fingerprint 409; duplicate-day guard (`029`); Alembic `028`/`029`; tag `v0.32.1`; 279 pytest |
+| Delivery platform reports (gross / commission / net) | done | `delivery_reports` + `delivery_settlements`; per-platform clearing `1410`/`1420`/`1430`; `post_delivery_report()` Dr clearing / Cr `4000` gross; `post_delivery_settlement()` Dr bank / Cr clearing net; statement classify `delivery_settlement`; entity `delivery_enabled` + `delivery_platforms` settings; reconciliation API; Alembic `030`; 289 pytest |
 | Commission e-Faturas (vendor pipeline) | not started | |
 | Tips (pass-through, not revenue/expense) | not started | |
 | Expenses + spelling tolerance | not started | |

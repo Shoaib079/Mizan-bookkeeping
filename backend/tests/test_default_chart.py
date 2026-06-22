@@ -23,6 +23,13 @@ def test_default_chart_includes_input_vat() -> None:
     assert vat.accepts_opening_balance is False
 
 
+def test_default_chart_includes_delivery_clearing_accounts() -> None:
+    codes = {a.code for a in DEFAULT_CHART}
+    assert "1410" in codes
+    assert "1420" in codes
+    assert "1430" in codes
+
+
 def test_inventory_not_in_default_chart() -> None:
     names = {a.name_en.lower() for a in DEFAULT_CHART}
     assert "inventory" not in names

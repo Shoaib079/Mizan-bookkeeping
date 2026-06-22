@@ -5,16 +5,16 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 6 — Sales intake + tips + expenses |
-| **Last completed slice** | POS daily-summary photo intake |
-| **Next slice** | Delivery platform reports (gross / commission / net) |
+| **Last completed slice** | Delivery platform reports |
+| **Next slice** | Commission e-Faturas (vendor pipeline) |
 | **Branch** | `main` |
-| **Last tag** | `4a529b3` / `v0.32.0-phase6-pos-daily-summary-intake` |
+| **Last tag** | (pending) / `v0.33.0-phase6-delivery-platform-reports` |
 
 ## Resume point
 
-**POS daily-summary photo intake** done — upload → draft/needs_review; confirm posts card batch + cash in atomically (no aggregate total GL line); reject optional; duplicate fingerprint 409. Phase 5 owner sign-off recorded.
+**Delivery platform reports** done — manual JSON intake; math check → `needs_review`; post Dr clearing / Cr revenue (gross); settlement Dr bank / Cr clearing (net); per-platform reconciliation; `delivery_settlement` bank classify.
 
 ## Session notes
 
-- **POS daily summary:** `adapters/ocr_ai/pos_summary.py`; `pos_daily_summaries` + RLS; `confirm_pos_daily_summary()` in `core/pos/daily_summary_posting.py`; API `POST/GET .../pos/daily-summaries`, confirm/reject; Alembic `028`; 275 pytest green
-- **Phase 5:** owner signed off; last tag `ce1e965` / `v0.31.0-phase5-fx-spend`
+- **Delivery reports:** `delivery_reports` + `delivery_settlements`; clearing `1410`/`1420`/`1430`; `post_delivery_report()` / `post_delivery_settlement()`; API under `/entities/{id}/delivery/...`; statement classify `delivery_settlement`; Alembic `030`; 289 pytest green
+- **POS daily summary:** duplicate-day guard tag `v0.32.1`; 279 pytest
