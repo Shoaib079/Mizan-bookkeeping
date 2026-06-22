@@ -19,6 +19,7 @@ class StatementLineClassification(str, enum.Enum):
     POS_SETTLEMENT = "pos_settlement"
     DELIVERY_SETTLEMENT = "delivery_settlement"
     BANK_FEE = "bank_fee"
+    RENT_UTILITY = "rent_utility"
     CREDIT_CARD_PAYMENT = "credit_card_payment"
     CUSTOMER_PAYMENT = "customer_payment"
     UNKNOWN = "unknown"
@@ -156,6 +157,12 @@ class BankStatementLine(EntityScopedMixin, Base):
     customer_ledger_entry_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("customer_ledger_entries.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    expense_entry_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("expense_entries.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )

@@ -1,0 +1,1 @@
+"""Daily expenses feature package."""

@@ -38,6 +38,7 @@ from app.features.delivery.api import (
     settlements_router as delivery_settlements_router,
 )
 from app.features.tips.api import router as tips_router
+from app.features.expenses.api import router as expenses_router
 
 app = FastAPI(
     title="Mizan API",
@@ -85,6 +86,7 @@ app.include_router(delivery_reports_router)
 app.include_router(delivery_settlements_router)
 app.include_router(delivery_reconciliation_router)
 app.include_router(tips_router)
+app.include_router(expenses_router)
 
 
 @app.get("/health")

@@ -40,10 +40,11 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_delivery_reports.py` | Delivery platform reports — intake draft/needs_review, post Dr clearing / Cr revenue (gross), settlement Dr bank / Cr clearing (net), reconciliation in-transit, `delivery_platform_id`, duplicate fingerprint 409, cross-entity isolation, statement classify `delivery_settlement`, API E2E | pass |
 | `backend/tests/test_delivery_commission_efatura.py` | Delivery commission e-Faturas — full lifecycle report + settlement + commission invoice → clearing zero; Dr `5500` + Dr `1500` / Cr clearing (AP untouched); gross vs report `commission_kurus` mismatch → needs_review + post blocked; double commission blocked; cross-entity isolation; supplier invoice path unchanged; API E2E | pass |
 | `backend/tests/test_tips.py` | Tips pass-through — card accrual Dr `1400`/Cr `2260` (no revenue/expense); cash held Dr cash/Cr `2260`; payout Dr `2260`/Cr cash (not expense); over-payout rejected; balance endpoint; API E2E | pass |
+| `backend/tests/test_expenses.py` | Daily expenses — manual Dr expense/Cr bank (no AP); `has_source_document=false`; Turkish alias memory; fuzzy → needs_review (no GL); confirm posts + alias; merge items; `rent_utility` bank classify; cross-entity RLS | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
-**Count:** 307 pytest (last run 2026-06-22).
+**Count:** 317 pytest (last run 2026-06-22).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 

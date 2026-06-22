@@ -19,6 +19,7 @@ from app.core.receivables import posting as receivables_posting
 from app.core.payables import posting as payables_posting
 from app.core.pos import posting as pos_posting
 from app.core.delivery import posting as delivery_posting
+from app.core.expenses.posting import InvalidExpensePostingError, post_expense_entry
 from app.features.delivery import platform_service
 from app.features.delivery.platform_service import InactiveDeliveryPlatformError
 from app.features.delivery.settings import (
@@ -94,6 +95,7 @@ def _to_line_read(line: BankStatementLine) -> BankStatementLineRead:
         review_reason=line.review_reason,
         candidate_supplier_ledger_entry_id=line.candidate_supplier_ledger_entry_id,
         candidate_account_transfer_id=line.candidate_account_transfer_id,
+        expense_entry_id=line.expense_entry_id,
     )
 
 
@@ -534,6 +536,7 @@ def classify_statement_line(
     confirm_supplier_ledger_entry_id: uuid.UUID | None = None,
     confirm_account_transfer_id: uuid.UUID | None = None,
     delivery_platform_id: uuid.UUID | None = None,
+    expense_account_id: uuid.UUID | None = None,
 ) -> ClassifyStatementLineResult:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -802,6 +805,18 @@ def classify_statement_line(
             if actor_id is None:
                 raise InvalidClassificationError("actor_id is required for bank_fee")
 
+        elif classification == StatementLineClassification.RENT_UTILITY:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "rent_utility classification requires an outflow (negative amount_kurus)"
+                )
+            if actor_id is None:
+                raise InvalidClassificationError("actor_id is required for rent_utility")
+            if expense_account_id is None:
+                raise InvalidClassificationError(
+                    "expense_account_id is required for rent_utility"
+                )
+
         elif classification == StatementLineClassification.CREDIT_CARD_PAYMENT:
             if line.amount_kurus >= 0:
                 raise InvalidClassificationError(
@@ -1057,6 +1072,46 @@ def classify_statement_line(
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
             line.credit_card_payment_id = payment_id
+            session.commit()
+            session.refresh(line)
+
+        return ClassifyStatementLineResult(
+            line=_to_line_read(line),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.RENT_UTILITY:
+        expense_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        assert expense_account_id is not None
+        try:
+            result = post_expense_entry(
+                session,
+                entity_id,
+                expense_date=line.transaction_date,
+                amount_kurus=expense_amount,
+                expense_account_id=expense_account_id,
+                money_account_id=statement.money_account_id,
+                description=line.description,
+                actor_id=actor_id,
+                bank_statement_line_id=line.id,
+            )
+        except (InvalidExpensePostingError, ValueError) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+
+        journal_id = result.journal_entry.id
+        expense_id = result.expense_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.RENT_UTILITY
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            line.expense_entry_id = expense_id
             session.commit()
             session.refresh(line)
 

@@ -120,6 +120,7 @@ class BankStatementLineRead(BaseModel):
     review_reason: str | None = None
     candidate_supplier_ledger_entry_id: uuid.UUID | None = None
     candidate_account_transfer_id: uuid.UUID | None = None
+    expense_entry_id: uuid.UUID | None = None
 
 
 class BankStatementRead(BaseModel):
@@ -150,6 +151,10 @@ class ClassifyStatementLineRequest(BaseModel):
     )
     confirm_supplier_ledger_entry_id: uuid.UUID | None = None
     confirm_account_transfer_id: uuid.UUID | None = None
+    expense_account_id: uuid.UUID | None = Field(
+        default=None,
+        description="Required for rent_utility — owner picks expense GL account (e.g. 5000 rent)",
+    )
 
 
 class ClassifyStatementLineResult(BaseModel):

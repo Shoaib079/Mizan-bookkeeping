@@ -29,6 +29,9 @@ RLS_TABLES = (
     "staff_ledger_entries",
     "partners",
     "partner_ledger_entries",
+    "expense_items",
+    "expense_item_aliases",
+    "expense_entries",
 )
 
 

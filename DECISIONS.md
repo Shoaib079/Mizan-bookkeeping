@@ -2,6 +2,16 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-22 — Daily expenses + spelling tolerance (Phase 6 Slice 6)
+
+**Choice:** Daily handwritten and manual typed expenses are first-class `expense_entries` — post Dr expense / Cr bank or cash via `post_expense_entry()` (`JournalEntrySource.EXPENSE_ENTRY`). `has_source_document=false` when no receipt attached. Item descriptions use canonical `expense_items` + `expense_item_aliases` with Turkish-aware normalization (`normalize_expense_item_text`) and fuzzy match (≥0.85 → `needs_review` until owner confirms; confirm remembers alias). Only `posted` expenses hit GL.
+
+**Bank classify `rent_utility`:** Outflow only; owner supplies `expense_account_id` (e.g. `5000` rent, `5200` utility); same posting path; links `expense_entry_id` on statement line.
+
+**API:** `POST/GET /entities/{id}/expense-items`, `POST .../expense-items/merge`, `POST/GET /entities/{id}/expenses`, `POST .../expenses/{id}/confirm-item`.
+
+**Not in slice:** OCR for handwritten papers, document upload/archive, credit card statement extraction, UI, locked-period enforcement, expense sub-categories.
+
 ## 2026-06-22 — Bank feed adapter (read-only, deferred)
 
 **Choice (future):** Add a **read-only** bank feed as an additional **input adapter** — account-information / transaction pull only. **Never payment-initiation**; the app never moves money. Output is the same normalized transaction row shape as the manual statement importer (`bank_statement_lines`), feeding the **same** downstream pipeline: classify → clearing → near-match → anti-double-count. No parallel classification or posting logic.

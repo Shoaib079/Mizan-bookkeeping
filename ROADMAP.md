@@ -12,11 +12,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 6 — Sales intake + tips + expenses |
-| **Active slice** | Expenses + spelling tolerance |
-| **Last completed slice** | Tips (pass-through, not revenue/expense) |
-| **Last commit/tag** | `v0.35.0-phase6-tips` |
-| **Next up** | Expenses + spelling tolerance |
+| **Active phase** | Phase 7 — Dashboard, reports, Excel export, financial statements |
+| **Active slice** | Delivery sales report |
+| **Last completed slice** | Expenses + spelling tolerance |
+| **Last commit/tag** | `v0.36.0-phase6-expenses` |
+| **Next up** | Delivery sales report (Phase 7 Slice 1) |
 
 ---
 
@@ -95,7 +95,7 @@ Every statement-line classification that represents a **real GL event** must pos
 | `credit_card_payment` | Dr CC payable / Cr bank | done (Phase 4 Slice 4) |
 | `pos_settlement` / card deposit | Dr bank / Cr card clearing `1400` | done (Phase 4 Slice 1) |
 | `delivery_settlement` | Dr bank / Cr platform clearing | done (Phase 6 Slice 2) |
-| `rent_utility` | Dr expense / Cr bank | **Phase 6** (expenses) |
+| `rent_utility` | Dr expense / Cr bank | done (Phase 6 Slice 6) |
 | `tax_payment` | Dr tax liability / Cr bank | **Phase 5/7** (tax module) |
 | `owner_draw` | Dr equity / Cr bank | **Phase 5** (owner movements) |
 | `customer_payment` | Dr bank / Cr AR | **done** (Phase 5 Slice 5) |
@@ -145,9 +145,9 @@ POS daily-summary photo + delivery platform reports; commission e-Faturas (e-Fat
 | User-managed delivery platforms | done | `delivery_platforms` table — owner add / rename / deactivate; auto clearing GL sub-account under parent `1450` (mirrors bank/card sub-accounts); reports/settlements/commission/reconciliation keyed by `delivery_platform_id`; removed fixed enum + comma-separated `delivery_platforms` setting; legacy `1410`–`1430` migrated; API `POST/GET/PATCH .../delivery/platforms`; Alembic `032`; 300 pytest |
 | Commission e-Faturas | done | Reuse `invoice_drafts` with `invoice_kind=delivery_commission` + `delivery_report_id` FK; `post_delivery_commission_draft()` Dr `5500` + Dr `1500` / **Cr platform clearing GL** (via linked platform) — **not** `2000` AP; link/report mismatch → `needs_review`; `commission_journal_entry_id` on report; Alembic `031` |
 | Tips (pass-through, not revenue/expense) | done | `tip_accruals` + `tip_payouts`; card Dr `1400`/Cr `2260`; cash held Dr cash/Cr `2260`; payout Dr `2260`/Cr cash (not expense); balance check on pot; chart `2260` Tips Payable; API `POST/GET .../tips/accruals`, `POST/GET .../tips/payouts`, `GET .../tips/balance`; Alembic `033`; tag `v0.35.0`; 307 pytest |
-| Expenses + spelling tolerance | not started | |
+| Expenses + spelling tolerance | done | `expense_items` + `expense_item_aliases` + `expense_entries`; Turkish-aware normalization + fuzzy match → `needs_review`; confirm remembers alias; manual Dr expense / Cr bank or cash; `rent_utility` bank classify with `expense_account_id`; `has_source_document=false` on manual entry; API `POST/GET .../expense-items`, `POST .../merge`, `POST/GET .../expenses`, `POST .../confirm-item`; Alembic `034`; tag `v0.36.0`; 317 pytest |
 
-**Phase 6 complete when:** all slices above done, tested, committed, owner sign-off.
+**Phase 6 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 6 COMPLETE (pending owner sign-off).**
 
 *Note: Phase 6 may need to land with or just before Phase 4 (settlements reconcile against sales). Resequence if dependencies require — the firm rule is tested + signed off, not strict phase numbering.*
 
