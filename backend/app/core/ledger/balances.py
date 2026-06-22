@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import date
 
 from sqlalchemy import func, select
@@ -11,7 +12,11 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntryStatus
 
-__all__ = ["balance_as_of_kurus", "period_activity_kurus"]
+__all__ = [
+    "balance_as_of_kurus",
+    "net_cash_effect_on_accounts",
+    "period_activity_kurus",
+]
 
 
 def _debit_credit_totals_kurus(
@@ -87,3 +92,32 @@ def balance_as_of_kurus(
         as_of_date=as_of_date,
     )
     return _signed_balance_kurus(debits, credits, account.normal_balance)
+
+
+def net_cash_effect_on_accounts(
+    session: Session,
+    journal_entry_id: uuid.UUID,
+    account_ids: set[uuid.UUID],
+) -> int:
+    """Signed net cash effect on liquid GL lines in one entry (debit +, credit −)."""
+    if not account_ids:
+        return 0
+
+    query = (
+        select(
+            JournalEntryLine.side,
+            func.coalesce(func.sum(JournalEntryLine.amount_kurus), 0),
+        )
+        .where(
+            JournalEntryLine.journal_entry_id == journal_entry_id,
+            JournalEntryLine.account_id.in_(account_ids),
+        )
+        .group_by(JournalEntryLine.side)
+    )
+    debits = credits = 0
+    for side, total in session.execute(query).all():
+        if side == AccountNormalBalance.DEBIT:
+            debits = int(total)
+        else:
+            credits = int(total)
+    return debits - credits

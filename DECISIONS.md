@@ -100,6 +100,18 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** Cash flow statement, trial balance report, period comparison, Excel export, UI, year-end closing entries.
 
+## 2026-06-22 — Cash flow statement (Phase 7)
+
+**Choice:** Read-only **cash flow statement** per entity from posted GL on **TRY liquid** accounts only — active `money_accounts` with `account_kind` in `bank`, `cash` (not `foreign_currency`, not `credit_card`). Shared `core/ledger/balances.py` extended with `net_cash_effect_on_accounts()`; opening/closing via `balance_as_of_kurus()` (opening = day before `from`, closing = `to` inclusive). **Posted only**; **void reversals excluded** (`reverses_entry_id IS NULL`).
+
+**Direct method:** Period journals touching TRY liquid GL lines categorized by `journal_entries.source` — debit to cash/bank = inflow, credit = outflow. **Transfers** between own accounts excluded (net zero at entity level). **Opening balance** entries excluded from period activity lines (still in opening/closing). Operating sources: POS/delivery settlements, supplier payments, expenses, fees, staff/partner/tip cash movements, FX spend on TRY accounts, manual, etc. Financing: `credit_card_payment`. Investing: empty (v1). `by_source` detail rows; `reconciled_to_balances` and `reconciled_to_categories` flags.
+
+**API:** `GET /entities/{id}/reports/cash-flow?from=&to=`; tag `reports`; `from > to` → 422; missing entity → 404. Tag `v0.40.0-phase7-cash-flow`.
+
+**Why:** Decisions §10 / §15 — formal cash flow from ledger; TRY liquid scope matches owner cash position; inter-account transfers are not operating cash flow.
+
+**Not in slice:** FX wallet native-currency flows, indirect method, period comparison, Excel export, UI, owner draw (no source yet).
+
 ## 2026-06-22 — Delivery platform reports (Phase 6 Slice 2)
 
 **Choice:** `delivery_reports` table (entity RLS, unique `entity_id` + `file_fingerprint`, partial unique on posted `entity_id` + `delivery_platform_id` + `report_date`). Manual JSON intake stores gross/commission/net kuruş; math check `gross - commission = net` — mismatch → `needs_review` (post blocked until corrected). `post_delivery_report()` posts **Dr** platform clearing GL / **Cr** `4000` Sales Revenue for **gross only** — commission stored on report row for reconciliation but **not** posted yet (deferred to commission e-Fatura slice). Platforms are **user-managed** (`delivery_platforms` + sub-accounts under `1450`); legacy fixed codes migrated in `032`. `delivery_settlements` + `post_delivery_settlement()` **Dr** bank / **Cr** platform clearing for net payout. Entity setting `delivery_enabled` guards intake. Bank statement classify `delivery_settlement` (inflow only, `delivery_platform_id` required).

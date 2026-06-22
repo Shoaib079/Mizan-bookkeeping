@@ -11,9 +11,11 @@ from sqlalchemy.orm import Session
 from app.db.session import get_session
 from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
+from app.features.reports import cash_flow
 from app.features.reports import financial_statements
 from app.features.reports.schema import (
     BalanceSheetRead,
+    CashFlowRead,
     DeliverySalesReportRead,
     ProfitAndLossRead,
 )
@@ -68,3 +70,18 @@ def get_balance_sheet(
         return financial_statements.get_balance_sheet(session, entity_id, as_of)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/cash-flow", response_model=CashFlowRead)
+def get_cash_flow(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    session: Session = Depends(get_session),
+) -> CashFlowRead:
+    try:
+        return cash_flow.get_cash_flow(session, entity_id, from_date, to_date)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidDateRangeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

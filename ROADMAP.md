@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 7 — Dashboard, reports, Excel export, financial statements |
-| **Active slice** | Cash flow statement |
-| **Last completed slice** | Dashboard |
-| **Last commit/tag** | `v0.38.0-phase7-dashboard` |
-| **Next up** | Cash flow statement (Phase 7 Slice 4) |
+| **Active slice** | Per-rate KDV report |
+| **Last completed slice** | Cash flow statement |
+| **Last commit/tag** | `v0.40.0-phase7-cash-flow` |
+| **Next up** | Per-rate KDV report (Phase 7 Slice 5) |
 
 ---
 
@@ -162,7 +162,7 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 | Delivery sales report | done | `GET .../reports/delivery-sales?from=&to=` — gross per platform + total; posted `delivery_reports` only; all platforms (active + inactive); `delivery_enabled` guard |
 | Dashboard | done | `GET .../dashboard?from=&to=` — period sales/expenses/net, payables preview, receivables, TRY position + FX wallets, delivery in-transit, needs-review counts; optional `supplier_id`, `money_account_id`, `expense_account_id` filters |
 | P&L & Balance Sheet (per entity) | done | `GET .../reports/profit-and-loss?from=&to=` — all active revenue/expense accounts, natural sign period activity, totals; `GET .../reports/balance-sheet?as_of=` — asset/liability/equity sections, `unclosed_net_income_kurus` synthetic equity line, accounting equation check; posted only, void reversals excluded |
-| Cash flow statement | not started | |
+| Cash flow statement | done | `GET .../reports/cash-flow?from=&to=` — TRY liquid bank+cash only; opening/closing from `balance_as_of_kurus`; direct method by journal source (operating/financing); transfers + opening_balance excluded from categorization; reconciliation flags |
 | Per-rate KDV report | not started | |
 | Period comparison | not started | |
 | Excel export | not started | |

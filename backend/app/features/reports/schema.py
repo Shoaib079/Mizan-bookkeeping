@@ -86,3 +86,36 @@ class BalanceSheetRead(BaseModel):
     total_equity_kurus: int
     total_liabilities_and_equity_kurus: int
     accounting_equation_balanced: bool
+
+
+class CashFlowCategoryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    inflows_kurus: int
+    outflows_kurus: int
+    net_kurus: int
+
+
+class CashFlowSourceRow(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source: str
+    category: str
+    net_cash_kurus: int
+
+
+class CashFlowRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    entity_id: uuid.UUID
+    from_date: date
+    to_date: date
+    opening_cash_kurus: int
+    closing_cash_kurus: int
+    net_change_kurus: int
+    operating: CashFlowCategoryRead
+    investing: CashFlowCategoryRead
+    financing: CashFlowCategoryRead
+    by_source: list[CashFlowSourceRow]
+    reconciled_to_balances: bool
+    reconciled_to_categories: bool
