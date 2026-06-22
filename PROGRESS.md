@@ -5,19 +5,17 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 5 — Cash drawer, forex, staff, partner reimbursements, receivables |
-| **Last completed slice** | Receivables |
-| **Next slice** | Phase 6 — Sales intake + tips + expenses |
+| **Last completed slice** | FX spend / conversion |
+| **Next slice** | Phase 5 owner sign-off |
 | **Branch** | `main` |
-| **Last tag** | `v0.30.0-phase5-receivables` |
+| **Last tag** | `v0.31.0-phase5-fx-spend` (pending commit) |
 
 ## Resume point
 
-**Receivables slice** done — `customers` CRUD; `customer_ledger_entries` append-only; credit sale Dr `1200`/Cr `4000`; payment Dr bank/Cr `1200` (no second revenue); per-customer opening balance via `customer_id` lines; bank statement `customer_payment` classify; control account reconciles. **Phase 5 complete** — pending owner sign-off. **Next:** Phase 6 — Sales intake.
+**FX spend / conversion** done — `post_fx_conversion()` and `post_fx_expense_spend()` at average cost; realized gain/loss on conversion only (`4200`/`5600`); holdings never revalued. All six Phase 5 slices done; pending owner sign-off.
 
 ## Session notes
 
-- **Receivables:** `core/receivables/` + `features/customers/`; `JournalEntrySource.CUSTOMER_*`; per-customer OB; bank `customer_payment` classify; Alembic `027`; 260 pytest green
-- **Partners:** `core/partners/` + `features/partners/`; `JournalEntrySource.PARTNER_*`; per-partner OB; Alembic `026`; 252 pytest green
-- **Staff:** `core/staff/` + `features/staff/`; `JournalEntrySource.STAFF_*`; `FxMovementType.SPEND`; Alembic `025`; 243 pytest green
-- **Forex purchase:** tag `v0.27.0-phase5-forex-purchase`
-- **Cash drawer:** tag `v0.26.0-phase5-cash-drawer`
+- **FX spend:** `core/fx/average_cost.py`, `core/fx/spend_posting.py`; `JournalEntrySource.FX_CONVERSION`, `FX_EXPENSE_SPEND`; chart `4200`/`5600`; 266 pytest green
+- **Receivables:** tag `v0.30.0-phase5-receivables`
+- **Partners:** tag `v0.29.0-phase5-partner-reimbursements`

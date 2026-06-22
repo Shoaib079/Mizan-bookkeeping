@@ -41,6 +41,38 @@ class FxPurchaseResponse(BaseModel):
     fx_ledger_entry: FxLedgerEntryRead
 
 
+class FxConversionCreate(BaseModel):
+    fx_money_account_id: uuid.UUID
+    try_money_account_id: uuid.UUID
+    native_quantity: int = Field(gt=0, description="Foreign currency spent in minor units")
+    try_received_kurus: int = Field(gt=0, description="TRY received in kuruş (owner-entered)")
+    conversion_date: date
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID
+
+
+class FxConversionResponse(BaseModel):
+    journal_entry_id: uuid.UUID
+    fx_ledger_entry: FxLedgerEntryRead
+    try_cost_kurus: int
+    realized_gain_kurus: int
+
+
+class FxExpenseSpendCreate(BaseModel):
+    fx_money_account_id: uuid.UUID
+    expense_account_id: uuid.UUID
+    native_quantity: int = Field(gt=0)
+    spend_date: date
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID
+
+
+class FxExpenseSpendResponse(BaseModel):
+    journal_entry_id: uuid.UUID
+    fx_ledger_entry: FxLedgerEntryRead
+    try_cost_kurus: int
+
+
 class FxBalanceRead(BaseModel):
     fx_money_account_id: uuid.UUID
     currency: str

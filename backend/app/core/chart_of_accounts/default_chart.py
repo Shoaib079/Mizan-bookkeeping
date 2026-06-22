@@ -21,6 +21,8 @@ CARD_SALES_CLEARING_CODE = "1400"
 SALES_REVENUE_CODE = "4000"
 BANK_CHARGES_CODE = "5300"
 CASH_OVER_SHORT_CODE = "5400"
+FX_GAIN_CODE = "4200"
+FX_LOSS_CODE = "5600"
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,13 +88,14 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
     # Revenue
     DefaultAccount("4000", "Sales Revenue", "Satış Geliri", AccountType.REVENUE, AccountNormalBalance.CREDIT, False),
     DefaultAccount("4100", "Other Income", "Diğer Gelirler", AccountType.REVENUE, AccountNormalBalance.CREDIT, False),
+    DefaultAccount(FX_GAIN_CODE, "FX Gain", "Kur Kazancı", AccountType.REVENUE, AccountNormalBalance.CREDIT, False),
     # Expenses
     DefaultAccount("5000", "Rent Expense", "Kira Gideri", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount("5100", "Salary Expense", "Maaş Gideri", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount("5200", "Utility Expense", "Genel Giderler", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount("5300", "Bank Charges", "Banka Masrafları", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount("5400", "Cash Over/Short", "Kasa Fazlası/Eksiği", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
-    DefaultAccount("5500", "FX Gain/Loss", "Kur Farkı", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
+    DefaultAccount(FX_LOSS_CODE, "FX Loss", "Kur Zararı", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
 )
 
 

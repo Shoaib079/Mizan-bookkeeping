@@ -1,5 +1,6 @@
 """FX holdings core — posting boundary and subledger (Decisions §15)."""
 
+from app.core.fx.average_cost import InsufficientFxBalanceError, compute_spend_at_average_cost
 from app.core.fx.ledger import (
     FxLedgerError,
     list_fx_ledger_entries,
@@ -9,17 +10,31 @@ from app.core.fx.ledger import (
 )
 from app.core.fx.models import FxLedgerEntry, ImmutableFxLedgerError
 from app.core.fx.posting import FxPurchasePostResult, InvalidFxPurchaseError, post_fx_purchase
+from app.core.fx.spend_posting import (
+    FxConversionPostResult,
+    FxExpenseSpendPostResult,
+    InvalidFxSpendError,
+    post_fx_conversion,
+    post_fx_expense_spend,
+)
 from app.core.fx.types import FxMovementType
 
 __all__ = [
+    "FxConversionPostResult",
+    "FxExpenseSpendPostResult",
     "FxLedgerEntry",
     "FxLedgerError",
     "FxMovementType",
     "FxPurchasePostResult",
     "ImmutableFxLedgerError",
+    "InsufficientFxBalanceError",
     "InvalidFxPurchaseError",
+    "InvalidFxSpendError",
+    "compute_spend_at_average_cost",
     "list_fx_ledger_entries",
     "native_quantity_balance",
+    "post_fx_conversion",
+    "post_fx_expense_spend",
     "post_fx_purchase",
     "record_fx_movement",
     "try_cost_balance_kurus",

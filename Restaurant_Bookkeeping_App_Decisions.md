@@ -188,7 +188,7 @@ Upload/ingestion (+ fingerprint) · AI read · Match & identify · Needs Review 
 - **Buying FX:** TRY leaves the drawer (amount entered by owner — **no online rates, ever**) → FX **units** arrive.
 - **Dashboard:** each FX balance shown in its own currency (`$1,000 / €500 / £200`) **next to TRY cash, NOT converted**, with a short plain-English note.
 - **Quiet safeguard:** store the TRY paid at each purchase (typed anyway, so free); not displayed; enables average-cost TRY valuation later if ever wanted.
-- **No revaluation / no gain-loss tracking** for now.
+- **Realized gain/loss on conversion only:** when FX → TRY, owner enters TRY received; difference from average book cost posts to FX Gain (`4200`) or FX Loss (`5600`). **Holdings are never revalued** — no mark-to-market.
 - **Spending FX — resolved patterns:**
   - **Business payments (~90%): convert FX → TRY first.** Dollars leave the USD wallet; the **actual lira received** is entered (a money movement between own wallets); then the expense is paid **in lira, normally**. No FX-expense puzzle — it's already lira.
   - **Forex salaries: paid directly in forex** — see Section 16.

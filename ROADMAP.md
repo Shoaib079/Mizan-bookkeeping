@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 5 — Cash drawer, forex, staff, partner reimbursements, receivables |
-| **Active slice** | Partner reimbursements |
-| **Last completed slice** | Staff (salary vs advance) |
-| **Last commit/tag** | `v0.28.0-phase5-staff` |
-| **Next up** | Phase 5 Slice 5 — Receivables |
+| **Active slice** | FX spend / conversion |
+| **Last completed slice** | Receivables |
+| **Last commit/tag** | pending / `v0.31.0-phase5-fx-spend` |
+| **Next up** | Phase 5 owner sign-off (after FX spend slice) |
 
 ---
 
@@ -128,8 +128,9 @@ Every statement-line classification that represents a **real GL event** must pos
 | Staff (salary vs advance — no double-count) | done | `employees` + `staff_ledger_entries`; `2250` Salaries Payable; TRY accrual Dr `5100`/Cr `2250`; advance Dr `1300`/Cr cash; payment Dr `2250`/Cr `1300`+cash (atomic advance offset); FX accrual subledger-only; FX payment Dr `5100`/Cr FX GL + `fx_ledger` spend; Alembic `025`; 9 tests; 243 pytest |
 | Partner reimbursements | done | `partners` + `partner_ledger_entries`; expense fronted Dr expense/Cr `2150`; reimbursement Dr `2150`/Cr cash (no expense); per-partner OB via `partner_id` lines; Alembic `026`; 10 tests; 252 pytest |
 | Receivables | done | `customers` + `customer_ledger_entries`; credit sale Dr `1200`/Cr `4000`; payment Dr bank/Cr `1200` (no revenue); per-customer OB via `customer_id`; statement classify `customer_payment`; Alembic `027`; 8 tests; 260 pytest |
+| FX spend / conversion | done | `post_fx_conversion()` Dr bank/cash / Cr FX GL at average cost + realized gain `4200` or loss `5600`; `post_fx_expense_spend()` Dr expense / Cr FX at average cost; `SPEND` subledger row; owner-entered TRY received; no holding revaluation; 6 tests; 266 pytest |
 
-**Phase 5 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 5 COMPLETE ✓ (pending owner sign-off).**
+**Phase 5 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 5 COMPLETE (pending owner sign-off — FX spend slice required before sign-off).**
 
 ---
 

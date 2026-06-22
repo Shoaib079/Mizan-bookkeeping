@@ -8,9 +8,14 @@ from sqlalchemy.orm import Session
 
 from app.core.fx import ledger as fx_ledger
 from app.core.fx.posting import post_fx_purchase
+from app.core.fx.spend_posting import InvalidFxSpendError, post_fx_conversion, post_fx_expense_spend
 from app.features.banking import service as banking_service
 from app.features.fx.schema import (
     FxBalanceRead,
+    FxConversionCreate,
+    FxConversionResponse,
+    FxExpenseSpendCreate,
+    FxExpenseSpendResponse,
     FxLedgerEntryRead,
     FxPurchaseCreate,
     FxPurchaseResponse,
@@ -40,6 +45,52 @@ def create_fx_purchase(
     return FxPurchaseResponse(
         journal_entry_id=result.journal_entry.id,
         fx_ledger_entry=_to_ledger_read(result.fx_ledger_entry),
+    )
+
+
+def create_fx_conversion(
+    session: Session,
+    entity_id: uuid.UUID,
+    payload: FxConversionCreate,
+) -> FxConversionResponse:
+    result = post_fx_conversion(
+        session,
+        entity_id,
+        fx_money_account_id=payload.fx_money_account_id,
+        try_money_account_id=payload.try_money_account_id,
+        native_quantity=payload.native_quantity,
+        try_received_kurus=payload.try_received_kurus,
+        conversion_date=payload.conversion_date,
+        description=payload.description,
+        actor_id=payload.actor_id,
+    )
+    return FxConversionResponse(
+        journal_entry_id=result.journal_entry.id,
+        fx_ledger_entry=_to_ledger_read(result.fx_ledger_entry),
+        try_cost_kurus=result.try_cost_kurus,
+        realized_gain_kurus=result.realized_gain_kurus,
+    )
+
+
+def create_fx_expense_spend(
+    session: Session,
+    entity_id: uuid.UUID,
+    payload: FxExpenseSpendCreate,
+) -> FxExpenseSpendResponse:
+    result = post_fx_expense_spend(
+        session,
+        entity_id,
+        fx_money_account_id=payload.fx_money_account_id,
+        expense_account_id=payload.expense_account_id,
+        native_quantity=payload.native_quantity,
+        spend_date=payload.spend_date,
+        description=payload.description,
+        actor_id=payload.actor_id,
+    )
+    return FxExpenseSpendResponse(
+        journal_entry_id=result.journal_entry.id,
+        fx_ledger_entry=_to_ledger_read(result.fx_ledger_entry),
+        try_cost_kurus=result.try_cost_kurus,
     )
 
 

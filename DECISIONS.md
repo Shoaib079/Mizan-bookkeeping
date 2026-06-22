@@ -14,6 +14,18 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** POS photo OCR (Phase 6), near-match for settlements, `bank_fee` GL classify, UI.
 
+## 2026-06-22 — FX spend / conversion (Phase 5 Slice 2b)
+
+**Choice:** Average-cost spend from FX wallets via `compute_spend_at_average_cost()` (`try_cost = spend_native × total_try_cost // total_native`; full balance when spending all). **FX → TRY conversion:** `post_fx_conversion()` — Dr bank/cash (owner-entered `try_received_kurus`) / Cr FX GL (average cost) / Cr `4200` FX Gain or Dr `5600` FX Loss for realized difference; `fx_ledger` `SPEND` row (negative quantity + cost). **Direct FX expense:** `post_fx_expense_spend()` — Dr expense / Cr FX GL at average cost; no gain/loss line. Chart: split `4200` FX Gain (revenue) and `5600` FX Loss (expense); removed combined `5500`.
+
+**Why:** Decisions §15 — spending/conversion at average book cost; realized gain/loss only when converting to TRY (owner enters TRY received); holdings never revalued (deferred).
+
+**API:** `POST .../fx/conversions`; `POST .../fx/expense-spends`.
+
+**Control accounts:** unchanged — `SUM(try_cost_kurus)` and `SUM(native_quantity)` still tie GL and wallet after spend.
+
+**Not in slice:** FX holding revaluation, live rates, UI.
+
 ## 2026-06-21 — Forex purchase (Phase 5 Slice 2)
 
 **Choice:** `MoneyAccountKind.FOREIGN_CURRENCY` with nullable `currency` column (`USD`/`EUR`/`GBP`) on `money_accounts`. FX wallets are GL sub-accounts under chart buckets `1010`/`1020`/`1030`; GL holds **TRY book cost in kuruş** (DEBIT normal balance). Native quantity tracked separately in append-only `fx_ledger_entries` subledger (`native_quantity` in foreign minor units, `try_cost_kurus` per movement). `post_fx_purchase()` atomically posts **Dr Cash&lt;CUR&gt; GL / Cr TRY cash GL** plus one subledger row. Tree API adds `foreign_currency` branch (`usd`/`eur`/`gbp`) with `native_quantity` on leaves — never live-converted.
@@ -26,7 +38,7 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Control accounts:** `SUM(fx_ledger_entries.try_cost_kurus)` = FX GL balance; `SUM(native_quantity)` = wallet quantity balance.
 
-**Not in slice:** Spending FX, conversion back to TRY, salaries, gain/loss, live rates, FX opening balances (quantity model), UI.
+**Not in slice:** ~~Spending FX, conversion back to TRY~~ (see FX spend slice), salaries, ~~gain/loss~~ (realized on conversion only), live rates, FX opening balances (quantity model), UI.
 
 ## 2026-06-21 — Cash drawer (Phase 5)
 
