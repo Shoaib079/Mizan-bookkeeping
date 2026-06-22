@@ -2,6 +2,24 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-22 — Entity roles & permissions (Phase 8 Slice 1)
+
+**Choice:** Per-entity roles via `entity_memberships` (FK to global `users` table). Four roles: `owner`, `partner`, `cashier`, `partner_view_only` — matching Decisions §18. Extensible `Permission` string enum with `ROLE_PERMISSIONS` map. v1 identity transport: `X-User-Id` header (UUID) — no JWT/login/password/OAuth this slice.
+
+**Enforcement:** `settings.auth_enforcement` / env `AUTH_ENFORCEMENT=true` for production. Default `false` so existing tests and dev workflows pass without headers. When on: guarded routes require header + membership + permission.
+
+**Permissions (v1):**
+- `financial_reports:read` — P&L, balance sheet, cash flow, period comparison (+ exports). Owner, partner, partner_view_only. **Not** cashier (DESIGN_SYSTEM).
+- `operations:write` — posting/mutations. Owner, partner, cashier.
+- `reports:read` — dashboard, KDV input, delivery sales. All roles including cashier.
+- `admin:manage_members` — list/add/patch memberships. Owner, partner.
+
+**Guarded routes (this slice):** financial report GET + export endpoints only. Dashboard, KDV, delivery sales unguarded. Pattern: `financial_reports_guard` dependency — no-op when enforcement off.
+
+**API:** `POST/GET /users`; `GET/POST/PATCH /entities/{id}/members`. User bootstrap open (no password).
+
+**Not in slice:** JWT/Clerk/OAuth, month locking for cashier write restrictions (deferred), enforcing permissions on every endpoint, UI, RLS on `users`.
+
 ## 2026-06-22 — Daily expenses + spelling tolerance (Phase 6 Slice 6)
 
 **Choice:** Daily handwritten and manual typed expenses are first-class `expense_entries` — post Dr expense / Cr bank or cash via `post_expense_entry()` (`JournalEntrySource.EXPENSE_ENTRY`). `has_source_document=false` when no receipt attached. Item descriptions use canonical `expense_items` + `expense_item_aliases` with Turkish-aware normalization (`normalize_expense_item_text`) and fuzzy match (≥0.85 → `needs_review` until owner confirms; confirm remembers alias). Only `posted` expenses hit GL.

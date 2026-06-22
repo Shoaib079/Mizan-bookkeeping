@@ -1,4 +1,8 @@
-"""Application settings — DATABASE_URL and environment (Phase 0)."""
+"""Application settings — DATABASE_URL and environment (Phase 0).
+
+Set ``AUTH_ENFORCEMENT=true`` in production to require ``X-User-Id`` and
+enforce per-entity permissions on guarded routes.
+"""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,6 +14,7 @@ class Settings(BaseSettings):
     test_database_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan_test"
     database_admin_url: str = "postgresql+psycopg://postgres@localhost:5432/postgres"
     upload_dir: str = "data/uploads"
+    auth_enforcement: bool = False
 
 
 settings = Settings()

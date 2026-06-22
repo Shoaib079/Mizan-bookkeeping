@@ -32,6 +32,7 @@ RLS_TABLES = (
     "expense_items",
     "expense_item_aliases",
     "expense_entries",
+    "entity_memberships",
 )
 
 

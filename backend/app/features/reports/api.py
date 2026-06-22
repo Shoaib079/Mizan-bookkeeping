@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.core.auth.deps import financial_reports_guard
 from app.db.session import get_session
 from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
@@ -79,6 +80,7 @@ def get_profit_and_loss(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
 ) -> ProfitAndLossRead:
     try:
         return financial_statements.get_profit_and_loss(
@@ -96,6 +98,7 @@ def export_profit_and_loss(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
 ) -> StreamingResponse:
     try:
         report = financial_statements.get_profit_and_loss(
@@ -117,6 +120,7 @@ def get_balance_sheet(
     entity_id: uuid.UUID,
     as_of: date = Query(...),
     session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
 ) -> BalanceSheetRead:
     try:
         return financial_statements.get_balance_sheet(session, entity_id, as_of)
@@ -129,6 +133,7 @@ def export_balance_sheet(
     entity_id: uuid.UUID,
     as_of: date = Query(...),
     session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
 ) -> StreamingResponse:
     try:
         report = financial_statements.get_balance_sheet(session, entity_id, as_of)
@@ -145,6 +150,7 @@ def get_cash_flow(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
 ) -> CashFlowRead:
     try:
         return cash_flow.get_cash_flow(session, entity_id, from_date, to_date)
@@ -160,6 +166,7 @@ def export_cash_flow(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
 ) -> StreamingResponse:
     try:
         report = cash_flow.get_cash_flow(session, entity_id, from_date, to_date)
@@ -219,6 +226,7 @@ def get_period_comparison_report(
     prior_from: date | None = Query(None),
     prior_to: date | None = Query(None),
     session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
 ) -> PeriodComparisonRead:
     try:
         return period_comparison.get_period_comparison(
@@ -243,6 +251,7 @@ def export_period_comparison(
     prior_from: date | None = Query(None),
     prior_to: date | None = Query(None),
     session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
 ) -> StreamingResponse:
     try:
         report = period_comparison.get_period_comparison(

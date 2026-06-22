@@ -41,6 +41,8 @@ from app.features.tips.api import router as tips_router
 from app.features.expenses.api import router as expenses_router
 from app.features.reports.api import router as reports_router
 from app.features.dashboard.api import router as dashboard_router
+from app.features.auth.api import members_router as auth_members_router
+from app.features.auth.api import users_router as auth_users_router
 
 app = FastAPI(
     title="Mizan API",
@@ -91,6 +93,8 @@ app.include_router(tips_router)
 app.include_router(expenses_router)
 app.include_router(reports_router)
 app.include_router(dashboard_router)
+app.include_router(auth_users_router)
+app.include_router(auth_members_router)
 
 
 @app.get("/health")

@@ -32,6 +32,7 @@ from app.features.pos.models import CardSalesBatch, PosDailySummary, PosSettleme
 from app.features.delivery.models import DeliveryReport, DeliverySettlement  # noqa: F401
 from app.features.tips.models import TipAccrual, TipPayout  # noqa: F401
 from app.features.expenses.models import ExpenseEntry, ExpenseItem, ExpenseItemAlias  # noqa: F401
+from app.features.auth.models import EntityMembership, User  # noqa: F401
 
 
 def ensure_mizan_role_and_databases() -> None:

@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 8 — Roles & permissions, backups, security hardening, launch |
-| **Active slice** | Roles & permissions |
-| **Last completed slice** | Excel export (Phase 7 final slice) |
-| **Last commit/tag** | `v0.43.0-phase7-excel-export` |
-| **Next up** | Roles & permissions (Phase 8 Slice 1) |
+| **Active slice** | Backups |
+| **Last completed slice** | Roles & permissions (Phase 8 Slice 1) |
+| **Last commit/tag** | `v0.44.0-phase8-roles-permissions` |
+| **Next up** | Backups (Phase 8 Slice 2) |
 
 ---
 
@@ -167,7 +167,7 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 | Period comparison | done | `GET .../reports/period-comparison?from=&to=` — current vs prior period metrics (dashboard/P&L/KDV/cash flow/delivery gross); auto same-length prior window; optional `prior_from`/`prior_to` override; omits payables/receivables/TRY position (not true period-over-period without as-of history) |
 | Excel export | done | `GET .../reports/{report}/export` — openpyxl xlsx for P&L, balance sheet, cash flow, KDV input, delivery sales, period comparison; integer kuruş; `Content-Disposition` attachment filenames |
 
-**Phase 7 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 7 COMPLETE pending owner sign-off.**
+**Phase 7 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 7 COMPLETE ✓ (owner signed off).**
 
 ---
 
@@ -175,7 +175,7 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| Roles & permissions | not started | |
+| Roles & permissions | done | `users` + `entity_memberships`; `EntityRole` enum; extensible `Permission` layer; `X-User-Id` v1 transport; `AUTH_ENFORCEMENT` flag (default off); financial reports guarded (cashier blocked from P&L/BS/cash flow/period comparison); membership CRUD API; Alembic `035`; 389 pytest |
 | Backups | not started | |
 | Security hardening | not started | |
 | Launch readiness | not started | |
@@ -200,6 +200,7 @@ Not in current build order — track here when scoped:
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-22 | Roles & permissions | — / `v0.44.0-phase8-roles-permissions` | users + entity_memberships, permission layer, financial report guards, 389 pytest |
 | 2026-06-22 | POS daily-summary photo intake | `4a529b3` / `v0.32.0-phase6-pos-daily-summary-intake` | `pos_daily_summaries`, OCR v1, confirm posts card batch + cash in, 275 pytest |
 | 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
 | 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |

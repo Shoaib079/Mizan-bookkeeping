@@ -50,6 +50,7 @@ def db_session(test_engine) -> Session:
             "staff_ledger_entries, employees, partner_ledger_entries, partners, "
             "cash_movements, cash_drawer_sessions, tip_payouts, tip_accruals, "
             "expense_entries, expense_item_aliases, expense_items, "
+            "entity_memberships, users, "
             "money_accounts, accounts, "
             "invoice_drafts, supplier_ledger_entries, suppliers, entity_settings, entities CASCADE"
         )
