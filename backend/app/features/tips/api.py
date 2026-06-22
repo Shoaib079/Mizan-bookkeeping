@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.ledger.posting import InvalidAccountError
 from app.core.tips.posting import InvalidTipsPostingError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.tips import service as tips_service
 from app.features.tips.schema import (
     TipAccrualCreate,
@@ -28,6 +29,7 @@ def create_tip_accrual(
     entity_id: uuid.UUID,
     payload: TipAccrualCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> TipAccrualRead:
     try:
         return tips_service.create_tip_accrual(session, entity_id, payload)
@@ -43,6 +45,7 @@ def create_tip_accrual(
 def list_tip_accruals(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     from_date: date | None = Query(default=None),
     to_date: date | None = Query(default=None),
 ) -> list[TipAccrualRead]:
@@ -59,6 +62,7 @@ def create_tip_payout(
     entity_id: uuid.UUID,
     payload: TipPayoutCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> TipPayoutRead:
     try:
         return tips_service.create_tip_payout(session, entity_id, payload)
@@ -74,6 +78,7 @@ def create_tip_payout(
 def list_tip_payouts(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     from_date: date | None = Query(default=None),
     to_date: date | None = Query(default=None),
 ) -> list[TipPayoutRead]:
@@ -89,6 +94,7 @@ def list_tip_payouts(
 def get_tips_balance(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> TipsBalanceRead:
     try:
         return tips_service.get_tips_balance(session, entity_id)

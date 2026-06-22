@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.delivery.posting import InvalidDeliveryReportError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.delivery import platform_service
 from app.features.delivery import service as delivery_service
 from app.features.delivery.models import DeliveryReportStatus
@@ -52,6 +53,7 @@ def create_delivery_platform(
     entity_id: uuid.UUID,
     payload: DeliveryPlatformCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> DeliveryPlatformRead:
     try:
         return platform_service.create_delivery_platform(session, entity_id, payload)
@@ -69,6 +71,7 @@ def create_delivery_platform(
 def list_delivery_platforms(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
 ) -> list[DeliveryPlatformRead]:
     try:
@@ -84,6 +87,7 @@ def get_delivery_platform(
     entity_id: uuid.UUID,
     platform_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> DeliveryPlatformRead:
     try:
         return platform_service.get_delivery_platform(session, entity_id, platform_id)
@@ -97,6 +101,7 @@ def update_delivery_platform(
     platform_id: uuid.UUID,
     payload: DeliveryPlatformUpdate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> DeliveryPlatformRead:
     try:
         return platform_service.update_delivery_platform(
@@ -117,6 +122,7 @@ def create_delivery_report(
     entity_id: uuid.UUID,
     payload: DeliveryReportCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> DeliveryReportRead:
     try:
         return delivery_service.create_delivery_report(session, entity_id, payload)
@@ -138,6 +144,7 @@ def create_delivery_report(
 def list_delivery_reports(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     delivery_platform_id: uuid.UUID | None = Query(default=None),
     status: DeliveryReportStatus | None = Query(default=None),
 ) -> DeliveryReportListOut:
@@ -157,6 +164,7 @@ def get_delivery_report(
     entity_id: uuid.UUID,
     report_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> DeliveryReportRead:
     try:
         return delivery_service.get_delivery_report(session, entity_id, report_id)
@@ -170,6 +178,7 @@ def post_delivery_report(
     report_id: uuid.UUID,
     payload: DeliveryReportPostRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> DeliveryReportRead:
     try:
         return delivery_service.post_delivery_report_intake(
@@ -190,6 +199,7 @@ def reject_delivery_report(
     entity_id: uuid.UUID,
     report_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
     reason: str | None = Query(default=None, max_length=512),
 ) -> DeliveryReportRead:
     try:
@@ -207,6 +217,7 @@ def create_delivery_settlement(
     entity_id: uuid.UUID,
     payload: DeliverySettlementCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> DeliverySettlementRead:
     try:
         return delivery_service.create_delivery_settlement(session, entity_id, payload)
@@ -222,6 +233,7 @@ def create_delivery_settlement(
 def list_delivery_settlements(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     delivery_platform_id: uuid.UUID | None = Query(default=None),
     money_account_id: uuid.UUID | None = Query(default=None),
 ) -> list[DeliverySettlementRead]:
@@ -240,6 +252,7 @@ def list_delivery_settlements(
 def get_delivery_clearing_reconciliation(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> DeliveryClearingReconciliationRead:
     try:
         return delivery_service.get_delivery_clearing_reconciliation(session, entity_id)

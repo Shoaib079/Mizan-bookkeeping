@@ -14,6 +14,7 @@ from app.core.payables.ledger import (
     ZeroMovementError,
 )
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.payables import service
 from app.features.payables.schema import (
     PayablesSummaryRead,
@@ -32,6 +33,7 @@ router = APIRouter(prefix="/entities/{entity_id}", tags=["payables"])
 def list_payables(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> PayablesSummaryRead:
     try:
         total, rows = service.list_payables(session, entity_id)
@@ -57,6 +59,7 @@ def get_supplier_ledger(
     entity_id: uuid.UUID,
     supplier_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> SupplierLedgerRead:
     try:
         balance, entries = service.get_supplier_ledger(session, entity_id, supplier_id)
@@ -80,6 +83,7 @@ def record_supplier_movement(
     supplier_id: uuid.UUID,
     payload: SupplierMovementCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> SupplierLedgerEntryRead:
     try:
         entry = service.record_movement(
@@ -112,6 +116,7 @@ def post_supplier_payment(
     supplier_id: uuid.UUID,
     payload: SupplierPaymentCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> SupplierPaymentRead:
     try:
         result = service.record_payment(

@@ -11,6 +11,7 @@ from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.partners.ledger import OverpaymentError, ZeroMovementError
 from app.core.partners.posting import InvalidPartnerPostingError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.partners import service
 from app.features.partners.schema import (
     ExpenseFrontedCreate,
@@ -31,6 +32,7 @@ def create_partner(
     entity_id: uuid.UUID,
     payload: PartnerCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> PartnerRead:
     try:
         partner = service.create_partner(session, entity_id, payload)
@@ -43,6 +45,7 @@ def create_partner(
 def list_partners(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
 ) -> list[PartnerRead]:
     try:
@@ -59,6 +62,7 @@ def get_partner(
     entity_id: uuid.UUID,
     partner_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> PartnerRead:
     try:
         partner = service.get_partner(session, entity_id, partner_id)
@@ -73,6 +77,7 @@ def update_partner(
     partner_id: uuid.UUID,
     payload: PartnerUpdate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> PartnerRead:
     try:
         partner = service.update_partner(session, entity_id, partner_id, payload)
@@ -86,6 +91,7 @@ def get_partner_ledger(
     entity_id: uuid.UUID,
     partner_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> PartnerLedgerRead:
     try:
         return service.get_partner_ledger(session, entity_id, partner_id)
@@ -103,6 +109,7 @@ def post_expense_fronted(
     partner_id: uuid.UUID,
     payload: ExpenseFrontedCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> ExpenseFrontedResponse:
     try:
         return service.record_expense_fronted(session, entity_id, partner_id, payload)
@@ -126,6 +133,7 @@ def post_reimbursement_paid(
     partner_id: uuid.UUID,
     payload: ReimbursementPaidCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> ReimbursementPaidResponse:
     try:
         return service.record_reimbursement_paid(session, entity_id, partner_id, payload)

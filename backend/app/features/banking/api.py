@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.banking import service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import (
@@ -25,6 +26,7 @@ def create_money_account(
     entity_id: uuid.UUID,
     payload: MoneyAccountCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> MoneyAccountRead:
     try:
         return service.create_money_account(session, entity_id, payload)
@@ -42,6 +44,7 @@ def create_money_account(
 def list_money_accounts(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     account_kind: MoneyAccountKind | None = Query(default=None),
     include_inactive: bool = Query(default=False),
 ) -> list[MoneyAccountRead]:
@@ -60,6 +63,7 @@ def list_money_accounts(
 def get_account_tree(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
 ) -> MoneyAccountTree:
     try:
@@ -77,6 +81,7 @@ def get_money_account(
     entity_id: uuid.UUID,
     money_account_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> MoneyAccountRead:
     try:
         return service.get_money_account(session, entity_id, money_account_id)
@@ -90,6 +95,7 @@ def update_money_account(
     money_account_id: uuid.UUID,
     payload: MoneyAccountUpdate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> MoneyAccountRead:
     try:
         return service.update_money_account(

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.receivables.ledger import OverpaymentError, ZeroMovementError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.customers import service
 from app.features.customers.schema import (
     CreditSaleCreate,
@@ -30,6 +31,7 @@ def create_customer(
     entity_id: uuid.UUID,
     payload: CustomerCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> CustomerRead:
     try:
         customer = service.create_customer(session, entity_id, payload)
@@ -42,6 +44,7 @@ def create_customer(
 def list_customers(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
 ) -> list[CustomerRead]:
     try:
@@ -58,6 +61,7 @@ def get_customer(
     entity_id: uuid.UUID,
     customer_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> CustomerRead:
     try:
         customer = service.get_customer(session, entity_id, customer_id)
@@ -72,6 +76,7 @@ def update_customer(
     customer_id: uuid.UUID,
     payload: CustomerUpdate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> CustomerRead:
     try:
         customer = service.update_customer(session, entity_id, customer_id, payload)
@@ -85,6 +90,7 @@ def get_customer_ledger(
     entity_id: uuid.UUID,
     customer_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> CustomerLedgerRead:
     try:
         return service.get_customer_ledger(session, entity_id, customer_id)
@@ -102,6 +108,7 @@ def post_credit_sale(
     customer_id: uuid.UUID,
     payload: CreditSaleCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> CreditSaleResponse:
     try:
         return service.record_credit_sale(session, entity_id, customer_id, payload)
@@ -125,6 +132,7 @@ def post_customer_payment(
     customer_id: uuid.UUID,
     payload: CustomerPaymentCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> CustomerPaymentResponse:
     try:
         return service.record_customer_payment(session, entity_id, customer_id, payload)

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.ledger.models import JournalEntryStatus
 from app.core.ledger.posting import PostingError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.manual_journals import service
 from app.features.manual_journals.schema import (
     CreateManualJournalRequest,
@@ -28,6 +29,7 @@ def create_manual_journal(
     entity_id: uuid.UUID,
     payload: CreateManualJournalRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> ManualJournalOut:
     try:
         return service.create_manual_journal(session, entity_id, payload)
@@ -41,6 +43,7 @@ def create_manual_journal(
 def list_manual_journals(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     status: JournalEntryStatus | None = None,
     entry_date_from: date | None = Query(default=None, alias="from"),
     entry_date_to: date | None = Query(default=None, alias="to"),
@@ -63,6 +66,7 @@ def get_manual_journal(
     entity_id: uuid.UUID,
     entry_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> ManualJournalOut:
     try:
         return service.get_manual_journal(session, entity_id, entry_id)
@@ -76,6 +80,7 @@ def void_manual_journal(
     entry_id: uuid.UUID,
     payload: VoidJournalEntryRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> ManualJournalVoidOut:
     try:
         original, reversal = service.void_manual_journal(

@@ -65,6 +65,19 @@ def posting_account_lookup(session: Session):
         session.execute(text("SELECT set_config('app.posting_lookup', '', true)"))
 
 
+@contextmanager
+def user_membership_lookup(session: Session, user_id: uuid.UUID):
+    """Allow reading entity_memberships rows for a user across entities (entity list)."""
+    session.execute(
+        text("SELECT set_config('app.current_user_id', :user_id, true)"),
+        {"user_id": str(user_id)},
+    )
+    try:
+        yield session
+    finally:
+        session.execute(text("SELECT set_config('app.current_user_id', '', true)"))
+
+
 def require_entity_context() -> uuid.UUID:
     entity_id = get_current_entity_id()
     if entity_id is None:

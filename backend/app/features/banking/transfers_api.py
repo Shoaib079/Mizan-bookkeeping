@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.banking.posting import InvalidTransferError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.banking import transfers as transfer_service
 from app.features.banking.schema import AccountTransferCreate, AccountTransferRead
 
@@ -20,6 +21,7 @@ def create_account_transfer(
     entity_id: uuid.UUID,
     payload: AccountTransferCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> AccountTransferRead:
     try:
         return transfer_service.create_account_transfer(session, entity_id, payload)
@@ -35,6 +37,7 @@ def create_account_transfer(
 def list_account_transfers(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     money_account_id: uuid.UUID | None = Query(default=None),
 ) -> list[AccountTransferRead]:
     try:

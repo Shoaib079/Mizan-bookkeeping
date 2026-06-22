@@ -89,6 +89,52 @@ def financial_reports_guard(
     require_permission(session, entity_id, user, Permission.FINANCIAL_REPORTS_READ)
 
 
+def reports_read_guard(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+) -> None:
+    """Require entity membership with reports:read (dashboard, KDV, delivery sales)."""
+    if not settings.auth_enforcement:
+        return
+    user = get_current_user(session=session, x_user_id=x_user_id)
+    require_permission(session, entity_id, user, Permission.REPORTS_READ)
+
+
+def operations_write_guard(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+) -> None:
+    """Require entity membership with operations:write for mutations."""
+    if not settings.auth_enforcement:
+        return
+    user = get_current_user(session=session, x_user_id=x_user_id)
+    require_permission(session, entity_id, user, Permission.OPERATIONS_WRITE)
+
+
+def member_read_guard(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+) -> None:
+    """Require entity membership (any role) for entity-scoped reads."""
+    if not settings.auth_enforcement:
+        return
+    user = get_current_user(session=session, x_user_id=x_user_id)
+    require_entity_membership(session, entity_id, user)
+
+
+def require_authenticated_user(
+    session: Session = Depends(get_session),
+    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+) -> User | None:
+    """Require a valid user when auth enforcement is enabled."""
+    if not settings.auth_enforcement:
+        return None
+    return get_current_user(session=session, x_user_id=x_user_id)
+
+
 def require_admin_members(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),

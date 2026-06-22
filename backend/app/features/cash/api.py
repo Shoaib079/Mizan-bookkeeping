@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.cash.posting import InvalidCashDrawerError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.cash import service as cash_service
 from app.features.cash.schema import (
     CashDrawerCloseRequest,
@@ -29,6 +30,7 @@ def create_cash_movement(
     entity_id: uuid.UUID,
     payload: CashMovementCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> CashMovementRead:
     try:
         return cash_service.create_cash_movement(session, entity_id, payload)
@@ -44,6 +46,7 @@ def create_cash_movement(
 def list_cash_drawer_sessions(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     money_account_id: uuid.UUID | None = Query(default=None),
 ) -> list[CashDrawerSessionRead]:
     try:
@@ -59,6 +62,7 @@ def get_cash_drawer_session(
     entity_id: uuid.UUID,
     session_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> CashDrawerSessionDetail:
     try:
         return cash_service.get_cash_drawer_session(session, entity_id, session_id)
@@ -72,6 +76,7 @@ def close_cash_drawer_session_route(
     session_id: uuid.UUID,
     payload: CashDrawerCloseRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> CashDrawerCloseResponse:
     try:
         return cash_service.close_cash_drawer(

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.pos.posting import InvalidCardSalesBatchError, InvalidPosSettlementError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.pos import daily_summary_service
 from app.features.pos import service as pos_service
 from app.features.pos.models import PosDailySummaryStatus
@@ -39,6 +40,7 @@ def create_pos_settlement(
     entity_id: uuid.UUID,
     payload: PosSettlementCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> PosSettlementRead:
     try:
         return pos_service.create_pos_settlement(session, entity_id, payload)
@@ -81,6 +83,7 @@ def create_card_sales_batch(
     entity_id: uuid.UUID,
     payload: CardSalesBatchCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> CardSalesBatchRead:
     try:
         return pos_service.create_card_sales_batch(session, entity_id, payload)
@@ -117,6 +120,7 @@ async def upload_pos_daily_summary(
     entity_id: uuid.UUID,
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> PosDailySummaryRead:
     from app.adapters.ocr_ai.pos_summary import PosSummaryUnsupportedError
 
@@ -152,6 +156,7 @@ async def upload_pos_daily_summary(
 def list_pos_daily_summaries(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     status: PosDailySummaryStatus | None = Query(default=None),
 ) -> PosDailySummaryListOut:
     try:
@@ -180,6 +185,7 @@ def confirm_pos_daily_summary(
     summary_id: uuid.UUID,
     payload: ConfirmPosDailySummaryRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> PosDailySummaryRead:
     try:
         return daily_summary_service.confirm_pos_daily_summary_intake(
@@ -199,6 +205,7 @@ def reject_pos_daily_summary(
     summary_id: uuid.UUID,
     payload: RejectPosDailySummaryRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> PosDailySummaryRead:
     try:
         return daily_summary_service.reject_pos_daily_summary(

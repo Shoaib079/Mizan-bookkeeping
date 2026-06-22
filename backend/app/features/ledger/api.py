@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.ledger.posting import PostingError
 from app.db.session import get_session
+from app.core.auth.deps import operations_write_guard
 from app.features.ledger import service
 from app.features.ledger.schema import (
     JournalEntryOut,
@@ -25,6 +26,7 @@ def void_entry(
     entry_id: uuid.UUID,
     payload: VoidJournalEntryRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> VoidJournalEntryOut:
     try:
         original, reversal = service.void_entry(session, entity_id, entry_id, payload)

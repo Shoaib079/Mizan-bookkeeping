@@ -67,3 +67,18 @@ def apply_entity_rls(connection: Connection) -> None:
             """
         )
     )
+
+    connection.execute(
+        text("DROP POLICY IF EXISTS entity_memberships_user_lookup ON entity_memberships")
+    )
+    connection.execute(
+        text(
+            """
+            CREATE POLICY entity_memberships_user_lookup ON entity_memberships
+            FOR SELECT
+            USING (
+                user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
+            )
+            """
+        )
+    )

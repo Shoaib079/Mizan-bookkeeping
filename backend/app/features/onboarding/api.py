@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from app.core.auth.deps import operations_write_guard
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -76,6 +77,7 @@ def validate_opening_balances(
     entity_id: uuid.UUID,
     payload: OpeningBalanceValidateRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> OpeningBalanceValidateResponse:
     if entity_service.get_entity(session, entity_id) is None:
         raise HTTPException(status_code=404, detail="Entity not found")
@@ -103,6 +105,7 @@ def post_opening_balances_api(
     entity_id: uuid.UUID,
     payload: OpeningBalancePostRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> OpeningBalancePostResponse:
     if entity_service.get_entity(session, entity_id) is None:
         raise HTTPException(status_code=404, detail="Entity not found")

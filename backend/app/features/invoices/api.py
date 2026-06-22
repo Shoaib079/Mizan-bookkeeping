@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.ocr_ai.efatura import EfaturaPdfUnsupportedError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.invoices import service
 from app.features.invoices.models import InvoiceDraftStatus
 from app.core.invoices.posting import DraftPostError
@@ -33,6 +34,7 @@ async def upload_efatura_draft(
     entity_id: uuid.UUID,
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
     content = await file.read()
     if not content:
@@ -67,6 +69,7 @@ def list_invoice_drafts(
     entity_id: uuid.UUID,
     status: InvoiceDraftStatus | None = Query(default=None),
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> InvoiceDraftListOut:
     try:
         items, total = service.list_invoice_drafts(session, entity_id, status=status)
@@ -80,6 +83,7 @@ def get_invoice_draft(
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> InvoiceDraftOut:
     try:
         return service.get_invoice_draft(session, entity_id, draft_id)
@@ -93,6 +97,7 @@ def link_supplier_to_draft(
     draft_id: uuid.UUID,
     payload: LinkSupplierRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
     try:
         return service.link_supplier_to_draft(
@@ -114,6 +119,7 @@ def unlink_supplier_from_draft(
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
     try:
         return service.unlink_supplier_from_draft(session, entity_id, draft_id)
@@ -129,6 +135,7 @@ def link_delivery_report_to_draft(
     draft_id: uuid.UUID,
     payload: LinkDeliveryReportRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
     try:
         return service.link_delivery_report_to_draft(
@@ -152,6 +159,7 @@ def unlink_delivery_report_from_draft(
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
     try:
         return service.unlink_delivery_report_from_draft(session, entity_id, draft_id)
@@ -167,6 +175,7 @@ def confirm_invoice_draft(
     draft_id: uuid.UUID,
     payload: ConfirmDraftRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
     try:
         return service.confirm_invoice_draft(
@@ -184,6 +193,7 @@ def reject_invoice_draft(
     draft_id: uuid.UUID,
     payload: RejectDraftRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
     try:
         return service.reject_invoice_draft(
@@ -203,6 +213,7 @@ def post_invoice_draft(
     draft_id: uuid.UUID,
     payload: PostInvoiceDraftRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> PostInvoiceDraftOut:
     try:
         return service.post_invoice_draft(

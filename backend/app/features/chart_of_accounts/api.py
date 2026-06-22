@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.chart_of_accounts import service
 from app.features.chart_of_accounts.schema import AccountRead, SeedChartResponse
 from app.core.chart_of_accounts.seed import ChartAlreadySeededError
@@ -17,7 +18,9 @@ router = APIRouter(prefix="/entities/{entity_id}/chart-of-accounts", tags=["char
 
 @router.post("/seed", response_model=SeedChartResponse, status_code=201)
 def seed_chart(
-    entity_id: uuid.UUID, session: Session = Depends(get_session)
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> SeedChartResponse:
     try:
         accounts = service.seed_chart_for_entity(session, entity_id)
@@ -35,7 +38,9 @@ def seed_chart(
 
 @router.get("", response_model=list[AccountRead])
 def list_chart_accounts(
-    entity_id: uuid.UUID, session: Session = Depends(get_session)
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> list[AccountRead]:
     try:
         accounts = service.list_accounts_for_entity(session, entity_id)

@@ -7,7 +7,8 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.session import entity_context, require_entity_context
+from app.db.session import entity_context, require_entity_context, user_membership_lookup
+from app.features.auth.models import EntityMembership
 from app.features.entities.models import Entity, EntitySetting
 from app.features.entities.schema import EntityCreate, EntitySettingCreate
 
@@ -22,6 +23,18 @@ def create_entity(session: Session, payload: EntityCreate) -> Entity:
 
 def list_entities(session: Session) -> list[Entity]:
     return list(session.scalars(select(Entity).order_by(Entity.name)))
+
+
+def list_entities_for_user(session: Session, user_id: uuid.UUID) -> list[Entity]:
+    with user_membership_lookup(session, user_id):
+        return list(
+            session.scalars(
+                select(Entity)
+                .join(EntityMembership, EntityMembership.entity_id == Entity.id)
+                .where(EntityMembership.user_id == user_id)
+                .order_by(Entity.name)
+            )
+        )
 
 
 def get_entity(session: Session, entity_id: uuid.UUID) -> Entity | None:

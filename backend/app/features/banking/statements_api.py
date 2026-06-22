@@ -12,6 +12,7 @@ from app.core.receivables.ledger import OverpaymentError
 from app.core.payables.ledger import OverpaymentError as SupplierOverpaymentError
 from app.core.banking.posting import InvalidTransferError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.banking import statements as statement_service
 from app.features.banking.schema import (
     BankStatementRead,
@@ -40,6 +41,7 @@ async def import_bank_statement(
     money_account_id: uuid.UUID,
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> BankStatementRead:
     content = await file.read()
     if not content:
@@ -73,6 +75,7 @@ def list_bank_statements(
     entity_id: uuid.UUID,
     money_account_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> list[BankStatementRead]:
     try:
         return statement_service.list_bank_statements(
@@ -89,6 +92,7 @@ def get_bank_statement(
     entity_id: uuid.UUID,
     statement_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> BankStatementRead:
     try:
         return statement_service.get_bank_statement(session, entity_id, statement_id)
@@ -106,6 +110,7 @@ def classify_statement_line(
     line_id: uuid.UUID,
     payload: ClassifyStatementLineRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> ClassifyStatementLineResult:
     try:
         return statement_service.classify_statement_line(

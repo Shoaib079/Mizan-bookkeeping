@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.suppliers import service
 from app.features.suppliers.schema import SupplierCreate, SupplierRead, SupplierUpdate, validate_vkn
 
@@ -19,6 +20,7 @@ def create_supplier(
     entity_id: uuid.UUID,
     payload: SupplierCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> SupplierRead:
     try:
         supplier = service.create_supplier(session, entity_id, payload)
@@ -33,6 +35,7 @@ def create_supplier(
 def list_suppliers(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
 ) -> list[SupplierRead]:
     try:
@@ -49,6 +52,7 @@ def get_supplier_by_vkn(
     entity_id: uuid.UUID,
     vkn: str,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> SupplierRead:
     try:
         validate_vkn(vkn)
@@ -69,6 +73,7 @@ def get_supplier(
     entity_id: uuid.UUID,
     supplier_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> SupplierRead:
     try:
         supplier = service.get_supplier(session, entity_id, supplier_id)
@@ -83,6 +88,7 @@ def update_supplier(
     supplier_id: uuid.UUID,
     payload: SupplierUpdate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> SupplierRead:
     try:
         supplier = service.update_supplier(session, entity_id, supplier_id, payload)

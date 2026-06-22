@@ -12,6 +12,7 @@ from app.core.expenses.items import InvalidExpenseItemError
 from app.core.expenses.posting import InvalidExpensePostingError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.expenses import service as expenses_service
 from app.features.expenses.models import ExpenseEntryStatus
 from app.features.expenses.schema import (
@@ -32,6 +33,7 @@ def create_expense_item(
     entity_id: uuid.UUID,
     payload: ExpenseItemCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> ExpenseItemRead:
     try:
         return expenses_service.create_expense_item(session, entity_id, payload)
@@ -45,6 +47,7 @@ def create_expense_item(
 def list_expense_items(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
 ) -> list[ExpenseItemRead]:
     try:
@@ -60,6 +63,7 @@ def merge_expense_items(
     entity_id: uuid.UUID,
     payload: ExpenseItemMergeRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> ExpenseItemRead:
     try:
         return expenses_service.merge_items(session, entity_id, payload)
@@ -74,6 +78,7 @@ def create_expense(
     entity_id: uuid.UUID,
     payload: ExpenseCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> ExpenseRead:
     try:
         return expenses_service.create_expense(session, entity_id, payload)
@@ -89,6 +94,7 @@ def create_expense(
 def list_expenses(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     status: ExpenseEntryStatus | None = Query(default=None),
     from_date: date | None = Query(default=None),
     to_date: date | None = Query(default=None),
@@ -111,6 +117,7 @@ def confirm_expense_item(
     expense_id: uuid.UUID,
     payload: ExpenseConfirmItemRequest,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> ExpenseRead:
     try:
         return expenses_service.confirm_expense_item(

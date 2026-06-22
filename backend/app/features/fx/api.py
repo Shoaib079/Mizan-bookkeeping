@@ -12,6 +12,7 @@ from app.core.fx.posting import InvalidFxPurchaseError
 from app.core.fx.spend_posting import InvalidFxSpendError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.fx import service as fx_service
 from app.features.fx.schema import (
     FxBalanceRead,
@@ -32,6 +33,7 @@ def create_fx_purchase(
     entity_id: uuid.UUID,
     payload: FxPurchaseCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> FxPurchaseResponse:
     try:
         return fx_service.create_fx_purchase(session, entity_id, payload)
@@ -48,6 +50,7 @@ def create_fx_conversion(
     entity_id: uuid.UUID,
     payload: FxConversionCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> FxConversionResponse:
     try:
         return fx_service.create_fx_conversion(session, entity_id, payload)
@@ -64,6 +67,7 @@ def create_fx_expense_spend(
     entity_id: uuid.UUID,
     payload: FxExpenseSpendCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> FxExpenseSpendResponse:
     try:
         return fx_service.create_fx_expense_spend(session, entity_id, payload)
@@ -80,6 +84,7 @@ def get_fx_ledger(
     entity_id: uuid.UUID,
     fx_money_account_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> list[FxLedgerEntryRead]:
     try:
         return fx_service.get_fx_ledger(session, entity_id, fx_money_account_id)
@@ -92,6 +97,7 @@ def get_fx_balance(
     entity_id: uuid.UUID,
     fx_money_account_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> FxBalanceRead:
     try:
         return fx_service.get_fx_balance(session, entity_id, fx_money_account_id)

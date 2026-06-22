@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.auth.deps import financial_reports_guard
+from app.core.auth.deps import financial_reports_guard, reports_read_guard
 from app.db.session import get_session
 from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
@@ -37,6 +37,7 @@ def get_delivery_sales_report(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
+    _: None = Depends(reports_read_guard),
 ) -> DeliverySalesReportRead:
     try:
         return reports_service.get_delivery_sales_report(
@@ -56,6 +57,7 @@ def export_delivery_sales(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
+    _: None = Depends(reports_read_guard),
 ) -> StreamingResponse:
     try:
         report = reports_service.get_delivery_sales_report(
@@ -187,6 +189,7 @@ def get_kdv_input(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
+    _: None = Depends(reports_read_guard),
 ) -> KdvInputReportRead:
     try:
         return kdv_input.get_kdv_input_report(session, entity_id, from_date, to_date)
@@ -202,6 +205,7 @@ def export_kdv_input(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
+    _: None = Depends(reports_read_guard),
 ) -> StreamingResponse:
     try:
         report = kdv_input.get_kdv_input_report(

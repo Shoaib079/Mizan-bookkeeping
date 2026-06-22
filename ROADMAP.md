@@ -177,8 +177,8 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 |-------|--------|-------|
 | Roles & permissions | done | `users` + `entity_memberships`; `EntityRole` enum; extensible `Permission` layer; `X-User-Id` v1 transport; `AUTH_ENFORCEMENT` flag (default off); financial reports guarded (cashier blocked from P&L/BS/cash flow/period comparison); membership CRUD API; Alembic `035`; 389 pytest |
 | Backups | not started | |
-| Security hardening | not started | |
-| Launch readiness | not started | |
+| Security hardening | done | `operations_write_guard` + `reports_read_guard` + `member_read_guard`; mutation + entity-scoped read routes wired; `list_entities` scoped to caller memberships; `create_entity` requires auth when enforced; Alembic `036`; 398 pytest |
+| Launch readiness | not started | Flip `AUTH_ENFORCEMENT` default to `true`; replace `X-User-Id` stub with real auth (JWT/login/OAuth) |
 
 **Phase 8 complete when:** all slices above done, tested, committed, owner sign-off.
 
@@ -200,6 +200,7 @@ Not in current build order — track here when scoped:
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-22 | Security hardening | — / `v0.45.0-phase8-security-hardening` | write/read/report guards on all entity routes; scoped entity list; membership user-lookup RLS; 398 pytest |
 | 2026-06-22 | Roles & permissions | — / `v0.44.0-phase8-roles-permissions` | users + entity_memberships, permission layer, financial report guards, 389 pytest |
 | 2026-06-22 | POS daily-summary photo intake | `4a529b3` / `v0.32.0-phase6-pos-daily-summary-intake` | `pos_daily_summaries`, OCR v1, confirm posts card batch + cash in, 275 pytest |
 | 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |

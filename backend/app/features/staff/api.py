@@ -11,6 +11,7 @@ from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.staff.ledger import OverpaymentError, ZeroMovementError
 from app.core.staff.posting import InvalidStaffPostingError
 from app.db.session import get_session
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.staff import service
 from app.features.staff.schema import (
     EmployeeCreate,
@@ -33,6 +34,7 @@ def create_employee(
     entity_id: uuid.UUID,
     payload: EmployeeCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> EmployeeRead:
     try:
         employee = service.create_employee(session, entity_id, payload)
@@ -45,6 +47,7 @@ def create_employee(
 def list_employees(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
 ) -> list[EmployeeRead]:
     try:
@@ -61,6 +64,7 @@ def get_employee(
     entity_id: uuid.UUID,
     employee_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> EmployeeRead:
     try:
         employee = service.get_employee(session, entity_id, employee_id)
@@ -75,6 +79,7 @@ def update_employee(
     employee_id: uuid.UUID,
     payload: EmployeeUpdate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> EmployeeRead:
     try:
         employee = service.update_employee(session, entity_id, employee_id, payload)
@@ -88,6 +93,7 @@ def get_staff_ledger(
     entity_id: uuid.UUID,
     employee_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> StaffLedgerRead:
     try:
         return service.get_staff_ledger(session, entity_id, employee_id)
@@ -105,6 +111,7 @@ def post_staff_accrual(
     employee_id: uuid.UUID,
     payload: StaffAccrualCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> StaffAccrualResponse:
     try:
         return service.record_accrual(session, entity_id, employee_id, payload)
@@ -128,6 +135,7 @@ def post_staff_advance(
     employee_id: uuid.UUID,
     payload: StaffAdvanceCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> StaffAdvanceResponse:
     try:
         return service.record_advance(session, entity_id, employee_id, payload)
@@ -151,6 +159,7 @@ def post_staff_payment(
     employee_id: uuid.UUID,
     payload: StaffPaymentCreate,
     session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
 ) -> StaffPaymentResponse:
     try:
         return service.record_payment(session, entity_id, employee_id, payload)

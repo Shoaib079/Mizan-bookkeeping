@@ -263,3 +263,169 @@ def test_cashier_blocked_from_balance_sheet_export(
         headers={"X-User-Id": str(cashier.id)},
     )
     assert response.status_code == 403
+
+
+def test_view_only_blocked_from_operations_write(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    viewer = _create_user(db_session, "viewer-write@example.com")
+    _add_member(
+        db_session, setup["entity_id"], viewer.id, EntityRole.PARTNER_VIEW_ONLY
+    )
+
+    response = client.post(
+        f"/entities/{setup['entity_id']}/suppliers",
+        json={"name": "Blocked Supplier", "vkn": "1234567890"},
+        headers={"X-User-Id": str(viewer.id)},
+    )
+    assert response.status_code == 403
+    assert "operations:write" in response.json()["detail"]
+
+
+def test_cross_entity_write_blocked(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+    restaurant_b,
+) -> None:
+    setup = roles_entity_setup
+    seed_default_chart(db_session, restaurant_b.id)
+    owner = _create_user(db_session, "owner-a@example.com")
+    _add_member(db_session, setup["entity_id"], owner.id, EntityRole.OWNER)
+
+    response = client.post(
+        f"/entities/{restaurant_b.id}/suppliers",
+        json={"name": "Cross Entity Supplier", "vkn": "9876543210"},
+        headers={"X-User-Id": str(owner.id)},
+    )
+    assert response.status_code == 403
+    assert "member" in response.json()["detail"].lower()
+
+
+def test_non_member_blocked_from_delivery_sales(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    outsider = _create_user(db_session, "outsider-delivery@example.com")
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/reports/delivery-sales",
+        params={"from": "2026-01-01", "to": "2026-01-31"},
+        headers={"X-User-Id": str(outsider.id)},
+    )
+    assert response.status_code == 403
+    assert "member" in response.json()["detail"].lower()
+
+
+def test_non_member_blocked_from_supplier_ledger(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    owner = _create_user(db_session, "owner-ledger@example.com")
+    _add_member(db_session, setup["entity_id"], owner.id, EntityRole.OWNER)
+    create_resp = client.post(
+        f"/entities/{setup['entity_id']}/suppliers",
+        json={"name": "Ledger Supplier", "vkn": "1234567890"},
+        headers={"X-User-Id": str(owner.id)},
+    )
+    assert create_resp.status_code == 201
+    supplier_id = create_resp.json()["id"]
+
+    outsider = _create_user(db_session, "outsider-ledger@example.com")
+    response = client.get(
+        f"/entities/{setup['entity_id']}/suppliers/{supplier_id}/ledger",
+        headers={"X-User-Id": str(outsider.id)},
+    )
+    assert response.status_code == 403
+    assert "member" in response.json()["detail"].lower()
+
+
+def test_non_member_blocked_from_bank_list(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    outsider = _create_user(db_session, "outsider-bank@example.com")
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/banking/accounts",
+        headers={"X-User-Id": str(outsider.id)},
+    )
+    assert response.status_code == 403
+    assert "member" in response.json()["detail"].lower()
+
+
+def test_non_member_blocked_from_expenses(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    outsider = _create_user(db_session, "outsider-expenses@example.com")
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/expenses",
+        headers={"X-User-Id": str(outsider.id)},
+    )
+    assert response.status_code == 403
+    assert "member" in response.json()["detail"].lower()
+
+
+def test_cross_entity_read_blocked(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+    restaurant_b,
+) -> None:
+    setup = roles_entity_setup
+    seed_default_chart(db_session, restaurant_b.id)
+    owner = _create_user(db_session, "owner-read-a@example.com")
+    _add_member(db_session, setup["entity_id"], owner.id, EntityRole.OWNER)
+
+    response = client.get(
+        f"/entities/{restaurant_b.id}/expenses",
+        headers={"X-User-Id": str(owner.id)},
+    )
+    assert response.status_code == 403
+    assert "member" in response.json()["detail"].lower()
+
+
+def test_list_entities_returns_only_caller_memberships(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+    restaurant_b,
+) -> None:
+    setup = roles_entity_setup
+    member = _create_user(db_session, "member-list@example.com")
+    _add_member(db_session, setup["entity_id"], member.id, EntityRole.CASHIER)
+
+    response = client.get("/entities", headers={"X-User-Id": str(member.id)})
+    assert response.status_code == 200
+    entity_ids = {row["id"] for row in response.json()}
+    assert str(setup["entity_id"]) in entity_ids
+    assert str(restaurant_b.id) not in entity_ids
+
+
+def test_create_entity_requires_authenticated_user(
+    auth_enforced,
+    client: TestClient,
+) -> None:
+    response = client.post("/entities", json={"name": "No Auth Entity"})
+    assert response.status_code == 401
