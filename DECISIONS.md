@@ -2,6 +2,20 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-22 — Bank feed adapter (read-only, deferred)
+
+**Choice (future):** Add a **read-only** bank feed as an additional **input adapter** — account-information / transaction pull only. **Never payment-initiation**; the app never moves money. Output is the same normalized transaction row shape as the manual statement importer (`bank_statement_lines`), feeding the **same** downstream pipeline: classify → clearing → near-match → anti-double-count. No parallel classification or posting logic.
+
+**Manual upload permanent:** CSV/statement file upload remains the universal fallback (every bank; feed connection down or unavailable). Feed and manual upload **coexist** — the feed does not replace upload.
+
+**Design notes for implementation (when scoped):**
+- Dedup on the bank's unique transaction ID (daily pulls overlap).
+- Handle consent / token expiry and reconnect flows.
+- Reconcile feed transactions to statement balance.
+- Confirm connection route (direct bank API vs aggregator) before build.
+
+**Scheduling:** Later enhancement — after core build (Phase 6–8 + sign-off). Not in current slice order.
+
 ## 2026-06-22 — POS daily-summary photo intake (Phase 6 Slice 1)
 
 **Choice:** `pos_daily_summaries` table (entity RLS, unique `entity_id` + `file_fingerprint`). OCR v1 in `adapters/ocr_ai/pos_summary.py` — fixture registry (SHA256) + UTF-8 text heuristics for Turkish POS Z-report labels (Nakit/Kart/Toplam). Upload creates `draft` when cash + card = total, else `needs_review` with reason. Confirm (draft or needs_review with corrected `cash_kurus`/`card_kurus`) calls `confirm_pos_daily_summary()` — single transaction: card portion → `post_card_sales_batch()` pattern (Dr `1400` / Cr `4000`); cash portion → `post_cash_movement()` IN (Dr cash GL / Cr `4000`). **Never** posts POS aggregate total as one GL line. Links `card_sales_batch_id` and `cash_movement_id` on summary row. Reject → `rejected`. Duplicate upload → 409.

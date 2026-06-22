@@ -186,6 +186,7 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison.
 
 Not in current build order — track here when scoped:
 
+- **Bank feed (read-only) adapter** — account-information / transaction pull only; never payment-initiation (the app never moves money). Additional input adapter producing the same normalized transaction rows as manual statement CSV import, feeding the existing classify → clearing → near-match → anti-double-count pipeline (downstream logic unchanged). Manual statement upload stays permanently as universal fallback (every bank; feed down). Both coexist — feed never replaces upload. When built: dedup on bank unique transaction ID (overlapping daily pulls), consent/token expiry + reconnect, reconcile feed balance to statement, confirm connection route (direct bank API vs aggregator) before committing. *Later enhancement — after core build.*
 - Proper KDV/tax-return module
 - Per-rate VAT separation (if needed beyond Phase 7)
 - FX revaluation
