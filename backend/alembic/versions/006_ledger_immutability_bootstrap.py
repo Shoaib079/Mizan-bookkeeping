@@ -13,6 +13,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Alembic defaults to varchar(32); several revision ids exceed that length.
+    op.execute("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE varchar(64)")
     bind = op.get_bind()
     apply_ledger_immutability(bind)
 

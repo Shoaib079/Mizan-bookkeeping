@@ -16,8 +16,8 @@ settings.auth_enforcement = False
 settings.clerk_test_mode = True
 settings.app_env = "test"
 
-from app.db.base import Base
-from app.db.bootstrap import ensure_test_database, init_database
+from app.db.bootstrap import ensure_test_database
+from app.db.provisioning import provision_database_via_alembic
 from app.db.session import get_session
 from app.features.entities.models import Entity, EntitySetting
 from app.main import app
@@ -34,11 +34,9 @@ def isolated_upload_dir(tmp_path_factory):
 @pytest.fixture(scope="session")
 def test_engine():
     ensure_test_database()
+    provision_database_via_alembic(settings.test_database_url)
     engine = create_engine(settings.test_database_url, pool_pre_ping=True)
-    Base.metadata.drop_all(engine)
-    init_database(settings.test_database_url)
     yield engine
-    Base.metadata.drop_all(engine)
     engine.dispose()
 
 

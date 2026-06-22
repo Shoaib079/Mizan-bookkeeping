@@ -1,16 +1,13 @@
-"""Create tables and apply PostgreSQL RLS — dev/test bootstrap."""
+"""Optional local bootstrap via create_all — NOT the production provisioning path.
+
+Production and pytest use ``alembic upgrade head`` (see ``app.db.provisioning``).
+"""
 
 from sqlalchemy import create_engine, text
 
 from app.config import settings
 from app.db.base import Base
-from app.db.fx_immutability import apply_fx_immutability
-from app.db.ledger_immutability import apply_ledger_immutability
-from app.db.receivables_immutability import apply_receivables_immutability
-from app.db.partners_immutability import apply_partners_immutability
-from app.db.payables_immutability import apply_payables_immutability
-from app.db.staff_immutability import apply_staff_immutability
-from app.db.rls import apply_entity_rls
+from app.db.provisioning import apply_database_integrity
 from app.features.entities.models import Entity, EntitySetting  # noqa: F401
 from app.core.chart_of_accounts.models import Account  # noqa: F401
 from app.core.ledger.models import JournalEntry, JournalEntryLine, LedgerAuditEvent  # noqa: F401
@@ -18,6 +15,7 @@ from app.features.invoices.models import InvoiceDraft  # noqa: F401
 from app.features.suppliers.models import Supplier  # noqa: F401
 from app.core.payables.models import SupplierLedgerEntry  # noqa: F401
 from app.features.banking.models import MoneyAccount  # noqa: F401
+from app.features.banking.credit_card_payment_models import CreditCardPayment  # noqa: F401
 from app.features.banking.statement_models import BankStatement, BankStatementLine  # noqa: F401
 from app.features.banking.transfer_models import AccountTransfer  # noqa: F401
 from app.core.fx.models import FxLedgerEntry  # noqa: F401
@@ -63,13 +61,7 @@ def init_database(url: str | None = None) -> None:
     engine = create_engine(url or settings.database_url, pool_pre_ping=True)
     Base.metadata.create_all(engine)
     with engine.begin() as connection:
-        apply_entity_rls(connection)
-        apply_ledger_immutability(connection)
-        apply_payables_immutability(connection)
-        apply_fx_immutability(connection)
-        apply_staff_immutability(connection)
-        apply_partners_immutability(connection)
-        apply_receivables_immutability(connection)
+        apply_database_integrity(connection)
     engine.dispose()
 
 

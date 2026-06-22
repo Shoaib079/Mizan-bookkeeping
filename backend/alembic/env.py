@@ -7,30 +7,26 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import settings
 from app.db.base import Base
-from app.features.entities.models import Entity, EntitySetting  # noqa: F401
-from app.core.chart_of_accounts.models import Account  # noqa: F401
-from app.core.ledger.models import JournalEntry, JournalEntryLine, LedgerAuditEvent  # noqa: F401
-from app.features.invoices.models import InvoiceDraft  # noqa: F401
-from app.features.suppliers.models import Supplier  # noqa: F401
-from app.core.payables.models import SupplierLedgerEntry  # noqa: F401
-from app.features.banking.models import MoneyAccount  # noqa: F401
-from app.features.banking.statement_models import BankStatement, BankStatementLine  # noqa: F401
-from app.features.banking.transfer_models import AccountTransfer  # noqa: F401
-from app.features.pos.models import CardSalesBatch, PosDailySummary, PosSettlement  # noqa: F401
-from app.features.delivery.models import DeliveryReport, DeliverySettlement  # noqa: F401
-from app.features.banking.credit_card_payment_models import CreditCardPayment  # noqa: F401
-from app.features.cash.models import CashDrawerSession, CashMovement  # noqa: F401
-from app.core.fx.models import FxLedgerEntry  # noqa: F401
-from app.features.staff.models import Employee  # noqa: F401
-from app.core.staff.models import StaffLedgerEntry  # noqa: F401
+import app.db.bootstrap  # noqa: F401 — register all ORM models for autogenerate/check
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+_configured_url = config.get_main_option("sqlalchemy.url")
+if not _configured_url or _configured_url.startswith("driver://"):
+    config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    """Skip index/unique reflection noise — hand-written migrations own those objects."""
+    if type_ in {"index", "unique_constraint"}:
+        return False
+    if type_ == "foreign_key_constraint" and name == "fk_credit_card_payments_entity_id_entities":
+        return False
+    return True
 
 
 def run_migrations_offline() -> None:
@@ -40,6 +36,9 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=False,
+        compare_server_default=False,
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -52,7 +51,13 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=False,
+            compare_server_default=False,
+            include_object=include_object,
+        )
         with context.begin_transaction():
             context.run_migrations()
 

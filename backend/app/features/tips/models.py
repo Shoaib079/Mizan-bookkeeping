@@ -19,9 +19,6 @@ class TipAccrualSource(str, enum.Enum):
 
 class TipAccrual(EntityScopedMixin, Base):
     __tablename__ = "tip_accruals"
-    __table_args__ = (
-        {"comment": "Tips owed to staff — pass-through accrual, not revenue"},
-    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     accrual_date: Mapped[date] = mapped_column(Date, nullable=False)

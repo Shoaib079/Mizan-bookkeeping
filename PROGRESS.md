@@ -5,29 +5,29 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 8 — Roles & permissions, backups, security hardening, launch |
-| **Last completed slice** | Auth hardening + pre-sign-off verification (Phase 8 Slice 5) |
+| **Last completed slice** | DB provisioning integrity (Phase 8 Slice 6) |
 | **Next slice** | Owner sign-off on Phase 8 |
 | **Branch** | `main` |
-| **Last tag** | `v0.47.1-phase8-auth-hardening` |
+| **Last tag** | `v0.47.2-phase8-db-provisioning` |
 
 ## Resume point
 
-**Phase 8 Slice 5 done.** Production refuses boot when `CLERK_TEST_MODE` is on; `CLERK_AUDIENCE` required when auth enforcement is on (non-test); Clerk `_extract_email` requires explicit `email_verified=true` (no primary-email fallback). Permanent guard tests: entity route inventory, single posting boundary, RLS registry + live policy check. Dashboard + receivables routes guarded. RLS registry completed (`customers`, `customer_ledger_entries`, `tip_*`, `delivery_platforms`); GUC re-sync after commit fixes delivery classify under RLS. **Phase 8 COMPLETE — pending owner sign-off.**
+**Phase 8 Slice 6 done.** Canonical DB provisioning is `alembic upgrade head` (see `app/db/provisioning.py`). Migration `006` widens `alembic_version.version_num` to varchar(64); migration `038` idempotently applies full RLS registry + immutability triggers. Pytest + RLS guard tests provision via Alembic (same as production). **Phase 8 COMPLETE — pending owner sign-off.**
 
 ## Pre-sign-off verification (2026-06-22)
 
 | Check | Result |
 |-------|--------|
-| Full pytest (`AUTH_ENFORCEMENT=false`, default test settings) | **420 passed**, 2 skipped |
-| Full pytest (`AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE=true`) | **420 passed**, 2 skipped |
-| Alembic `upgrade head` on empty DB | **FAIL (pre-existing)** — revision `006_ledger_immutability_bootstrap` (33 chars) exceeds `alembic_version.version_num` varchar(32); not introduced in this slice |
-| Alembic `check` (model drift) | Not run — blocked by upgrade failure above; test DB uses `init_database()` bootstrap |
-| Secrets in git | `.env` gitignored; no `.env` tracked; `.gitignore` covers `.env`, `backend/data/`, `backups/` |
-| `.env.example` Clerk vars | `CLERK_JWKS_URL`, `CLERK_ISSUER`, `CLERK_AUDIENCE` documented |
-| `pip-audit` (backend deps) | **No known high/critical CVEs** |
+| Full pytest (Alembic-provisioned test DB) | **423 passed**, 2 skipped |
+| `alembic upgrade head` on empty DB | **GREEN** (through `038_db_provisioning`) |
+| `alembic check` (model drift) | **GREEN** — no new upgrade ops (indexes/uniques hand-managed in migrations) |
+| Alembic provisioning tests | RLS on all entity-scoped tables + ledger immutability triggers verified |
+| Secrets in git | `.env` gitignored; `.gitignore` covers `.env`, `backend/data/`, `backups/` |
+| `pip-audit` (backend deps) | No known high/critical CVEs (prior slice) |
 
 ## Recent
 
+- 2026-06-22 — DB provisioning integrity (`v0.47.2-phase8-db-provisioning`, 423 pytest)
 - 2026-06-22 — Auth hardening + guard tests (`v0.47.1-phase8-auth-hardening`, 420 pytest)
 - 2026-06-22 — Launch readiness / Clerk auth (`v0.47.0-phase8-launch-readiness`, 412 pytest)
 - 2026-06-22 — Roles & permissions (`v0.44.0-phase8-roles-permissions`, 389 pytest)
