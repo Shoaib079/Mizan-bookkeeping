@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 7 — Dashboard, reports, Excel export, financial statements |
-| **Active slice** | Delivery sales report |
-| **Last completed slice** | Expenses + spelling tolerance |
-| **Last commit/tag** | `v0.36.0-phase6-expenses` |
-| **Next up** | Delivery sales report (Phase 7 Slice 1) |
+| **Active slice** | Dashboard |
+| **Last completed slice** | Delivery sales report |
+| **Last commit/tag** | `v0.37.0-phase7-delivery-sales-report` |
+| **Next up** | Dashboard (Phase 7 Slice 2) |
 
 ---
 
@@ -147,7 +147,7 @@ POS daily-summary photo + delivery platform reports; commission e-Faturas (e-Fat
 | Tips (pass-through, not revenue/expense) | done | `tip_accruals` + `tip_payouts`; card Dr `1400`/Cr `2260`; cash held Dr cash/Cr `2260`; payout Dr `2260`/Cr cash (not expense); balance check on pot; chart `2260` Tips Payable; API `POST/GET .../tips/accruals`, `POST/GET .../tips/payouts`, `GET .../tips/balance`; Alembic `033`; tag `v0.35.0`; 307 pytest |
 | Expenses + spelling tolerance | done | `expense_items` + `expense_item_aliases` + `expense_entries`; Turkish-aware normalization + fuzzy match → `needs_review`; confirm remembers alias; manual Dr expense / Cr bank or cash; `rent_utility` bank classify with `expense_account_id`; `has_source_document=false` on manual entry; API `POST/GET .../expense-items`, `POST .../merge`, `POST/GET .../expenses`, `POST .../confirm-item`; Alembic `034`; tag `v0.36.0`; 317 pytest |
 
-**Phase 6 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 6 COMPLETE (pending owner sign-off).**
+**Phase 6 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 6 COMPLETE (owner signed off).**
 
 *Note: Phase 6 may need to land with or just before Phase 4 (settlements reconcile against sales). Resequence if dependencies require — the firm rule is tested + signed off, not strict phase numbering.*
 
@@ -159,7 +159,7 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| Delivery sales report | not started | Gross sales per **entity-configured** platform + combined total; `from`/`to` on `report_date`; source = posted `delivery_reports` grouped by `delivery_platform_id`; read API only |
+| Delivery sales report | done | `GET .../reports/delivery-sales?from=&to=` — gross per platform + total; posted `delivery_reports` only; all platforms (active + inactive); `delivery_enabled` guard |
 | Dashboard | not started | |
 | P&L & Balance Sheet (per entity) | not started | |
 | Cash flow statement | not started | |

@@ -66,11 +66,11 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** New OCR beyond existing e-Fatura adapters, tips, general expenses, UI, locked-period enforcement.
 
-## 2026-06-22 — Delivery sales report (Phase 7, planned)
+## 2026-06-22 — Delivery sales report (Phase 7)
 
-**Choice:** Read-only **Delivery sales report** per entity — gross delivery sales **per configured platform** (from `delivery_platforms`) plus a **combined total**, filterable by **`from` / `to` date range** (inclusive on `delivery_reports.report_date`). **Source of truth:** `delivery_reports` with `status = posted` only — aggregate `gross_kurus` grouped by `delivery_platform_id`. Exclude draft, `needs_review`, and rejected rows.
+**Choice:** Read-only **Delivery sales report** per entity — gross delivery sales **per configured platform** (from `delivery_platforms`) plus a **combined total**, filterable by **`from` / `to` date range** (inclusive on `delivery_reports.report_date`). **Source of truth:** `delivery_reports` with `status = posted` only — aggregate `gross_kurus` grouped by `delivery_platform_id`. Exclude draft, `needs_review`, and rejected rows. All entity platforms listed (active + inactive); zero gross when no posted reports in range.
 
-**API (planned):** `GET /entities/{id}/reports/delivery-sales?from=YYYY-MM-DD&to=YYYY-MM-DD` — one row per entity platform (active + inactive with history) plus `total_gross_kurus`; `delivery_enabled` guard.
+**API:** `GET /entities/{id}/reports/delivery-sales?from=YYYY-MM-DD&to=YYYY-MM-DD` — one row per entity platform plus `total_gross_kurus`; `delivery_enabled` guard; `from <= to` validation.
 
 **Why:** Decisions §9 / §10 — period view of delivery channel sales for dashboard and owner review; portal report intake remains authoritative.
 

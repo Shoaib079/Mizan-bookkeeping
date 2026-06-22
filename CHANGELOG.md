@@ -4,7 +4,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-22
 
-**Phase 6 — Daily expenses + spelling tolerance:** `expense_items` + `expense_item_aliases` + `expense_entries`; Turkish-aware normalization + fuzzy match → `needs_review`; confirm remembers alias; manual Dr expense / Cr bank or cash (`has_source_document=false` on manual entry); bank `rent_utility` classify Dr expense / Cr bank with owner `expense_account_id`; API `POST/GET .../expense-items`, `POST .../merge`, `POST/GET .../expenses`, `POST .../confirm-item`. Alembic `034`. Tag `v0.36.0-phase6-expenses`. 317 pytest green. **Phase 6 complete (pending owner sign-off).**
+**Phase 7 — Delivery sales report:** Read-only gross delivery sales per entity-configured platform plus combined total; `from`/`to` inclusive on `report_date`; source = posted `delivery_reports` only (draft/needs_review/rejected excluded); all platforms listed (active + inactive with zero when no reports in range); `delivery_enabled` guard. API `GET /entities/{id}/reports/delivery-sales?from=&to=`. Tag `v0.37.0-phase7-delivery-sales-report`. 326 pytest green. **Phase 6 owner signed off.**
+
+**Phase 6 — Daily expenses + spelling tolerance:** `expense_items` + `expense_item_aliases` + `expense_entries`; Turkish-aware normalization + fuzzy match → `needs_review`; confirm remembers alias; manual Dr expense / Cr bank or cash (`has_source_document=false` on manual entry); bank `rent_utility` classify Dr expense / Cr bank with owner `expense_account_id`; API `POST/GET .../expense-items`, `POST .../merge`, `POST/GET .../expenses`, `POST .../confirm-item`. Alembic `034`. Tag `v0.36.0-phase6-expenses`. 317 pytest green. **Phase 6 complete (owner signed off).**
 
 **Phase 6 — Tips pass-through:** `tip_accruals` + `tip_payouts` tables; chart `2260` Tips Payable (liability); card accrual Dr `1400` / Cr `2260` (not sales); cash held Dr cash / Cr `2260`; payout Dr `2260` / Cr cash (not expense); balance check rejects over-payout; API `POST/GET .../tips/accruals`, `POST/GET .../tips/payouts`, `GET .../tips/balance`. Alembic `033`. Tag `v0.35.0-phase6-tips`. 307 pytest green.
 
