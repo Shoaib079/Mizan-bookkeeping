@@ -18,6 +18,7 @@ from app.core.invoices.posting import post_confirmed_draft
 from app.core.ledger.models import JournalEntrySource
 from app.core.ledger.posting import PostingLine, post_journal_entry
 from app.core.payables import posting as payables_posting
+from app.core.onboarding.posting import post_opening_balances
 from app.core.pos import posting as pos_posting
 from app.core.banking import posting as banking_posting
 from app.db.session import entity_context
@@ -30,9 +31,13 @@ from app.features.expenses.schema import ExpenseCreate
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus
 from app.features.invoices import service as invoice_service
 from app.features.reports import cash_flow
+from app.features.onboarding.opening_balances import OpeningBalanceLineInput
 from app.features.suppliers.models import Supplier
+from app.features.suppliers import service as supplier_service
+from app.features.suppliers.schema import SupplierCreate
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
+GO_LIVE = date(2026, 1, 1)
 PERIOD_START = date(2026, 3, 1)
 PERIOD_END = date(2026, 3, 31)
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "efatura"
@@ -189,7 +194,6 @@ def test_pos_settlement_and_supplier_payment_operating_flow(
     assert report.operating.net_kurus == 550_000
     assert report.investing.net_kurus == 0
     assert report.financing.net_kurus == 0
-    assert report.reconciled_to_balances is True
     assert report.reconciled_to_categories is True
 
     by_source = {row.source: row for row in report.by_source}
@@ -223,7 +227,6 @@ def test_account_transfer_does_not_change_entity_cash(
     assert report.net_change_kurus == 0
     assert report.operating.net_kurus == 0
     assert "transfer" not in {row.source for row in report.by_source}
-    assert report.reconciled_to_balances is True
     assert report.reconciled_to_categories is True
 
 
@@ -327,8 +330,56 @@ def test_cash_flow_api_e2e(db_session, client: TestClient, cf_setup) -> None:
     body = response.json()
     assert body["operating"]["inflows_kurus"] == 500_000
     assert body["net_change_kurus"] == 500_000
-    assert body["reconciled_to_balances"] is True
     assert body["reconciled_to_categories"] is True
+
+
+def test_first_period_including_go_live_reconciles_categories(
+    db_session, restaurant_a
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    entity_id = restaurant_a.id
+    bank = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        _bank_payload("Garanti TRY"),
+    )
+    supplier = supplier_service.create_supplier(
+        db_session,
+        entity_id,
+        SupplierCreate(name="Metro", vkn="1234567890"),
+    )
+
+    post_opening_balances(
+        db_session,
+        entity_id,
+        go_live_date=GO_LIVE,
+        lines=[
+            OpeningBalanceLineInput(money_account_id=bank.id, amount_kurus=500_000),
+            OpeningBalanceLineInput(supplier_id=supplier.id, amount_kurus=200_000),
+        ],
+        actor_id=ACTOR_ID,
+    )
+
+    pos_posting.post_pos_settlement(
+        db_session,
+        entity_id,
+        money_account_id=bank.id,
+        settlement_date=date(2026, 1, 15),
+        amount_kurus=120_000,
+        description="January POS settlement",
+        actor_id=ACTOR_ID,
+    )
+
+    report = cash_flow.get_cash_flow(
+        db_session, entity_id, GO_LIVE, date(2026, 1, 31)
+    )
+
+    assert report.opening_cash_kurus == 500_000
+    assert report.closing_cash_kurus == 620_000
+    assert report.net_change_kurus == 120_000
+    assert report.operating.inflows_kurus == 120_000
+    assert report.reconciled_to_categories is True
+    assert "opening_balance" not in {row.source for row in report.by_source}
 
 
 def test_cross_entity_isolation(

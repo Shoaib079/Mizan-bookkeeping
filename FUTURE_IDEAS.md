@@ -20,7 +20,7 @@
 - **Fixed-assets register + depreciation.**
 - **Multi-currency revaluation / FX gain–loss posting** — FX Gain/Loss accounts are in the default chart; today we keep FX simple (cost only).
 - **Cost of goods / light inventory link** — only if you ever want food-cost % (inventory is out of v1 scope).
-- **Year-end close** — closing entries to retained earnings; fiscal-period handling beyond basic month locking.
+- **Year-end close** — closing entries to retained earnings; fiscal-period handling beyond basic month locking. **Implementation note:** today the Balance Sheet's `_unclosed_net_income_kurus` (`backend/app/features/reports/financial_statements.py`) correctly carries *all* accumulated revenue−expenses since inception, because there are no closing entries yet. When year-end close is added, that function must only count the **post-close** period (revenue/expenses since the last close), otherwise prior-year profit would be double-counted — once in retained earnings (via the closing entry) and again in unclosed net income. Add a balance-sheet test that closes a year and asserts the equation still balances.
 - **Additional default expense accounts** — optional chart expansion (e.g. Advertising, Fuel, Office supplies) beyond the current rent/salary/utility seed.
 
 ## Workflow & control

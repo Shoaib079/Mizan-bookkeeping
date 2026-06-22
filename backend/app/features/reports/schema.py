@@ -117,5 +117,4 @@ class CashFlowRead(BaseModel):
     investing: CashFlowCategoryRead
     financing: CashFlowCategoryRead
     by_source: list[CashFlowSourceRow]
-    reconciled_to_balances: bool
     reconciled_to_categories: bool

@@ -49,12 +49,7 @@ _OPERATING_SOURCES = frozenset(
 
 _FINANCING_SOURCES = frozenset({JournalEntrySource.CREDIT_CARD_PAYMENT})
 
-_EXCLUDED_SOURCES = frozenset(
-    {
-        JournalEntrySource.TRANSFER,
-        JournalEntrySource.OPENING_BALANCE,
-    }
-)
+_EXCLUDED_SOURCES = frozenset({JournalEntrySource.TRANSFER})
 
 _NON_CASH_SOURCES = frozenset(
     {
@@ -152,6 +147,7 @@ def get_cash_flow(
     financing = _empty_category()
     by_source_net: dict[str, int] = defaultdict(int)
     by_source_category: dict[str, str] = {}
+    opening_balance_cash_kurus = 0
 
     with entity_context(session, entity_id):
         require_entity_context()
@@ -194,6 +190,9 @@ def get_cash_flow(
             net_cash = net_cash_effect_on_accounts(session, entry_id, liquid_ids)
             if net_cash == 0:
                 continue
+            if entry.source == JournalEntrySource.OPENING_BALANCE:
+                opening_balance_cash_kurus += net_cash
+                continue
             if entry.source in _EXCLUDED_SOURCES:
                 continue
 
@@ -209,6 +208,8 @@ def get_cash_flow(
 
             by_source_net[source_key] += net_cash
             by_source_category[source_key] = category_name
+
+        opening_cash_kurus += opening_balance_cash_kurus
 
     net_change_kurus = closing_cash_kurus - opening_cash_kurus
     category_net_total = operating.net_kurus + investing.net_kurus + financing.net_kurus
@@ -233,6 +234,5 @@ def get_cash_flow(
         investing=investing,
         financing=financing,
         by_source=by_source,
-        reconciled_to_balances=opening_cash_kurus + net_change_kurus == closing_cash_kurus,
         reconciled_to_categories=category_net_total == net_change_kurus,
     )
