@@ -24,6 +24,8 @@ RLS_TABLES = (
     "fx_ledger_entries",
     "employees",
     "staff_ledger_entries",
+    "partners",
+    "partner_ledger_entries",
 )
 
 

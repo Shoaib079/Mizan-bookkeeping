@@ -2,6 +2,10 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-22
+
+**Phase 5 — Partner reimbursements:** `partners` table (light master, not capital); `partner_ledger_entries` append-only subledger (`expense_fronted`, `reimbursement_paid`, `opening_balance`); control account `2150` reconciles to subledger; expense fronted Dr owner-selected expense / Cr `2150` (recorded once); reimbursement Dr `2150` / Cr bank/cash (no expense line); per-partner opening balances via `partner_id` lines; API `/entities/{id}/partners/...`; Alembic `026`. Tag `v0.29.0-phase5-partner-reimbursements`. 252 pytest green.
+
 ## 2026-06-21
 
 **Phase 5 — Staff (salary vs advance):** `employees` table with `pay_currency` (TRY/USD/EUR/GBP); `staff_ledger_entries` append-only subledger (`salary_accrued`, `advance_paid`, `salary_payment`); chart account `2250` Salaries Payable (mirrors AP `2000` for accrual/settlement); TRY accrual Dr `5100`/Cr `2250`; advance Dr `1300`/Cr cash/bank; salary payment Dr `2250`/Cr `1300`+cash in one atomic entry when advance applies — no second `5100` on payment; FX accrual subledger-only (stable forex ledger); FX payment Dr `5100` at owner-entered `try_cost_kurus`/Cr FX GL + `fx_ledger` spend row; API under `/entities/{id}/staff/...`; Alembic `025`. Tag `v0.28.0-phase5-staff`. 243 pytest green.

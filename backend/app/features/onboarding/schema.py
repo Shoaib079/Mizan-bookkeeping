@@ -37,22 +37,28 @@ class OpeningBalanceLineIn(BaseModel):
     account_code: str | None = Field(default=None, min_length=1, max_length=16)
     money_account_id: uuid.UUID | None = None
     supplier_id: uuid.UUID | None = None
+    partner_id: uuid.UUID | None = None
     side: AccountNormalBalance | None = None
 
     @model_validator(mode="after")
     def validate_single_target(self) -> OpeningBalanceLineIn:
-        targets = [self.account_code, self.money_account_id, self.supplier_id]
+        targets = [
+            self.account_code,
+            self.money_account_id,
+            self.supplier_id,
+            self.partner_id,
+        ]
         set_count = sum(1 for target in targets if target is not None)
         if set_count != 1:
             raise ValueError(
                 "each line must specify exactly one of account_code, "
-                "money_account_id, or supplier_id"
+                "money_account_id, supplier_id, or partner_id"
             )
         if self.account_code is not None and self.side is None:
             raise ValueError("side is required for account_code lines")
         if self.account_code is None and self.side is not None:
             raise ValueError(
-                "side is implied for money_account_id and supplier_id lines"
+                "side is implied for money_account_id, supplier_id, and partner_id lines"
             )
         return self
 
@@ -84,8 +90,14 @@ class SupplierLedgerEntryOut(BaseModel):
     supplier_id: uuid.UUID
 
 
+class PartnerLedgerEntryOut(BaseModel):
+    id: uuid.UUID
+    partner_id: uuid.UUID
+
+
 class OpeningBalancePostResponse(BaseModel):
     journal_entry_id: uuid.UUID
     journal_lines: list[JournalLineOut]
     supplier_ledger_entries: list[SupplierLedgerEntryOut]
+    partner_ledger_entries: list[PartnerLedgerEntryOut]
     go_live_date: date

@@ -59,7 +59,7 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
         "Ortak Masraf Borçları",
         AccountType.LIABILITY,
         AccountNormalBalance.CREDIT,
-        False,
+        True,
     ),
     DefaultAccount("2200", "Loans Payable", "Krediler", AccountType.LIABILITY, AccountNormalBalance.CREDIT, True),
     DefaultAccount(

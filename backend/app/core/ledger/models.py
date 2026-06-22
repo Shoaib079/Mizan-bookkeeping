@@ -56,6 +56,8 @@ class JournalEntrySource(str, enum.Enum):
     STAFF_ACCRUAL = "staff_accrual"
     STAFF_ADVANCE = "staff_advance"
     STAFF_PAYMENT = "staff_payment"
+    PARTNER_EXPENSE_FRONTED = "partner_expense_fronted"
+    PARTNER_REIMBURSEMENT_PAID = "partner_reimbursement_paid"
     SYSTEM = "system"
 
 

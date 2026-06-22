@@ -105,7 +105,7 @@ def test_rejects_partner_payable_opening_balance(seeded_entity, db_session) -> N
             side=AccountNormalBalance.CREDIT,
         )
     ]
-    with pytest.raises(OpeningBalanceNotSupportedError, match="Partner reimbursement opening balances are not supported yet"):
+    with pytest.raises(OpeningBalanceNotSupportedError, match="partner_id lines"):
         validate_opening_balance_lines(db_session, seeded_entity.id, lines)
 
 

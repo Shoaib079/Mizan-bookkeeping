@@ -14,6 +14,8 @@ from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource
 from app.core.onboarding.posting import AlreadyPostedError, post_opening_balances
+from app.core.partners import ledger as partners_ledger
+from app.core.partners.models import PartnerLedgerEntry
 from app.core.payables import ledger as payables_ledger
 from app.core.payables.models import SupplierLedgerEntry
 from app.db.session import entity_context
@@ -22,6 +24,7 @@ from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
 from app.features.entities import service as entity_service
 from app.features.onboarding.opening_balances import OpeningBalanceLineInput
+from app.features.partners.models import Partner
 from app.features.suppliers import service as supplier_service
 from app.features.suppliers.schema import SupplierCreate
 
@@ -53,6 +56,35 @@ def _supplier(db_session, entity, *, name="Metro", vkn="1234567890"):
         entity.id,
         SupplierCreate(name=name, vkn=vkn),
     )
+
+
+def _partner(db_session, entity, *, name="Ahmet") -> uuid.UUID:
+    with entity_context(db_session, entity.id):
+        partner = Partner(name=name)
+        db_session.add(partner)
+        db_session.commit()
+        return partner.id
+
+
+def _partner_gl_balance(db_session, entity_id: uuid.UUID) -> int:
+    with entity_context(db_session, entity_id):
+        account = db_session.scalar(
+            select(Account).where(Account.code == "2150")
+        )
+        assert account is not None
+        debits = db_session.scalar(
+            select(func.coalesce(func.sum(JournalEntryLine.amount_kurus), 0)).where(
+                JournalEntryLine.account_id == account.id,
+                JournalEntryLine.side == AccountNormalBalance.DEBIT,
+            )
+        )
+        credits = db_session.scalar(
+            select(func.coalesce(func.sum(JournalEntryLine.amount_kurus), 0)).where(
+                JournalEntryLine.account_id == account.id,
+                JournalEntryLine.side == AccountNormalBalance.CREDIT,
+            )
+        )
+    return int(credits or 0) - int(debits or 0)
 
 
 def _ap_gl_balance(db_session, entity_id: uuid.UUID) -> int:
@@ -153,6 +185,33 @@ def test_gl_ap_equals_subledger_sum(db_session, seeded_entity) -> None:
         db_session, seeded_entity.id, s1_id
     ) + payables_ledger.current_balance_kurus(db_session, seeded_entity.id, s2_id)
     assert gl_ap == subledger_total == 140_000
+
+
+def test_gl_2150_equals_partner_subledger_sum(db_session, seeded_entity) -> None:
+    p1_id = _partner(db_session, seeded_entity, name="Partner A")
+    p2_id = _partner(db_session, seeded_entity, name="Partner B")
+    result = post_opening_balances(
+        db_session,
+        seeded_entity.id,
+        go_live_date=GO_LIVE,
+        lines=[
+            OpeningBalanceLineInput(partner_id=p1_id, amount_kurus=80_000),
+            OpeningBalanceLineInput(partner_id=p2_id, amount_kurus=30_000),
+        ],
+        actor_id=ACTOR_ID,
+    )
+
+    assert len(result.partner_ledger_entries) == 2
+    gl_2150 = _partner_gl_balance(db_session, seeded_entity.id)
+    subledger_total = partners_ledger.entity_total_balance_kurus(
+        db_session, seeded_entity.id
+    )
+    assert gl_2150 == subledger_total == 110_000
+
+    with entity_context(db_session, seeded_entity.id):
+        rows = db_session.scalars(select(PartnerLedgerEntry)).all()
+        assert len(rows) == 2
+        assert all(row.journal_entry_id == result.journal_entry.id for row in rows)
 
 
 def test_bank_sub_account_gl_debited(db_session, seeded_entity) -> None:

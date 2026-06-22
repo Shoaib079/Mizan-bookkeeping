@@ -298,3 +298,21 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Deferred:** Staff opening balances wizard; payroll/SGK; tips; reports UI; per-employee GL sub-accounts.
 
+## 2026-06-22 — Partner reimbursements (Phase 5 Slice 4, Decisions §17)
+
+**Choice:** Mirror supplier payables / staff pattern — entity-wide control account `2150` Partner Reimbursements Payable reconciled to per-partner `partner_ledger_entries` subledger. **Not capital tracking** — light master (`partners`: name, `is_active`) only.
+
+**Why:** Decisions §17 — partner pays business expense out of pocket → business owes partner → repaid → cleared. Expense hits the chosen expense account **once** at fronting; reimbursement is settlement only (no second expense).
+
+**GL patterns:**
+1. Expense fronted: Dr expense (owner picks `5000` rent, `5200` utility, etc.) / Cr `2150`; subledger `+amount_kurus`
+2. Reimbursement paid: Dr `2150` / Cr bank/cash GL; subledger `-amount_kurus`; **no expense line**
+
+**Opening balances:** Per-partner via `partner_id` lines on onboarding post (aggregate `account_code=2150` still rejected — use subledger). `2150` `accepts_opening_balance=true` for chart consistency; OB wizard uses `partner_id` like `supplier_id`.
+
+**API:** `/entities/{id}/partners` CRUD; `POST .../expenses-fronted`, `POST .../reimbursements`; `GET .../ledger`.
+
+**JournalEntrySource:** `partner_expense_fronted`, `partner_reimbursement_paid`.
+
+**Deferred:** Receivables (§18); partner reimbursement bank-statement classify; reports UI; capital/equity tracking.
+

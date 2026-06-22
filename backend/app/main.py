@@ -27,6 +27,7 @@ from app.features.cash.api import movements_router as cash_movements_router
 from app.features.cash.api import sessions_router as cash_sessions_router
 from app.features.fx.api import router as fx_router
 from app.features.staff.api import router as staff_router
+from app.features.partners.api import router as partners_router
 
 app = FastAPI(
     title="Mizan API",
@@ -65,6 +66,7 @@ app.include_router(cash_movements_router)
 app.include_router(cash_sessions_router)
 app.include_router(fx_router)
 app.include_router(staff_router)
+app.include_router(partners_router)
 
 
 @app.get("/health")

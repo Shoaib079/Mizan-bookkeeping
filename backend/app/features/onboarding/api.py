@@ -29,6 +29,7 @@ from app.features.onboarding.schema import (
     OpeningBalancePostResponse,
     OpeningBalanceValidateRequest,
     OpeningBalanceValidateResponse,
+    PartnerLedgerEntryOut,
     SupplierLedgerEntryOut,
 )
 
@@ -41,6 +42,7 @@ def _line_inputs(payload_lines) -> list[OpeningBalanceLineInput]:
             account_code=line.account_code,
             money_account_id=line.money_account_id,
             supplier_id=line.supplier_id,
+            partner_id=line.partner_id,
             amount_kurus=line.amount_kurus,
             side=line.side,
         )
@@ -143,6 +145,10 @@ def post_opening_balances_api(
         supplier_ledger_entries=[
             SupplierLedgerEntryOut(id=entry.id, supplier_id=entry.supplier_id)
             for entry in result.supplier_ledger_entries
+        ],
+        partner_ledger_entries=[
+            PartnerLedgerEntryOut(id=entry.id, partner_id=entry.partner_id)
+            for entry in result.partner_ledger_entries
         ],
         go_live_date=payload.go_live_date,
     )
