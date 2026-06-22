@@ -20,6 +20,7 @@ from app.features.banking.statements_api import (
 from app.features.banking.transfers_api import router as banking_transfers_router
 from app.features.pos.api import (
     card_sales_router,
+    daily_summaries_router,
     reconciliation_router,
     settlements_router,
 )
@@ -64,6 +65,7 @@ app.include_router(banking_transfers_router)
 app.include_router(settlements_router)
 app.include_router(card_sales_router)
 app.include_router(reconciliation_router)
+app.include_router(daily_summaries_router)
 app.include_router(cash_movements_router)
 app.include_router(cash_sessions_router)
 app.include_router(fx_router)

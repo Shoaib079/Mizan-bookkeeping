@@ -65,3 +65,46 @@ class ClearingReconciliationRead(BaseModel):
     in_transit_kurus: int
     card_sales_batch_count: int
     pos_settlement_count: int
+
+
+class PosDailySummaryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    entity_id: uuid.UUID
+    status: str
+    file_fingerprint: str
+    summary_date: date | None
+    cash_kurus: int
+    card_kurus: int
+    total_kurus: int
+    confirmed_cash_kurus: int | None
+    confirmed_card_kurus: int | None
+    extraction_payload: dict
+    review_reason: str | None
+    money_account_id: uuid.UUID | None
+    confirmed_at: datetime | None
+    confirmed_by: uuid.UUID | None
+    posted_at: datetime | None
+    posted_by: uuid.UUID | None
+    card_sales_batch_id: uuid.UUID | None
+    cash_movement_id: uuid.UUID | None
+    created_at: datetime
+
+
+class PosDailySummaryListOut(BaseModel):
+    items: list[PosDailySummaryRead]
+    total: int
+
+
+class ConfirmPosDailySummaryRequest(BaseModel):
+    money_account_id: uuid.UUID
+    actor_id: uuid.UUID
+    cash_kurus: int | None = Field(default=None, ge=0)
+    card_kurus: int | None = Field(default=None, ge=0)
+    summary_date: date | None = None
+    description: str | None = Field(default=None, max_length=512)
+
+
+class RejectPosDailySummaryRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=512)

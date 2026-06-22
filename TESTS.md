@@ -35,8 +35,11 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_staff.py` | Staff — TRY accrual Dr 5100/Cr 2250, advance Dr 1300 (no expense), payment clears payable + advance offset (no second 5100), FX accrual subledger-only, FX payment expense at try_cost + wallet spend, cross-entity + RLS isolation, API E2E | pass |
 | `backend/tests/test_partners.py` | Partner reimbursements — expense fronted Dr expense/Cr 2150, reimbursement Dr 2150 (no expense), control account = subledger sum, overpayment rejected, immutability, cross-entity + RLS isolation, API E2E | pass |
 | `backend/tests/test_receivables.py` | Customer receivables — credit sale Dr AR/Cr revenue, payment no revenue, control account = subledger, overpayment rejected, per-customer OB, bank `customer_payment` classify, immutability, API E2E | pass |
+| `backend/tests/test_pos_daily_summary.py` | POS daily-summary intake — OCR extract, upload draft, math mismatch → needs_review + confirm blocked, valid confirm posts card batch + cash in (no total line), duplicate 409, cross-entity isolation, corrected confirm, reject, API E2E | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
+
+**Count:** 275 pytest (last run 2026-06-22).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 

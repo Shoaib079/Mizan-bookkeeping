@@ -1,14 +1,24 @@
-"""POS persistence — card sales batches and settlements (Decisions §13)."""
+"""POS persistence — card sales batches, settlements, daily summaries (Decisions §9, §13)."""
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import date, datetime
 
 from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, UniqueConstraint, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, EntityScopedMixin, utcnow
+
+
+class PosDailySummaryStatus(str, enum.Enum):
+    DRAFT = "draft"
+    NEEDS_REVIEW = "needs_review"
+    CONFIRMED = "confirmed"
+    POSTED = "posted"
+    REJECTED = "rejected"
 
 
 class CardSalesBatch(EntityScopedMixin, Base):
@@ -69,6 +79,54 @@ class PosSettlement(EntityScopedMixin, Base):
     card_sales_batch_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("card_sales_batches.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class PosDailySummary(EntityScopedMixin, Base):
+    __tablename__ = "pos_daily_summaries"
+    __table_args__ = (
+        UniqueConstraint(
+            "entity_id",
+            "file_fingerprint",
+            name="uq_pos_daily_summaries_entity_fingerprint",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    status: Mapped[PosDailySummaryStatus] = mapped_column(
+        String(32), nullable=False, default=PosDailySummaryStatus.DRAFT
+    )
+    file_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    summary_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    cash_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
+    card_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
+    total_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
+    confirmed_cash_kurus: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    confirmed_card_kurus: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    extraction_payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    review_reason: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    money_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("money_accounts.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    confirmed_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    posted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    posted_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    card_sales_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("card_sales_batches.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    cash_movement_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("cash_movements.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )

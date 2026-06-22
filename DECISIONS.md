@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-22 — POS daily-summary photo intake (Phase 6 Slice 1)
+
+**Choice:** `pos_daily_summaries` table (entity RLS, unique `entity_id` + `file_fingerprint`). OCR v1 in `adapters/ocr_ai/pos_summary.py` — fixture registry (SHA256) + UTF-8 text heuristics for Turkish POS Z-report labels (Nakit/Kart/Toplam). Upload creates `draft` when cash + card = total, else `needs_review` with reason. Confirm (draft or needs_review with corrected `cash_kurus`/`card_kurus`) calls `confirm_pos_daily_summary()` — single transaction: card portion → `post_card_sales_batch()` pattern (Dr `1400` / Cr `4000`); cash portion → `post_cash_movement()` IN (Dr cash GL / Cr `4000`). **Never** posts POS aggregate total as one GL line. Links `card_sales_batch_id` and `cash_movement_id` on summary row. Reject → `rejected`. Duplicate upload → 409.
+
+**Why:** Decisions §9 — primary sales source from POS daily summary photo; math check before posting; cash and card posted separately to revenue.
+
+**Migration:** Alembic `028` — `pos_daily_summaries` with entity RLS.
+
+**API:** `POST/GET .../pos/daily-summaries`; `GET .../{id}`; `POST .../{id}/confirm`; `POST .../{id}/reject`.
+
+**Not in slice:** Real vision OCR/ML, delivery platforms, tips, manual sales entry, UI, locked-period enforcement.
+
 ## 2026-06-21 — Card sales → bank deposit reconciliation (Phase 4)
 
 **Choice:** Manual `card_sales_batches` intake posts **Dr** `1400` Card Sales Clearing / **Cr** `4000` Sales Revenue (`JournalEntrySource.CARD_SALES`). Extend `post_pos_settlement()` with optional `commission_kurus` and `card_sales_batch_id`. Net-only (commission 0/null, no inference): unchanged 2-line journal (backward compat). With commission: single 3-line entry — **Dr** bank (net), **Dr** `5300` Bank Charges (commission), **Cr** `1400` (gross = net + commission). Inferred commission when batch linked and `commission_kurus` omitted: `commission = batch.gross - net`, `commission_inferred=True`; reject if gross < net. Reconciliation read API: clearing GL balance, total sales, total settled gross, in-transit (sales − settled gross), batch/settlement counts.

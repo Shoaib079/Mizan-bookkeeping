@@ -18,6 +18,7 @@ RLS_TABLES = (
     "account_transfers",
     "pos_settlements",
     "card_sales_batches",
+    "pos_daily_summaries",
     "credit_card_payments",
     "cash_drawer_sessions",
     "cash_movements",

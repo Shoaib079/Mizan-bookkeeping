@@ -4,6 +4,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-22
 
+**Phase 6 — POS daily-summary photo intake:** Owner uploads POS Z-report photo; OCR v1 (fixture registry + UTF-8 text heuristics) extracts cash, card, total (kuruş). Math check: cash + card must equal total — mismatch → `needs_review` (confirm blocked until owner corrects amounts). Confirm posts atomically: card portion via `post_card_sales_batch()` Dr `1400` / Cr `4000`; cash portion via `post_cash_movement()` IN with offset `4000` — never posts POS aggregate total as one GL line. Duplicate file fingerprint → 409. API `POST/GET .../pos/daily-summaries`, `POST .../confirm`, `POST .../reject`. Alembic `028`. Tag `v0.32.0-phase6-pos-daily-summary-intake`. 275 pytest green.
+
+**Phase 5 owner sign-off:** Cash drawer, forex, staff, partner reimbursements, receivables, FX spend officially complete. Active phase → Phase 6. Last tag remains `ce1e965` / `v0.31.0-phase5-fx-spend`.
+
 **Phase 5 — FX spend / conversion:** `post_fx_conversion()` spends FX at average book cost, credits TRY to bank/cash (owner-entered amount), posts realized gain to `4200` or loss to `5600`; `post_fx_expense_spend()` Dr expense / Cr FX at average cost (no gain/loss). Holdings never revalued. API `POST .../fx/conversions`, `POST .../fx/expense-spends`. Tag `v0.31.0-phase5-fx-spend`. 266 pytest green.
 
 **Phase 5 — Receivables:** `customers` table (name, optional identifier, `is_active`); `customer_ledger_entries` append-only subledger (`credit_sale`, `payment_received`, `opening_balance`); control account `1200` reconciles to subledger; credit sale Dr `1200` / Cr `4000` (revenue once); payment Dr bank/cash / Cr `1200` (no revenue line); per-customer opening balances via `customer_id` lines; bank statement classify `customer_payment` (inflow → Dr bank / Cr AR); API `/entities/{id}/customers/...`, `GET .../receivables`; Alembic `027`. Tag `v0.30.0-phase5-receivables`. 260 pytest green.

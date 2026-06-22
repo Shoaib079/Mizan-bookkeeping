@@ -12,11 +12,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 5 — Cash drawer, forex, staff, partner reimbursements, receivables |
-| **Active slice** | FX spend / conversion |
-| **Last completed slice** | Receivables |
-| **Last commit/tag** | `ce1e965` / `v0.31.0-phase5-fx-spend` |
-| **Next up** | Phase 5 owner sign-off (after FX spend slice) |
+| **Active phase** | Phase 6 — Sales intake + tips + expenses |
+| **Active slice** | Delivery platform reports |
+| **Last completed slice** | POS daily-summary photo intake |
+| **Last commit/tag** | (pending) / `v0.32.0-phase6-pos-daily-summary-intake` |
+| **Next up** | Delivery platform reports (gross / commission / net) |
 
 ---
 
@@ -130,7 +130,7 @@ Every statement-line classification that represents a **real GL event** must pos
 | Receivables | done | `customers` + `customer_ledger_entries`; credit sale Dr `1200`/Cr `4000`; payment Dr bank/Cr `1200` (no revenue); per-customer OB via `customer_id`; statement classify `customer_payment`; Alembic `027`; 8 tests; 260 pytest |
 | FX spend / conversion | done | `post_fx_conversion()` Dr bank/cash / Cr FX GL at average cost + realized gain `4200` or loss `5600`; `post_fx_expense_spend()` Dr expense / Cr FX at average cost; `SPEND` subledger row; owner-entered TRY received; no holding revaluation; 6 tests; 266 pytest |
 
-**Phase 5 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 5 COMPLETE (pending owner sign-off — FX spend slice required before sign-off).**
+**Phase 5 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 5 COMPLETE ✓ (owner signed off).**
 
 ---
 
@@ -140,7 +140,7 @@ POS daily-summary photo + delivery platform reports; commission e-Faturas via ve
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| POS daily-summary photo intake | not started | |
+| POS daily-summary photo intake | done | `pos_daily_summaries`; OCR v1 fixture + text heuristics; math check → `needs_review`; confirm posts card batch Dr `1400`/Cr `4000` + cash in Dr cash/Cr `4000` (never total line); duplicate fingerprint 409; Alembic `028`; 9 tests; 275 pytest |
 | Delivery platform reports (gross / commission / net) | not started | Per-platform clearing balances |
 | Commission e-Faturas (vendor pipeline) | not started | |
 | Tips (pass-through, not revenue/expense) | not started | |
@@ -197,6 +197,7 @@ Not in current build order — track here when scoped:
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-22 | POS daily-summary photo intake | (pending) / `v0.32.0-phase6-pos-daily-summary-intake` | `pos_daily_summaries`, OCR v1, confirm posts card batch + cash in, 275 pytest |
 | 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
 | 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
 | 2026-06-21 | Opening-balances plan | `451c57f` / `v0.4.0-phase0-complete` | Default chart, OB validation, wizard plan, Phase 0 done |
