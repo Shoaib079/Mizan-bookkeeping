@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 7 — Dashboard, reports, Excel export, financial statements |
-| **Active slice** | Dashboard |
-| **Last completed slice** | Delivery sales report |
-| **Last commit/tag** | `v0.37.0-phase7-delivery-sales-report` |
-| **Next up** | Dashboard (Phase 7 Slice 2) |
+| **Active slice** | P&L & Balance Sheet |
+| **Last completed slice** | Dashboard |
+| **Last commit/tag** | `v0.38.0-phase7-dashboard` |
+| **Next up** | P&L & Balance Sheet (Phase 7 Slice 3) |
 
 ---
 
@@ -160,7 +160,7 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 | Slice | Status | Notes |
 |-------|--------|-------|
 | Delivery sales report | done | `GET .../reports/delivery-sales?from=&to=` — gross per platform + total; posted `delivery_reports` only; all platforms (active + inactive); `delivery_enabled` guard |
-| Dashboard | not started | |
+| Dashboard | done | `GET .../dashboard?from=&to=` — period sales/expenses/net, payables preview, receivables, TRY position + FX wallets, delivery in-transit, needs-review counts; optional `supplier_id`, `money_account_id`, `expense_account_id` filters |
 | P&L & Balance Sheet (per entity) | not started | |
 | Cash flow statement | not started | |
 | Per-rate KDV report | not started | |

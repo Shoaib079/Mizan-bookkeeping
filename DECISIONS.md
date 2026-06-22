@@ -76,6 +76,16 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** Commission/net breakdown, Excel export (separate Phase 7 slice), UI, multi-entity roll-up.
 
+## 2026-06-22 — Entity dashboard (Phase 7)
+
+**Choice:** Read-only **entity dashboard** per Decisions §23 — single endpoint aggregating period metrics (`from`/`to` inclusive on `journal_entries.entry_date`, posted only) and point-in-time balances. **Sales:** GL credits to `4000` split by `journal_entries.source` (`cash_movement`, `card_sales`, `delivery_report`, other e.g. `customer_credit_sale`). **Expenses:** sum debits on `account_type = expense` (optional `expense_account_id`). **Net result:** total sales − total expenses (snapshot, not full P&L). **Payables:** reuse `list_payables()` total; preview top 5 suppliers by balance (`supplier_id` filter limits preview row only). **Receivables:** reuse `list_receivables()` total. **Delivery:** platform gross via `get_delivery_sales_report()`; in-transit via `get_delivery_clearing_reconciliation()` clearing balances — only when `delivery_enabled`. **Money:** sum active TRY bank+cash GL balances (`money_account_id` → single account); FX wallets with `native_quantity` + `try_cost_kurus` listed separately (not converted into TRY total). **Needs review:** current queue counts (invoice drafts, duplicates, bank lines, POS summaries, delivery reports, expenses). **Deferred:** tax-department payments (`null`).
+
+**API:** `GET /entities/{id}/dashboard?from=&to=` — tag `dashboard`; `from <= to` → 422; missing entity → 404.
+
+**Why:** Owner-facing restaurant snapshot before P&L/Balance Sheet slices; reuses existing services, no duplicate ledger logic.
+
+**Not in slice:** Period comparison, Excel export, P&L/Balance Sheet, UI, tax-department payments.
+
 ## 2026-06-22 — Delivery platform reports (Phase 6 Slice 2)
 
 **Choice:** `delivery_reports` table (entity RLS, unique `entity_id` + `file_fingerprint`, partial unique on posted `entity_id` + `delivery_platform_id` + `report_date`). Manual JSON intake stores gross/commission/net kuruş; math check `gross - commission = net` — mismatch → `needs_review` (post blocked until corrected). `post_delivery_report()` posts **Dr** platform clearing GL / **Cr** `4000` Sales Revenue for **gross only** — commission stored on report row for reconciliation but **not** posted yet (deferred to commission e-Fatura slice). Platforms are **user-managed** (`delivery_platforms` + sub-accounts under `1450`); legacy fixed codes migrated in `032`. `delivery_settlements` + `post_delivery_settlement()` **Dr** bank / **Cr** platform clearing for net payout. Entity setting `delivery_enabled` guards intake. Bank statement classify `delivery_settlement` (inflow only, `delivery_platform_id` required).
