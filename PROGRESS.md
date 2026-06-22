@@ -8,7 +8,7 @@
 | **Last completed slice** | Commission e-Faturas |
 | **Next slice** | Tips (pass-through, not revenue/expense) |
 | **Branch** | `main` |
-| **Last tag** | (pending) / `v0.34.0-phase6-delivery-commission-efatura` |
+| **Last tag** | `154734c` / `v0.34.0-phase6-delivery-commission-efatura` |
 
 ## Resume point
 

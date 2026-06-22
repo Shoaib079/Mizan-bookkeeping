@@ -15,7 +15,7 @@
 | **Active phase** | Phase 6 — Sales intake + tips + expenses |
 | **Active slice** | Tips (pass-through) |
 | **Last completed slice** | Commission e-Faturas |
-| **Last commit/tag** | (pending) / `v0.34.0-phase6-delivery-commission-efatura` |
+| **Last commit/tag** | `154734c` / `v0.34.0-phase6-delivery-commission-efatura` |
 | **Next up** | Tips (pass-through, not revenue/expense) |
 
 ---
