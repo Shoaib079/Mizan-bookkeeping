@@ -139,3 +139,25 @@ class KdvInputReportRead(BaseModel):
     total_base_kurus: int
     total_vat_kurus: int
     invoice_count: int
+
+
+class PeriodMetricComparison(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    key: str
+    label: str
+    current_kurus: int
+    prior_kurus: int
+    change_kurus: int
+    change_percent: float | None = None
+
+
+class PeriodComparisonRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    entity_id: uuid.UUID
+    current_from: date
+    current_to: date
+    prior_from: date
+    prior_to: date
+    metrics: list[PeriodMetricComparison]

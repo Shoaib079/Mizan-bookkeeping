@@ -122,6 +122,18 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** Output VAT, VAT declaration, Excel export, UI, period comparison.
 
+## 2026-06-22 — Period comparison report (Phase 7)
+
+**Choice:** Read-only **period-over-period comparison** per entity — current window vs prior window. **Metrics** reuse existing report services (no duplicated GL logic): dashboard sales/expenses/net result, P&L `net_income_kurus`, KDV input `total_vat_kurus`, cash flow `net_change_kurus`, delivery gross (only when `delivery_enabled`). **Prior window default:** same inclusive length immediately before current (`period_days = (to - from).days + 1`; `prior_to = from - 1`; `prior_from = prior_to - (period_days - 1)`). Optional `prior_from`/`prior_to` override (both required if either set). Per metric: `current_kurus`, `prior_kurus`, `change_kurus`, `change_percent` (null when prior zero).
+
+**Omitted v1:** Payables, receivables, TRY cash position — live subledger balances at query time, not true period-over-period without as-of ledger history.
+
+**API:** `GET /entities/{id}/reports/period-comparison?from=YYYY-MM-DD&to=YYYY-MM-DD`; optional `prior_from`/`prior_to`; `from > to` or partial prior params or `prior_from > prior_to` → 422; missing entity → 404. Tag `v0.42.0-phase7-period-comparison`.
+
+**Why:** Decisions §24 — reports wrapper includes period comparison (this vs last).
+
+**Not in slice:** Excel export, UI, payables/receivables/TRY position comparison, budgets vs actuals.
+
 ## 2026-06-22 — Delivery platform reports (Phase 6 Slice 2)
 
 **Choice:** `delivery_reports` table (entity RLS, unique `entity_id` + `file_fingerprint`, partial unique on posted `entity_id` + `delivery_platform_id` + `report_date`). Manual JSON intake stores gross/commission/net kuruş; math check `gross - commission = net` — mismatch → `needs_review` (post blocked until corrected). `post_delivery_report()` posts **Dr** platform clearing GL / **Cr** `4000` Sales Revenue for **gross only** — commission stored on report row for reconciliation but **not** posted yet (deferred to commission e-Fatura slice). Platforms are **user-managed** (`delivery_platforms` + sub-accounts under `1450`); legacy fixed codes migrated in `032`. `delivery_settlements` + `post_delivery_settlement()` **Dr** bank / **Cr** platform clearing for net payout. Entity setting `delivery_enabled` guards intake. Bank statement classify `delivery_settlement` (inflow only, `delivery_platform_id` required).

@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 7 — Dashboard, reports, Excel export, financial statements |
-| **Active slice** | Period comparison |
-| **Last completed slice** | Per-rate KDV report |
-| **Last commit/tag** | `v0.41.0-phase7-kdv-input-report` |
-| **Next up** | Period comparison (Phase 7 Slice 6) |
+| **Active slice** | Excel export |
+| **Last completed slice** | Period comparison |
+| **Last commit/tag** | `v0.42.0-phase7-period-comparison` |
+| **Next up** | Excel export (Phase 7 Slice 7 — last Phase 7 slice) |
 
 ---
 
@@ -164,7 +164,7 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 | P&L & Balance Sheet (per entity) | done | `GET .../reports/profit-and-loss?from=&to=` — all active revenue/expense accounts, natural sign period activity, totals; `GET .../reports/balance-sheet?as_of=` — asset/liability/equity sections, `unclosed_net_income_kurus` synthetic equity line, accounting equation check; posted only, void reversals excluded |
 | Cash flow statement | done | `GET .../reports/cash-flow?from=&to=` — TRY liquid bank+cash only; opening/closing from `balance_as_of_kurus`; direct method by journal source (operating/financing); transfers + opening_balance excluded from categorization; reconciliation flags |
 | Per-rate KDV report | done | `GET .../reports/kdv-input?from=&to=` — purchase/input VAT per rate from posted `invoice_drafts` (`supplier` + `delivery_commission`); aggregate `vat_breakdown`; distinct invoice counts per rate |
-| Period comparison | not started | |
+| Period comparison | done | `GET .../reports/period-comparison?from=&to=` — current vs prior period metrics (dashboard/P&L/KDV/cash flow/delivery gross); auto same-length prior window; optional `prior_from`/`prior_to` override; omits payables/receivables/TRY position (not true period-over-period without as-of history) |
 | Excel export | not started | |
 
 **Phase 7 complete when:** all slices above done, tested, committed, owner sign-off.

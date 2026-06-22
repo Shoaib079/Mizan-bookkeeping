@@ -14,11 +14,13 @@ from app.features.reports import service as reports_service
 from app.features.reports import cash_flow
 from app.features.reports import financial_statements
 from app.features.reports import kdv_input
+from app.features.reports import period_comparison
 from app.features.reports.schema import (
     BalanceSheetRead,
     CashFlowRead,
     DeliverySalesReportRead,
     KdvInputReportRead,
+    PeriodComparisonRead,
     ProfitAndLossRead,
 )
 from app.features.reports.service import InvalidDateRangeError
@@ -98,6 +100,30 @@ def get_kdv_input(
 ) -> KdvInputReportRead:
     try:
         return kdv_input.get_kdv_input_report(session, entity_id, from_date, to_date)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidDateRangeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/period-comparison", response_model=PeriodComparisonRead)
+def get_period_comparison_report(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    prior_from: date | None = Query(None),
+    prior_to: date | None = Query(None),
+    session: Session = Depends(get_session),
+) -> PeriodComparisonRead:
+    try:
+        return period_comparison.get_period_comparison(
+            session,
+            entity_id,
+            from_date,
+            to_date,
+            prior_from=prior_from,
+            prior_to=prior_to,
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InvalidDateRangeError as exc:
