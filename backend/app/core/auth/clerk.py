@@ -39,14 +39,7 @@ def reset_jwk_client_for_tests() -> None:
 def _extract_email(claims: dict[str, Any]) -> tuple[str, bool]:
     email = claims.get("email")
     if isinstance(email, str) and email.strip():
-        verified = claims.get("email_verified")
-        if verified is None:
-            verified = claims.get("email_verified") is True
-        return email.strip().lower(), bool(verified)
-
-    primary = claims.get("primary_email_address")
-    if isinstance(primary, str) and primary.strip():
-        return primary.strip().lower(), True
+        return email.strip().lower(), claims.get("email_verified") is True
 
     raise ClerkTokenError("Verified email claim missing from token")
 

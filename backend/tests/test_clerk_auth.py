@@ -132,6 +132,96 @@ def test_production_refuses_boot_without_enforcement(monkeypatch) -> None:
         validate_launch_settings()
 
 
+def test_production_refuses_boot_with_clerk_test_mode(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "auth_enforcement", True)
+    monkeypatch.setattr(settings, "clerk_test_mode", True)
+    with pytest.raises(RuntimeError, match="CLERK_TEST_MODE"):
+        validate_launch_settings()
+
+
+def test_launch_requires_clerk_audience_when_enforced(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "development")
+    monkeypatch.setattr(settings, "auth_enforcement", True)
+    monkeypatch.setattr(settings, "clerk_test_mode", False)
+    monkeypatch.setattr(settings, "clerk_jwks_url", "https://example.test/jwks.json")
+    monkeypatch.setattr(settings, "clerk_issuer", "https://example.test")
+    monkeypatch.setattr(settings, "clerk_audience", None)
+    with pytest.raises(RuntimeError, match="CLERK_AUDIENCE"):
+        validate_launch_settings()
+
+
+def test_verify_clerk_token_rejects_unverified_email_claim(monkeypatch) -> None:
+    """Email without explicit email_verified=true is rejected (no primary_email fallback)."""
+    settings.clerk_test_mode = False
+    settings.clerk_jwks_url = "https://example.test/jwks.json"
+    settings.clerk_issuer = "https://example.test"
+    settings.clerk_audience = "pk_test_audience"
+
+    token = jwt.encode(
+        {
+            "sub": "user_fake",
+            "email": "fake@example.com",
+            "iss": "https://example.test",
+            "aud": "pk_test_audience",
+        },
+        "not-the-real-key",
+        algorithm="HS256",
+    )
+
+    class FakeJWKClient:
+        def get_signing_key_from_jwt(self, _token: str):
+            class Key:
+                key = "wrong-secret-for-test"
+
+            return Key()
+
+    monkeypatch.setattr("app.core.auth.clerk._jwk_client", None)
+    monkeypatch.setattr(
+        "app.core.auth.clerk.PyJWKClient",
+        lambda *a, **k: FakeJWKClient(),
+    )
+    with pytest.raises(Exception, match="not verified|Invalid|expired"):
+        verify_clerk_token(token)
+    settings.clerk_test_mode = True
+
+
+def test_jwt_decode_passes_audience_when_configured(monkeypatch) -> None:
+    """verify_clerk_token forwards CLERK_AUDIENCE to jwt.decode."""
+    settings.clerk_test_mode = False
+    settings.clerk_jwks_url = "https://example.test/jwks.json"
+    settings.clerk_issuer = "https://example.test"
+    settings.clerk_audience = "pk_test_audience"
+
+    captured: dict = {}
+
+    def fake_decode(token, key, **kwargs):
+        captured.update(kwargs)
+        return {
+            "sub": "user_aud",
+            "email": "aud@example.com",
+            "email_verified": True,
+            "iss": "https://example.test",
+            "aud": "pk_test_audience",
+        }
+
+    class FakeJWKClient:
+        def get_signing_key_from_jwt(self, _token: str):
+            class Key:
+                key = "k"
+
+            return Key()
+
+    monkeypatch.setattr("app.core.auth.clerk._jwk_client", None)
+    monkeypatch.setattr("app.core.auth.clerk.PyJWKClient", lambda *a, **k: FakeJWKClient())
+    monkeypatch.setattr("app.core.auth.clerk.jwt.decode", fake_decode)
+
+    claims = verify_clerk_token("any.jwt.token")
+    assert claims.email == "aud@example.com"
+    assert captured.get("audience") == "pk_test_audience"
+    settings.clerk_test_mode = True
+
+
 def test_jwt_verification_uses_signature_not_decode_only(monkeypatch) -> None:
     """Tampered token must fail JWKS verification path (not just base64 decode)."""
     settings.clerk_test_mode = False

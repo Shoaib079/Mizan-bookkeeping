@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth.deps import member_read_guard
 from app.db.session import get_session
 from app.features.receivables import service
 from app.features.receivables.schema import (
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/entities/{entity_id}", tags=["receivables"])
 def list_receivables(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> ReceivablesSummaryRead:
     try:
         total, rows = service.list_receivables(session, entity_id)

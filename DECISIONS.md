@@ -2,9 +2,21 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-22 — Auth hardening + pre-sign-off (Phase 8 Slice 5)
+
+**Production guards:** Boot refuses `CLERK_TEST_MODE=true` when `APP_ENV=production`. `CLERK_AUDIENCE` required alongside `CLERK_JWKS_URL` and `CLERK_ISSUER` when auth enforcement is on and not in test mode.
+
+**Clerk claims:** `_extract_email` requires explicit `email_verified=true` in JWT — no fallback to unverified `email` or `primary_email_address`.
+
+**Permanent guard tests:** Route-guard inventory (every entity-scoped FastAPI route must depend on a auth guard); single posting boundary (no `JournalEntry` construction outside `core/ledger`); RLS registry parity + live policy check against PostgreSQL.
+
+**RLS fix:** Completed `RLS_TABLES` for tables already migrated; `_apply_entity_guc` + delivery platform lookup re-sync GUC after connection churn post-commit.
+
+**Not in slice:** Alembic revision id length fix (`006_ledger_immutability_bootstrap` > 32 chars blocks empty-DB `upgrade head` — pre-existing).
+
 ## 2026-06-22 — Clerk launch readiness (Phase 8 Slice 4)
 
-**Choice:** Replace `X-User-Id` transport with verified Clerk session JWT (`Authorization: Bearer`). Verification via Clerk JWKS — signature, issuer, audience (optional), expiry. Keys from env only (`CLERK_JWKS_URL`, `CLERK_ISSUER`, optional `CLERK_AUDIENCE`); no hardcoded secrets.
+**Choice:** Replace `X-User-Id` transport with verified Clerk session JWT (`Authorization: Bearer`). Verification via Clerk JWKS — signature, issuer, audience, expiry. Keys from env only (`CLERK_JWKS_URL`, `CLERK_ISSUER`, `CLERK_AUDIENCE`); no hardcoded secrets.
 
 **Provisioning:** Invite-only. Local `users` row pre-created by admin; first Clerk sign-in links `external_auth_id` when verified email matches. No self-service signup. Unverified email, unknown email, identity conflict, or inactive user → denied with audit event.
 

@@ -36,23 +36,28 @@ def get_session() -> Generator[Session, None, None]:
         session.close()
 
 
+def _apply_entity_guc(session: Session, entity_id: uuid.UUID | None) -> None:
+    """Set PostgreSQL RLS variable on the session's current connection."""
+    session.execute(
+        text("SELECT set_config('app.current_entity_id', :entity_id, false)"),
+        {"entity_id": str(entity_id) if entity_id else ""},
+    )
+
+
 @contextmanager
 def entity_context(session: Session, entity_id: uuid.UUID):
     """Set PostgreSQL RLS variable (connection-scoped) and Python context."""
     token = _current_entity_id.set(entity_id)
-    session.execute(
-        text("SELECT set_config('app.current_entity_id', :entity_id, false)"),
-        {"entity_id": str(entity_id)},
-    )
+    _apply_entity_guc(session, entity_id)
     try:
         yield session
     finally:
         _current_entity_id.reset(token)
         try:
-            session.execute(text("SELECT set_config('app.current_entity_id', '', false)"))
+            _apply_entity_guc(session, None)
         except Exception:
             session.rollback()
-            session.execute(text("SELECT set_config('app.current_entity_id', '', false)"))
+            _apply_entity_guc(session, None)
 
 
 @contextmanager

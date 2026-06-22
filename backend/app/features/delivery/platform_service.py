@@ -13,7 +13,12 @@ from app.core.chart_of_accounts.default_chart import DELIVERY_CLEARING_PARENT_CO
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 from app.db.base import utcnow
-from app.db.session import entity_context, get_current_entity_id, require_entity_context
+from app.db.session import (
+    entity_context,
+    get_current_entity_id,
+    require_entity_context,
+    _apply_entity_guc,
+)
 from app.features.delivery.models import OwnedDeliveryPlatform
 from app.features.delivery.platform_schema import (
     DeliveryPlatformCreate,
@@ -24,14 +29,20 @@ from app.features.delivery.settings import DeliveryNotEnabledError, require_deli
 from app.features.entities import service as entity_service
 
 
-@contextmanager
-def _null_context(session: Session):
-    yield session
-
 
 def _with_entity_context(session: Session, entity_id: uuid.UUID):
+    """Ensure Python + PostgreSQL entity context before RLS-scoped queries."""
     if get_current_entity_id() == entity_id:
-        return _null_context(session)
+
+        @contextmanager
+        def _resync():
+            _apply_entity_guc(session, entity_id)
+            try:
+                yield session
+            finally:
+                pass
+
+        return _resync()
     return entity_context(session, entity_id)
 
 

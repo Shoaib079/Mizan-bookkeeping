@@ -13,4 +13,5 @@ out/
 backend/.venv/
 backend/*.egg-info/
 backend/data/
+backups/
 frontend/.next/
