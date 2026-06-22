@@ -118,3 +118,24 @@ class CashFlowRead(BaseModel):
     financing: CashFlowCategoryRead
     by_source: list[CashFlowSourceRow]
     reconciled_to_categories: bool
+
+
+class KdvInputRateRow(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    rate_percent: float
+    base_kurus: int
+    vat_kurus: int
+    invoice_count: int
+
+
+class KdvInputReportRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    entity_id: uuid.UUID
+    from_date: date
+    to_date: date
+    rates: list[KdvInputRateRow]
+    total_base_kurus: int
+    total_vat_kurus: int
+    invoice_count: int

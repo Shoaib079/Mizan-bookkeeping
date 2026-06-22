@@ -13,10 +13,12 @@ from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
 from app.features.reports import cash_flow
 from app.features.reports import financial_statements
+from app.features.reports import kdv_input
 from app.features.reports.schema import (
     BalanceSheetRead,
     CashFlowRead,
     DeliverySalesReportRead,
+    KdvInputReportRead,
     ProfitAndLossRead,
 )
 from app.features.reports.service import InvalidDateRangeError
@@ -81,6 +83,21 @@ def get_cash_flow(
 ) -> CashFlowRead:
     try:
         return cash_flow.get_cash_flow(session, entity_id, from_date, to_date)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidDateRangeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/kdv-input", response_model=KdvInputReportRead)
+def get_kdv_input(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    session: Session = Depends(get_session),
+) -> KdvInputReportRead:
+    try:
+        return kdv_input.get_kdv_input_report(session, entity_id, from_date, to_date)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InvalidDateRangeError as exc:

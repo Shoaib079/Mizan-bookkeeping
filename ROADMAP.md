@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 7 — Dashboard, reports, Excel export, financial statements |
-| **Active slice** | Per-rate KDV report |
-| **Last completed slice** | Cash flow statement |
-| **Last commit/tag** | `v0.40.0-phase7-cash-flow` |
-| **Next up** | Per-rate KDV report (Phase 7 Slice 5) |
+| **Active slice** | Period comparison |
+| **Last completed slice** | Per-rate KDV report |
+| **Last commit/tag** | `v0.41.0-phase7-kdv-input-report` |
+| **Next up** | Period comparison (Phase 7 Slice 6) |
 
 ---
 
@@ -163,7 +163,7 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 | Dashboard | done | `GET .../dashboard?from=&to=` — period sales/expenses/net, payables preview, receivables, TRY position + FX wallets, delivery in-transit, needs-review counts; optional `supplier_id`, `money_account_id`, `expense_account_id` filters |
 | P&L & Balance Sheet (per entity) | done | `GET .../reports/profit-and-loss?from=&to=` — all active revenue/expense accounts, natural sign period activity, totals; `GET .../reports/balance-sheet?as_of=` — asset/liability/equity sections, `unclosed_net_income_kurus` synthetic equity line, accounting equation check; posted only, void reversals excluded |
 | Cash flow statement | done | `GET .../reports/cash-flow?from=&to=` — TRY liquid bank+cash only; opening/closing from `balance_as_of_kurus`; direct method by journal source (operating/financing); transfers + opening_balance excluded from categorization; reconciliation flags |
-| Per-rate KDV report | not started | |
+| Per-rate KDV report | done | `GET .../reports/kdv-input?from=&to=` — purchase/input VAT per rate from posted `invoice_drafts` (`supplier` + `delivery_commission`); aggregate `vat_breakdown`; distinct invoice counts per rate |
 | Period comparison | not started | |
 | Excel export | not started | |
 

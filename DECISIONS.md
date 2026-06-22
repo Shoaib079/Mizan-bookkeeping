@@ -112,6 +112,16 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** FX wallet native-currency flows, indirect method, period comparison, Excel export, UI, owner draw (no source yet).
 
+## 2026-06-22 — Per-rate KDV input report (Phase 7)
+
+**Choice:** Read-only **purchase / input KDV report** per entity — per-rate breakdown (1%/10%/20%/0% etc.) from posted e-Fatura `vat_breakdown` on `invoice_drafts`. **Source of truth:** `invoice_drafts` with `status = posted` only; includes `invoice_kind` `supplier` and `delivery_commission` (both post input VAT to `1500`). Excludes draft, needs_review, confirmed (unposted), duplicate, rejected. Inclusive `from`/`to` on `invoice_date`. Aggregate each draft's `vat_breakdown` entries by `rate_percent` (float key, sorted ascending); per rate: `base_kurus`, `vat_kurus`, `invoice_count` (distinct posted drafts at that rate — one invoice with two lines at same rate counts once).
+
+**API:** `GET /entities/{id}/reports/kdv-input?from=YYYY-MM-DD&to=YYYY-MM-DD`; tag `reports`; `from > to` → 422; missing entity → 404. Tag `v0.41.0-phase7-kdv-input-report`.
+
+**Why:** Decisions §11 — capture and show per-rate purchase KDV; input VAT only (not tax-authority payments); ready for future VAT return module.
+
+**Not in slice:** Output VAT, VAT declaration, Excel export, UI, period comparison.
+
 ## 2026-06-22 — Delivery platform reports (Phase 6 Slice 2)
 
 **Choice:** `delivery_reports` table (entity RLS, unique `entity_id` + `file_fingerprint`, partial unique on posted `entity_id` + `delivery_platform_id` + `report_date`). Manual JSON intake stores gross/commission/net kuruş; math check `gross - commission = net` — mismatch → `needs_review` (post blocked until corrected). `post_delivery_report()` posts **Dr** platform clearing GL / **Cr** `4000` Sales Revenue for **gross only** — commission stored on report row for reconciliation but **not** posted yet (deferred to commission e-Fatura slice). Platforms are **user-managed** (`delivery_platforms` + sub-accounts under `1450`); legacy fixed codes migrated in `032`. `delivery_settlements` + `post_delivery_settlement()` **Dr** bank / **Cr** platform clearing for net payout. Entity setting `delivery_enabled` guards intake. Bank statement classify `delivery_settlement` (inflow only, `delivery_platform_id` required).

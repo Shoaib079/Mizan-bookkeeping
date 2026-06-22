@@ -45,10 +45,11 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_dashboard.py` | Entity dashboard — period sales by source, expenses, net result, payables preview ordering + supplier filter, receivables, delivery in-transit clearing, needs-review counts, TRY position vs FX separate, optional expense/money account filters, `from>to` → 422, API E2E, cross-entity RLS | pass |
 | `backend/tests/test_financial_statements.py` | P&L & Balance Sheet — revenue/expense/net from card/cash/delivery/expense postings, date range exclusion, voided entry excluded, opening-balance as-of balances, unclosed net income balances accounting equation, `from>to` → 422, API E2E, cross-entity RLS | pass |
 | `backend/tests/test_cash_flow.py` | Cash flow statement — POS settlement inflow + supplier payment outflow, transfer net-zero exclusion, expense cash outflow, date range exclusion, `from>to` → 422, API E2E, cross-entity RLS | pass |
+| `backend/tests/test_kdv_input_report.py` | Per-rate KDV input report — posted supplier + delivery commission `vat_breakdown` aggregation, date range + unposted exclusion, multi-rate invoice count, `from>to` → 422, API E2E, cross-entity RLS | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
-**Count:** 354 pytest (last run 2026-06-22).
+**Count:** 363 pytest (last run 2026-06-22).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 
