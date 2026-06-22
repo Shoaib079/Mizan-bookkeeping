@@ -9,11 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.auth.deps import (
-    X_USER_ID_HEADER,
     get_current_user,
     member_read_guard,
     operations_write_guard,
     require_authenticated_user,
+    resolve_current_user,
 )
 from app.db.session import get_session
 from app.features.entities import service
@@ -39,10 +39,10 @@ def create_entity(
 @router.get("", response_model=list[EntityRead])
 def list_entities(
     session: Session = Depends(get_session),
-    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+    authorization: str | None = Header(None),
 ) -> list[EntityRead]:
     if settings.auth_enforcement:
-        user = get_current_user(session=session, x_user_id=x_user_id)
+        user = resolve_current_user(session, authorization)
         return service.list_entities_for_user(session, user.id)
     return service.list_entities(session)
 

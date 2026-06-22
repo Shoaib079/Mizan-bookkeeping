@@ -10,6 +10,12 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import settings
+
+# Test suite defaults — must be set before importing app (launch validation).
+settings.auth_enforcement = False
+settings.clerk_test_mode = True
+settings.app_env = "test"
+
 from app.db.base import Base
 from app.db.bootstrap import ensure_test_database, init_database
 from app.db.session import get_session
@@ -50,7 +56,7 @@ def db_session(test_engine) -> Session:
             "staff_ledger_entries, employees, partner_ledger_entries, partners, "
             "cash_movements, cash_drawer_sessions, tip_payouts, tip_accruals, "
             "expense_entries, expense_item_aliases, expense_items, "
-            "entity_memberships, users, "
+            "entity_memberships, users, auth_audit_events, "
             "money_accounts, accounts, "
             "invoice_drafts, supplier_ledger_entries, suppliers, entity_settings, entities CASCADE"
         )

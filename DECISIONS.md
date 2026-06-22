@@ -2,6 +2,20 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-22 — Clerk launch readiness (Phase 8 Slice 4)
+
+**Choice:** Replace `X-User-Id` transport with verified Clerk session JWT (`Authorization: Bearer`). Verification via Clerk JWKS — signature, issuer, audience (optional), expiry. Keys from env only (`CLERK_JWKS_URL`, `CLERK_ISSUER`, optional `CLERK_AUDIENCE`); no hardcoded secrets.
+
+**Provisioning:** Invite-only. Local `users` row pre-created by admin; first Clerk sign-in links `external_auth_id` when verified email matches. No self-service signup. Unverified email, unknown email, identity conflict, or inactive user → denied with audit event.
+
+**Enforcement:** `AUTH_ENFORCEMENT` default `true`. Production boot (`APP_ENV=production`) refuses start if enforcement off or Clerk keys missing when not in test mode. Existing permission guards unchanged — only identity resolution changed.
+
+**Test mode:** `CLERK_TEST_MODE=true` accepts deterministic tokens `test:{clerk_id}:{email}` for pytest (no live Clerk).
+
+**Schema:** `users.external_auth_id` (unique, nullable); `auth_audit_events` for login success/denial/token invalid. Alembic `037`.
+
+**Not in slice:** Clerk frontend UI, webhooks, orgs, OAuth provider config (Clerk Dashboard), password flows.
+
 ## 2026-06-22 — Entity roles & permissions (Phase 8 Slice 1)
 
 **Choice:** Per-entity roles via `entity_memberships` (FK to global `users` table). Four roles: `owner`, `partner`, `cashier`, `partner_view_only` — matching Decisions §18. Extensible `Permission` string enum with `ROLE_PERMISSIONS` map. v1 identity transport: `X-User-Id` header (UUID) — no JWT/login/password/OAuth this slice.

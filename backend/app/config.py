@@ -1,7 +1,7 @@
 """Application settings — DATABASE_URL and environment (Phase 0).
 
-Set ``AUTH_ENFORCEMENT=true`` in production to require ``X-User-Id`` and
-enforce per-entity permissions on guarded routes.
+Production requires ``AUTH_ENFORCEMENT=true`` (default) and Clerk JWT verification.
+Tests/dev set ``AUTH_ENFORCEMENT=false`` and ``CLERK_TEST_MODE=true``.
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -10,11 +10,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
+    app_env: str = "development"
     database_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan"
     test_database_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan_test"
     database_admin_url: str = "postgresql+psycopg://postgres@localhost:5432/postgres"
     upload_dir: str = "data/uploads"
-    auth_enforcement: bool = False
+    auth_enforcement: bool = True
+
+    clerk_secret_key: str | None = None
+    clerk_publishable_key: str | None = None
+    clerk_jwks_url: str | None = None
+    clerk_issuer: str | None = None
+    clerk_audience: str | None = None
+    clerk_test_mode: bool = False
 
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/0"
@@ -32,6 +40,10 @@ class Settings(BaseSettings):
     backup_s3_region: str | None = None
     backup_s3_access_key_id: str | None = None
     backup_s3_secret_access_key: str | None = None
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.lower() == "production"
 
 
 settings = Settings()

@@ -1,4 +1,4 @@
-"""FastAPI auth dependencies — X-User-Id v1 transport (Phase 8)."""
+"""FastAPI auth dependencies — Clerk session JWT (Phase 8 launch)."""
 
 from __future__ import annotations
 
@@ -9,34 +9,82 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
+from app.core.auth.clerk import ClerkTokenError, verify_clerk_token
 from app.core.auth.permissions import Permission, user_has_permission
 from app.db.session import entity_context, get_session
+from app.features.auth import service as auth_service
+from app.features.auth.audit import AuthAuditAction, record_auth_event
 from app.features.auth.models import EntityMembership, User
+from app.features.auth.service import AuthIdentityConflictError, UserNotProvisionedError
 
-X_USER_ID_HEADER = "X-User-Id"
+
+def _extract_bearer_token(authorization: str | None) -> str:
+    if authorization is None or not authorization.strip():
+        raise HTTPException(status_code=401, detail="Authorization Bearer token required")
+    parts = authorization.strip().split(None, 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Authorization Bearer token required")
+    return parts[1]
 
 
-def _parse_user_id(raw: str | None) -> uuid.UUID:
-    if raw is None or not raw.strip():
-        raise HTTPException(status_code=401, detail="X-User-Id header required")
+def resolve_current_user(session: Session, authorization: str | None) -> User:
+    """Resolve caller from verified Clerk session token."""
+    token = _extract_bearer_token(authorization)
     try:
-        return uuid.UUID(raw.strip())
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail="Invalid X-User-Id header") from exc
+        claims = verify_clerk_token(token)
+    except ClerkTokenError as exc:
+        record_auth_event(
+            session,
+            AuthAuditAction.TOKEN_INVALID,
+            detail=str(exc),
+        )
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    try:
+        user = auth_service.resolve_user_from_clerk(
+            session,
+            clerk_user_id=claims.clerk_user_id,
+            email=claims.email,
+            email_verified=claims.email_verified,
+        )
+    except UserNotProvisionedError as exc:
+        record_auth_event(
+            session,
+            AuthAuditAction.LOGIN_DENIED,
+            clerk_user_id=claims.clerk_user_id,
+            email=claims.email,
+            detail=str(exc),
+        )
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except AuthIdentityConflictError as exc:
+        record_auth_event(
+            session,
+            AuthAuditAction.LOGIN_DENIED,
+            clerk_user_id=claims.clerk_user_id,
+            email=claims.email,
+            detail=str(exc),
+        )
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    if not user.is_active:
+        record_auth_event(
+            session,
+            AuthAuditAction.LOGIN_DENIED,
+            user_id=user.id,
+            clerk_user_id=claims.clerk_user_id,
+            email=claims.email,
+            detail="User is inactive",
+        )
+        raise HTTPException(status_code=403, detail="User is inactive")
+
+    return user
 
 
 def get_current_user(
     session: Session = Depends(get_session),
-    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+    authorization: str | None = Header(None),
 ) -> User:
-    """Resolve the caller from X-User-Id. Raises 401 when enforcement is on."""
-    user_id = _parse_user_id(x_user_id)
-    user = session.get(User, user_id)
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="User is inactive")
-    return user
+    return resolve_current_user(session, authorization)
 
 
 def require_entity_membership(
@@ -54,6 +102,13 @@ def require_entity_membership(
             )
         )
     if membership is None:
+        record_auth_event(
+            session,
+            AuthAuditAction.PERMISSION_DENIED,
+            user_id=user.id,
+            entity_id=entity_id,
+            detail="Not a member of this entity",
+        )
         raise HTTPException(status_code=403, detail="Not a member of this entity")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="User is inactive")
@@ -70,6 +125,13 @@ def require_permission(
     if not user_has_permission(
         membership.role, permission, is_active=membership.user.is_active
     ):
+        record_auth_event(
+            session,
+            AuthAuditAction.PERMISSION_DENIED,
+            user_id=user.id,
+            entity_id=entity_id,
+            detail=f"Permission denied: {permission.value}",
+        )
         raise HTTPException(
             status_code=403,
             detail=f"Permission denied: {permission.value}",
@@ -80,69 +142,63 @@ def require_permission(
 def financial_reports_guard(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
-    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+    authorization: str | None = Header(None),
 ) -> None:
-    """Block cashier from P&L, balance sheet, cash flow, period comparison when enforced."""
     if not settings.auth_enforcement:
         return
-    user = get_current_user(session=session, x_user_id=x_user_id)
+    user = resolve_current_user(session, authorization)
     require_permission(session, entity_id, user, Permission.FINANCIAL_REPORTS_READ)
 
 
 def reports_read_guard(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
-    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+    authorization: str | None = Header(None),
 ) -> None:
-    """Require entity membership with reports:read (dashboard, KDV, delivery sales)."""
     if not settings.auth_enforcement:
         return
-    user = get_current_user(session=session, x_user_id=x_user_id)
+    user = resolve_current_user(session, authorization)
     require_permission(session, entity_id, user, Permission.REPORTS_READ)
 
 
 def operations_write_guard(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
-    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+    authorization: str | None = Header(None),
 ) -> None:
-    """Require entity membership with operations:write for mutations."""
     if not settings.auth_enforcement:
         return
-    user = get_current_user(session=session, x_user_id=x_user_id)
+    user = resolve_current_user(session, authorization)
     require_permission(session, entity_id, user, Permission.OPERATIONS_WRITE)
 
 
 def member_read_guard(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
-    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+    authorization: str | None = Header(None),
 ) -> None:
-    """Require entity membership (any role) for entity-scoped reads."""
     if not settings.auth_enforcement:
         return
-    user = get_current_user(session=session, x_user_id=x_user_id)
+    user = resolve_current_user(session, authorization)
     require_entity_membership(session, entity_id, user)
 
 
 def require_authenticated_user(
     session: Session = Depends(get_session),
-    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+    authorization: str | None = Header(None),
 ) -> User | None:
-    """Require a valid user when auth enforcement is enabled."""
     if not settings.auth_enforcement:
         return None
-    return get_current_user(session=session, x_user_id=x_user_id)
+    return resolve_current_user(session, authorization)
 
 
 def require_admin_members(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
-    x_user_id: str | None = Header(None, alias=X_USER_ID_HEADER),
+    authorization: str | None = Header(None),
 ) -> User | None:
-    """Guard membership admin routes when auth enforcement is enabled."""
     if not settings.auth_enforcement:
         return None
-    user = get_current_user(session=session, x_user_id=x_user_id)
+    user = resolve_current_user(session, authorization)
     require_permission(session, entity_id, user, Permission.ADMIN_MANAGE_MEMBERS)
     return user

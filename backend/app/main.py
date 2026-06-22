@@ -43,6 +43,9 @@ from app.features.reports.api import router as reports_router
 from app.features.dashboard.api import router as dashboard_router
 from app.features.auth.api import members_router as auth_members_router
 from app.features.auth.api import users_router as auth_users_router
+from app.launch import validate_launch_settings
+
+validate_launch_settings()
 
 app = FastAPI(
     title="Mizan API",

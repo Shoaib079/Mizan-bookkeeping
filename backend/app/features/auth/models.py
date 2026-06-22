@@ -18,10 +18,11 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    external_auth_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
-    memberships: Mapped[list[EntityMembership]] = relationship(back_populates="user")
+    memberships: Mapped[list["EntityMembership"]] = relationship(back_populates="user")
 
 
 class EntityMembership(EntityScopedMixin, Base):
@@ -45,3 +46,22 @@ class EntityMembership(EntityScopedMixin, Base):
     @property
     def entity_role(self) -> EntityRole:
         return EntityRole(self.role)
+
+
+class AuthAuditEvent(Base):
+    """Append-only auth/security audit trail."""
+
+    __tablename__ = "auth_audit_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("entities.id", ondelete="SET NULL"), nullable=True
+    )
+    clerk_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    detail: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)

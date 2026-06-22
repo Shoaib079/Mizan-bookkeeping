@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.session import entity_context
+from app.features.auth.audit import AuthAuditAction, record_auth_event
 from app.features.auth.models import EntityMembership, User
 from app.features.auth.schema import MembershipCreate, MembershipUpdate, UserCreate
 from app.features.entities import service as entity_service
@@ -20,6 +21,55 @@ class DuplicateUserError(Exception):
 
 class DuplicateMembershipError(Exception):
     """Raised when user is already a member of the entity."""
+
+
+class UserNotProvisionedError(Exception):
+    """Clerk identity has no matching invited local user."""
+
+
+class AuthIdentityConflictError(Exception):
+    """Clerk identity does not match the linked local user."""
+
+
+def resolve_user_from_clerk(
+    session: Session, *, clerk_user_id: str, email: str, email_verified: bool
+) -> User:
+    """Invite-only: link Clerk id to pre-provisioned local user by verified email."""
+    if not email_verified:
+        raise UserNotProvisionedError("Email address is not verified")
+
+    normalized_email = email.strip().lower()
+    by_clerk = session.scalar(
+        select(User).where(User.external_auth_id == clerk_user_id)
+    )
+    if by_clerk is not None:
+        if by_clerk.email != normalized_email:
+            raise AuthIdentityConflictError("Clerk identity email mismatch")
+        return by_clerk
+
+    by_email = session.scalar(select(User).where(User.email == normalized_email))
+    if by_email is None:
+        raise UserNotProvisionedError(
+            "No invited account for this email. Contact your administrator."
+        )
+
+    if by_email.external_auth_id and by_email.external_auth_id != clerk_user_id:
+        raise AuthIdentityConflictError("Email already linked to a different sign-in identity")
+
+    if by_email.external_auth_id != clerk_user_id:
+        by_email.external_auth_id = clerk_user_id
+        session.commit()
+        session.refresh(by_email)
+        record_auth_event(
+            session,
+            AuthAuditAction.LOGIN_SUCCESS,
+            user_id=by_email.id,
+            clerk_user_id=clerk_user_id,
+            email=normalized_email,
+            detail="First Clerk sign-in linked to invited account",
+        )
+
+    return by_email
 
 
 def create_user(session: Session, payload: UserCreate) -> User:

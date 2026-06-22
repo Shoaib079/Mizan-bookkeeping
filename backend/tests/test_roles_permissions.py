@@ -16,11 +16,13 @@ from app.db.session import entity_context
 from app.features.auth.models import EntityMembership, User
 from app.features.auth import service as auth_service
 from app.features.auth.schema import MembershipCreate, UserCreate
+from tests.auth_helpers import auth_headers
 
 
 @pytest.fixture
 def auth_enforced(monkeypatch):
     monkeypatch.setattr(settings, "auth_enforcement", True)
+    monkeypatch.setattr(settings, "clerk_test_mode", True)
     yield
     monkeypatch.setattr(settings, "auth_enforcement", False)
 
@@ -86,7 +88,7 @@ def test_owner_can_get_pl(
     response = client.get(
         f"/entities/{setup['entity_id']}/reports/profit-and-loss",
         params={"from": "2026-01-01", "to": "2026-01-31"},
-        headers={"X-User-Id": str(owner.id)},
+        headers=auth_headers(owner),
     )
     assert response.status_code == 200
 
@@ -104,7 +106,7 @@ def test_cashier_blocked_from_pl(
     response = client.get(
         f"/entities/{setup['entity_id']}/reports/profit-and-loss",
         params={"from": "2026-01-01", "to": "2026-01-31"},
-        headers={"X-User-Id": str(cashier.id)},
+        headers=auth_headers(cashier),
     )
     assert response.status_code == 403
     assert "financial_reports:read" in response.json()["detail"]
@@ -125,12 +127,12 @@ def test_partner_view_only_can_get_pl(
     response = client.get(
         f"/entities/{setup['entity_id']}/reports/profit-and-loss",
         params={"from": "2026-01-01", "to": "2026-01-31"},
-        headers={"X-User-Id": str(viewer.id)},
+        headers=auth_headers(viewer),
     )
     assert response.status_code == 200
 
 
-def test_missing_user_header_returns_401(
+def test_missing_bearer_token_returns_401(
     auth_enforced,
     client: TestClient,
     roles_entity_setup,
@@ -155,7 +157,7 @@ def test_non_member_returns_403(
     response = client.get(
         f"/entities/{setup['entity_id']}/reports/profit-and-loss",
         params={"from": "2026-01-01", "to": "2026-01-31"},
-        headers={"X-User-Id": str(outsider.id)},
+        headers=auth_headers(outsider),
     )
     assert response.status_code == 403
     assert "member" in response.json()["detail"].lower()
@@ -199,7 +201,7 @@ def test_membership_crud_api(
     add_resp = client.post(
         f"/entities/{restaurant_a.id}/members",
         json={"user_id": str(member_user.id), "role": "cashier"},
-        headers={"X-User-Id": str(admin.id)},
+        headers=auth_headers(admin),
     )
     assert add_resp.status_code == 201
     membership_id = add_resp.json()["id"]
@@ -207,7 +209,7 @@ def test_membership_crud_api(
 
     list_resp = client.get(
         f"/entities/{restaurant_a.id}/members",
-        headers={"X-User-Id": str(admin.id)},
+        headers=auth_headers(admin),
     )
     assert list_resp.status_code == 200
     assert len(list_resp.json()) == 2
@@ -215,7 +217,7 @@ def test_membership_crud_api(
     patch_resp = client.patch(
         f"/entities/{restaurant_a.id}/members/{membership_id}",
         json={"role": "partner"},
-        headers={"X-User-Id": str(admin.id)},
+        headers=auth_headers(admin),
     )
     assert patch_resp.status_code == 200
     assert patch_resp.json()["role"] == "partner"
@@ -223,7 +225,7 @@ def test_membership_crud_api(
     deactivate_resp = client.patch(
         f"/entities/{restaurant_a.id}/members/{membership_id}",
         json={"is_active": False},
-        headers={"X-User-Id": str(admin.id)},
+        headers=auth_headers(admin),
     )
     assert deactivate_resp.status_code == 200
     assert deactivate_resp.json()["user"]["is_active"] is False
@@ -242,7 +244,7 @@ def test_cashier_can_access_dashboard_when_enforced(
     response = client.get(
         f"/entities/{setup['entity_id']}/dashboard",
         params={"from": "2026-01-01", "to": "2026-01-31"},
-        headers={"X-User-Id": str(cashier.id)},
+        headers=auth_headers(cashier),
     )
     assert response.status_code == 200
 
@@ -260,7 +262,7 @@ def test_cashier_blocked_from_balance_sheet_export(
     response = client.get(
         f"/entities/{setup['entity_id']}/reports/balance-sheet/export",
         params={"as_of": "2026-01-31"},
-        headers={"X-User-Id": str(cashier.id)},
+        headers=auth_headers(cashier),
     )
     assert response.status_code == 403
 
@@ -280,7 +282,7 @@ def test_view_only_blocked_from_operations_write(
     response = client.post(
         f"/entities/{setup['entity_id']}/suppliers",
         json={"name": "Blocked Supplier", "vkn": "1234567890"},
-        headers={"X-User-Id": str(viewer.id)},
+        headers=auth_headers(viewer),
     )
     assert response.status_code == 403
     assert "operations:write" in response.json()["detail"]
@@ -301,7 +303,7 @@ def test_cross_entity_write_blocked(
     response = client.post(
         f"/entities/{restaurant_b.id}/suppliers",
         json={"name": "Cross Entity Supplier", "vkn": "9876543210"},
-        headers={"X-User-Id": str(owner.id)},
+        headers=auth_headers(owner),
     )
     assert response.status_code == 403
     assert "member" in response.json()["detail"].lower()
@@ -319,7 +321,7 @@ def test_non_member_blocked_from_delivery_sales(
     response = client.get(
         f"/entities/{setup['entity_id']}/reports/delivery-sales",
         params={"from": "2026-01-01", "to": "2026-01-31"},
-        headers={"X-User-Id": str(outsider.id)},
+        headers=auth_headers(outsider),
     )
     assert response.status_code == 403
     assert "member" in response.json()["detail"].lower()
@@ -337,7 +339,7 @@ def test_non_member_blocked_from_supplier_ledger(
     create_resp = client.post(
         f"/entities/{setup['entity_id']}/suppliers",
         json={"name": "Ledger Supplier", "vkn": "1234567890"},
-        headers={"X-User-Id": str(owner.id)},
+        headers=auth_headers(owner),
     )
     assert create_resp.status_code == 201
     supplier_id = create_resp.json()["id"]
@@ -345,7 +347,7 @@ def test_non_member_blocked_from_supplier_ledger(
     outsider = _create_user(db_session, "outsider-ledger@example.com")
     response = client.get(
         f"/entities/{setup['entity_id']}/suppliers/{supplier_id}/ledger",
-        headers={"X-User-Id": str(outsider.id)},
+        headers=auth_headers(outsider),
     )
     assert response.status_code == 403
     assert "member" in response.json()["detail"].lower()
@@ -362,7 +364,7 @@ def test_non_member_blocked_from_bank_list(
 
     response = client.get(
         f"/entities/{setup['entity_id']}/banking/accounts",
-        headers={"X-User-Id": str(outsider.id)},
+        headers=auth_headers(outsider),
     )
     assert response.status_code == 403
     assert "member" in response.json()["detail"].lower()
@@ -379,7 +381,7 @@ def test_non_member_blocked_from_expenses(
 
     response = client.get(
         f"/entities/{setup['entity_id']}/expenses",
-        headers={"X-User-Id": str(outsider.id)},
+        headers=auth_headers(outsider),
     )
     assert response.status_code == 403
     assert "member" in response.json()["detail"].lower()
@@ -399,7 +401,7 @@ def test_cross_entity_read_blocked(
 
     response = client.get(
         f"/entities/{restaurant_b.id}/expenses",
-        headers={"X-User-Id": str(owner.id)},
+        headers=auth_headers(owner),
     )
     assert response.status_code == 403
     assert "member" in response.json()["detail"].lower()
@@ -416,7 +418,7 @@ def test_list_entities_returns_only_caller_memberships(
     member = _create_user(db_session, "member-list@example.com")
     _add_member(db_session, setup["entity_id"], member.id, EntityRole.CASHIER)
 
-    response = client.get("/entities", headers={"X-User-Id": str(member.id)})
+    response = client.get("/entities", headers=auth_headers(member))
     assert response.status_code == 200
     entity_ids = {row["id"] for row in response.json()}
     assert str(setup["entity_id"]) in entity_ids
