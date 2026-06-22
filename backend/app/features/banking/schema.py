@@ -144,9 +144,9 @@ class ClassifyStatementLineRequest(BaseModel):
     credit_card_money_account_id: uuid.UUID | None = None
     actor_id: uuid.UUID | None = None
     customer_id: uuid.UUID | None = None
-    delivery_platform: str | None = Field(
+    delivery_platform_id: uuid.UUID | None = Field(
         default=None,
-        description="Required for delivery_settlement — getir, yemeksepeti, or trendyol",
+        description="Required for delivery_settlement — entity delivery platform id",
     )
     confirm_supplier_ledger_entry_id: uuid.UUID | None = None
     confirm_account_transfer_id: uuid.UUID | None = None

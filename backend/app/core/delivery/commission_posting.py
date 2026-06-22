@@ -11,12 +11,12 @@ from sqlalchemy.orm import Session
 from app.core.chart_of_accounts.default_chart import INPUT_VAT_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
-from app.core.delivery.platforms import DeliveryPlatform, clearing_code_for_platform
 from app.core.invoices.posting import DraftPostError, build_invoice_posting_lines
 from app.core.ledger.models import JournalEntry, JournalEntrySource
 from app.core.ledger.posting import InvalidAccountError, PostingLine, prepare_journal_entry
 from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
+from app.features.delivery import platform_service
 from app.features.delivery.models import DeliveryReport, DeliveryReportStatus
 from app.features.entities import service as entity_service
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
@@ -131,13 +131,12 @@ def post_delivery_commission_draft(
 
         _validate_expense_account(session, entity_id, expense_account_id)
 
-        platform = DeliveryPlatform(report.platform)
-        clearing_code = clearing_code_for_platform(platform)
-        clearing_account = session.scalar(
-            select(Account).where(Account.code == clearing_code)
+        platform = platform_service.get_delivery_platform_row(
+            session, entity_id, report.delivery_platform_id
         )
+        clearing_account = session.get(Account, platform.gl_account_id)
         if clearing_account is None:
-            raise InvalidAccountError(f"clearing account {clearing_code} not found")
+            raise InvalidAccountError("platform clearing account not found")
 
         input_vat_account = session.scalar(
             select(Account).where(Account.code == INPUT_VAT_CODE)

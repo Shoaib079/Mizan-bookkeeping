@@ -16,9 +16,19 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Scheduling:** Later enhancement — after core build (Phase 6–8 + sign-off). Not in current slice order.
 
+## 2026-06-22 — User-managed delivery platforms (Phase 6 refactor)
+
+**Choice:** Replace fixed `DeliveryPlatform` enum and hardcoded clearing codes (`1410`/`1420`/`1430`) with per-entity **`delivery_platforms`** table. Owner can **add**, **rename**, and **deactivate** platforms when `delivery_enabled`. Each platform row owns a **clearing GL sub-account** auto-created under parent **`1450` Delivery Platform Clearing** (same sub-account pattern as bank/card `money_accounts`). `delivery_reports`, `delivery_settlements`, bank classify `delivery_settlement`, commission posting, and clearing reconciliation all reference **`delivery_platform_id`** — iterate the entity's platform list, not a global enum. Remove comma-separated `delivery_platforms` entity setting (module toggle `delivery_enabled` only). Migration `032` seeds platforms from legacy clearing accounts and reparents them under `1450`.
+
+**Why:** Decisions §9 — per-restaurant platform list varies; fixed enum does not scale; clearing sub-accounts mirror existing money-account pattern.
+
+**API:** `POST/GET/PATCH /entities/{id}/delivery/platforms`; reports/settlements bodies use `delivery_platform_id`; statement classify uses `delivery_platform_id`.
+
+**Prerequisite for:** commission e-Fatura clearing credit and Phase 7 delivery sales report (both keyed by managed platforms).
+
 ## 2026-06-22 — Delivery commission e-Faturas (Phase 6 Slice 3)
 
-**Choice:** Reuse existing e-Fatura intake (`invoice_drafts` / UBL-TR pipeline) for platform commission invoices. Platform remains a **vendor for document intake** (VKN, e-Fatura metadata) but commission posting does **not** use the supplier payables path. On post: **Dr** commission expense `5500` (net) + **Dr** Input VAT `1500` (per `vat_breakdown`) / **Cr** platform clearing account (`1410` Getir / `1420` Yemeksepeti / `1430` Trendyol) for commission **gross** (net + VAT). **Do not** credit `2000` Accounts Payable — commission was already deducted from the bank payout (`post_delivery_settlement()` credits clearing by net).
+**Choice:** Reuse existing e-Fatura intake (`invoice_drafts` / UBL-TR pipeline) for platform commission invoices. Platform remains a **vendor for document intake** (VKN, e-Fatura metadata) but commission posting does **not** use the supplier payables path. On post: **Dr** commission expense `5500` (net) + **Dr** Input VAT `1500` (per `vat_breakdown`) / **Cr** linked platform's clearing GL sub-account for commission **gross** (net + VAT). **Do not** credit `2000` Accounts Payable — commission was already deducted from the bank payout (`post_delivery_settlement()` credits clearing by net).
 
 **Clearing lifecycle (per platform):** (1) report → Dr clearing / Cr `4000` gross; (2) settlement → Dr bank / Cr clearing net; (3) commission e-Fatura → Dr commission expense + Dr input VAT / Cr clearing commission gross → clearing balance **zero**.
 
@@ -36,9 +46,19 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** New OCR beyond existing e-Fatura adapters, tips, general expenses, UI, locked-period enforcement.
 
+## 2026-06-22 — Delivery sales report (Phase 7, planned)
+
+**Choice:** Read-only **Delivery sales report** per entity — gross delivery sales **per configured platform** (from `delivery_platforms`) plus a **combined total**, filterable by **`from` / `to` date range** (inclusive on `delivery_reports.report_date`). **Source of truth:** `delivery_reports` with `status = posted` only — aggregate `gross_kurus` grouped by `delivery_platform_id`. Exclude draft, `needs_review`, and rejected rows.
+
+**API (planned):** `GET /entities/{id}/reports/delivery-sales?from=YYYY-MM-DD&to=YYYY-MM-DD` — one row per entity platform (active + inactive with history) plus `total_gross_kurus`; `delivery_enabled` guard.
+
+**Why:** Decisions §9 / §10 — period view of delivery channel sales for dashboard and owner review; portal report intake remains authoritative.
+
+**Not in slice:** Commission/net breakdown, Excel export (separate Phase 7 slice), UI, multi-entity roll-up.
+
 ## 2026-06-22 — Delivery platform reports (Phase 6 Slice 2)
 
-**Choice:** `delivery_reports` table (entity RLS, unique `entity_id` + `file_fingerprint`, partial unique on posted `entity_id` + `platform` + `report_date`). Manual JSON intake stores gross/commission/net kuruş; math check `gross - commission = net` — mismatch → `needs_review` (post blocked until corrected). `post_delivery_report()` posts **Dr** platform clearing / **Cr** `4000` Sales Revenue for **gross only** — commission stored on report row for reconciliation but **not** posted yet (deferred to commission e-Fatura slice: Dr commission expense + Dr `1500` / Cr platform clearing). Per-platform clearing accounts `1410` Getir, `1420` Yemeksepeti, `1430` Trendyol (asset/debit, seeded in default chart + idempotent migration for existing entities). `delivery_settlements` + `post_delivery_settlement()` **Dr** bank / **Cr** platform clearing for net payout; remaining clearing balance = commission in transit until commission e-Fatura credits clearing. Entity settings `delivery_enabled` + comma-separated `delivery_platforms` guard all intake/settlement. Bank statement classify `delivery_settlement` (inflow only, `delivery_platform` required).
+**Choice:** `delivery_reports` table (entity RLS, unique `entity_id` + `file_fingerprint`, partial unique on posted `entity_id` + `delivery_platform_id` + `report_date`). Manual JSON intake stores gross/commission/net kuruş; math check `gross - commission = net` — mismatch → `needs_review` (post blocked until corrected). `post_delivery_report()` posts **Dr** platform clearing GL / **Cr** `4000` Sales Revenue for **gross only** — commission stored on report row for reconciliation but **not** posted yet (deferred to commission e-Fatura slice). Platforms are **user-managed** (`delivery_platforms` + sub-accounts under `1450`); legacy fixed codes migrated in `032`. `delivery_settlements` + `post_delivery_settlement()` **Dr** bank / **Cr** platform clearing for net payout. Entity setting `delivery_enabled` guards intake. Bank statement classify `delivery_settlement` (inflow only, `delivery_platform_id` required).
 
 **Why:** Decisions §9 — per-platform portal reports are authoritative; clearing pattern mirrors card sales; irregular payout schedules reconciled via clearing balance.
 

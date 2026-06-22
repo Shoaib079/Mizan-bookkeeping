@@ -9,84 +9,44 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from app.core.chart_of_accounts.default_chart import (
-    GETIR_CLEARING_CODE,
-    SALES_REVENUE_CODE,
-)
+from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.delivery import posting as delivery_posting
-from app.core.delivery.platforms import DeliveryPlatform
 from app.core.ledger.models import JournalEntryLine, JournalEntrySource
 from app.db.session import entity_context
 from app.features.banking import service as banking_service
-from app.features.banking import statements as statement_service
-from app.features.banking.models import MoneyAccountKind
-from app.features.banking.schema import MoneyAccountCreate
-from app.features.banking.statement_models import StatementLineClassification
-from app.features.delivery.models import DeliveryReport, DeliveryReportStatus
-from app.features.delivery.schema import DeliveryReportCreate, DeliverySettlementCreate
-from app.features.delivery import service as delivery_service
-from app.features.delivery.settings import (
-    DELIVERY_ENABLED_KEY,
-    DELIVERY_PLATFORMS_KEY,
+from app.features.delivery.models import DeliveryReportStatus
+from app.features.delivery.schema import (
+    DeliveryReportCreate,
+    DeliveryReportPostRequest,
+    DeliverySettlementCreate,
 )
-from app.features.entities import service as entity_service
-from app.features.entities.schema import EntitySettingCreate
-
-ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
-
-
-def _enable_delivery(db_session, entity_id, platforms: str = "getir,yemeksepeti,trendyol"):
-    entity_service.create_entity_setting(
-        db_session,
-        entity_id,
-        EntitySettingCreate(key=DELIVERY_ENABLED_KEY, value="true"),
-    )
-    entity_service.create_entity_setting(
-        db_session,
-        entity_id,
-        EntitySettingCreate(key=DELIVERY_PLATFORMS_KEY, value=platforms),
-    )
-
-
-def _bank_account(db_session, entity_id):
-    return banking_service.create_money_account(
-        db_session,
-        entity_id,
-        MoneyAccountCreate(
-            account_kind=MoneyAccountKind.BANK,
-            name="Garanti TRY",
-            bank_name="Garanti BBVA",
-        ),
-    )
+from app.features.delivery import service as delivery_service
+from app.features.delivery.settings import DeliveryNotEnabledError
+from tests.delivery_helpers import ACTOR_ID, delivery_setup as build_delivery_setup
 
 
 @pytest.fixture
 def delivery_setup(db_session, restaurant_a):
-    seed_default_chart(db_session, restaurant_a.id)
-    _enable_delivery(db_session, restaurant_a.id)
-    bank = _bank_account(db_session, restaurant_a.id)
+    setup = build_delivery_setup(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):
-        accounts = {a.code: a.id for a in db_session.scalars(select(Account))}
-    return {
-        "entity_id": restaurant_a.id,
-        "bank": bank,
-        "accounts": accounts,
-    }
+        setup["accounts"] = {a.code: a.id for a in db_session.scalars(select(Account))}
+    setup["getir"] = setup["platforms"]["Getir"]
+    return setup
 
 
 def test_delivery_report_posts_dr_clearing_cr_revenue(db_session, delivery_setup) -> None:
     entity_id = delivery_setup["entity_id"]
-    clearing_id = delivery_setup["accounts"][GETIR_CLEARING_CODE]
+    clearing_id = delivery_setup["getir"].gl_account_id
     revenue_id = delivery_setup["accounts"][SALES_REVENUE_CODE]
 
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
-            platform=DeliveryPlatform.GETIR,
+            delivery_platform_id=delivery_setup["getir"].id,
             report_date=date(2026, 3, 1),
             gross_kurus=500_000,
             commission_kurus=75_000,
@@ -96,8 +56,6 @@ def test_delivery_report_posts_dr_clearing_cr_revenue(db_session, delivery_setup
         ),
     )
     assert created.status == DeliveryReportStatus.DRAFT.value
-
-    from app.features.delivery.schema import DeliveryReportPostRequest
 
     posted = delivery_service.post_delivery_report_intake(
         db_session,
@@ -129,7 +87,7 @@ def test_math_mismatch_creates_needs_review(db_session, delivery_setup) -> None:
         db_session,
         entity_id,
         DeliveryReportCreate(
-            platform=DeliveryPlatform.GETIR,
+            delivery_platform_id=delivery_setup["getir"].id,
             report_date=date(2026, 3, 2),
             gross_kurus=500_000,
             commission_kurus=75_000,
@@ -140,8 +98,6 @@ def test_math_mismatch_creates_needs_review(db_session, delivery_setup) -> None:
     )
     assert created.status == DeliveryReportStatus.NEEDS_REVIEW.value
     assert created.review_reason is not None
-
-    from app.features.delivery.schema import DeliveryReportPostRequest
 
     with pytest.raises(delivery_posting.InvalidDeliveryReportError):
         delivery_service.post_delivery_report_intake(
@@ -155,12 +111,12 @@ def test_math_mismatch_creates_needs_review(db_session, delivery_setup) -> None:
 def test_delivery_not_enabled_rejected(db_session, restaurant_a) -> None:
     seed_default_chart(db_session, restaurant_a.id)
 
-    with pytest.raises(delivery_service.DeliveryNotEnabledError):
+    with pytest.raises(DeliveryNotEnabledError):
         delivery_service.create_delivery_report(
             db_session,
             restaurant_a.id,
             DeliveryReportCreate(
-                platform=DeliveryPlatform.GETIR,
+                delivery_platform_id=uuid.uuid4(),
                 report_date=date(2026, 3, 1),
                 gross_kurus=100_000,
                 commission_kurus=10_000,
@@ -174,7 +130,7 @@ def test_delivery_not_enabled_rejected(db_session, restaurant_a) -> None:
 def test_duplicate_fingerprint_rejected(db_session, delivery_setup) -> None:
     entity_id = delivery_setup["entity_id"]
     payload = DeliveryReportCreate(
-        platform=DeliveryPlatform.GETIR,
+        delivery_platform_id=delivery_setup["getir"].id,
         report_date=date(2026, 3, 3),
         gross_kurus=200_000,
         commission_kurus=20_000,
@@ -191,13 +147,13 @@ def test_duplicate_fingerprint_rejected(db_session, delivery_setup) -> None:
 def test_settlement_credits_clearing(db_session, delivery_setup) -> None:
     entity_id = delivery_setup["entity_id"]
     bank = delivery_setup["bank"]
-    clearing_id = delivery_setup["accounts"][GETIR_CLEARING_CODE]
+    clearing_id = delivery_setup["getir"].gl_account_id
 
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
-            platform=DeliveryPlatform.GETIR,
+            delivery_platform_id=delivery_setup["getir"].id,
             report_date=date(2026, 3, 4),
             gross_kurus=300_000,
             commission_kurus=30_000,
@@ -206,8 +162,6 @@ def test_settlement_credits_clearing(db_session, delivery_setup) -> None:
             actor_id=ACTOR_ID,
         ),
     )
-    from app.features.delivery.schema import DeliveryReportPostRequest
-
     delivery_service.post_delivery_report_intake(
         db_session,
         entity_id,
@@ -218,7 +172,7 @@ def test_settlement_credits_clearing(db_session, delivery_setup) -> None:
     result = delivery_posting.post_delivery_settlement(
         db_session,
         entity_id,
-        platform=DeliveryPlatform.GETIR,
+        delivery_platform_id=delivery_setup["getir"].id,
         money_account_id=bank.id,
         settlement_date=date(2026, 3, 8),
         amount_kurus=270_000,
@@ -255,7 +209,7 @@ def test_clearing_reconciliation(db_session, delivery_setup) -> None:
         db_session,
         entity_id,
         DeliveryReportCreate(
-            platform=DeliveryPlatform.GETIR,
+            delivery_platform_id=delivery_setup["getir"].id,
             report_date=date(2026, 3, 5),
             gross_kurus=400_000,
             commission_kurus=40_000,
@@ -264,8 +218,6 @@ def test_clearing_reconciliation(db_session, delivery_setup) -> None:
             actor_id=ACTOR_ID,
         ),
     )
-    from app.features.delivery.schema import DeliveryReportPostRequest
-
     delivery_service.post_delivery_report_intake(
         db_session,
         entity_id,
@@ -277,7 +229,7 @@ def test_clearing_reconciliation(db_session, delivery_setup) -> None:
         db_session,
         entity_id,
         DeliverySettlementCreate(
-            platform=DeliveryPlatform.GETIR,
+            delivery_platform_id=delivery_setup["getir"].id,
             money_account_id=bank.id,
             settlement_date=date(2026, 3, 10),
             amount_kurus=360_000,
@@ -287,7 +239,9 @@ def test_clearing_reconciliation(db_session, delivery_setup) -> None:
     )
 
     recon = delivery_service.get_delivery_clearing_reconciliation(db_session, entity_id)
-    getir = next(p for p in recon.platforms if p.platform == DeliveryPlatform.GETIR)
+    getir = next(
+        p for p in recon.platforms if p.delivery_platform_id == delivery_setup["getir"].id
+    )
     assert getir.total_reported_gross_kurus == 400_000
     assert getir.total_settled_net_kurus == 360_000
     assert getir.in_transit_kurus == 40_000
@@ -295,15 +249,13 @@ def test_clearing_reconciliation(db_session, delivery_setup) -> None:
 
 
 def test_cross_entity_isolation(db_session, restaurant_a, restaurant_b) -> None:
-    seed_default_chart(db_session, restaurant_a.id)
-    seed_default_chart(db_session, restaurant_b.id)
-    _enable_delivery(db_session, restaurant_a.id)
+    setup_a = build_delivery_setup(db_session, restaurant_a.id, platform_names=("Getir",))
 
     created = delivery_service.create_delivery_report(
         db_session,
         restaurant_a.id,
         DeliveryReportCreate(
-            platform=DeliveryPlatform.GETIR,
+            delivery_platform_id=setup_a["platforms"]["Getir"].id,
             report_date=date(2026, 3, 6),
             gross_kurus=100_000,
             commission_kurus=10_000,
@@ -320,11 +272,12 @@ def test_cross_entity_isolation(db_session, restaurant_a, restaurant_b) -> None:
 def test_delivery_reports_api_e2e(client: TestClient, db_session, delivery_setup) -> None:
     entity_id = delivery_setup["entity_id"]
     bank = delivery_setup["bank"]
+    getir_id = str(delivery_setup["getir"].id)
 
     create_resp = client.post(
         f"/entities/{entity_id}/delivery/reports",
         json={
-            "platform": "getir",
+            "delivery_platform_id": getir_id,
             "report_date": "2026-03-07",
             "gross_kurus": 250_000,
             "commission_kurus": 25_000,
@@ -346,7 +299,7 @@ def test_delivery_reports_api_e2e(client: TestClient, db_session, delivery_setup
     settle_resp = client.post(
         f"/entities/{entity_id}/delivery/settlements",
         json={
-            "platform": "getir",
+            "delivery_platform_id": getir_id,
             "money_account_id": str(bank.id),
             "settlement_date": "2026-03-12",
             "amount_kurus": 225_000,
@@ -365,7 +318,7 @@ def test_delivery_reports_api_e2e(client: TestClient, db_session, delivery_setup
     dup_resp = client.post(
         f"/entities/{entity_id}/delivery/reports",
         json={
-            "platform": "getir",
+            "delivery_platform_id": getir_id,
             "report_date": "2026-03-07",
             "gross_kurus": 250_000,
             "commission_kurus": 25_000,
@@ -382,6 +335,7 @@ def test_classify_statement_delivery_settlement(
 ) -> None:
     entity_id = delivery_setup["entity_id"]
     bank = delivery_setup["bank"]
+    getir_id = str(delivery_setup["getir"].id)
 
     csv_content = (
         "transaction_date,amount_kurus,description,reference\n"
@@ -400,7 +354,7 @@ def test_classify_statement_delivery_settlement(
         f"/entities/{entity_id}/banking/statements/{statement_id}/lines/{line_id}/classify",
         json={
             "classification": "delivery_settlement",
-            "delivery_platform": "getir",
+            "delivery_platform_id": getir_id,
             "actor_id": str(ACTOR_ID),
         },
     )

@@ -7,11 +7,9 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.delivery.platforms import DeliveryPlatform
-
 
 class DeliveryReportCreate(BaseModel):
-    platform: DeliveryPlatform
+    delivery_platform_id: uuid.UUID
     report_date: date
     gross_kurus: int = Field(gt=0)
     commission_kurus: int = Field(ge=0)
@@ -32,7 +30,8 @@ class DeliveryReportRead(BaseModel):
 
     id: uuid.UUID
     entity_id: uuid.UUID
-    platform: DeliveryPlatform
+    delivery_platform_id: uuid.UUID
+    platform_name: str
     report_date: date
     gross_kurus: int
     commission_kurus: int
@@ -55,7 +54,7 @@ class DeliveryReportListOut(BaseModel):
 
 
 class DeliverySettlementCreate(BaseModel):
-    platform: DeliveryPlatform
+    delivery_platform_id: uuid.UUID
     money_account_id: uuid.UUID
     settlement_date: date
     amount_kurus: int = Field(gt=0)
@@ -69,7 +68,8 @@ class DeliverySettlementRead(BaseModel):
 
     id: uuid.UUID
     entity_id: uuid.UUID
-    platform: DeliveryPlatform
+    delivery_platform_id: uuid.UUID
+    platform_name: str
     money_account_id: uuid.UUID
     settlement_date: date
     amount_kurus: int
@@ -84,8 +84,10 @@ class DeliverySettlementRead(BaseModel):
 
 
 class PlatformClearingReconciliation(BaseModel):
-    platform: DeliveryPlatform
+    delivery_platform_id: uuid.UUID
+    platform_name: str
     clearing_account_code: str
+    is_active: bool
     clearing_balance_kurus: int
     total_reported_gross_kurus: int
     total_settled_net_kurus: int

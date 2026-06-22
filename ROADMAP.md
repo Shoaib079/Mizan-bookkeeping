@@ -14,8 +14,8 @@
 |-------|-------|
 | **Active phase** | Phase 6 — Sales intake + tips + expenses |
 | **Active slice** | Tips (pass-through) |
-| **Last completed slice** | Commission e-Faturas |
-| **Last commit/tag** | `154734c` / `v0.34.0-phase6-delivery-commission-efatura` |
+| **Last completed slice** | User-managed delivery platforms |
+| **Last commit/tag** | `v0.34.1-phase6-delivery-platforms-managed` |
 | **Next up** | Tips (pass-through, not revenue/expense) |
 
 ---
@@ -141,8 +141,9 @@ POS daily-summary photo + delivery platform reports; commission e-Faturas (e-Fat
 | Slice | Status | Notes |
 |-------|--------|-------|
 | POS daily-summary photo intake | done | `pos_daily_summaries`; OCR v1 fixture + text heuristics; math check → `needs_review`; confirm posts card batch Dr `1400`/Cr `4000` + cash in Dr cash/Cr `4000` (never total line); duplicate fingerprint 409; duplicate-day guard (`029`); Alembic `028`/`029`; tag `v0.32.1`; 279 pytest |
-| Delivery platform reports (gross / commission / net) | done | `delivery_reports` + `delivery_settlements`; per-platform clearing `1410`/`1420`/`1430`; `post_delivery_report()` Dr clearing / Cr `4000` gross; `post_delivery_settlement()` Dr bank / Cr clearing net; statement classify `delivery_settlement`; entity `delivery_enabled` + `delivery_platforms` settings; reconciliation API; Alembic `030`; 289 pytest |
-| Commission e-Faturas | done | Reuse `invoice_drafts` with `invoice_kind=delivery_commission` + `delivery_report_id` FK; `post_delivery_commission_draft()` Dr `5500` commission expense + Dr `1500` / Cr platform clearing (`1410`/`1420`/`1430`) — **not** `2000` AP; link/report mismatch → `needs_review`; `commission_journal_entry_id` on report prevents double post; reconciliation shows commission posted + clearing → 0; API link/post under `/invoices/drafts/...`; Alembic `031`; 295 pytest |
+| Delivery platform reports (gross / commission / net) | done | `delivery_reports` + `delivery_settlements`; `post_delivery_report()` Dr clearing / Cr `4000` gross; `post_delivery_settlement()` Dr bank / Cr clearing net; statement classify `delivery_settlement` (`delivery_platform_id`); reconciliation iterates entity platforms; Alembic `030` |
+| User-managed delivery platforms | done | `delivery_platforms` table — owner add / rename / deactivate; auto clearing GL sub-account under parent `1450` (mirrors bank/card sub-accounts); reports/settlements/commission/reconciliation keyed by `delivery_platform_id`; removed fixed enum + comma-separated `delivery_platforms` setting; legacy `1410`–`1430` migrated; API `POST/GET/PATCH .../delivery/platforms`; Alembic `032`; 300 pytest |
+| Commission e-Faturas | done | Reuse `invoice_drafts` with `invoice_kind=delivery_commission` + `delivery_report_id` FK; `post_delivery_commission_draft()` Dr `5500` + Dr `1500` / **Cr platform clearing GL** (via linked platform) — **not** `2000` AP; link/report mismatch → `needs_review`; `commission_journal_entry_id` on report; Alembic `031` |
 | Tips (pass-through, not revenue/expense) | not started | |
 | Expenses + spelling tolerance | not started | |
 
@@ -154,10 +155,11 @@ POS daily-summary photo + delivery platform reports; commission e-Faturas (e-Fat
 
 ## Phase 7 — Dashboard, reports, Excel export, financial statements
 
-P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison.
+P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery sales by platform.
 
 | Slice | Status | Notes |
 |-------|--------|-------|
+| Delivery sales report | not started | Gross sales per **entity-configured** platform + combined total; `from`/`to` on `report_date`; source = posted `delivery_reports` grouped by `delivery_platform_id`; read API only |
 | Dashboard | not started | |
 | P&L & Balance Sheet (per entity) | not started | |
 | Cash flow statement | not started | |

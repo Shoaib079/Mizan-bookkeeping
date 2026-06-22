@@ -1,13 +1,15 @@
 """Tests for default chart seed — Opening Balance Equity and OB-eligible accounts."""
 
 from app.core.chart_of_accounts.default_chart import (
-    DEFAULT_CHART,
+    DELIVERY_CLEARING_PARENT_CODE,
     OPENING_BALANCE_EQUITY_CODE,
     opening_balance_accounts,
 )
 
 
 def test_default_chart_includes_opening_balance_equity() -> None:
+    from app.core.chart_of_accounts.default_chart import DEFAULT_CHART
+
     codes = {a.code for a in DEFAULT_CHART}
     assert OPENING_BALANCE_EQUITY_CODE in codes
     equity = next(a for a in DEFAULT_CHART if a.code == OPENING_BALANCE_EQUITY_CODE)
@@ -16,6 +18,8 @@ def test_default_chart_includes_opening_balance_equity() -> None:
 
 
 def test_default_chart_includes_input_vat() -> None:
+    from app.core.chart_of_accounts.default_chart import DEFAULT_CHART
+
     codes = {a.code for a in DEFAULT_CHART}
     assert "1500" in codes
     vat = next(a for a in DEFAULT_CHART if a.code == "1500")
@@ -23,14 +27,18 @@ def test_default_chart_includes_input_vat() -> None:
     assert vat.accepts_opening_balance is False
 
 
-def test_default_chart_includes_delivery_clearing_accounts() -> None:
+def test_default_chart_includes_delivery_clearing_parent() -> None:
+    from app.core.chart_of_accounts.default_chart import DEFAULT_CHART
+
     codes = {a.code for a in DEFAULT_CHART}
-    assert "1410" in codes
-    assert "1420" in codes
-    assert "1430" in codes
+    assert DELIVERY_CLEARING_PARENT_CODE in codes
+    parent = next(a for a in DEFAULT_CHART if a.code == DELIVERY_CLEARING_PARENT_CODE)
+    assert parent.name_en == "Delivery Platform Clearing"
 
 
 def test_inventory_not_in_default_chart() -> None:
+    from app.core.chart_of_accounts.default_chart import DEFAULT_CHART
+
     names = {a.name_en.lower() for a in DEFAULT_CHART}
     assert "inventory" not in names
 

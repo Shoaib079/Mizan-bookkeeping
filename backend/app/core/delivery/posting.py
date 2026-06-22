@@ -12,12 +12,12 @@ from sqlalchemy.orm import Session
 from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
-from app.core.delivery.platforms import DeliveryPlatform, clearing_code_for_platform
 from app.core.ledger.models import JournalEntry, JournalEntrySource
 from app.core.ledger.posting import InvalidAccountError, PostingLine, prepare_journal_entry
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.delivery.models import DeliveryReport, DeliveryReportStatus, DeliverySettlement
+from app.features.delivery import platform_service
 from app.features.entities import service as entity_service
 
 
@@ -133,7 +133,7 @@ def _validate_bank_money_account(
 def persist_delivery_settlement(
     session: Session,
     *,
-    platform: DeliveryPlatform,
+    delivery_platform_id: uuid.UUID,
     money_account_id: uuid.UUID,
     settlement_date: date,
     amount_kurus: int,
@@ -146,7 +146,7 @@ def persist_delivery_settlement(
     delivery_report_id: uuid.UUID | None = None,
 ) -> DeliverySettlement:
     settlement = DeliverySettlement(
-        platform=platform.value,
+        delivery_platform_id=delivery_platform_id,
         money_account_id=money_account_id,
         settlement_date=settlement_date,
         amount_kurus=amount_kurus,
@@ -196,13 +196,16 @@ def post_delivery_report(
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
-    platform = DeliveryPlatform(report.platform)
-    clearing_code = clearing_code_for_platform(platform)
+    platform = platform_service.get_delivery_platform_row(
+        session, entity_id, report.delivery_platform_id
+    )
 
     with entity_context(session, entity_id):
         require_entity_context()
 
-        clearing_account = _get_account_by_code(session, clearing_code)
+        clearing_account = session.get(Account, platform.gl_account_id)
+        if clearing_account is None:
+            raise InvalidAccountError("platform clearing account not found")
         sales_revenue_account = _get_account_by_code(session, SALES_REVENUE_CODE)
 
         lines = build_delivery_report_posting_lines(
@@ -244,7 +247,7 @@ def post_delivery_settlement(
     session: Session,
     entity_id: uuid.UUID,
     *,
-    platform: DeliveryPlatform,
+    delivery_platform_id: uuid.UUID,
     money_account_id: uuid.UUID,
     settlement_date: date,
     amount_kurus: int,
@@ -262,14 +265,18 @@ def post_delivery_settlement(
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
-    clearing_code = clearing_code_for_platform(platform)
+    platform = platform_service.get_delivery_platform_row(
+        session, entity_id, delivery_platform_id
+    )
 
     with entity_context(session, entity_id):
         require_entity_context()
 
         money_account = _validate_bank_money_account(session, entity_id, money_account_id)
         _validate_bank_gl_account(session, entity_id, money_account.gl_account_id)
-        clearing_account = _get_account_by_code(session, clearing_code)
+        clearing_account = session.get(Account, platform.gl_account_id)
+        if clearing_account is None:
+            raise InvalidAccountError("platform clearing account not found")
 
         lines = build_delivery_settlement_posting_lines(
             bank_gl_account_id=money_account.gl_account_id,
@@ -289,7 +296,7 @@ def post_delivery_settlement(
 
         settlement = persist_delivery_settlement(
             session,
-            platform=platform,
+            delivery_platform_id=delivery_platform_id,
             money_account_id=money_account_id,
             settlement_date=settlement_date,
             amount_kurus=amount_kurus,

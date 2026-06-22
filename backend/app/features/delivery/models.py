@@ -6,7 +6,7 @@ import enum
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, ForeignKey, Index, Integer, String, UniqueConstraint, Uuid, text
+from sqlalchemy import Boolean, Date, ForeignKey, Index, Integer, String, UniqueConstraint, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, EntityScopedMixin, utcnow
@@ -17,6 +17,35 @@ class DeliveryReportStatus(str, enum.Enum):
     NEEDS_REVIEW = "needs_review"
     POSTED = "posted"
     REJECTED = "rejected"
+
+
+class OwnedDeliveryPlatform(EntityScopedMixin, Base):
+    """Per-restaurant delivery platform with its own clearing GL sub-account."""
+
+    __tablename__ = "delivery_platforms"
+    __table_args__ = (
+        UniqueConstraint(
+            "entity_id",
+            "name",
+            name="uq_delivery_platforms_entity_name",
+        ),
+        UniqueConstraint(
+            "gl_account_id",
+            name="uq_delivery_platforms_gl_account_id",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    gl_account_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 
 
 class DeliveryReport(EntityScopedMixin, Base):
@@ -30,7 +59,7 @@ class DeliveryReport(EntityScopedMixin, Base):
         Index(
             "uq_delivery_reports_entity_platform_date_posted",
             "entity_id",
-            "platform",
+            "delivery_platform_id",
             "report_date",
             unique=True,
             postgresql_where=text("status = 'posted'"),
@@ -38,7 +67,12 @@ class DeliveryReport(EntityScopedMixin, Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    platform: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    delivery_platform_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("delivery_platforms.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
     report_date: Mapped[date] = mapped_column(Date, nullable=False)
     gross_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
     commission_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -76,7 +110,12 @@ class DeliverySettlement(EntityScopedMixin, Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    platform: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    delivery_platform_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("delivery_platforms.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
     money_account_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("money_accounts.id", ondelete="RESTRICT"),

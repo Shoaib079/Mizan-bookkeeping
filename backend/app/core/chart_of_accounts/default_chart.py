@@ -18,9 +18,7 @@ PARTNER_REIMBURSEMENT_PAYABLE_CODE = "2150"
 SALARY_EXPENSE_CODE = "5100"
 EMPLOYEE_ADVANCES_CODE = "1300"
 CARD_SALES_CLEARING_CODE = "1400"
-GETIR_CLEARING_CODE = "1410"
-YEMEKSEPETI_CLEARING_CODE = "1420"
-TRENDYOL_CLEARING_CODE = "1430"
+DELIVERY_CLEARING_PARENT_CODE = "1450"
 SALES_REVENUE_CODE = "4000"
 BANK_CHARGES_CODE = "5300"
 CASH_OVER_SHORT_CODE = "5400"
@@ -50,25 +48,9 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
     DefaultAccount("1300", "Employee Advances", "Personel Avansları", AccountType.ASSET, AccountNormalBalance.DEBIT, True),
     DefaultAccount("1400", "Card Sales Clearing", "POS Kart Takas", AccountType.ASSET, AccountNormalBalance.DEBIT, True),
     DefaultAccount(
-        GETIR_CLEARING_CODE,
-        "Getir Clearing",
-        "Getir Takas",
-        AccountType.ASSET,
-        AccountNormalBalance.DEBIT,
-        True,
-    ),
-    DefaultAccount(
-        YEMEKSEPETI_CLEARING_CODE,
-        "Yemeksepeti Clearing",
-        "Yemeksepeti Takas",
-        AccountType.ASSET,
-        AccountNormalBalance.DEBIT,
-        True,
-    ),
-    DefaultAccount(
-        TRENDYOL_CLEARING_CODE,
-        "Trendyol Clearing",
-        "Trendyol Takas",
+        DELIVERY_CLEARING_PARENT_CODE,
+        "Delivery Platform Clearing",
+        "Yemek Platformu Takas",
         AccountType.ASSET,
         AccountNormalBalance.DEBIT,
         True,

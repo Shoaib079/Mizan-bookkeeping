@@ -12,11 +12,6 @@ from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
-from app.core.delivery.platforms import (
-    DeliveryPlatform,
-    PLATFORM_CLEARING_CODES,
-    clearing_code_for_platform,
-)
 from app.core.delivery.posting import (
     InvalidDeliveryReportError,
     post_delivery_report,
@@ -25,11 +20,14 @@ from app.core.delivery.posting import (
 )
 from app.db.session import entity_context, require_entity_context
 from app.features.banking import service as banking_service
+from app.features.banking.models import MoneyAccountKind
 from app.features.delivery.models import (
     DeliveryReport,
     DeliveryReportStatus,
     DeliverySettlement,
+    OwnedDeliveryPlatform,
 )
+from app.features.delivery import platform_service
 from app.features.delivery.schema import (
     DeliveryClearingReconciliationRead,
     DeliveryReportCreate,
@@ -40,12 +38,7 @@ from app.features.delivery.schema import (
     DeliverySettlementRead,
     PlatformClearingReconciliation,
 )
-from app.features.delivery.settings import (
-    DeliveryNotEnabledError,
-    DeliveryPlatformNotEnabledError,
-    require_delivery_enabled,
-    require_platform_enabled,
-)
+from app.features.delivery.settings import require_delivery_enabled
 from app.features.entities import service as entity_service
 
 
@@ -61,14 +54,14 @@ class DeliveryReportImmutableError(Exception):
 
 def report_fingerprint(
     *,
-    platform: DeliveryPlatform,
-    report_date,
+    delivery_platform_id: uuid.UUID,
+    report_date: date,
     gross_kurus: int,
     commission_kurus: int,
     net_kurus: int,
 ) -> str:
     payload = (
-        f"{platform.value}|{report_date.isoformat()}|"
+        f"{delivery_platform_id}|{report_date.isoformat()}|"
         f"{gross_kurus}|{commission_kurus}|{net_kurus}"
     )
     return hashlib.sha256(payload.encode()).hexdigest()
@@ -79,11 +72,17 @@ def _require_entity(session: Session, entity_id: uuid.UUID) -> None:
         raise LookupError("Entity not found")
 
 
-def _to_report_read(report: DeliveryReport) -> DeliveryReportRead:
+def _platform_name(session: Session, platform_id: uuid.UUID) -> str:
+    platform = session.get(OwnedDeliveryPlatform, platform_id)
+    return platform.name if platform is not None else ""
+
+
+def _to_report_read(session: Session, report: DeliveryReport) -> DeliveryReportRead:
     return DeliveryReportRead(
         id=report.id,
         entity_id=report.entity_id,
-        platform=DeliveryPlatform(report.platform),
+        delivery_platform_id=report.delivery_platform_id,
+        platform_name=_platform_name(session, report.delivery_platform_id),
         report_date=report.report_date,
         gross_kurus=report.gross_kurus,
         commission_kurus=report.commission_kurus,
@@ -101,11 +100,14 @@ def _to_report_read(report: DeliveryReport) -> DeliveryReportRead:
     )
 
 
-def _to_settlement_read(settlement: DeliverySettlement) -> DeliverySettlementRead:
+def _to_settlement_read(
+    session: Session, settlement: DeliverySettlement
+) -> DeliverySettlementRead:
     return DeliverySettlementRead(
         id=settlement.id,
         entity_id=settlement.entity_id,
-        platform=DeliveryPlatform(settlement.platform),
+        delivery_platform_id=settlement.delivery_platform_id,
+        platform_name=_platform_name(session, settlement.delivery_platform_id),
         money_account_id=settlement.money_account_id,
         settlement_date=settlement.settlement_date,
         amount_kurus=settlement.amount_kurus,
@@ -136,10 +138,12 @@ def create_delivery_report(
     payload: DeliveryReportCreate,
 ) -> DeliveryReportRead:
     _require_entity(session, entity_id)
-    require_platform_enabled(session, entity_id, payload.platform)
+    platform_service.require_active_delivery_platform(
+        session, entity_id, payload.delivery_platform_id
+    )
 
     fingerprint = report_fingerprint(
-        platform=payload.platform,
+        delivery_platform_id=payload.delivery_platform_id,
         report_date=payload.report_date,
         gross_kurus=payload.gross_kurus,
         commission_kurus=payload.commission_kurus,
@@ -170,7 +174,7 @@ def create_delivery_report(
             raise DuplicateDeliveryReportError(existing)
 
         report = DeliveryReport(
-            platform=payload.platform.value,
+            delivery_platform_id=payload.delivery_platform_id,
             report_date=payload.report_date,
             gross_kurus=payload.gross_kurus,
             commission_kurus=payload.commission_kurus,
@@ -196,7 +200,7 @@ def create_delivery_report(
             raise
         session.refresh(report)
 
-    return _to_report_read(report)
+    return _to_report_read(session, report)
 
 
 def post_delivery_report_intake(
@@ -216,8 +220,9 @@ def post_delivery_report_intake(
             f"Cannot post report in status {report.status}"
         )
 
-    platform = DeliveryPlatform(report.platform)
-    require_platform_enabled(session, entity_id, platform)
+    platform_service.require_active_delivery_platform(
+        session, entity_id, report.delivery_platform_id
+    )
 
     with entity_context(session, entity_id):
         if payload.gross_kurus is not None:
@@ -252,14 +257,14 @@ def post_delivery_report_intake(
         report=report,
         actor_id=payload.actor_id,
     )
-    return _to_report_read(result.delivery_report)
+    return _to_report_read(session, result.delivery_report)
 
 
 def list_delivery_reports(
     session: Session,
     entity_id: uuid.UUID,
     *,
-    platform: DeliveryPlatform | None = None,
+    delivery_platform_id: uuid.UUID | None = None,
     status: DeliveryReportStatus | None = None,
 ) -> DeliveryReportListOut:
     _require_entity(session, entity_id)
@@ -270,12 +275,14 @@ def list_delivery_reports(
             DeliveryReport.report_date.desc(),
             DeliveryReport.created_at.desc(),
         )
-        if platform is not None:
-            query = query.where(DeliveryReport.platform == platform.value)
+        if delivery_platform_id is not None:
+            query = query.where(
+                DeliveryReport.delivery_platform_id == delivery_platform_id
+            )
         if status is not None:
             query = query.where(DeliveryReport.status == status.value)
         reports = session.scalars(query).all()
-        items = [_to_report_read(report) for report in reports]
+        items = [_to_report_read(session, report) for report in reports]
         return DeliveryReportListOut(items=items, total=len(items))
 
 
@@ -285,7 +292,7 @@ def get_delivery_report(
     report_id: uuid.UUID,
 ) -> DeliveryReportRead:
     report = _get_report_row(session, entity_id, report_id)
-    return _to_report_read(report)
+    return _to_report_read(session, report)
 
 
 def reject_delivery_report(
@@ -312,7 +319,7 @@ def reject_delivery_report(
         session.commit()
         session.refresh(report)
 
-    return _to_report_read(report)
+    return _to_report_read(session, report)
 
 
 def create_delivery_settlement(
@@ -321,12 +328,14 @@ def create_delivery_settlement(
     payload: DeliverySettlementCreate,
 ) -> DeliverySettlementRead:
     _require_entity(session, entity_id)
-    require_platform_enabled(session, entity_id, payload.platform)
+    platform_service.require_active_delivery_platform(
+        session, entity_id, payload.delivery_platform_id
+    )
 
     result = post_delivery_settlement(
         session,
         entity_id,
-        platform=payload.platform,
+        delivery_platform_id=payload.delivery_platform_id,
         money_account_id=payload.money_account_id,
         settlement_date=payload.settlement_date,
         amount_kurus=payload.amount_kurus,
@@ -334,14 +343,14 @@ def create_delivery_settlement(
         actor_id=payload.actor_id,
         delivery_report_id=payload.delivery_report_id,
     )
-    return _to_settlement_read(result.delivery_settlement)
+    return _to_settlement_read(session, result.delivery_settlement)
 
 
 def list_delivery_settlements(
     session: Session,
     entity_id: uuid.UUID,
     *,
-    platform: DeliveryPlatform | None = None,
+    delivery_platform_id: uuid.UUID | None = None,
     money_account_id: uuid.UUID | None = None,
 ) -> list[DeliverySettlementRead]:
     _require_entity(session, entity_id)
@@ -352,12 +361,14 @@ def list_delivery_settlements(
             DeliverySettlement.settlement_date.desc(),
             DeliverySettlement.created_at.desc(),
         )
-        if platform is not None:
-            query = query.where(DeliverySettlement.platform == platform.value)
+        if delivery_platform_id is not None:
+            query = query.where(
+                DeliverySettlement.delivery_platform_id == delivery_platform_id
+            )
         if money_account_id is not None:
             query = query.where(DeliverySettlement.money_account_id == money_account_id)
         settlements = session.scalars(query).all()
-        return [_to_settlement_read(settlement) for settlement in settlements]
+        return [_to_settlement_read(session, settlement) for settlement in settlements]
 
 
 def get_delivery_clearing_reconciliation(
@@ -372,13 +383,13 @@ def get_delivery_clearing_reconciliation(
     with entity_context(session, entity_id):
         require_entity_context()
 
-        for platform, clearing_code in PLATFORM_CLEARING_CODES.items():
-            clearing_account = session.scalar(
-                select(Account).where(Account.code == clearing_code)
-            )
-            if clearing_account is None:
-                continue
+        rows = session.execute(
+            select(OwnedDeliveryPlatform, Account).join(
+                Account, OwnedDeliveryPlatform.gl_account_id == Account.id
+            ).order_by(OwnedDeliveryPlatform.name)
+        ).all()
 
+        for platform, clearing_account in rows:
             clearing_balance_kurus = banking_service.gl_balance_kurus(
                 session,
                 clearing_account.id,
@@ -388,7 +399,7 @@ def get_delivery_clearing_reconciliation(
             total_reported_gross_kurus = int(
                 session.scalar(
                     select(func.coalesce(func.sum(DeliveryReport.gross_kurus), 0)).where(
-                        DeliveryReport.platform == platform.value,
+                        DeliveryReport.delivery_platform_id == platform.id,
                         DeliveryReport.status == DeliveryReportStatus.POSTED.value,
                     )
                 )
@@ -399,7 +410,7 @@ def get_delivery_clearing_reconciliation(
                     select(func.count())
                     .select_from(DeliveryReport)
                     .where(
-                        DeliveryReport.platform == platform.value,
+                        DeliveryReport.delivery_platform_id == platform.id,
                         DeliveryReport.status == DeliveryReportStatus.POSTED.value,
                     )
                 )
@@ -409,7 +420,7 @@ def get_delivery_clearing_reconciliation(
             total_settled_net_kurus = int(
                 session.scalar(
                     select(func.coalesce(func.sum(DeliverySettlement.amount_kurus), 0)).where(
-                        DeliverySettlement.platform == platform.value
+                        DeliverySettlement.delivery_platform_id == platform.id
                     )
                 )
                 or 0
@@ -418,7 +429,7 @@ def get_delivery_clearing_reconciliation(
                 session.scalar(
                     select(func.count())
                     .select_from(DeliverySettlement)
-                    .where(DeliverySettlement.platform == platform.value)
+                    .where(DeliverySettlement.delivery_platform_id == platform.id)
                 )
                 or 0
             )
@@ -428,7 +439,7 @@ def get_delivery_clearing_reconciliation(
                     select(
                         func.coalesce(func.sum(DeliveryReport.commission_kurus), 0)
                     ).where(
-                        DeliveryReport.platform == platform.value,
+                        DeliveryReport.delivery_platform_id == platform.id,
                         DeliveryReport.status == DeliveryReportStatus.POSTED.value,
                         DeliveryReport.commission_journal_entry_id.is_not(None),
                     )
@@ -440,7 +451,7 @@ def get_delivery_clearing_reconciliation(
                     select(func.count())
                     .select_from(DeliveryReport)
                     .where(
-                        DeliveryReport.platform == platform.value,
+                        DeliveryReport.delivery_platform_id == platform.id,
                         DeliveryReport.status == DeliveryReportStatus.POSTED.value,
                         DeliveryReport.commission_journal_entry_id.is_not(None),
                     )
@@ -456,8 +467,10 @@ def get_delivery_clearing_reconciliation(
 
             platforms.append(
                 PlatformClearingReconciliation(
-                    platform=platform,
-                    clearing_account_code=clearing_code,
+                    delivery_platform_id=platform.id,
+                    platform_name=platform.name,
+                    clearing_account_code=clearing_account.code,
+                    is_active=platform.is_active,
                     clearing_balance_kurus=clearing_balance_kurus,
                     total_reported_gross_kurus=total_reported_gross_kurus,
                     total_settled_net_kurus=total_settled_net_kurus,

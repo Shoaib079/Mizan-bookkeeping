@@ -19,11 +19,11 @@ from app.core.receivables import posting as receivables_posting
 from app.core.payables import posting as payables_posting
 from app.core.pos import posting as pos_posting
 from app.core.delivery import posting as delivery_posting
-from app.core.delivery.platforms import DeliveryPlatform, parse_platform
+from app.features.delivery import platform_service
+from app.features.delivery.platform_service import InactiveDeliveryPlatformError
 from app.features.delivery.settings import (
     DeliveryNotEnabledError,
-    DeliveryPlatformNotEnabledError,
-    require_platform_enabled,
+    require_delivery_enabled,
 )
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
@@ -533,7 +533,7 @@ def classify_statement_line(
     actor_id: uuid.UUID | None = None,
     confirm_supplier_ledger_entry_id: uuid.UUID | None = None,
     confirm_account_transfer_id: uuid.UUID | None = None,
-    delivery_platform: str | None = None,
+    delivery_platform_id: uuid.UUID | None = None,
 ) -> ClassifyStatementLineResult:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -780,17 +780,18 @@ def classify_statement_line(
                 raise InvalidClassificationError(
                     "actor_id is required for delivery_settlement"
                 )
-            if delivery_platform is None:
+            if delivery_platform_id is None:
                 raise InvalidClassificationError(
-                    "delivery_platform is required for delivery_settlement"
+                    "delivery_platform_id is required for delivery_settlement"
                 )
             try:
-                platform = parse_platform(delivery_platform)
-            except ValueError as exc:
+                require_delivery_enabled(session, entity_id)
+                platform_service.get_delivery_platform_row(
+                    session, entity_id, delivery_platform_id
+                )
+            except (DeliveryNotEnabledError, LookupError) as exc:
                 raise InvalidClassificationError(str(exc)) from exc
-            try:
-                require_platform_enabled(session, entity_id, platform)
-            except (DeliveryNotEnabledError, DeliveryPlatformNotEnabledError) as exc:
+            except InactiveDeliveryPlatformError as exc:
                 raise InvalidClassificationError(str(exc)) from exc
 
         elif classification == StatementLineClassification.BANK_FEE:
@@ -965,12 +966,11 @@ def classify_statement_line(
     if classification == StatementLineClassification.DELIVERY_SETTLEMENT:
         settlement_amount = line.amount_kurus
         assert actor_id is not None
-        assert delivery_platform is not None
-        platform = parse_platform(delivery_platform)
+        assert delivery_platform_id is not None
         result = delivery_posting.post_delivery_settlement(
             session,
             entity_id,
-            platform=platform,
+            delivery_platform_id=delivery_platform_id,
             money_account_id=statement.money_account_id,
             settlement_date=line.transaction_date,
             amount_kurus=settlement_amount,

@@ -13,7 +13,6 @@ from sqlalchemy import func, select
 from app.core.chart_of_accounts.default_chart import (
     ACCOUNTS_PAYABLE_CODE,
     DELIVERY_COMMISSION_EXPENSE_CODE,
-    GETIR_CLEARING_CODE,
     INPUT_VAT_CODE,
     SALES_REVENUE_CODE,
 )
@@ -21,59 +20,25 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.delivery.commission_posting import post_delivery_commission_draft
-from app.core.delivery.platforms import DeliveryPlatform
 from app.core.invoices.posting import DraftPostError
 from app.core.ledger.posting import InvalidAccountError
 from app.core.ledger.models import JournalEntryLine, JournalEntrySource
 from app.core.payables.models import SupplierLedgerEntry
 from app.db.session import entity_context
 from app.features.banking import service as banking_service
-from app.features.banking.models import MoneyAccountKind
-from app.features.banking.schema import MoneyAccountCreate
 from app.features.delivery.schema import (
     DeliveryReportCreate,
     DeliveryReportPostRequest,
     DeliverySettlementCreate,
 )
 from app.features.delivery import service as delivery_service
-from app.features.delivery.settings import (
-    DELIVERY_ENABLED_KEY,
-    DELIVERY_PLATFORMS_KEY,
-)
-from app.features.entities import service as entity_service
-from app.features.entities.schema import EntitySettingCreate
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind, InvoiceSourceType
 from app.features.invoices import service as invoice_service
 from app.features.suppliers.models import Supplier
+from tests.delivery_helpers import ACTOR_ID, delivery_setup as build_delivery_setup, enable_delivery
 
-ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "efatura"
 SAMPLE_XML = FIXTURES / "sample.xml"
-
-
-def _enable_delivery(db_session, entity_id):
-    entity_service.create_entity_setting(
-        db_session,
-        entity_id,
-        EntitySettingCreate(key=DELIVERY_ENABLED_KEY, value="true"),
-    )
-    entity_service.create_entity_setting(
-        db_session,
-        entity_id,
-        EntitySettingCreate(key=DELIVERY_PLATFORMS_KEY, value="getir"),
-    )
-
-
-def _bank_account(db_session, entity_id):
-    return banking_service.create_money_account(
-        db_session,
-        entity_id,
-        MoneyAccountCreate(
-            account_kind=MoneyAccountKind.BANK,
-            name="Garanti TRY",
-            bank_name="Garanti BBVA",
-        ),
-    )
 
 
 def _platform_supplier(db_session, entity_id, *, vkn: str = "9876543210") -> uuid.UUID:
@@ -88,6 +53,7 @@ def _platform_supplier(db_session, entity_id, *, vkn: str = "9876543210") -> uui
 def _posted_report(
     db_session,
     entity_id,
+    platform_id: uuid.UUID,
     *,
     gross_kurus: int = 500_000,
     commission_kurus: int = 75_000,
@@ -97,7 +63,7 @@ def _posted_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
-            platform=DeliveryPlatform.GETIR,
+            delivery_platform_id=platform_id,
             report_date=date(2026, 4, 1),
             gross_kurus=gross_kurus,
             commission_kurus=commission_kurus,
@@ -155,18 +121,14 @@ def _commission_draft(
 
 @pytest.fixture
 def commission_setup(db_session, restaurant_a):
-    seed_default_chart(db_session, restaurant_a.id)
-    _enable_delivery(db_session, restaurant_a.id)
-    bank = _bank_account(db_session, restaurant_a.id)
+    setup = build_delivery_setup(db_session, restaurant_a.id, platform_names=("Getir",))
     supplier_id = _platform_supplier(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):
         accounts = {a.code: a.id for a in db_session.scalars(select(Account))}
-    return {
-        "entity_id": restaurant_a.id,
-        "bank": bank,
-        "accounts": accounts,
-        "supplier_id": supplier_id,
-    }
+    setup["accounts"] = accounts
+    setup["supplier_id"] = supplier_id
+    setup["getir"] = setup["platforms"]["Getir"]
+    return setup
 
 
 def test_full_lifecycle_clearing_zero(db_session, commission_setup) -> None:
@@ -174,17 +136,18 @@ def test_full_lifecycle_clearing_zero(db_session, commission_setup) -> None:
     bank = commission_setup["bank"]
     accounts = commission_setup["accounts"]
     supplier_id = commission_setup["supplier_id"]
-    clearing_id = accounts[GETIR_CLEARING_CODE]
+    getir = commission_setup["getir"]
+    clearing_id = getir.gl_account_id
     expense_id = accounts[DELIVERY_COMMISSION_EXPENSE_CODE]
     vat_id = accounts[INPUT_VAT_CODE]
     ap_id = accounts[ACCOUNTS_PAYABLE_CODE]
 
-    report = _posted_report(db_session, entity_id)
+    report = _posted_report(db_session, entity_id, getir.id)
     delivery_service.create_delivery_settlement(
         db_session,
         entity_id,
         DeliverySettlementCreate(
-            platform=DeliveryPlatform.GETIR,
+            delivery_platform_id=getir.id,
             money_account_id=bank.id,
             settlement_date=date(2026, 4, 10),
             amount_kurus=425_000,
@@ -266,19 +229,20 @@ def test_full_lifecycle_clearing_zero(db_session, commission_setup) -> None:
     assert balance == 0
 
     recon = delivery_service.get_delivery_clearing_reconciliation(db_session, entity_id)
-    getir = next(p for p in recon.platforms if p.platform == DeliveryPlatform.GETIR)
-    assert getir.clearing_balance_kurus == 0
-    assert getir.in_transit_kurus == 0
-    assert getir.total_commission_posted_kurus == 75_000
-    assert getir.commission_posted_count == 1
+    row = next(p for p in recon.platforms if p.delivery_platform_id == getir.id)
+    assert row.clearing_balance_kurus == 0
+    assert row.in_transit_kurus == 0
+    assert row.total_commission_posted_kurus == 75_000
+    assert row.commission_posted_count == 1
 
 
 def test_mismatch_blocks_link_and_post(db_session, commission_setup) -> None:
     entity_id = commission_setup["entity_id"]
     supplier_id = commission_setup["supplier_id"]
     expense_id = commission_setup["accounts"][DELIVERY_COMMISSION_EXPENSE_CODE]
+    getir = commission_setup["getir"]
 
-    report = _posted_report(db_session, entity_id)
+    report = _posted_report(db_session, entity_id, getir.id)
     draft = _commission_draft(
         db_session,
         entity_id,
@@ -319,8 +283,9 @@ def test_double_commission_post_blocked(db_session, commission_setup) -> None:
     entity_id = commission_setup["entity_id"]
     supplier_id = commission_setup["supplier_id"]
     expense_id = commission_setup["accounts"][DELIVERY_COMMISSION_EXPENSE_CODE]
+    getir = commission_setup["getir"]
 
-    report = _posted_report(db_session, entity_id)
+    report = _posted_report(db_session, entity_id, getir.id)
     draft = _commission_draft(db_session, entity_id, supplier_id)
     invoice_service.link_delivery_report_to_draft(
         db_session, entity_id, draft.id, delivery_report_id=report.id
@@ -349,16 +314,17 @@ def test_cross_entity_isolation(
     entity_id = commission_setup["entity_id"]
     supplier_id = commission_setup["supplier_id"]
     expense_id = commission_setup["accounts"][DELIVERY_COMMISSION_EXPENSE_CODE]
+    getir = commission_setup["getir"]
 
     seed_default_chart(db_session, restaurant_b.id)
-    _enable_delivery(db_session, restaurant_b.id)
+    enable_delivery(db_session, restaurant_b.id)
     with entity_context(db_session, restaurant_b.id):
         b_accounts = {
             account.code: account.id
             for account in db_session.scalars(select(Account))
         }
 
-    report = _posted_report(db_session, entity_id)
+    report = _posted_report(db_session, entity_id, getir.id)
     draft = _commission_draft(db_session, entity_id, supplier_id)
     invoice_service.link_delivery_report_to_draft(
         db_session, entity_id, draft.id, delivery_report_id=report.id
@@ -393,6 +359,7 @@ def test_api_commission_e2e(client: TestClient, db_session, commission_setup) ->
     entity_id = commission_setup["entity_id"]
     bank = commission_setup["bank"]
     accounts = commission_setup["accounts"]
+    getir_id = str(commission_setup["getir"].id)
 
     client.post(
         f"/entities/{entity_id}/suppliers",
@@ -402,7 +369,7 @@ def test_api_commission_e2e(client: TestClient, db_session, commission_setup) ->
     report_resp = client.post(
         f"/entities/{entity_id}/delivery/reports",
         json={
-            "platform": "getir",
+            "delivery_platform_id": getir_id,
             "report_date": "2026-04-15",
             "gross_kurus": 300_000,
             "commission_kurus": 30_000,
@@ -423,7 +390,7 @@ def test_api_commission_e2e(client: TestClient, db_session, commission_setup) ->
     settle_resp = client.post(
         f"/entities/{entity_id}/delivery/settlements",
         json={
-            "platform": "getir",
+            "delivery_platform_id": getir_id,
             "money_account_id": str(bank.id),
             "settlement_date": "2026-04-20",
             "amount_kurus": 270_000,
@@ -471,7 +438,9 @@ def test_api_commission_e2e(client: TestClient, db_session, commission_setup) ->
     recon_resp = client.get(f"/entities/{entity_id}/delivery/clearing-reconciliation")
     assert recon_resp.status_code == 200
     getir = next(
-        p for p in recon_resp.json()["platforms"] if p["platform"] == "getir"
+        p
+        for p in recon_resp.json()["platforms"]
+        if p["delivery_platform_id"] == getir_id
     )
     assert getir["clearing_balance_kurus"] == 0
     assert getir["in_transit_kurus"] == 0
@@ -481,6 +450,7 @@ def test_supplier_invoice_path_unchanged(
     client: TestClient, db_session, restaurant_a, commission_setup
 ) -> None:
     accounts = commission_setup["accounts"]
+    getir_clearing = commission_setup["getir"].gl_account_id
     content = SAMPLE_XML.read_bytes()
 
     client.post(
@@ -514,7 +484,6 @@ def test_supplier_invoice_path_unchanged(
     assert post.json()["payable_balance_kurus"] == 12_000_000
 
     with entity_context(db_session, restaurant_a.id):
-        clearing_id = accounts[GETIR_CLEARING_CODE]
         revenue_id = accounts[SALES_REVENUE_CODE]
         ap_id = accounts[ACCOUNTS_PAYABLE_CODE]
         lines = list(
@@ -525,5 +494,5 @@ def test_supplier_invoice_path_unchanged(
             )
         )
         assert any(line.account_id == ap_id for line in lines)
-        assert not any(line.account_id == clearing_id for line in lines)
+        assert not any(line.account_id == getir_clearing for line in lines)
         assert not any(line.account_id == revenue_id for line in lines)
