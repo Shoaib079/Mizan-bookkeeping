@@ -17,11 +17,13 @@ from app.features.invoices.schema import (
     ConfirmDraftRequest,
     InvoiceDraftListOut,
     InvoiceDraftOut,
+    LinkDeliveryReportRequest,
     LinkSupplierRequest,
     PostInvoiceDraftOut,
     PostInvoiceDraftRequest,
     RejectDraftRequest,
 )
+from app.features.delivery.settings import DeliveryNotEnabledError
 
 router = APIRouter(prefix="/entities/{entity_id}/invoices", tags=["invoices"])
 
@@ -115,6 +117,44 @@ def unlink_supplier_from_draft(
 ) -> InvoiceDraftOut:
     try:
         return service.unlink_supplier_from_draft(session, entity_id, draft_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.DraftNotLinkableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/link-delivery-report", response_model=InvoiceDraftOut)
+def link_delivery_report_to_draft(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    payload: LinkDeliveryReportRequest,
+    session: Session = Depends(get_session),
+) -> InvoiceDraftOut:
+    try:
+        return service.link_delivery_report_to_draft(
+            session,
+            entity_id,
+            draft_id,
+            delivery_report_id=payload.delivery_report_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DeliveryNotEnabledError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except service.DeliveryReportLinkError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except service.DraftNotLinkableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/unlink-delivery-report", response_model=InvoiceDraftOut)
+def unlink_delivery_report_from_draft(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    session: Session = Depends(get_session),
+) -> InvoiceDraftOut:
+    try:
+        return service.unlink_delivery_report_from_draft(session, entity_id, draft_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.DraftNotLinkableError as exc:

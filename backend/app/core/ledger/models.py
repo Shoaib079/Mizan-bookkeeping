@@ -50,6 +50,7 @@ class JournalEntrySource(str, enum.Enum):
     CARD_SALES = "card_sales"
     DELIVERY_REPORT = "delivery_report"
     DELIVERY_SETTLEMENT = "delivery_settlement"
+    DELIVERY_COMMISSION = "delivery_commission"
     BANK_FEE = "bank_fee"
     CREDIT_CARD_PAYMENT = "credit_card_payment"
     CASH_MOVEMENT = "cash_movement"

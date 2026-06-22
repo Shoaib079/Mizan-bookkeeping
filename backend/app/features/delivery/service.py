@@ -94,6 +94,7 @@ def _to_report_read(report: DeliveryReport) -> DeliveryReportRead:
         description=report.description,
         actor_id=report.actor_id,
         journal_entry_id=report.journal_entry_id,
+        commission_journal_entry_id=report.commission_journal_entry_id,
         posted_at=report.posted_at,
         posted_by=report.posted_by,
         created_at=report.created_at,
@@ -422,7 +423,36 @@ def get_delivery_clearing_reconciliation(
                 or 0
             )
 
-            in_transit_kurus = total_reported_gross_kurus - total_settled_net_kurus
+            total_commission_posted_kurus = int(
+                session.scalar(
+                    select(
+                        func.coalesce(func.sum(DeliveryReport.commission_kurus), 0)
+                    ).where(
+                        DeliveryReport.platform == platform.value,
+                        DeliveryReport.status == DeliveryReportStatus.POSTED.value,
+                        DeliveryReport.commission_journal_entry_id.is_not(None),
+                    )
+                )
+                or 0
+            )
+            commission_posted_count = int(
+                session.scalar(
+                    select(func.count())
+                    .select_from(DeliveryReport)
+                    .where(
+                        DeliveryReport.platform == platform.value,
+                        DeliveryReport.status == DeliveryReportStatus.POSTED.value,
+                        DeliveryReport.commission_journal_entry_id.is_not(None),
+                    )
+                )
+                or 0
+            )
+
+            in_transit_kurus = (
+                total_reported_gross_kurus
+                - total_settled_net_kurus
+                - total_commission_posted_kurus
+            )
 
             platforms.append(
                 PlatformClearingReconciliation(
@@ -431,9 +461,11 @@ def get_delivery_clearing_reconciliation(
                     clearing_balance_kurus=clearing_balance_kurus,
                     total_reported_gross_kurus=total_reported_gross_kurus,
                     total_settled_net_kurus=total_settled_net_kurus,
+                    total_commission_posted_kurus=total_commission_posted_kurus,
                     in_transit_kurus=in_transit_kurus,
                     report_count=report_count,
                     settlement_count=settlement_count,
+                    commission_posted_count=commission_posted_count,
                 )
             )
 

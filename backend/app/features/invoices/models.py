@@ -26,6 +26,11 @@ class InvoiceSourceType(str, enum.Enum):
     EFATURA_PDF = "efatura_pdf"
 
 
+class InvoiceKind(str, enum.Enum):
+    SUPPLIER = "supplier"
+    DELIVERY_COMMISSION = "delivery_commission"
+
+
 class InvoiceDraft(EntityScopedMixin, Base):
     __tablename__ = "invoice_drafts"
     __table_args__ = (
@@ -40,6 +45,9 @@ class InvoiceDraft(EntityScopedMixin, Base):
     status: Mapped[InvoiceDraftStatus] = mapped_column(
         String(32), nullable=False, default=InvoiceDraftStatus.DRAFT
     )
+    invoice_kind: Mapped[str] = mapped_column(
+        String(32), nullable=False, default=InvoiceKind.SUPPLIER.value
+    )
     source_type: Mapped[InvoiceSourceType] = mapped_column(String(32), nullable=False)
     file_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     supplier_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -47,6 +55,12 @@ class InvoiceDraft(EntityScopedMixin, Base):
     supplier_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("suppliers.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    delivery_report_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("delivery_reports.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )

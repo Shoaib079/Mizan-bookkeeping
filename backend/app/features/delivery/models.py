@@ -57,6 +57,13 @@ class DeliveryReport(EntityScopedMixin, Base):
         unique=True,
         index=True,
     )
+    commission_journal_entry_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("journal_entries.id", ondelete="RESTRICT"),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
     posted_at: Mapped[datetime | None] = mapped_column(nullable=True)
     posted_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

@@ -37,10 +37,11 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_receivables.py` | Customer receivables — credit sale Dr AR/Cr revenue, payment no revenue, control account = subledger, overpayment rejected, per-customer OB, bank `customer_payment` classify, immutability, API E2E | pass |
 | `backend/tests/test_pos_daily_summary.py` | POS daily-summary intake — OCR extract, upload draft, math mismatch → needs_review + confirm blocked, valid confirm posts card batch + cash in (no total line), duplicate fingerprint 409, duplicate-day upload → needs_review, confirm/post rejected when date already posted (service + API), DB partial unique index on posted rows, cross-entity isolation, corrected confirm, reject, API E2E | pass |
 | `backend/tests/test_delivery_reports.py` | Delivery platform reports — intake draft/needs_review, post Dr clearing / Cr revenue (gross), settlement Dr bank / Cr clearing (net), reconciliation in-transit = commission, delivery_enabled guard, duplicate fingerprint 409, cross-entity isolation, statement classify `delivery_settlement`, API E2E | pass |
+| `backend/tests/test_delivery_commission_efatura.py` | Delivery commission e-Faturas — full lifecycle report + settlement + commission invoice → clearing zero; Dr `5500` + Dr `1500` / Cr clearing (AP untouched); gross vs report `commission_kurus` mismatch → needs_review + post blocked; double commission blocked; cross-entity isolation; supplier invoice path unchanged; API E2E | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
-**Count:** 289 pytest (last run 2026-06-22).
+**Count:** 295 pytest (last run 2026-06-22).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 

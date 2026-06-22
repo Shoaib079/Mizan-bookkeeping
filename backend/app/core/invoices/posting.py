@@ -26,7 +26,7 @@ from app.core.payables.models import SupplierLedgerEntry
 from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
-from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus
+from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
 from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
 
 
@@ -130,6 +130,10 @@ def post_confirmed_draft(
         if status != InvoiceDraftStatus.CONFIRMED:
             raise DraftPostError(
                 f"Draft status {status.value!r} must be confirmed to post"
+            )
+        if InvoiceKind(draft.invoice_kind) == InvoiceKind.DELIVERY_COMMISSION:
+            raise DraftPostError(
+                "Delivery commission drafts must use delivery commission posting"
             )
         if draft.supplier_id is None:
             raise DraftPostError("Supplier must be linked before posting")

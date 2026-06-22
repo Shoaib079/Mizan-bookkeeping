@@ -24,9 +24,16 @@ from app.features.entities import service as entity_service
 from app.features.invoices.models import (
     InvoiceDraft,
     InvoiceDraftStatus,
+    InvoiceKind,
     InvoiceSourceType,
 )
+from app.core.delivery.commission_posting import (
+    _commission_mismatch_reason,
+    post_delivery_commission_draft,
+)
 from app.core.invoices.posting import DraftPostError, post_confirmed_draft
+from app.features.delivery.models import DeliveryReport, DeliveryReportStatus
+from app.features.delivery.settings import require_delivery_enabled
 from app.features.invoices.schema import InvoiceDraftOut, PostInvoiceDraftOut
 from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
 from app.features.suppliers import service as supplier_service
@@ -49,6 +56,10 @@ class SupplierLinkError(Exception):
 
 class DraftConfirmError(Exception):
     """Raised when draft cannot be confirmed."""
+
+
+class DeliveryReportLinkError(Exception):
+    """Raised when delivery report link preconditions fail."""
 
 
 class DraftImmutableError(Exception):
@@ -111,11 +122,13 @@ def _to_out(
         id=draft.id,
         entity_id=draft.entity_id,
         status=draft.status,
+        invoice_kind=InvoiceKind(draft.invoice_kind),
         source_type=draft.source_type,
         file_fingerprint=draft.file_fingerprint,
         supplier_name=draft.supplier_name,
         supplier_vkn=draft.supplier_vkn,
         supplier_id=draft.supplier_id,
+        delivery_report_id=draft.delivery_report_id,
         linked_supplier_name=linked_name,
         linked_supplier_vkn=linked_vkn,
         invoice_number=draft.invoice_number,
@@ -339,6 +352,71 @@ def unlink_supplier_from_draft(
     return _draft_out(session, entity_id, draft)
 
 
+def link_delivery_report_to_draft(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    *,
+    delivery_report_id: uuid.UUID,
+) -> InvoiceDraftOut:
+    _require_entity(session, entity_id)
+    require_delivery_enabled(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    _ensure_draft_linkable(draft)
+
+    with entity_context(session, entity_id):
+        report = session.get(DeliveryReport, delivery_report_id)
+        if report is None:
+            raise LookupError("Delivery report not found")
+        if report.status != DeliveryReportStatus.POSTED.value:
+            raise DeliveryReportLinkError("Delivery report must be posted before linking")
+        if report.commission_journal_entry_id is not None:
+            raise DeliveryReportLinkError(
+                "Delivery report commission is already posted"
+            )
+
+        draft.invoice_kind = InvoiceKind.DELIVERY_COMMISSION.value
+        draft.delivery_report_id = delivery_report_id
+
+        if draft.gross_kurus != report.commission_kurus:
+            draft.status = InvoiceDraftStatus.NEEDS_REVIEW.value
+            draft.review_reason = _commission_mismatch_reason(
+                draft_gross_kurus=draft.gross_kurus,
+                report_commission_kurus=report.commission_kurus,
+            )
+        elif _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
+            draft.status = InvoiceDraftStatus.DRAFT.value
+            draft.review_reason = None
+
+        session.commit()
+        session.refresh(draft)
+
+    return _draft_out(session, entity_id, draft)
+
+
+def unlink_delivery_report_from_draft(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+) -> InvoiceDraftOut:
+    _require_entity(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    _ensure_draft_linkable(draft)
+
+    with entity_context(session, entity_id):
+        draft.invoice_kind = InvoiceKind.SUPPLIER.value
+        draft.delivery_report_id = None
+        if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
+            draft.status = InvoiceDraftStatus.DRAFT.value
+            draft.review_reason = None
+        session.commit()
+        session.refresh(draft)
+
+    return _draft_out(session, entity_id, draft)
+
+
 def confirm_invoice_draft(
     session: Session,
     entity_id: uuid.UUID,
@@ -355,6 +433,13 @@ def confirm_invoice_draft(
         )
     if draft.supplier_id is None:
         raise DraftConfirmError("Supplier must be linked before confirm")
+    if InvoiceKind(draft.invoice_kind) == InvoiceKind.DELIVERY_COMMISSION:
+        if draft.delivery_report_id is None:
+            raise DraftConfirmError("Delivery report must be linked before confirm")
+        if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
+            raise DraftConfirmError(
+                draft.review_reason or "Draft needs review before confirm"
+            )
 
     with entity_context(session, entity_id):
         draft.status = InvoiceDraftStatus.CONFIRMED
@@ -399,6 +484,26 @@ def post_invoice_draft(
     actor_id: uuid.UUID,
 ) -> PostInvoiceDraftOut:
     _require_entity(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    if InvoiceKind(draft.invoice_kind) == InvoiceKind.DELIVERY_COMMISSION:
+        require_delivery_enabled(session, entity_id)
+        result = post_delivery_commission_draft(
+            session,
+            entity_id,
+            draft_id,
+            expense_account_id=expense_account_id,
+            actor_id=actor_id,
+        )
+        draft = _get_draft_row(session, entity_id, draft_id)
+        return PostInvoiceDraftOut(
+            draft=_draft_out(session, entity_id, draft),
+            journal_entry_id=result.journal_entry.id,
+            journal_entry_date=result.journal_entry.entry_date,
+            journal_entry_description=result.journal_entry.description,
+            journal_entry_source=result.journal_entry.source,
+            delivery_report_id=result.delivery_report.id,
+        )
 
     result = post_confirmed_draft(
         session,

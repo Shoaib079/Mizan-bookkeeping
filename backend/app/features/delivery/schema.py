@@ -43,6 +43,7 @@ class DeliveryReportRead(BaseModel):
     description: str
     actor_id: uuid.UUID | None
     journal_entry_id: uuid.UUID | None
+    commission_journal_entry_id: uuid.UUID | None
     posted_at: datetime | None
     posted_by: uuid.UUID | None
     created_at: datetime
@@ -88,9 +89,11 @@ class PlatformClearingReconciliation(BaseModel):
     clearing_balance_kurus: int
     total_reported_gross_kurus: int
     total_settled_net_kurus: int
+    total_commission_posted_kurus: int
     in_transit_kurus: int
     report_count: int
     settlement_count: int
+    commission_posted_count: int
 
 
 class DeliveryClearingReconciliationRead(BaseModel):

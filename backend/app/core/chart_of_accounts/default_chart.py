@@ -26,6 +26,7 @@ BANK_CHARGES_CODE = "5300"
 CASH_OVER_SHORT_CODE = "5400"
 FX_GAIN_CODE = "4200"
 FX_LOSS_CODE = "5600"
+DELIVERY_COMMISSION_EXPENSE_CODE = "5500"
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,6 +123,14 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
     DefaultAccount("5200", "Utility Expense", "Genel Giderler", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount("5300", "Bank Charges", "Banka Masrafları", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount("5400", "Cash Over/Short", "Kasa Fazlası/Eksiği", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
+    DefaultAccount(
+        DELIVERY_COMMISSION_EXPENSE_CODE,
+        "Delivery Platform Commission",
+        "Yemek Platformu Komisyonu",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
     DefaultAccount(FX_LOSS_CODE, "FX Loss", "Kur Zararı", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
 )
 
