@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-22
 
+**Phase 7 — Excel export:** openpyxl xlsx export for Phase 7 read reports — P&L, balance sheet, cash flow, KDV input, delivery sales, period comparison. Shared `core/excel/workbook.py` helpers; builders in `features/reports/excel_export.py`. Integer kuruş columns; metadata row + bold headers; `StreamingResponse` with attachment filenames (`mizan-{slug}-{from}-{to}.xlsx`). Same error handling as JSON routes. API `GET .../reports/{report}/export`. Tag `v0.43.0-phase7-excel-export`. 378 pytest green. **Phase 7 complete pending owner sign-off.**
+
 **Phase 7 — Period comparison:** Read-only current vs prior period metrics per entity — reuses `get_dashboard()`, `get_profit_and_loss()`, `get_kdv_input_report()`, `get_cash_flow()`, and `get_delivery_sales_report()` (when `delivery_enabled`) for each window. Auto prior window: same inclusive length immediately before current (`prior_to = from - 1 day`). Optional `prior_from`/`prior_to` override. Per-metric `change_kurus` and `change_percent` (null when prior zero). Omits payables/receivables/TRY position (live balances, not historical as-of). API `GET .../reports/period-comparison`. Tag `v0.42.0-phase7-period-comparison`. 371 pytest green.
 
 **Phase 7 — Per-rate KDV input report:** Read-only purchase/input VAT per entity from posted `invoice_drafts` only (`status=posted`); includes `supplier` and `delivery_commission` kinds; aggregates `vat_breakdown` JSONB by `rate_percent` (base + VAT kuruş sums, distinct invoice count per rate); inclusive `from`/`to` on `invoice_date`; grand totals + distinct posted invoice count. API `GET .../reports/kdv-input`. Tag `v0.41.0-phase7-kdv-input-report`. 363 pytest green.

@@ -122,6 +122,14 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** Output VAT, VAT declaration, Excel export, UI, period comparison.
 
+## 2026-06-22 — Excel export (Phase 7)
+
+**Choice:** `openpyxl>=3.1` for Phase 7 read-report exports only (v1). Shared helpers in `core/excel/workbook.py`; per-report builders in `features/reports/excel_export.py`. Integer kuruş in cells (no Turkish locale formatting v1). One sheet per export; row 1 metadata + bold headers; `StreamingResponse` with `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`.
+
+**API:** `GET .../reports/profit-and-loss/export`, `balance-sheet/export`, `cash-flow/export`, `kdv-input/export`, `delivery-sales/export`, `period-comparison/export` — same params and error handling as JSON routes.
+
+**Not in slice:** PDF, supplier ledger/payables/bank/backup exports, UI download buttons, multi-entity roll-up, Turkish number formatting in cells.
+
 ## 2026-06-22 — Period comparison report (Phase 7)
 
 **Choice:** Read-only **period-over-period comparison** per entity — current window vs prior window. **Metrics** reuse existing report services (no duplicated GL logic): dashboard sales/expenses/net result, P&L `net_income_kurus`, KDV input `total_vat_kurus`, cash flow `net_change_kurus`, delivery gross (only when `delivery_enabled`). **Prior window default:** same inclusive length immediately before current (`period_days = (to - from).days + 1`; `prior_to = from - 1`; `prior_from = prior_to - (period_days - 1)`). Optional `prior_from`/`prior_to` override (both required if either set). Per metric: `current_kurus`, `prior_kurus`, `change_kurus`, `change_percent` (null when prior zero).

@@ -12,11 +12,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 7 — Dashboard, reports, Excel export, financial statements |
-| **Active slice** | Excel export |
-| **Last completed slice** | Period comparison |
-| **Last commit/tag** | `v0.42.0-phase7-period-comparison` |
-| **Next up** | Excel export (Phase 7 Slice 7 — last Phase 7 slice) |
+| **Active phase** | Phase 8 — Roles & permissions, backups, security hardening, launch |
+| **Active slice** | Roles & permissions |
+| **Last completed slice** | Excel export (Phase 7 final slice) |
+| **Last commit/tag** | `v0.43.0-phase7-excel-export` |
+| **Next up** | Roles & permissions (Phase 8 Slice 1) |
 
 ---
 
@@ -165,9 +165,9 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 | Cash flow statement | done | `GET .../reports/cash-flow?from=&to=` — TRY liquid bank+cash only; opening/closing from `balance_as_of_kurus`; direct method by journal source (operating/financing); transfers + opening_balance excluded from categorization; reconciliation flags |
 | Per-rate KDV report | done | `GET .../reports/kdv-input?from=&to=` — purchase/input VAT per rate from posted `invoice_drafts` (`supplier` + `delivery_commission`); aggregate `vat_breakdown`; distinct invoice counts per rate |
 | Period comparison | done | `GET .../reports/period-comparison?from=&to=` — current vs prior period metrics (dashboard/P&L/KDV/cash flow/delivery gross); auto same-length prior window; optional `prior_from`/`prior_to` override; omits payables/receivables/TRY position (not true period-over-period without as-of history) |
-| Excel export | not started | |
+| Excel export | done | `GET .../reports/{report}/export` — openpyxl xlsx for P&L, balance sheet, cash flow, KDV input, delivery sales, period comparison; integer kuruş; `Content-Disposition` attachment filenames |
 
-**Phase 7 complete when:** all slices above done, tested, committed, owner sign-off.
+**Phase 7 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 7 COMPLETE pending owner sign-off.**
 
 ---
 

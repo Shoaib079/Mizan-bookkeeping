@@ -47,10 +47,11 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_cash_flow.py` | Cash flow statement — POS settlement inflow + supplier payment outflow, transfer net-zero exclusion, expense cash outflow, date range exclusion, `from>to` → 422, API E2E, cross-entity RLS | pass |
 | `backend/tests/test_kdv_input_report.py` | Per-rate KDV input report — posted supplier + delivery commission `vat_breakdown` aggregation, date range + unposted exclusion, multi-rate invoice count, `from>to` → 422, API E2E, cross-entity RLS | pass |
 | `backend/tests/test_period_comparison.py` | Period comparison — auto prior same length, metrics differ by period, change_kurus/change_percent, explicit prior override, partial prior → 422, `from>to` → 422, API E2E, cross-entity RLS | pass |
+| `backend/tests/test_excel_export.py` | Excel export — P&L/balance sheet/KDV/period comparison xlsx 200 + content-type, valid openpyxl load, expected headers, P&L row count vs JSON, `from>to` → 422 | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
-**Count:** 371 pytest (last run 2026-06-22).
+**Count:** 378 pytest (last run 2026-06-22).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 
