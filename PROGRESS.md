@@ -8,7 +8,7 @@
 | **Last completed slice** | POS daily-summary photo intake |
 | **Next slice** | Delivery platform reports (gross / commission / net) |
 | **Branch** | `main` |
-| **Last tag** | (pending commit) / `v0.32.0-phase6-pos-daily-summary-intake` |
+| **Last tag** | `4a529b3` / `v0.32.0-phase6-pos-daily-summary-intake` |
 
 ## Resume point
 

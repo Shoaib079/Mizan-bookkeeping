@@ -15,7 +15,7 @@
 | **Active phase** | Phase 6 — Sales intake + tips + expenses |
 | **Active slice** | Delivery platform reports |
 | **Last completed slice** | POS daily-summary photo intake |
-| **Last commit/tag** | (pending) / `v0.32.0-phase6-pos-daily-summary-intake` |
+| **Last commit/tag** | `4a529b3` / `v0.32.0-phase6-pos-daily-summary-intake` |
 | **Next up** | Delivery platform reports (gross / commission / net) |
 
 ---
@@ -197,7 +197,7 @@ Not in current build order — track here when scoped:
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| 2026-06-22 | POS daily-summary photo intake | (pending) / `v0.32.0-phase6-pos-daily-summary-intake` | `pos_daily_summaries`, OCR v1, confirm posts card batch + cash in, 275 pytest |
+| 2026-06-22 | POS daily-summary photo intake | `4a529b3` / `v0.32.0-phase6-pos-daily-summary-intake` | `pos_daily_summaries`, OCR v1, confirm posts card batch + cash in, 275 pytest |
 | 2026-06-21 | App scaffold & repo setup | `d91ccec` / `v0.1.0-phase0-scaffold` | FastAPI + Next.js monorepo, Mizan shell, money type, docker Postgres, pytest |
 | 2026-06-21 | Multi-restaurant foundation | `29ce4a3` / `v0.2.0-phase0-entity-isolation` | Entity + RLS, entity_context, cross-entity isolation tests |
 | 2026-06-21 | Opening-balances plan | `451c57f` / `v0.4.0-phase0-complete` | Default chart, OB validation, wizard plan, Phase 0 done |
