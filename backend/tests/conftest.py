@@ -48,7 +48,7 @@ def db_session(test_engine) -> Session:
             "delivery_settlements, delivery_reports, delivery_platforms, "
             "card_sales_batches, pos_daily_summaries, credit_card_payments, fx_ledger_entries, "
             "staff_ledger_entries, employees, partner_ledger_entries, partners, "
-            "cash_movements, cash_drawer_sessions, "
+            "cash_movements, cash_drawer_sessions, tip_payouts, tip_accruals, "
             "money_accounts, accounts, "
             "invoice_drafts, supplier_ledger_entries, suppliers, entity_settings, entities CASCADE"
         )

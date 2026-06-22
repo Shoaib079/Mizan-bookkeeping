@@ -43,6 +43,16 @@ def test_inventory_not_in_default_chart() -> None:
     assert "inventory" not in names
 
 
+def test_default_chart_includes_tips_payable() -> None:
+    from app.core.chart_of_accounts.default_chart import DEFAULT_CHART, TIPS_PAYABLE_CODE
+
+    codes = {a.code for a in DEFAULT_CHART}
+    assert TIPS_PAYABLE_CODE in codes
+    tips = next(a for a in DEFAULT_CHART if a.code == TIPS_PAYABLE_CODE)
+    assert tips.name_en == "Tips Payable"
+    assert tips.accepts_opening_balance is True
+
+
 def test_opening_balance_accounts_are_balance_sheet() -> None:
     ob = opening_balance_accounts()
     assert len(ob) >= 5

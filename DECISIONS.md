@@ -16,6 +16,16 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Scheduling:** Later enhancement — after core build (Phase 6–8 + sign-off). Not in current slice order.
 
+## 2026-06-22 — Tips pass-through (Phase 6 Slice 5)
+
+**Choice:** Tips are **pass-through**, not revenue or expense. Chart account **`2260` Tips Payable** (liability, credit normal balance) holds the "tips owed to staff" pot. **Card tip accrual** Dr `1400` Card Sales Clearing / Cr `2260`. **Cash tip accrual** (tips held in drawer) Dr cash GL / Cr `2260`. **Tip payout to staff** Dr `2260` / Cr cash GL — reject if pot balance insufficient. P&L unaffected.
+
+**Why:** Decisions §9 — card tips are not sales; cash paid to staff is not expense; net zero on P&L.
+
+**API:** `POST/GET /entities/{id}/tips/accruals`, `POST/GET /entities/{id}/tips/payouts`, `GET /entities/{id}/tips/balance`.
+
+**Not in slice:** POS auto-extraction of tips, UI, locked-period enforcement.
+
 ## 2026-06-22 — User-managed delivery platforms (Phase 6 refactor)
 
 **Choice:** Replace fixed `DeliveryPlatform` enum and hardcoded clearing codes (`1410`/`1420`/`1430`) with per-entity **`delivery_platforms`** table. Owner can **add**, **rename**, and **deactivate** platforms when `delivery_enabled`. Each platform row owns a **clearing GL sub-account** auto-created under parent **`1450` Delivery Platform Clearing** (same sub-account pattern as bank/card `money_accounts`). `delivery_reports`, `delivery_settlements`, bank classify `delivery_settlement`, commission posting, and clearing reconciliation all reference **`delivery_platform_id`** — iterate the entity's platform list, not a global enum. Remove comma-separated `delivery_platforms` entity setting (module toggle `delivery_enabled` only). Migration `032` seeds platforms from legacy clearing accounts and reparents them under `1450`.

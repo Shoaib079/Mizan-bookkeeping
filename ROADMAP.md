@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 6 — Sales intake + tips + expenses |
-| **Active slice** | Tips (pass-through) |
-| **Last completed slice** | User-managed delivery platforms |
-| **Last commit/tag** | `v0.34.1-phase6-delivery-platforms-managed` |
-| **Next up** | Tips (pass-through, not revenue/expense) |
+| **Active slice** | Expenses + spelling tolerance |
+| **Last completed slice** | Tips (pass-through, not revenue/expense) |
+| **Last commit/tag** | `v0.35.0-phase6-tips` |
+| **Next up** | Expenses + spelling tolerance |
 
 ---
 
@@ -144,7 +144,7 @@ POS daily-summary photo + delivery platform reports; commission e-Faturas (e-Fat
 | Delivery platform reports (gross / commission / net) | done | `delivery_reports` + `delivery_settlements`; `post_delivery_report()` Dr clearing / Cr `4000` gross; `post_delivery_settlement()` Dr bank / Cr clearing net; statement classify `delivery_settlement` (`delivery_platform_id`); reconciliation iterates entity platforms; Alembic `030` |
 | User-managed delivery platforms | done | `delivery_platforms` table — owner add / rename / deactivate; auto clearing GL sub-account under parent `1450` (mirrors bank/card sub-accounts); reports/settlements/commission/reconciliation keyed by `delivery_platform_id`; removed fixed enum + comma-separated `delivery_platforms` setting; legacy `1410`–`1430` migrated; API `POST/GET/PATCH .../delivery/platforms`; Alembic `032`; 300 pytest |
 | Commission e-Faturas | done | Reuse `invoice_drafts` with `invoice_kind=delivery_commission` + `delivery_report_id` FK; `post_delivery_commission_draft()` Dr `5500` + Dr `1500` / **Cr platform clearing GL** (via linked platform) — **not** `2000` AP; link/report mismatch → `needs_review`; `commission_journal_entry_id` on report; Alembic `031` |
-| Tips (pass-through, not revenue/expense) | not started | |
+| Tips (pass-through, not revenue/expense) | done | `tip_accruals` + `tip_payouts`; card Dr `1400`/Cr `2260`; cash held Dr cash/Cr `2260`; payout Dr `2260`/Cr cash (not expense); balance check on pot; chart `2260` Tips Payable; API `POST/GET .../tips/accruals`, `POST/GET .../tips/payouts`, `GET .../tips/balance`; Alembic `033`; tag `v0.35.0`; 307 pytest |
 | Expenses + spelling tolerance | not started | |
 
 **Phase 6 complete when:** all slices above done, tested, committed, owner sign-off.

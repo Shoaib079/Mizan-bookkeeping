@@ -14,6 +14,7 @@ INPUT_VAT_CODE = "1500"
 ACCOUNTS_RECEIVABLE_CODE = "1200"
 ACCOUNTS_PAYABLE_CODE = "2000"
 SALARIES_PAYABLE_CODE = "2250"
+TIPS_PAYABLE_CODE = "2260"
 PARTNER_REIMBURSEMENT_PAYABLE_CODE = "2150"
 SALARY_EXPENSE_CODE = "5100"
 EMPLOYEE_ADVANCES_CODE = "1300"
@@ -79,6 +80,14 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
         SALARIES_PAYABLE_CODE,
         "Salaries Payable",
         "Ödenecek Maaşlar",
+        AccountType.LIABILITY,
+        AccountNormalBalance.CREDIT,
+        True,
+    ),
+    DefaultAccount(
+        TIPS_PAYABLE_CODE,
+        "Tips Payable",
+        "Ödenecek Bahşişler",
         AccountType.LIABILITY,
         AccountNormalBalance.CREDIT,
         True,
