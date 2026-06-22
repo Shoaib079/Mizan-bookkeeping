@@ -7,6 +7,7 @@ import uuid
 from datetime import date
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.adapters.ocr_ai.pos_summary import (
@@ -99,6 +100,49 @@ def _find_by_fingerprint(
         )
 
 
+def _format_summary_date_tr(summary_date: date) -> str:
+    return summary_date.strftime("%d.%m")
+
+
+def _duplicate_date_review_reason(summary_date: date) -> str:
+    return f"A summary for {_format_summary_date_tr(summary_date)} already exists"
+
+
+def _find_active_summary_for_date(
+    session: Session,
+    entity_id: uuid.UUID,
+    summary_date: date,
+    *,
+    exclude_id: uuid.UUID | None = None,
+) -> PosDailySummary | None:
+    """Another non-rejected summary for the same business day."""
+    with entity_context(session, entity_id):
+        query = select(PosDailySummary).where(
+            PosDailySummary.summary_date == summary_date,
+            PosDailySummary.status != PosDailySummaryStatus.REJECTED.value,
+        )
+        if exclude_id is not None:
+            query = query.where(PosDailySummary.id != exclude_id)
+        return session.scalar(query.limit(1))
+
+
+def _find_posted_summary_for_date(
+    session: Session,
+    entity_id: uuid.UUID,
+    summary_date: date,
+    *,
+    exclude_id: uuid.UUID | None = None,
+) -> PosDailySummary | None:
+    with entity_context(session, entity_id):
+        query = select(PosDailySummary).where(
+            PosDailySummary.summary_date == summary_date,
+            PosDailySummary.status == PosDailySummaryStatus.POSTED.value,
+        )
+        if exclude_id is not None:
+            query = query.where(PosDailySummary.id != exclude_id)
+        return session.scalar(query.limit(1))
+
+
 def _extension_for(filename: str | None, content_type: str | None) -> str:
     if filename:
         lower = filename.lower()
@@ -147,6 +191,19 @@ def create_pos_daily_summary_from_upload(
             f"cash ({extraction.cash_kurus}) + card ({extraction.card_kurus}) "
             f"!= total ({extraction.total_kurus})"
         )
+
+    if extraction.summary_date is not None:
+        duplicate = _find_active_summary_for_date(
+            session, entity_id, extraction.summary_date
+        )
+        if duplicate is not None:
+            status = PosDailySummaryStatus.NEEDS_REVIEW
+            dup_reason = _duplicate_date_review_reason(extraction.summary_date)
+            review_reason = (
+                dup_reason
+                if review_reason is None
+                else f"{review_reason}; {dup_reason}"
+            )
 
     stored_path = save_upload(
         entity_id,
@@ -228,6 +285,12 @@ def confirm_pos_daily_summary_intake(
             f"Summary status {status.value!r} cannot be confirmed"
         )
 
+    sales_date = payload.summary_date or summary.summary_date or date.today()
+    if _find_posted_summary_for_date(
+        session, entity_id, sales_date, exclude_id=summary.id
+    ) is not None:
+        raise PosDailySummaryConfirmError(_duplicate_date_review_reason(sales_date))
+
     cash_kurus = (
         payload.cash_kurus if payload.cash_kurus is not None else summary.cash_kurus
     )
@@ -273,6 +336,13 @@ def confirm_pos_daily_summary_intake(
         )
     except PosDailySummaryPostError as exc:
         raise PosDailySummaryConfirmError(str(exc)) from exc
+    except IntegrityError as exc:
+        session.rollback()
+        if "uq_pos_daily_summaries_entity_date_posted" in str(exc.orig):
+            raise PosDailySummaryConfirmError(
+                _duplicate_date_review_reason(sales_date)
+            ) from exc
+        raise
 
     return _to_read(result.summary)
 

@@ -6,7 +6,7 @@ import enum
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, UniqueConstraint, Uuid
+from sqlalchemy import Boolean, Date, ForeignKey, Index, Integer, String, UniqueConstraint, text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -92,6 +92,13 @@ class PosDailySummary(EntityScopedMixin, Base):
             "entity_id",
             "file_fingerprint",
             name="uq_pos_daily_summaries_entity_fingerprint",
+        ),
+        Index(
+            "uq_pos_daily_summaries_entity_date_posted",
+            "entity_id",
+            "summary_date",
+            unique=True,
+            postgresql_where=text("status = 'posted'"),
         ),
     )
 

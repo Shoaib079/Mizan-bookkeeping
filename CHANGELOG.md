@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-22
 
+**Phase 6 — POS duplicate-day guard:** At most one posted POS daily summary per `(entity_id, summary_date)`; duplicate upload for same business day → `needs_review`; confirm rejects when another summary for that day is already posted (application check + partial unique index `029`). Tag `v0.32.1-phase6-pos-summary-duplicate-day-guard`. 279 pytest green.
+
 **Phase 6 — POS daily-summary photo intake:** Owner uploads POS Z-report photo; OCR v1 (fixture registry + UTF-8 text heuristics) extracts cash, card, total (kuruş). Math check: cash + card must equal total — mismatch → `needs_review` (confirm blocked until owner corrects amounts). Confirm posts atomically: card portion via `post_card_sales_batch()` Dr `1400` / Cr `4000`; cash portion via `post_cash_movement()` IN with offset `4000` — never posts POS aggregate total as one GL line. Duplicate file fingerprint → 409. API `POST/GET .../pos/daily-summaries`, `POST .../confirm`, `POST .../reject`. Alembic `028`. Tag `v0.32.0-phase6-pos-daily-summary-intake`. 275 pytest green.
 
 **Phase 5 owner sign-off:** Cash drawer, forex, staff, partner reimbursements, receivables, FX spend officially complete. Active phase → Phase 6. Last tag remains `ce1e965` / `v0.31.0-phase5-fx-spend`.

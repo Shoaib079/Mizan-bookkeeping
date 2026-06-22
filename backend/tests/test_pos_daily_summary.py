@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from datetime import date
 from pathlib import Path
 
 import pytest
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 from app.adapters.ocr_ai.pos_summary import extract_pos_summary, math_valid
 from app.core.chart_of_accounts.default_chart import (
@@ -22,11 +24,17 @@ from app.db.session import entity_context
 from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
+from app.features.pos.daily_summary_service import (
+    PosDailySummaryConfirmError,
+    confirm_pos_daily_summary_intake,
+)
 from app.features.pos.models import CardSalesBatch, PosDailySummary, PosDailySummaryStatus
+from app.features.pos.schema import ConfirmPosDailySummaryRequest
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "pos"
 SAMPLE_SUMMARY = FIXTURES / "sample_summary.txt"
 MISMATCH_SUMMARY = FIXTURES / "mismatch_summary.txt"
+DUPLICATE_DAY_SUMMARY = FIXTURES / "duplicate_day_summary.txt"
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
@@ -256,6 +264,207 @@ def test_list_and_get_summary(client, restaurant_a, pos_summary_setup) -> None:
     single = client.get(f"/entities/{restaurant_a.id}/pos/daily-summaries/{summary_id}")
     assert single.status_code == 200
     assert single.json()["cash_kurus"] == 150_000
+
+
+def test_duplicate_day_upload_needs_review(client, restaurant_a, pos_summary_setup) -> None:
+    first = client.post(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries",
+        files={"file": ("summary.txt", SAMPLE_SUMMARY.read_bytes(), "text/plain")},
+    )
+    assert first.status_code == 201
+    assert first.json()["status"] == "draft"
+
+    second = client.post(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries",
+        files={
+            "file": (
+                "duplicate_day.txt",
+                DUPLICATE_DAY_SUMMARY.read_bytes(),
+                "text/plain",
+            )
+        },
+    )
+    assert second.status_code == 201
+    body = second.json()
+    assert body["status"] == "needs_review"
+    assert "22.06" in body["review_reason"]
+    assert "already exists" in body["review_reason"]
+
+
+def test_confirm_posting_rejected_when_date_already_posted(
+    db_session, client, pos_summary_setup
+) -> None:
+    """Confirm/post guard — rejects a draft for a day that already has a posted summary."""
+    entity_id = pos_summary_setup["entity_id"]
+    drawer = pos_summary_setup["drawer"]
+    sales_date = date(2026, 6, 22)
+
+    first_upload = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries",
+        files={"file": ("summary.txt", SAMPLE_SUMMARY.read_bytes(), "text/plain")},
+    )
+    first_id = first_upload.json()["id"]
+    confirm_first = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries/{first_id}/confirm",
+        json={
+            "money_account_id": str(drawer.id),
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert confirm_first.status_code == 200
+    assert confirm_first.json()["status"] == "posted"
+
+    rogue_fp = hashlib.sha256(b"rogue-draft-second-summary").hexdigest()
+    with entity_context(db_session, entity_id):
+        rogue = PosDailySummary(
+            entity_id=entity_id,
+            status=PosDailySummaryStatus.DRAFT.value,
+            file_fingerprint=rogue_fp,
+            summary_date=sales_date,
+            cash_kurus=100_000,
+            card_kurus=100_000,
+            total_kurus=200_000,
+            extraction_payload={"source": "test"},
+        )
+        db_session.add(rogue)
+        db_session.commit()
+        db_session.refresh(rogue)
+        rogue_id = rogue.id
+
+    with pytest.raises(PosDailySummaryConfirmError, match="22.06") as exc_info:
+        confirm_pos_daily_summary_intake(
+            db_session,
+            entity_id,
+            rogue_id,
+            ConfirmPosDailySummaryRequest(
+                money_account_id=drawer.id,
+                actor_id=ACTOR_ID,
+            ),
+        )
+    assert "already exists" in str(exc_info.value)
+
+    with entity_context(db_session, entity_id):
+        posted_count = db_session.scalar(
+            select(func.count())
+            .select_from(PosDailySummary)
+            .where(PosDailySummary.status == PosDailySummaryStatus.POSTED.value)
+        )
+    assert posted_count == 1
+
+
+def test_db_partial_unique_index_blocks_second_posted(
+    db_session, client, pos_summary_setup
+) -> None:
+    """DB partial unique index — concurrent/race path cannot leave two posted rows."""
+    entity_id = pos_summary_setup["entity_id"]
+    drawer = pos_summary_setup["drawer"]
+    sales_date = date(2026, 6, 22)
+
+    first_upload = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries",
+        files={"file": ("summary.txt", SAMPLE_SUMMARY.read_bytes(), "text/plain")},
+    )
+    first_id = first_upload.json()["id"]
+    confirm_first = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries/{first_id}/confirm",
+        json={
+            "money_account_id": str(drawer.id),
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert confirm_first.status_code == 200
+
+    rogue_fp = hashlib.sha256(b"rogue-for-db-unique-index").hexdigest()
+    with entity_context(db_session, entity_id):
+        rogue = PosDailySummary(
+            entity_id=entity_id,
+            status=PosDailySummaryStatus.DRAFT.value,
+            file_fingerprint=rogue_fp,
+            summary_date=sales_date,
+            cash_kurus=50_000,
+            card_kurus=50_000,
+            total_kurus=100_000,
+            extraction_payload={"source": "test"},
+        )
+        db_session.add(rogue)
+        db_session.commit()
+        db_session.refresh(rogue)
+        rogue_id = rogue.id
+
+    with entity_context(db_session, entity_id):
+        rogue = db_session.get(PosDailySummary, rogue_id)
+        assert rogue is not None
+        rogue.status = PosDailySummaryStatus.POSTED.value
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+        db_session.rollback()
+
+
+def test_second_summary_same_date_cannot_double_post(
+    db_session, client, pos_summary_setup
+) -> None:
+    entity_id = pos_summary_setup["entity_id"]
+    drawer = pos_summary_setup["drawer"]
+    revenue_id = pos_summary_setup["accounts"][SALES_REVENUE_CODE]
+
+    first_upload = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries",
+        files={"file": ("summary.txt", SAMPLE_SUMMARY.read_bytes(), "text/plain")},
+    )
+    first_id = first_upload.json()["id"]
+
+    confirm_first = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries/{first_id}/confirm",
+        json={
+            "money_account_id": str(drawer.id),
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert confirm_first.status_code == 200
+    assert confirm_first.json()["status"] == "posted"
+
+    second_upload = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries",
+        files={
+            "file": (
+                "duplicate_day.txt",
+                DUPLICATE_DAY_SUMMARY.read_bytes(),
+                "text/plain",
+            )
+        },
+    )
+    assert second_upload.status_code == 201
+    assert second_upload.json()["status"] == "needs_review"
+    second_id = second_upload.json()["id"]
+
+    confirm_second = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries/{second_id}/confirm",
+        json={
+            "money_account_id": str(drawer.id),
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert confirm_second.status_code == 422
+    assert "22.06" in confirm_second.json()["detail"]
+    assert "already exists" in confirm_second.json()["detail"]
+
+    with entity_context(db_session, entity_id):
+        revenue_credit = int(
+            db_session.scalar(
+                select(func.coalesce(func.sum(JournalEntryLine.amount_kurus), 0)).where(
+                    JournalEntryLine.account_id == revenue_id,
+                    JournalEntryLine.side == AccountNormalBalance.CREDIT,
+                )
+            )
+            or 0
+        )
+        posted_count = db_session.scalar(
+            select(func.count())
+            .select_from(PosDailySummary)
+            .where(PosDailySummary.status == PosDailySummaryStatus.POSTED.value)
+        )
+    assert revenue_credit == 500_000
+    assert posted_count == 1
 
 
 def test_reject_summary(client, restaurant_a, pos_summary_setup) -> None:
