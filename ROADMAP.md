@@ -15,7 +15,7 @@
 | **Active phase** | Phase 8 — Roles & permissions, backups, security hardening, launch |
 | **Active slice** | Launch readiness |
 | **Last completed slice** | Backups (Phase 8 Slice 2) |
-| **Last commit/tag** | `f0490f7` / `v0.46.0-phase8-backups` |
+| **Last commit/tag** | `eed9f92` / `v0.46.0-phase8-backups` |
 | **Next up** | Launch readiness (Phase 8 Slice 4) |
 
 ---
@@ -200,7 +200,7 @@ Not in current build order — track here when scoped:
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| 2026-06-22 | Backups | `f0490f7` / `v0.46.0-phase8-backups` | pg_dump+uploads artifact, S3/local storage, Celery+Redis schedule, retention, restore-verify, OPS_RESTORE.md, 401 pytest |
+| 2026-06-22 | Backups | `eed9f92` / `v0.46.0-phase8-backups` | pg_dump+uploads artifact, S3/local storage, Celery+Redis schedule, retention, restore-verify, OPS_RESTORE.md, 401 pytest |
 | 2026-06-22 | Security hardening | — / `v0.45.0-phase8-security-hardening` | write/read/report guards on all entity routes; scoped entity list; membership user-lookup RLS; 398 pytest |
 | 2026-06-22 | Roles & permissions | — / `v0.44.0-phase8-roles-permissions` | users + entity_memberships, permission layer, financial report guards, 389 pytest |
 | 2026-06-22 | POS daily-summary photo intake | `4a529b3` / `v0.32.0-phase6-pos-daily-summary-intake` | `pos_daily_summaries`, OCR v1, confirm posts card batch + cash in, 275 pytest |
