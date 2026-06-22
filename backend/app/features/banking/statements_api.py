@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.adapters.bank_parsers.csv_simple import CsvParseError
-from app.core.payables.ledger import OverpaymentError
+from app.core.receivables.ledger import OverpaymentError
+from app.core.payables.ledger import OverpaymentError as SupplierOverpaymentError
 from app.core.banking.posting import InvalidTransferError
 from app.db.session import get_session
 from app.features.banking import statements as statement_service
@@ -116,6 +117,7 @@ def classify_statement_line(
             supplier_id=payload.supplier_id,
             counterpart_money_account_id=payload.counterpart_money_account_id,
             credit_card_money_account_id=payload.credit_card_money_account_id,
+            customer_id=payload.customer_id,
             actor_id=payload.actor_id,
             confirm_supplier_ledger_entry_id=payload.confirm_supplier_ledger_entry_id,
             confirm_account_transfer_id=payload.confirm_account_transfer_id,
@@ -124,6 +126,8 @@ def classify_statement_line(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except statement_service.LineAlreadyResolvedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except SupplierOverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverpaymentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidTransferError as exc:

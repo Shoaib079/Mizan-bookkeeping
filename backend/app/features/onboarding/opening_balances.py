@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.default_chart import (
     ACCOUNTS_PAYABLE_CODE,
+    ACCOUNTS_RECEIVABLE_CODE,
     OPENING_BALANCE_EQUITY_CODE,
     PARTNER_REIMBURSEMENT_PAYABLE_CODE,
     chart_by_code,
@@ -18,6 +19,7 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
+from app.features.customers.models import Customer
 from app.features.partners.models import Partner
 from app.features.suppliers.models import Supplier
 
@@ -75,6 +77,7 @@ class OpeningBalanceLineInput:
     money_account_id: uuid.UUID | None = None
     supplier_id: uuid.UUID | None = None
     partner_id: uuid.UUID | None = None
+    customer_id: uuid.UUID | None = None
     side: AccountNormalBalance | None = None
 
     def __post_init__(self) -> None:
@@ -85,18 +88,20 @@ class OpeningBalanceLineInput:
             self.money_account_id,
             self.supplier_id,
             self.partner_id,
+            self.customer_id,
         ]
         set_count = sum(1 for target in targets if target is not None)
         if set_count != 1:
             raise OpeningBalanceError(
                 "each line must specify exactly one of account_code, "
-                "money_account_id, supplier_id, or partner_id"
+                "money_account_id, supplier_id, partner_id, or customer_id"
             )
         if self.account_code is not None and self.side is None:
             raise OpeningBalanceError("side is required for account_code lines")
         if self.account_code is None and self.side is not None:
             raise OpeningBalanceError(
-                "side is implied for money_account_id, supplier_id, and partner_id lines"
+                "side is implied for money_account_id, supplier_id, partner_id, "
+                "and customer_id lines"
             )
 
 
@@ -117,6 +122,12 @@ class SupplierOpeningLine:
 @dataclass(frozen=True, slots=True)
 class PartnerOpeningLine:
     partner_id: uuid.UUID
+    amount_kurus: int
+
+
+@dataclass(frozen=True, slots=True)
+class CustomerOpeningLine:
+    customer_id: uuid.UUID
     amount_kurus: int
 
 
@@ -199,8 +210,10 @@ def _validate_opening_balance_lines_in_context(
     seen_money_accounts: set[uuid.UUID] = set()
     seen_suppliers: set[uuid.UUID] = set()
     seen_partners: set[uuid.UUID] = set()
+    seen_customers: set[uuid.UUID] = set()
     has_supplier_lines = False
     has_partner_lines = False
+    has_customer_lines = False
 
     for line in lines:
         if line.account_code is not None:
@@ -244,6 +257,13 @@ def _validate_opening_balance_lines_in_context(
                     "aggregate account 2150 cannot be combined with partner_id lines; "
                     "use partner_id for each partner reimbursement balance"
                 )
+            if line.account_code == ACCOUNTS_RECEIVABLE_CODE and any(
+                other.customer_id is not None for other in lines
+            ):
+                raise OpeningBalanceError(
+                    "aggregate account 1200 cannot be combined with customer_id lines; "
+                    "use customer_id for each customer receivable balance"
+                )
 
             _validate_aggregate_line(line)
 
@@ -276,8 +296,7 @@ def _validate_opening_balance_lines_in_context(
             if supplier is None:
                 raise OpeningBalanceError(f"supplier not found: {line.supplier_id}")
 
-        else:
-            assert line.partner_id is not None
+        elif line.partner_id is not None:
             if line.partner_id in seen_partners:
                 raise OpeningBalanceError(
                     f"duplicate partner in opening balances: {line.partner_id}"
@@ -289,6 +308,19 @@ def _validate_opening_balance_lines_in_context(
             if partner is None:
                 raise OpeningBalanceError(f"partner not found: {line.partner_id}")
 
+        else:
+            assert line.customer_id is not None
+            if line.customer_id in seen_customers:
+                raise OpeningBalanceError(
+                    f"duplicate customer in opening balances: {line.customer_id}"
+                )
+            seen_customers.add(line.customer_id)
+            has_customer_lines = True
+
+            customer = session.get(Customer, line.customer_id)
+            if customer is None:
+                raise OpeningBalanceError(f"customer not found: {line.customer_id}")
+
     if has_supplier_lines and ACCOUNTS_PAYABLE_CODE in seen_account_codes:
         raise OpeningBalanceError(
             "aggregate account 2000 cannot be combined with supplier_id lines"
@@ -296,6 +328,10 @@ def _validate_opening_balance_lines_in_context(
     if has_partner_lines and PARTNER_REIMBURSEMENT_PAYABLE_CODE in seen_account_codes:
         raise OpeningBalanceError(
             "aggregate account 2150 cannot be combined with partner_id lines"
+        )
+    if has_customer_lines and ACCOUNTS_RECEIVABLE_CODE in seen_account_codes:
+        raise OpeningBalanceError(
+            "aggregate account 1200 cannot be combined with customer_id lines"
         )
 
 
@@ -312,13 +348,20 @@ def validate_opening_balance_lines(
 def _resolve_journal_lines(
     session: Session,
     lines: list[OpeningBalanceLineInput],
-) -> tuple[list[JournalLineDraft], list[SupplierOpeningLine], list[PartnerOpeningLine]]:
+) -> tuple[
+    list[JournalLineDraft],
+    list[SupplierOpeningLine],
+    list[PartnerOpeningLine],
+    list[CustomerOpeningLine],
+]:
     """Map validated input lines to GL journal drafts and subledger targets."""
     journal: list[JournalLineDraft] = []
     supplier_lines: list[SupplierOpeningLine] = []
     partner_lines: list[PartnerOpeningLine] = []
+    customer_lines: list[CustomerOpeningLine] = []
     supplier_total = 0
     partner_total = 0
+    customer_total = 0
 
     for line in lines:
         if line.account_code is not None:
@@ -354,7 +397,6 @@ def _resolve_journal_lines(
             )
         else:
             if line.supplier_id is not None:
-                assert line.supplier_id is not None
                 supplier_lines.append(
                     SupplierOpeningLine(
                         supplier_id=line.supplier_id,
@@ -362,8 +404,7 @@ def _resolve_journal_lines(
                     )
                 )
                 supplier_total += line.amount_kurus
-            else:
-                assert line.partner_id is not None
+            elif line.partner_id is not None:
                 partner_lines.append(
                     PartnerOpeningLine(
                         partner_id=line.partner_id,
@@ -371,6 +412,15 @@ def _resolve_journal_lines(
                     )
                 )
                 partner_total += line.amount_kurus
+            else:
+                assert line.customer_id is not None
+                customer_lines.append(
+                    CustomerOpeningLine(
+                        customer_id=line.customer_id,
+                        amount_kurus=line.amount_kurus,
+                    )
+                )
+                customer_total += line.amount_kurus
 
     if supplier_total > 0:
         ap_account = session.scalar(
@@ -407,7 +457,24 @@ def _resolve_journal_lines(
             )
         )
 
-    return journal, supplier_lines, partner_lines
+    if customer_total > 0:
+        ar_account = session.scalar(
+            select(Account).where(Account.code == ACCOUNTS_RECEIVABLE_CODE)
+        )
+        if ar_account is None:
+            raise OpeningBalanceError(
+                f"accounts receivable account {ACCOUNTS_RECEIVABLE_CODE} not seeded for entity"
+            )
+        journal.append(
+            JournalLineDraft(
+                account_code=ar_account.code,
+                account_id=ar_account.id,
+                amount_kurus=customer_total,
+                side=AccountNormalBalance.DEBIT,
+            )
+        )
+
+    return journal, supplier_lines, partner_lines, customer_lines
 
 
 def _build_day_one_journal_in_context(
@@ -418,7 +485,7 @@ def _build_day_one_journal_in_context(
     _validate_opening_balance_lines_in_context(session, lines)
     require_entity_context()
 
-    journal, _, _ = _resolve_journal_lines(session, lines)
+    journal, _, _, _ = _resolve_journal_lines(session, lines)
 
     debits = sum(
         line.amount_kurus for line in journal if line.side == AccountNormalBalance.DEBIT
@@ -539,11 +606,16 @@ def resolve_opening_balance_posting(
     session: Session,
     entity_id: uuid.UUID,
     lines: list[OpeningBalanceLineInput],
-) -> tuple[list[JournalLineDraft], list[SupplierOpeningLine], list[PartnerOpeningLine]]:
+) -> tuple[
+    list[JournalLineDraft],
+    list[SupplierOpeningLine],
+    list[PartnerOpeningLine],
+    list[CustomerOpeningLine],
+]:
     """Validated journal drafts plus subledger lines — caller holds entity_context."""
     journal = _build_day_one_journal_in_context(session, lines)
-    _, supplier_lines, partner_lines = _resolve_journal_lines(session, lines)
-    return journal, supplier_lines, partner_lines
+    _, supplier_lines, partner_lines, customer_lines = _resolve_journal_lines(session, lines)
+    return journal, supplier_lines, partner_lines, customer_lines
 
 
 def chart_is_seeded(session: Session, entity_id: uuid.UUID) -> bool:

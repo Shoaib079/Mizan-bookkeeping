@@ -6,6 +6,7 @@ from app.config import settings
 from app.db.base import Base
 from app.db.fx_immutability import apply_fx_immutability
 from app.db.ledger_immutability import apply_ledger_immutability
+from app.db.receivables_immutability import apply_receivables_immutability
 from app.db.partners_immutability import apply_partners_immutability
 from app.db.payables_immutability import apply_payables_immutability
 from app.db.staff_immutability import apply_staff_immutability
@@ -25,6 +26,8 @@ from app.features.staff.models import Employee  # noqa: F401
 from app.core.staff.models import StaffLedgerEntry  # noqa: F401
 from app.features.partners.models import Partner  # noqa: F401
 from app.core.partners.models import PartnerLedgerEntry  # noqa: F401
+from app.features.customers.models import Customer  # noqa: F401
+from app.core.receivables.models import CustomerLedgerEntry  # noqa: F401
 
 
 def ensure_mizan_role_and_databases() -> None:
@@ -61,6 +64,7 @@ def init_database(url: str | None = None) -> None:
         apply_fx_immutability(connection)
         apply_staff_immutability(connection)
         apply_partners_immutability(connection)
+        apply_receivables_immutability(connection)
     engine.dispose()
 
 

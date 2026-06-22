@@ -15,6 +15,7 @@ from app.adapters.storage.local import save_upload
 from app.core.banking import posting as banking_posting
 from app.core.banking import statement_posting
 from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_date_bounds
+from app.core.receivables import posting as receivables_posting
 from app.core.payables import posting as payables_posting
 from app.core.pos import posting as pos_posting
 from app.core.payables.models import SupplierLedgerEntry
@@ -34,6 +35,7 @@ from app.features.banking.statement_models import (
 )
 from app.features.entities import service as entity_service
 from app.features.banking.transfer_models import AccountTransfer
+from app.features.customers.models import Customer
 from app.features.suppliers.models import Supplier
 
 BANK_STATEMENT_LINE_REF = "bank_statement_line"
@@ -79,6 +81,8 @@ def _to_line_read(line: BankStatementLine) -> BankStatementLineRead:
         account_transfer_id=line.account_transfer_id,
         pos_settlement_id=line.pos_settlement_id,
         credit_card_payment_id=line.credit_card_payment_id,
+        customer_id=line.customer_id,
+        customer_ledger_entry_id=line.customer_ledger_entry_id,
         review_reason=line.review_reason,
         candidate_supplier_ledger_entry_id=line.candidate_supplier_ledger_entry_id,
         candidate_account_transfer_id=line.candidate_account_transfer_id,
@@ -515,6 +519,7 @@ def classify_statement_line(
     *,
     classification: StatementLineClassification,
     supplier_id: uuid.UUID | None = None,
+    customer_id: uuid.UUID | None = None,
     counterpart_money_account_id: uuid.UUID | None = None,
     credit_card_money_account_id: uuid.UUID | None = None,
     actor_id: uuid.UUID | None = None,
@@ -783,6 +788,19 @@ def classify_statement_line(
                     "credit_card_payment requires a credit_card money account"
                 )
 
+        elif classification == StatementLineClassification.CUSTOMER_PAYMENT:
+            if line.amount_kurus <= 0:
+                raise InvalidClassificationError(
+                    "customer_payment classification requires an inflow (positive amount_kurus)"
+                )
+            if customer_id is None or actor_id is None:
+                raise InvalidClassificationError(
+                    "customer_id and actor_id are required for customer_payment"
+                )
+            customer = session.get(Customer, customer_id)
+            if customer is None:
+                raise LookupError("Customer not found")
+
         elif classification == StatementLineClassification.UNKNOWN:
             line.classification = classification
             line.status = StatementLineStatus.CLASSIFIED
@@ -827,6 +845,44 @@ def classify_statement_line(
             line.supplier_id = supplier_id
             line.journal_entry_id = journal_id
             line.supplier_ledger_entry_id = supplier_ledger_id
+            session.commit()
+            session.refresh(line)
+
+        return ClassifyStatementLineResult(
+            line=_to_line_read(line),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.CUSTOMER_PAYMENT:
+        payment_amount = line.amount_kurus
+        assert customer_id is not None
+        assert actor_id is not None
+        result = receivables_posting.post_customer_payment(
+            session,
+            entity_id,
+            customer_id,
+            payment_date=line.transaction_date,
+            amount_kurus=payment_amount,
+            description=line.description,
+            actor_id=actor_id,
+            payment_account_id=money_account.gl_account_id,
+            reference_type=BANK_STATEMENT_LINE_REF,
+            reference_id=line.id,
+        )
+        journal_id = result.journal_entry.id
+        customer_ledger_id = result.customer_ledger_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.CUSTOMER_PAYMENT
+            line.status = StatementLineStatus.POSTED
+            line.customer_id = customer_id
+            line.journal_entry_id = journal_id
+            line.customer_ledger_entry_id = customer_ledger_id
             session.commit()
             session.refresh(line)
 

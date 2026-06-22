@@ -98,7 +98,7 @@ Every statement-line classification that represents a **real GL event** must pos
 | `rent_utility` | Dr expense / Cr bank | **Phase 6** (expenses) |
 | `tax_payment` | Dr tax liability / Cr bank | **Phase 5/7** (tax module) |
 | `owner_draw` | Dr equity / Cr bank | **Phase 5** (owner movements) |
-| `customer_payment` | Dr bank / Cr AR | **Phase 5** (receivables) |
+| `customer_payment` | Dr bank / Cr AR | **done** (Phase 5 Slice 5) |
 | `partner_reimbursement` | Dr `2150` / Cr bank | **done** (Phase 5 Slice 4) |
 | `unknown` | No GL — stays in Needs Review until reclassified | by design |
 
@@ -127,9 +127,9 @@ Every statement-line classification that represents a **real GL event** must pos
 | Forex (FX purchase / holding) | done | `MoneyAccountKind.FOREIGN_CURRENCY` + `currency`; GL sub-accounts under `1010`/`1020`/`1030` (TRY cost kuruş); `fx_ledger_entries` subledger (native quantity + try_cost_kurus); `post_fx_purchase()` Dr FX / Cr TRY cash; tree `foreign_currency` branch; Alembic `024`; 10 tests; 234 pytest |
 | Staff (salary vs advance — no double-count) | done | `employees` + `staff_ledger_entries`; `2250` Salaries Payable; TRY accrual Dr `5100`/Cr `2250`; advance Dr `1300`/Cr cash; payment Dr `2250`/Cr `1300`+cash (atomic advance offset); FX accrual subledger-only; FX payment Dr `5100`/Cr FX GL + `fx_ledger` spend; Alembic `025`; 9 tests; 243 pytest |
 | Partner reimbursements | done | `partners` + `partner_ledger_entries`; expense fronted Dr expense/Cr `2150`; reimbursement Dr `2150`/Cr cash (no expense); per-partner OB via `partner_id` lines; Alembic `026`; 10 tests; 252 pytest |
-| Receivables | not started | |
+| Receivables | done | `customers` + `customer_ledger_entries`; credit sale Dr `1200`/Cr `4000`; payment Dr bank/Cr `1200` (no revenue); per-customer OB via `customer_id`; statement classify `customer_payment`; Alembic `027`; 8 tests; 260 pytest |
 
-**Phase 5 complete when:** all slices above done, tested, committed, owner sign-off.
+**Phase 5 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 5 COMPLETE ✓ (pending owner sign-off).**
 
 ---
 

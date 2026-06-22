@@ -13,6 +13,7 @@ from app.core.ledger.models import JournalEntry, JournalEntrySource, JournalEntr
 from app.core.ledger.posting import PostingLine, prepare_journal_entry
 from app.core.partners.ledger import persist_partner_opening_entry
 from app.core.payables.ledger import persist_supplier_opening_entry
+from app.core.receivables.ledger import persist_customer_opening_entry
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.entities.models import EntitySetting
@@ -52,10 +53,19 @@ class PartnerOpeningEntrySummary:
 
 
 @dataclass(frozen=True, slots=True)
+class CustomerOpeningEntrySummary:
+    id: uuid.UUID
+    customer_id: uuid.UUID
+    journal_entry_id: uuid.UUID
+    amount_kurus: int
+
+
+@dataclass(frozen=True, slots=True)
 class OpeningBalancePostResult:
     journal_entry: JournalEntry
     supplier_ledger_entries: list[SupplierOpeningEntrySummary]
     partner_ledger_entries: list[PartnerOpeningEntrySummary]
+    customer_ledger_entries: list[CustomerOpeningEntrySummary]
 
 
 def _opening_balance_already_posted(session: Session) -> bool:
@@ -107,7 +117,7 @@ def post_opening_balances(
                 "Opening balances have already been posted for this entity"
             )
 
-        journal_drafts, supplier_lines, partner_lines = resolve_opening_balance_posting(
+        journal_drafts, supplier_lines, partner_lines, customer_lines = resolve_opening_balance_posting(
             session, entity_id, lines
         )
 
@@ -176,6 +186,28 @@ def post_opening_balances(
                 )
             )
 
+        customer_summaries: list[CustomerOpeningEntrySummary] = []
+        for customer_line in customer_lines:
+            customer_entry = persist_customer_opening_entry(
+                session,
+                customer_line.customer_id,
+                movement_date=go_live_date,
+                amount_kurus=customer_line.amount_kurus,
+                description=description,
+                actor_id=actor_id,
+                journal_entry_id=journal_entry.id,
+                reference_type="opening_balance",
+                reference_id=journal_entry.id,
+            )
+            customer_summaries.append(
+                CustomerOpeningEntrySummary(
+                    id=customer_entry.id,
+                    customer_id=customer_entry.customer_id,
+                    journal_entry_id=customer_entry.journal_entry_id,
+                    amount_kurus=customer_entry.amount_kurus,
+                )
+            )
+
         _store_go_live_date(session, go_live_date)
 
         session.commit()
@@ -186,4 +218,5 @@ def post_opening_balances(
             journal_entry=journal_entry,
             supplier_ledger_entries=supplier_summaries,
             partner_ledger_entries=partner_summaries,
+            customer_ledger_entries=customer_summaries,
         )

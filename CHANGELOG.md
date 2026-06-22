@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-22
 
+**Phase 5 — Receivables (Phase 5 complete):** `customers` table (name, optional identifier, `is_active`); `customer_ledger_entries` append-only subledger (`credit_sale`, `payment_received`, `opening_balance`); control account `1200` reconciles to subledger; credit sale Dr `1200` / Cr `4000` (revenue once); payment Dr bank/cash / Cr `1200` (no revenue line); per-customer opening balances via `customer_id` lines; bank statement classify `customer_payment` (inflow → Dr bank / Cr AR); API `/entities/{id}/customers/...`, `GET .../receivables`; Alembic `027`. Tag `v0.30.0-phase5-receivables`. 260 pytest green.
+
 **Phase 5 — Partner reimbursements:** `partners` table (light master, not capital); `partner_ledger_entries` append-only subledger (`expense_fronted`, `reimbursement_paid`, `opening_balance`); control account `2150` reconciles to subledger; expense fronted Dr owner-selected expense / Cr `2150` (recorded once); reimbursement Dr `2150` / Cr bank/cash (no expense line); per-partner opening balances via `partner_id` lines; API `/entities/{id}/partners/...`; Alembic `026`. Tag `v0.29.0-phase5-partner-reimbursements`. 252 pytest green.
 
 ## 2026-06-21

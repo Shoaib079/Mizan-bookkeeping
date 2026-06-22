@@ -314,5 +314,27 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **JournalEntrySource:** `partner_expense_fronted`, `partner_reimbursement_paid`.
 
-**Deferred:** Receivables (§18); partner reimbursement bank-statement classify; reports UI; capital/equity tracking.
+**Deferred:** Partner reimbursement bank-statement classify; reports UI; capital/equity tracking.
+
+## 2026-06-22 — Customer receivables (Phase 5 Slice 5, Decisions §10)
+
+**Choice:** Mirror supplier payables pattern — entity-wide control account `1200` Accounts Receivable reconciled to per-customer `customer_ledger_entries` subledger. Light master (`customers`: name, optional `identifier`, `is_active`) only — no invoicing module.
+
+**Why:** Decisions §10 — credit sale increases what customer owes; later payment reduces it. Revenue hits `4000` **once** at credit sale; payment is settlement only (no second revenue).
+
+**GL patterns:**
+1. Credit sale: Dr `1200` / Cr `4000` Sales Revenue (or owner-selected revenue account); subledger `+amount_kurus`
+2. Payment received: Dr bank/cash GL / Cr `1200`; subledger `-amount_kurus`; **no revenue line**
+
+**Opening balances:** Per-customer via `customer_id` lines on onboarding post (aggregate `account_code=1200` still allowed when no per-customer lines; cannot combine aggregate `1200` with `customer_id` lines). Subledger `opening_balance` row linked to opening journal.
+
+**Bank statement:** `customer_payment` classification on bank **inflow** — Dr bank / Cr AR via `post_customer_payment()`; links `customer_id` and `customer_ledger_entry_id` on statement line.
+
+**API:** `/entities/{id}/customers` CRUD; `POST .../credit-sales`, `POST .../payments`; `GET .../ledger`; `GET .../receivables` summary.
+
+**JournalEntrySource:** `customer_credit_sale`, `customer_payment_received`.
+
+**Immutability:** ORM event listeners + PostgreSQL triggers (`apply_receivables_immutability()`). Alembic `027`.
+
+**Deferred:** Invoicing module; e-Fatura for customers; receivables reports UI.
 
