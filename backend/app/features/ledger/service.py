@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource, JournalEntryStatus
 from app.core.ledger.correction import (
     SubledgerBackedCorrectionError,
-    is_subledger_backed_source,
+    is_generic_correctable,
     resolve_correction_route,
 )
 from app.core.ledger.posting import PostingLine, correct_journal_entry, void_journal_entry
@@ -143,7 +143,7 @@ def correct_entry(
         original = session.get(JournalEntry, entry_id)
         if original is None:
             raise LookupError("Journal entry not found")
-        if is_subledger_backed_source(original.source):
+        if not is_generic_correctable(original.source):
             raise SubledgerBackedCorrectionError(resolve_correction_route(original.source))
 
     lines = [

@@ -37,16 +37,28 @@ def _collect_dependency_callables(dependant) -> set:
     return found
 
 
-def test_subledger_backed_sources_have_correction_routes() -> None:
-    """Every subledger-backed source must map to a dedicated correction flow."""
-    from app.core.ledger.correction import SUBLEDGER_BACKED_SOURCES, resolve_correction_route
+def test_every_journal_entry_source_has_correction_classification() -> None:
+    """Every JournalEntrySource must be whitelisted for generic correct or routed elsewhere."""
+    from app.core.ledger.correction import (
+        DEDICATED_CORRECTION_ROUTES,
+        GENERIC_CORRECTABLE_SOURCES,
+        VOID_AND_REENTER_SOURCES,
+        resolve_correction_route,
+        verify_correction_source_registry_complete,
+    )
     from app.core.ledger.models import JournalEntrySource
 
-    for source in SUBLEDGER_BACKED_SOURCES:
-        assert isinstance(source, JournalEntrySource)
+    verify_correction_source_registry_complete()
+
+    for source in JournalEntrySource:
+        if source in GENERIC_CORRECTABLE_SOURCES:
+            continue
         message = resolve_correction_route(source)
-        assert "use the" in message
-        assert "flow" in message
+        if source in DEDICATED_CORRECTION_ROUTES:
+            assert "use the" in message
+            assert "flow" in message
+        elif source in VOID_AND_REENTER_SOURCES:
+            assert "void" in message.lower()
 
 
 def test_entity_routes_have_auth_guard() -> None:

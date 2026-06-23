@@ -331,6 +331,200 @@ def test_manual_entry_still_correctable_via_generic_endpoint(
     assert body["corrected"]["source"] == "manual"
 
 
+def test_generic_correct_rejects_opening_balance(
+    client: TestClient, db_session, restaurant_a, seeded_accounts
+) -> None:
+    from app.core.onboarding.posting import post_opening_balances
+    from app.features.onboarding.opening_balances import OpeningBalanceLineInput
+
+    bank = banking_service.create_money_account(
+        db_session,
+        restaurant_a.id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.BANK,
+            name="Garanti TRY",
+            bank_name="Garanti BBVA",
+        ),
+    )
+    result = post_opening_balances(
+        db_session,
+        restaurant_a.id,
+        go_live_date=date(2026, 1, 1),
+        lines=[OpeningBalanceLineInput(money_account_id=bank.id, amount_kurus=100_000)],
+        actor_id=ACTOR_ID,
+    )
+    entry_id = result.journal_entry.id
+    ap_id = seeded_accounts[ACCOUNTS_PAYABLE_CODE]
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/ledger/entries/{entry_id}/correct",
+        json={
+            "entry_date": "2026-01-02",
+            "description": "Should fail",
+            "actor_id": str(ACTOR_ID),
+            "lines": [
+                {
+                    "account_id": str(bank.gl_account_id),
+                    "amount_kurus": 100000,
+                    "side": "debit",
+                },
+                {
+                    "account_id": str(ap_id),
+                    "amount_kurus": 100000,
+                    "side": "credit",
+                },
+            ],
+        },
+    )
+    assert response.status_code == 409
+    assert "void" in response.json()["detail"].lower()
+
+
+def test_generic_correct_rejects_transfer(
+    client: TestClient, db_session, restaurant_a, seeded_accounts
+) -> None:
+    from app.core.banking import posting as banking_posting
+
+    bank_a = banking_service.create_money_account(
+        db_session,
+        restaurant_a.id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.BANK,
+            name="Bank A",
+            bank_name="Test Bank",
+        ),
+    )
+    bank_b = banking_service.create_money_account(
+        db_session,
+        restaurant_a.id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.BANK,
+            name="Bank B",
+            bank_name="Test Bank",
+        ),
+    )
+    ap_id = seeded_accounts[ACCOUNTS_PAYABLE_CODE]
+    post_journal_entry(
+        db_session,
+        restaurant_a.id,
+        date(2026, 1, 1),
+        "Fund accounts",
+        [
+            PostingLine(bank_a.gl_account_id, 5_000_000, AccountNormalBalance.DEBIT),
+            PostingLine(ap_id, 5_000_000, AccountNormalBalance.CREDIT),
+        ],
+        actor_id=ACTOR_ID,
+        source=JournalEntrySource.MANUAL,
+    )
+
+    transfer = banking_posting.post_account_transfer(
+        db_session,
+        restaurant_a.id,
+        from_money_account_id=bank_a.id,
+        to_money_account_id=bank_b.id,
+        transfer_date=date(2026, 2, 10),
+        amount_kurus=1_000_000,
+        description="Internal transfer",
+        actor_id=ACTOR_ID,
+    )
+    entry_id = transfer.journal_entry.id
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/ledger/entries/{entry_id}/correct",
+        json={
+            "entry_date": "2026-02-11",
+            "description": "Should fail",
+            "actor_id": str(ACTOR_ID),
+            "lines": [
+                {
+                    "account_id": str(bank_b.gl_account_id),
+                    "amount_kurus": 1_000_000,
+                    "side": "debit",
+                },
+                {
+                    "account_id": str(bank_a.gl_account_id),
+                    "amount_kurus": 1_000_000,
+                    "side": "credit",
+                },
+            ],
+        },
+    )
+    assert response.status_code == 409
+    assert "void" in response.json()["detail"].lower()
+
+
+def test_bank_fee_correctable_via_generic_endpoint(
+    client: TestClient, db_session, restaurant_a, seeded_accounts
+) -> None:
+    from app.core.chart_of_accounts.default_chart import BANK_CHARGES_CODE
+    from app.features.banking import statements as statement_service
+    from app.features.banking.statement_models import (
+        StatementLineClassification,
+        StatementLineStatus,
+    )
+
+    bank = banking_service.create_money_account(
+        db_session,
+        restaurant_a.id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.BANK,
+            name="Garanti TRY",
+            bank_name="Garanti BBVA",
+        ),
+    )
+    charges_id = seeded_accounts[BANK_CHARGES_CODE]
+    csv = (
+        "transaction_date,amount_kurus,description,reference\n"
+        "2026-02-03,-25000,Bank service fee,FEE-FEB\n"
+    ).encode()
+    statement = statement_service.import_bank_statement(
+        db_session,
+        restaurant_a.id,
+        bank.id,
+        csv,
+        original_filename="fee.csv",
+    )
+    fee_line = statement.lines[0]
+    classified = statement_service.classify_statement_line(
+        db_session,
+        restaurant_a.id,
+        statement.id,
+        fee_line.id,
+        classification=StatementLineClassification.BANK_FEE,
+        actor_id=ACTOR_ID,
+    )
+    assert classified.line.status == StatementLineStatus.POSTED
+    entry_id = classified.journal_entry_id
+    assert entry_id is not None
+
+    correct_response = client.post(
+        f"/entities/{restaurant_a.id}/ledger/entries/{entry_id}/correct",
+        json={
+            "entry_date": "2026-02-04",
+            "description": "Corrected bank fee",
+            "actor_id": str(ACTOR_ID),
+            "reason": "Wrong fee amount",
+            "lines": [
+                {
+                    "account_id": str(charges_id),
+                    "amount_kurus": 30000,
+                    "side": "debit",
+                },
+                {
+                    "account_id": str(bank.gl_account_id),
+                    "amount_kurus": 30000,
+                    "side": "credit",
+                },
+            ],
+        },
+    )
+    assert correct_response.status_code == 200
+    body = correct_response.json()
+    assert body["original"]["status"] == "voided"
+    assert body["corrected"]["source"] == "bank_fee"
+    assert body["corrected"]["amends_entry_id"] == str(entry_id)
+
+
 def test_security_invariant_subledger_correction_tie(
     db_session, restaurant_a, seeded_accounts
 ) -> None:

@@ -5,14 +5,14 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 8.5 — Pre-frontend API hardening |
-| **Last completed slice** | Subledger-safe correct/amend follow-up (Phase 8.5 Slice 2) |
+| **Last completed slice** | Correct/amend whitelist guard (Phase 8.5 Slice 2) |
 | **Next slice** | Flexible dates + soft period locks (Phase 8.5 Slice 4) |
 | **Branch** | `main` |
-| **Last tag** | `v0.47.6-phase8.5-correct-subledger-safe` |
+| **Last tag** | `v0.47.7-phase8.5-correct-whitelist` |
 
 ## Resume point
 
-**Phase 8.5 Slice 3 done.** Shared `app/core/listing/` module; all list endpoints return `{items, total, limit, offset}` with `q` (Turkish-aware), `from`/`to`, `min_amount`/`max_amount`, `status`, and relevant `*_id` filters. New `GET /entities/{id}/ledger/entries`. **Slice 2 follow-up done:** subledger-safe corrections — generic ledger correct restricted to `MANUAL` (409 for subledger-backed sources); `correction.py` registry + atomic GL+subledger flows; dedicated correct endpoints for supplier payment, customer payment, FX purchase. **Next: Slice 4 — flexible dates + soft period locks.**
+**Phase 8.5 Slice 3 done.** Shared `app/core/listing/` module; all list endpoints return `{items, total, limit, offset}` with `q` (Turkish-aware), `from`/`to`, `min_amount`/`max_amount`, `status`, and relevant `*_id` filters. New `GET /entities/{id}/ledger/entries`. **Slice 2 follow-up done:** subledger-safe corrections with **whitelist guard** — generic correct allows only `MANUAL` and `BANK_FEE`; every other source classified (dedicated flow or void-and-re-enter); completeness invariant test. **Next: Slice 4 — flexible dates + soft period locks.**
 
 ## Pre-sign-off verification (2026-06-23)
 

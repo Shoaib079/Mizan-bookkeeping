@@ -2,6 +2,10 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-23 — Correct/amend whitelist guard (Phase 8.5 Slice 2)
+
+**Choice:** Generic ledger correct uses a **whitelist** (`GENERIC_CORRECTABLE_SOURCES = {MANUAL, BANK_FEE}`), not a blocklist of known subledger sources. Every other `JournalEntrySource` is either in `DEDICATED_CORRECTION_ROUTES` (type-specific flow) or `VOID_AND_REENTER_SOURCES` (409 with “void and re-enter”). `verify_correction_source_registry_complete()` + permanent test ensure new enum values fail CI until classified.
+
 ## 2026-06-23 — Subledger-safe correct/amend (Phase 8.5 Slice 2 follow-up)
 
 **Choice:** Generic ledger correct is manual-only; subledger-backed journal sources must use type-specific correction flows in `app/core/ledger/correction.py`. Each flow atomically: GL correct via `_correct_journal_entry_in_transaction`, append reversing subledger row on reversal JE (opposite sign, immutable), append new subledger row on corrected JE, update mutable detail tables where applicable (`expense_entries`, `invoice_drafts`, `tip_accruals`/`tip_payouts`). Dedicated HTTP endpoints for supplier payment, customer payment, FX purchase; core helpers also cover credit sale, supplier invoice, expense entry, staff, partner, tips, FX conversion/spend.

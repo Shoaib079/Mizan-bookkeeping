@@ -47,14 +47,23 @@ from app.features.tips.models import TipAccrual, TipPayout
 
 
 class SubledgerBackedCorrectionError(ValueError):
-    """Generic ledger correct rejected — use the type-specific correction flow."""
+    """Generic ledger correct rejected — source is not standalone GL."""
 
 
 class CorrectionNotFoundError(LookupError):
     """No subledger row linked to the journal entry."""
 
 
-SUBLEDGER_BACKED_SOURCES: dict[JournalEntrySource, str] = {
+# Standalone GL entries with no paired feature/subledger record.
+GENERIC_CORRECTABLE_SOURCES: frozenset[JournalEntrySource] = frozenset(
+    {
+        JournalEntrySource.MANUAL,
+        JournalEntrySource.BANK_FEE,
+    }
+)
+
+# Type-specific correction flows (void + repost GL and paired subledger/detail atomically).
+DEDICATED_CORRECTION_ROUTES: dict[JournalEntrySource, str] = {
     JournalEntrySource.PAYMENT: "supplier payment correction",
     JournalEntrySource.INVOICE: "supplier invoice correction",
     JournalEntrySource.CUSTOMER_CREDIT_SALE: "customer credit sale correction",
@@ -72,17 +81,58 @@ SUBLEDGER_BACKED_SOURCES: dict[JournalEntrySource, str] = {
     JournalEntrySource.EXPENSE_ENTRY: "expense entry correction",
 }
 
+# Paired feature records with no dedicated correction API yet — never generic-correct.
+VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
+    {
+        JournalEntrySource.OPENING_BALANCE,
+        JournalEntrySource.TRANSFER,
+        JournalEntrySource.POS_SETTLEMENT,
+        JournalEntrySource.CARD_SALES,
+        JournalEntrySource.DELIVERY_REPORT,
+        JournalEntrySource.DELIVERY_SETTLEMENT,
+        JournalEntrySource.DELIVERY_COMMISSION,
+        JournalEntrySource.CREDIT_CARD_PAYMENT,
+        JournalEntrySource.CASH_MOVEMENT,
+        JournalEntrySource.CASH_DRAWER_CLOSE,
+        JournalEntrySource.SYSTEM,
+    }
+)
+
+
+def verify_correction_source_registry_complete() -> None:
+    """Fail fast if a JournalEntrySource is not classified for generic correct."""
+    all_sources = set(JournalEntrySource)
+    classified = (
+        set(GENERIC_CORRECTABLE_SOURCES)
+        | set(DEDICATED_CORRECTION_ROUTES.keys())
+        | set(VOID_AND_REENTER_SOURCES)
+    )
+    if classified != all_sources:
+        missing = sorted(s.value for s in all_sources - classified)
+        extra = sorted(s.value for s in classified - all_sources)
+        raise AssertionError(
+            f"correction registry incomplete: missing={missing!r} extra={extra!r}"
+        )
+    if GENERIC_CORRECTABLE_SOURCES & set(DEDICATED_CORRECTION_ROUTES.keys()):
+        raise AssertionError("source cannot be both generic-correctable and dedicated")
+    if GENERIC_CORRECTABLE_SOURCES & VOID_AND_REENTER_SOURCES:
+        raise AssertionError("source cannot be both generic-correctable and void-and-reenter")
+    if set(DEDICATED_CORRECTION_ROUTES.keys()) & VOID_AND_REENTER_SOURCES:
+        raise AssertionError("source cannot be both dedicated and void-and-reenter")
+
+
+def is_generic_correctable(source: JournalEntrySource) -> bool:
+    return source in GENERIC_CORRECTABLE_SOURCES
+
 
 def resolve_correction_route(source: JournalEntrySource) -> str:
     """Human-readable message naming the required correction flow."""
-    flow = SUBLEDGER_BACKED_SOURCES.get(source)
-    if flow is None:
-        return f"use the dedicated correction flow for source {source.value}"
-    return f"use the {flow} flow"
-
-
-def is_subledger_backed_source(source: JournalEntrySource) -> bool:
-    return source in SUBLEDGER_BACKED_SOURCES
+    if source in GENERIC_CORRECTABLE_SOURCES:
+        raise ValueError(f"source {source.value} is generic-correctable")
+    dedicated = DEDICATED_CORRECTION_ROUTES.get(source)
+    if dedicated is not None:
+        return f"use the {dedicated} flow"
+    return "void the entry and re-enter"
 
 
 @dataclass(frozen=True, slots=True)
