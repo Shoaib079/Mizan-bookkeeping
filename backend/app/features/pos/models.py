@@ -115,7 +115,6 @@ class PosDailySummary(EntityScopedMixin, Base):
     cash_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
     card_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
     total_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
-    tips_kurus: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     confirmed_cash_kurus: Mapped[int | None] = mapped_column(Integer, nullable=True)
     confirmed_card_kurus: Mapped[int | None] = mapped_column(Integer, nullable=True)
     extraction_payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)

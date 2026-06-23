@@ -43,14 +43,18 @@ def test_inventory_not_in_default_chart() -> None:
     assert "inventory" not in names
 
 
-def test_default_chart_includes_tips_payable() -> None:
-    from app.core.chart_of_accounts.default_chart import DEFAULT_CHART, TIPS_PAYABLE_CODE
+def test_default_chart_includes_tips_expense_not_payable() -> None:
+    from app.core.chart_of_accounts.default_chart import DEFAULT_CHART, TIPS_EXPENSE_CODE
+    from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 
     codes = {a.code for a in DEFAULT_CHART}
-    assert TIPS_PAYABLE_CODE in codes
-    tips = next(a for a in DEFAULT_CHART if a.code == TIPS_PAYABLE_CODE)
-    assert tips.name_en == "Tips Payable"
-    assert tips.accepts_opening_balance is True
+    assert "2260" not in codes  # Tips Payable retired (tips are an expense)
+    assert TIPS_EXPENSE_CODE in codes
+    tips = next(a for a in DEFAULT_CHART if a.code == TIPS_EXPENSE_CODE)
+    assert tips.name_en == "Tips Expense"
+    assert tips.account_type == AccountType.EXPENSE
+    assert tips.normal_balance == AccountNormalBalance.DEBIT
+    assert tips.accepts_opening_balance is False
 
 
 def test_opening_balance_accounts_are_balance_sheet() -> None:

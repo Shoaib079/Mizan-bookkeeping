@@ -127,7 +127,7 @@ Upload/ingestion (+ fingerprint) · AI read · Match & identify · Needs Review 
 - **Net payout to bank = gross − commission.** It settles the clearing balance and should reconcile to (gross owed − commission invoice); mismatch → review.
 
 - **No sales cancellations** — so no negative-sale handling needed.
-- **Tips — pass-through, NOT revenue/expense.** A tip paid by card goes into a small **"tips owed to staff" pot** (not counted as sales). The cash handed to staff **empties that pot** (not counted as an expense). Net zero — staff get their cash immediately, and real sales/expense numbers stay honest (no inflation on either side).
+- **Tips — an EXPENSE paid from cash (owner decision 2026-06-23; supersedes the earlier pass-through-liability treatment).** Sales are recorded **gross** (the POS system receipt has no separate tip line). When a tip is given to staff it is taken from the cash drawer and paid right away, recorded on the **expense list** as a tip expense (`Dr Tips Expense / Cr Cash`). A tip left by a customer on a card is still paid to staff from cash and booked as a cash expense. There is **no "tips owed to staff" pot / Tips Payable liability** anymore. (Separating a card tip from hidden bank commission via the card-terminal Z report is a later slice — see ROADMAP Phase 11 "Z-report system".)
 
 ---
 
@@ -174,7 +174,7 @@ Upload/ingestion (+ fingerprint) · AI read · Match & identify · Needs Review 
 
 ## 14. Cash drawer (per restaurant)
 
-- TRY cash account: cash sales in; cash expenses out; FX purchases out; tip payouts out (from the tip pot, not as expense); owner draws; etc.
+- TRY cash account: cash sales in; cash expenses out (including tips paid to staff — a tip is a cash expense); FX purchases out; owner draws; etc.
 - Running balance = what should be in the drawer.
 - **End-of-day close:** count the drawer, compare to the expected cash; any difference posts to a **Cash Over/Short** account and the day is locked. (A real Z-report / EOD close — idea borrowed from the previous app.)
 
@@ -325,7 +325,7 @@ Custom date ranges (from/to). Each export has its own columns. Possible exports:
 - Forcing per-day matching of POS sales to bank deposits (they batch & delay).
 - **Trusting the POS's aggregate total** — it double-counts delivery; always compute the real total from trusted per-channel sources.
 - **Forcing delivery payouts into fixed periods** — each platform pays on a different schedule; use per-platform clearing balances instead.
-- Counting tips as revenue/expense (they're pass-through).
+- Carving tips out of sales (sales are recorded gross; a tip is a separate cash expense, owner decision 2026-06-23).
 - Double-counting: invoice + payment, salary + advance, card purchase + bank-to-card payment, sale + deposit, own-account transfers, partner-fronted expense + reimbursement.
 - Building everything at once instead of invoices-first.
 - **Out of scope (deliberately):** inventory/stock tracking — a whole separate chapter, not now.

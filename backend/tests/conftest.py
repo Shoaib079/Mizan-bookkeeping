@@ -53,7 +53,7 @@ def db_session(test_engine) -> Session:
             "delivery_settlements, delivery_reports, delivery_platforms, "
             "card_sales_batches, pos_daily_summaries, credit_card_payments, fx_ledger_entries, "
             "staff_ledger_entries, employees, partner_ledger_entries, partners, "
-            "cash_movements, cash_drawer_sessions, tip_payouts, tip_accruals, "
+            "cash_movements, cash_drawer_sessions, "
             "expense_entries, expense_item_aliases, expense_items, "
             "entity_memberships, users, auth_audit_events, idempotency_records, "
             "period_lock_audit_events, period_locks, "

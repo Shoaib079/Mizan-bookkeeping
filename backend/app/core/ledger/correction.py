@@ -43,7 +43,6 @@ from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.expenses.models import ExpenseEntry
 from app.features.invoices.models import InvoiceDraft
-from app.features.tips.models import TipAccrual, TipPayout
 
 
 class SubledgerBackedCorrectionError(ValueError):
@@ -76,8 +75,6 @@ DEDICATED_CORRECTION_ROUTES: dict[JournalEntrySource, str] = {
     JournalEntrySource.STAFF_PAYMENT: "staff payment correction",
     JournalEntrySource.PARTNER_EXPENSE_FRONTED: "partner expense correction",
     JournalEntrySource.PARTNER_REIMBURSEMENT_PAID: "partner reimbursement correction",
-    JournalEntrySource.TIP_ACCRUAL: "tip accrual correction",
-    JournalEntrySource.TIP_PAYOUT: "tip payout correction",
     JournalEntrySource.EXPENSE_ENTRY: "expense entry correction",
 }
 
@@ -1076,96 +1073,6 @@ def correct_partner_journal_entry(
         period_unlock_reason=period_unlock_reason,
         partner_row=partner_row,
         new_partner_row=new_row,
-    )
-
-
-def correct_tip_accrual(
-    session: Session,
-    entity_id: uuid.UUID,
-    journal_entry_id: uuid.UUID,
-    entry_date: date,
-    description: str,
-    lines: list[PostingLine],
-    *,
-    actor_id: uuid.UUID,
-    amount_kurus: int,
-    reason: str | None = None,
-    void_date: date | None = None,
-    period_unlock_reason: str | None = None,
-) -> SubledgerCorrectionResult:
-    with entity_context(session, entity_id):
-        require_entity_context()
-        accrual = session.scalar(
-            select(TipAccrual).where(TipAccrual.journal_entry_id == journal_entry_id)
-        )
-        if accrual is None:
-            raise CorrectionNotFoundError("tip accrual not found for journal entry")
-
-        def update_tip(sess: Session, corrected: JournalEntry) -> None:
-            accrual.accrual_date = entry_date
-            accrual.amount_kurus = amount_kurus
-            accrual.description = description
-            accrual.actor_id = actor_id
-            accrual.journal_entry_id = corrected.id
-            sess.flush()
-
-    return correct_gl_with_subledger_rows(
-        session,
-        entity_id,
-        journal_entry_id,
-        entry_date,
-        description,
-        lines,
-        actor_id=actor_id,
-        reason=reason,
-        void_date=void_date,
-        period_unlock_reason=period_unlock_reason,
-        update_mutable=update_tip,
-    )
-
-
-def correct_tip_payout(
-    session: Session,
-    entity_id: uuid.UUID,
-    journal_entry_id: uuid.UUID,
-    entry_date: date,
-    description: str,
-    lines: list[PostingLine],
-    *,
-    actor_id: uuid.UUID,
-    amount_kurus: int,
-    reason: str | None = None,
-    void_date: date | None = None,
-    period_unlock_reason: str | None = None,
-) -> SubledgerCorrectionResult:
-    with entity_context(session, entity_id):
-        require_entity_context()
-        payout = session.scalar(
-            select(TipPayout).where(TipPayout.journal_entry_id == journal_entry_id)
-        )
-        if payout is None:
-            raise CorrectionNotFoundError("tip payout not found for journal entry")
-
-        def update_tip(sess: Session, corrected: JournalEntry) -> None:
-            payout.payout_date = entry_date
-            payout.amount_kurus = amount_kurus
-            payout.description = description
-            payout.actor_id = actor_id
-            payout.journal_entry_id = corrected.id
-            sess.flush()
-
-    return correct_gl_with_subledger_rows(
-        session,
-        entity_id,
-        journal_entry_id,
-        entry_date,
-        description,
-        lines,
-        actor_id=actor_id,
-        reason=reason,
-        void_date=void_date,
-        period_unlock_reason=period_unlock_reason,
-        update_mutable=update_tip,
     )
 
 

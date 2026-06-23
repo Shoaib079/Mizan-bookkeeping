@@ -80,7 +80,6 @@ class PosDailySummaryRead(BaseModel):
     cash_kurus: int
     card_kurus: int
     total_kurus: int
-    tips_kurus: int = 0
     confirmed_cash_kurus: int | None
     confirmed_card_kurus: int | None
     extraction_payload: dict

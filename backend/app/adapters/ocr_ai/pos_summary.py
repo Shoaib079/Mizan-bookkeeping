@@ -15,7 +15,6 @@ class PosSummaryExtraction:
     cash_kurus: int
     card_kurus: int
     total_kurus: int
-    tips_kurus: int = 0
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -81,7 +80,6 @@ def _extract_from_registry(content: bytes) -> PosSummaryExtraction | None:
         cash_kurus=fields["cash_kurus"],
         card_kurus=fields["card_kurus"],
         total_kurus=fields["total_kurus"],
-        tips_kurus=int(fields.get("tips_kurus", 0)),
         raw={"source": "pos_fixture_registry", "fingerprint": fingerprint},
     )
 
@@ -110,11 +108,6 @@ def _parse_text_heuristics(text: str) -> PosSummaryExtraction:
         text,
         re.IGNORECASE,
     )
-    tips_match = re.search(
-        r"(?:Bah[sş]i[sş]|Tips?)\s*[:\.]?\s*([\d.,]+)",
-        text,
-        re.IGNORECASE,
-    )
     if not cash_match or not card_match or not total_match:
         raise PosSummaryUnsupportedError(
             "Could not find cash, card, and total amounts in document text"
@@ -123,14 +116,12 @@ def _parse_text_heuristics(text: str) -> PosSummaryExtraction:
     cash_kurus = _amount_to_kurus(cash_match.group(1))
     card_kurus = _amount_to_kurus(card_match.group(1))
     total_kurus = _amount_to_kurus(total_match.group(1))
-    tips_kurus = _amount_to_kurus(tips_match.group(1)) if tips_match else 0
 
     return PosSummaryExtraction(
         summary_date=_parse_date(text),
         cash_kurus=cash_kurus,
         card_kurus=card_kurus,
         total_kurus=total_kurus,
-        tips_kurus=tips_kurus,
         raw={"source": "text_heuristics", "text_length": len(text)},
     )
 

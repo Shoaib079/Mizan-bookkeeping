@@ -28,7 +28,6 @@ from app.features.customers.models import Customer  # noqa: F401
 from app.core.receivables.models import CustomerLedgerEntry  # noqa: F401
 from app.features.pos.models import CardSalesBatch, PosDailySummary, PosSettlement  # noqa: F401
 from app.features.delivery.models import DeliveryReport, DeliverySettlement, OwnedDeliveryPlatform  # noqa: F401
-from app.features.tips.models import TipAccrual, TipPayout  # noqa: F401
 from app.features.expenses.models import ExpenseEntry, ExpenseItem, ExpenseItemAlias  # noqa: F401
 from app.features.auth.models import EntityMembership, User, AuthAuditEvent  # noqa: F401
 from app.core.idempotency.models import IdempotencyRecord  # noqa: F401

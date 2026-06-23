@@ -255,7 +255,7 @@ def test_subledger_tables_have_immutability_triggers(db_session) -> None:
 
 
 def test_subledger_control_account_tie_registry_complete() -> None:
-    """Every *_ledger_entries table and tip_accruals must map to a control GL account."""
+    """Every *_ledger_entries subledger table must map to a control GL account."""
     from app.core.subledger.control_account_tie import (
         verify_control_account_tie_registry_complete,
     )

@@ -2,6 +2,14 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-23 — Tips are an expense, not a pass-through liability (Slice A; owner decision)
+
+**Choice:** A tip is an **expense paid from cash**, and sales are recorded **gross**. This reverses two prior signed-off decisions: Phase 6 "Tips (pass-through, not revenue/expense)" (`v0.35.0`) and Phase 8.6 Item 4 "carve tips from POS revenue at confirm" (`v0.47.17`).
+
+**What changed:** New expense account `5700 Tips Expense / Bahşiş Gideri` (EXPENSE/DEBIT). Removed the entire Tips Payable liability subsystem: `2260 Tips Payable` account, `tip_accruals`/`tip_payouts` tables, `features/tips/`, `core/tips/posting.py`, `JournalEntrySource.TIP_ACCRUAL`/`TIP_PAYOUT` (+ correction registry entries + `correct_tip_accrual/payout`), the `tip_accruals` control-account tie, the `tip_accruals`/`tip_payouts` RLS entries, and the cash-flow TIP_* source classifications. POS daily-summary confirm now posts **gross** revenue (removed `_accrue_pos_tips`/`_tip_split`/`tips_kurus` plumbing and the `pos_daily_summaries.tips_kurus` column). A tip is now recorded through the existing expenses pipeline against `5700` from a cash money account (`Dr 5700 / Cr cash`). Migration `045_tips_expense_not_liability` drops the tables/column and removes `2260`, guarded to abort if any tip rows or `2260` postings exist (pre-launch: none; if real data existed it would be reversed via the posting boundary, never hard-deleted).
+
+**Not in slice:** Z-report ↔ system ↔ bank total-clearance reconciliation (card tip vs hidden bank commission) and the expense-photo OCR — separate later slices (B and C). Decisions doc §9/§14 updated.
+
 ## 2026-06-23 — Flexible dates + soft period locks (Phase 8.5 Slice 4)
 
 **Choice:** User-entered **calendar dates** for all transaction dates (`entry_date`, movement dates, void/reversal dates). No timezone setting; audit timestamps UTC via `utcnow()`. Default entry date when omitted: `datetime.now(timezone.utc).date()` (not local machine tz). Go-live floor from `entity_settings.go_live_date` — reject earlier dates at posting boundary (422).

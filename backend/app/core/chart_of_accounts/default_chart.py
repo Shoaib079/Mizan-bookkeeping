@@ -14,7 +14,6 @@ INPUT_VAT_CODE = "1500"
 ACCOUNTS_RECEIVABLE_CODE = "1200"
 ACCOUNTS_PAYABLE_CODE = "2000"
 SALARIES_PAYABLE_CODE = "2250"
-TIPS_PAYABLE_CODE = "2260"
 PARTNER_REIMBURSEMENT_PAYABLE_CODE = "2150"
 SALARY_EXPENSE_CODE = "5100"
 EMPLOYEE_ADVANCES_CODE = "1300"
@@ -25,6 +24,7 @@ BANK_CHARGES_CODE = "5300"
 CASH_OVER_SHORT_CODE = "5400"
 FX_GAIN_CODE = "4200"
 FX_LOSS_CODE = "5600"
+TIPS_EXPENSE_CODE = "5700"
 DELIVERY_COMMISSION_EXPENSE_CODE = "5500"
 
 
@@ -84,14 +84,6 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
         AccountNormalBalance.CREDIT,
         True,
     ),
-    DefaultAccount(
-        TIPS_PAYABLE_CODE,
-        "Tips Payable",
-        "Ödenecek Bahşişler",
-        AccountType.LIABILITY,
-        AccountNormalBalance.CREDIT,
-        True,
-    ),
     # Equity
     DefaultAccount("3000", "Owner Capital", "Sermaye", AccountType.EQUITY, AccountNormalBalance.CREDIT, False),
     DefaultAccount("3100", "Retained Earnings", "Geçmiş Yıl Karları", AccountType.EQUITY, AccountNormalBalance.CREDIT, False),
@@ -123,6 +115,7 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
         False,
     ),
     DefaultAccount(FX_LOSS_CODE, "FX Loss", "Kur Zararı", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
+    DefaultAccount(TIPS_EXPENSE_CODE, "Tips Expense", "Bahşiş Gideri", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
 )
 
 

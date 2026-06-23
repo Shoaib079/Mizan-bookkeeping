@@ -1,58 +1,45 @@
-"""Tips pass-through — accrual and payout, not revenue/expense (Phase 6)."""
+"""Tips are an EXPENSE paid from cash, not a pass-through liability (Slice A).
+
+Owner decision 2026-06-23 (reverses Phase 6 tips pass-through + Phase 8.6 POS
+carve-out): a tip is recorded through the normal expenses pipeline as
+``Dr 5700 Tips Expense / Cr cash``. There is no Tips Payable (2260) liability,
+and no tip_accruals/tip_payouts subledger.
+"""
 
 from __future__ import annotations
 
 import uuid
 from datetime import date
 
-import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
-from app.core.chart_of_accounts.default_chart import (
-    CARD_SALES_CLEARING_CODE,
-    SALARY_EXPENSE_CODE,
-    SALES_REVENUE_CODE,
-    TIPS_PAYABLE_CODE,
-)
+from app.core.chart_of_accounts.default_chart import TIPS_EXPENSE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
-from app.core.chart_of_accounts.types import AccountNormalBalance
+from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
+from app.core.expenses.posting import post_expense_entry
 from app.core.ledger.models import JournalEntryLine, JournalEntrySource
-from app.core.tips import posting as tips_posting
 from app.db.session import entity_context
+from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
-from app.features.banking import service as banking_service
-from app.features.tips.models import TipAccrualSource
-
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 
-@pytest.fixture
-def tips_setup(db_session, restaurant_a):
-    seed_default_chart(db_session, restaurant_a.id)
+def _setup(db_session, entity):
+    seed_default_chart(db_session, entity.id)
     drawer = banking_service.create_money_account(
         db_session,
-        restaurant_a.id,
+        entity.id,
         MoneyAccountCreate(account_kind=MoneyAccountKind.CASH, name="Main Drawer"),
     )
-    with entity_context(db_session, restaurant_a.id):
-        accounts = {a.code: a.id for a in db_session.scalars(select(Account))}
-    return {
-        "entity_id": restaurant_a.id,
-        "drawer": drawer,
-        "accounts": accounts,
-    }
+    with entity_context(db_session, entity.id):
+        accounts = {a.code: a for a in db_session.scalars(select(Account))}
+    return drawer, accounts
 
 
-def _gl_balance(
-    db_session,
-    entity_id: uuid.UUID,
-    account_id: uuid.UUID,
-    normal: AccountNormalBalance,
-) -> int:
+def _gl_balance(db_session, entity_id, account_id, normal: AccountNormalBalance) -> int:
     with entity_context(db_session, entity_id):
         rows = db_session.execute(
             select(JournalEntryLine.side, func.sum(JournalEntryLine.amount_kurus))
@@ -70,222 +57,53 @@ def _gl_balance(
         return debits - credits
 
 
-def _account_codes_on_journal(db_session, entity_id: uuid.UUID, journal_entry_id: uuid.UUID) -> set[str]:
-    with entity_context(db_session, entity_id):
-        rows = db_session.execute(
-            select(Account.code)
-            .join(JournalEntryLine, JournalEntryLine.account_id == Account.id)
-            .where(JournalEntryLine.journal_entry_id == journal_entry_id)
+def test_tips_expense_account_in_default_chart_not_payable(db_session, restaurant_a) -> None:
+    _, accounts = _setup(db_session, restaurant_a)
+
+    assert "2260" not in accounts  # Tips Payable retired
+    tips_expense = accounts[TIPS_EXPENSE_CODE]
+    assert tips_expense.account_type == AccountType.EXPENSE
+    assert tips_expense.normal_balance == AccountNormalBalance.DEBIT
+    assert tips_expense.name_en == "Tips Expense"
+
+
+def test_tip_posts_dr_5700_cr_cash(db_session, restaurant_a) -> None:
+    drawer, accounts = _setup(db_session, restaurant_a)
+    tips_expense_id = accounts[TIPS_EXPENSE_CODE].id
+    drawer_id = drawer.id
+    drawer_gl_id = drawer.gl_account_id
+
+    result = post_expense_entry(
+        db_session,
+        restaurant_a.id,
+        expense_date=date(2026, 6, 23),
+        amount_kurus=4_500,
+        expense_account_id=tips_expense_id,
+        money_account_id=drawer_id,
+        description="Tip paid to staff",
+        actor_id=ACTOR_ID,
+        written_item_description="Bahşiş",
+    )
+
+    assert result.journal_entry.source == JournalEntrySource.EXPENSE_ENTRY
+    journal_entry_id = result.journal_entry.id
+
+    with entity_context(db_session, restaurant_a.id):
+        lines = db_session.scalars(
+            select(JournalEntryLine).where(
+                JournalEntryLine.journal_entry_id == journal_entry_id
+            )
         ).all()
-        return {row[0] for row in rows}
+        by_account = {line.account_id: line for line in lines}
 
+    assert by_account[tips_expense_id].side == AccountNormalBalance.DEBIT
+    assert by_account[tips_expense_id].amount_kurus == 4_500
+    assert by_account[drawer_gl_id].side == AccountNormalBalance.CREDIT
+    assert by_account[drawer_gl_id].amount_kurus == 4_500
 
-def test_card_accrual_dr_1400_cr_2260_no_revenue_expense(db_session, tips_setup) -> None:
-    entity_id = tips_setup["entity_id"]
-    accounts = tips_setup["accounts"]
-
-    result = tips_posting.post_tip_accrual(
-        db_session,
-        entity_id,
-        accrual_date=date(2026, 6, 1),
-        amount_kurus=15_000,
-        source=TipAccrualSource.CARD,
-        description="Card tips from POS",
-        actor_id=ACTOR_ID,
-    )
-
-    assert result.journal_entry.source == JournalEntrySource.TIP_ACCRUAL
-    codes = _account_codes_on_journal(db_session, entity_id, result.journal_entry.id)
-    assert codes == {CARD_SALES_CLEARING_CODE, TIPS_PAYABLE_CODE}
-    assert SALES_REVENUE_CODE not in codes
-    assert SALARY_EXPENSE_CODE not in codes
     assert _gl_balance(
-        db_session, entity_id, accounts[CARD_SALES_CLEARING_CODE], AccountNormalBalance.DEBIT
-    ) == 15_000
+        db_session, restaurant_a.id, tips_expense_id, AccountNormalBalance.DEBIT
+    ) == 4_500
     assert _gl_balance(
-        db_session, entity_id, accounts[TIPS_PAYABLE_CODE], AccountNormalBalance.CREDIT
-    ) == 15_000
-
-
-def test_cash_accrual_dr_cash_cr_2260(db_session, tips_setup) -> None:
-    entity_id = tips_setup["entity_id"]
-    accounts = tips_setup["accounts"]
-    drawer = tips_setup["drawer"]
-
-    result = tips_posting.post_tip_accrual(
-        db_session,
-        entity_id,
-        accrual_date=date(2026, 6, 2),
-        amount_kurus=8_000,
-        source=TipAccrualSource.CASH,
-        money_account_id=drawer.id,
-        description="Cash tips held in drawer",
-        actor_id=ACTOR_ID,
-    )
-
-    assert result.tip_accrual.money_account_id == drawer.id
-    codes = _account_codes_on_journal(db_session, entity_id, result.journal_entry.id)
-    assert TIPS_PAYABLE_CODE in codes
-    assert SALES_REVENUE_CODE not in codes
-    assert _gl_balance(
-        db_session, entity_id, drawer.gl_account_id, AccountNormalBalance.DEBIT
-    ) == 8_000
-    assert _gl_balance(
-        db_session, entity_id, accounts[TIPS_PAYABLE_CODE], AccountNormalBalance.CREDIT
-    ) == 8_000
-
-
-def test_payout_dr_2260_cr_cash_not_expense(db_session, tips_setup) -> None:
-    entity_id = tips_setup["entity_id"]
-    accounts = tips_setup["accounts"]
-    drawer = tips_setup["drawer"]
-
-    tips_posting.post_tip_accrual(
-        db_session,
-        entity_id,
-        accrual_date=date(2026, 6, 1),
-        amount_kurus=20_000,
-        source=TipAccrualSource.CARD,
-        description="Card tips",
-        actor_id=ACTOR_ID,
-    )
-
-    result = tips_posting.post_tip_payout(
-        db_session,
-        entity_id,
-        payout_date=date(2026, 6, 3),
-        amount_kurus=12_000,
-        money_account_id=drawer.id,
-        description="Tips paid to staff",
-        actor_id=ACTOR_ID,
-    )
-
-    assert result.journal_entry.source == JournalEntrySource.TIP_PAYOUT
-    codes = _account_codes_on_journal(db_session, entity_id, result.journal_entry.id)
-    assert codes == {TIPS_PAYABLE_CODE, drawer.gl_account_code}
-    assert SALARY_EXPENSE_CODE not in codes
-    assert _gl_balance(
-        db_session, entity_id, accounts[TIPS_PAYABLE_CODE], AccountNormalBalance.CREDIT
-    ) == 8_000
-    assert _gl_balance(
-        db_session, entity_id, drawer.gl_account_id, AccountNormalBalance.DEBIT
-    ) == -12_000
-
-
-def test_payout_rejected_when_exceeds_pot_balance(db_session, tips_setup) -> None:
-    entity_id = tips_setup["entity_id"]
-    drawer = tips_setup["drawer"]
-
-    tips_posting.post_tip_accrual(
-        db_session,
-        entity_id,
-        accrual_date=date(2026, 6, 1),
-        amount_kurus=5_000,
-        source=TipAccrualSource.CARD,
-        description="Card tips",
-        actor_id=ACTOR_ID,
-    )
-
-    with pytest.raises(tips_posting.InvalidTipsPostingError, match="exceeds tips payable balance"):
-        tips_posting.post_tip_payout(
-            db_session,
-            entity_id,
-            payout_date=date(2026, 6, 2),
-            amount_kurus=6_000,
-            money_account_id=drawer.id,
-            description="Too much",
-            actor_id=ACTOR_ID,
-        )
-
-
-def test_balance_endpoint_reflects_accruals_minus_payouts(
-    client: TestClient, db_session, tips_setup
-) -> None:
-    entity_id = tips_setup["entity_id"]
-    drawer = tips_setup["drawer"]
-    base = f"/entities/{entity_id}/tips"
-
-    balance = client.get(f"{base}/balance")
-    assert balance.status_code == 200
-    assert balance.json()["balance_kurus"] == 0
-
-    card_accrual = client.post(
-        f"{base}/accruals",
-        json={
-            "accrual_date": "2026-06-01",
-            "amount_kurus": 30_000,
-            "source": "card",
-            "description": "Card tips",
-            "actor_id": str(ACTOR_ID),
-        },
-    )
-    assert card_accrual.status_code == 201
-
-    cash_accrual = client.post(
-        f"{base}/accruals",
-        json={
-            "accrual_date": "2026-06-02",
-            "amount_kurus": 10_000,
-            "source": "cash",
-            "money_account_id": str(drawer.id),
-            "description": "Cash tips held",
-            "actor_id": str(ACTOR_ID),
-        },
-    )
-    assert cash_accrual.status_code == 201
-
-    balance = client.get(f"{base}/balance")
-    assert balance.json()["balance_kurus"] == 40_000
-
-    payout = client.post(
-        f"{base}/payouts",
-        json={
-            "payout_date": "2026-06-03",
-            "amount_kurus": 25_000,
-            "money_account_id": str(drawer.id),
-            "description": "Staff payout",
-            "actor_id": str(ACTOR_ID),
-        },
-    )
-    assert payout.status_code == 201
-
-    balance = client.get(f"{base}/balance")
-    assert balance.json()["balance_kurus"] == 15_000
-
-    accruals = client.get(f"{base}/accruals")
-    assert accruals.status_code == 200
-    assert accruals.json()["total"] == 2
-
-    payouts = client.get(f"{base}/payouts")
-    assert payouts.status_code == 200
-    assert payouts.json()["total"] == 1
-
-    overpay = client.post(
-        f"{base}/payouts",
-        json={
-            "payout_date": "2026-06-04",
-            "amount_kurus": 20_000,
-            "money_account_id": str(drawer.id),
-            "description": "Too much",
-            "actor_id": str(ACTOR_ID),
-        },
-    )
-    assert overpay.status_code == 422
-
-
-def test_card_accrual_rejects_money_account_id(client: TestClient, tips_setup) -> None:
-    entity_id = tips_setup["entity_id"]
-    drawer = tips_setup["drawer"]
-
-    response = client.post(
-        f"/entities/{entity_id}/tips/accruals",
-        json={
-            "accrual_date": "2026-06-01",
-            "amount_kurus": 1_000,
-            "source": "card",
-            "money_account_id": str(drawer.id),
-            "description": "Invalid",
-            "actor_id": str(ACTOR_ID),
-        },
-    )
-    assert response.status_code == 422
+        db_session, restaurant_a.id, drawer_gl_id, AccountNormalBalance.DEBIT
+    ) == -4_500

@@ -32,8 +32,6 @@ RLS_TABLES = (
     "partner_ledger_entries",
     "customers",
     "customer_ledger_entries",
-    "tip_accruals",
-    "tip_payouts",
     "expense_items",
     "expense_item_aliases",
     "expense_entries",

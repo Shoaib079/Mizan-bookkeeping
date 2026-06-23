@@ -16,7 +16,6 @@ from app.core.chart_of_accounts.default_chart import (
     EMPLOYEE_ADVANCES_CODE,
     PARTNER_REIMBURSEMENT_PAYABLE_CODE,
     SALARIES_PAYABLE_CODE,
-    TIPS_PAYABLE_CODE,
 )
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
@@ -30,7 +29,6 @@ from app.db.base import EntityScopedMixin
 from app.db.session import entity_context, require_entity_context
 from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
-from app.features.tips.models import TipAccrual
 
 BalanceFn = Callable[[Session, uuid.UUID], int]
 NormalSide = Literal["asset", "liability"]
@@ -47,7 +45,7 @@ class ControlAccountTie:
 
 
 def discover_subledger_tables() -> frozenset[str]:
-    """Discover all *_ledger_entries tables plus tip_accruals (subledger-like)."""
+    """Discover all *_ledger_entries tables (subledgers tied to a GL control account)."""
     import app.db.bootstrap  # noqa: F401 — load model registry
 
     tables: set[str] = set()
@@ -60,7 +58,6 @@ def discover_subledger_tables() -> frozenset[str]:
             walk(sub)
 
     walk(EntityScopedMixin)
-    tables.add(TipAccrual.__tablename__)
     return frozenset(tables)
 
 
@@ -173,14 +170,6 @@ def fx_gl_try_cost_total(db_session: Session, entity_id: uuid.UUID) -> int:
         return total
 
 
-def tip_accruals_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:
-    with entity_context(db_session, entity_id):
-        total = db_session.scalar(
-            select(func.coalesce(func.sum(TipAccrual.amount_kurus), 0))
-        )
-        return int(total or 0)
-
-
 CONTROL_ACCOUNT_TIES: tuple[ControlAccountTie, ...] = (
     ControlAccountTie(
         table_name="supplier_ledger_entries",
@@ -217,12 +206,6 @@ CONTROL_ACCOUNT_TIES: tuple[ControlAccountTie, ...] = (
         account_code="fx_wallets_aggregate",
         balance_fn=fx_try_cost_subledger_total,
         normal_side="asset",
-    ),
-    ControlAccountTie(
-        table_name="tip_accruals",
-        account_code=TIPS_PAYABLE_CODE,
-        balance_fn=tip_accruals_subledger_total,
-        normal_side="liability",
     ),
 )
 

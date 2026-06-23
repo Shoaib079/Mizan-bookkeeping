@@ -2,6 +2,16 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-06-23 — Tips recorded as a liability instead of an expense
+
+**Symptom:** Tips were booked to `2260 Tips Payable` (a pass-through liability) and the POS confirm carved tips out of sales revenue, so both the tip and the underlying sale were understated/mismodelled. Owner's real workflow: a tip is taken from the drawer and paid to staff immediately and written on the expense list — it is an expense, and sales are gross.
+
+**Root cause:** Phase 6 modelled tips as a pass-through liability (`tip_accruals`/`tip_payouts` → `2260`), and Phase 8.6 Item 4 added a POS revenue carve-out to the same liability — both based on an incorrect product assumption.
+
+**Fix (Slice A):** Tips are an **expense from cash** (`Dr 5700 Tips Expense / Cr cash`) via the existing expenses pipeline; sales post **gross**. Removed the entire Tips Payable subsystem (account `2260`, `tip_accruals`/`tip_payouts`, `features/tips/`, `core/tips/posting.py`, tips router, `JournalEntrySource.TIP_*` + correction registry, control-account tie, RLS, cash-flow wiring, POS `tips_kurus` carve-out). Migration `045_tips_expense_not_liability` drops the tables/column, removes `2260`, seeds `5700` — guarded to abort if any tip rows or `2260` postings exist (never hard-delete real financial data; reverse via the posting boundary instead).
+
+**Guarding test:** `test_tips.py::test_tip_posts_dr_5700_cr_cash` (Dr 5700 / Cr cash, no 2260), `test_default_chart.py::test_default_chart_includes_tips_expense_not_payable`, `test_pos_daily_summary.py` gross-revenue assertions, migration guard in `045`. Tag `v0.48.0-tips-expense-slice-a`. **Money-critical — owner sign-off required.**
+
 ## 2026-06-23 — Fresh `pip install -e ".[dev]"` failed on clean machine
 
 **Symptom:** On a new venv, `pip install -e ".[dev]"` in `backend/` failed with setuptools error: *Multiple top-level packages discovered in a flat-layout: `app`, `data`, `alembic`*.
