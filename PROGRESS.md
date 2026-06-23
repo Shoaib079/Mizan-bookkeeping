@@ -8,7 +8,7 @@
 | **Last completed slice** | PDF export — financial statements (Phase 8.5 Slice 5) |
 | **Next slice** | Phase 9 Slice 1 — Auth + entity context (frontend) |
 | **Branch** | `main` |
-| **Last tag** | `v0.47.11` |
+| **Last tag** | `v0.47.12` |
 
 ## Resume point
 

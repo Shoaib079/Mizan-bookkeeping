@@ -50,16 +50,6 @@ END;
 $$ LANGUAGE plpgsql;
 """
 
-PREVENT_LEDGER_AUDIT_EVENT_MUTATION = """
-CREATE OR REPLACE FUNCTION prevent_ledger_audit_event_mutation()
-RETURNS TRIGGER AS $$
-BEGIN
-    RAISE EXCEPTION 'ledger audit events are append-only';
-END;
-$$ LANGUAGE plpgsql;
-"""
-
-
 def apply_ledger_immutability(connection: Connection) -> None:
     """Install or refresh ledger immutability triggers (idempotent)."""
     connection.execute(text(PREVENT_JOURNAL_LINE_MUTATION))
@@ -104,18 +94,3 @@ def apply_ledger_immutability(connection: Connection) -> None:
         )
     )
 
-    connection.execute(text(PREVENT_LEDGER_AUDIT_EVENT_MUTATION))
-    connection.execute(
-        text(
-            "DROP TRIGGER IF EXISTS ledger_audit_events_append_only ON ledger_audit_events"
-        )
-    )
-    connection.execute(
-        text(
-            """
-            CREATE TRIGGER ledger_audit_events_append_only
-            BEFORE UPDATE OR DELETE ON ledger_audit_events
-            FOR EACH ROW EXECUTE FUNCTION prevent_ledger_audit_event_mutation();
-            """
-        )
-    )

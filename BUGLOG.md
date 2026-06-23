@@ -12,6 +12,16 @@ Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
 **Guarding test:** `backend/scripts/verify_fresh_install.sh` + `.github/workflows/ci.yml` (clean venv, `pip install -e ".[dev]"`, boot, full pytest).
 
+## 2026-06-23 — Period lock audit trail mutable at database layer
+
+**Symptom:** `period_lock_audit_events` and `period_locks` had no append-only/delete protection unlike ledger audit tables.
+
+**Root cause:** Slice 4 added tables but did not extend the canonical immutability trigger tail; no registry guard for audit tables.
+
+**Fix:** `IMMUTABLE_AUDIT_TABLES` registry + `apply_audit_immutability()` (append-only on all `*_audit_events` tables); `period_locks_no_delete` trigger; migration `042_period_lock_immutability`; table-existence checks so migration 038 can run before period-lock tables exist.
+
+**Guarding test:** `test_immutable_audit_registry_covers_all_audit_tables`, `test_immutable_audit_tables_have_append_only_triggers`, `test_period_locks_table_has_delete_protection_trigger` in `test_security_invariants.py`; provisioning tests in `test_db_provisioning.py`; raw SQL tests in `test_period_locks.py`.
+
 ## 2026-06-23 — FastAPI file-upload routes missing runtime dependency
 
 **Symptom:** After editable install, importing the app or hitting upload endpoints failed with FastAPI’s `python-multipart` requirement error.

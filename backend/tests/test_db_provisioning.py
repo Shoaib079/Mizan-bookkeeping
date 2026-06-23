@@ -9,8 +9,12 @@ from sqlalchemy.orm import sessionmaker
 from app.config import settings
 from app.db.bootstrap import ensure_test_database
 from app.db.provisioning import (
+    AUDIT_IMMUTABILITY_TRIGGERS,
     LEDGER_IMMUTABILITY_TRIGGERS,
+    PERIOD_LOCKS_IMMUTABILITY_TRIGGERS,
+    audit_immutability_triggers_present,
     ledger_immutability_triggers_present,
+    period_locks_immutability_triggers_present,
     provision_database_via_alembic,
 )
 from app.db.rls import RLS_TABLES
@@ -64,7 +68,7 @@ def test_alembic_upgrade_head_on_empty_database(alembic_provisioned_url: str) ->
     engine = create_engine(alembic_provisioned_url, pool_pre_ping=True)
     with engine.connect() as conn:
         version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "041_period_locks"
+        assert version == "042_period_lock_immutability"
         table_count = conn.execute(
             text(
                 "SELECT count(*) FROM information_schema.tables "
@@ -125,3 +129,27 @@ def test_alembic_provisioning_installs_ledger_immutability_triggers(
 
     missing = LEDGER_IMMUTABILITY_TRIGGERS - present
     assert not missing, f"Missing ledger immutability triggers: {sorted(missing)}"
+
+
+def test_alembic_provisioning_installs_audit_immutability_triggers(
+    alembic_provisioned_url: str,
+) -> None:
+    engine = create_engine(alembic_provisioned_url, pool_pre_ping=True)
+    with engine.connect() as conn:
+        present = frozenset(audit_immutability_triggers_present(conn))
+    engine.dispose()
+
+    missing = AUDIT_IMMUTABILITY_TRIGGERS - present
+    assert not missing, f"Missing audit immutability triggers: {sorted(missing)}"
+
+
+def test_alembic_provisioning_installs_period_lock_immutability_triggers(
+    alembic_provisioned_url: str,
+) -> None:
+    engine = create_engine(alembic_provisioned_url, pool_pre_ping=True)
+    with engine.connect() as conn:
+        present = frozenset(period_locks_immutability_triggers_present(conn))
+    engine.dispose()
+
+    missing = PERIOD_LOCKS_IMMUTABILITY_TRIGGERS - present
+    assert not missing, f"Missing period lock immutability triggers: {sorted(missing)}"

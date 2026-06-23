@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import calendar
 import uuid
 from datetime import date, datetime, timezone
 
@@ -20,7 +19,7 @@ from app.core.period_locks.models import (
     PeriodLockAuditAction,
     PeriodLockAuditEvent,
 )
-from app.db.session import get_current_entity_id, user_membership_lookup
+from app.db.session import entity_context, get_current_entity_id, user_membership_lookup
 from app.features.auth.models import EntityMembership
 from app.features.entities.models import EntitySetting
 
@@ -28,12 +27,6 @@ from app.features.entities.models import EntitySetting
 def utc_today() -> date:
     """Default calendar date for entry_date when omitted — UTC, not local machine tz."""
     return datetime.now(timezone.utc).date()
-
-
-def _month_bounds(anchor: date) -> tuple[date, date]:
-    last_day = calendar.monthrange(anchor.year, anchor.month)[1]
-    return date(anchor.year, anchor.month, 1), date(anchor.year, anchor.month, last_day)
-
 
 def get_go_live_date(session: Session, entity_id: uuid.UUID) -> date | None:
     def _read() -> date | None:

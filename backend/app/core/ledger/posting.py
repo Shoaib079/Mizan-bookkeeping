@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -23,6 +23,7 @@ from app.core.ledger.models import (
     journal_void_update_allowed,
 )
 from app.core.money import Kurus
+from app.core.period_locks.guards import utc_today
 from app.db.base import utcnow
 from app.db.session import entity_context, posting_account_lookup, require_entity_context
 
@@ -167,11 +168,6 @@ def _record_audit_event(
     session.add(event)
     return event
 
-
-def _utc_today() -> date:
-    return datetime.now(timezone.utc).date()
-
-
 def prepare_journal_entry(
     session: Session,
     entity_id: uuid.UUID,
@@ -272,7 +268,7 @@ def _create_reversal_entry(
     validate_posting_lines(reversal_lines)
     _validate_accounts(session, entity_id, reversal_lines)
 
-    effective_void_date = void_date or _utc_today()
+    effective_void_date = void_date or utc_today()
     reversal = _persist_journal_entry(
         session,
         effective_void_date,
@@ -323,7 +319,7 @@ def void_journal_entry(
         require_entity_context()
 
         original = _get_voidable_entry(session, entry_id)
-        effective_void_date = void_date or _utc_today()
+        effective_void_date = void_date or utc_today()
         from app.core.period_locks.guards import assert_entry_dates_allowed, mark_periods_dirty_for_dates
 
         assert_entry_dates_allowed(
@@ -379,7 +375,7 @@ def _correct_journal_entry_in_transaction(
     validate_posting_lines(lines)
     _validate_accounts(session, entity_id, lines)
 
-    effective_void_date = void_date or _utc_today()
+    effective_void_date = void_date or utc_today()
     assert_entry_dates_allowed(
         session,
         entity_id,

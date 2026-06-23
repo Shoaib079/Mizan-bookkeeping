@@ -22,10 +22,21 @@ from alembic.config import Config
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Connection, Engine
 
+from app.db.audit_immutability import (
+    IMMUTABLE_AUDIT_TABLES,
+    apply_audit_immutability,
+    audit_immutability_trigger_name,
+    audit_immutability_triggers_present,
+)
 from app.db.fx_immutability import apply_fx_immutability
 from app.db.ledger_immutability import apply_ledger_immutability
 from app.db.partners_immutability import apply_partners_immutability
 from app.db.payables_immutability import apply_payables_immutability
+from app.db.period_locks_immutability import (
+    PERIOD_LOCKS_NO_DELETE_TRIGGER,
+    apply_period_locks_immutability,
+    period_locks_immutability_triggers_present,
+)
 from app.db.receivables_immutability import apply_receivables_immutability
 from app.db.rls import apply_entity_rls
 from app.db.staff_immutability import apply_staff_immutability
@@ -35,15 +46,22 @@ LEDGER_IMMUTABILITY_TRIGGERS = frozenset(
         "journal_entry_lines_immutable",
         "journal_entries_no_delete",
         "journal_entries_restrict_update",
-        "ledger_audit_events_append_only",
     }
 )
+
+AUDIT_IMMUTABILITY_TRIGGERS = frozenset(
+    audit_immutability_trigger_name(table) for table in IMMUTABLE_AUDIT_TABLES
+)
+
+PERIOD_LOCKS_IMMUTABILITY_TRIGGERS = frozenset({PERIOD_LOCKS_NO_DELETE_TRIGGER})
 
 
 def apply_database_integrity(connection: Connection) -> None:
     """Idempotent RLS policies + immutability triggers (production migration tail)."""
     apply_entity_rls(connection)
     apply_ledger_immutability(connection)
+    apply_audit_immutability(connection)
+    apply_period_locks_immutability(connection)
     apply_payables_immutability(connection)
     apply_fx_immutability(connection)
     apply_staff_immutability(connection)
@@ -87,7 +105,7 @@ def ledger_immutability_triggers_present(connection: Connection) -> list[str]:
             WHERE n.nspname = 'public'
               AND NOT t.tgisinternal
               AND c.relname IN (
-                  'journal_entries', 'journal_entry_lines', 'ledger_audit_events'
+                  'journal_entries', 'journal_entry_lines'
               )
             """
         )

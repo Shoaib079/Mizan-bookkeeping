@@ -17,6 +17,13 @@ from app.core.auth.deps import (
     require_admin_members,
 )
 from app.db.base import EntityScopedMixin
+from app.db.audit_immutability import (
+    IMMUTABLE_AUDIT_TABLES,
+    audit_immutability_triggers_present,
+    discover_audit_event_tables,
+)
+from app.db.period_locks_immutability import period_locks_immutability_triggers_present
+from app.db.provisioning import AUDIT_IMMUTABILITY_TRIGGERS, PERIOD_LOCKS_IMMUTABILITY_TRIGGERS
 from app.db.rls import RLS_TABLES
 from app.main import app
 
@@ -162,6 +169,29 @@ def test_entity_tables_have_rls_and_policy(db_session) -> None:
             failures.append(f"{table}: no RLS policy")
 
     assert not failures, "RLS coverage gaps:\n" + "\n".join(failures)
+
+
+def test_immutable_audit_registry_covers_all_audit_tables() -> None:
+    """Every *_audit_events table must be registered in IMMUTABLE_AUDIT_TABLES."""
+    discovered = discover_audit_event_tables()
+    missing = discovered - IMMUTABLE_AUDIT_TABLES
+    extra = IMMUTABLE_AUDIT_TABLES - discovered
+    assert not missing, f"Audit tables missing from IMMUTABLE_AUDIT_TABLES: {sorted(missing)}"
+    assert not extra, f"IMMUTABLE_AUDIT_TABLES entries with no model: {sorted(extra)}"
+
+
+def test_immutable_audit_tables_have_append_only_triggers(db_session) -> None:
+    """Every IMMUTABLE_AUDIT_TABLES entry must have an append-only trigger installed."""
+    present = frozenset(audit_immutability_triggers_present(db_session.connection()))
+    missing = AUDIT_IMMUTABILITY_TRIGGERS - present
+    assert not missing, f"Missing audit immutability triggers: {sorted(missing)}"
+
+
+def test_period_locks_table_has_delete_protection_trigger(db_session) -> None:
+    """period_locks must reject DELETE at the database layer."""
+    present = frozenset(period_locks_immutability_triggers_present(db_session.connection()))
+    missing = PERIOD_LOCKS_IMMUTABILITY_TRIGGERS - present
+    assert not missing, f"Missing period lock immutability triggers: {sorted(missing)}"
 
 
 def test_pdf_export_has_no_top_level_reportlab_import() -> None:

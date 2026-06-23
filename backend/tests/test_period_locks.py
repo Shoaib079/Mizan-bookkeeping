@@ -7,7 +7,8 @@ from datetime import date, timezone
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -16,7 +17,7 @@ from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntrySource
 from app.core.ledger.posting import PostingLine, post_journal_entry
-from app.core.period_locks.guards import utc_today
+from app.core.period_locks.guards import get_go_live_date, utc_today
 from app.core.period_locks.models import (
     PeriodLock,
     PeriodLockAuditAction,
@@ -89,6 +90,32 @@ def _manual_payload(
     }
     if entry_date is not None:
         payload["entry_date"] = entry_date
+    if period_unlock_reason is not None:
+        payload["period_unlock_reason"] = period_unlock_reason
+    return payload
+
+
+def _correct_payload(
+    setup: dict,
+    entry_id: str,
+    *,
+    entry_date: str,
+    void_date: str,
+    actor_id: uuid.UUID,
+    period_unlock_reason: str | None = None,
+) -> dict:
+    bank_id = setup["accounts"]["1100"]
+    ap_id = setup["accounts"]["2000"]
+    payload = {
+        "entry_date": entry_date,
+        "description": "Corrected",
+        "actor_id": str(actor_id),
+        "void_date": void_date,
+        "lines": [
+            {"account_id": str(bank_id), "amount_kurus": 20000, "side": "debit"},
+            {"account_id": str(ap_id), "amount_kurus": 20000, "side": "credit"},
+        ],
+    }
     if period_unlock_reason is not None:
         payload["period_unlock_reason"] = period_unlock_reason
     return payload
@@ -194,6 +221,14 @@ def test_owner_unlock_write_succeeds_with_audit(
     assert audits[0].reason == "Correcting missed accrual"
     assert audits[0].actor_id == setup["owner"].id
 
+    with entity_context(db_session, setup["entity_id"]):
+        lock = db_session.scalar(
+            select(PeriodLock).where(PeriodLock.period_start == locked_day)
+        )
+    assert lock is not None
+    assert lock.reopened_at is None
+    assert lock.dirty is True
+
 
 def test_close_month_blocks_backdated_entry_in_month(
     auth_enforced,
@@ -218,7 +253,117 @@ def test_close_month_blocks_backdated_entry_in_month(
     assert blocked.status_code == 422
 
 
-def test_correct_checks_void_date_and_corrected_entry_date(
+def test_correct_blocked_when_only_void_date_in_locked_period(
+    auth_enforced,
+    client: TestClient,
+    lock_setup,
+) -> None:
+    setup = lock_setup
+    bank_id = setup["accounts"]["1100"]
+    ap_id = setup["accounts"]["2000"]
+    original_date = date(2026, 3, 10)
+    locked_void_date = date(2026, 3, 20)
+
+    create = client.post(
+        f"/entities/{setup['entity_id']}/manual-journals",
+        json=_manual_payload(
+            bank_id, ap_id, setup["owner"].id, original_date.isoformat()
+        ),
+        headers=auth_headers(setup["owner"]),
+    )
+    entry_id = create.json()["id"]
+
+    client.post(
+        f"/entities/{setup['entity_id']}/period-locks/close",
+        json={"lock_kind": "day", "anchor_date": locked_void_date.isoformat()},
+        headers=auth_headers(setup["owner"]),
+    )
+
+    blocked = client.post(
+        f"/entities/{setup['entity_id']}/ledger/entries/{entry_id}/correct",
+        json=_correct_payload(
+            setup,
+            entry_id,
+            entry_date=original_date.isoformat(),
+            void_date=locked_void_date.isoformat(),
+            actor_id=setup["cashier"].id,
+        ),
+        headers=auth_headers(setup["cashier"]),
+    )
+    assert blocked.status_code == 422
+    assert "closed period" in blocked.json()["detail"].lower()
+
+    allowed = client.post(
+        f"/entities/{setup['entity_id']}/ledger/entries/{entry_id}/correct",
+        json=_correct_payload(
+            setup,
+            entry_id,
+            entry_date=original_date.isoformat(),
+            void_date=locked_void_date.isoformat(),
+            actor_id=setup["owner"].id,
+            period_unlock_reason="Void date falls in closed day",
+        ),
+        headers=auth_headers(setup["owner"]),
+    )
+    assert allowed.status_code == 200
+
+
+def test_correct_blocked_when_original_entry_period_locked(
+    auth_enforced,
+    client: TestClient,
+    lock_setup,
+) -> None:
+    setup = lock_setup
+    bank_id = setup["accounts"]["1100"]
+    ap_id = setup["accounts"]["2000"]
+    original_date = date(2026, 3, 20)
+    unlocked_correct_date = date(2026, 4, 5)
+
+    create = client.post(
+        f"/entities/{setup['entity_id']}/manual-journals",
+        json=_manual_payload(
+            bank_id, ap_id, setup["owner"].id, original_date.isoformat()
+        ),
+        headers=auth_headers(setup["owner"]),
+    )
+    entry_id = create.json()["id"]
+
+    client.post(
+        f"/entities/{setup['entity_id']}/period-locks/close",
+        json={"lock_kind": "day", "anchor_date": original_date.isoformat()},
+        headers=auth_headers(setup["owner"]),
+    )
+
+    blocked = client.post(
+        f"/entities/{setup['entity_id']}/ledger/entries/{entry_id}/correct",
+        json=_correct_payload(
+            setup,
+            entry_id,
+            entry_date=unlocked_correct_date.isoformat(),
+            void_date=unlocked_correct_date.isoformat(),
+            actor_id=setup["cashier"].id,
+        ),
+        headers=auth_headers(setup["cashier"]),
+    )
+    assert blocked.status_code == 422
+    assert "closed period" in blocked.json()["detail"].lower()
+
+    allowed = client.post(
+        f"/entities/{setup['entity_id']}/ledger/entries/{entry_id}/correct",
+        json=_correct_payload(
+            setup,
+            entry_id,
+            entry_date=unlocked_correct_date.isoformat(),
+            void_date=unlocked_correct_date.isoformat(),
+            actor_id=setup["owner"].id,
+            period_unlock_reason="Original entry day was closed",
+        ),
+        headers=auth_headers(setup["owner"]),
+    )
+    assert allowed.status_code == 200
+
+
+def test_correct_blocked_when_corrected_date_before_go_live(
     auth_enforced,
     client: TestClient,
     lock_setup,
@@ -237,44 +382,47 @@ def test_correct_checks_void_date_and_corrected_entry_date(
     )
     entry_id = create.json()["id"]
 
-    client.post(
-        f"/entities/{setup['entity_id']}/period-locks/close",
-        json={"lock_kind": "day", "anchor_date": "2026-03-20"},
-        headers=auth_headers(setup["owner"]),
-    )
-
-    correct_blocked = client.post(
+    blocked = client.post(
         f"/entities/{setup['entity_id']}/ledger/entries/{entry_id}/correct",
-        json={
-            "entry_date": "2026-03-20",
-            "description": "Corrected",
-            "actor_id": str(setup["cashier"].id),
-            "void_date": "2026-03-20",
-            "lines": [
-                {"account_id": str(bank_id), "amount_kurus": 20000, "side": "debit"},
-                {"account_id": str(ap_id), "amount_kurus": 20000, "side": "credit"},
-            ],
-        },
+        json=_correct_payload(
+            setup,
+            entry_id,
+            entry_date="2025-12-31",
+            void_date=original_date.isoformat(),
+            actor_id=setup["cashier"].id,
+        ),
         headers=auth_headers(setup["cashier"]),
     )
-    assert correct_blocked.status_code == 422
+    assert blocked.status_code == 422
+    assert "go-live" in blocked.json()["detail"].lower()
 
-    correct_ok = client.post(
+    owner_blocked = client.post(
         f"/entities/{setup['entity_id']}/ledger/entries/{entry_id}/correct",
-        json={
-            "entry_date": "2026-03-20",
-            "description": "Corrected",
-            "actor_id": str(setup["owner"].id),
-            "void_date": "2026-03-20",
-            "period_unlock_reason": "Month-end correction",
-            "lines": [
-                {"account_id": str(bank_id), "amount_kurus": 20000, "side": "debit"},
-                {"account_id": str(ap_id), "amount_kurus": 20000, "side": "credit"},
-            ],
-        },
+        json=_correct_payload(
+            setup,
+            entry_id,
+            entry_date="2025-12-31",
+            void_date=original_date.isoformat(),
+            actor_id=setup["owner"].id,
+            period_unlock_reason="Should not bypass go-live floor",
+        ),
         headers=auth_headers(setup["owner"]),
     )
-    assert correct_ok.status_code == 200
+    assert owner_blocked.status_code == 422
+    assert "go-live" in owner_blocked.json()["detail"].lower()
+
+
+def test_get_go_live_date_reads_target_entity_when_context_differs(
+    db_session: Session,
+    restaurant_a,
+    restaurant_b,
+) -> None:
+    _set_go_live(db_session, restaurant_a.id, date(2026, 1, 1))
+    _set_go_live(db_session, restaurant_b.id, date(2026, 2, 1))
+
+    with entity_context(db_session, restaurant_a.id):
+        assert get_go_live_date(db_session, restaurant_a.id) == date(2026, 1, 1)
+        assert get_go_live_date(db_session, restaurant_b.id) == date(2026, 2, 1)
 
 
 def test_reopen_is_audited_and_dirty_flag_set_on_change(
@@ -415,3 +563,50 @@ def test_close_period_service_direct(db_session: Session, lock_setup) -> None:
     )
     assert lock.period_start == date(2026, 5, 1)
     assert lock.reopened_at is None
+
+
+def test_period_lock_audit_event_raw_sql_update_rejected(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    lock_setup,
+) -> None:
+    setup = lock_setup
+    client.post(
+        f"/entities/{setup['entity_id']}/period-locks/close",
+        json={"lock_kind": "day", "anchor_date": "2026-06-01"},
+        headers=auth_headers(setup["owner"]),
+    )
+    with entity_context(db_session, setup["entity_id"]):
+        audit_id = db_session.scalar(select(PeriodLockAuditEvent.id))
+        assert audit_id is not None
+        with pytest.raises(DBAPIError, match="append-only"):
+            db_session.execute(
+                text("UPDATE period_lock_audit_events SET reason = :reason WHERE id = :id"),
+                {"reason": "tampered", "id": audit_id},
+            )
+            db_session.commit()
+    db_session.rollback()
+
+
+def test_period_lock_raw_sql_delete_rejected(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    lock_setup,
+) -> None:
+    setup = lock_setup
+    close_resp = client.post(
+        f"/entities/{setup['entity_id']}/period-locks/close",
+        json={"lock_kind": "day", "anchor_date": "2026-06-02"},
+        headers=auth_headers(setup["owner"]),
+    )
+    lock_id = close_resp.json()["id"]
+    with entity_context(db_session, setup["entity_id"]):
+        with pytest.raises(DBAPIError, match="cannot be deleted"):
+            db_session.execute(
+                text("DELETE FROM period_locks WHERE id = :id"),
+                {"id": lock_id},
+            )
+            db_session.commit()
+    db_session.rollback()

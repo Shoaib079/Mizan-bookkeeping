@@ -15,7 +15,7 @@
 | **Active phase** | Phase 8.5 — Pre-frontend API hardening |
 | **Active slice** | Phase 8.5 complete — ready for Phase 9 |
 | **Last completed slice** | Phase 8.5 Slice 5 — PDF export (financial statements) |
-| **Last commit/tag** | `v0.47.11` |
+| **Last commit/tag** | `v0.47.12` |
 | **Next up** | Phase 9 Slice 1 — Auth + entity context (frontend) |
 
 **The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
@@ -233,7 +233,7 @@ strengthen the existing write/read APIs.
 | 1. Idempotency on writes | done | `IdempotencyMiddleware` on POST/PATCH/PUT/DELETE; client `Idempotency-Key` (UUID) per action; scope = verified user + method + path + key; repeated key returns cached JSON + status; different keys with same payload both succeed; `idempotency_enforcement` setting (default True; conftest False); Alembic `039`; `test_idempotency.py`; 432 pytest |
 | 2. Correct / amend operation | done | `correct_journal_entry()` — atomic void + reversal + corrected post in one transaction; `amends_entry_id` / `amended_by_entry_id` links; `LedgerAuditAction.AMEND`; `POST /entities/{id}/ledger/entries/{id}/correct` (**whitelist:** `MANUAL` + `BANK_FEE` only — all other sources 409 with dedicated-flow or void-and-re-enter hint); subledger-safe follow-up: `correction.py` registry + type-specific flows; dedicated correct endpoints for supplier payment, customer payment, FX purchase; completeness guard test; 454 pytest |
 | 3. Pagination + search + filters | done | Shared `app/core/listing/` (`ListParams`, Turkish-aware `q`, date/amount/status/FK filters, `PaginatedListOut`). All entity list endpoints return `{items, total, limit, offset}`; new `GET .../ledger/entries`. Consistent query params: `q`, `from`, `to`, `min_amount`, `max_amount`, `status`, `*_id`. `test_list_pagination.py`; 444 pytest |
-| 4. Flexible dates + soft period locks | done | Timestamps UTC via `utcnow()`; transaction dates are user calendar `date` (no timezone setting). Entry date optional on create — defaults to `datetime.now(timezone.utc).date()`; floored at `go_live_date` (422). `period_locks` + `period_lock_audit_events`; close day/month (owner); reopen (owner, audited); owner unlock writes require `period_unlock_reason` (audited); `dirty` flag when closed period touched. Central guard `assert_entry_dates_allowed()` in posting boundary (post/void/correct + subledger corrections). API: `POST .../period-locks/close`, `POST .../{lock_id}/reopen`, `GET .../period-locks`. Alembic `041`; `test_period_locks.py`; 464 pytest |
+| 4. Flexible dates + soft period locks | done | Go-live floor; soft day/month locks; owner unlock + audit; dirty flag; `IMMUTABLE_AUDIT_TABLES` + append-only audit triggers; `period_locks` no-delete trigger; migration `042`; guard-tests; split correction lock tests; 483 pytest |
 | 5. PDF export — financial statements | done | Lazy `reportlab` imports; bundled DejaVu Sans TTF (`app/core/pdf/fonts.py`); ₺ + Turkish glyphs fail loudly; bold totals via DejaVuSans-Bold; `GET .../export/pdf`; `financial_reports_guard`; `test_pdf_export.py` (6 tests); fresh-install guard script + CI; `REVIEWER_BRIEF.md`; 473 pytest |
 
 **Phase 8.5 complete when:** all slices done, tested, committed, owner sign-off.
@@ -333,6 +333,7 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-23 | Period locks review fixes | `v0.47.12` | IMMUTABLE_AUDIT_TABLES registry; append-only audit triggers; period_locks no-delete; split correction tests; 483 pytest |
 | 2026-06-23 | PDF export review fixes | `v0.47.11` | Lazy reportlab; bundled DejaVu fonts; ₺/Turkish glyph tests; fresh-install CI guard; 473 pytest |
 | 2026-06-23 | PDF export — financial statements | `v0.47.10-phase8.5-pdf-export` | reportlab PDF for P&L/balance sheet/cash flow; `format_try` at render edge; `GET .../export/pdf`; 469 pytest |
 | 2026-06-23 | Flexible dates + soft period locks | `v0.47.9-phase8.5-period-locks` | Go-live floor; soft day/month locks; owner unlock + audit; dirty flag; posting boundary guard; 464 pytest |
