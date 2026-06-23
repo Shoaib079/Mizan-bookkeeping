@@ -12,6 +12,46 @@ Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
 **Guarding test:** `backend/scripts/verify_fresh_install.sh` + `.github/workflows/ci.yml` (clean venv, `pip install -e ".[dev]"`, boot, full pytest).
 
+## 2026-06-23 — Staff advance applied twice on partial salary payments
+
+**Symptom:** Accrue 100k, advance 50k, pay 30k then 20k — both 1300 and 2250 showed −50k wrongly.
+
+**Root cause:** `SALARY_PAYMENT` recorded only cash paid; `outstanding_advance_minor` never reduced on apply.
+
+**Fix:** `ADVANCE_APPLIED` movement; full payable clearance on payment; FX path aligned.
+
+**Guarding test:** `test_partial_salary_payment_applies_advance_only_once`, staff tie test. Tag `v0.47.14`. **Money-critical — owner sign-off.**
+
+## 2026-06-23 — Payables adjustments posted without GL
+
+**Symptom:** ADJUSTMENT/OPENING_BALANCE via API with `journal_entry_id=None`.
+
+**Root cause:** Subledger API bypassed posting boundary.
+
+**Fix:** `post_supplier_manual_movement()` with GL counterpart. Tag `v0.47.15`. **Money-critical — owner sign-off.**
+
+## 2026-06-23 — POS daily totals double-counted tips as revenue
+
+**Symptom:** Full total credited to 4000 while tips also hit 2260.
+
+**Root cause:** No tips at intake; gross posted to revenue.
+
+**Fix:** `tips_kurus` intake; revenue = total − tips at confirm. Tag `v0.47.17`. **Money-critical — owner sign-off.**
+
+## 2026-06-23 — POS/delivery settlements not idempotent
+
+**Symptom:** Duplicate settlement posts / re-classify could double-count.
+
+**Fix:** UNIQUE batch id + dedup + bank link-existing. Tag `v0.47.16`.
+
+## 2026-06-23 — FX purchase classified as operating cash flow
+
+**Fix:** Investing bucket + registry guard. Tag `v0.47.18`.
+
+## 2026-06-23 — Subledger immutability not registry-guarded
+
+**Fix:** `IMMUTABLE_SUBLEDGER_TABLES` + raw SQL tests. Tag `v0.47.19`.
+
 ## 2026-06-23 — Period lock audit trail mutable at database layer
 
 **Symptom:** `period_lock_audit_events` and `period_locks` had no append-only/delete protection unlike ledger audit tables.

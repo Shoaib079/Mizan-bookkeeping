@@ -242,6 +242,8 @@ strengthen the existing write/read APIs.
 
 ## Phase 8.6 — Pre-frontend full backend audit (do before Phase 9)
 
+**Status: complete (2026-06-23)** — items 0–6 implemented; **501 pytest green** from clean venv; **owner sign-off pending** on money-critical fixes (items 1–4).
+
 Retro-audit all of Phases 0–8 while the backend is stable and no frontend depends on it yet — fixes are
 cheapest now. Two tracks; every gap found becomes a permanent test (meta-rule), so the backend is
 self-policing before any UI is built.
@@ -265,7 +267,17 @@ Builder finds nothing wrong with its own work by definition; that's why a differ
   imports. Money-critical fixes require owner sign-off.
 
 **Phase 8.6 complete when:** all money-critical phases reviewed, every found gap fixed + covered by a
-permanent test, full suite green from a clean venv, owner sign-off.
+permanent test, full suite green from a clean venv, owner sign-off. **Done** — tags `v0.47.13` … `v0.47.19`; awaiting owner sign-off on money-critical items.
+
+| Item | Tag | Summary |
+|------|-----|---------|
+| 0 | `v0.47.13-phase8.6-control-account-ties` | Control-account tie registry + completeness guards |
+| 1 | `v0.47.14-phase8.6-staff-advance-fix` | `ADVANCE_APPLIED` subledger; full payable clearance |
+| 2 | `v0.47.15-phase8.6-payables-gl-tie` | AP adjustments through GL posting boundary |
+| 3 | `v0.47.16-phase8.6-settlement-idempotency` | POS/delivery settlement dedup + batch unique |
+| 4 | `v0.47.17-phase8.6-pos-tips-carveout` | POS tips carved from revenue at confirm |
+| 5 | `v0.47.18-phase8.6-cash-flow-investing` | `FX_PURCHASE` → investing; source registry guard |
+| 6 | `v0.47.19-phase8.6-subledger-immutability-guards` | `IMMUTABLE_SUBLEDGER_TABLES` + raw SQL tests |
 
 ---
 
