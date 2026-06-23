@@ -2,6 +2,12 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-23 — Idempotency on writes (Phase 8.5 Slice 1)
+
+**Choice:** Central `IdempotencyMiddleware` (not per-route) intercepts POST/PATCH/PUT/DELETE. Client sends `Idempotency-Key` UUID per distinct submission; scope = `user_id` + method + path + key (anonymous sentinel when auth off). Repeated key returns stored JSON + status; different keys with same payload both post. `idempotency_enforcement` env setting (default true; false in pytest). Table `idempotency_records` (not entity-scoped, no RLS). Alembic `039`.
+
+**Not in slice:** Near-duplicate detection / soft "possible duplicate?" prompt (separate UX concern).
+
 ## 2026-06-23 — Phase 8 owner sign-off
 
 **Status:** Phase 8 (roles, backups, security hardening, launch readiness, auth hardening, DB provisioning) owner signed off. Backend v1 complete at tag `v0.47.2-phase8-db-provisioning` (423 pytest). Next work: Phase 8.5 pre-frontend API hardening before Phase 9 frontend.

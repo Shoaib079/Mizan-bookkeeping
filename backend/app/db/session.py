@@ -21,7 +21,9 @@ def get_current_entity_id() -> uuid.UUID | None:
 
 
 def create_db_engine(url: str | None = None) -> Engine:
-    return create_engine(url or settings.database_url, pool_pre_ping=True)
+    if url is None:
+        url = settings.test_database_url if settings.app_env == "test" else settings.database_url
+    return create_engine(url, pool_pre_ping=True)
 
 
 engine = create_db_engine()

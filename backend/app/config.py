@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     database_admin_url: str = "postgresql+psycopg://postgres@localhost:5432/postgres"
     upload_dir: str = "data/uploads"
     auth_enforcement: bool = True
+    idempotency_enforcement: bool = True
 
     clerk_secret_key: str | None = None
     clerk_publishable_key: str | None = None

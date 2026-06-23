@@ -31,6 +31,7 @@ from app.features.delivery.models import DeliveryReport, DeliverySettlement, Own
 from app.features.tips.models import TipAccrual, TipPayout  # noqa: F401
 from app.features.expenses.models import ExpenseEntry, ExpenseItem, ExpenseItemAlias  # noqa: F401
 from app.features.auth.models import EntityMembership, User, AuthAuditEvent  # noqa: F401
+from app.core.idempotency.models import IdempotencyRecord  # noqa: F401
 
 
 def ensure_mizan_role_and_databases() -> None:

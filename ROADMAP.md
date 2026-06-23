@@ -15,8 +15,8 @@
 | **Active phase** | Phase 8.5 — Pre-frontend API hardening |
 | **Active slice** | Idempotency / correct-amend / pagination / dates & soft-locks |
 | **Last completed slice** | DB provisioning integrity (Phase 8 Slice 6) — backend v1 COMPLETE |
-| **Last commit/tag** | `v0.47.2-phase8-db-provisioning` |
-| **Next up** | Phase 8.5 (do before any frontend), then Phase 9 Slice 1 |
+| **Last commit/tag** | `v0.47.3-phase8.5-idempotency` |
+| **Next up** | Phase 8.5 Slice 2 (correct/amend), then pagination |
 
 **The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -230,10 +230,11 @@ strengthen the existing write/read APIs.
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| 1. Idempotency on writes | planned | Server-side idempotency key per **submission/action** (NOT keyed on amount/date/account) on every mutation endpoint; a repeated key returns the original result instead of creating a second record. The frontend generates a fresh key per distinct entry, so two genuinely separate payments (e.g. rent from two accounts, even identical amounts/dates) BOTH record — only a re-submit of the same action (double-click/retry) is collapsed. Real backstop for "no doubling." Near-identical manual entries are NOT auto-rejected — surface a soft "possible duplicate?" → Needs Review for the user to confirm. |
+| 1. Idempotency on writes | done | `IdempotencyMiddleware` on POST/PATCH/PUT/DELETE; client `Idempotency-Key` (UUID) per action; scope = verified user + method + path + key; repeated key returns cached JSON + status; different keys with same payload both succeed; `idempotency_enforcement` setting (default True; conftest False); Alembic `039`; `test_idempotency.py`; 432 pytest |
 | 2. Correct / amend operation | planned | One atomic backend op that voids an entry and posts the corrected one, linked, in a single transaction (never a client-orchestrated void-then-recreate that could half-fail). Every entry screen uses it. |
 | 3. Pagination + filters | planned | Cursor/limit + date / amount / text filters on all list endpoints (expenses, transactions, ledgers). Lists currently return everything; would choke and force UI rework with real data. |
 | 4. Flexible dates + soft period locks | planned | Confirm timestamps are stored UTC and transaction dates stay user-entered calendar dates (NO hardcoded timezone, NO timezone setting). Entry date defaults to today but accepts ANY date (batch/backdated entry), floored at go-live. Closed day/month is **soft-locked** (prevents accidental backdating); **owner can unlock + edit** anytime; reopen + changes audited; flag a closed period that changed after close (re-file KDV / inform accountant). |
+| 5. PDF export — financial statements | planned | Backend PDF rendering for **P&L, balance sheet, cash flow only** (the shareable statements; owner's choice — other reports stay Excel-only for now, add PDF later if needed). Pull from the SAME report service as the Excel export (one source of truth, no recomputation); integer kuruş → Turkish display format (`1.234,56 ₺`) at the render edge; header with entity name + period + generated date; `Content-Disposition` filename. Same `financial_reports_guard` as the Excel export (cashier blocked). Frontend buttons come in Phase 9 Slice 8. |
 
 **Phase 8.5 complete when:** all slices done, tested, committed, owner sign-off.
 
@@ -260,7 +261,7 @@ token file. Golden rule #8 applies to every form.
 | 5. POS & delivery sales | planned | POS daily-summary + card-sales intake; delivery platform reports + settlements + reconciliation; user-managed delivery platforms; commission e-Faturas. |
 | 6. Staff, partners, receivables, tips | planned | Entry forms + ledger views for each subledger (salary vs advance, partner reimbursements, customer receivables, tip pot in/out). |
 | 7. Needs-review queue + document upload | planned | Photo/scan/PDF upload → OCR read → side-by-side review (original + extracted fields + confidence) → confirm-to-post. The review-first heart; nothing posts unconfirmed. |
-| 8. Dashboard + reports | planned | Dashboard tiles; Reports card-library landing; P&L / balance sheet / cash flow / KDV input / delivery sales / period comparison read views; Excel export buttons; role-gated (cashier can't see financials). |
+| 8. Dashboard + reports | planned | Dashboard tiles; Reports card-library landing; P&L / balance sheet / cash flow / KDV input / delivery sales / period comparison read views; **Excel export buttons** (all reports, backend built) + **PDF export buttons** (P&L / balance sheet / cash flow only — backend from Phase 8.5 Slice 5); role-gated (cashier can't see financials). |
 | 9. Settings & onboarding | planned | Opening-balances wizard; members/roles management; entity settings; delivery-platform management; backup status; create / switch restaurants. |
 | 10. Theme refinement + UX polish | planned | Apply final theme via the one token file (zero page rework); empty states, loading skeletons, toasts, command palette, full keyboard + touch + accessibility pass. |
 
@@ -303,6 +304,7 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-23 | Idempotency on writes | `v0.47.3-phase8.5-idempotency` | Server-side `Idempotency-Key` middleware; `idempotency_records` table; 432 pytest |
 | 2026-06-22 | DB provisioning | `v0.47.2-phase8-db-provisioning` | Alembic chain fix, canonical `upgrade head`, RLS+triggers migration 038, 423 pytest |
 | 2026-06-22 | Auth hardening | `v0.47.1-phase8-auth-hardening` | CLERK_TEST_MODE + audience production guards; permanent route/posting/RLS tests; RLS GUC re-sync; 420 pytest |
 | 2026-06-22 | Launch readiness | `39d11ed` / `v0.47.0-phase8-launch-readiness` | Clerk JWT/JWKS auth, invite-only provisioning, AUTH_ENFORCEMENT default on, 412 pytest |

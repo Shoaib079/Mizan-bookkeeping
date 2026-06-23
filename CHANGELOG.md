@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-23
 
+**Phase 8.5 — Idempotency on writes:** Server-side `Idempotency-Key` header (UUID) on every mutation endpoint via `IdempotencyMiddleware` — no per-route edits. Scope = verified user identity (when auth on) + HTTP method + path + key; repeated same key returns original JSON body + status (no second DB record); two different keys with identical payload both succeed. `idempotency_enforcement` setting (default `true`; pytest conftest sets `false`). `idempotency_records` table stores cached responses (Alembic `039`). Skips GET, `/health`, `/docs`. Tag `v0.47.3-phase8.5-idempotency`. 432 pytest green.
+
 **Phase 8 owner sign-off:** Backend v1 officially complete. All Phase 8 slices done — roles & permissions, backups, security hardening, Clerk JWT launch readiness, auth hardening + guard tests, DB provisioning integrity (`alembic upgrade head` canonical). 423 pytest green at sign-off. Active phase advances to **Phase 8.5 — Pre-frontend API hardening** (idempotency, correct/amend, pagination, flexible dates + soft locks) before any frontend work.
 
 ## 2026-06-22

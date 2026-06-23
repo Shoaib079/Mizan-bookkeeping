@@ -14,6 +14,7 @@ from app.config import settings
 # Test suite defaults — must be set before importing app (launch validation).
 settings.auth_enforcement = False
 settings.clerk_test_mode = True
+settings.idempotency_enforcement = False
 settings.app_env = "test"
 
 from app.db.bootstrap import ensure_test_database
@@ -54,7 +55,7 @@ def db_session(test_engine) -> Session:
             "staff_ledger_entries, employees, partner_ledger_entries, partners, "
             "cash_movements, cash_drawer_sessions, tip_payouts, tip_accruals, "
             "expense_entries, expense_item_aliases, expense_items, "
-            "entity_memberships, users, auth_audit_events, "
+            "entity_memberships, users, auth_audit_events, idempotency_records, "
             "money_accounts, accounts, "
             "invoice_drafts, supplier_ledger_entries, suppliers, entity_settings, entities CASCADE"
         )

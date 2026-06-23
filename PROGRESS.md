@@ -5,14 +5,14 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | 8.5 — Pre-frontend API hardening |
-| **Last completed slice** | Phase 8 owner sign-off (backend v1 complete) |
-| **Next slice** | Idempotency on writes (Phase 8.5 Slice 1) |
+| **Last completed slice** | Idempotency on writes (Phase 8.5 Slice 1) |
+| **Next slice** | Correct / amend operation (Phase 8.5 Slice 2) |
 | **Branch** | `main` |
-| **Last tag** | `v0.47.2-phase8-db-provisioning` |
+| **Last tag** | `v0.47.3-phase8.5-idempotency` |
 
 ## Resume point
 
-**Phase 8 SIGNED OFF** (2026-06-23). Backend v1 complete — roles, backups, security hardening, Clerk auth, DB provisioning integrity. **Active work: Phase 8.5 Slice 1 — idempotency on writes** (server-side `Idempotency-Key` per mutation; collapse double-submit only).
+**Phase 8.5 Slice 1 done.** `IdempotencyMiddleware` on all mutation endpoints; client sends `Idempotency-Key` (UUID) per distinct action; repeated key returns cached response (no second record); scope includes verified user when auth on. `idempotency_enforcement` default True (conftest False). Alembic `039_idempotency`. **Next: Slice 2 — atomic correct/amend operation.**
 
 ## Pre-sign-off verification (2026-06-22)
 
