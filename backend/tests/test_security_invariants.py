@@ -226,3 +226,21 @@ def test_app_main_imports_after_editable_install() -> None:
     import app.main  # noqa: F401
 
     assert app.main.app is not None
+
+
+def test_subledger_control_account_tie_registry_complete() -> None:
+    """Every *_ledger_entries table and tip_accruals must map to a control GL account."""
+    from app.core.subledger.control_account_tie import (
+        verify_control_account_tie_registry_complete,
+    )
+
+    verify_control_account_tie_registry_complete()
+
+
+def test_control_accounts_tied_on_empty_seeded_entity(db_session, restaurant_a) -> None:
+    """Empty entity with seeded chart — all subledger totals tie to zero GL balances."""
+    from app.core.chart_of_accounts.seed import seed_default_chart
+    from app.core.subledger.control_account_tie import assert_entity_control_accounts_tied
+
+    seed_default_chart(db_session, restaurant_a.id)
+    assert_entity_control_accounts_tied(db_session, restaurant_a.id)

@@ -16,6 +16,7 @@ class StaffMovementType(str, enum.Enum):
     OPENING_BALANCE = "opening_balance"
     SALARY_ACCRUED = "salary_accrued"
     ADVANCE_PAID = "advance_paid"
+    ADVANCE_APPLIED = "advance_applied"
     SALARY_PAYMENT = "salary_payment"
 
 
