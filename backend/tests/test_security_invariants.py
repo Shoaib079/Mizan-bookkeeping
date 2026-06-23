@@ -235,6 +235,25 @@ def test_every_journal_entry_source_has_cash_flow_classification() -> None:
     verify_cash_flow_source_registry_complete()
 
 
+def test_subledger_immutability_registry_complete() -> None:
+    """Every *_ledger_entries table must be registered for immutability guards."""
+    from app.db.subledger_immutability import verify_subledger_immutability_registry_complete
+
+    verify_subledger_immutability_registry_complete()
+
+
+def test_subledger_tables_have_immutability_triggers(db_session) -> None:
+    """Every IMMUTABLE_SUBLEDGER_TABLES entry must have an immutability trigger."""
+    from app.db.subledger_immutability import (
+        SUBLEDGER_IMMUTABILITY_TRIGGERS,
+        subledger_immutability_triggers_present,
+    )
+
+    present = frozenset(subledger_immutability_triggers_present(db_session.connection()))
+    missing = SUBLEDGER_IMMUTABILITY_TRIGGERS - present
+    assert not missing, f"Missing subledger immutability triggers: {sorted(missing)}"
+
+
 def test_subledger_control_account_tie_registry_complete() -> None:
     """Every *_ledger_entries table and tip_accruals must map to a control GL account."""
     from app.core.subledger.control_account_tie import (
