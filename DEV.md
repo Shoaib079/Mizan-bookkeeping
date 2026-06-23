@@ -15,8 +15,8 @@ docker compose up -d
 # 2. Backend (from repo root)
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"       # needs python-multipart; packages only app* (see BUGLOG)
 uvicorn app.main:app --reload --port 8000
 
 # 3. Frontend (new terminal)
