@@ -31,12 +31,14 @@ BEGIN
        OR OLD.source IS DISTINCT FROM NEW.source
        OR OLD.created_at IS DISTINCT FROM NEW.created_at
        OR OLD.reverses_entry_id IS DISTINCT FROM NEW.reverses_entry_id
+       OR OLD.amends_entry_id IS DISTINCT FROM NEW.amends_entry_id
     THEN
         RAISE EXCEPTION 'journal entries are immutable except void metadata';
     END IF;
 
     IF (OLD.status IS DISTINCT FROM NEW.status
         OR OLD.reversed_by_entry_id IS DISTINCT FROM NEW.reversed_by_entry_id
+        OR OLD.amended_by_entry_id IS DISTINCT FROM NEW.amended_by_entry_id
         OR OLD.voided_at IS DISTINCT FROM NEW.voided_at)
        AND current_setting('app.journal_void_update', true) IS DISTINCT FROM '1'
     THEN

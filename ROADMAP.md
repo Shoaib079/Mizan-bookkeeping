@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 8.5 — Pre-frontend API hardening |
-| **Active slice** | Idempotency / correct-amend / pagination / dates & soft-locks |
-| **Last completed slice** | DB provisioning integrity (Phase 8 Slice 6) — backend v1 COMPLETE |
-| **Last commit/tag** | `v0.47.3-phase8.5-idempotency` |
-| **Next up** | Phase 8.5 Slice 2 (correct/amend), then pagination |
+| **Active slice** | Phase 8.5 Slice 3 — Pagination + search + filters |
+| **Last completed slice** | Phase 8.5 Slice 2 — atomic correct/amend |
+| **Last commit/tag** | `v0.47.4-phase8.5-correct-amend` |
+| **Next up** | Slice 3 (pagination + search + filters) → Slice 4 (dates/locks) → Slice 5 (statement PDF) |
 
 **The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -231,8 +231,8 @@ strengthen the existing write/read APIs.
 | Slice | Status | Notes |
 |-------|--------|-------|
 | 1. Idempotency on writes | done | `IdempotencyMiddleware` on POST/PATCH/PUT/DELETE; client `Idempotency-Key` (UUID) per action; scope = verified user + method + path + key; repeated key returns cached JSON + status; different keys with same payload both succeed; `idempotency_enforcement` setting (default True; conftest False); Alembic `039`; `test_idempotency.py`; 432 pytest |
-| 2. Correct / amend operation | planned | One atomic backend op that voids an entry and posts the corrected one, linked, in a single transaction (never a client-orchestrated void-then-recreate that could half-fail). Every entry screen uses it. |
-| 3. Pagination + filters | planned | Cursor/limit + date / amount / text filters on all list endpoints (expenses, transactions, ledgers). Lists currently return everything; would choke and force UI rework with real data. |
+| 2. Correct / amend operation | done | `correct_journal_entry()` — atomic void + reversal + corrected post in one transaction; `amends_entry_id` / `amended_by_entry_id` links; `LedgerAuditAction.AMEND`; `POST /entities/{id}/ledger/entries/{id}/correct`; Alembic `040`; `test_ledger_correct.py`; 438 pytest |
+| 3. Pagination + search + filters | planned | Lists currently return everything with no pagination and **no free-text search anywhere** — fix both. (a) Cursor/limit pagination on every list endpoint. (b) **Free-text search (`q`)** across all the main lists: suppliers/customers/partners/employees by name (+ VKN), expenses by description/item, transactions/ledger entries by description, invoices by supplier/number. (c) Structured filters: date range, amount range, status, and relevant foreign keys (supplier/account/category/platform). Consistent param names across endpoints. This is what makes the preview's filter/search UI actually work (wired in Phase 9). |
 | 4. Flexible dates + soft period locks | planned | Confirm timestamps are stored UTC and transaction dates stay user-entered calendar dates (NO hardcoded timezone, NO timezone setting). Entry date defaults to today but accepts ANY date (batch/backdated entry), floored at go-live. Closed day/month is **soft-locked** (prevents accidental backdating); **owner can unlock + edit** anytime; reopen + changes audited; flag a closed period that changed after close (re-file KDV / inform accountant). |
 | 5. PDF export — financial statements | planned | Backend PDF rendering for **P&L, balance sheet, cash flow only** (the shareable statements; owner's choice — other reports stay Excel-only for now, add PDF later if needed). Pull from the SAME report service as the Excel export (one source of truth, no recomputation); integer kuruş → Turkish display format (`1.234,56 ₺`) at the render edge; header with entity name + period + generated date; `Content-Disposition` filename. Same `financial_reports_guard` as the Excel export (cashier blocked). Frontend buttons come in Phase 9 Slice 8. |
 

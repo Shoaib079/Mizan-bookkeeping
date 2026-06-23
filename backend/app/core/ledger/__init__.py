@@ -23,6 +23,7 @@ from app.core.ledger.posting import (
     post_journal_entry,
     validate_posting_lines,
     void_journal_entry,
+    correct_journal_entry,
 )
 
 __all__ = [
@@ -46,4 +47,5 @@ __all__ = [
     "post_journal_entry",
     "validate_posting_lines",
     "void_journal_entry",
+    "correct_journal_entry",
 ]

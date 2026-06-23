@@ -38,6 +38,8 @@ class ManualJournalOut(BaseModel):
     source: JournalEntrySource
     reverses_entry_id: uuid.UUID | None
     reversed_by_entry_id: uuid.UUID | None
+    amends_entry_id: uuid.UUID | None
+    amended_by_entry_id: uuid.UUID | None
     voided_at: datetime | None
     created_at: datetime
     lines: list[ManualJournalLineOut]

@@ -59,6 +59,8 @@ def _to_manual_journal_out(
         source=entry.source,
         reverses_entry_id=entry.reverses_entry_id,
         reversed_by_entry_id=entry.reversed_by_entry_id,
+        amends_entry_id=entry.amends_entry_id,
+        amended_by_entry_id=entry.amended_by_entry_id,
         voided_at=entry.voided_at,
         created_at=entry.created_at,
         lines=lines,

@@ -30,6 +30,15 @@ class VoidJournalEntryRequest(BaseModel):
     void_date: date | None = None
 
 
+class CorrectJournalEntryRequest(BaseModel):
+    entry_date: date
+    description: str = Field(max_length=512)
+    lines: list[PostingLineIn] = Field(min_length=2)
+    actor_id: uuid.UUID
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+
+
 class JournalEntryLineOut(BaseModel):
     id: uuid.UUID
     account_id: uuid.UUID
@@ -49,6 +58,8 @@ class JournalEntryOut(BaseModel):
     source: JournalEntrySource
     reverses_entry_id: uuid.UUID | None
     reversed_by_entry_id: uuid.UUID | None
+    amends_entry_id: uuid.UUID | None
+    amended_by_entry_id: uuid.UUID | None
     voided_at: datetime | None
     created_at: datetime
     lines: list[JournalEntryLineOut]
@@ -59,3 +70,9 @@ class JournalEntryOut(BaseModel):
 class VoidJournalEntryOut(BaseModel):
     original: JournalEntryOut
     reversal: JournalEntryOut
+
+
+class CorrectJournalEntryOut(BaseModel):
+    original: JournalEntryOut
+    reversal: JournalEntryOut
+    corrected: JournalEntryOut

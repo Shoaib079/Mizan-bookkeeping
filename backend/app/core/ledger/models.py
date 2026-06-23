@@ -74,6 +74,7 @@ class JournalEntrySource(str, enum.Enum):
 class LedgerAuditAction(str, enum.Enum):
     POST = "post"
     VOID = "void"
+    AMEND = "amend"
 
 
 class JournalEntry(EntityScopedMixin, Base):
@@ -104,6 +105,18 @@ class JournalEntry(EntityScopedMixin, Base):
         nullable=True,
         index=True,
     )
+    amends_entry_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("journal_entries.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    amended_by_entry_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("journal_entries.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     voided_at: Mapped[datetime | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
@@ -118,6 +131,14 @@ class JournalEntry(EntityScopedMixin, Base):
     )
     reversed_by_entry: Mapped["JournalEntry | None"] = relationship(
         foreign_keys=[reversed_by_entry_id],
+        remote_side="JournalEntry.id",
+    )
+    amends_entry: Mapped["JournalEntry | None"] = relationship(
+        foreign_keys=[amends_entry_id],
+        remote_side="JournalEntry.id",
+    )
+    amended_by_entry: Mapped["JournalEntry | None"] = relationship(
+        foreign_keys=[amended_by_entry_id],
         remote_side="JournalEntry.id",
     )
 

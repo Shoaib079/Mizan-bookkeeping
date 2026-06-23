@@ -2,6 +2,12 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-23 — Atomic correct/amend (Phase 8.5 Slice 2)
+
+**Choice:** One backend operation `correct_journal_entry()` — void + reversal + corrected post in a single DB transaction. Never client-orchestrated void-then-create. Generic ledger endpoint `POST .../ledger/entries/{id}/correct` (not per-feature amend routes). Links via `amends_entry_id` / `amended_by_entry_id`; corrected preserves original `source`. Audit: VOID on original, POST on reversal and corrected, AMEND on corrected.
+
+**Not in slice:** Per-feature amend endpoints; pagination; UI.
+
 ## 2026-06-23 — Idempotency on writes (Phase 8.5 Slice 1)
 
 **Choice:** Central `IdempotencyMiddleware` (not per-route) intercepts POST/PATCH/PUT/DELETE. Client sends `Idempotency-Key` UUID per distinct submission; scope = `user_id` + method + path + key (anonymous sentinel when auth off). Repeated key returns stored JSON + status; different keys with same payload both post. `idempotency_enforcement` env setting (default true; false in pytest). Table `idempotency_records` (not entity-scoped, no RLS). Alembic `039`.
