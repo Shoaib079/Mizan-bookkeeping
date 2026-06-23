@@ -2,4 +2,5 @@ GUNLUK OZET
 Tarih: 22.06.2026
 Nakit: 1.500,00
 Kart: 3.500,00
+Bahşiş: 500,00
 Toplam: 5.000,00

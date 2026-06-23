@@ -15,6 +15,7 @@ from app.adapters.ocr_ai.pos_summary import extract_pos_summary, math_valid
 from app.core.chart_of_accounts.default_chart import (
     CARD_SALES_CLEARING_CODE,
     SALES_REVENUE_CODE,
+    TIPS_PAYABLE_CODE,
 )
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
@@ -68,6 +69,7 @@ def test_extract_sample_fixture_fields() -> None:
     assert extraction.cash_kurus == 150_000
     assert extraction.card_kurus == 350_000
     assert extraction.total_kurus == 500_000
+    assert extraction.tips_kurus == 50_000
     assert math_valid(extraction.cash_kurus, extraction.card_kurus, extraction.total_kurus)
 
 
@@ -83,6 +85,7 @@ def test_upload_creates_draft_with_extracted_amounts(client, restaurant_a, pos_s
     assert body["cash_kurus"] == 150_000
     assert body["card_kurus"] == 350_000
     assert body["total_kurus"] == 500_000
+    assert body["tips_kurus"] == 50_000
     assert body["file_fingerprint"]
     assert "stored_path" in body["extraction_payload"]
 
@@ -115,6 +118,7 @@ def test_valid_confirm_posts_card_batch_and_cash_in(
     drawer = pos_summary_setup["drawer"]
     revenue_id = pos_summary_setup["accounts"][SALES_REVENUE_CODE]
     clearing_id = pos_summary_setup["accounts"][CARD_SALES_CLEARING_CODE]
+    tips_id = pos_summary_setup["accounts"][TIPS_PAYABLE_CODE]
 
     content = SAMPLE_SUMMARY.read_bytes()
     upload = client.post(
@@ -138,6 +142,11 @@ def test_valid_confirm_posts_card_batch_and_cash_in(
     assert body["cash_movement_id"]
     assert body["confirmed_cash_kurus"] == 150_000
     assert body["confirmed_card_kurus"] == 350_000
+    assert body["tips_kurus"] == 50_000
+
+    cash_revenue = 135_000
+    card_revenue = 315_000
+    tips_total = 50_000
 
     with entity_context(db_session, entity_id):
         batch = db_session.get(CardSalesBatch, uuid.UUID(body["card_sales_batch_id"]))
@@ -155,9 +164,9 @@ def test_valid_confirm_posts_card_batch_and_cash_in(
         ).all()
         card_by_account = {line.account_id: line for line in card_lines}
         assert card_by_account[clearing_id].side == AccountNormalBalance.DEBIT
-        assert card_by_account[clearing_id].amount_kurus == 350_000
+        assert card_by_account[clearing_id].amount_kurus == card_revenue
         assert card_by_account[revenue_id].side == AccountNormalBalance.CREDIT
-        assert card_by_account[revenue_id].amount_kurus == 350_000
+        assert card_by_account[revenue_id].amount_kurus == card_revenue
 
         cash_je_id = db_session.scalar(
             select(JournalEntry.id).where(
@@ -168,8 +177,8 @@ def test_valid_confirm_posts_card_batch_and_cash_in(
             select(JournalEntryLine).where(JournalEntryLine.journal_entry_id == cash_je_id)
         ).all()
         cash_by_account = {line.account_id: line for line in cash_lines}
-        assert cash_by_account[drawer.gl_account_id].amount_kurus == 150_000
-        assert cash_by_account[revenue_id].amount_kurus == 150_000
+        assert cash_by_account[drawer.gl_account_id].amount_kurus == cash_revenue
+        assert cash_by_account[revenue_id].amount_kurus == cash_revenue
 
         revenue_credit = int(
             db_session.scalar(
@@ -180,7 +189,19 @@ def test_valid_confirm_posts_card_batch_and_cash_in(
             )
             or 0
         )
-        assert revenue_credit == 500_000
+        assert revenue_credit == 450_000
+
+        tips_credit = int(
+            db_session.scalar(
+                select(func.coalesce(func.sum(JournalEntryLine.amount_kurus), 0)).where(
+                    JournalEntryLine.account_id == tips_id,
+                    JournalEntryLine.side == AccountNormalBalance.CREDIT,
+                )
+            )
+            or 0
+        )
+        assert tips_credit == tips_total
+        assert revenue_credit + tips_credit == 500_000
 
         total_line_count = db_session.scalar(
             select(func.count()).select_from(JournalEntryLine).where(
@@ -463,7 +484,7 @@ def test_second_summary_same_date_cannot_double_post(
             .select_from(PosDailySummary)
             .where(PosDailySummary.status == PosDailySummaryStatus.POSTED.value)
         )
-    assert revenue_credit == 500_000
+    assert revenue_credit == 450_000
     assert posted_count == 1
 
 

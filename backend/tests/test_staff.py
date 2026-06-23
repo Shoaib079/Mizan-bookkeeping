@@ -560,7 +560,14 @@ def test_api_staff_flow(client: TestClient, staff_setup, db_session) -> None:
     ledger = client.get(f"{base}/employees/{employee_id}/ledger")
     assert ledger.status_code == 200
     assert ledger.json()["balance_minor"] == 0
-    assert len(ledger.json()["entries"]) == 3
+    assert len(ledger.json()["entries"]) == 4
+    types = {e["movement_type"] for e in ledger.json()["entries"]}
+    assert types == {
+        "salary_accrued",
+        "advance_paid",
+        "salary_payment",
+        "advance_applied",
+    }
 
 
 def test_rls_isolation_raw_sql(db_session, restaurant_a, restaurant_b, staff_setup) -> None:

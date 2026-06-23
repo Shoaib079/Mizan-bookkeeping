@@ -16,6 +16,7 @@ from app.core.cash.posting import (
 from app.core.chart_of_accounts.default_chart import (
     CARD_SALES_CLEARING_CODE,
     SALES_REVENUE_CODE,
+    TIPS_PAYABLE_CODE,
 )
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
@@ -34,7 +35,12 @@ from app.features.cash.models import (
     CashMovement,
     CashMovementDirection,
 )
+from app.core.tips.posting import (
+    build_card_tip_accrual_lines,
+    build_cash_tip_accrual_lines,
+)
 from app.features.entities import service as entity_service
+from app.features.tips.models import TipAccrual, TipAccrualSource
 from app.features.pos.models import CardSalesBatch, PosDailySummary, PosDailySummaryStatus
 
 
@@ -49,6 +55,117 @@ class PosDailySummaryPostResult:
     cash_movement: CashMovement | None
     card_journal_entry: JournalEntry | None
     cash_journal_entry: JournalEntry | None
+    tip_journal_entry: JournalEntry | None = None
+
+
+def _tip_split(
+    *,
+    cash_kurus: int,
+    card_kurus: int,
+    total_kurus: int,
+    tips_kurus: int,
+) -> tuple[int, int]:
+    if total_kurus == 0 or tips_kurus == 0:
+        return 0, 0
+    card_tips = (tips_kurus * card_kurus) // total_kurus
+    return card_tips, tips_kurus - card_tips
+
+
+def _accrue_pos_tips(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    sales_date: date,
+    card_tips_kurus: int,
+    cash_tips_kurus: int,
+    money_account: MoneyAccount,
+    description: str,
+    actor_id: uuid.UUID,
+) -> JournalEntry | None:
+    if card_tips_kurus <= 0 and cash_tips_kurus <= 0:
+        return None
+
+    tips_payable = _get_account_by_code(session, TIPS_PAYABLE_CODE)
+    last_journal: JournalEntry | None = None
+
+    if card_tips_kurus > 0:
+        clearing = _get_account_by_code(session, CARD_SALES_CLEARING_CODE)
+        card_lines = build_card_tip_accrual_lines(
+            card_clearing_id=clearing.id,
+            tips_payable_id=tips_payable.id,
+            amount_kurus=card_tips_kurus,
+        )
+        last_journal = prepare_journal_entry(
+            session,
+            entity_id,
+            sales_date,
+            f"{description} — card",
+            card_lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.TIP_ACCRUAL,
+        )
+        session.add(
+            TipAccrual(
+                accrual_date=sales_date,
+                amount_kurus=card_tips_kurus,
+                source=TipAccrualSource.CARD,
+                money_account_id=None,
+                description=description,
+                actor_id=actor_id,
+                journal_entry_id=last_journal.id,
+            )
+        )
+        session.flush()
+
+    if cash_tips_kurus > 0:
+        cash_lines = build_cash_tip_accrual_lines(
+            cash_gl_account_id=money_account.gl_account_id,
+            tips_payable_id=tips_payable.id,
+            amount_kurus=cash_tips_kurus,
+        )
+        last_journal = prepare_journal_entry(
+            session,
+            entity_id,
+            sales_date,
+            f"{description} — cash",
+            cash_lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.TIP_ACCRUAL,
+        )
+        session.add(
+            TipAccrual(
+                accrual_date=sales_date,
+                amount_kurus=cash_tips_kurus,
+                source=TipAccrualSource.CASH,
+                money_account_id=money_account.id,
+                description=description,
+                actor_id=actor_id,
+                journal_entry_id=last_journal.id,
+            )
+        )
+        session.flush()
+
+    return last_journal
+
+
+def _revenue_amounts(
+    *,
+    cash_kurus: int,
+    card_kurus: int,
+    total_kurus: int,
+    tips_kurus: int,
+) -> tuple[int, int, int]:
+    """Return (cash_revenue, card_revenue, tips_kurus) for GL posting."""
+    if tips_kurus < 0:
+        raise PosDailySummaryPostError("tips_kurus must be >= 0")
+    if tips_kurus > total_kurus:
+        raise PosDailySummaryPostError("tips cannot exceed total")
+    revenue_total = total_kurus - tips_kurus
+    if total_kurus == 0:
+        return 0, 0, tips_kurus
+    cash_revenue = (revenue_total * cash_kurus) // total_kurus
+    card_revenue = revenue_total - cash_revenue
+    return cash_revenue, card_revenue, tips_kurus
 
 
 def _get_account_by_code(session: Session, code: str) -> Account:
@@ -144,18 +261,26 @@ def confirm_pos_daily_summary(
 
         money_account = _validate_cash_money_account(session, entity_id, money_account_id)
         sales_revenue_account = _get_account_by_code(session, SALES_REVENUE_CODE)
+        tips_kurus = summary.tips_kurus or 0
+        cash_revenue, card_revenue, tips_kurus = _revenue_amounts(
+            cash_kurus=cash_kurus,
+            card_kurus=card_kurus,
+            total_kurus=summary.total_kurus,
+            tips_kurus=tips_kurus,
+        )
 
         card_batch: CardSalesBatch | None = None
         card_journal: JournalEntry | None = None
         cash_movement: CashMovement | None = None
         cash_journal: JournalEntry | None = None
+        tip_journal: JournalEntry | None = None
 
         if card_kurus > 0:
             clearing_account = _get_account_by_code(session, CARD_SALES_CLEARING_CODE)
             card_lines = build_card_sales_batch_posting_lines(
                 clearing_account_id=clearing_account.id,
                 sales_revenue_account_id=sales_revenue_account.id,
-                gross_amount_kurus=card_kurus,
+                gross_amount_kurus=card_revenue,
             )
             card_journal = prepare_journal_entry(
                 session,
@@ -184,7 +309,7 @@ def confirm_pos_daily_summary(
             cash_lines = build_cash_in_posting_lines(
                 cash_gl_account_id=money_account.gl_account_id,
                 offset_account_id=sales_revenue_account.id,
-                amount_kurus=cash_kurus,
+                amount_kurus=cash_revenue,
             )
             cash_journal = prepare_journal_entry(
                 session,
@@ -208,6 +333,24 @@ def confirm_pos_daily_summary(
             )
             session.add(cash_movement)
             session.flush()
+
+        if tips_kurus > 0:
+            card_tips, cash_tips = _tip_split(
+                cash_kurus=cash_kurus,
+                card_kurus=card_kurus,
+                total_kurus=summary.total_kurus,
+                tips_kurus=tips_kurus,
+            )
+            tip_journal = _accrue_pos_tips(
+                session,
+                entity_id,
+                sales_date=sales_date,
+                card_tips_kurus=card_tips,
+                cash_tips_kurus=cash_tips,
+                money_account=money_account,
+                description=f"{description} — tips",
+                actor_id=actor_id,
+            )
 
         summary.status = PosDailySummaryStatus.POSTED
         summary.confirmed_cash_kurus = cash_kurus
@@ -236,4 +379,5 @@ def confirm_pos_daily_summary(
             cash_movement=cash_movement,
             card_journal_entry=card_journal,
             cash_journal_entry=cash_journal,
+            tip_journal_entry=tip_journal,
         )

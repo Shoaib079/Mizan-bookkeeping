@@ -67,6 +67,7 @@ def _to_read(summary: PosDailySummary) -> PosDailySummaryRead:
         cash_kurus=summary.cash_kurus,
         card_kurus=summary.card_kurus,
         total_kurus=summary.total_kurus,
+        tips_kurus=summary.tips_kurus,
         confirmed_cash_kurus=summary.confirmed_cash_kurus,
         confirmed_card_kurus=summary.confirmed_card_kurus,
         extraction_payload=summary.extraction_payload,
@@ -223,6 +224,7 @@ def create_pos_daily_summary_from_upload(
             cash_kurus=extraction.cash_kurus,
             card_kurus=extraction.card_kurus,
             total_kurus=extraction.total_kurus,
+            tips_kurus=extraction.tips_kurus,
             extraction_payload=payload,
             review_reason=review_reason,
         )

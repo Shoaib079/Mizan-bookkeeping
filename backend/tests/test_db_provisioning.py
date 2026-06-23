@@ -68,7 +68,7 @@ def test_alembic_upgrade_head_on_empty_database(alembic_provisioned_url: str) ->
     engine = create_engine(alembic_provisioned_url, pool_pre_ping=True)
     with engine.connect() as conn:
         version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "042_period_lock_immutability"
+        assert version == "044_pos_daily_summary_tips"
         table_count = conn.execute(
             text(
                 "SELECT count(*) FROM information_schema.tables "
