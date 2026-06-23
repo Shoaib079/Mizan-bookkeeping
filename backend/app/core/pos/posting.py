@@ -32,6 +32,10 @@ class InvalidCardSalesBatchError(ValueError):
     """Card sales batch preconditions failed."""
 
 
+class NothingToClearError(ValueError):
+    """Card clearing balance is zero or negative — nothing to sweep as commission."""
+
+
 @dataclass(frozen=True, slots=True)
 class PosSettlementPostResult:
     journal_entry: JournalEntry
@@ -42,6 +46,13 @@ class PosSettlementPostResult:
 class CardSalesBatchPostResult:
     journal_entry: JournalEntry
     card_sales_batch: CardSalesBatch
+
+
+@dataclass(frozen=True, slots=True)
+class CardCommissionClearanceResult:
+    journal_entry: JournalEntry
+    commission_kurus: int
+    clearing_balance_before_kurus: int
 
 
 def build_pos_settlement_posting_lines(
@@ -312,6 +323,80 @@ def post_card_sales_batch(
         return CardSalesBatchPostResult(
             journal_entry=journal_entry,
             card_sales_batch=batch,
+        )
+
+
+def post_card_commission_clearance(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    clearance_date: date,
+    description: str,
+    actor_id: uuid.UUID,
+) -> CardCommissionClearanceResult:
+    """Total clearance — book the current card-clearing (1400) residual as commission.
+
+    Both banks' card deposits land in the one card-clearing account. Whatever is
+    left after deposits is the hidden bank commission, so this sweeps the current
+    1400 debit balance to 5300 bank charges (Dr 5300 / Cr 1400), zeroing 1400.
+
+    Press it when all deposits for the period are in: any card sales not yet
+    deposited still sit in 1400 and would be swept as commission. Rejects a zero
+    or negative clearing balance (nothing to clear / deposits exceed sales).
+    """
+    from app.features.banking import service as banking_service
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+
+        clearing_account = _get_account_by_code(session, CARD_SALES_CLEARING_CODE)
+        residual_kurus = banking_service.gl_balance_kurus(
+            session, clearing_account.id, AccountNormalBalance.DEBIT
+        )
+        if residual_kurus == 0:
+            raise NothingToClearError(
+                "Card clearing balance is zero — nothing to clear as commission"
+            )
+        if residual_kurus < 0:
+            raise NothingToClearError(
+                "Card clearing balance is negative — deposits exceed card sales; "
+                "review deposits before clearing commission"
+            )
+
+        bank_charges_account = _get_account_by_code(session, BANK_CHARGES_CODE)
+        lines = [
+            PostingLine(
+                account_id=bank_charges_account.id,
+                amount_kurus=residual_kurus,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=clearing_account.id,
+                amount_kurus=residual_kurus,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ]
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            clearance_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.POS_COMMISSION_SWEEP,
+        )
+
+        session.commit()
+        session.refresh(journal_entry)
+        _ = list(journal_entry.lines)
+
+        return CardCommissionClearanceResult(
+            journal_entry=journal_entry,
+            commission_kurus=residual_kurus,
+            clearing_balance_before_kurus=residual_kurus,
         )
 
 

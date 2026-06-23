@@ -9,13 +9,19 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
-from app.core.pos.posting import InvalidCardSalesBatchError, InvalidPosSettlementError
+from app.core.pos.posting import (
+    InvalidCardSalesBatchError,
+    InvalidPosSettlementError,
+    NothingToClearError,
+)
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.pos import daily_summary_service
 from app.features.pos import service as pos_service
 from app.features.pos.models import PosDailySummaryStatus
 from app.features.pos.schema import (
+    CardCommissionClearanceRead,
+    CardCommissionClearanceRequest,
     CardSalesBatchCreate,
     CardSalesBatchRead,
     ClearingReconciliationRead,
@@ -156,6 +162,21 @@ def get_clearing_reconciliation(
         return pos_service.get_clearing_reconciliation(session, entity_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@reconciliation_router.post("/clear-commission", response_model=CardCommissionClearanceRead)
+def clear_card_commission(
+    entity_id: uuid.UUID,
+    payload: CardCommissionClearanceRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> CardCommissionClearanceRead:
+    try:
+        return pos_service.clear_card_commission(session, entity_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except NothingToClearError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @daily_summaries_router.post("", response_model=PosDailySummaryRead, status_code=201)

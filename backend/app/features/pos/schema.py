@@ -69,6 +69,20 @@ class ClearingReconciliationRead(BaseModel):
     pos_settlement_count: int
 
 
+class CardCommissionClearanceRequest(BaseModel):
+    actor_id: uuid.UUID
+    clearance_date: date | None = None
+    description: str | None = Field(default=None, max_length=512)
+
+
+class CardCommissionClearanceRead(BaseModel):
+    commission_kurus: int
+    clearing_balance_before_kurus: int
+    clearing_balance_after_kurus: int
+    clearance_date: date
+    journal_entry_id: uuid.UUID
+
+
 class PosDailySummaryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

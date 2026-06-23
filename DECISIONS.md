@@ -2,6 +2,20 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-24 — Card commission via total clearance (Slice B2; owner decision)
+
+**Choice:** Hidden bank commission is derived as the **card-clearing residual** — no configuration. Both banks' card deposits credit the one card-clearing account `1400`; whatever remains after the owner records net deposits is the commission. The owner explicitly rejected a `commission_recognition` cadence setting ("keep it the way it was — I don't have to do anything"): record net deposits, then press one button when all deposits are in.
+
+**Trigger:** owner decision — one button, **no period** (`ondemand_nodate`). Books whatever is currently in `1400`. (Considered and rejected: a per-period one-click and a fully-automatic month-end post.)
+
+**GL:** `Dr 5300 Bank Charges / Cr 1400 Card Sales Clearing` for the current `1400` debit balance; `source=pos_commission_sweep`. Zeros the clearing account. No subledger row and **no migration** — a standalone GL journal (like a manual journal / opening-balance post).
+
+**Guards:** reject a **zero** balance (`NothingToClearError` → 422 "nothing to clear") and a **negative** balance (deposits exceed card sales — review deposits first). **Repeatable** by design: each press clears the current leftover, so a later sales/deposit cycle is swept by pressing again (no per-period idempotency marker needed). Note: card sales not yet deposited still sit in `1400` and would be swept as commission — the owner controls timing by pressing only when all deposits are in.
+
+**Interplay with per-settlement commission:** unchanged and complementary — if a settlement already recorded commission (explicit or inferred from a linked batch), it credited `1400` by the gross, so the residual the sweep books is only the still-unaccounted commission. No double count.
+
+**API:** `POST /entities/{id}/pos/clearing-reconciliation/clear-commission` → `{commission_kurus, clearing_balance_before_kurus, clearing_balance_after_kurus, clearance_date, journal_entry_id}`. Core: `post_card_commission_clearance()`. New `JournalEntrySource.POS_COMMISSION_SWEEP` (cash-flow operating; correction void-and-reenter).
+
 ## 2026-06-24 — Card tips via the card-terminal Z report (Slice B1; owner decision)
 
 **Choice:** Restaurants that collect tips on the card terminal reconcile them with the terminal's **Z report**. Z report total = system card sale + card tips, so the day's card tip is `tip = Z − system card sale`. Whether and how this is applied is **per-entity** (every restaurant runs differently — some take platform sales as cash on the Z report, some are card-only, etc.).

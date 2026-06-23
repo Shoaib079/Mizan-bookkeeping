@@ -11,7 +11,11 @@ from sqlalchemy.orm import Session
 from app.core.chart_of_accounts.default_chart import CARD_SALES_CLEARING_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
-from app.core.pos.posting import post_card_sales_batch, post_pos_settlement
+from app.core.pos.posting import (
+    post_card_commission_clearance,
+    post_card_sales_batch,
+    post_pos_settlement,
+)
 from app.core.listing import (
     ListParams,
     amount_range_filters,
@@ -24,6 +28,8 @@ from app.features.banking import service as banking_service
 from app.features.entities import service as entity_service
 from app.features.pos.models import CardSalesBatch, PosSettlement
 from app.features.pos.schema import (
+    CardCommissionClearanceRead,
+    CardCommissionClearanceRequest,
     CardSalesBatchCreate,
     CardSalesBatchRead,
     ClearingReconciliationRead,
@@ -143,6 +149,28 @@ def create_pos_settlement(
         card_sales_batch_id=payload.card_sales_batch_id,
     )
     return _to_settlement_read(result.pos_settlement)
+
+
+def clear_card_commission(
+    session: Session,
+    entity_id: uuid.UUID,
+    payload: CardCommissionClearanceRequest,
+) -> CardCommissionClearanceRead:
+    """Total clearance — sweep the current card-clearing residual to commission."""
+    result = post_card_commission_clearance(
+        session,
+        entity_id,
+        clearance_date=payload.clearance_date or date.today(),
+        description=payload.description or "Card commission clearance",
+        actor_id=payload.actor_id,
+    )
+    return CardCommissionClearanceRead(
+        commission_kurus=result.commission_kurus,
+        clearing_balance_before_kurus=result.clearing_balance_before_kurus,
+        clearing_balance_after_kurus=0,
+        clearance_date=result.journal_entry.entry_date,
+        journal_entry_id=result.journal_entry.id,
+    )
 
 
 def list_pos_settlements(
