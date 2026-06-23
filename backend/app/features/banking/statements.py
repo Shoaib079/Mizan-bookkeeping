@@ -494,17 +494,31 @@ def list_bank_statements(
     session: Session,
     entity_id: uuid.UUID,
     money_account_id: uuid.UUID,
-) -> list[BankStatementRead]:
+    *,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[BankStatementRead], int]:
+    from app.core.listing import ListParams, date_range_filters, fetch_paginated
+
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         _get_bank_money_account(session, money_account_id)
-        statements = session.scalars(
+        filters = [BankStatement.money_account_id == money_account_id]
+        filters.extend(
+            date_range_filters(
+                BankStatement.period_start, from_date=from_date, to_date=to_date
+            )
+        )
+        stmt = (
             select(BankStatement)
-            .where(BankStatement.money_account_id == money_account_id)
+            .where(*filters)
             .order_by(BankStatement.imported_at.desc())
-        ).all()
+        )
+        statements, total = fetch_paginated(session, stmt, params)
         results: list[BankStatementRead] = []
         for statement in statements:
             lines = list(
@@ -518,7 +532,7 @@ def list_bank_statements(
                 )
             )
             results.append(_to_statement_read(statement, lines))
-        return results
+        return results, total
 
 
 def classify_statement_line(

@@ -13,6 +13,13 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.tips.posting import post_tip_accrual, post_tip_payout
 from app.db.session import entity_context, require_entity_context
+from app.core.listing import (
+    ListParams,
+    amount_range_filters,
+    date_range_filters,
+    fetch_paginated,
+    text_search_filter,
+)
 from app.features.banking import service as banking_service
 from app.features.entities import service as entity_service
 from app.features.tips.models import TipAccrual, TipPayout
@@ -78,22 +85,46 @@ def list_tip_accruals(
     *,
     from_date: date | None = None,
     to_date: date | None = None,
-) -> list[TipAccrualRead]:
+    money_account_id: uuid.UUID | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[TipAccrualRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(TipAccrual).order_by(
-            TipAccrual.accrual_date.desc(),
-            TipAccrual.created_at.desc(),
+        filters = []
+        if money_account_id is not None:
+            filters.append(TipAccrual.money_account_id == money_account_id)
+        filters.extend(
+            date_range_filters(
+                TipAccrual.accrual_date, from_date=from_date, to_date=to_date
+            )
         )
-        if from_date is not None:
-            query = query.where(TipAccrual.accrual_date >= from_date)
-        if to_date is not None:
-            query = query.where(TipAccrual.accrual_date <= to_date)
-        accruals = session.scalars(query).all()
-        return [_to_accrual_read(item) for item in accruals]
+        filters.extend(
+            amount_range_filters(
+                TipAccrual.amount_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        search = text_search_filter(q, TipAccrual.description)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(TipAccrual)
+            .where(*filters)
+            .order_by(
+                TipAccrual.accrual_date.desc(),
+                TipAccrual.created_at.desc(),
+            )
+        )
+        accruals, total = fetch_paginated(session, stmt, params)
+        return [_to_accrual_read(item) for item in accruals], total
 
 
 def create_tip_payout(
@@ -119,22 +150,46 @@ def list_tip_payouts(
     *,
     from_date: date | None = None,
     to_date: date | None = None,
-) -> list[TipPayoutRead]:
+    money_account_id: uuid.UUID | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[TipPayoutRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(TipPayout).order_by(
-            TipPayout.payout_date.desc(),
-            TipPayout.created_at.desc(),
+        filters = []
+        if money_account_id is not None:
+            filters.append(TipPayout.money_account_id == money_account_id)
+        filters.extend(
+            date_range_filters(
+                TipPayout.payout_date, from_date=from_date, to_date=to_date
+            )
         )
-        if from_date is not None:
-            query = query.where(TipPayout.payout_date >= from_date)
-        if to_date is not None:
-            query = query.where(TipPayout.payout_date <= to_date)
-        payouts = session.scalars(query).all()
-        return [_to_payout_read(item) for item in payouts]
+        filters.extend(
+            amount_range_filters(
+                TipPayout.amount_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        search = text_search_filter(q, TipPayout.description)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(TipPayout)
+            .where(*filters)
+            .order_by(
+                TipPayout.payout_date.desc(),
+                TipPayout.created_at.desc(),
+            )
+        )
+        payouts, total = fetch_paginated(session, stmt, params)
+        return [_to_payout_read(item) for item in payouts], total
 
 
 def get_tips_balance(session: Session, entity_id: uuid.UUID) -> TipsBalanceRead:

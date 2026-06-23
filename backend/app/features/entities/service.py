@@ -7,6 +7,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.db.session import entity_context, require_entity_context, user_membership_lookup
 from app.features.auth.models import EntityMembership
 from app.features.entities.models import Entity, EntitySetting
@@ -21,20 +22,41 @@ def create_entity(session: Session, payload: EntityCreate) -> Entity:
     return entity
 
 
-def list_entities(session: Session) -> list[Entity]:
-    return list(session.scalars(select(Entity).order_by(Entity.name)))
+def list_entities(
+    session: Session,
+    *,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[Entity], int]:
+    params = list_params or ListParams()
+    filters = []
+    search = text_search_filter(q, Entity.name)
+    if search is not None:
+        filters.append(search)
+    stmt = select(Entity).where(*filters).order_by(Entity.name)
+    return fetch_paginated(session, stmt, params)
 
 
-def list_entities_for_user(session: Session, user_id: uuid.UUID) -> list[Entity]:
+def list_entities_for_user(
+    session: Session,
+    user_id: uuid.UUID,
+    *,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[Entity], int]:
+    params = list_params or ListParams()
     with user_membership_lookup(session, user_id):
-        return list(
-            session.scalars(
-                select(Entity)
-                .join(EntityMembership, EntityMembership.entity_id == Entity.id)
-                .where(EntityMembership.user_id == user_id)
-                .order_by(Entity.name)
-            )
+        filters = []
+        search = text_search_filter(q, Entity.name)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(Entity)
+            .join(EntityMembership, EntityMembership.entity_id == Entity.id)
+            .where(EntityMembership.user_id == user_id, *filters)
+            .order_by(Entity.name)
         )
+        return fetch_paginated(session, stmt, params)
 
 
 def get_entity(session: Session, entity_id: uuid.UUID) -> Entity | None:
@@ -52,12 +74,22 @@ def create_entity_setting(
         return setting
 
 
-def list_entity_settings(session: Session, entity_id: uuid.UUID) -> list[EntitySetting]:
+def list_entity_settings(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[EntitySetting], int]:
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        return list(
-            session.scalars(select(EntitySetting).order_by(EntitySetting.key))
-        )
+        filters = []
+        search = text_search_filter(q, EntitySetting.key)
+        if search is not None:
+            filters.append(search)
+        stmt = select(EntitySetting).where(*filters).order_by(EntitySetting.key)
+        return fetch_paginated(session, stmt, params)
 
 
 def get_entity_setting_by_key(

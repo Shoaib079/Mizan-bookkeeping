@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.chart_of_accounts import service
@@ -36,14 +37,23 @@ def seed_chart(
     )
 
 
-@router.get("", response_model=list[AccountRead])
+@router.get("", response_model=PaginatedListOut[AccountRead])
 def list_chart_accounts(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
-) -> list[AccountRead]:
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[AccountRead]:
     try:
-        accounts = service.list_accounts_for_entity(session, entity_id)
+        accounts, total = service.list_accounts_for_entity(
+            session, entity_id, q=q, list_params=list_params
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return [AccountRead.model_validate(a) for a in accounts]
+    return paginated_list(
+        [AccountRead.model_validate(a) for a in accounts],
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )

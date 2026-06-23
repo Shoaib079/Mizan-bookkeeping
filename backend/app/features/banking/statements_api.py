@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.adapters.bank_parsers.csv_simple import CsvParseError
 from app.core.receivables.ledger import OverpaymentError
 from app.core.payables.ledger import OverpaymentError as SupplierOverpaymentError
 from app.core.banking.posting import InvalidTransferError
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.banking import statements as statement_service
@@ -69,22 +71,36 @@ async def import_bank_statement(
 
 @accounts_router.get(
     "/{money_account_id}/statements",
-    response_model=list[BankStatementRead],
+    response_model=PaginatedListOut[BankStatementRead],
 )
 def list_bank_statements(
     entity_id: uuid.UUID,
     money_account_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
-) -> list[BankStatementRead]:
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[BankStatementRead]:
     try:
-        return statement_service.list_bank_statements(
-            session, entity_id, money_account_id
+        items, total = statement_service.list_bank_statements(
+            session,
+            entity_id,
+            money_account_id,
+            from_date=from_date,
+            to_date=to_date,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except statement_service.NotBankAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @statements_router.get("/{statement_id}", response_model=BankStatementRead)

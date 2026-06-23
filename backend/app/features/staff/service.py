@@ -7,6 +7,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.staff import posting as staff_posting
 from app.core.staff.ledger import current_balance_minor, list_ledger_entries
 from app.db.session import entity_context, require_entity_context
@@ -45,17 +46,27 @@ def create_employee(
 
 
 def list_employees(
-    session: Session, entity_id: uuid.UUID, *, include_inactive: bool = False
-) -> list[Employee]:
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    include_inactive: bool = False,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[Employee], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(Employee).order_by(Employee.name)
+        filters = []
         if not include_inactive:
-            query = query.where(Employee.is_active.is_(True))
-        return list(session.scalars(query))
+            filters.append(Employee.is_active.is_(True))
+        search = text_search_filter(q, Employee.name)
+        if search is not None:
+            filters.append(search)
+        stmt = select(Employee).where(*filters).order_by(Employee.name)
+        return fetch_paginated(session, stmt, params)
 
 
 def get_employee(

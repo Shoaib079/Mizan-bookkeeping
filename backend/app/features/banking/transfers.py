@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.banking.posting import post_account_transfer
+from app.core.listing import (
+    ListParams,
+    amount_range_filters,
+    date_range_filters,
+    fetch_paginated,
+    text_search_filter,
+)
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.schema import AccountTransferCreate, AccountTransferRead
 from app.features.banking.transfer_models import AccountTransfer
@@ -54,22 +62,49 @@ def list_account_transfers(
     entity_id: uuid.UUID,
     *,
     money_account_id: uuid.UUID | None = None,
-) -> list[AccountTransferRead]:
+    from_date: date | None = None,
+    to_date: date | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[AccountTransferRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(AccountTransfer).order_by(
-            AccountTransfer.transfer_date.desc(),
-            AccountTransfer.created_at.desc(),
-        )
+        filters = []
         if money_account_id is not None:
-            query = query.where(
+            filters.append(
                 or_(
                     AccountTransfer.from_money_account_id == money_account_id,
                     AccountTransfer.to_money_account_id == money_account_id,
                 )
             )
-        transfers = session.scalars(query).all()
-        return [_to_read(transfer) for transfer in transfers]
+        filters.extend(
+            date_range_filters(
+                AccountTransfer.transfer_date, from_date=from_date, to_date=to_date
+            )
+        )
+        filters.extend(
+            amount_range_filters(
+                AccountTransfer.amount_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        search = text_search_filter(q, AccountTransfer.description)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(AccountTransfer)
+            .where(*filters)
+            .order_by(
+                AccountTransfer.transfer_date.desc(),
+                AccountTransfer.created_at.desc(),
+            )
+        )
+        transfers, total = fetch_paginated(session, stmt, params)
+        return [_to_read(transfer) for transfer in transfers], total

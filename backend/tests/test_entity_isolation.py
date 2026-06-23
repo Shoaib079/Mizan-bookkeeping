@@ -84,8 +84,8 @@ def test_service_layer_scoped_lists(db_session, restaurant_a, restaurant_b) -> N
         EntitySettingCreate(key="delivery_enabled", value="false"),
     )
 
-    a_settings = service.list_entity_settings(db_session, restaurant_a.id)
-    b_settings = service.list_entity_settings(db_session, restaurant_b.id)
+    a_settings, _ = service.list_entity_settings(db_session, restaurant_a.id)
+    b_settings, _ = service.list_entity_settings(db_session, restaurant_b.id)
 
     assert len(a_settings) == 1
     assert a_settings[0].value == "true"
@@ -105,7 +105,7 @@ def test_api_cross_entity_settings_isolation(
 
     list_b = client.get(f"/entities/{restaurant_b.id}/settings")
     assert list_b.status_code == 200
-    assert list_b.json() == []
+    assert list_b.json()["items"] == [] and list_b.json()["total"] == 0
 
 
 def test_query_without_entity_context_sees_no_scoped_rows(

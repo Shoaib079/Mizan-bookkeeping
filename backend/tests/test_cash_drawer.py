@@ -376,7 +376,7 @@ def test_cash_drawer_api_e2e(client: TestClient, db_session, cash_setup) -> None
 
     list_resp = client.get(f"/entities/{entity_id}/cash/drawer-sessions")
     assert list_resp.status_code == 200
-    assert len(list_resp.json()) == 1
+    assert list_resp.json()["total"] == 1
 
     blocked_resp = client.post(
         f"/entities/{entity_id}/cash/movements",

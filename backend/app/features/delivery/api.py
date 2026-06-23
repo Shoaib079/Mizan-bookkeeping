@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.delivery.posting import InvalidDeliveryReportError
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.delivery import platform_service
@@ -67,19 +69,31 @@ def create_delivery_platform(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@platforms_router.get("", response_model=list[DeliveryPlatformRead])
+@platforms_router.get("", response_model=PaginatedListOut[DeliveryPlatformRead])
 def list_delivery_platforms(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
-) -> list[DeliveryPlatformRead]:
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[DeliveryPlatformRead]:
     try:
-        return platform_service.list_delivery_platforms(
-            session, entity_id, include_inactive=include_inactive
+        items, total = platform_service.list_delivery_platforms(
+            session,
+            entity_id,
+            include_inactive=include_inactive,
+            q=q,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @platforms_router.get("/{platform_id}", response_model=DeliveryPlatformRead)
@@ -147,16 +161,34 @@ def list_delivery_reports(
     _: None = Depends(member_read_guard),
     delivery_platform_id: uuid.UUID | None = Query(default=None),
     status: DeliveryReportStatus | None = Query(default=None),
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    q: str | None = Query(default=None, max_length=256),
+    min_amount: int | None = Query(default=None),
+    max_amount: int | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
 ) -> DeliveryReportListOut:
     try:
-        return delivery_service.list_delivery_reports(
+        items, total = delivery_service.list_delivery_reports(
             session,
             entity_id,
             delivery_platform_id=delivery_platform_id,
             status=status,
+            from_date=from_date,
+            to_date=to_date,
+            q=q,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @reports_router.get("/{report_id}", response_model=DeliveryReportRead)
@@ -229,23 +261,41 @@ def create_delivery_settlement(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@settlements_router.get("", response_model=list[DeliverySettlementRead])
+@settlements_router.get("", response_model=PaginatedListOut[DeliverySettlementRead])
 def list_delivery_settlements(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
     delivery_platform_id: uuid.UUID | None = Query(default=None),
     money_account_id: uuid.UUID | None = Query(default=None),
-) -> list[DeliverySettlementRead]:
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    q: str | None = Query(default=None, max_length=256),
+    min_amount: int | None = Query(default=None),
+    max_amount: int | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[DeliverySettlementRead]:
     try:
-        return delivery_service.list_delivery_settlements(
+        items, total = delivery_service.list_delivery_settlements(
             session,
             entity_id,
             delivery_platform_id=delivery_platform_id,
             money_account_id=money_account_id,
+            from_date=from_date,
+            to_date=to_date,
+            q=q,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @reconciliation_router.get("", response_model=DeliveryClearingReconciliationRead)

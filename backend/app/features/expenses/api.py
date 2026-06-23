@@ -8,6 +8,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.expenses.items import InvalidExpenseItemError
 from app.core.expenses.posting import InvalidExpensePostingError
 from app.core.ledger.posting import InvalidAccountError
@@ -43,19 +44,31 @@ def create_expense_item(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/expense-items", response_model=list[ExpenseItemRead])
+@router.get("/expense-items", response_model=PaginatedListOut[ExpenseItemRead])
 def list_expense_items(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
-) -> list[ExpenseItemRead]:
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[ExpenseItemRead]:
     try:
-        return expenses_service.list_expense_items(
-            session, entity_id, include_inactive=include_inactive
+        items, total = expenses_service.list_expense_items(
+            session,
+            entity_id,
+            include_inactive=include_inactive,
+            q=q,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.post("/expense-items/merge", response_model=ExpenseItemRead)
@@ -90,25 +103,45 @@ def create_expense(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/expenses", response_model=list[ExpenseRead])
+@router.get("/expenses", response_model=PaginatedListOut[ExpenseRead])
 def list_expenses(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
     status: ExpenseEntryStatus | None = Query(default=None),
-    from_date: date | None = Query(default=None),
-    to_date: date | None = Query(default=None),
-) -> list[ExpenseRead]:
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    q: str | None = Query(default=None, max_length=256),
+    min_amount: int | None = Query(default=None, alias="min_amount"),
+    max_amount: int | None = Query(default=None, alias="max_amount"),
+    expense_account_id: uuid.UUID | None = Query(default=None),
+    money_account_id: uuid.UUID | None = Query(default=None),
+    expense_item_id: uuid.UUID | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[ExpenseRead]:
     try:
-        return expenses_service.list_expenses(
+        items, total = expenses_service.list_expenses(
             session,
             entity_id,
             status=status,
             from_date=from_date,
             to_date=to_date,
+            q=q,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            expense_account_id=expense_account_id,
+            money_account_id=money_account_id,
+            expense_item_id=expense_item_id,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.post("/expenses/{expense_id}/confirm-item", response_model=ExpenseRead)

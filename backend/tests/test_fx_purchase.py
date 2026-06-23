@@ -329,7 +329,7 @@ def test_api_fx_purchase_ledger_and_balance(
 
     ledger = client.get(f"{base}/accounts/{wallet.id}/ledger")
     assert ledger.status_code == 200
-    assert len(ledger.json()) == 1
+    assert ledger.json()["total"] == 1
 
     balance = client.get(f"{base}/accounts/{wallet.id}/balance")
     assert balance.status_code == 200

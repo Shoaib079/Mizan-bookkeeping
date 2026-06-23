@@ -23,6 +23,7 @@ from app.core.pos.daily_summary_posting import (
     confirm_pos_daily_summary,
 )
 from app.db.session import entity_context
+from app.core.listing import ListParams, date_range_filters, fetch_paginated
 from app.features.entities import service as entity_service
 from app.features.pos.models import PosDailySummary, PosDailySummaryStatus
 from app.features.pos.schema import (
@@ -237,29 +238,33 @@ def list_pos_daily_summaries(
     entity_id: uuid.UUID,
     *,
     status: PosDailySummaryStatus | None = None,
-) -> PosDailySummaryListOut:
+    from_date: date | None = None,
+    to_date: date | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[PosDailySummaryRead], int]:
     _require_entity(session, entity_id)
+    params = list_params or ListParams()
 
     with entity_context(session, entity_id):
-        count_query = select(func.count()).select_from(PosDailySummary)
-        list_query = select(PosDailySummary)
+        filters = []
         if status is not None:
-            count_query = count_query.where(PosDailySummary.status == status)
-            list_query = list_query.where(PosDailySummary.status == status)
-        total = session.scalar(count_query) or 0
-        summaries = list(
-            session.scalars(
-                list_query.order_by(
-                    PosDailySummary.created_at.desc(),
-                    PosDailySummary.summary_date.desc(),
-                )
+            filters.append(PosDailySummary.status == status)
+        filters.extend(
+            date_range_filters(
+                PosDailySummary.summary_date, from_date=from_date, to_date=to_date
             )
         )
+        stmt = (
+            select(PosDailySummary)
+            .where(*filters)
+            .order_by(
+                PosDailySummary.created_at.desc(),
+                PosDailySummary.summary_date.desc(),
+            )
+        )
+        summaries, total = fetch_paginated(session, stmt, params)
 
-    return PosDailySummaryListOut(
-        items=[_to_read(summary) for summary in summaries],
-        total=total,
-    )
+    return [_to_read(summary) for summary in summaries], total
 
 
 def get_pos_daily_summary(

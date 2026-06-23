@@ -12,6 +12,7 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntryLine
 from app.db.session import entity_context, require_entity_context
+from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.features.banking.models import (
     BUCKET_CODE_BY_KIND,
     FX_BUCKET_CODE_BY_CURRENCY,
@@ -193,24 +194,32 @@ def list_money_accounts(
     *,
     account_kind: MoneyAccountKind | None = None,
     include_inactive: bool = False,
-) -> list[MoneyAccountRead]:
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[MoneyAccountRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(MoneyAccount).order_by(MoneyAccount.name)
+        filters = []
         if account_kind is not None:
-            query = query.where(MoneyAccount.account_kind == account_kind)
+            filters.append(MoneyAccount.account_kind == account_kind)
         if not include_inactive:
-            query = query.where(MoneyAccount.is_active.is_(True))
+            filters.append(MoneyAccount.is_active.is_(True))
+        search = text_search_filter(q, MoneyAccount.name)
+        if search is not None:
+            filters.append(search)
+        stmt = select(MoneyAccount).where(*filters).order_by(MoneyAccount.name)
+        accounts, total = fetch_paginated(session, stmt, params)
 
         results: list[MoneyAccountRead] = []
-        for money_account in session.scalars(query):
+        for money_account in accounts:
             gl_account = session.get(Account, money_account.gl_account_id)
             assert gl_account is not None
             results.append(_to_read(session, money_account, gl_account))
-        return results
+        return results, total
 
 
 def get_money_account(

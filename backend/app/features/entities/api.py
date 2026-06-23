@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.config import settings
 from app.core.auth.deps import (
     get_current_user,
@@ -36,15 +37,26 @@ def create_entity(
     return service.create_entity(session, payload)
 
 
-@router.get("", response_model=list[EntityRead])
+@router.get("", response_model=PaginatedListOut[EntityRead])
 def list_entities(
     session: Session = Depends(get_session),
     authorization: str | None = Header(None),
-) -> list[EntityRead]:
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[EntityRead]:
     if settings.auth_enforcement:
         user = resolve_current_user(session, authorization)
-        return service.list_entities_for_user(session, user.id)
-    return service.list_entities(session)
+        entities, total = service.list_entities_for_user(
+            session, user.id, q=q, list_params=list_params
+        )
+    else:
+        entities, total = service.list_entities(session, q=q, list_params=list_params)
+    return paginated_list(
+        [EntityRead.model_validate(e) for e in entities],
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.get("/{entity_id}", response_model=EntityRead)
@@ -71,12 +83,22 @@ def create_setting(
     return service.create_entity_setting(session, entity_id, payload)
 
 
-@router.get("/{entity_id}/settings", response_model=list[EntitySettingRead])
+@router.get("/{entity_id}/settings", response_model=PaginatedListOut[EntitySettingRead])
 def list_settings(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
-) -> list[EntitySettingRead]:
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[EntitySettingRead]:
     if service.get_entity(session, entity_id) is None:
         raise HTTPException(status_code=404, detail="Entity not found")
-    return service.list_entity_settings(session, entity_id)
+    settings_rows, total = service.list_entity_settings(
+        session, entity_id, q=q, list_params=list_params
+    )
+    return paginated_list(
+        [EntitySettingRead.model_validate(s) for s in settings_rows],
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )

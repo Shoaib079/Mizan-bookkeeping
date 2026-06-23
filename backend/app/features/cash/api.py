@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 
 from app.core.cash.posting import InvalidCashDrawerError
 from app.core.ledger.posting import InvalidAccountError
@@ -42,19 +45,35 @@ def create_cash_movement(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@sessions_router.get("", response_model=list[CashDrawerSessionRead])
+@sessions_router.get("", response_model=PaginatedListOut[CashDrawerSessionRead])
 def list_cash_drawer_sessions(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
     money_account_id: uuid.UUID | None = Query(default=None),
-) -> list[CashDrawerSessionRead]:
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    status: str | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[CashDrawerSessionRead]:
     try:
-        return cash_service.list_cash_drawer_sessions(
-            session, entity_id, money_account_id=money_account_id
+        items, total = cash_service.list_cash_drawer_sessions(
+            session,
+            entity_id,
+            money_account_id=money_account_id,
+            from_date=from_date,
+            to_date=to_date,
+            status=status,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @sessions_router.get("/{session_id}", response_model=CashDrawerSessionDetail)

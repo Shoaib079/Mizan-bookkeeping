@@ -12,6 +12,7 @@ from app.core.chart_of_accounts.seed import (
     list_accounts,
     seed_default_chart,
 )
+from app.core.listing import ListParams
 from app.features.entities import service as entity_service
 
 __all__ = [
@@ -27,7 +28,13 @@ def seed_chart_for_entity(session: Session, entity_id: uuid.UUID) -> list[Accoun
     return seed_default_chart(session, entity_id)
 
 
-def list_accounts_for_entity(session: Session, entity_id: uuid.UUID) -> list[Account]:
+def list_accounts_for_entity(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[Account], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
-    return list_accounts(session, entity_id)
+    return list_accounts(session, entity_id, q=q, list_params=list_params)

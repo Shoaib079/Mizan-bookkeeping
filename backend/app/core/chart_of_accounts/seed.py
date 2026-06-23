@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.default_chart import DEFAULT_CHART
 from app.core.chart_of_accounts.models import Account
+from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.db.session import entity_context
 
 
@@ -41,11 +42,21 @@ def seed_default_chart(session: Session, entity_id: uuid.UUID) -> list[Account]:
         return accounts
 
 
-def list_accounts(session: Session, entity_id: uuid.UUID) -> list[Account]:
+def list_accounts(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[Account], int]:
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
-        return list(
-            session.scalars(select(Account).order_by(Account.code))
-        )
+        filters = []
+        search = text_search_filter(q, Account.code, Account.name_en, Account.name_tr)
+        if search is not None:
+            filters.append(search)
+        stmt = select(Account).where(*filters).order_by(Account.code)
+        return fetch_paginated(session, stmt, params)
 
 
 def get_account_by_code(

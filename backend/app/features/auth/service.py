@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.db.session import entity_context
 from app.features.auth.audit import AuthAuditAction, record_auth_event
 from app.features.auth.models import EntityMembership, User
@@ -89,18 +90,31 @@ def get_user(session: Session, user_id: uuid.UUID) -> User | None:
 
 
 def list_entity_members(
-    session: Session, entity_id: uuid.UUID
-) -> list[EntityMembership]:
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[EntityMembership], int]:
+    from app.features.auth.models import User
+
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
-        return list(
-            session.scalars(
-                select(EntityMembership)
-                .options(joinedload(EntityMembership.user))
-                .order_by(EntityMembership.created_at)
-            )
+        filters = []
+        if q:
+            search = text_search_filter(q, User.email, User.display_name)
+            if search is not None:
+                filters.append(search)
+        stmt = (
+            select(EntityMembership)
+            .join(User, EntityMembership.user_id == User.id)
+            .options(joinedload(EntityMembership.user))
+            .where(*filters)
+            .order_by(EntityMembership.created_at)
         )
+        return fetch_paginated(session, stmt, params)
 
 
 def add_entity_member(

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.suppliers.models import Supplier
@@ -44,17 +45,27 @@ def create_supplier(
 
 
 def list_suppliers(
-    session: Session, entity_id: uuid.UUID, *, include_inactive: bool = False
-) -> list[Supplier]:
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    include_inactive: bool = False,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[Supplier], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(Supplier).order_by(Supplier.name)
+        filters = []
         if not include_inactive:
-            query = query.where(Supplier.is_active.is_(True))
-        return list(session.scalars(query))
+            filters.append(Supplier.is_active.is_(True))
+        search = text_search_filter(q, Supplier.name, Supplier.vkn)
+        if search is not None:
+            filters.append(search)
+        stmt = select(Supplier).where(*filters).order_by(Supplier.name)
+        return fetch_paginated(session, stmt, params)
 
 
 def get_supplier(

@@ -311,7 +311,7 @@ def test_card_sales_and_settlement_api_e2e(client: TestClient, pos_setup) -> Non
 
     list_batches = client.get(f"/entities/{entity_id}/pos/card-sales")
     assert list_batches.status_code == 200
-    assert len(list_batches.json()) == 1
+    assert list_batches.json()["total"] == 1
 
     settle_resp = client.post(
         f"/entities/{entity_id}/pos/settlements",

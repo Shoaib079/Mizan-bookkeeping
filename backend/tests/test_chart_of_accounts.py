@@ -61,7 +61,7 @@ def test_api_seed_and_list(client: TestClient, restaurant_a) -> None:
 
     listing = client.get(f"/entities/{restaurant_a.id}/chart-of-accounts")
     assert listing.status_code == 200
-    assert len(listing.json()) == len(DEFAULT_CHART)
+    assert listing.json()["total"] == len(DEFAULT_CHART)
 
 
 def test_api_seed_conflict(client: TestClient, restaurant_a) -> None:

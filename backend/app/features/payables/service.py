@@ -12,19 +12,31 @@ from app.core.payables import posting as payables_posting
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
+from app.core.listing import ListParams, fetch_paginated_rows, text_search_filter
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.suppliers.models import Supplier
 
 
-def list_payables(session: Session, entity_id: uuid.UUID) -> tuple[int, list[tuple[Supplier, int]]]:
-    """Return (total_payables_kurus, [(supplier, balance_kurus), ...]) for active suppliers."""
+def list_payables(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[int, list[tuple[Supplier, int]], int]:
+    """Return (total_payables_kurus, [(supplier, balance_kurus), ...], row_count)."""
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        balances = session.execute(
+        filters = [Supplier.is_active.is_(True)]
+        search = text_search_filter(q, Supplier.name, Supplier.vkn)
+        if search is not None:
+            filters.append(search)
+        stmt = (
             select(
                 Supplier,
                 func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0).label("balance"),
@@ -33,14 +45,17 @@ def list_payables(session: Session, entity_id: uuid.UUID) -> tuple[int, list[tup
                 SupplierLedgerEntry,
                 SupplierLedgerEntry.supplier_id == Supplier.id,
             )
-            .where(Supplier.is_active.is_(True))
+            .where(*filters)
             .group_by(Supplier.id)
             .order_by(Supplier.name)
-        ).all()
-
-        rows: list[tuple[Supplier, int]] = [(supplier, int(balance)) for supplier, balance in balances]
-        total = sum(balance for _, balance in rows)
-        return total, rows
+        )
+        all_rows = session.execute(stmt).all()
+        total_payables = sum(int(balance) for _, balance in all_rows)
+        rows, total = fetch_paginated_rows(session, stmt, params)
+        result_rows: list[tuple[Supplier, int]] = [
+            (supplier, int(balance)) for supplier, balance in rows
+        ]
+        return total_payables, result_rows, total
 
 
 def get_supplier_ledger(

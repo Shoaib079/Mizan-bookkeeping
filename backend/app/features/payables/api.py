@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+
+from app.core.listing import ListParams, list_params_dependency
 
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.payables.ledger import (
@@ -34,14 +36,18 @@ def list_payables(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
 ) -> PayablesSummaryRead:
     try:
-        total, rows = service.list_payables(session, entity_id)
+        total_payables, rows, total = service.list_payables(
+            session, entity_id, q=q, list_params=list_params
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     return PayablesSummaryRead(
-        total_payables_kurus=total,
+        total_payables_kurus=total_payables,
         suppliers=[
             SupplierPayableBalanceRead(
                 supplier_id=supplier.id,
@@ -51,6 +57,9 @@ def list_payables(
             )
             for supplier, balance in rows
         ],
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
     )
 
 

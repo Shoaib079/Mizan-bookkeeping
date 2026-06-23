@@ -334,8 +334,8 @@ def get_dashboard(
             for row in clearing.platforms
         ]
 
-    total_payables, payable_rows = payables_service.list_payables(session, entity_id)
-    total_receivables, _ = receivables_service.list_receivables(session, entity_id)
+    total_payables, payable_rows, _ = payables_service.list_payables(session, entity_id)
+    total_receivables, _, _ = receivables_service.list_receivables(session, entity_id)
 
     return DashboardRead(
         entity_id=entity_id,

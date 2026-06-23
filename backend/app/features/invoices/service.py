@@ -20,6 +20,13 @@ from app.adapters.ocr_ai.efatura import (
 from app.adapters.storage.local import save_upload
 from app.db.base import utcnow
 from app.db.session import entity_context
+from app.core.listing import (
+    ListParams,
+    amount_range_filters,
+    date_range_filters,
+    fetch_paginated,
+    text_search_filter,
+)
 from app.features.entities import service as entity_service
 from app.features.invoices.models import (
     InvoiceDraft,
@@ -283,24 +290,46 @@ def list_invoice_drafts(
     entity_id: uuid.UUID,
     *,
     status: InvoiceDraftStatus | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    q: str | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    supplier_id: uuid.UUID | None = None,
+    list_params: ListParams | None = None,
 ) -> tuple[list[InvoiceDraftOut], int]:
     _require_entity(session, entity_id)
+    params = list_params or ListParams()
 
     with entity_context(session, entity_id):
-        count_query = select(func.count()).select_from(InvoiceDraft)
-        list_query = select(InvoiceDraft)
+        filters = []
         if status is not None:
-            count_query = count_query.where(InvoiceDraft.status == status)
-            list_query = list_query.where(InvoiceDraft.status == status)
-        total = session.scalar(count_query) or 0
-        drafts = list(
-            session.scalars(
-                list_query.order_by(
-                    InvoiceDraft.created_at.desc(),
-                    InvoiceDraft.invoice_date.desc(),
-                )
+            filters.append(InvoiceDraft.status == status)
+        if supplier_id is not None:
+            filters.append(InvoiceDraft.supplier_id == supplier_id)
+        filters.extend(
+            date_range_filters(
+                InvoiceDraft.invoice_date, from_date=from_date, to_date=to_date
             )
         )
+        filters.extend(
+            amount_range_filters(
+                InvoiceDraft.gross_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        search = text_search_filter(
+            q, InvoiceDraft.supplier_name, InvoiceDraft.invoice_number
+        )
+        if search is not None:
+            filters.append(search)
+
+        stmt = select(InvoiceDraft).where(*filters).order_by(
+            InvoiceDraft.created_at.desc(),
+            InvoiceDraft.invoice_date.desc(),
+        )
+        drafts, total = fetch_paginated(session, stmt, params)
 
     return [_draft_out(session, entity_id, draft) for draft in drafts], total
 

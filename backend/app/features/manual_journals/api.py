@@ -8,6 +8,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, list_params_dependency, paginated_list
 from app.core.ledger.models import JournalEntryStatus
 from app.core.ledger.posting import PostingError
 from app.db.session import get_session
@@ -47,6 +48,10 @@ def list_manual_journals(
     status: JournalEntryStatus | None = None,
     entry_date_from: date | None = Query(default=None, alias="from"),
     entry_date_to: date | None = Query(default=None, alias="to"),
+    q: str | None = Query(default=None, max_length=256),
+    min_amount: int | None = Query(default=None),
+    max_amount: int | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
 ) -> ManualJournalListOut:
     try:
         items, total = service.list_manual_journals(
@@ -55,10 +60,19 @@ def list_manual_journals(
             status=status,
             entry_date_from=entry_date_from,
             entry_date_to=entry_date_to,
+            q=q,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return ManualJournalListOut(items=items, total=total)
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.get("/{entry_id}", response_model=ManualJournalOut)

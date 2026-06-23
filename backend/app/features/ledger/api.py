@@ -3,23 +3,64 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.ledger.models import JournalEntrySource, JournalEntryStatus
 from app.core.ledger.posting import PostingError
+from app.core.listing import ListParams, list_params_dependency, paginated_list
 from app.db.session import get_session
-from app.core.auth.deps import operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.ledger import service
 from app.features.ledger.schema import (
     CorrectJournalEntryOut,
     CorrectJournalEntryRequest,
+    JournalEntryListOut,
     JournalEntryOut,
     VoidJournalEntryOut,
     VoidJournalEntryRequest,
 )
 
 router = APIRouter(prefix="/entities/{entity_id}/ledger", tags=["ledger"])
+
+
+@router.get("/entries", response_model=JournalEntryListOut)
+def list_journal_entries(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+    status: JournalEntryStatus | None = Query(default=None),
+    source: JournalEntrySource | None = Query(default=None),
+    entry_date_from: date | None = Query(default=None, alias="from"),
+    entry_date_to: date | None = Query(default=None, alias="to"),
+    q: str | None = Query(default=None, max_length=256),
+    min_amount: int | None = Query(default=None),
+    max_amount: int | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> JournalEntryListOut:
+    try:
+        items, total = service.list_journal_entries(
+            session,
+            entity_id,
+            status=status,
+            source=source,
+            entry_date_from=entry_date_from,
+            entry_date_to=entry_date_to,
+            q=q,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            list_params=list_params,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.post("/entries/{entry_id}/void", response_model=VoidJournalEntryOut)

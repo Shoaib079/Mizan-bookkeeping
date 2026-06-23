@@ -57,7 +57,8 @@ def test_list_suppliers_ordered_by_name(db_session, restaurant_a) -> None:
     service.create_supplier(
         db_session, restaurant_a.id, _payload(name="Alpha Produce", vkn="2222222222")
     )
-    names = [s.name for s in service.list_suppliers(db_session, restaurant_a.id)]
+    suppliers, _ = service.list_suppliers(db_session, restaurant_a.id)
+    names = [s.name for s in suppliers]
     assert names == ["Alpha Produce", "Zebra Foods"]
 
 
@@ -75,10 +76,10 @@ def test_list_excludes_inactive_by_default(db_session, restaurant_a) -> None:
         SupplierUpdate(is_active=False),
     )
 
-    visible = service.list_suppliers(db_session, restaurant_a.id)
+    visible, _ = service.list_suppliers(db_session, restaurant_a.id)
     assert [s.id for s in visible] == [active.id]
 
-    all_suppliers = service.list_suppliers(
+    all_suppliers, _ = service.list_suppliers(
         db_session, restaurant_a.id, include_inactive=True
     )
     assert len(all_suppliers) == 2
@@ -158,7 +159,7 @@ def test_api_create_list_get_update(
 
     listing = client.get(f"/entities/{restaurant_a.id}/suppliers")
     assert listing.status_code == 200
-    assert len(listing.json()) == 1
+    assert listing.json()["total"] == 1
 
     detail = client.get(f"/entities/{restaurant_a.id}/suppliers/{supplier_id}")
     assert detail.status_code == 200
@@ -180,17 +181,17 @@ def test_api_create_list_get_update(
 
     active_only = client.get(f"/entities/{restaurant_a.id}/suppliers")
     assert active_only.status_code == 200
-    assert active_only.json() == []
+    assert active_only.json()["items"] == [] and active_only.json()["total"] == 0
 
     with_inactive = client.get(
         f"/entities/{restaurant_a.id}/suppliers?include_inactive=true"
     )
     assert with_inactive.status_code == 200
-    assert len(with_inactive.json()) == 1
+    assert with_inactive.json()["total"] == 1
 
     list_b = client.get(f"/entities/{restaurant_b.id}/suppliers")
     assert list_b.status_code == 200
-    assert list_b.json() == []
+    assert list_b.json()["items"] == [] and list_b.json()["total"] == 0
 
 
 def test_api_duplicate_vkn_returns_409(client: TestClient, restaurant_a) -> None:

@@ -444,4 +444,4 @@ def test_cross_entity_rls_isolation(
 
     list_b = client.get(f"/entities/{restaurant_b.id}/expenses")
     assert list_b.status_code == 200
-    assert list_b.json() == []
+    assert list_b.json()["items"] == [] and list_b.json()["total"] == 0

@@ -19,6 +19,13 @@ from app.core.delivery.posting import (
     report_math_valid,
 )
 from app.db.session import entity_context, require_entity_context
+from app.core.listing import (
+    ListParams,
+    amount_range_filters,
+    date_range_filters,
+    fetch_paginated,
+    text_search_filter,
+)
 from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.delivery.models import (
@@ -266,24 +273,48 @@ def list_delivery_reports(
     *,
     delivery_platform_id: uuid.UUID | None = None,
     status: DeliveryReportStatus | None = None,
-) -> DeliveryReportListOut:
+    from_date: date | None = None,
+    to_date: date | None = None,
+    q: str | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[DeliveryReportRead], int]:
     _require_entity(session, entity_id)
+    params = list_params or ListParams()
 
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(DeliveryReport).order_by(
-            DeliveryReport.report_date.desc(),
-            DeliveryReport.created_at.desc(),
-        )
+        filters = []
         if delivery_platform_id is not None:
-            query = query.where(
-                DeliveryReport.delivery_platform_id == delivery_platform_id
-            )
+            filters.append(DeliveryReport.delivery_platform_id == delivery_platform_id)
         if status is not None:
-            query = query.where(DeliveryReport.status == status.value)
-        reports = session.scalars(query).all()
-        items = [_to_report_read(session, report) for report in reports]
-        return DeliveryReportListOut(items=items, total=len(items))
+            filters.append(DeliveryReport.status == status.value)
+        filters.extend(
+            date_range_filters(
+                DeliveryReport.report_date, from_date=from_date, to_date=to_date
+            )
+        )
+        filters.extend(
+            amount_range_filters(
+                DeliveryReport.gross_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        search = text_search_filter(q, DeliveryReport.description)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(DeliveryReport)
+            .where(*filters)
+            .order_by(
+                DeliveryReport.report_date.desc(),
+                DeliveryReport.created_at.desc(),
+            )
+        )
+        reports, total = fetch_paginated(session, stmt, params)
+        return [_to_report_read(session, report) for report in reports], total
 
 
 def get_delivery_report(
@@ -352,23 +383,50 @@ def list_delivery_settlements(
     *,
     delivery_platform_id: uuid.UUID | None = None,
     money_account_id: uuid.UUID | None = None,
-) -> list[DeliverySettlementRead]:
+    from_date: date | None = None,
+    to_date: date | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[DeliverySettlementRead], int]:
     _require_entity(session, entity_id)
+    params = list_params or ListParams()
 
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(DeliverySettlement).order_by(
-            DeliverySettlement.settlement_date.desc(),
-            DeliverySettlement.created_at.desc(),
-        )
+        filters = []
         if delivery_platform_id is not None:
-            query = query.where(
-                DeliverySettlement.delivery_platform_id == delivery_platform_id
-            )
+            filters.append(DeliverySettlement.delivery_platform_id == delivery_platform_id)
         if money_account_id is not None:
-            query = query.where(DeliverySettlement.money_account_id == money_account_id)
-        settlements = session.scalars(query).all()
-        return [_to_settlement_read(session, settlement) for settlement in settlements]
+            filters.append(DeliverySettlement.money_account_id == money_account_id)
+        filters.extend(
+            date_range_filters(
+                DeliverySettlement.settlement_date,
+                from_date=from_date,
+                to_date=to_date,
+            )
+        )
+        filters.extend(
+            amount_range_filters(
+                DeliverySettlement.amount_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        search = text_search_filter(q, DeliverySettlement.description)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(DeliverySettlement)
+            .where(*filters)
+            .order_by(
+                DeliverySettlement.settlement_date.desc(),
+                DeliverySettlement.created_at.desc(),
+            )
+        )
+        settlements, total = fetch_paginated(session, stmt, params)
+        return [_to_settlement_read(session, s) for s in settlements], total
 
 
 def get_delivery_clearing_reconciliation(

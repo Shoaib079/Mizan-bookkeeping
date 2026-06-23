@@ -8,41 +8,47 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.receivables.models import CustomerLedgerEntry
+from app.core.listing import ListParams, fetch_paginated_rows, text_search_filter
 from app.db.session import entity_context, require_entity_context
 from app.features.customers.models import Customer
 from app.features.entities import service as entity_service
 
 
 def list_receivables(
-    session: Session, entity_id: uuid.UUID
-) -> tuple[int, list[tuple[Customer, int]]]:
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[int, list[tuple[Customer, int]], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        rows = session.execute(
-            select(
-                Customer,
-                func.coalesce(func.sum(CustomerLedgerEntry.amount_kurus), 0).label(
-                    "balance_kurus"
-                ),
-            )
+        filters = [Customer.is_active.is_(True)]
+        search = text_search_filter(q, Customer.name, Customer.identifier)
+        if search is not None:
+            filters.append(search)
+        balance_expr = func.coalesce(func.sum(CustomerLedgerEntry.amount_kurus), 0)
+        stmt = (
+            select(Customer, balance_expr.label("balance_kurus"))
             .outerjoin(
                 CustomerLedgerEntry,
                 CustomerLedgerEntry.customer_id == Customer.id,
             )
-            .where(Customer.is_active.is_(True))
+            .where(*filters)
             .group_by(Customer.id)
+            .having(balance_expr != 0)
             .order_by(Customer.name)
-        ).all()
+        )
+        all_rows = session.execute(stmt).all()
+        total_receivables = sum(int(balance or 0) for _, balance in all_rows)
+        rows, total = fetch_paginated_rows(session, stmt, params)
 
-        balances: list[tuple[Customer, int]] = []
-        total = 0
-        for customer, balance in rows:
-            amount = int(balance or 0)
-            if amount != 0:
-                balances.append((customer, amount))
-                total += amount
+        balances: list[tuple[Customer, int]] = [
+            (customer, int(balance or 0)) for customer, balance in rows
+        ]
 
-        return total, balances
+        return total_receivables, balances, total

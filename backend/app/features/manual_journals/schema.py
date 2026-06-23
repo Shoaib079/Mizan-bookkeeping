@@ -8,6 +8,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, Field
 
 from app.core.chart_of_accounts.types import AccountNormalBalance
+from app.core.listing.schema import PaginatedListOut
 from app.core.ledger.models import JournalEntrySource, JournalEntryStatus
 from app.features.ledger.schema import PostingLineIn, VoidJournalEntryRequest
 
@@ -45,9 +46,8 @@ class ManualJournalOut(BaseModel):
     lines: list[ManualJournalLineOut]
 
 
-class ManualJournalListOut(BaseModel):
-    items: list[ManualJournalOut]
-    total: int
+class ManualJournalListOut(PaginatedListOut[ManualJournalOut]):
+    pass
 
 
 class ManualJournalVoidOut(BaseModel):

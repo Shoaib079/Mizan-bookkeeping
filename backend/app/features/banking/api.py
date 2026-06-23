@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.banking import service
@@ -40,23 +41,33 @@ def create_money_account(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("", response_model=list[MoneyAccountRead])
+@router.get("", response_model=PaginatedListOut[MoneyAccountRead])
 def list_money_accounts(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
     account_kind: MoneyAccountKind | None = Query(default=None),
     include_inactive: bool = Query(default=False),
-) -> list[MoneyAccountRead]:
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[MoneyAccountRead]:
     try:
-        return service.list_money_accounts(
+        items, total = service.list_money_accounts(
             session,
             entity_id,
             account_kind=account_kind,
             include_inactive=include_inactive,
+            q=q,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.get("/tree", response_model=MoneyAccountTree)

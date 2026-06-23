@@ -7,6 +7,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.partners import posting as partner_posting
 from app.core.partners.ledger import current_balance_kurus, list_ledger_entries
 from app.db.session import entity_context, require_entity_context
@@ -42,17 +43,27 @@ def create_partner(
 
 
 def list_partners(
-    session: Session, entity_id: uuid.UUID, *, include_inactive: bool = False
-) -> list[Partner]:
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    include_inactive: bool = False,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[Partner], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(Partner).order_by(Partner.name)
+        filters = []
         if not include_inactive:
-            query = query.where(Partner.is_active.is_(True))
-        return list(session.scalars(query))
+            filters.append(Partner.is_active.is_(True))
+        search = text_search_filter(q, Partner.name)
+        if search is not None:
+            filters.append(search)
+        stmt = select(Partner).where(*filters).order_by(Partner.name)
+        return fetch_paginated(session, stmt, params)
 
 
 def get_partner(

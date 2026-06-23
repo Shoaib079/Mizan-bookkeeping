@@ -8,6 +8,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.ledger.posting import InvalidAccountError
 from app.core.tips.posting import InvalidTipsPostingError
 from app.db.session import get_session
@@ -41,20 +42,39 @@ def create_tip_accrual(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/accruals", response_model=list[TipAccrualRead])
+@router.get("/accruals", response_model=PaginatedListOut[TipAccrualRead])
 def list_tip_accruals(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
-    from_date: date | None = Query(default=None),
-    to_date: date | None = Query(default=None),
-) -> list[TipAccrualRead]:
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    money_account_id: uuid.UUID | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=256),
+    min_amount: int | None = Query(default=None),
+    max_amount: int | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[TipAccrualRead]:
     try:
-        return tips_service.list_tip_accruals(
-            session, entity_id, from_date=from_date, to_date=to_date
+        items, total = tips_service.list_tip_accruals(
+            session,
+            entity_id,
+            from_date=from_date,
+            to_date=to_date,
+            money_account_id=money_account_id,
+            q=q,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.post("/payouts", response_model=TipPayoutRead, status_code=201)
@@ -74,20 +94,39 @@ def create_tip_payout(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/payouts", response_model=list[TipPayoutRead])
+@router.get("/payouts", response_model=PaginatedListOut[TipPayoutRead])
 def list_tip_payouts(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
-    from_date: date | None = Query(default=None),
-    to_date: date | None = Query(default=None),
-) -> list[TipPayoutRead]:
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    money_account_id: uuid.UUID | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=256),
+    min_amount: int | None = Query(default=None),
+    max_amount: int | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[TipPayoutRead]:
     try:
-        return tips_service.list_tip_payouts(
-            session, entity_id, from_date=from_date, to_date=to_date
+        items, total = tips_service.list_tip_payouts(
+            session,
+            entity_id,
+            from_date=from_date,
+            to_date=to_date,
+            money_account_id=money_account_id,
+            q=q,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.get("/balance", response_model=TipsBalanceRead)

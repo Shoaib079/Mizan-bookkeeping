@@ -10,6 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.core.fx.models import FxLedgerEntry
 from app.core.fx.types import FxMovementType
+from app.core.listing import (
+    ListParams,
+    amount_range_filters,
+    date_range_filters,
+    fetch_paginated,
+    text_search_filter,
+)
 from app.db.session import entity_context, get_current_entity_id, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.entities import service as entity_service
@@ -140,21 +147,46 @@ def try_cost_balance_kurus(
 
 
 def list_fx_ledger_entries(
-    session: Session, entity_id: uuid.UUID, fx_money_account_id: uuid.UUID
-) -> list[FxLedgerEntry]:
+    session: Session,
+    entity_id: uuid.UUID,
+    fx_money_account_id: uuid.UUID,
+    *,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[FxLedgerEntry], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         money_account = session.get(MoneyAccount, fx_money_account_id)
         if money_account is None:
             raise LookupError("FX money account not found")
 
         require_entity_context()
-        return list(
-            session.scalars(
-                select(FxLedgerEntry)
-                .where(FxLedgerEntry.fx_money_account_id == fx_money_account_id)
-                .order_by(FxLedgerEntry.movement_date, FxLedgerEntry.created_at)
+        filters = [FxLedgerEntry.fx_money_account_id == fx_money_account_id]
+        filters.extend(
+            date_range_filters(
+                FxLedgerEntry.movement_date, from_date=from_date, to_date=to_date
             )
         )
+        filters.extend(
+            amount_range_filters(
+                FxLedgerEntry.try_cost_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        search = text_search_filter(q, FxLedgerEntry.description)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(FxLedgerEntry)
+            .where(*filters)
+            .order_by(FxLedgerEntry.movement_date, FxLedgerEntry.created_at)
+        )
+        return fetch_paginated(session, stmt, params)

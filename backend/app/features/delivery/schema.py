@@ -7,6 +7,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.listing.schema import PaginatedListOut
+
 
 class DeliveryReportCreate(BaseModel):
     delivery_platform_id: uuid.UUID
@@ -48,9 +50,8 @@ class DeliveryReportRead(BaseModel):
     created_at: datetime
 
 
-class DeliveryReportListOut(BaseModel):
-    items: list[DeliveryReportRead]
-    total: int
+class DeliveryReportListOut(PaginatedListOut[DeliveryReportRead]):
+    pass
 
 
 class DeliverySettlementCreate(BaseModel):

@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.receivables.ledger import OverpaymentError, ZeroMovementError
 from app.db.session import get_session
@@ -40,20 +41,31 @@ def create_customer(
     return CustomerRead.model_validate(customer)
 
 
-@router.get("", response_model=list[CustomerRead])
+@router.get("", response_model=PaginatedListOut[CustomerRead])
 def list_customers(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
-) -> list[CustomerRead]:
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[CustomerRead]:
     try:
-        customers = service.list_customers(
-            session, entity_id, include_inactive=include_inactive
+        customers, total = service.list_customers(
+            session,
+            entity_id,
+            include_inactive=include_inactive,
+            q=q,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return [CustomerRead.model_validate(c) for c in customers]
+    return paginated_list(
+        [CustomerRead.model_validate(c) for c in customers],
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.get("/{customer_id}", response_model=CustomerRead)

@@ -106,7 +106,7 @@ def test_payables_list_per_supplier_and_total(db_session, restaurant_a) -> None:
     _record(db_session, restaurant_a, s1_id, amount_kurus=100_000)
     _record(db_session, restaurant_a, s2_id, amount_kurus=40_000)
 
-    total, rows = payables_service.list_payables(db_session, restaurant_a.id)
+    total, rows, _ = payables_service.list_payables(db_session, restaurant_a.id)
     balances = {supplier.id: balance for supplier, balance in rows}
     assert balances[s1_id] == 100_000
     assert balances[s2_id] == 40_000

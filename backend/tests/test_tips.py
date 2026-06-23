@@ -254,11 +254,11 @@ def test_balance_endpoint_reflects_accruals_minus_payouts(
 
     accruals = client.get(f"{base}/accruals")
     assert accruals.status_code == 200
-    assert len(accruals.json()) == 2
+    assert accruals.json()["total"] == 2
 
     payouts = client.get(f"{base}/payouts")
     assert payouts.status_code == 200
-    assert len(payouts.json()) == 1
+    assert payouts.json()["total"] == 1
 
     overpay = client.post(
         f"{base}/payouts",

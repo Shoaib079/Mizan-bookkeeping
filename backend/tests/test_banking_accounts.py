@@ -180,7 +180,7 @@ def test_api_crud_and_tree(
 
     list_resp = client.get(f"{base}?account_kind=bank")
     assert list_resp.status_code == 200
-    assert len(list_resp.json()) == 1
+    assert list_resp.json()["total"] == 1
 
     get_resp = client.get(f"{base}/{account_id}")
     assert get_resp.status_code == 200
@@ -202,7 +202,7 @@ def test_api_crud_and_tree(
     assert patch_resp.json()["is_active"] is False
 
     inactive_hidden = client.get(base)
-    assert inactive_hidden.json() == []
+    assert inactive_hidden.json()["items"] == [] and inactive_hidden.json()["total"] == 0
 
 
 def test_api_create_before_chart_seeded(client: TestClient, restaurant_a) -> None:

@@ -2,6 +2,12 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-23 — Pagination + search + filters (Phase 8.5 Slice 3)
+
+**Choice:** Shared `app/core/listing/` module — limit/offset pagination (default 50, max 200), `PaginatedListOut` response shape (`items`, `total`, `limit`, `offset`). Free-text `q` uses Turkish-aware normalization (same rules as expense-item matching: I→ı, İ→i, casefold). Consistent filter param names: `q`, `from`, `to`, `min_amount`, `max_amount`, `status`, plus resource-specific `*_id` filters. All entity-scoped list endpoints updated; new `GET .../ledger/entries` for journal entry search. Payables/receivables summaries paginate row lists but compute aggregate totals over full filtered set.
+
+**Not in slice:** Cursor-based pagination; normalized search columns in DB (SQL `turkish_fold` helper used instead).
+
 ## 2026-06-23 — Atomic correct/amend (Phase 8.5 Slice 2)
 
 **Choice:** One backend operation `correct_journal_entry()` — void + reversal + corrected post in a single DB transaction. Never client-orchestrated void-then-create. Generic ledger endpoint `POST .../ledger/entries/{id}/correct` (not per-feature amend routes). Links via `amends_entry_id` / `amended_by_entry_id`; corrected preserves original `source`. Audit: VOID on original, POST on reversal and corrected, AMEND on corrected.

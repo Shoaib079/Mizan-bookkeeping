@@ -448,4 +448,4 @@ def test_api_import_and_classify(
         f"/entities/{restaurant_a.id}/banking/accounts/{bank.id}/statements"
     )
     assert list_resp.status_code == 200
-    assert len(list_resp.json()) == 1
+    assert list_resp.json()["total"] == 1

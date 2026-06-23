@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -11,6 +12,13 @@ from app.core.chart_of_accounts.default_chart import CARD_SALES_CLEARING_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.pos.posting import post_card_sales_batch, post_pos_settlement
+from app.core.listing import (
+    ListParams,
+    amount_range_filters,
+    date_range_filters,
+    fetch_paginated,
+    text_search_filter,
+)
 from app.db.session import entity_context, require_entity_context
 from app.features.banking import service as banking_service
 from app.features.entities import service as entity_service
@@ -76,19 +84,46 @@ def create_card_sales_batch(
 def list_card_sales_batches(
     session: Session,
     entity_id: uuid.UUID,
-) -> list[CardSalesBatchRead]:
+    *,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[CardSalesBatchRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        batches = session.scalars(
-            select(CardSalesBatch).order_by(
+        filters = []
+        filters.extend(
+            date_range_filters(
+                CardSalesBatch.sales_date, from_date=from_date, to_date=to_date
+            )
+        )
+        filters.extend(
+            amount_range_filters(
+                CardSalesBatch.gross_amount_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        search = text_search_filter(q, CardSalesBatch.description)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(CardSalesBatch)
+            .where(*filters)
+            .order_by(
                 CardSalesBatch.sales_date.desc(),
                 CardSalesBatch.created_at.desc(),
             )
-        ).all()
-        return [_to_batch_read(batch) for batch in batches]
+        )
+        batches, total = fetch_paginated(session, stmt, params)
+        return [_to_batch_read(batch) for batch in batches], total
 
 
 def create_pos_settlement(
@@ -115,20 +150,47 @@ def list_pos_settlements(
     entity_id: uuid.UUID,
     *,
     money_account_id: uuid.UUID | None = None,
-) -> list[PosSettlementRead]:
+    from_date: date | None = None,
+    to_date: date | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[PosSettlementRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(PosSettlement).order_by(
-            PosSettlement.settlement_date.desc(),
-            PosSettlement.created_at.desc(),
-        )
+        filters = []
         if money_account_id is not None:
-            query = query.where(PosSettlement.money_account_id == money_account_id)
-        settlements = session.scalars(query).all()
-        return [_to_settlement_read(settlement) for settlement in settlements]
+            filters.append(PosSettlement.money_account_id == money_account_id)
+        filters.extend(
+            date_range_filters(
+                PosSettlement.settlement_date, from_date=from_date, to_date=to_date
+            )
+        )
+        filters.extend(
+            amount_range_filters(
+                PosSettlement.amount_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        search = text_search_filter(q, PosSettlement.description)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(PosSettlement)
+            .where(*filters)
+            .order_by(
+                PosSettlement.settlement_date.desc(),
+                PosSettlement.created_at.desc(),
+            )
+        )
+        settlements, total = fetch_paginated(session, stmt, params)
+        return [_to_settlement_read(s) for s in settlements], total
 
 
 def get_pos_settlement(

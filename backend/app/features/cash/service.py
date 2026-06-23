@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.cash.posting import close_cash_drawer_session, post_cash_movement
+from app.core.listing import (
+    ListParams,
+    date_range_filters,
+    fetch_paginated,
+)
 from app.db.session import entity_context, require_entity_context
 from app.features.cash.models import CashDrawerSession, CashMovement
 from app.features.cash.schema import (
@@ -78,20 +84,37 @@ def list_cash_drawer_sessions(
     entity_id: uuid.UUID,
     *,
     money_account_id: uuid.UUID | None = None,
-) -> list[CashDrawerSessionRead]:
+    from_date: date | None = None,
+    to_date: date | None = None,
+    status: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[CashDrawerSessionRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(CashDrawerSession).order_by(
-            CashDrawerSession.session_date.desc(),
-            CashDrawerSession.created_at.desc(),
-        )
+        filters = []
         if money_account_id is not None:
-            query = query.where(CashDrawerSession.money_account_id == money_account_id)
-        sessions = session.scalars(query).all()
-        return [_to_session_read(item) for item in sessions]
+            filters.append(CashDrawerSession.money_account_id == money_account_id)
+        if status is not None:
+            filters.append(CashDrawerSession.status == status)
+        filters.extend(
+            date_range_filters(
+                CashDrawerSession.session_date, from_date=from_date, to_date=to_date
+            )
+        )
+        stmt = (
+            select(CashDrawerSession)
+            .where(*filters)
+            .order_by(
+                CashDrawerSession.session_date.desc(),
+                CashDrawerSession.created_at.desc(),
+            )
+        )
+        sessions, total = fetch_paginated(session, stmt, params)
+        return [_to_session_read(item) for item in sessions], total
 
 
 def get_cash_drawer_session(

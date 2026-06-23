@@ -212,7 +212,7 @@ def test_membership_crud_api(
         headers=auth_headers(admin),
     )
     assert list_resp.status_code == 200
-    assert len(list_resp.json()) == 2
+    assert list_resp.json()["total"] == 2
 
     patch_resp = client.patch(
         f"/entities/{restaurant_a.id}/members/{membership_id}",
@@ -420,7 +420,7 @@ def test_list_entities_returns_only_caller_memberships(
 
     response = client.get("/entities", headers=auth_headers(member))
     assert response.status_code == 200
-    entity_ids = {row["id"] for row in response.json()}
+    entity_ids = {row["id"] for row in response.json()["items"]}
     assert str(setup["entity_id"]) in entity_ids
     assert str(restaurant_b.id) not in entity_ids
 

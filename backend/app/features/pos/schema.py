@@ -7,6 +7,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.listing.schema import PaginatedListOut
+
 
 class CardSalesBatchCreate(BaseModel):
     sales_date: date
@@ -92,9 +94,8 @@ class PosDailySummaryRead(BaseModel):
     created_at: datetime
 
 
-class PosDailySummaryListOut(BaseModel):
-    items: list[PosDailySummaryRead]
-    total: int
+class PosDailySummaryListOut(PaginatedListOut[PosDailySummaryRead]):
+    pass
 
 
 class ConfirmPosDailySummaryRequest(BaseModel):

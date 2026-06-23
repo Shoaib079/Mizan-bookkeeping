@@ -385,10 +385,10 @@ def test_entity_isolation_list_transfers(
             actor_id=ACTOR_ID,
         ),
     )
-    visible_a = transfer_service.list_account_transfers(
+    visible_a, _ = transfer_service.list_account_transfers(
         db_session, transfer_setup["entity_id"]
     )
-    visible_b = transfer_service.list_account_transfers(db_session, restaurant_b.id)
+    visible_b, _ = transfer_service.list_account_transfers(db_session, restaurant_b.id)
     assert len(visible_a) == 1
     assert visible_b == []
 
@@ -421,6 +421,6 @@ def test_api_create_and_list_transfers(
         params={"money_account_id": str(bank_a.id)},
     )
     assert list_resp.status_code == 200
-    transfers = list_resp.json()
+    transfers = list_resp.json()["items"]
     assert len(transfers) == 1
     assert transfers[0]["id"] == body["id"]

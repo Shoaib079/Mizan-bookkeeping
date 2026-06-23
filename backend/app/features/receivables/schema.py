@@ -17,3 +17,6 @@ class CustomerReceivableBalanceRead(BaseModel):
 class ReceivablesSummaryRead(BaseModel):
     total_receivables_kurus: int
     customers: list[CustomerReceivableBalanceRead]
+    total: int
+    limit: int
+    offset: int

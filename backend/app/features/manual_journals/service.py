@@ -8,8 +8,15 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.listing import (
+    ListParams,
+    amount_range_filters,
+    date_range_filters,
+    fetch_paginated,
+    text_search_filter,
+)
 from app.core.chart_of_accounts.models import Account
-from app.core.ledger.models import JournalEntry, JournalEntrySource, JournalEntryStatus
+from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource, JournalEntryStatus
 from app.core.ledger.posting import PostingLine, post_journal_entry, void_journal_entry
 from app.db.session import entity_context
 from app.features.entities import service as entity_service
@@ -100,37 +107,58 @@ def list_manual_journals(
     status: JournalEntryStatus | None = None,
     entry_date_from: date | None = None,
     entry_date_to: date | None = None,
+    q: str | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    list_params: ListParams | None = None,
 ) -> tuple[list[ManualJournalOut], int]:
     _require_entity(session, entity_id)
+    params = list_params or ListParams()
 
     with entity_context(session, entity_id):
         filters = [JournalEntry.source == JournalEntrySource.MANUAL]
         if status is not None:
             filters.append(JournalEntry.status == status)
-        if entry_date_from is not None:
-            filters.append(JournalEntry.entry_date >= entry_date_from)
-        if entry_date_to is not None:
-            filters.append(JournalEntry.entry_date <= entry_date_to)
-
-        total = session.scalar(
-            select(func.count()).select_from(JournalEntry).where(*filters)
-        )
-        entries = list(
-            session.scalars(
-                select(JournalEntry)
-                .where(*filters)
-                .options(selectinload(JournalEntry.lines))
-                .order_by(
-                    JournalEntry.entry_date.desc(),
-                    JournalEntry.created_at.desc(),
-                )
+        filters.extend(
+            date_range_filters(
+                JournalEntry.entry_date,
+                from_date=entry_date_from,
+                to_date=entry_date_to,
             )
         )
+        search = text_search_filter(q, JournalEntry.description)
+        if search is not None:
+            filters.append(search)
+        if min_amount is not None or max_amount is not None:
+            line_sum = (
+                select(func.coalesce(func.sum(JournalEntryLine.amount_kurus), 0))
+                .where(JournalEntryLine.journal_entry_id == JournalEntry.id)
+                .correlate(JournalEntry)
+                .scalar_subquery()
+            )
+            filters.extend(
+                amount_range_filters(
+                    line_sum,
+                    min_amount=min_amount,
+                    max_amount=max_amount,
+                )
+            )
+
+        stmt = (
+            select(JournalEntry)
+            .where(*filters)
+            .options(selectinload(JournalEntry.lines))
+            .order_by(
+                JournalEntry.entry_date.desc(),
+                JournalEntry.created_at.desc(),
+            )
+        )
+        entries, total = fetch_paginated(session, stmt, params)
 
         account_ids = {line.account_id for entry in entries for line in entry.lines}
         accounts = _account_map(session, account_ids)
 
-    return [_to_manual_journal_out(entry, accounts) for entry in entries], total or 0
+    return [_to_manual_journal_out(entry, accounts) for entry in entries], total
 
 
 def get_manual_journal(

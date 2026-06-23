@@ -80,3 +80,6 @@ class SupplierPaymentRead(BaseModel):
 class PayablesSummaryRead(BaseModel):
     total_payables_kurus: int
     suppliers: list[SupplierPayableBalanceRead]
+    total: int
+    limit: int
+    offset: int

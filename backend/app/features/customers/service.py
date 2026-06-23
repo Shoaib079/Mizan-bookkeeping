@@ -7,6 +7,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.receivables import ledger as receivables_ledger
 from app.core.receivables import posting as receivables_posting
 from app.db.session import entity_context, require_entity_context
@@ -43,17 +44,27 @@ def create_customer(
 
 
 def list_customers(
-    session: Session, entity_id: uuid.UUID, *, include_inactive: bool = False
-) -> list[Customer]:
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    include_inactive: bool = False,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[Customer], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(Customer).order_by(Customer.name)
+        filters = []
         if not include_inactive:
-            query = query.where(Customer.is_active.is_(True))
-        return list(session.scalars(query))
+            filters.append(Customer.is_active.is_(True))
+        search = text_search_filter(q, Customer.name, Customer.identifier)
+        if search is not None:
+            filters.append(search)
+        stmt = select(Customer).where(*filters).order_by(Customer.name)
+        return fetch_paginated(session, stmt, params)
 
 
 def get_customer(

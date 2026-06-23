@@ -228,7 +228,7 @@ def test_pos_settlement_api_e2e(client: TestClient, db_session, pos_setup) -> No
 
     list_resp = client.get(f"/entities/{entity_id}/pos/settlements")
     assert list_resp.status_code == 200
-    assert len(list_resp.json()) == 1
+    assert list_resp.json()["total"] == 1
 
     detail_resp = client.get(
         f"/entities/{entity_id}/pos/settlements/{created['id']}"

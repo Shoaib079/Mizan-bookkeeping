@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 
 from app.core.fx.average_cost import InsufficientFxBalanceError
 from app.core.fx.posting import InvalidFxPurchaseError
@@ -79,17 +82,39 @@ def create_fx_expense_spend(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/accounts/{fx_money_account_id}/ledger", response_model=list[FxLedgerEntryRead])
+@router.get("/accounts/{fx_money_account_id}/ledger", response_model=PaginatedListOut[FxLedgerEntryRead])
 def get_fx_ledger(
     entity_id: uuid.UUID,
     fx_money_account_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
-) -> list[FxLedgerEntryRead]:
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    q: str | None = Query(default=None, max_length=256),
+    min_amount: int | None = Query(default=None),
+    max_amount: int | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[FxLedgerEntryRead]:
     try:
-        return fx_service.get_fx_ledger(session, entity_id, fx_money_account_id)
+        items, total = fx_service.get_fx_ledger(
+            session,
+            entity_id,
+            fx_money_account_id,
+            from_date=from_date,
+            to_date=to_date,
+            q=q,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            list_params=list_params,
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.get("/accounts/{fx_money_account_id}/balance", response_model=FxBalanceRead)

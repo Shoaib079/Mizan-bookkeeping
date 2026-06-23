@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.partners.ledger import OverpaymentError, ZeroMovementError
 from app.core.partners.posting import InvalidPartnerPostingError
@@ -41,20 +42,31 @@ def create_partner(
     return PartnerRead.model_validate(partner)
 
 
-@router.get("", response_model=list[PartnerRead])
+@router.get("", response_model=PaginatedListOut[PartnerRead])
 def list_partners(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
     include_inactive: bool = Query(default=False),
-) -> list[PartnerRead]:
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[PartnerRead]:
     try:
-        partners = service.list_partners(
-            session, entity_id, include_inactive=include_inactive
+        partners, total = service.list_partners(
+            session,
+            entity_id,
+            include_inactive=include_inactive,
+            q=q,
+            list_params=list_params,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return [PartnerRead.model_validate(p) for p in partners]
+    return paginated_list(
+        [PartnerRead.model_validate(p) for p in partners],
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.get("/{partner_id}", response_model=PartnerRead)

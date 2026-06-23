@@ -110,7 +110,7 @@ def test_platforms_api_e2e(client: TestClient, db_session, restaurant_a) -> None
 
     list_resp = client.get(f"/entities/{entity_id}/delivery/platforms")
     assert list_resp.status_code == 200
-    assert len(list_resp.json()) == 1
+    assert list_resp.json()["total"] == 1
 
     patch_resp = client.patch(
         f"/entities/{entity_id}/delivery/platforms/{body['id']}",

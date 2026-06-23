@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.chart_of_accounts.default_chart import DELIVERY_CLEARING_PARENT_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
+from app.core.listing import ListParams, fetch_paginated_rows, text_search_filter
 from app.db.base import utcnow
 from app.db.session import (
     entity_context,
@@ -149,19 +150,29 @@ def list_delivery_platforms(
     entity_id: uuid.UUID,
     *,
     include_inactive: bool = False,
-) -> list[DeliveryPlatformRead]:
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[DeliveryPlatformRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(OwnedDeliveryPlatform, Account).join(
-            Account, OwnedDeliveryPlatform.gl_account_id == Account.id
-        ).order_by(OwnedDeliveryPlatform.name)
+        filters = []
         if not include_inactive:
-            query = query.where(OwnedDeliveryPlatform.is_active.is_(True))
-        rows = session.execute(query).all()
-        return [_to_read(platform, gl_account) for platform, gl_account in rows]
+            filters.append(OwnedDeliveryPlatform.is_active.is_(True))
+        search = text_search_filter(q, OwnedDeliveryPlatform.name)
+        if search is not None:
+            filters.append(search)
+        stmt = (
+            select(OwnedDeliveryPlatform, Account)
+            .join(Account, OwnedDeliveryPlatform.gl_account_id == Account.id)
+            .where(*filters)
+            .order_by(OwnedDeliveryPlatform.name)
+        )
+        rows, total = fetch_paginated_rows(session, stmt, params)
+        return [_to_read(platform, gl_account) for platform, gl_account in rows], total
 
 
 def get_delivery_platform(

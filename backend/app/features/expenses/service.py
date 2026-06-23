@@ -5,8 +5,17 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
+
+from app.core.listing import (
+    ListParams,
+    amount_range_filters,
+    date_range_filters,
+    fetch_paginated,
+    normalized_text_search_filter,
+    text_search_filter,
+)
 
 from app.core.expenses.items import InvalidExpenseItemError, merge_expense_items, resolve_expense_item
 from app.core.expenses.posting import InvalidExpensePostingError, post_expense_entry
@@ -103,17 +112,26 @@ def list_expense_items(
     entity_id: uuid.UUID,
     *,
     include_inactive: bool = False,
-) -> list[ExpenseItemRead]:
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[ExpenseItemRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(ExpenseItem).order_by(ExpenseItem.canonical_name)
+        filters = []
         if not include_inactive:
-            query = query.where(ExpenseItem.is_active.is_(True))
-        items = session.scalars(query).all()
-        return [_to_item_read(item) for item in items]
+            filters.append(ExpenseItem.is_active.is_(True))
+        search = normalized_text_search_filter(q, ExpenseItem.canonical_name_normalized)
+        if search is None and q:
+            search = text_search_filter(q, ExpenseItem.canonical_name)
+        if search is not None:
+            filters.append(search)
+        stmt = select(ExpenseItem).where(*filters).order_by(ExpenseItem.canonical_name)
+        items, total = fetch_paginated(session, stmt, params)
+        return [_to_item_read(item) for item in items], total
 
 
 def merge_items(
@@ -198,24 +216,73 @@ def list_expenses(
     status: ExpenseEntryStatus | None = None,
     from_date: date | None = None,
     to_date: date | None = None,
-) -> list[ExpenseRead]:
+    q: str | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    expense_account_id: uuid.UUID | None = None,
+    money_account_id: uuid.UUID | None = None,
+    expense_item_id: uuid.UUID | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[ExpenseRead], int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        query = select(ExpenseEntry).order_by(
+        filters = []
+        if status is not None:
+            filters.append(ExpenseEntry.status == status)
+        filters.extend(
+            date_range_filters(
+                ExpenseEntry.expense_date, from_date=from_date, to_date=to_date
+            )
+        )
+        filters.extend(
+            amount_range_filters(
+                ExpenseEntry.amount_kurus,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+        if expense_account_id is not None:
+            filters.append(ExpenseEntry.expense_account_id == expense_account_id)
+        if money_account_id is not None:
+            filters.append(ExpenseEntry.money_account_id == money_account_id)
+        if expense_item_id is not None:
+            filters.append(ExpenseEntry.expense_item_id == expense_item_id)
+        if q:
+            item_search = normalized_text_search_filter(
+                q, ExpenseItem.canonical_name_normalized
+            )
+            text_clauses = [
+                c
+                for c in (
+                    text_search_filter(q, ExpenseEntry.description),
+                    text_search_filter(q, ExpenseEntry.written_item_description),
+                    item_search,
+                )
+                if c is not None
+            ]
+            if text_clauses:
+                stmt = (
+                    select(ExpenseEntry)
+                    .outerjoin(
+                        ExpenseItem,
+                        ExpenseEntry.expense_item_id == ExpenseItem.id,
+                    )
+                    .where(*filters, or_(*text_clauses))
+                )
+            else:
+                stmt = select(ExpenseEntry).where(*filters)
+        else:
+            stmt = select(ExpenseEntry).where(*filters)
+        stmt = stmt.order_by(
             ExpenseEntry.expense_date.desc(),
             ExpenseEntry.created_at.desc(),
         )
-        if status is not None:
-            query = query.where(ExpenseEntry.status == status)
-        if from_date is not None:
-            query = query.where(ExpenseEntry.expense_date >= from_date)
-        if to_date is not None:
-            query = query.where(ExpenseEntry.expense_date <= to_date)
-        entries = session.scalars(query).all()
-        return [_to_expense_read(entry) for entry in entries]
+        entries, total = fetch_paginated(session, stmt, params)
+        return [_to_expense_read(entry) for entry in entries], total
 
 
 def confirm_expense_item(

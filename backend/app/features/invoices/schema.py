@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.core.listing.schema import PaginatedListOut
 from app.features.invoices.models import InvoiceDraftStatus, InvoiceKind, InvoiceSourceType
 from app.core.ledger.models import JournalEntrySource
 
@@ -79,9 +80,8 @@ class InvoiceDraftOut(BaseModel):
     created_at: datetime
 
 
-class InvoiceDraftListOut(BaseModel):
-    items: list[InvoiceDraftOut]
-    total: int
+class InvoiceDraftListOut(PaginatedListOut[InvoiceDraftOut]):
+    pass
 
 
 class DuplicateDraftErrorDetail(BaseModel):

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntrySource, JournalEntryStatus
+from app.core.listing.schema import PaginatedListOut
 
 
 class PostingLineIn(BaseModel):
@@ -76,3 +77,7 @@ class CorrectJournalEntryOut(BaseModel):
     original: JournalEntryOut
     reversal: JournalEntryOut
     corrected: JournalEntryOut
+
+
+class JournalEntryListOut(PaginatedListOut[JournalEntryOut]):
+    pass

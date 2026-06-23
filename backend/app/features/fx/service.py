@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from sqlalchemy.orm import Session
+
+from app.core.listing import ListParams
 
 from app.core.fx import ledger as fx_ledger
 from app.core.fx.posting import post_fx_purchase
@@ -98,9 +101,26 @@ def get_fx_ledger(
     session: Session,
     entity_id: uuid.UUID,
     fx_money_account_id: uuid.UUID,
-) -> list[FxLedgerEntryRead]:
-    entries = fx_ledger.list_fx_ledger_entries(session, entity_id, fx_money_account_id)
-    return [_to_ledger_read(entry) for entry in entries]
+    *,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    min_amount: int | None = None,
+    max_amount: int | None = None,
+    q: str | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[FxLedgerEntryRead], int]:
+    entries, total = fx_ledger.list_fx_ledger_entries(
+        session,
+        entity_id,
+        fx_money_account_id,
+        from_date=from_date,
+        to_date=to_date,
+        min_amount=min_amount,
+        max_amount=max_amount,
+        q=q,
+        list_params=list_params,
+    )
+    return [_to_ledger_read(entry) for entry in entries], total
 
 
 def get_fx_balance(

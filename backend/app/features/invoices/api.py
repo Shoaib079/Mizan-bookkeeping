@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.adapters.ocr_ai.efatura import EfaturaPdfUnsupportedError
+from app.core.listing import ListParams, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.invoices import service
@@ -68,14 +70,37 @@ async def upload_efatura_draft(
 def list_invoice_drafts(
     entity_id: uuid.UUID,
     status: InvoiceDraftStatus | None = Query(default=None),
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    q: str | None = Query(default=None, max_length=256),
+    min_amount: int | None = Query(default=None),
+    max_amount: int | None = Query(default=None),
+    supplier_id: uuid.UUID | None = Query(default=None),
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
+    list_params: ListParams = Depends(list_params_dependency),
 ) -> InvoiceDraftListOut:
     try:
-        items, total = service.list_invoice_drafts(session, entity_id, status=status)
+        items, total = service.list_invoice_drafts(
+            session,
+            entity_id,
+            status=status,
+            from_date=from_date,
+            to_date=to_date,
+            q=q,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            supplier_id=supplier_id,
+            list_params=list_params,
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return InvoiceDraftListOut(items=items, total=total)
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.get("/drafts/{draft_id}", response_model=InvoiceDraftOut)

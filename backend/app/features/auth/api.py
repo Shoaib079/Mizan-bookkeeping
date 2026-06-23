@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.auth.deps import require_admin_members
 from app.db.session import get_session
 from app.features.auth import service
@@ -43,17 +44,26 @@ def get_user(
     return UserRead.model_validate(user)
 
 
-@members_router.get("", response_model=list[MembershipRead])
+@members_router.get("", response_model=PaginatedListOut[MembershipRead])
 def list_members(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: object = Depends(require_admin_members),
-) -> list[MembershipRead]:
+    q: str | None = Query(default=None, max_length=256),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[MembershipRead]:
     try:
-        memberships = service.list_entity_members(session, entity_id)
+        memberships, total = service.list_entity_members(
+            session, entity_id, q=q, list_params=list_params
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return [MembershipRead.model_validate(m) for m in memberships]
+    return paginated_list(
+        [MembershipRead.model_validate(m) for m in memberships],
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @members_router.post("", response_model=MembershipRead, status_code=201)

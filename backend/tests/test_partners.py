@@ -399,4 +399,4 @@ def test_partners_api_e2e(client: TestClient, db_session, partner_setup) -> None
 
     list_resp = client.get(f"/entities/{entity_id}/partners")
     assert list_resp.status_code == 200
-    assert len(list_resp.json()) >= 2
+    assert list_resp.json()["total"] >= 2
