@@ -121,6 +121,41 @@ record why in `BUGLOG.md`.
 
 ---
 
+## 2b. Independent review (separate agent / model — use each agent for what it's best at)
+
+Self-audit (2a) is the author checking itself — useful but biased. An **independent review** by a
+*separate* agent catches what the author can't see. Use the strongest available model (e.g. Opus 4.8)
+for this role. The point is not which model — it's the **independence**.
+
+**Hard requirement — independence:** the reviewer MUST run in a **separate session/context** from the
+builder and judge the **committed git state** (diff since the previous tag), NOT the builder's chat
+claims. A review done in the same chat that wrote the code does not count — it shares the blind spots.
+
+**Two roles (the model/agent wiring is configured in Cursor, not enforceable by this file):**
+- **Builder** — implements the slice, runs the completion gate including self-audit (2a), commits + tags.
+- **Reviewer** — a fresh agent that reads the committed diff with the adversarial brief in
+  `REVIEWER_BRIEF.md` and the five self-audit checks (2a), and returns a verdict with file/line or
+  test-name evidence. Finds what's broken; does not confirm.
+
+**When review runs:**
+- **Low-risk slices** (CRUD, lists, UI, copy, non-money config): self-audit + guard-tests + an
+  independent review may flow automatically; owner sign-off can be a batch/sweep at the phase boundary.
+- **Money-critical slices** (anything touching the ledger/posting boundary, subledger↔control-account
+  ties, settlements, FX, cash, financial statements, auth/RLS/entity isolation, migrations, backups):
+  independent review is **mandatory AND owner sign-off is mandatory.** These never pass on AI review
+  alone, automatic mode or not.
+
+**Two safeguards that never depend on any agent's honesty (keep them, always):**
+1. **Deterministic guard-tests** (`test_security_invariants.py` and the control-account-tie tests) —
+   they fail regardless of what any agent believes. Every found gap becomes one of these (meta-rule, 2a).
+2. **Owner sign-off** on money-critical slices — a human gate two agreeing AIs cannot remove.
+
+**Why this matters:** two AIs left fully alone can drift toward agreeing with each other. The structure
+above keeps the agents doing what they're good at (building, fresh-eyes critique) while the
+non-negotiable correctness lives in tests and the owner's gate.
+
+---
+
 ## 3. Nothing hangs around for nothing (no dead code)
 
 - **Every file, function, and component must have a purpose and must be used.** No orphan code, no unused files, no commented-out blocks left lying around, no dead branches.

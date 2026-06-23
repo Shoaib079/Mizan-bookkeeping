@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ast
 import re
+from importlib.resources import files
 from pathlib import Path
 
 from sqlalchemy import text
@@ -160,3 +162,37 @@ def test_entity_tables_have_rls_and_policy(db_session) -> None:
             failures.append(f"{table}: no RLS policy")
 
     assert not failures, "RLS coverage gaps:\n" + "\n".join(failures)
+
+
+def test_pdf_export_has_no_top_level_reportlab_import() -> None:
+    """Missing reportlab must not break API import or pytest collection."""
+    app_root = Path(__file__).resolve().parents[1] / "app"
+    path = app_root / "features" / "reports" / "pdf_export.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    offenders: list[str] = []
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "reportlab" or alias.name.startswith("reportlab."):
+                    offenders.append(f"import {alias.name}")
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            if node.module == "reportlab" or node.module.startswith("reportlab."):
+                offenders.append(f"from {node.module} import ...")
+    assert not offenders, (
+        "pdf_export.py must lazy-import reportlab inside functions only:\n"
+        + "\n".join(offenders)
+    )
+
+
+def test_bundled_pdf_fonts_ship_with_package() -> None:
+    """Unicode PDF fonts must ship inside the app package (no OS font dependency)."""
+    font_dir = files("app").joinpath("assets", "fonts")
+    for filename in ("DejaVuSans.ttf", "DejaVuSans-Bold.ttf", "LICENSE"):
+        assert font_dir.joinpath(filename).is_file(), f"missing bundled font asset: {filename}"
+
+
+def test_app_main_imports_after_editable_install() -> None:
+    """Boot check — app.main must import when project dependencies are installed."""
+    import app.main  # noqa: F401
+
+    assert app.main.app is not None

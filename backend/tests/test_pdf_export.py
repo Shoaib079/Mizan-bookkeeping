@@ -18,6 +18,7 @@ from app.db.session import entity_context
 from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
+from app.features.entities.models import Entity
 from app.features.reports import financial_statements
 from app.features.reports import pdf_export
 from tests.auth_helpers import auth_headers
@@ -30,6 +31,7 @@ from tests.test_financial_statements import (
 from tests.test_roles_permissions import _add_member, _create_user, auth_enforced
 
 PDF_CONTENT_TYPE = pdf_export.PDF_CONTENT_TYPE
+TURKISH_ENTITY_NAME = "İstanbul Şişli Çağdaş Balık Restoranı"
 
 
 @pytest.fixture
@@ -50,17 +52,37 @@ def pdf_export_setup(db_session, restaurant_a):
     }
 
 
+@pytest.fixture
+def turkish_pdf_export_setup(db_session):
+    entity = Entity(name=TURKISH_ENTITY_NAME)
+    db_session.add(entity)
+    db_session.commit()
+    db_session.refresh(entity)
+    seed_default_chart(db_session, entity.id)
+    drawer = banking_service.create_money_account(
+        db_session,
+        entity.id,
+        MoneyAccountCreate(account_kind=MoneyAccountKind.CASH, name="Ana Kasa"),
+    )
+    with entity_context(db_session, entity.id):
+        accounts = {a.code: a.id for a in db_session.scalars(select(Account))}
+    return {
+        "entity_id": entity.id,
+        "entity_name": entity.name,
+        "drawer": drawer,
+        "accounts": accounts,
+    }
+
+
 def _pdf_text(data: bytes) -> str:
     reader = PdfReader(BytesIO(data))
     return "".join(page.extract_text() or "" for page in reader.pages)
 
 
-def _turkish_amount_in_text(amount_kurus: int, text: str) -> bool:
-    """Match Turkish-formatted amount; tolerate PDF glyph substitution for ₺."""
+def _assert_amount_with_try_symbol(amount_kurus: int, text: str) -> None:
     formatted = format_try(amount_kurus)
-    if formatted in text:
-        return True
-    return formatted.replace(" ₺", "") in text
+    assert "₺" in text, "PDF must render the Turkish lira symbol (₺)"
+    assert formatted in text, f"expected formatted amount {formatted!r} in PDF text"
 
 
 def _assert_pdf_export(response, *, filename_fragment: str) -> bytes:
@@ -94,8 +116,8 @@ def test_profit_and_loss_pdf_export(
     )
     text = _pdf_text(data)
     assert setup["entity_name"] in text
-    assert _turkish_amount_in_text(pl_report.net_income_kurus, text)
-    assert _turkish_amount_in_text(pl_report.total_revenue_kurus, text)
+    _assert_amount_with_try_symbol(pl_report.net_income_kurus, text)
+    _assert_amount_with_try_symbol(pl_report.total_revenue_kurus, text)
 
 
 def test_balance_sheet_pdf_export(
@@ -118,7 +140,7 @@ def test_balance_sheet_pdf_export(
     text = _pdf_text(data)
     assert setup["entity_name"] in text
     assert "Assets" in text
-    assert _turkish_amount_in_text(bs_report.total_assets_kurus, text)
+    _assert_amount_with_try_symbol(bs_report.total_assets_kurus, text)
 
 
 def test_cash_flow_pdf_export(
@@ -138,7 +160,27 @@ def test_cash_flow_pdf_export(
     text = _pdf_text(data)
     assert setup["entity_name"] in text
     assert "Opening cash" in text
-    assert _turkish_amount_in_text(100_000, text)
+    _assert_amount_with_try_symbol(100_000, text)
+
+
+def test_pdf_renders_turkish_entity_name_and_glyphs(
+    db_session, client: TestClient, turkish_pdf_export_setup
+) -> None:
+    setup = turkish_pdf_export_setup
+    _post_period_sales(db_session, setup)
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/reports/profit-and-loss/export/pdf",
+        params={"from": "2026-01-01", "to": "2026-01-31"},
+    )
+    data = _assert_pdf_export(
+        response, filename_fragment='filename="mizan-profit-and-loss-2026-01-01-2026-01-31.pdf"'
+    )
+
+    text = _pdf_text(data)
+    for glyph in ("ğ", "ı", "İ", "ş", "₺"):
+        assert glyph in text, f"PDF must render Turkish glyph {glyph!r}"
+    assert "Çağdaş" in text
 
 
 def test_profit_and_loss_pdf_invalid_date_range(

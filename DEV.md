@@ -36,6 +36,14 @@ cd backend && .venv/bin/pytest -v
 cd frontend && npm run build
 ```
 
+**Fresh-install guard** (clean venv → editable install → boot → full pytest):
+
+```bash
+bash backend/scripts/verify_fresh_install.sh
+```
+
+CI runs the same script on every push/PR (`.github/workflows/ci.yml`).
+
 Tests use `mizan_test` database. On first run, bootstrap creates the `mizan` role and databases (uses `DATABASE_ADMIN_URL`, default `postgres@localhost`).
 
 ## Migrations

@@ -15,7 +15,7 @@
 | **Active phase** | Phase 8.5 — Pre-frontend API hardening |
 | **Active slice** | Phase 8.5 complete — ready for Phase 9 |
 | **Last completed slice** | Phase 8.5 Slice 5 — PDF export (financial statements) |
-| **Last commit/tag** | `v0.47.10-phase8.5-pdf-export` |
+| **Last commit/tag** | `v0.47.11` |
 | **Next up** | Phase 9 Slice 1 — Auth + entity context (frontend) |
 
 **The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
@@ -234,9 +234,38 @@ strengthen the existing write/read APIs.
 | 2. Correct / amend operation | done | `correct_journal_entry()` — atomic void + reversal + corrected post in one transaction; `amends_entry_id` / `amended_by_entry_id` links; `LedgerAuditAction.AMEND`; `POST /entities/{id}/ledger/entries/{id}/correct` (**whitelist:** `MANUAL` + `BANK_FEE` only — all other sources 409 with dedicated-flow or void-and-re-enter hint); subledger-safe follow-up: `correction.py` registry + type-specific flows; dedicated correct endpoints for supplier payment, customer payment, FX purchase; completeness guard test; 454 pytest |
 | 3. Pagination + search + filters | done | Shared `app/core/listing/` (`ListParams`, Turkish-aware `q`, date/amount/status/FK filters, `PaginatedListOut`). All entity list endpoints return `{items, total, limit, offset}`; new `GET .../ledger/entries`. Consistent query params: `q`, `from`, `to`, `min_amount`, `max_amount`, `status`, `*_id`. `test_list_pagination.py`; 444 pytest |
 | 4. Flexible dates + soft period locks | done | Timestamps UTC via `utcnow()`; transaction dates are user calendar `date` (no timezone setting). Entry date optional on create — defaults to `datetime.now(timezone.utc).date()`; floored at `go_live_date` (422). `period_locks` + `period_lock_audit_events`; close day/month (owner); reopen (owner, audited); owner unlock writes require `period_unlock_reason` (audited); `dirty` flag when closed period touched. Central guard `assert_entry_dates_allowed()` in posting boundary (post/void/correct + subledger corrections). API: `POST .../period-locks/close`, `POST .../{lock_id}/reopen`, `GET .../period-locks`. Alembic `041`; `test_period_locks.py`; 464 pytest |
-| 5. PDF export — financial statements | done | `reportlab>=4.0`; `features/reports/pdf_export.py` — P&L, balance sheet, cash flow only; same report services as JSON/Excel; `format_try()` Turkish display at render edge; entity name + period + UTC generated date header; `GET .../export/pdf` routes; `financial_reports_guard`; `test_pdf_export.py` (5 tests); 469 pytest |
+| 5. PDF export — financial statements | done | Lazy `reportlab` imports; bundled DejaVu Sans TTF (`app/core/pdf/fonts.py`); ₺ + Turkish glyphs fail loudly; bold totals via DejaVuSans-Bold; `GET .../export/pdf`; `financial_reports_guard`; `test_pdf_export.py` (6 tests); fresh-install guard script + CI; `REVIEWER_BRIEF.md`; 473 pytest |
 
 **Phase 8.5 complete when:** all slices done, tested, committed, owner sign-off.
+
+---
+
+## Phase 8.6 — Pre-frontend full backend audit (do before Phase 9)
+
+Retro-audit all of Phases 0–8 while the backend is stable and no frontend depends on it yet — fixes are
+cheapest now. Two tracks; every gap found becomes a permanent test (meta-rule), so the backend is
+self-policing before any UI is built.
+
+**Role separation (non-negotiable — this is the point of the audit):** the **independent reviewer**
+(fresh Opus session, read-only, committed git, adversarial) does the auditing. **Cursor does NOT audit
+its own phases** — it only *implements* the fixes the reviewer flags, after which the reviewer re-checks.
+Builder finds nothing wrong with its own work by definition; that's why a different agent audits.
+
+- **Track 1 — automatic invariant sweep (cheap, permanent).** Run the dynamic guard-tests across the
+  whole codebase: RLS coverage (`RLS_TABLES`), immutability coverage (`IMMUTABLE_AUDIT_TABLES`, new),
+  correction-source completeness, posting-boundary, route-auth. These audit every phase at once and stay
+  enforced. Prereq: PDF + period-lock fixes landed (they add the dynamic immutability test + clean-venv
+  boot guard).
+- **Track 2 — independent reviewer deep-read of money-critical phases** (separate Opus session, committed
+  git, adversarial brief). Priority order: (1) Phase 1 ledger core / posting boundary / immutability;
+  (2) Phase 7 financial statements & reports; (3) Phase 5 FX / staff / partners / receivables;
+  (4) Phases 2–4 payables / banking / POS / cards; (5) Phase 6 sales / tips / expenses. Skip deep-read on
+  pure CRUD/list slices (guard-tests cover them). Hunt for: self-masking tests, missing
+  immutability/control-ties, money-movement-as-income double-counts, idempotency gaps, eager optional
+  imports. Money-critical fixes require owner sign-off.
+
+**Phase 8.6 complete when:** all money-critical phases reviewed, every found gap fixed + covered by a
+permanent test, full suite green from a clean venv, owner sign-off.
 
 ---
 
@@ -304,6 +333,7 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-23 | PDF export review fixes | `v0.47.11` | Lazy reportlab; bundled DejaVu fonts; ₺/Turkish glyph tests; fresh-install CI guard; 473 pytest |
 | 2026-06-23 | PDF export — financial statements | `v0.47.10-phase8.5-pdf-export` | reportlab PDF for P&L/balance sheet/cash flow; `format_try` at render edge; `GET .../export/pdf`; 469 pytest |
 | 2026-06-23 | Flexible dates + soft period locks | `v0.47.9-phase8.5-period-locks` | Go-live floor; soft day/month locks; owner unlock + audit; dirty flag; posting boundary guard; 464 pytest |
 | 2026-06-23 | Pagination + search + filters | `v0.47.5-phase8.5-pagination-filters` | Shared listing module; paginated list responses on all list endpoints; ledger entries list; 444 pytest |

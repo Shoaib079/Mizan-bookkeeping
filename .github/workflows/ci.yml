@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  fresh-install-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mizan
+          POSTGRES_PASSWORD: mizan_dev
+          POSTGRES_DB: mizan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mizan -d mizan"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      APP_ENV: test
+      AUTH_ENFORCEMENT: "false"
+      CLERK_TEST_MODE: "true"
+      DATABASE_URL: postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan
+      DATABASE_ADMIN_URL: postgresql+psycopg://postgres:mizan_dev@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fresh-install verify (clean venv, boot, full pytest)
+        run: bash backend/scripts/verify_fresh_install.sh
