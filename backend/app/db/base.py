@@ -22,6 +22,7 @@ class Base(DeclarativeBase):
 
 
 def utcnow() -> datetime:
+    """Timezone-aware UTC now for audit timestamps (created_at, voided_at, closed_at)."""
     return datetime.now(timezone.utc)
 
 

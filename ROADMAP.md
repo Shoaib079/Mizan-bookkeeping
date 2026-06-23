@@ -13,9 +13,9 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 8.5 — Pre-frontend API hardening |
-| **Active slice** | Phase 8.5 Slice 4 — Flexible dates + soft period locks |
-| **Last completed slice** | Phase 8.5 Slice 3 — pagination + search + filters |
-| **Last commit/tag** | `v0.47.5-phase8.5-pagination-filters` |
+| **Active slice** | Phase 8.5 Slice 5 — PDF export (financial statements) |
+| **Last completed slice** | Phase 8.5 Slice 4 — Flexible dates + soft period locks |
+| **Last commit/tag** | `v0.47.9-phase8.5-period-locks` |
 | **Next up** | Slice 4 (dates/locks) → Slice 5 (statement PDF) |
 
 **The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
@@ -233,7 +233,7 @@ strengthen the existing write/read APIs.
 | 1. Idempotency on writes | done | `IdempotencyMiddleware` on POST/PATCH/PUT/DELETE; client `Idempotency-Key` (UUID) per action; scope = verified user + method + path + key; repeated key returns cached JSON + status; different keys with same payload both succeed; `idempotency_enforcement` setting (default True; conftest False); Alembic `039`; `test_idempotency.py`; 432 pytest |
 | 2. Correct / amend operation | done | `correct_journal_entry()` — atomic void + reversal + corrected post in one transaction; `amends_entry_id` / `amended_by_entry_id` links; `LedgerAuditAction.AMEND`; `POST /entities/{id}/ledger/entries/{id}/correct` (**whitelist:** `MANUAL` + `BANK_FEE` only — all other sources 409 with dedicated-flow or void-and-re-enter hint); subledger-safe follow-up: `correction.py` registry + type-specific flows; dedicated correct endpoints for supplier payment, customer payment, FX purchase; completeness guard test; 454 pytest |
 | 3. Pagination + search + filters | done | Shared `app/core/listing/` (`ListParams`, Turkish-aware `q`, date/amount/status/FK filters, `PaginatedListOut`). All entity list endpoints return `{items, total, limit, offset}`; new `GET .../ledger/entries`. Consistent query params: `q`, `from`, `to`, `min_amount`, `max_amount`, `status`, `*_id`. `test_list_pagination.py`; 444 pytest |
-| 4. Flexible dates + soft period locks | planned | Confirm timestamps are stored UTC and transaction dates stay user-entered calendar dates (NO hardcoded timezone, NO timezone setting). Entry date defaults to today but accepts ANY date (batch/backdated entry), floored at go-live. Closed day/month is **soft-locked** (prevents accidental backdating); **owner can unlock + edit** anytime; reopen + changes audited; flag a closed period that changed after close (re-file KDV / inform accountant). **Corrections (Slice 2) must respect locks:** a correct/amend (and its reversal leg) that touches a locked period requires the owner-unlock path — block for non-owners; the reversal leg currently defaults to today's date, so ensure both legs' periods are lock-checked. |
+| 4. Flexible dates + soft period locks | done | Timestamps UTC via `utcnow()`; transaction dates are user calendar `date` (no timezone setting). Entry date optional on create — defaults to `datetime.now(timezone.utc).date()`; floored at `go_live_date` (422). `period_locks` + `period_lock_audit_events`; close day/month (owner); reopen (owner, audited); owner unlock writes require `period_unlock_reason` (audited); `dirty` flag when closed period touched. Central guard `assert_entry_dates_allowed()` in posting boundary (post/void/correct + subledger corrections). API: `POST .../period-locks/close`, `POST .../{lock_id}/reopen`, `GET .../period-locks`. Alembic `041`; `test_period_locks.py`; 464 pytest |
 | 5. PDF export — financial statements | planned | Backend PDF rendering for **P&L, balance sheet, cash flow only** (the shareable statements; owner's choice — other reports stay Excel-only for now, add PDF later if needed). Pull from the SAME report service as the Excel export (one source of truth, no recomputation); integer kuruş → Turkish display format (`1.234,56 ₺`) at the render edge; header with entity name + period + generated date; `Content-Disposition` filename. Same `financial_reports_guard` as the Excel export (cashier blocked). Frontend buttons come in Phase 9 Slice 8. |
 
 **Phase 8.5 complete when:** all slices done, tested, committed, owner sign-off.
@@ -304,6 +304,7 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-23 | Flexible dates + soft period locks | `v0.47.9-phase8.5-period-locks` | Go-live floor; soft day/month locks; owner unlock + audit; dirty flag; posting boundary guard; 464 pytest |
 | 2026-06-23 | Pagination + search + filters | `v0.47.5-phase8.5-pagination-filters` | Shared listing module; paginated list responses on all list endpoints; ledger entries list; 444 pytest |
 | 2026-06-23 | Idempotency on writes | `v0.47.3-phase8.5-idempotency` | Server-side `Idempotency-Key` middleware; `idempotency_records` table; 432 pytest |
 | 2026-06-22 | DB provisioning | `v0.47.2-phase8-db-provisioning` | Alembic chain fix, canonical `upgrade head`, RLS+triggers migration 038, 423 pytest |

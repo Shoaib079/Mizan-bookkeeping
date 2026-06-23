@@ -19,16 +19,18 @@ class PostingLineIn(BaseModel):
 
 
 class PostJournalEntryRequest(BaseModel):
-    entry_date: date
+    entry_date: date | None = None
     description: str = Field(max_length=512)
     lines: list[PostingLineIn] = Field(min_length=2)
     actor_id: uuid.UUID
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
 class VoidJournalEntryRequest(BaseModel):
     actor_id: uuid.UUID
     reason: str | None = Field(default=None, max_length=512)
     void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
 class CorrectJournalEntryRequest(BaseModel):
@@ -38,6 +40,7 @@ class CorrectJournalEntryRequest(BaseModel):
     actor_id: uuid.UUID
     reason: str | None = Field(default=None, max_length=512)
     void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
 class JournalEntryLineOut(BaseModel):

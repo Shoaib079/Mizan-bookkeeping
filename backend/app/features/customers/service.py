@@ -183,6 +183,7 @@ def correct_customer_payment_entry(
     *,
     reason: str | None = None,
     void_date=None,
+    period_unlock_reason: str | None = None,
 ):
     with entity_context(session, entity_id):
         row = session.scalar(
@@ -204,6 +205,7 @@ def correct_customer_payment_entry(
         payment_account_id=payload.payment_account_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
     )
     balance = receivables_ledger.current_balance_kurus(session, entity_id, customer_id)
     with entity_context(session, entity_id):

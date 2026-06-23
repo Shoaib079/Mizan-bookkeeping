@@ -157,6 +157,7 @@ def _run_subledger_correction_with_setup(
     actor_id: uuid.UUID,
     reason: str | None,
     void_date: date | None,
+    period_unlock_reason: str | None = None,
     after_gl: Callable[[Session, JournalEntry, JournalEntry, JournalEntry], None],
 ) -> SubledgerCorrectionResult:
     if entity_service.get_entity(session, entity_id) is None:
@@ -175,6 +176,7 @@ def _run_subledger_correction_with_setup(
             actor_id=actor_id,
             reason=reason,
             void_date=void_date,
+            period_unlock_reason=period_unlock_reason,
         )
         after_gl(session, original, reversal, corrected)
         session.commit()
@@ -197,6 +199,7 @@ def _run_subledger_correction(
     actor_id: uuid.UUID,
     reason: str | None,
     void_date: date | None,
+    period_unlock_reason: str | None = None,
     after_gl: Callable[[Session, JournalEntry, JournalEntry, JournalEntry], None],
 ) -> SubledgerCorrectionResult:
     if entity_service.get_entity(session, entity_id) is None:
@@ -214,6 +217,7 @@ def _run_subledger_correction(
             actor_id=actor_id,
             reason=reason,
             void_date=void_date,
+            period_unlock_reason=period_unlock_reason,
         )
         after_gl(session, original, reversal, corrected)
         session.commit()
@@ -393,6 +397,7 @@ def correct_supplier_payment(
     payment_account_id: uuid.UUID,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
     reference_type: str | None = None,
     reference_id: uuid.UUID | None = None,
 ) -> SubledgerCorrectionResult:
@@ -465,6 +470,7 @@ def correct_supplier_payment(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         after_gl=after_gl,
     )
 
@@ -481,6 +487,7 @@ def correct_customer_payment(
     payment_account_id: uuid.UUID,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     if amount_kurus <= 0:
         raise ValueError("amount_kurus must be positive")
@@ -554,6 +561,7 @@ def correct_customer_payment(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         after_gl=after_gl,
     )
 
@@ -572,6 +580,7 @@ def correct_fx_purchase(
     try_cash_money_account_id: uuid.UUID | None = None,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     from app.features.banking.models import MoneyAccount
 
@@ -642,6 +651,7 @@ def correct_fx_purchase(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         after_gl=after_gl,
     )
 
@@ -657,6 +667,7 @@ def correct_gl_with_subledger_rows(
     actor_id: uuid.UUID,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
     supplier_row: SupplierLedgerEntry | None = None,
     customer_row: CustomerLedgerEntry | None = None,
     fx_row: FxLedgerEntry | None = None,
@@ -718,6 +729,7 @@ def correct_gl_with_subledger_rows(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         after_gl=after_gl,
     )
 
@@ -734,6 +746,7 @@ def correct_credit_sale(
     revenue_account_id: uuid.UUID,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     from app.core.chart_of_accounts.default_chart import ACCOUNTS_RECEIVABLE_CODE
 
@@ -778,6 +791,7 @@ def correct_credit_sale(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         customer_row=original_row,
         new_customer_row=new_row,
     )
@@ -797,6 +811,7 @@ def correct_supplier_invoice(
     vat_breakdown: list,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     from app.core.chart_of_accounts.default_chart import INPUT_VAT_CODE
 
@@ -854,6 +869,7 @@ def correct_supplier_invoice(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         supplier_row=original_row,
         new_supplier_row=new_row,
         update_mutable=update_draft,
@@ -875,6 +891,7 @@ def correct_expense_entry(
     expense_item_id: uuid.UUID | None = None,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     from app.features.banking.models import MoneyAccount
 
@@ -918,6 +935,7 @@ def correct_expense_entry(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         update_mutable=update_expense,
     )
 
@@ -935,6 +953,7 @@ def correct_staff_journal_entry(
     try_cost_kurus: int | None = None,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     with entity_context(session, entity_id):
         require_entity_context()
@@ -994,6 +1013,7 @@ def correct_staff_journal_entry(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         staff_row=staff_row,
         fx_row=fx_row,
         new_staff_row=new_staff,
@@ -1013,6 +1033,7 @@ def correct_partner_journal_entry(
     amount_kurus: int | None = None,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     with entity_context(session, entity_id):
         require_entity_context()
@@ -1052,6 +1073,7 @@ def correct_partner_journal_entry(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         partner_row=partner_row,
         new_partner_row=new_row,
     )
@@ -1069,6 +1091,7 @@ def correct_tip_accrual(
     amount_kurus: int,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     with entity_context(session, entity_id):
         require_entity_context()
@@ -1096,6 +1119,7 @@ def correct_tip_accrual(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         update_mutable=update_tip,
     )
 
@@ -1112,6 +1136,7 @@ def correct_tip_payout(
     amount_kurus: int,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     with entity_context(session, entity_id):
         require_entity_context()
@@ -1139,6 +1164,7 @@ def correct_tip_payout(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         update_mutable=update_tip,
     )
 
@@ -1156,6 +1182,7 @@ def correct_fx_conversion_or_spend(
     try_cost_kurus: int,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
     with entity_context(session, entity_id):
         require_entity_context()
@@ -1186,6 +1213,7 @@ def correct_fx_conversion_or_spend(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         fx_row=fx_row,
         new_fx_row=new_fx,
     )

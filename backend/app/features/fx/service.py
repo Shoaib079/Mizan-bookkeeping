@@ -75,6 +75,7 @@ def correct_fx_purchase_entry(
         try_cash_money_account_id=payload.try_cash_money_account_id,
         reason=payload.reason,
         void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
     )
     with entity_context(session, entity_id):
         new_row = session.scalar(

@@ -18,6 +18,7 @@ from app.core.listing import (
 from app.core.chart_of_accounts.models import Account
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource, JournalEntryStatus
 from app.core.ledger.posting import PostingLine, post_journal_entry, void_journal_entry
+from app.core.period_locks.guards import utc_today
 from app.db.session import entity_context
 from app.features.entities import service as entity_service
 from app.features.manual_journals.schema import (
@@ -89,11 +90,12 @@ def create_manual_journal(
     entry = post_journal_entry(
         session,
         entity_id,
-        payload.entry_date,
+        payload.entry_date or utc_today(),
         payload.description,
         lines,
         actor_id=payload.actor_id,
         source=JournalEntrySource.MANUAL,
+        period_unlock_reason=payload.period_unlock_reason,
     )
     with entity_context(session, entity_id):
         accounts = _account_map(session, {line.account_id for line in entry.lines})
@@ -202,6 +204,7 @@ def void_manual_journal(
         actor_id=payload.actor_id,
         reason=payload.reason,
         void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
     )
 
     with entity_context(session, entity_id):

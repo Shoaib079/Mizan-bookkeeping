@@ -44,6 +44,7 @@ class FxPurchaseResponse(BaseModel):
 class FxPurchaseCorrect(FxPurchaseCreate):
     reason: str | None = Field(default=None, max_length=512)
     void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
 class FxPurchaseCorrectOut(BaseModel):

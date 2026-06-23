@@ -29,6 +29,7 @@ class SupplierPaymentCreate(BaseModel):
 class SupplierPaymentCorrect(SupplierPaymentCreate):
     reason: str | None = Field(default=None, max_length=512)
     void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
 class SupplierMovementCreate(BaseModel):

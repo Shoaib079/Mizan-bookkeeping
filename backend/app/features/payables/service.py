@@ -129,6 +129,7 @@ def correct_supplier_payment_entry(
     reference: str | None = None,
     reason: str | None = None,
     void_date=None,
+    period_unlock_reason: str | None = None,
 ):
     with entity_context(session, entity_id):
         row = session.scalar(
@@ -150,6 +151,7 @@ def correct_supplier_payment_entry(
         payment_account_id=payment_account_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
         reference_type=reference,
     )
     balance = payables_ledger.current_balance_kurus(session, entity_id, supplier_id)

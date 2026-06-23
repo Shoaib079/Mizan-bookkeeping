@@ -2,6 +2,12 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-23 — Flexible dates + soft period locks (Phase 8.5 Slice 4)
+
+**Choice:** User-entered **calendar dates** for all transaction dates (`entry_date`, movement dates, void/reversal dates). No timezone setting; audit timestamps UTC via `utcnow()`. Default entry date when omitted: `datetime.now(timezone.utc).date()` (not local machine tz). Go-live floor from `entity_settings.go_live_date` — reject earlier dates at posting boundary (422).
+
+**Soft locks:** `period_locks` table (`lock_kind` day|month, `period_start`/`period_end`, `closed_at`/`closed_by`, `reopened_at`/`reopened_by`, `dirty`). `period_lock_audit_events` for close, reopen, unlock_write. Active lock (`reopened_at IS NULL`) blocks post/void/correct for non-owners when any checked date falls in range. Owner may write with required `period_unlock_reason` (body field on mutation requests) — audited. Owner-only close/reopen via `require_owner_members`. `dirty` set when writes touch a period that was ever closed. Central guard `assert_entry_dates_allowed()` in `core/period_locks/guards.py` called from `prepare_journal_entry`, void, and `_correct_journal_entry_in_transaction` (checks original entry_date, void_date, corrected entry_date).
+
 ## 2026-06-23 — Correct/amend whitelist guard (Phase 8.5 Slice 2)
 
 **Choice:** Generic ledger correct uses a **whitelist** (`GENERIC_CORRECTABLE_SOURCES = {MANUAL, BANK_FEE}`), not a blocklist of known subledger sources. Every other `JournalEntrySource` is either in `DEDICATED_CORRECTION_ROUTES` (type-specific flow) or `VOID_AND_REENTER_SOURCES` (409 with “void and re-enter”). `verify_correction_source_registry_complete()` + permanent test ensure new enum values fail CI until classified.

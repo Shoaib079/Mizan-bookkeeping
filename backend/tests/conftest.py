@@ -56,6 +56,7 @@ def db_session(test_engine) -> Session:
             "cash_movements, cash_drawer_sessions, tip_payouts, tip_accruals, "
             "expense_entries, expense_item_aliases, expense_items, "
             "entity_memberships, users, auth_audit_events, idempotency_records, "
+            "period_lock_audit_events, period_locks, "
             "money_accounts, accounts, "
             "invoice_drafts, supplier_ledger_entries, suppliers, entity_settings, entities CASCADE"
         )

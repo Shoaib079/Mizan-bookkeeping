@@ -188,6 +188,7 @@ def correct_supplier_payment(
             reference=payload.reference,
             reason=payload.reason,
             void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

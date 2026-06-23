@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
+from app.core.ledger.errors import PostingError
 from app.core.ledger.models import (
     ImmutableJournalError,
     JournalEntry,
@@ -24,10 +25,6 @@ from app.core.ledger.models import (
 from app.core.money import Kurus
 from app.db.base import utcnow
 from app.db.session import entity_context, posting_account_lookup, require_entity_context
-
-
-class PostingError(ValueError):
-    """Base posting validation failure."""
 
 
 class UnbalancedEntryError(PostingError):
@@ -171,6 +168,10 @@ def _record_audit_event(
     return event
 
 
+def _utc_today() -> date:
+    return datetime.now(timezone.utc).date()
+
+
 def prepare_journal_entry(
     session: Session,
     entity_id: uuid.UUID,
@@ -180,16 +181,27 @@ def prepare_journal_entry(
     *,
     actor_id: uuid.UUID,
     source: JournalEntrySource,
+    period_unlock_reason: str | None = None,
 ) -> JournalEntry:
     """Validate and persist a journal entry without committing — caller owns the transaction."""
+    from app.core.period_locks.guards import assert_entry_dates_allowed, mark_periods_dirty_for_dates
+
     validate_posting_lines(lines)
     require_entity_context()
+    assert_entry_dates_allowed(
+        session,
+        entity_id,
+        [entry_date],
+        actor_id=actor_id,
+        unlock_reason=period_unlock_reason,
+    )
     _validate_accounts(session, entity_id, lines)
     entry = _persist_journal_entry(
         session, entry_date, description, lines, source=source
     )
     _record_audit_event(session, entry.id, LedgerAuditAction.POST, actor_id)
     session.flush()
+    mark_periods_dirty_for_dates(session, entity_id, [entry_date])
     _ = list(entry.lines)
     return entry
 
@@ -203,6 +215,7 @@ def post_journal_entry(
     *,
     actor_id: uuid.UUID,
     source: JournalEntrySource,
+    period_unlock_reason: str | None = None,
 ) -> JournalEntry:
     """The ONE posting boundary. Requires entity_context(entity_id) via wrapper."""
     with entity_context(session, entity_id):
@@ -214,6 +227,7 @@ def post_journal_entry(
             lines,
             actor_id=actor_id,
             source=source,
+            period_unlock_reason=period_unlock_reason,
         )
         session.commit()
         session.refresh(entry)
@@ -252,12 +266,13 @@ def _create_reversal_entry(
     actor_id: uuid.UUID,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> JournalEntry:
     reversal_lines = _build_reversal_lines(original)
     validate_posting_lines(reversal_lines)
     _validate_accounts(session, entity_id, reversal_lines)
 
-    effective_void_date = void_date or date.today()
+    effective_void_date = void_date or _utc_today()
     reversal = _persist_journal_entry(
         session,
         effective_void_date,
@@ -301,12 +316,23 @@ def void_journal_entry(
     actor_id: uuid.UUID,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> tuple[JournalEntry, JournalEntry]:
     """Void a posted entry by posting a balanced reversing entry linked to the original."""
     with entity_context(session, entity_id):
         require_entity_context()
 
         original = _get_voidable_entry(session, entry_id)
+        effective_void_date = void_date or _utc_today()
+        from app.core.period_locks.guards import assert_entry_dates_allowed, mark_periods_dirty_for_dates
+
+        assert_entry_dates_allowed(
+            session,
+            entity_id,
+            [original.entry_date, effective_void_date],
+            actor_id=actor_id,
+            unlock_reason=period_unlock_reason,
+        )
         reversal = _create_reversal_entry(
             session,
             entity_id,
@@ -314,12 +340,19 @@ def void_journal_entry(
             actor_id=actor_id,
             reason=reason,
             void_date=void_date,
+            period_unlock_reason=period_unlock_reason,
         )
         with journal_void_update_allowed(session):
             _mark_original_voided(
                 session, original, reversal, actor_id=actor_id, reason=reason
             )
             session.commit()
+        mark_periods_dirty_for_dates(
+            session,
+            entity_id,
+            [original.entry_date, reversal.entry_date],
+        )
+        session.commit()
         session.refresh(original)
         session.refresh(reversal)
         return original, reversal
@@ -336,12 +369,24 @@ def _correct_journal_entry_in_transaction(
     actor_id: uuid.UUID,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> tuple[JournalEntry, JournalEntry, JournalEntry]:
     """Void and repost without commit — caller must hold entity_context and commit."""
+    from app.core.period_locks.guards import assert_entry_dates_allowed, mark_periods_dirty_for_dates
+
     original = _get_voidable_entry(session, entry_id)
 
     validate_posting_lines(lines)
     _validate_accounts(session, entity_id, lines)
+
+    effective_void_date = void_date or _utc_today()
+    assert_entry_dates_allowed(
+        session,
+        entity_id,
+        [original.entry_date, effective_void_date, entry_date],
+        actor_id=actor_id,
+        unlock_reason=period_unlock_reason,
+    )
 
     reversal = _create_reversal_entry(
         session,
@@ -350,6 +395,7 @@ def _correct_journal_entry_in_transaction(
         actor_id=actor_id,
         reason=reason,
         void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
     )
 
     corrected = _persist_journal_entry(
@@ -377,6 +423,11 @@ def _correct_journal_entry_in_transaction(
             amended_by_entry_id=corrected.id,
         )
         session.flush()
+    mark_periods_dirty_for_dates(
+        session,
+        entity_id,
+        [original.entry_date, reversal.entry_date, corrected.entry_date],
+    )
     return original, reversal, corrected
 
 
@@ -391,6 +442,7 @@ def correct_journal_entry(
     actor_id: uuid.UUID,
     reason: str | None = None,
     void_date: date | None = None,
+    period_unlock_reason: str | None = None,
 ) -> tuple[JournalEntry, JournalEntry, JournalEntry]:
     """Atomically void an entry and post a corrected replacement linked to the original."""
     with entity_context(session, entity_id):
@@ -406,6 +458,7 @@ def correct_journal_entry(
             actor_id=actor_id,
             reason=reason,
             void_date=void_date,
+            period_unlock_reason=period_unlock_reason,
         )
         session.commit()
 

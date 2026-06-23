@@ -127,6 +127,7 @@ def void_entry(
         actor_id=payload.actor_id,
         reason=payload.reason,
         void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
     )
 
 
@@ -164,4 +165,5 @@ def correct_entry(
         actor_id=payload.actor_id,
         reason=payload.reason,
         void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
     )

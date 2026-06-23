@@ -38,12 +38,25 @@ RLS_TABLES = (
     "expense_item_aliases",
     "expense_entries",
     "entity_memberships",
+    "period_locks",
+    "period_lock_audit_events",
 )
 
 
 def apply_entity_rls(connection: Connection) -> None:
     """Enable RLS and policies: rows visible only when entity_id matches session setting."""
     for table in RLS_TABLES:
+        exists = connection.execute(
+            text(
+                """
+                SELECT 1 FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = :table_name
+                """
+            ),
+            {"table_name": table},
+        ).scalar()
+        if exists is None:
+            continue
         connection.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
         connection.execute(text(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY"))
         connection.execute(text(f"DROP POLICY IF EXISTS {table}_entity_isolation ON {table}"))
