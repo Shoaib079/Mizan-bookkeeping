@@ -5,9 +5,10 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
+from app.adapters.ocr_ai.expense_photo import ExpensePhotoExtractionError
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.expenses.items import InvalidExpenseItemError
 from app.core.expenses.posting import InvalidExpensePostingError
@@ -17,6 +18,7 @@ from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.expenses import service as expenses_service
 from app.features.expenses.models import ExpenseEntryStatus
 from app.features.expenses.schema import (
+    ConfirmTipPhotoRequest,
     ExpenseConfirmItemRequest,
     ExpenseCreate,
     ExpenseItemCreate,
@@ -24,7 +26,11 @@ from app.features.expenses.schema import (
     ExpenseItemRead,
     ExpenseRead,
 )
-from app.features.expenses.service import ExpenseNotReviewableError
+from app.features.expenses.service import (
+    DuplicateExpenseDocumentError,
+    ExpenseNotReviewableError,
+    NotATipPhotoError,
+)
 
 router = APIRouter(prefix="/entities/{entity_id}", tags=["expenses"])
 
@@ -142,6 +148,66 @@ def list_expenses(
         limit=list_params.limit,
         offset=list_params.offset,
     )
+
+
+@router.post("/expenses/tip-photos", response_model=ExpenseRead, status_code=201)
+async def upload_tip_photo(
+    entity_id: uuid.UUID,
+    file: UploadFile = File(...),
+    money_account_id: uuid.UUID = Form(...),
+    actor_id: uuid.UUID = Form(...),
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> ExpenseRead:
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file")
+    try:
+        return expenses_service.create_tip_expense_from_photo(
+            session,
+            entity_id,
+            content,
+            money_account_id=money_account_id,
+            actor_id=actor_id,
+            filename=file.filename,
+            content_type=file.content_type,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DuplicateExpenseDocumentError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Duplicate expense document for this entity",
+                "existing_expense_id": str(exc.existing.id),
+            },
+        ) from exc
+    except ExpensePhotoExtractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except (InvalidExpensePostingError, InvalidAccountError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/expenses/tip-photos/{expense_id}/confirm", response_model=ExpenseRead)
+def confirm_tip_photo(
+    entity_id: uuid.UUID,
+    expense_id: uuid.UUID,
+    payload: ConfirmTipPhotoRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> ExpenseRead:
+    try:
+        return expenses_service.confirm_tip_expense(
+            session, entity_id, expense_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except NotATipPhotoError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ExpenseNotReviewableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (InvalidExpensePostingError, InvalidAccountError, InvalidExpenseItemError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/expenses/{expense_id}/confirm-item", response_model=ExpenseRead)

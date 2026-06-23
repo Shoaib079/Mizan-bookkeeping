@@ -48,6 +48,21 @@ class ExpenseConfirmItemRequest(BaseModel):
     actor_id: uuid.UUID
 
 
+class ConfirmTipPhotoRequest(BaseModel):
+    """Confirm a photo-tip draft → post Dr 5700 / Cr cash (Slice C).
+
+    The OCR-read tip is editable on review: the owner may correct the amount, the
+    cash/bank account it was paid from, and the date before it posts.
+    """
+
+    actor_id: uuid.UUID
+    amount_kurus: int | None = Field(default=None, gt=0)
+    money_account_id: uuid.UUID | None = None
+    expense_date: date | None = None
+    description: str | None = Field(default=None, max_length=512)
+    notes: str | None = Field(default=None, max_length=512)
+
+
 class ExpenseRead(BaseModel):
     id: uuid.UUID
     entity_id: uuid.UUID
@@ -66,6 +81,8 @@ class ExpenseRead(BaseModel):
     bank_statement_line_id: uuid.UUID | None
     review_reason: str | None
     candidate_expense_item_id: uuid.UUID | None
+    source_document_fingerprint: str | None
+    source_document_path: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

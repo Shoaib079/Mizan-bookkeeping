@@ -59,6 +59,11 @@ class ExpenseEntry(EntityScopedMixin, Base):
     __tablename__ = "expense_entries"
     __table_args__ = (
         UniqueConstraint("journal_entry_id", name="uq_expense_entries_journal_entry_id"),
+        UniqueConstraint(
+            "entity_id",
+            "source_document_fingerprint",
+            name="uq_expense_entries_entity_source_fingerprint",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -116,4 +121,10 @@ class ExpenseEntry(EntityScopedMixin, Base):
         nullable=True,
         index=True,
     )
+    # Slice C: an expense read from an uploaded photo (e.g. a cash tip). The
+    # fingerprint dedupes re-uploads per entity; the path points at the stored image.
+    source_document_fingerprint: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    source_document_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

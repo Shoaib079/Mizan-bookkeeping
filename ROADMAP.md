@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Tips treatment fix (promoted from Phase 11 parking lot) |
-| **Active slice** | Slice B2 — card commission total clearance (DONE, awaiting owner sign-off) |
-| **Last completed slice** | Slice B2 — card commission total-clearance sweep (residual → 5300, one button) |
-| **Last commit/tag** | `v0.50.0-pos-commission-total-clearance-slice-b2` |
-| **Next up** | Slice C — expense-photo OCR cash-tip draft; then Phase 9 frontend |
+| **Active slice** | Slice C — expense-photo OCR cash-tip draft (DONE, awaiting owner sign-off) |
+| **Last completed slice** | Slice C — expense-photo OCR reads a tip → `5700` cash-tip draft in Needs Review |
+| **Last commit/tag** | `v0.51.0-expense-photo-tip-ocr-slice-c` |
+| **Next up** | Phase 9 frontend |
 
 **The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -342,7 +342,7 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 - **Tip treatment: expense, not pass-through liability (reverses Phase 6) — DONE (Slice A, 2026-06-23, `v0.48.0-tips-expense-slice-a`).** Promoted to Decisions §9/§14 + `DECISIONS.md`. Tips now book to `5700 Tips Expense` from cash (`Dr 5700 / Cr cash`) via the expenses pipeline; sales post **gross**. Retired `2260 Tips Payable`, the `tip_accruals`/`tip_payouts` subsystem, the tips feature/router, the `JournalEntrySource.TIP_*` sources, the control-account tie + RLS + cash-flow wiring, and the Phase 8.6 Item 4 POS carve-out (`tips_kurus`). Migration `045_tips_expense_not_liability` (guarded). **Money-critical — awaiting owner sign-off.** Remaining tip work: Slice B (Z-report total-clearance) and Slice C (expense-photo OCR), below.
 - **Tip treatment — Slice B1 DONE (2026-06-24, `v0.49.0-pos-card-tips-z-report-slice-b1`):** card tips via the card-terminal **Z report** at POS confirm. Per-entity `card_tips_z_report_enabled` + `card_sale_basis` (`system` pass-through / `z_report` expense / `ask` → Needs Review); `tip = Z − system card sale`; `1400` always debits the full Z so deposits + sweep clear it to zero. Needs Review on `ask`+tip, `tip<0`, Z-without-sale, and `expected_tip_kurus` mismatch. New `JournalEntrySource.POS_CARD_TIP`; migration `046`. **Money-critical — awaiting owner sign-off.**
 - **Tip treatment — Slice B2 DONE (2026-06-24, `v0.50.0-pos-commission-total-clearance-slice-b2`):** card commission via **total clearance** — both banks' deposits land in the one `1400` clearing account; the leftover after net deposits **is** the commission. One button (`POST .../pos/clearing-reconciliation/clear-commission`) books the current `1400` residual → `5300` and zeros clearing; repeatable; rejects zero/negative. **No `commission_recognition` setting** (owner dropped it — keep it automatic) and **no migration**. New `JournalEntrySource.POS_COMMISSION_SWEEP`. **Money-critical — awaiting owner sign-off.**
-- **Tip treatment — Slice C (next):** `adapters/ocr_ai/expense_photo.py` reads a tip from an uploaded expense photo into a `5700` cash-tip expense draft in Needs Review.
+- **Tip treatment — Slice C DONE (2026-06-24, `v0.51.0-expense-photo-tip-ocr-slice-c`):** `adapters/ocr_ai/expense_photo.py` reads a tip off an uploaded expense photo (fixture registry → UTF-8 text heuristics; Turkish `Bahşiş`/`Servis` + English `Tip`/`Gratuity`; reuses `parse_try_loose`) into a `5700 Tips Expense` cash-tip draft in **Needs Review** — review-first, nothing auto-posts. Confirm (editable amount/cash account/date) posts `Dr 5700 / Cr cash` via the existing expenses posting boundary (`JournalEntrySource.EXPENSE_ENTRY` — no new source, no registry changes). `POST .../expenses/tip-photos` (multipart) + `POST .../expenses/tip-photos/{id}/confirm`. Per-entity duplicate-photo guard via new nullable `expense_entries.source_document_fingerprint` (+ `source_document_path`) and unique `(entity_id, source_document_fingerprint)`; concurrent-upload race → clean 409. No-tip read → zero-amount draft the owner must fill. Migration `047_expense_source_document` (additive/nullable — manual expenses unaffected). 11 new tests; **522 pytest green**; clean-venv verify green. **Money-critical — awaiting owner sign-off.** This completes the tips-treatment work (Slices A + B + C).
 
 ---
 
@@ -350,6 +350,10 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-24 | Tips Slice C — expense-photo OCR cash-tip | `v0.51.0-expense-photo-tip-ocr-slice-c` | `expense_photo.py` reads a tip → `5700` cash-tip draft in Needs Review; confirm posts Dr 5700/Cr cash; `expenses/tip-photos` upload+confirm; per-entity dup guard (`source_document_fingerprint`); migration `047`; 522 pytest |
+| 2026-06-24 | Tips Slice B2 — card commission total clearance | `v0.50.0-pos-commission-total-clearance-slice-b2` | One-button `1400` residual → `5300` sweep; `POS_COMMISSION_SWEEP`; no migration; 511 pytest |
+| 2026-06-24 | Tips Slice B1 — card tips via Z report | `v0.49.0-pos-card-tips-z-report-slice-b1` | Per-entity `card_sale_basis`; `tip = Z − card`; Needs Review guards; `POS_CARD_TIP`; migration `046`; 506 pytest |
+| 2026-06-23 | Tips Slice A — tips are an expense | `v0.48.0-tips-expense-slice-a` | Retire `2260`/tips subsystem; gross sales; `5700 Tips Expense`; migration `045`; 497 pytest |
 | 2026-06-23 | Period locks review fixes | `v0.47.12` | IMMUTABLE_AUDIT_TABLES registry; append-only audit triggers; period_locks no-delete; split correction tests; 483 pytest |
 | 2026-06-23 | PDF export review fixes | `v0.47.11` | Lazy reportlab; bundled DejaVu fonts; ₺/Turkish glyph tests; fresh-install CI guard; 473 pytest |
 | 2026-06-23 | PDF export — financial statements | `v0.47.10-phase8.5-pdf-export` | reportlab PDF for P&L/balance sheet/cash flow; `format_try` at render edge; `GET .../export/pdf`; 469 pytest |

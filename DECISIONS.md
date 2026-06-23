@@ -2,6 +2,20 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-24 — Expense-photo OCR cash-tip (Slice C; owner ask)
+
+**Choice:** Reuse the existing **expenses pipeline** to capture a cash tip read from an uploaded receipt photo, rather than build a new intake table. A tip is already a cash expense (`Dr 5700 Tips Expense / Cr cash`, Slice A); the only new need is reading the tip off a photo and holding it for review. The photo upload creates an `ExpenseEntry` in `needs_review` pointed at `5700`; confirm posts it through the unchanged `post_expense_entry` boundary with `source=expense_entry`. Because no new `JournalEntrySource` is introduced, the correction registry, cash-flow categorization, and RLS registries need **no changes** (connected-surface audit).
+
+**Reader:** `adapters/ocr_ai/expense_photo.py` mirrors the POS daily-summary reader — a fixture registry (deterministic tests) first, then UTF-8 text heuristics; real binary images raise `ExpensePhotoUnsupportedError` and route to Needs Review until vision OCR lands. Tip labels: `Bahşiş` / `Bahsis` / `Servis(  Ücreti)` / `Tip` / `Gratuity`. Amounts use the canonical `core/money.parse_try_loose` (no duplicate Turkish-number parser). Scope is deliberately the **tip only** — the general receipt total / line-item read stays the manual expenses pipeline's job (no speculative scope).
+
+**Review-first:** nothing posts on upload. The draft carries a review reason ("Tip read from expense photo: 50,00 ₺ — confirm or correct" or, when nothing is found, "No tip detected — enter the tip amount"). Confirm (`ConfirmTipPhotoRequest`) may correct the **amount, cash/bank account, and date**. A zero/empty tip cannot post (`ExpenseNotReviewableError`); confirming a non-photo expense via this route is refused (`NotATipPhotoError`); confirming twice is blocked by the `needs_review` status guard (no double-post).
+
+**Storage / dedup:** new nullable columns `expense_entries.source_document_fingerprint` (SHA-256) + `source_document_path`, with a unique `(entity_id, source_document_fingerprint)` constraint. Per-entity dedup (NULLs stay distinct, so manual expenses without a photo never collide; the same photo is allowed in different restaurants). The pre-insert `select` plus a commit-time `IntegrityError → DuplicateExpenseDocumentError` makes a concurrent-upload race a clean 409, not a 500.
+
+**API:** `POST /entities/{id}/expenses/tip-photos` (multipart: `file` + `money_account_id` + `actor_id`) → draft; `POST /entities/{id}/expenses/tip-photos/{expense_id}/confirm` → posted. Migration `047_expense_source_document` (additive/nullable). Considered and rejected: a dedicated `expense_documents` intake table (over-built for a tip-only slice) and a shared OCR text-parsing module that would have refactored the money-critical POS reader (unnecessary blast radius — reused `parse_try_loose` instead).
+
+**Status:** money-critical (touches the posting boundary + a migration) — independent review + owner sign-off required.
+
 ## 2026-06-24 — Card commission via total clearance (Slice B2; owner decision)
 
 **Choice:** Hidden bank commission is derived as the **card-clearing residual** — no configuration. Both banks' card deposits credit the one card-clearing account `1400`; whatever remains after the owner records net deposits is the commission. The owner explicitly rejected a `commission_recognition` cadence setting ("keep it the way it was — I don't have to do anything"): record net deposits, then press one button when all deposits are in.
