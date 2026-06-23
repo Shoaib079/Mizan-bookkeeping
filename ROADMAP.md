@@ -12,11 +12,47 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 8 — Roles & permissions, backups, security hardening, launch |
-| **Active slice** | — (Phase 8 complete, pending owner sign-off) |
-| **Last completed slice** | DB provisioning integrity (Phase 8 Slice 6) |
+| **Active phase** | Phase 8.5 — Pre-frontend API hardening |
+| **Active slice** | Idempotency / correct-amend / pagination / dates & soft-locks |
+| **Last completed slice** | DB provisioning integrity (Phase 8 Slice 6) — backend v1 COMPLETE |
 | **Last commit/tag** | `v0.47.2-phase8-db-provisioning` |
-| **Next up** | Owner sign-off on Phase 8 |
+| **Next up** | Phase 8.5 (do before any frontend), then Phase 9 Slice 1 |
+
+**The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
+
+---
+
+## Golden rules — apply to EVERY slice, backend or frontend (non-negotiable)
+
+These are the invariants that keep the books correct and the data safe. They apply to every slice
+from here to the end. Most are now enforced by permanent guard-tests that fail the build if violated
+(see `test_security_invariants.py`). Cursor must honor all of them on every slice without being asked.
+
+1. **No double-recording.** Every ledger write goes through the single posting boundary
+   (`core/ledger`). Nothing constructs a journal entry anywhere else. If unsure whether something
+   should post → route it to **Needs Review**, never auto-record. *(Guard-test enforced.)*
+2. **No penny leaks (entity isolation).** Every entity-scoped table has RLS; every entity route has
+   an auth guard; cross-entity read or write is impossible. Each restaurant is a sealed box.
+   *(Guard-tests enforced.)*
+3. **Money is integer kuruş, never a float.** Turkish formatting (`1.234,56`, `DD.MM.YYYY`) only at
+   the edges (display/input); convert to exact integer kuruş before anything touches the ledger.
+4. **Money movements are not income or expense.** Payments, settlements, transfers, FX conversions
+   reduce balances — they are never a second revenue or expense. (The recurring double-count trap.)
+5. **The books always tie.** Debits = credits on every entry; subledgers tie to their control
+   accounts; trial balance / accounting equation balance. Re-verified on every backup restore.
+6. **Immutable + audited.** Posted records can't be edited or deleted — corrections are void/reverse,
+   and every change records who and when.
+7. **Drafts, not auto-posts.** Documents (invoices, receipts, statements, OCR reads) land in a review
+   queue; a human confirms before anything posts.
+8. **Frontend honors the same rules.** Forms must prevent double-submit (a double click must not
+   create two ledger entries), convert Turkish numbers to exact kuruş, and never bypass the review
+   queue. The UI is a window onto the engine — it cannot weaken any invariant above.
+9. **The completion gate, every slice:** characterized → audited → tested → bugs root-caused & fixed
+   → API/flow verified → ROADMAP/PROGRESS updated → commit + semantic tag → owner sign-off. Nothing
+   advances until the current slice passes this and the owner signs off.
+10. **Anti-monolith & recovery.** Keep files small (split > ~400 lines, no business logic in entry
+    files); after any crash/new session, run the Recovery Protocol in `CURSOR_RULES.md` §5; git is the
+    source of truth for what's actually done.
 
 ---
 
@@ -182,19 +218,84 @@ P&L, Balance Sheet, Cash flow, per-rate KDV report, period comparison, delivery 
 | Auth hardening + pre-sign-off | done | Production refuses `CLERK_TEST_MODE`; `CLERK_AUDIENCE` required; explicit `email_verified` only; permanent route/posting/RLS guard tests; dashboard + receivables guarded; RLS registry + GUC re-sync; 420 pytest |
 | DB provisioning integrity | done | `alembic upgrade head` canonical path; `006` widens version table; `038` RLS+triggers tail; pytest provisions via Alembic; `alembic check` green; 423 pytest |
 
-**Phase 8 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 8 COMPLETE (pending owner sign-off).**
+**Phase 8 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 8 COMPLETE ✓ (owner signed off).**
 
 ---
 
-## Later (post-v1)
+## Phase 8.5 — Pre-frontend API hardening
 
-Not in current build order — track here when scoped:
+Small, contained backend slice to do **before** any frontend, because the frontend's entry screens
+depend on these and retrofitting later means redoing both API and UI. No new accounting logic — these
+strengthen the existing write/read APIs.
 
-- **Bank feed (read-only) adapter** — account-information / transaction pull only; never payment-initiation (the app never moves money). Additional input adapter producing the same normalized transaction rows as manual statement CSV import, feeding the existing classify → clearing → near-match → anti-double-count pipeline (downstream logic unchanged). Manual statement upload stays permanently as universal fallback (every bank; feed down). Both coexist — feed never replaces upload. When built: dedup on bank unique transaction ID (overlapping daily pulls), consent/token expiry + reconnect, reconcile feed balance to statement, confirm connection route (direct bank API vs aggregator) before committing. *Later enhancement — after core build.*
-- Proper KDV/tax-return module
-- Per-rate VAT separation (if needed beyond Phase 7)
-- FX revaluation
-- Owner combined-restaurant view
+| Slice | Status | Notes |
+|-------|--------|-------|
+| 1. Idempotency on writes | planned | Server-side idempotency key per **submission/action** (NOT keyed on amount/date/account) on every mutation endpoint; a repeated key returns the original result instead of creating a second record. The frontend generates a fresh key per distinct entry, so two genuinely separate payments (e.g. rent from two accounts, even identical amounts/dates) BOTH record — only a re-submit of the same action (double-click/retry) is collapsed. Real backstop for "no doubling." Near-identical manual entries are NOT auto-rejected — surface a soft "possible duplicate?" → Needs Review for the user to confirm. |
+| 2. Correct / amend operation | planned | One atomic backend op that voids an entry and posts the corrected one, linked, in a single transaction (never a client-orchestrated void-then-recreate that could half-fail). Every entry screen uses it. |
+| 3. Pagination + filters | planned | Cursor/limit + date / amount / text filters on all list endpoints (expenses, transactions, ledgers). Lists currently return everything; would choke and force UI rework with real data. |
+| 4. Flexible dates + soft period locks | planned | Confirm timestamps are stored UTC and transaction dates stay user-entered calendar dates (NO hardcoded timezone, NO timezone setting). Entry date defaults to today but accepts ANY date (batch/backdated entry), floored at go-live. Closed day/month is **soft-locked** (prevents accidental backdating); **owner can unlock + edit** anytime; reopen + changes audited; flag a closed period that changed after close (re-file KDV / inform accountant). |
+
+**Phase 8.5 complete when:** all slices done, tested, committed, owner sign-off.
+
+---
+
+## Phase 9 — Frontend (record data, then see it)
+
+Backend is v1-complete; this phase puts a usable face on it. Follow `DESIGN_SYSTEM.md` (white bg,
+blue `#2563EB`, Inter, Lucide, shadcn token file, the page archetypes, app shell) and the
+"structure first, theme later" rule. Stack: Next.js + TypeScript + Tailwind + shadcn/ui. Each slice
+is a thin vertical: auth → entity context → API → ledger → read-back, shippable on its own.
+
+Every slice wires existing backend APIs — no new accounting logic. One shared component kit + one
+token file (DESIGN_SYSTEM.md); every screen is one of the locked page archetypes. Build all
+structure against default tokens; the final look is applied later (Slice 10) by editing only the
+token file. Golden rule #8 applies to every form.
+
+| Slice | Status | Notes |
+|-------|--------|-------|
+| 1. Shell + login + first entry | next | Clerk login (email + Google, Apple optional, verified-email linking); app shell (sidebar/topbar) + restaurant switcher sets entity context (Bearer token + entity id on every call); one end-to-end flow — record a manual **expense** and see it listed. Proves the whole pipe. Tag `v0.48.0`. |
+| 2. Daily sales + expenses | planned | Manual sales (cash/card/totals, cash+card=total validation) + expense forms + read-back lists. Turkish number input → kuruş; DD.MM.YYYY; keyboard-first; no double-submit. |
+| 3. Suppliers & payables | planned | Supplier master CRUD; invoice draft → confirm; record payment; supplier ledger + payables (running balances) views. |
+| 4. Banking & cash | planned | Account tree + balances; statement upload → classify → Needs Review; transfers; cash drawer (open / movements / EOD close with over-short); FX wallets (purchase / convert / spend). |
+| 5. POS & delivery sales | planned | POS daily-summary + card-sales intake; delivery platform reports + settlements + reconciliation; user-managed delivery platforms; commission e-Faturas. |
+| 6. Staff, partners, receivables, tips | planned | Entry forms + ledger views for each subledger (salary vs advance, partner reimbursements, customer receivables, tip pot in/out). |
+| 7. Needs-review queue + document upload | planned | Photo/scan/PDF upload → OCR read → side-by-side review (original + extracted fields + confidence) → confirm-to-post. The review-first heart; nothing posts unconfirmed. |
+| 8. Dashboard + reports | planned | Dashboard tiles; Reports card-library landing; P&L / balance sheet / cash flow / KDV input / delivery sales / period comparison read views; Excel export buttons; role-gated (cashier can't see financials). |
+| 9. Settings & onboarding | planned | Opening-balances wizard; members/roles management; entity settings; delivery-platform management; backup status; create / switch restaurants. |
+| 10. Theme refinement + UX polish | planned | Apply final theme via the one token file (zero page rework); empty states, loading skeletons, toasts, command palette, full keyboard + touch + accessibility pass. |
+
+**Phase 9 complete when:** all slices done, tested, committed, owner sign-off → **frontend v1 complete.**
+
+---
+
+## Phase 10 — Deployment & go-live
+
+Take the tested app to a real, secure production environment and put real data in it.
+
+| Slice | Status | Notes |
+|-------|--------|-------|
+| 1. Hosting & infrastructure | planned | Provision managed Postgres + Redis + app host + object storage (uploads & backups); set all secrets/env vars; HTTPS/SSL + domain. |
+| 2. Production provisioning | planned | Stand up the DB via the canonical `alembic upgrade head`; confirm RLS + immutability triggers present on the prod-equivalent DB; Clerk **production** keys + JWT template emitting `email`/`email_verified`; `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE` off (boot guard verified). |
+| 3. Backups live | planned | Scheduled backups running to off-site storage; run a real restore-verify in production and confirm the books tie; alert on backup failure. |
+| 4. Observability | planned | Error tracking, structured logging, uptime/health checks, basic rate limiting. |
+| 5. Pre-launch security pass | planned | Tighten `create_entity` (auth required); dependency scan (no high/critical CVEs); secrets audit; full suite green under production settings; final guard-test run. |
+| 6. Owner onboarding & smoke test | planned | Create the real restaurant(s), seed chart, enter opening balances, invite users with roles; run the end-to-end smoke test in production; **go live.** |
+
+**Phase 10 complete when:** app is live, backed up, monitored, and the owner has recorded real data successfully.
+
+---
+
+## Phase 11 — Post-launch enhancements (parking lot)
+
+Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. Sequence by need.
+
+- **Bank feed (read-only) adapter** — account-information / transaction pull only; never payment-initiation (the app never moves money). Same normalized transaction rows as manual statement import, feeding the existing classify → clearing → near-match → anti-double-count pipeline (downstream unchanged). Manual upload stays permanently as universal fallback; both coexist. When built: dedup on bank unique transaction ID, consent/token expiry + reconnect, reconcile feed balance to statement, confirm route (direct bank API vs aggregator).
+- **Proper KDV/tax-return module** — output − input, declaration, periods (input VAT already captured per rate).
+- **FX revaluation** — period-end holding revaluation (today FX is cost-only; gain/loss accounts already exist).
+- **Owner combined-restaurant view** — cross-entity, read-only overview (entity-stamped data already supports it).
+- **Recipe costing / food-cost %** — ingredient → recipe → menu item; the COGS world deliberately out of v1.
+- **Receipt AI learning store** — remember owner corrections to pre-fill future reads.
+- **Restore UI + configurable backup schedules**; **scheduled/emailed reports**; **custom report builder**.
 
 ---
 

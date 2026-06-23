@@ -4,15 +4,15 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | 8 — Roles & permissions, backups, security hardening, launch |
-| **Last completed slice** | DB provisioning integrity (Phase 8 Slice 6) |
-| **Next slice** | Owner sign-off on Phase 8 |
+| **Phase** | 8.5 — Pre-frontend API hardening |
+| **Last completed slice** | Phase 8 owner sign-off (backend v1 complete) |
+| **Next slice** | Idempotency on writes (Phase 8.5 Slice 1) |
 | **Branch** | `main` |
 | **Last tag** | `v0.47.2-phase8-db-provisioning` |
 
 ## Resume point
 
-**Phase 8 Slice 6 done.** Canonical DB provisioning is `alembic upgrade head` (see `app/db/provisioning.py`). Migration `006` widens `alembic_version.version_num` to varchar(64); migration `038` idempotently applies full RLS registry + immutability triggers. Pytest + RLS guard tests provision via Alembic (same as production). **Phase 8 COMPLETE — pending owner sign-off.**
+**Phase 8 SIGNED OFF** (2026-06-23). Backend v1 complete — roles, backups, security hardening, Clerk auth, DB provisioning integrity. **Active work: Phase 8.5 Slice 1 — idempotency on writes** (server-side `Idempotency-Key` per mutation; collapse double-submit only).
 
 ## Pre-sign-off verification (2026-06-22)
 

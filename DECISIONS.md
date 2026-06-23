@@ -2,6 +2,10 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-23 — Phase 8 owner sign-off
+
+**Status:** Phase 8 (roles, backups, security hardening, launch readiness, auth hardening, DB provisioning) owner signed off. Backend v1 complete at tag `v0.47.2-phase8-db-provisioning` (423 pytest). Next work: Phase 8.5 pre-frontend API hardening before Phase 9 frontend.
+
 ## 2026-06-22 — Auth hardening + pre-sign-off (Phase 8 Slice 5)
 
 **Production guards:** Boot refuses `CLERK_TEST_MODE=true` when `APP_ENV=production`. `CLERK_AUDIENCE` required alongside `CLERK_JWKS_URL` and `CLERK_ISSUER` when auth enforcement is on and not in test mode.

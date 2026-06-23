@@ -2,6 +2,10 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-23
+
+**Phase 8 owner sign-off:** Backend v1 officially complete. All Phase 8 slices done — roles & permissions, backups, security hardening, Clerk JWT launch readiness, auth hardening + guard tests, DB provisioning integrity (`alembic upgrade head` canonical). 423 pytest green at sign-off. Active phase advances to **Phase 8.5 — Pre-frontend API hardening** (idempotency, correct/amend, pagination, flexible dates + soft locks) before any frontend work.
+
 ## 2026-06-22
 
 **Phase 8 — DB provisioning integrity:** Fixed broken Alembic chain — migration `006` widens `alembic_version.version_num` to varchar(64). New migration `038_db_provisioning` idempotently applies full RLS registry (`RLS_TABLES` + lookup policies) and all ledger/subledger immutability triggers via `app/db/provisioning.py`. Canonical production path documented and enforced: **`alembic upgrade head` only** (not `init_database()`). Fixed `alembic/env.py` to respect explicit database URLs and pass `alembic check`. Pytest session DB + live RLS guard test now provision via Alembic (same as production). Added `test_db_provisioning.py` — empty DB upgrade, RLS policies, ledger immutability triggers. Tag `v0.47.2-phase8-db-provisioning`. 423 pytest green. **Phase 8 complete (pending owner sign-off).**
