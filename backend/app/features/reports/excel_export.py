@@ -360,8 +360,9 @@ def export_filename(
     from_date: date | None = None,
     to_date: date | None = None,
     as_of: date | None = None,
+    extension: str = ".xlsx",
 ) -> str:
     if as_of is not None:
-        return f"mizan-{report_slug}-{as_of}.xlsx"
+        return f"mizan-{report_slug}-{as_of}{extension}"
     assert from_date is not None and to_date is not None
-    return f"mizan-{report_slug}-{from_date}-{to_date}.xlsx"
+    return f"mizan-{report_slug}-{from_date}-{to_date}{extension}"

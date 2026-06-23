@@ -212,6 +212,14 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Not in slice:** PDF, supplier ledger/payables/bank/backup exports, UI download buttons, multi-entity roll-up, Turkish number formatting in cells.
 
+## 2026-06-23 — PDF export for financial statements (Phase 8.5)
+
+**Choice:** `reportlab>=4.0` for **P&L, balance sheet, cash flow** PDF exports only (shareable statements; other reports stay Excel-only v1). Builders in `features/reports/pdf_export.py`; reuses `format_try()` from `core/money.py` for Turkish display (`1.234,56 ₺`) at the render edge only. Entity name fetched from `entities` table for header; period + UTC generated timestamp. Same report service calls as JSON/Excel — no recomputation. `StreamingResponse` with `application/pdf` and `Content-Disposition` attachment filenames via shared `export_filename(..., extension=".pdf")`.
+
+**API:** `GET .../reports/profit-and-loss/export/pdf`, `balance-sheet/export/pdf`, `cash-flow/export/pdf` — same query params and error handling as JSON/Excel routes. `financial_reports_guard` (cashier blocked).
+
+**Not in slice:** PDF for KDV/delivery/period comparison; frontend download UI (Phase 9 Slice 8); multi-entity roll-up.
+
 ## 2026-06-22 — Period comparison report (Phase 7)
 
 **Choice:** Read-only **period-over-period comparison** per entity — current window vs prior window. **Metrics** reuse existing report services (no duplicated GL logic): dashboard sales/expenses/net result, P&L `net_income_kurus`, KDV input `total_vat_kurus`, cash flow `net_change_kurus`, delivery gross (only when `delivery_enabled`). **Prior window default:** same inclusive length immediately before current (`period_days = (to - from).days + 1`; `prior_to = from - 1`; `prior_from = prior_to - (period_days - 1)`). Optional `prior_from`/`prior_to` override (both required if either set). Per metric: `current_kurus`, `prior_kurus`, `change_kurus`, `change_percent` (null when prior zero).

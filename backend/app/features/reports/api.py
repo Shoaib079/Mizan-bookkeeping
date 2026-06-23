@@ -17,7 +17,9 @@ from app.features.reports import cash_flow
 from app.features.reports import excel_export
 from app.features.reports import financial_statements
 from app.features.reports import kdv_input
+from app.features.reports import pdf_export
 from app.features.reports import period_comparison
+from app.features.entities import service as entity_service
 from app.features.reports.schema import (
     BalanceSheetRead,
     CashFlowRead,
@@ -29,6 +31,13 @@ from app.features.reports.schema import (
 from app.features.reports.service import InvalidDateRangeError
 
 router = APIRouter(prefix="/entities/{entity_id}/reports", tags=["reports"])
+
+
+def _entity_name_for_export(session: Session, entity_id: uuid.UUID) -> str:
+    entity = entity_service.get_entity(session, entity_id)
+    if entity is None:
+        raise LookupError(f"Entity not found: {entity_id}")
+    return entity.name
 
 
 @router.get("/delivery-sales", response_model=DeliverySalesReportRead)
@@ -117,6 +126,30 @@ def export_profit_and_loss(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/profit-and-loss/export/pdf")
+def export_profit_and_loss_pdf(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
+) -> StreamingResponse:
+    try:
+        entity_name = _entity_name_for_export(session, entity_id)
+        report = financial_statements.get_profit_and_loss(
+            session, entity_id, from_date, to_date
+        )
+        data = pdf_export.build_profit_and_loss_pdf(report, entity_name)
+        filename = pdf_export.pdf_export_filename(
+            "profit-and-loss", from_date=from_date, to_date=to_date
+        )
+        return pdf_export.pdf_response(data, filename)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidDateRangeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @router.get("/balance-sheet", response_model=BalanceSheetRead)
 def get_balance_sheet(
     entity_id: uuid.UUID,
@@ -142,6 +175,23 @@ def export_balance_sheet(
         data = excel_export.build_balance_sheet_xlsx(report)
         filename = excel_export.export_filename("balance-sheet", as_of=as_of)
         return excel_export.xlsx_response(data, filename)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/balance-sheet/export/pdf")
+def export_balance_sheet_pdf(
+    entity_id: uuid.UUID,
+    as_of: date = Query(...),
+    session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
+) -> StreamingResponse:
+    try:
+        entity_name = _entity_name_for_export(session, entity_id)
+        report = financial_statements.get_balance_sheet(session, entity_id, as_of)
+        data = pdf_export.build_balance_sheet_pdf(report, entity_name)
+        filename = pdf_export.pdf_export_filename("balance-sheet", as_of=as_of)
+        return pdf_export.pdf_response(data, filename)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -177,6 +227,28 @@ def export_cash_flow(
             "cash-flow", from_date=from_date, to_date=to_date
         )
         return excel_export.xlsx_response(data, filename)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidDateRangeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/cash-flow/export/pdf")
+def export_cash_flow_pdf(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
+) -> StreamingResponse:
+    try:
+        entity_name = _entity_name_for_export(session, entity_id)
+        report = cash_flow.get_cash_flow(session, entity_id, from_date, to_date)
+        data = pdf_export.build_cash_flow_pdf(report, entity_name)
+        filename = pdf_export.pdf_export_filename(
+            "cash-flow", from_date=from_date, to_date=to_date
+        )
+        return pdf_export.pdf_response(data, filename)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InvalidDateRangeError as exc:
