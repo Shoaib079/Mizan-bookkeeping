@@ -161,6 +161,7 @@ class ClassifyStatementLineResult(BaseModel):
     line: BankStatementLineRead
     linked_existing_payment: bool
     linked_existing_transfer: bool = False
+    linked_existing_settlement: bool = False
     routed_to_needs_review: bool = False
     journal_entry_id: uuid.UUID | None
 

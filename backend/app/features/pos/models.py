@@ -46,6 +46,10 @@ class PosSettlement(EntityScopedMixin, Base):
     __tablename__ = "pos_settlements"
     __table_args__ = (
         UniqueConstraint("journal_entry_id", name="uq_pos_settlements_journal_entry_id"),
+        UniqueConstraint(
+            "card_sales_batch_id",
+            name="uq_pos_settlements_card_sales_batch_id",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)

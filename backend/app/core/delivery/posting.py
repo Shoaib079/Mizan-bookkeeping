@@ -272,6 +272,23 @@ def post_delivery_settlement(
     with entity_context(session, entity_id):
         require_entity_context()
 
+        if delivery_report_id is not None:
+            existing = session.scalar(
+                select(DeliverySettlement).where(
+                    DeliverySettlement.delivery_report_id == delivery_report_id
+                )
+            )
+            if existing is not None:
+                journal_entry = session.get(JournalEntry, existing.journal_entry_id)
+                if journal_entry is None:
+                    raise InvalidDeliverySettlementError(
+                        "linked settlement journal entry not found"
+                    )
+                return DeliverySettlementPostResult(
+                    journal_entry=journal_entry,
+                    delivery_settlement=existing,
+                )
+
         money_account = _validate_bank_money_account(session, entity_id, money_account_id)
         _validate_bank_gl_account(session, entity_id, money_account.gl_account_id)
         clearing_account = session.get(Account, platform.gl_account_id)

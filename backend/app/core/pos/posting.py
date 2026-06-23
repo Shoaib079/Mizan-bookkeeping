@@ -340,6 +340,23 @@ def post_pos_settlement(
     with entity_context(session, entity_id):
         require_entity_context()
 
+        if card_sales_batch_id is not None:
+            existing = session.scalar(
+                select(PosSettlement).where(
+                    PosSettlement.card_sales_batch_id == card_sales_batch_id
+                )
+            )
+            if existing is not None:
+                journal_entry = session.get(JournalEntry, existing.journal_entry_id)
+                if journal_entry is None:
+                    raise InvalidPosSettlementError(
+                        "linked settlement journal entry not found"
+                    )
+                return PosSettlementPostResult(
+                    journal_entry=journal_entry,
+                    pos_settlement=existing,
+                )
+
         money_account = _validate_bank_money_account(session, entity_id, money_account_id)
         _validate_bank_gl_account(session, entity_id, money_account.gl_account_id)
 

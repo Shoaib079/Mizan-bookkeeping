@@ -43,6 +43,8 @@ from app.features.banking.statement_models import (
 )
 from app.features.entities import service as entity_service
 from app.features.banking.transfer_models import AccountTransfer
+from app.features.delivery.models import DeliverySettlement
+from app.features.pos.models import PosSettlement
 from app.features.customers.models import Customer
 from app.features.suppliers.models import Supplier
 
@@ -253,6 +255,95 @@ def _route_payment_needs_review(
         )
         line.candidate_supplier_ledger_entry_id = None
     line.candidate_account_transfer_id = None
+
+
+def _used_pos_settlement_ids(
+    session: Session, *, exclude_line_id: uuid.UUID | None = None
+) -> set[uuid.UUID]:
+    query = select(BankStatementLine.pos_settlement_id).where(
+        BankStatementLine.pos_settlement_id.isnot(None)
+    )
+    if exclude_line_id is not None:
+        query = query.where(BankStatementLine.id != exclude_line_id)
+    return set(session.scalars(query).all())
+
+
+def _find_matching_pos_settlement(
+    session: Session,
+    *,
+    money_account_id: uuid.UUID,
+    amount_kurus: int,
+    settlement_date: date,
+    exclude_line_id: uuid.UUID | None = None,
+) -> PosSettlement | None:
+    used_ids = _used_pos_settlement_ids(session, exclude_line_id=exclude_line_id)
+    filters = [
+        PosSettlement.money_account_id == money_account_id,
+        PosSettlement.settlement_date == settlement_date,
+        PosSettlement.amount_kurus == amount_kurus,
+    ]
+    if used_ids:
+        filters.append(PosSettlement.id.not_in(used_ids))
+    return session.scalar(
+        select(PosSettlement).where(*filters).order_by(PosSettlement.created_at).limit(1)
+    )
+
+
+def _link_pos_settlement_to_line(
+    line: BankStatementLine, *, settlement: PosSettlement
+) -> None:
+    line.classification = StatementLineClassification.POS_SETTLEMENT
+    line.status = StatementLineStatus.LINKED
+    line.journal_entry_id = settlement.journal_entry_id
+    line.pos_settlement_id = settlement.id
+    line.review_reason = None
+
+
+def _used_delivery_settlement_ids(
+    session: Session, *, exclude_line_id: uuid.UUID | None = None
+) -> set[uuid.UUID]:
+    query = select(BankStatementLine.delivery_settlement_id).where(
+        BankStatementLine.delivery_settlement_id.isnot(None)
+    )
+    if exclude_line_id is not None:
+        query = query.where(BankStatementLine.id != exclude_line_id)
+    return set(session.scalars(query).all())
+
+
+def _find_matching_delivery_settlement(
+    session: Session,
+    *,
+    delivery_platform_id: uuid.UUID,
+    money_account_id: uuid.UUID,
+    amount_kurus: int,
+    settlement_date: date,
+    exclude_line_id: uuid.UUID | None = None,
+) -> DeliverySettlement | None:
+    used_ids = _used_delivery_settlement_ids(session, exclude_line_id=exclude_line_id)
+    filters = [
+        DeliverySettlement.delivery_platform_id == delivery_platform_id,
+        DeliverySettlement.money_account_id == money_account_id,
+        DeliverySettlement.settlement_date == settlement_date,
+        DeliverySettlement.amount_kurus == amount_kurus,
+    ]
+    if used_ids:
+        filters.append(DeliverySettlement.id.not_in(used_ids))
+    return session.scalar(
+        select(DeliverySettlement)
+        .where(*filters)
+        .order_by(DeliverySettlement.created_at)
+        .limit(1)
+    )
+
+
+def _link_delivery_settlement_to_line(
+    line: BankStatementLine, *, settlement: DeliverySettlement
+) -> None:
+    line.classification = StatementLineClassification.DELIVERY_SETTLEMENT
+    line.status = StatementLineStatus.LINKED
+    line.journal_entry_id = settlement.journal_entry_id
+    line.delivery_settlement_id = settlement.id
+    line.review_reason = None
 
 
 def _find_matching_transfer(
@@ -786,6 +877,25 @@ def classify_statement_line(
                 raise InvalidClassificationError(
                     "actor_id is required for pos_settlement"
                 )
+            existing_settlement = _find_matching_pos_settlement(
+                session,
+                money_account_id=statement.money_account_id,
+                amount_kurus=line.amount_kurus,
+                settlement_date=line.transaction_date,
+                exclude_line_id=line.id,
+            )
+            if existing_settlement is not None:
+                _link_pos_settlement_to_line(line, settlement=existing_settlement)
+                session.commit()
+                session.refresh(line)
+                return ClassifyStatementLineResult(
+                    line=_to_line_read(line),
+                    linked_existing_payment=False,
+                    linked_existing_transfer=False,
+                    linked_existing_settlement=True,
+                    routed_to_needs_review=False,
+                    journal_entry_id=existing_settlement.journal_entry_id,
+                )
 
         elif classification == StatementLineClassification.DELIVERY_SETTLEMENT:
             if line.amount_kurus <= 0:
@@ -810,6 +920,26 @@ def classify_statement_line(
                 raise InvalidClassificationError(str(exc)) from exc
             except InactiveDeliveryPlatformError as exc:
                 raise InvalidClassificationError(str(exc)) from exc
+            existing_settlement = _find_matching_delivery_settlement(
+                session,
+                delivery_platform_id=delivery_platform_id,
+                money_account_id=statement.money_account_id,
+                amount_kurus=line.amount_kurus,
+                settlement_date=line.transaction_date,
+                exclude_line_id=line.id,
+            )
+            if existing_settlement is not None:
+                _link_delivery_settlement_to_line(line, settlement=existing_settlement)
+                session.commit()
+                session.refresh(line)
+                return ClassifyStatementLineResult(
+                    line=_to_line_read(line),
+                    linked_existing_payment=False,
+                    linked_existing_transfer=False,
+                    linked_existing_settlement=True,
+                    routed_to_needs_review=False,
+                    journal_entry_id=existing_settlement.journal_entry_id,
+                )
 
         elif classification == StatementLineClassification.BANK_FEE:
             if line.amount_kurus >= 0:
@@ -988,6 +1118,7 @@ def classify_statement_line(
             line=_to_line_read(line),
             linked_existing_payment=False,
             linked_existing_transfer=False,
+            linked_existing_settlement=False,
             routed_to_needs_review=False,
             journal_entry_id=journal_id,
         )
