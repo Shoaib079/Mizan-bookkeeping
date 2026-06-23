@@ -12,10 +12,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 8.5 — Pre-frontend API hardening |
-| **Active slice** | Phase 8.5 complete — ready for Phase 9 |
-| **Last completed slice** | Phase 8.5 Slice 5 — PDF export (financial statements) |
-| **Last commit/tag** | `v0.47.12` |
+| **Active phase** | Phase 9 — Frontend |
+| **Active slice** | Phase 9 Slice 1 — Shell + login + first entry (next) |
+| **Last completed slice** | Phase 8.6 — Pre-frontend full backend audit (owner signed off) |
+| **Last commit/tag** | `v0.47.19-phase8.6-subledger-immutability-guards` |
 | **Next up** | Phase 9 Slice 1 — Auth + entity context (frontend) |
 
 **The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
@@ -242,7 +242,7 @@ strengthen the existing write/read APIs.
 
 ## Phase 8.6 — Pre-frontend full backend audit (do before Phase 9)
 
-**Status: complete (2026-06-23)** — items 0–6 implemented; **501 pytest green** from clean venv; **owner sign-off pending** on money-critical fixes (items 1–4).
+**Status: complete ✓ (owner signed off 2026-06-23)** — items 0–6 implemented; **501 pytest green** from clean venv; money-critical fixes (items 1–4) signed off.
 
 Retro-audit all of Phases 0–8 while the backend is stable and no frontend depends on it yet — fixes are
 cheapest now. Two tracks; every gap found becomes a permanent test (meta-rule), so the backend is
@@ -267,7 +267,7 @@ Builder finds nothing wrong with its own work by definition; that's why a differ
   imports. Money-critical fixes require owner sign-off.
 
 **Phase 8.6 complete when:** all money-critical phases reviewed, every found gap fixed + covered by a
-permanent test, full suite green from a clean venv, owner sign-off. **Done** — tags `v0.47.13` … `v0.47.19`; awaiting owner sign-off on money-critical items.
+permanent test, full suite green from a clean venv, owner sign-off. **Done ✓** — tags `v0.47.13` … `v0.47.19`; owner signed off on money-critical items 1–4 (2026-06-23).
 
 | Item | Tag | Summary |
 |------|-----|---------|
@@ -338,6 +338,8 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 - **Recipe costing / food-cost %** — ingredient → recipe → menu item; the COGS world deliberately out of v1.
 - **Receipt AI learning store** — remember owner corrections to pre-fill future reads.
 - **Restore UI + configurable backup schedules**; **scheduled/emailed reports**; **custom report builder**.
+- **POS card-tip / commission separation (Z-report system)** — when a card terminal collects tips, the bank deposit exceeds the system card sale; if the bank hides commission, tip and commission are tangled in one difference and become unexplainable. Capturing the card-terminal **Z-report** total as an optional third figure separates them cleanly: `tip = Z − system card sale`; `commission = Z − bank deposit`; `bank = sale + tip − commission`. Make Z an **optional / progressive** input (e.g. a per-entity "tracks card tips" toggle) so tip-free businesses are unaffected. Reconciliation rule: Z absent → today's commission-only behavior; `Z = sale` → no tip; `Z > sale` → book tip + derive commission; can't reconcile → `needs_review`. Deferred (owner, 2026-06-23): decide later whether to build; money-critical, needs owner sign-off. Until then the bank-deposit-exceeds-card-sale case stays unhandled (today the linked settlement is rejected — `test_inferred_commission_rejects_net_exceeding_batch_gross`).
+- **Tip treatment: expense, not pass-through liability (reverses Phase 6)** — owner decision (2026-06-23): tips are recorded on the **expense list**, so a tip is an **expense**, not a pass-through liability. This **supersedes the Phase 6 "Tips (pass-through, not revenue/expense)" decision** (`v0.35.0`, ROADMAP line 183: payout `Dr 2260 / Cr cash`, "not expense"). Rework when promoted: tips book to a tip **expense** account instead of `2260` Tips Payable; revisit the `tip_accruals` / `tip_payouts` subsystem and the Phase 8.6 Item 4 POS tip carve-out (which currently accrues to `2260`). The `Restaurant_Bookkeeping_App_Decisions.md` WHAT-doc still carries the old liability treatment — reconcile it when this is promoted. Not implemented yet — owner: "deal with the rest later."
 
 ---
 

@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | 8.6 — Pre-frontend full backend audit (complete; owner sign-off pending) |
+| **Phase** | 8.6 — Pre-frontend full backend audit (complete ✓ owner signed off) |
 | **Last completed slice** | Subledger immutability guards (Phase 8.6 Item 6) |
 | **Next slice** | Phase 9 Slice 1 — Auth + entity context (frontend) |
 | **Branch** | `main` |
@@ -12,7 +12,7 @@
 
 ## Resume point
 
-**Phase 8.6 complete** (implementation). Money-critical fixes in items 1–4 need **owner sign-off** before production. Full suite **501 passed**, 2 skipped, from clean venv (`backend/scripts/verify_fresh_install.sh`). **Next: Phase 9 — Frontend (auth + entity context first).**
+**Phase 8.6 complete ✓** — owner signed off on money-critical items 1–4 (2026-06-23). Full suite **501 passed**, 2 skipped, from clean venv (`backend/scripts/verify_fresh_install.sh`). **Next: Phase 9 Slice 1 — Frontend (auth + entity context + first expense flow).**
 
 ## Pre-sign-off verification (2026-06-23)
 
