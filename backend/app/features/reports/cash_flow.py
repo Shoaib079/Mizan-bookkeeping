@@ -37,7 +37,6 @@ _OPERATING_SOURCES = frozenset(
         JournalEntrySource.PARTNER_REIMBURSEMENT_PAID,
         JournalEntrySource.TIP_PAYOUT,
         JournalEntrySource.CASH_MOVEMENT,
-        JournalEntrySource.FX_PURCHASE,
         JournalEntrySource.FX_CONVERSION,
         JournalEntrySource.FX_EXPENSE_SPEND,
         JournalEntrySource.CASH_DRAWER_CLOSE,
@@ -47,9 +46,13 @@ _OPERATING_SOURCES = frozenset(
     }
 )
 
+_INVESTING_SOURCES = frozenset({JournalEntrySource.FX_PURCHASE})
+
 _FINANCING_SOURCES = frozenset({JournalEntrySource.CREDIT_CARD_PAYMENT})
 
 _EXCLUDED_SOURCES = frozenset({JournalEntrySource.TRANSFER})
+
+_OPENING_BALANCE_SOURCES = frozenset({JournalEntrySource.OPENING_BALANCE})
 
 _NON_CASH_SOURCES = frozenset(
     {
@@ -102,9 +105,47 @@ def _try_liquid_accounts(session: Session) -> list[Account]:
     return accounts
 
 
+def verify_cash_flow_source_registry_complete() -> None:
+    """Fail fast if a JournalEntrySource is not classified for cash-flow reporting."""
+    from app.core.ledger.models import JournalEntrySource
+
+    all_sources = set(JournalEntrySource)
+    classified = (
+        set(_OPERATING_SOURCES)
+        | set(_INVESTING_SOURCES)
+        | set(_FINANCING_SOURCES)
+        | set(_EXCLUDED_SOURCES)
+        | set(_NON_CASH_SOURCES)
+        | set(_OPENING_BALANCE_SOURCES)
+    )
+    if classified != all_sources:
+        missing = sorted(s.value for s in all_sources - classified)
+        extra = sorted(s.value for s in classified - all_sources)
+        raise AssertionError(
+            f"cash flow source registry incomplete: missing={missing!r} extra={extra!r}"
+        )
+    overlap_pairs = [
+        ("operating", _OPERATING_SOURCES),
+        ("investing", _INVESTING_SOURCES),
+        ("financing", _FINANCING_SOURCES),
+        ("excluded", _EXCLUDED_SOURCES),
+        ("non_cash", _NON_CASH_SOURCES),
+        ("opening_balance", _OPENING_BALANCE_SOURCES),
+    ]
+    for i, (name_a, set_a) in enumerate(overlap_pairs):
+        for name_b, set_b in overlap_pairs[i + 1 :]:
+            if set_a & set_b:
+                raise AssertionError(
+                    f"cash flow source in both {name_a} and {name_b}: "
+                    f"{sorted(s.value for s in set_a & set_b)!r}"
+                )
+
+
 def _source_category(source: JournalEntrySource) -> str:
     if source in _FINANCING_SOURCES:
         return "financing"
+    if source in _INVESTING_SOURCES:
+        return "investing"
     if source in _OPERATING_SOURCES or source in _NON_CASH_SOURCES:
         return "operating"
     return "operating"

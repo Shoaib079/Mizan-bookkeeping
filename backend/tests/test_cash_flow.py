@@ -201,6 +201,56 @@ def test_pos_settlement_and_supplier_payment_operating_flow(
     assert by_source["payment"].net_cash_kurus == -300_000
 
 
+def test_fx_purchase_classified_as_investing(db_session, restaurant_a) -> None:
+    """FX cash→wallet purchase is an investing outflow, not operating."""
+    from app.core.fx import posting as fx_posting
+    from app.features.banking import service as banking_service
+    from app.features.banking.models import MoneyAccountKind
+    from app.features.banking.schema import MoneyAccountCreate
+
+    seed_default_chart(db_session, restaurant_a.id)
+    entity_id = restaurant_a.id
+    drawer = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(account_kind=MoneyAccountKind.CASH, name="Drawer"),
+    )
+    wallet = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.FOREIGN_CURRENCY,
+            currency="USD",
+            name="USD",
+        ),
+    )
+
+    fx_posting.post_fx_purchase(
+        db_session,
+        entity_id,
+        fx_money_account_id=wallet.id,
+        try_cash_money_account_id=drawer.id,
+        native_quantity=1_000,
+        try_cost_kurus=35_000,
+        purchase_date=date(2026, 3, 20),
+        description="USD buy",
+        actor_id=ACTOR_ID,
+    )
+
+    report = cash_flow.get_cash_flow(
+        db_session, entity_id, PERIOD_START, PERIOD_END
+    )
+
+    assert report.operating.net_kurus == 0
+    assert report.investing.outflows_kurus == 35_000
+    assert report.investing.net_kurus == -35_000
+    assert report.net_change_kurus == -35_000
+    by_source = {row.source: row for row in report.by_source}
+    assert by_source["fx_purchase"].category == "investing"
+    assert by_source["fx_purchase"].net_cash_kurus == -35_000
+    assert report.reconciled_to_categories is True
+
+
 def test_account_transfer_does_not_change_entity_cash(
     db_session, transfer_cf_setup
 ) -> None:

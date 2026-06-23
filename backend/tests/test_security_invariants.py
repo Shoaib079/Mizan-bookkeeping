@@ -228,6 +228,13 @@ def test_app_main_imports_after_editable_install() -> None:
     assert app.main.app is not None
 
 
+def test_every_journal_entry_source_has_cash_flow_classification() -> None:
+    """Every JournalEntrySource must be classified for cash-flow reporting."""
+    from app.features.reports.cash_flow import verify_cash_flow_source_registry_complete
+
+    verify_cash_flow_source_registry_complete()
+
+
 def test_subledger_control_account_tie_registry_complete() -> None:
     """Every *_ledger_entries table and tip_accruals must map to a control GL account."""
     from app.core.subledger.control_account_tie import (
