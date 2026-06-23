@@ -32,6 +32,13 @@ from app.features.pos.schema import (
     PosDailySummaryRead,
     RejectPosDailySummaryRequest,
 )
+from app.features.pos.settings import (
+    CardSaleBasis,
+    InvalidCardSaleBasisError,
+    get_card_sale_basis,
+    is_card_tips_z_report_enabled,
+    parse_card_sale_basis,
+)
 
 
 class DuplicatePosDailySummaryError(Exception):
@@ -67,6 +74,7 @@ def _to_read(summary: PosDailySummary) -> PosDailySummaryRead:
         cash_kurus=summary.cash_kurus,
         card_kurus=summary.card_kurus,
         total_kurus=summary.total_kurus,
+        z_report_kurus=summary.z_report_kurus,
         confirmed_cash_kurus=summary.confirmed_cash_kurus,
         confirmed_card_kurus=summary.confirmed_card_kurus,
         extraction_payload=summary.extraction_payload,
@@ -275,6 +283,94 @@ def get_pos_daily_summary(
     return _to_read(summary)
 
 
+class _NeedsReview:
+    """Sentinel signalling the day must go to Needs Review, with a reason."""
+
+    __slots__ = ("reason",)
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+
+
+def _resolve_card_tip(
+    session: Session,
+    entity_id: uuid.UUID,
+    summary: PosDailySummary,
+    payload: ConfirmPosDailySummaryRequest,
+    card_kurus: int,
+) -> tuple[int | None, CardSaleBasis | None | _NeedsReview]:
+    """Resolve the card tip + posting basis from the Z report (per-entity).
+
+    Returns ``(z_report_kurus, basis)`` where ``basis`` is a concrete
+    ``CardSaleBasis`` (SYSTEM/Z_REPORT) when a tip must be posted, ``None`` when
+    there is no tip to post, or a ``_NeedsReview`` sentinel when the owner must
+    decide (ambiguous basis, negative tip, or a tip-amount mismatch).
+    """
+    if not is_card_tips_z_report_enabled(session, entity_id):
+        return None, None
+
+    z_value = (
+        payload.z_report_kurus
+        if payload.z_report_kurus is not None
+        else summary.z_report_kurus
+    )
+    if z_value is None:
+        return None, None
+
+    if card_kurus == 0:
+        if z_value > 0:
+            return z_value, _NeedsReview(
+                "Z report entered but there is no card sale for this day"
+            )
+        return z_value, None
+
+    tip = z_value - card_kurus
+    if tip < 0:
+        return z_value, _NeedsReview(
+            f"Z report total ({z_value}) is below the card sale ({card_kurus})"
+        )
+    if tip == 0:
+        return z_value, None
+
+    if (
+        payload.expected_tip_kurus is not None
+        and payload.expected_tip_kurus != tip
+    ):
+        return z_value, _NeedsReview(
+            f"card tip mismatch: Z report implies {tip} but "
+            f"{payload.expected_tip_kurus} was entered — review system vs Z report"
+        )
+
+    try:
+        override = parse_card_sale_basis(payload.card_sale_basis)
+    except InvalidCardSaleBasisError as exc:
+        raise PosDailySummaryConfirmError(str(exc)) from exc
+    basis = override or get_card_sale_basis(session, entity_id)
+
+    if basis == CardSaleBasis.ASK:
+        return z_value, _NeedsReview(
+            f"card tip of {tip} detected — choose 'system' or 'z_report' basis"
+        )
+    return z_value, basis
+
+
+def _flag_needs_review(
+    session: Session,
+    entity_id: uuid.UUID,
+    summary: PosDailySummary,
+    z_report_kurus: int | None,
+    reason: str,
+) -> PosDailySummaryRead:
+    with entity_context(session, entity_id):
+        summary.status = PosDailySummaryStatus.NEEDS_REVIEW
+        summary.review_reason = reason
+        if z_report_kurus is not None:
+            summary.z_report_kurus = z_report_kurus
+        session.commit()
+        session.refresh(summary)
+    return _to_read(summary)
+
+
 def confirm_pos_daily_summary_intake(
     session: Session,
     entity_id: uuid.UUID,
@@ -328,6 +424,15 @@ def confirm_pos_daily_summary_intake(
             summary.summary_date = sales_date
         session.flush()
 
+    # Resolve card-tip handling via the card-terminal Z report (per-entity).
+    z_report_kurus, tip_basis = _resolve_card_tip(
+        session, entity_id, summary, payload, card_kurus
+    )
+    if isinstance(tip_basis, _NeedsReview):
+        return _flag_needs_review(
+            session, entity_id, summary, z_report_kurus, tip_basis.reason
+        )
+
     try:
         result = confirm_pos_daily_summary(
             session,
@@ -338,6 +443,8 @@ def confirm_pos_daily_summary_intake(
             card_kurus=card_kurus,
             actor_id=payload.actor_id,
             description=description,
+            z_report_kurus=z_report_kurus,
+            tip_basis=tip_basis,
         )
     except PosDailySummaryPostError as exc:
         raise PosDailySummaryConfirmError(str(exc)) from exc

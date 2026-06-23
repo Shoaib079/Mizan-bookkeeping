@@ -80,6 +80,7 @@ class PosDailySummaryRead(BaseModel):
     cash_kurus: int
     card_kurus: int
     total_kurus: int
+    z_report_kurus: int | None
     confirmed_cash_kurus: int | None
     confirmed_card_kurus: int | None
     extraction_payload: dict
@@ -105,6 +106,14 @@ class ConfirmPosDailySummaryRequest(BaseModel):
     card_kurus: int | None = Field(default=None, ge=0)
     summary_date: date | None = None
     description: str | None = Field(default=None, max_length=512)
+    # Card-terminal Z-report total (card sale + card tips). When the entity has
+    # card-tip Z reconciliation enabled, the card tip = z_report_kurus - card.
+    z_report_kurus: int | None = Field(default=None, ge=0)
+    # Per-entry override of the entity card_sale_basis (system|z_report|ask).
+    card_sale_basis: str | None = None
+    # Optional cross-check: the tip actually paid to staff. If it does not equal
+    # the derived (z_report_kurus - card) tip, the summary goes to Needs Review.
+    expected_tip_kurus: int | None = Field(default=None, ge=0)
 
 
 class RejectPosDailySummaryRequest(BaseModel):

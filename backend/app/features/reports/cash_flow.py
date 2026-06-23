@@ -27,6 +27,7 @@ __all__ = ["get_cash_flow"]
 _OPERATING_SOURCES = frozenset(
     {
         JournalEntrySource.POS_SETTLEMENT,
+        JournalEntrySource.POS_CARD_TIP,
         JournalEntrySource.DELIVERY_SETTLEMENT,
         JournalEntrySource.CUSTOMER_PAYMENT_RECEIVED,
         JournalEntrySource.PAYMENT,

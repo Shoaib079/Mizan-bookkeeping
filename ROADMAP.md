@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Tips treatment fix (promoted from Phase 11 parking lot) |
-| **Active slice** | Slice A — tips = expense, gross sales (DONE, awaiting owner sign-off) |
-| **Last completed slice** | Slice A — tips liability → cash expense + retire dead code |
-| **Last commit/tag** | `v0.48.0-tips-expense-slice-a` |
-| **Next up** | Slice B (gated) — Z-report ↔ bank total-clearance design + sign-off; then Slice C — expense-photo OCR; then Phase 9 frontend |
+| **Active slice** | Slice B1 — card tips via Z report (DONE, awaiting owner sign-off) |
+| **Last completed slice** | Slice B1 — card tips via card-terminal Z report + per-entity basis + Needs Review |
+| **Last commit/tag** | `v0.49.0-pos-card-tips-z-report-slice-b1` |
+| **Next up** | Slice B2 — commission cadence + month-end total-clearance sweep; then Slice C — expense-photo OCR; then Phase 9 frontend |
 
 **The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -340,7 +340,8 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 - **Restore UI + configurable backup schedules**; **scheduled/emailed reports**; **custom report builder**.
 - **POS card-tip / commission separation (Z-report system)** — when a card terminal collects tips, the bank deposit exceeds the system card sale; if the bank hides commission, tip and commission are tangled in one difference and become unexplainable. Capturing the card-terminal **Z-report** total as an optional third figure separates them cleanly: `tip = Z − system card sale`; `commission = Z − bank deposit`; `bank = sale + tip − commission`. Make Z an **optional / progressive** input (e.g. a per-entity "tracks card tips" toggle) so tip-free businesses are unaffected. Reconciliation rule: Z absent → today's commission-only behavior; `Z = sale` → no tip; `Z > sale` → book tip + derive commission; can't reconcile → `needs_review`. Deferred (owner, 2026-06-23): decide later whether to build; money-critical, needs owner sign-off. Until then the bank-deposit-exceeds-card-sale case stays unhandled (today the linked settlement is rejected — `test_inferred_commission_rejects_net_exceeding_batch_gross`).
 - **Tip treatment: expense, not pass-through liability (reverses Phase 6) — DONE (Slice A, 2026-06-23, `v0.48.0-tips-expense-slice-a`).** Promoted to Decisions §9/§14 + `DECISIONS.md`. Tips now book to `5700 Tips Expense` from cash (`Dr 5700 / Cr cash`) via the expenses pipeline; sales post **gross**. Retired `2260 Tips Payable`, the `tip_accruals`/`tip_payouts` subsystem, the tips feature/router, the `JournalEntrySource.TIP_*` sources, the control-account tie + RLS + cash-flow wiring, and the Phase 8.6 Item 4 POS carve-out (`tips_kurus`). Migration `045_tips_expense_not_liability` (guarded). **Money-critical — awaiting owner sign-off.** Remaining tip work: Slice B (Z-report total-clearance) and Slice C (expense-photo OCR), below.
-- **Tip treatment — Slice B (gated) + Slice C:** **Slice B** = card-tip vs hidden bank commission via the card-terminal **Z report** using a per-entity "total clearance" model (see the Z-report item above); gated on owner confirming the clearance tolerance/period + per-entity settings, then a written GL/Needs-Review design for sign-off before coding. **Slice C** = `adapters/ocr_ai/expense_photo.py` reads a tip from an uploaded expense photo into a `5700` cash-tip expense draft in Needs Review.
+- **Tip treatment — Slice B1 DONE (2026-06-24, `v0.49.0-pos-card-tips-z-report-slice-b1`):** card tips via the card-terminal **Z report** at POS confirm. Per-entity `card_tips_z_report_enabled` + `card_sale_basis` (`system` pass-through / `z_report` expense / `ask` → Needs Review); `tip = Z − system card sale`; `1400` always debits the full Z so deposits + sweep clear it to zero. Needs Review on `ask`+tip, `tip<0`, Z-without-sale, and `expected_tip_kurus` mismatch. New `JournalEntrySource.POS_CARD_TIP`; migration `046`. **Money-critical — awaiting owner sign-off.**
+- **Tip treatment — Slice B2 (next) + Slice C:** **Slice B2** = per-entity `commission_recognition` (per-settlement vs month-end) + the month-end **total-clearance** commission sweep (current `1400` residual → `5300`, idempotent per entity+month; settlement skips per-settlement commission inference when month-end is chosen). **Slice C** = `adapters/ocr_ai/expense_photo.py` reads a tip from an uploaded expense photo into a `5700` cash-tip expense draft in Needs Review.
 
 ---
 

@@ -2,6 +2,31 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-24 — Card tips via the card-terminal Z report (Slice B1; owner decision)
+
+**Choice:** Restaurants that collect tips on the card terminal reconcile them with the terminal's **Z report**. Z report total = system card sale + card tips, so the day's card tip is `tip = Z − system card sale`. Whether and how this is applied is **per-entity** (every restaurant runs differently — some take platform sales as cash on the Z report, some are card-only, etc.).
+
+**Settings (`entity_settings`):**
+- `card_tips_z_report_enabled` (`true`/`false`, default off) — when off, the daily summary posts gross card sales exactly as before; a passed `z_report_kurus` is ignored.
+- `card_sale_basis` (`system` | `z_report` | `ask`, default **`ask`**) — how to treat a tip-bearing day:
+  - `system` — book the POS system card sale as revenue; the tip is a **pass-through** (received via card clearing, paid to staff from the drawer); no P&L impact.
+  - `z_report` — book the **Z total** as revenue; expense the tip to `5700` (paid to staff from the drawer).
+  - `ask` — never auto-post a tip-bearing day; route to Needs Review so the owner decides per entry.
+
+**GL model (anchor: `1400` card clearing must always be debited the full Z deposit so deposits + the commission sweep clear it to zero).** Worked example — system card sale 1000, tip 100, Z 1100, hidden commission 30, bank deposit 1070:
+
+- **system basis:** card sale `Dr 1400 1000 / Cr 4000 1000`; tip pass-through `Dr 1400 100 / Cr cash 100`. `1400` = 1100. Revenue = 1000.
+- **z_report basis:** card sale `Dr 1400 1100 / Cr 4000 1100`; tip expense `Dr 5700 100 / Cr cash 100`. `1400` = 1100. Revenue = 1100, tip expense = 100.
+- both: deposit `Dr bank 1070 / Cr 1400 1070`; commission `Dr 5300 30 / Cr 1400 30` → `1400` = 0.
+
+The `card_sales_batch.gross_amount_kurus` is stored as the full **Z** total (the amount that will be deposited) so clearing reconciliation and settlement/commission matching operate on the deposited figure. The tip leg is its own journal with `source=pos_card_tip` (separate from the `card_sales` sale journal) to keep cash-flow classification and corrections clean.
+
+**Needs Review (nothing with a tip discrepancy auto-posts):** `ask` basis + tip > 0; `tip < 0` (Z below system sale); Z entered with no card sale; and an optional `expected_tip_kurus` cross-check that does not equal `Z − card`. The owner re-confirms with an explicit per-entry `card_sale_basis` override (and/or corrected figures) to post.
+
+**What changed:** `features/pos/settings.py` (settings + `CardSaleBasis`); `ConfirmPosDailySummaryRequest` gains `z_report_kurus`, `card_sale_basis`, `expected_tip_kurus`; `PosDailySummary.z_report_kurus` (+ read schema); `confirm_pos_daily_summary` posts the tip leg per basis; the intake service resolves Z+basis and routes to Needs Review. New `JournalEntrySource.POS_CARD_TIP` (cash-flow operating; correction void-and-reenter). Migration `046_pos_card_tips_z_report` adds the nullable `z_report_kurus` column (additive).
+
+**Not in slice:** commission recognition cadence (`commission_recognition`: per-settlement vs month-end) and the month-end **total-clearance** commission sweep (`1400` residual → `5300`) — Slice B2. Decisions doc §9/§14 updated.
+
 ## 2026-06-23 — Tips are an expense, not a pass-through liability (Slice A; owner decision)
 
 **Choice:** A tip is an **expense paid from cash**, and sales are recorded **gross**. This reverses two prior signed-off decisions: Phase 6 "Tips (pass-through, not revenue/expense)" (`v0.35.0`) and Phase 8.6 Item 4 "carve tips from POS revenue at confirm" (`v0.47.17`).
