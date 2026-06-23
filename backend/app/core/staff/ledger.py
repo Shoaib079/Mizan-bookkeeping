@@ -173,7 +173,9 @@ def remaining_accrual_minor(session: Session, employee_id: uuid.UUID) -> int:
 def outstanding_advance_minor(session: Session, employee_id: uuid.UUID) -> int:
     """Unapplied advance total in pay-currency minor units (positive number)."""
     advance = _sum_by_type(session, employee_id, StaffMovementType.ADVANCE_PAID)
-    return -advance if advance < 0 else 0
+    applied = _sum_by_type(session, employee_id, StaffMovementType.ADVANCE_APPLIED)
+    raw = -advance - applied
+    return raw if raw > 0 else 0
 
 
 def outstanding_advance_try_kurus(session: Session, employee_id: uuid.UUID) -> int:
@@ -181,16 +183,27 @@ def outstanding_advance_try_kurus(session: Session, employee_id: uuid.UUID) -> i
     rows = session.scalars(
         select(StaffLedgerEntry).where(
             StaffLedgerEntry.employee_id == employee_id,
-            StaffLedgerEntry.movement_type == StaffMovementType.ADVANCE_PAID,
+            StaffLedgerEntry.movement_type.in_(
+                (
+                    StaffMovementType.ADVANCE_PAID,
+                    StaffMovementType.ADVANCE_APPLIED,
+                )
+            ),
         )
     ).all()
     total = 0
     for row in rows:
-        if row.try_cost_kurus is not None:
-            total += -row.try_cost_kurus
+        if row.movement_type == StaffMovementType.ADVANCE_PAID:
+            if row.try_cost_kurus is not None:
+                total += row.try_cost_kurus
+            else:
+                total += -row.amount_minor
         else:
-            total += -row.amount_minor
-    return total
+            if row.try_cost_kurus is not None:
+                total -= row.try_cost_kurus
+            else:
+                total -= row.amount_minor
+    return total if total > 0 else 0
 
 
 def list_ledger_entries(

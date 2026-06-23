@@ -497,6 +497,7 @@ def post_salary_payment(
 
         fx_entry: FxLedgerEntry | None = None
         journal_entry: JournalEntry
+        advance_applied_try = 0
 
         if employee.pay_currency == PayCurrency.TRY:
             if payment_account_id is None:
@@ -524,6 +525,7 @@ def post_salary_payment(
                 source=JournalEntrySource.STAFF_PAYMENT,
             )
             stored_try_cost = None
+            payable_cleared_minor = amount_minor + advance_applied_minor
         else:
             if fx_money_account_id is None or try_cost_kurus is None:
                 raise InvalidStaffPostingError(
@@ -571,18 +573,35 @@ def post_salary_payment(
                 journal_entry_id=journal_entry.id,
             )
             stored_try_cost = try_cost_kurus
+            payable_cleared_minor = amount_minor + advance_applied_minor
 
         staff_entry = staff_ledger.persist_staff_ledger_entry(
             session,
             employee_id,
             movement_date=payment_date,
             movement_type=StaffMovementType.SALARY_PAYMENT,
-            amount_minor=-amount_minor,
+            amount_minor=-payable_cleared_minor,
             try_cost_kurus=stored_try_cost,
             description=description,
             actor_id=actor_id,
             journal_entry_id=journal_entry.id,
         )
+
+        if advance_applied_minor > 0:
+            applied_try_cost = (
+                advance_applied_try if employee.pay_currency != PayCurrency.TRY else None
+            )
+            staff_ledger.persist_staff_ledger_entry(
+                session,
+                employee_id,
+                movement_date=payment_date,
+                movement_type=StaffMovementType.ADVANCE_APPLIED,
+                amount_minor=advance_applied_minor,
+                try_cost_kurus=applied_try_cost,
+                description=f"{description} — advance applied",
+                actor_id=actor_id,
+                journal_entry_id=journal_entry.id,
+            )
 
         session.commit()
         session.refresh(journal_entry)

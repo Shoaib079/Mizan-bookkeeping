@@ -202,6 +202,153 @@ def test_salary_payment_no_second_5100_with_advance_offset(db_session, staff_set
         assert expense_lines == []
 
 
+def test_partial_salary_payment_applies_advance_only_once(db_session, staff_setup) -> None:
+    """Phase 8.6 — two partial pays must not re-apply the same advance."""
+    entity_id = staff_setup["entity_id"]
+    employee_id = staff_setup["employee_id"]
+    accounts = staff_setup["accounts"]
+    drawer = staff_setup["drawer"]
+
+    staff_posting.post_salary_accrual(
+        db_session,
+        entity_id,
+        employee_id,
+        accrual_date=date(2026, 6, 1),
+        amount_minor=100_000_00,
+        description="June salary",
+        actor_id=ACTOR_ID,
+    )
+    staff_posting.post_advance_paid(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 5),
+        amount_minor=50_000_00,
+        description="June avans",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    staff_posting.post_salary_payment(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 15),
+        amount_minor=30_000_00,
+        description="Partial pay 1",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    staff_posting.post_salary_payment(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 30),
+        amount_minor=20_000_00,
+        description="Partial pay 2",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert _gl_balance(
+        db_session, entity_id, accounts[SALARIES_PAYABLE_CODE], AccountNormalBalance.CREDIT
+    ) == 0
+    assert _gl_balance(
+        db_session, entity_id, accounts[EMPLOYEE_ADVANCES_CODE], AccountNormalBalance.DEBIT
+    ) == 0
+    assert _subledger_balance(db_session, entity_id, employee_id) == 0
+
+    from app.core.subledger.control_account_tie import assert_entity_control_accounts_tied
+
+    assert_entity_control_accounts_tied(db_session, entity_id)
+
+
+def test_fx_partial_salary_payment_applies_advance_only_once(db_session, staff_setup) -> None:
+    """FX path — advance applied once across partial salary payments."""
+    entity_id = staff_setup["entity_id"]
+    accounts = staff_setup["accounts"]
+    drawer = staff_setup["drawer"]
+
+    usd_wallet = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.FOREIGN_CURRENCY,
+            currency="USD",
+            name="USD Wallet",
+        ),
+    )
+    fx_posting.post_fx_purchase(
+        db_session,
+        entity_id,
+        fx_money_account_id=usd_wallet.id,
+        try_cash_money_account_id=drawer.id,
+        native_quantity=200_000,
+        try_cost_kurus=7_000_000,
+        purchase_date=date(2026, 5, 1),
+        description="Buy USD",
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, entity_id):
+        employee = Employee(name="John FX", pay_currency=PayCurrency.USD)
+        db_session.add(employee)
+        db_session.commit()
+        db_session.refresh(employee)
+        employee_id = employee.id
+
+    staff_posting.post_salary_accrual(
+        db_session,
+        entity_id,
+        employee_id,
+        accrual_date=date(2026, 6, 1),
+        amount_minor=100_000,
+        description="USD salary",
+        actor_id=ACTOR_ID,
+    )
+    staff_posting.post_advance_paid(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 5),
+        amount_minor=50_000,
+        description="USD avans",
+        actor_id=ACTOR_ID,
+        fx_money_account_id=usd_wallet.id,
+        try_cost_kurus=1_750_000,
+    )
+    staff_posting.post_salary_payment(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 15),
+        amount_minor=30_000,
+        description="Partial FX pay 1",
+        actor_id=ACTOR_ID,
+        fx_money_account_id=usd_wallet.id,
+        try_cost_kurus=1_050_000,
+    )
+    staff_posting.post_salary_payment(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 30),
+        amount_minor=20_000,
+        description="Partial FX pay 2",
+        actor_id=ACTOR_ID,
+        fx_money_account_id=usd_wallet.id,
+        try_cost_kurus=700_000,
+    )
+
+    assert _gl_balance(
+        db_session, entity_id, accounts[EMPLOYEE_ADVANCES_CODE], AccountNormalBalance.DEBIT
+    ) == 0
+    assert _subledger_balance(db_session, entity_id, employee_id) == 0
+
+    from app.core.subledger.control_account_tie import assert_entity_control_accounts_tied
+
+    assert_entity_control_accounts_tied(db_session, entity_id)
+
+
 def test_salary_payment_without_advance(db_session, staff_setup) -> None:
     entity_id = staff_setup["entity_id"]
     employee_id = staff_setup["employee_id"]

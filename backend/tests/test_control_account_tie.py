@@ -48,10 +48,6 @@ def staff_employee(db_session, tie_setup):
     return employee.id
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Phase 8.6 Item 1 — staff advance double-application (remove xfail when fixed)",
-)
 def test_staff_control_accounts_tie_after_partial_payments_with_advance(
     db_session, tie_setup, staff_employee
 ) -> None:
