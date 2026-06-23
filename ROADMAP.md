@@ -2,7 +2,7 @@
 
 **Build progress tracker.** Mirrors Decisions §27. Update after every slice — mandatory before marking work complete (see `CURSOR_RULES.md` §2).
 
-**Rule:** Nothing advances to the next slice until the current slice passes the completion gate (characterized → audited → tested → fixed → API verified → ROADMAP updated → commit/tag) and the owner signs off.
+**Rule:** Nothing advances to the next slice until the current slice passes the completion gate (characterized → audited → tested → fixed → API verified → self-audited → ROADMAP updated → commit/tag) and the owner signs off.
 
 ---
 
@@ -16,7 +16,7 @@
 | **Active slice** | Phase 8.5 Slice 5 — PDF export (financial statements) |
 | **Last completed slice** | Phase 8.5 Slice 4 — Flexible dates + soft period locks |
 | **Last commit/tag** | `v0.47.9-phase8.5-period-locks` |
-| **Next up** | Slice 4 (dates/locks) → Slice 5 (statement PDF) |
+| **Next up** | Slice 5 — statement PDF export |
 
 **The whole journey:** Phases 0–8 = backend (DONE, v1 complete). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 

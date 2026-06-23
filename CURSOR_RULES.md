@@ -52,7 +52,7 @@ If a task would require breaking any of these, STOP and ask.
 
 Every slice MUST pass ALL gates in this order. **Only commit and tag if every gate passes.**
 
-**Characterize → Audit → Test → Fix → API → Verify → ROADMAP → Commit/tag**
+**Characterize → Audit → Test → Fix → API → Verify → Self-audit → ROADMAP → Commit/tag**
 
 | Step | What to do |
 |------|------------|
@@ -62,10 +62,11 @@ Every slice MUST pass ALL gates in this order. **Only commit and tag if every ga
 | **Fix** | Fix any failures at the root. Re-run tests until green. Never weaken or skip tests. |
 | **API** | Verify API endpoints / integration points for this slice work as intended. |
 | **Verify** | Confirm end-to-end behavior matches the slice purpose (owner-visible where applicable). |
+| **Self-audit** | Run the adversarial self-audit (Section 2a). Assume the slice is broken; find the gap; back every finding with file/line or test name. Fix what's found, then re-run the gate from Test. |
 | **ROADMAP** | Update `ROADMAP.md`: slice status, what was done, what's next. |
 | **Commit/tag** | Commit with a clear message; tag if this slice is a milestone. Push to remote. |
 
-Do NOT commit or tag a slice that has not passed Characterize through ROADMAP.
+Do NOT commit or tag a slice that has not passed Characterize through Self-audit.
 
 ### Definition of Done (do NOT mark a slice complete until ALL are true)
 
@@ -75,6 +76,48 @@ Do NOT commit or tag a slice that has not passed Characterize through ROADMAP.
 4. **Commit/tag is recommended** — only after 1–3 pass; then commit (and tag if appropriate) and push.
 
 A slice is NOT done if any of the above is missing — even if the feature "works" in the UI.
+
+---
+
+## 2a. Self-audit gate (run after Verify, before Commit/tag)
+
+The self-audit is a **first filter, not a guarantee.** An author checking its own work shares the
+blind spots that produced any gap, so this step is designed to fight that bias. It does NOT replace
+the permanent guard-tests or the owner's independent review — it catches the easy misses before they
+get there.
+
+**Three rules that make it work (follow all three):**
+- **Adversarial framing.** Do not ask "is this correct?" Assume the slice contains a bug and a missing
+  test, and go find them. The goal is to break it, not to confirm it.
+- **Evidence required.** Every "pass" must cite a file/line or a test name. "Looks good" / "seems fine"
+  is banned — an unbacked claim counts as a fail.
+- **Enumerate, don't judge.** Each check is a list to walk item by item, not an overall opinion.
+- **Best run with fresh eyes.** When practical, run the self-audit in a new session pointed at the
+  committed code (a fresh context has no attachment to the work it is reviewing).
+
+**The five checks (produce a short written result for each):**
+
+1. **Test-gap analysis.** List every new/changed behavior in the slice. For each, name the test that
+   exercises it — *including the failure path* and the money invariants where relevant (debits =
+   credits, subledger ties to its control account, entity isolation, no double-record, integer kuruş).
+   Flag anything with no covering test.
+2. **Previous-fix / regression audit.** Run the FULL `pytest` suite and ALL guard-tests
+   (`test_security_invariants.py`), not just this slice's tests. Confirm no earlier fix or invariant
+   reverted.
+3. **Connected-surface audit ("all connected like a web").** Whatever changed, enumerate everything
+   downstream that touches it and confirm each was updated. Examples: a new `JournalEntrySource` →
+   correction registry, RLS registry, reports, dashboard, cash-flow categorization; a new table →
+   RLS policy + immutability trigger + backup integrity check + guard-test.
+4. **Doc-drift check.** `ROADMAP.md` / `PROGRESS.md` / `CHANGELOG.md` / `DECISIONS.md` match what was
+   actually built; the work is committed and tagged.
+5. **Hostile-reviewer pass.** "If I wanted to break this slice, where would I attack?" List 3 plausible
+   failure modes and check each against the code/tests.
+
+**Highest-leverage meta-rule (mandatory):** whenever the self-audit (or any review) finds a gap, do
+NOT just patch it — **add a permanent automated test (or extend a guard-test) so that exact gap can
+never silently return.** A one-time fix protects today; a test protects forever. This is how invariants
+accumulate instead of decay. If a gap genuinely cannot be expressed as a test, say so explicitly and
+record why in `BUGLOG.md`.
 
 ---
 
