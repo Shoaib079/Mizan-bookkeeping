@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, list_params_dependency
 
+from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.payables.ledger import (
     DisallowedMovementTypeError,
@@ -23,6 +24,8 @@ from app.features.payables.schema import (
     SupplierLedgerRead,
     SupplierMovementCreate,
     SupplierPaymentCreate,
+    SupplierPaymentCorrect,
+    SupplierPaymentCorrectOut,
     SupplierPaymentRead,
     SupplierPayableBalanceRead,
     SupplierLedgerEntryRead,
@@ -156,4 +159,54 @@ def post_supplier_payment(
             result.supplier_ledger_entry
         ),
         payable_balance_kurus=result.payable_balance_kurus,
+    )
+
+
+@router.post(
+    "/suppliers/{supplier_id}/payments/{journal_entry_id}/correct",
+    response_model=SupplierPaymentCorrectOut,
+)
+def correct_supplier_payment(
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: SupplierPaymentCorrect,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> SupplierPaymentCorrectOut:
+    try:
+        result, balance, new_row = service.correct_supplier_payment_entry(
+            session,
+            entity_id,
+            supplier_id,
+            journal_entry_id,
+            payment_date=payload.payment_date,
+            amount_kurus=payload.amount_kurus,
+            description=payload.description,
+            actor_id=payload.actor_id,
+            payment_account_id=payload.payment_account_id,
+            reference=payload.reference,
+            reason=payload.reason,
+            void_date=payload.void_date,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    assert new_row is not None
+    return SupplierPaymentCorrectOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+        corrected_journal_entry_id=result.corrected.id,
+        supplier_ledger_entry=SupplierLedgerEntryRead.model_validate(new_row),
+        payable_balance_kurus=balance,
     )

@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.ledger.models import JournalEntrySource, JournalEntryStatus
+from app.core.ledger.correction import SubledgerBackedCorrectionError
 from app.core.ledger.posting import PostingError
 from app.core.listing import ListParams, list_params_dependency, paginated_list
 from app.db.session import get_session
@@ -97,6 +98,8 @@ def correct_entry(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SubledgerBackedCorrectionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return CorrectJournalEntryOut(

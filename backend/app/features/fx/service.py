@@ -5,7 +5,10 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy.orm import Session
+from app.core.fx.models import FxLedgerEntry
+from app.core.ledger.correction import CorrectionNotFoundError, correct_fx_purchase
+from app.db.session import entity_context
+from sqlalchemy import select
 
 from app.core.listing import ListParams
 
@@ -21,6 +24,8 @@ from app.features.fx.schema import (
     FxExpenseSpendResponse,
     FxLedgerEntryRead,
     FxPurchaseCreate,
+    FxPurchaseCorrect,
+    FxPurchaseCorrectOut,
     FxPurchaseResponse,
 )
 
@@ -48,6 +53,42 @@ def create_fx_purchase(
     return FxPurchaseResponse(
         journal_entry_id=result.journal_entry.id,
         fx_ledger_entry=_to_ledger_read(result.fx_ledger_entry),
+    )
+
+
+def correct_fx_purchase_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: FxPurchaseCorrect,
+) -> FxPurchaseCorrectOut:
+    result = correct_fx_purchase(
+        session,
+        entity_id,
+        journal_entry_id,
+        purchase_date=payload.purchase_date,
+        native_quantity=payload.native_quantity,
+        try_cost_kurus=payload.try_cost_kurus,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        fx_money_account_id=payload.fx_money_account_id,
+        try_cash_money_account_id=payload.try_cash_money_account_id,
+        reason=payload.reason,
+        void_date=payload.void_date,
+    )
+    with entity_context(session, entity_id):
+        new_row = session.scalar(
+            select(FxLedgerEntry).where(
+                FxLedgerEntry.journal_entry_id == result.corrected.id
+            )
+        )
+    if new_row is None:
+        raise CorrectionNotFoundError("corrected FX ledger entry not found")
+    return FxPurchaseCorrectOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+        corrected_journal_entry_id=result.corrected.id,
+        fx_ledger_entry=_to_ledger_read(new_row),
     )
 
 

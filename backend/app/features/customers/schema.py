@@ -81,3 +81,16 @@ class CustomerPaymentResponse(BaseModel):
     journal_entry_id: uuid.UUID
     customer_ledger_entry: CustomerLedgerEntryRead
     balance_kurus: int
+
+
+class CustomerPaymentCorrect(CustomerPaymentCreate):
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+
+
+class CustomerPaymentCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
+    customer_ledger_entry: CustomerLedgerEntryRead
+    balance_kurus: int

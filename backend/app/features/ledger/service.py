@@ -9,7 +9,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource, JournalEntryStatus
+from app.core.ledger.correction import (
+    SubledgerBackedCorrectionError,
+    is_subledger_backed_source,
+    resolve_correction_route,
+)
 from app.core.ledger.posting import PostingLine, correct_journal_entry, void_journal_entry
+from app.db.session import entity_context
 from app.core.listing import (
     ListParams,
     amount_range_filters,
@@ -132,6 +138,14 @@ def correct_entry(
 ) -> tuple[JournalEntry, JournalEntry, JournalEntry]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        original = session.get(JournalEntry, entry_id)
+        if original is None:
+            raise LookupError("Journal entry not found")
+        if is_subledger_backed_source(original.source):
+            raise SubledgerBackedCorrectionError(resolve_correction_route(original.source))
+
     lines = [
         PostingLine(
             account_id=line.account_id,

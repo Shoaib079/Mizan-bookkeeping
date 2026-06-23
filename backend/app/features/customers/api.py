@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
+from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.receivables.ledger import OverpaymentError, ZeroMovementError
 from app.db.session import get_session
@@ -17,8 +18,11 @@ from app.features.customers.schema import (
     CreditSaleCreate,
     CreditSaleResponse,
     CustomerCreate,
+    CustomerLedgerEntryRead,
     CustomerLedgerRead,
     CustomerPaymentCreate,
+    CustomerPaymentCorrect,
+    CustomerPaymentCorrectOut,
     CustomerPaymentResponse,
     CustomerRead,
     CustomerUpdate,
@@ -158,3 +162,48 @@ def post_customer_payment(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{customer_id}/payments/{journal_entry_id}/correct",
+    response_model=CustomerPaymentCorrectOut,
+)
+def correct_customer_payment(
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: CustomerPaymentCorrect,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> CustomerPaymentCorrectOut:
+    try:
+        result, balance, new_row = service.correct_customer_payment_entry(
+            session,
+            entity_id,
+            customer_id,
+            journal_entry_id,
+            payload,
+            reason=payload.reason,
+            void_date=payload.void_date,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    assert new_row is not None
+    return CustomerPaymentCorrectOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+        corrected_journal_entry_id=result.corrected.id,
+        customer_ledger_entry=CustomerLedgerEntryRead.model_validate(new_row),
+        balance_kurus=balance,
+    )

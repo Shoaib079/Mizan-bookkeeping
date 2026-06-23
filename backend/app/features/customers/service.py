@@ -8,7 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
+from app.core.ledger.correction import CorrectionNotFoundError, correct_customer_payment
 from app.core.receivables import ledger as receivables_ledger
+from app.core.receivables.models import CustomerLedgerEntry
 from app.core.receivables import posting as receivables_posting
 from app.db.session import entity_context, require_entity_context
 from app.features.customers.models import Customer
@@ -19,6 +21,8 @@ from app.features.customers.schema import (
     CustomerLedgerEntryRead,
     CustomerLedgerRead,
     CustomerPaymentCreate,
+    CustomerPaymentCorrect,
+    CustomerPaymentCorrectOut,
     CustomerPaymentResponse,
     CustomerUpdate,
 )
@@ -168,3 +172,44 @@ def record_customer_payment(
         ),
         balance_kurus=result.balance_kurus,
     )
+
+
+def correct_customer_payment_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: CustomerPaymentCreate,
+    *,
+    reason: str | None = None,
+    void_date=None,
+):
+    with entity_context(session, entity_id):
+        row = session.scalar(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if row is None or row.customer_id != customer_id:
+            raise CorrectionNotFoundError("customer payment not found")
+
+    result = correct_customer_payment(
+        session,
+        entity_id,
+        journal_entry_id,
+        payment_date=payload.payment_date,
+        amount_kurus=payload.amount_kurus,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+        reason=reason,
+        void_date=void_date,
+    )
+    balance = receivables_ledger.current_balance_kurus(session, entity_id, customer_id)
+    with entity_context(session, entity_id):
+        new_row = session.scalar(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.journal_entry_id == result.corrected.id
+            )
+        )
+    return result, balance, new_row

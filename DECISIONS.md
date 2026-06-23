@@ -2,6 +2,12 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-23 — Subledger-safe correct/amend (Phase 8.5 Slice 2 follow-up)
+
+**Choice:** Generic ledger correct is manual-only; subledger-backed journal sources must use type-specific correction flows in `app/core/ledger/correction.py`. Each flow atomically: GL correct via `_correct_journal_entry_in_transaction`, append reversing subledger row on reversal JE (opposite sign, immutable), append new subledger row on corrected JE, update mutable detail tables where applicable (`expense_entries`, `invoice_drafts`, `tip_accruals`/`tip_payouts`). Dedicated HTTP endpoints for supplier payment, customer payment, FX purchase; core helpers also cover credit sale, supplier invoice, expense entry, staff, partner, tips, FX conversion/spend.
+
+**Not in slice:** Per-feature HTTP endpoints for every type (staff/partners/tips/invoices/expenses use core correction helpers; add routes when frontend needs them).
+
 ## 2026-06-23 — Pagination + search + filters (Phase 8.5 Slice 3)
 
 **Choice:** Shared `app/core/listing/` module — limit/offset pagination (default 50, max 200), `PaginatedListOut` response shape (`items`, `total`, `limit`, `offset`). Free-text `q` uses Turkish-aware normalization (same rules as expense-item matching: I→ı, İ→i, casefold). Consistent filter param names: `q`, `from`, `to`, `min_amount`, `max_amount`, `status`, plus resource-specific `*_id` filters. All entity-scoped list endpoints updated; new `GET .../ledger/entries` for journal entry search. Payables/receivables summaries paginate row lists but compute aggregate totals over full filtered set.

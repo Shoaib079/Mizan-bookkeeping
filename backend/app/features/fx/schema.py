@@ -41,6 +41,18 @@ class FxPurchaseResponse(BaseModel):
     fx_ledger_entry: FxLedgerEntryRead
 
 
+class FxPurchaseCorrect(FxPurchaseCreate):
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+
+
+class FxPurchaseCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
+    fx_ledger_entry: FxLedgerEntryRead
+
+
 class FxConversionCreate(BaseModel):
     fx_money_account_id: uuid.UUID
     try_money_account_id: uuid.UUID

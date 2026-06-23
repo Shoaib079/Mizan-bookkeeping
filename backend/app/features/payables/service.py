@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.payables import ledger as payables_ledger
 from app.core.payables import posting as payables_posting
+from app.core.ledger.correction import CorrectionNotFoundError, correct_supplier_payment
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
@@ -112,3 +113,50 @@ def record_payment(
         payment_account_id=payment_account_id,
         reference_type=reference,
     )
+
+
+def correct_supplier_payment_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    payment_date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+    reference: str | None = None,
+    reason: str | None = None,
+    void_date=None,
+):
+    with entity_context(session, entity_id):
+        row = session.scalar(
+            select(SupplierLedgerEntry).where(
+                SupplierLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if row is None or row.supplier_id != supplier_id:
+            raise CorrectionNotFoundError("supplier payment not found")
+
+    result = correct_supplier_payment(
+        session,
+        entity_id,
+        journal_entry_id,
+        payment_date=payment_date,
+        amount_kurus=amount_kurus,
+        description=description,
+        actor_id=actor_id,
+        payment_account_id=payment_account_id,
+        reason=reason,
+        void_date=void_date,
+        reference_type=reference,
+    )
+    balance = payables_ledger.current_balance_kurus(session, entity_id, supplier_id)
+    with entity_context(session, entity_id):
+        new_row = session.scalar(
+            select(SupplierLedgerEntry).where(
+                SupplierLedgerEntry.journal_entry_id == result.corrected.id
+            )
+        )
+    return result, balance, new_row

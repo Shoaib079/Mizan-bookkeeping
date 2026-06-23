@@ -26,6 +26,11 @@ class SupplierPaymentCreate(BaseModel):
         return value
 
 
+class SupplierPaymentCorrect(SupplierPaymentCreate):
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+
+
 class SupplierMovementCreate(BaseModel):
     movement_date: date
     movement_type: SupplierMovementType
@@ -73,6 +78,14 @@ class SupplierPayableBalanceRead(BaseModel):
 
 class SupplierPaymentRead(BaseModel):
     journal_entry_id: uuid.UUID
+    supplier_ledger_entry: SupplierLedgerEntryRead
+    payable_balance_kurus: int
+
+
+class SupplierPaymentCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
     supplier_ledger_entry: SupplierLedgerEntryRead
     payable_balance_kurus: int
 

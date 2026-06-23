@@ -325,6 +325,61 @@ def void_journal_entry(
         return original, reversal
 
 
+def _correct_journal_entry_in_transaction(
+    session: Session,
+    entity_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    entry_date: date,
+    description: str,
+    lines: list[PostingLine],
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+) -> tuple[JournalEntry, JournalEntry, JournalEntry]:
+    """Void and repost without commit — caller must hold entity_context and commit."""
+    original = _get_voidable_entry(session, entry_id)
+
+    validate_posting_lines(lines)
+    _validate_accounts(session, entity_id, lines)
+
+    reversal = _create_reversal_entry(
+        session,
+        entity_id,
+        original,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+    )
+
+    corrected = _persist_journal_entry(
+        session,
+        entry_date,
+        description,
+        lines,
+        source=original.source,
+        amends_entry_id=original.id,
+    )
+    _record_audit_event(session, corrected.id, LedgerAuditAction.POST, actor_id)
+    _record_audit_event(
+        session, corrected.id, LedgerAuditAction.AMEND, actor_id, reason=reason
+    )
+    session.flush()
+    _ = list(corrected.lines)
+
+    with journal_void_update_allowed(session):
+        _mark_original_voided(
+            session,
+            original,
+            reversal,
+            actor_id=actor_id,
+            reason=reason,
+            amended_by_entry_id=corrected.id,
+        )
+        session.flush()
+    return original, reversal, corrected
+
+
 def correct_journal_entry(
     session: Session,
     entity_id: uuid.UUID,
@@ -341,47 +396,18 @@ def correct_journal_entry(
     with entity_context(session, entity_id):
         require_entity_context()
 
-        original = _get_voidable_entry(session, entry_id)
-
-        validate_posting_lines(lines)
-        _validate_accounts(session, entity_id, lines)
-
-        reversal = _create_reversal_entry(
+        original, reversal, corrected = _correct_journal_entry_in_transaction(
             session,
             entity_id,
-            original,
+            entry_id,
+            entry_date,
+            description,
+            lines,
             actor_id=actor_id,
             reason=reason,
             void_date=void_date,
         )
-
-        corrected = _persist_journal_entry(
-            session,
-            entry_date,
-            description,
-            lines,
-            source=original.source,
-            amends_entry_id=original.id,
-        )
-        _record_audit_event(
-            session, corrected.id, LedgerAuditAction.POST, actor_id
-        )
-        _record_audit_event(
-            session, corrected.id, LedgerAuditAction.AMEND, actor_id, reason=reason
-        )
-        session.flush()
-        _ = list(corrected.lines)
-
-        with journal_void_update_allowed(session):
-            _mark_original_voided(
-                session,
-                original,
-                reversal,
-                actor_id=actor_id,
-                reason=reason,
-                amended_by_entry_id=corrected.id,
-            )
-            session.commit()
+        session.commit()
 
         session.refresh(original)
         session.refresh(reversal)

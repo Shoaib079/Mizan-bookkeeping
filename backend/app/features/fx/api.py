@@ -13,6 +13,7 @@ from app.core.listing import ListParams, PaginatedListOut, list_params_dependenc
 from app.core.fx.average_cost import InsufficientFxBalanceError
 from app.core.fx.posting import InvalidFxPurchaseError
 from app.core.fx.spend_posting import InvalidFxSpendError
+from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
@@ -25,6 +26,8 @@ from app.features.fx.schema import (
     FxExpenseSpendResponse,
     FxLedgerEntryRead,
     FxPurchaseCreate,
+    FxPurchaseCorrect,
+    FxPurchaseCorrectOut,
     FxPurchaseResponse,
 )
 
@@ -41,6 +44,28 @@ def create_fx_purchase(
     try:
         return fx_service.create_fx_purchase(session, entity_id, payload)
     except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (InvalidFxPurchaseError, InvalidAccountError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/purchases/{journal_entry_id}/correct", response_model=FxPurchaseCorrectOut)
+def correct_fx_purchase(
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: FxPurchaseCorrect,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> FxPurchaseCorrectOut:
+    try:
+        return fx_service.correct_fx_purchase_entry(
+            session, entity_id, journal_entry_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (InvalidFxPurchaseError, InvalidAccountError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
