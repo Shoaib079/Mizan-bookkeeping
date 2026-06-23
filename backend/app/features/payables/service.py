@@ -78,6 +78,20 @@ def record_movement(
     description: str,
     actor_id: uuid.UUID,
 ):
+    if movement_type in {
+        SupplierMovementType.ADJUSTMENT,
+        SupplierMovementType.OPENING_BALANCE,
+    }:
+        return payables_posting.post_supplier_manual_movement(
+            session,
+            entity_id,
+            supplier_id,
+            movement_date=movement_date,
+            movement_type=movement_type,
+            amount_kurus=amount_kurus,
+            description=description,
+            actor_id=actor_id,
+        ).supplier_ledger_entry
     return payables_ledger.record_supplier_movement(
         session,
         entity_id,

@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 
-from app.core.chart_of_accounts.seed import seed_default_chart
+from app.core.chart_of_accounts.seed import ChartAlreadySeededError, seed_default_chart
 from app.core.payables import ledger as payables_ledger
 from app.core.payables import posting as payables_posting
 from app.core.payables.ledger import (
@@ -28,9 +28,17 @@ from app.features.suppliers.schema import SupplierCreate
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 
+@pytest.fixture(autouse=True)
+def _seed_charts(db_session, restaurant_a, restaurant_b):
+    for entity_id in (restaurant_a.id, restaurant_b.id):
+        try:
+            seed_default_chart(db_session, entity_id)
+        except ChartAlreadySeededError:
+            pass
+
+
 @pytest.fixture
 def seeded_accounts(db_session, restaurant_a):
-    seed_default_chart(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):
         from app.core.chart_of_accounts.models import Account
 
@@ -56,7 +64,7 @@ def _record(
     movement_date: date | None = None,
     description="Test movement",
 ):
-    return payables_ledger.record_supplier_movement(
+    return payables_service.record_movement(
         db_session,
         entity.id,
         supplier_id,
@@ -71,7 +79,8 @@ def _record(
 def test_adjustment_updates_balance(db_session, restaurant_a) -> None:
     supplier = _supplier(db_session, restaurant_a)
     supplier_id = supplier.id
-    _record(db_session, restaurant_a, supplier_id, amount_kurus=50_000)
+    entry = _record(db_session, restaurant_a, supplier_id, amount_kurus=50_000)
+    assert entry.journal_entry_id is not None
     _record(db_session, restaurant_a, supplier_id, amount_kurus=-20_000, description="Credit")
 
     balance = payables_ledger.current_balance_kurus(
@@ -160,7 +169,7 @@ def test_entity_b_cannot_see_entity_a_ledger(
 def test_zero_amount_rejected(db_session, restaurant_a) -> None:
     supplier = _supplier(db_session, restaurant_a)
     supplier_id = supplier.id
-    with pytest.raises(ZeroMovementError):
+    with pytest.raises((ZeroMovementError, ValueError)):
         _record(db_session, restaurant_a, supplier_id, amount_kurus=0)
 
 

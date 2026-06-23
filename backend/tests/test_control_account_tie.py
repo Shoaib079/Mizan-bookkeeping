@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
-from app.core.payables import ledger as payables_ledger
+from app.features.payables import service as payables_service
 from app.core.payables.types import SupplierMovementType
 from app.core.staff import posting as staff_posting
 from app.core.staff.types import PayCurrency
@@ -99,11 +99,7 @@ def test_staff_control_accounts_tie_after_partial_payments_with_advance(
     assert_entity_control_accounts_tied(db_session, entity_id)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Phase 8.6 Item 2 — payables adjustment without GL (remove xfail when fixed)",
-)
-def test_supplier_adjustment_api_breaks_ap_tie(db_session, restaurant_a) -> None:
+def test_supplier_adjustment_api_ties_ap_control(db_session, restaurant_a) -> None:
     """Repro Phase 8.6 Item 2 — subledger-only adjustment leaves AP GL untied."""
     seed_default_chart(db_session, restaurant_a.id)
     supplier = supplier_service.create_supplier(
@@ -111,7 +107,7 @@ def test_supplier_adjustment_api_breaks_ap_tie(db_session, restaurant_a) -> None
         restaurant_a.id,
         SupplierCreate(name="Metro Tedarik", vkn="1234567890"),
     )
-    payables_ledger.record_supplier_movement(
+    payables_service.record_movement(
         db_session,
         restaurant_a.id,
         supplier.id,

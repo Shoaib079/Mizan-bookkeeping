@@ -11,6 +11,4 @@ class SupplierMovementType(str, Enum):
     CREDIT_NOTE = "credit_note"
 
 
-WRITABLE_MOVEMENT_TYPES: frozenset[SupplierMovementType] = frozenset(
-    {SupplierMovementType.OPENING_BALANCE, SupplierMovementType.ADJUSTMENT}
-)
+WRITABLE_MOVEMENT_TYPES: frozenset[SupplierMovementType] = frozenset()

@@ -16,7 +16,7 @@ from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.fx import posting as fx_posting
-from app.core.payables.ledger import record_supplier_movement
+from app.features.payables import service as payables_service
 from app.core.payables.types import SupplierMovementType
 from app.core.pos import posting as pos_posting
 from app.core.receivables import posting as receivables_posting
@@ -237,7 +237,7 @@ def test_payables_total_and_preview_ordering(db_session, dashboard_setup) -> Non
     ]
 
     for supplier_id, amount in supplier_amounts:
-        record_supplier_movement(
+        payables_service.record_movement(
             db_session,
             entity_id,
             supplier_id,
@@ -267,7 +267,7 @@ def test_payables_preview_supplier_filter(db_session, dashboard_setup) -> None:
         db_session, entity_id, SupplierCreate(name="Filtered", vkn="4444444444")
     )
     supplier_id = supplier.id
-    record_supplier_movement(
+    payables_service.record_movement(
         db_session,
         entity_id,
         supplier_id,
