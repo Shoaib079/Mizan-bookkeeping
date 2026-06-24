@@ -5,16 +5,20 @@
 import { UserButton } from "@clerk/nextjs";
 import {
   BarChart3,
+  Banknote,
   Building2,
   CreditCard,
   HandCoins,
+  Handshake,
   LayoutDashboard,
   Settings,
   ShoppingBag,
   Truck,
   Upload,
+  UserCircle,
   Users,
   Wallet,
+  UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -42,6 +46,10 @@ const navGroups = [
       { href: "/uploads", label: "Uploads", icon: Upload },
       { href: "/suppliers", label: "Suppliers", icon: Users },
       { href: "/payables", label: "Payables", icon: HandCoins },
+      { href: "/staff", label: "Staff", icon: UsersRound },
+      { href: "/partners", label: "Partners", icon: Handshake },
+      { href: "/customers", label: "Customers", icon: UserCircle },
+      { href: "/receivables", label: "Receivables", icon: Banknote },
       { href: "/banking", label: "Banking", icon: Building2 },
       { href: "/cards", label: "Cards", icon: CreditCard },
     ],

@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 
 type MenuKey =
   | "expense"
+  | "cashTip"
   | "sales"
   | "posPhoto"
   | "cardSales"
@@ -66,6 +67,14 @@ export function NewMenu() {
           >
             <Wallet className="size-4 text-primary" />
             Manual expense
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+            onClick={() => openForm("cashTip")}
+          >
+            <Wallet className="size-4 text-primary" />
+            Cash tip (5700 expense)
           </button>
           <button
             type="button"
@@ -127,6 +136,11 @@ export function NewMenu() {
       )}
 
       <ManualExpenseForm open={active === "expense"} onClose={() => setActive(null)} />
+      <ManualExpenseForm
+        open={active === "cashTip"}
+        onClose={() => setActive(null)}
+        defaultExpenseAccountCode="5700"
+      />
       <ManualDailySalesForm open={active === "sales"} onClose={() => setActive(null)} />
       <PosSummaryUploadForm open={active === "posPhoto"} onClose={() => setActive(null)} />
       <CardSalesForm open={active === "cardSales"} onClose={() => setActive(null)} />

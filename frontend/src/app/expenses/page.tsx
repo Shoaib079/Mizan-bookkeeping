@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
+import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
 import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
 import {
   DataTable,
   DataTableBody,
@@ -31,15 +34,24 @@ export default function ExpensesPage() {
     "/expenses",
     entityId,
   );
+  const [tipFormOpen, setTipFormOpen] = useState(false);
 
   return (
     <AppShell title="Expenses">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           {entityId
             ? `${total} expense${total === 1 ? "" : "s"}`
             : "Select a restaurant in the sidebar"}
         </p>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={!entityId}
+          onClick={() => setTipFormOpen(true)}
+        >
+          Record cash tip
+        </Button>
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
@@ -84,12 +96,20 @@ export default function ExpensesPage() {
       )}
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Receipt intakes in review open from{" "}
-        <Link href="/uploads" className="text-primary hover:underline">
-          Uploads
-        </Link>{" "}
-        (coming soon).
+        Tips are cash expenses (5700) — use <strong>Record cash tip</strong> or{" "}
+        <strong>New → Cash tip</strong>. After a Z mismatch on daily sales, record
+        the tip here then re-confirm on{" "}
+        <Link href="/sales" className="text-primary hover:underline">
+          Sales
+        </Link>
+        .
       </p>
+
+      <ManualExpenseForm
+        open={tipFormOpen}
+        onClose={() => setTipFormOpen(false)}
+        defaultExpenseAccountCode="5700"
+      />
     </AppShell>
   );
 }

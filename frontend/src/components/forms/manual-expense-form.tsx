@@ -17,9 +17,15 @@ const MANUAL_EXPENSE_ACCOUNT_CODES = ["5200", "5700"];
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** Pre-select expense account by chart code (e.g. `5700` for cash tips). */
+  defaultExpenseAccountCode?: string;
 };
 
-export function ManualExpenseForm({ open, onClose }: Props) {
+export function ManualExpenseForm({
+  open,
+  onClose,
+  defaultExpenseAccountCode,
+}: Props) {
   const { entityId, actorId } = useEntity();
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
@@ -47,10 +53,13 @@ export function ManualExpenseForm({ open, onClose }: Props) {
       MANUAL_EXPENSE_ACCOUNT_CODES.includes(a.code),
     );
     setExpenseAccounts(pickable);
-    const general = pickable.find((a) => a.code === "5200");
-    if (general) setExpenseAccountId(general.id);
+    const preferred = defaultExpenseAccountCode
+      ? pickable.find((a) => a.code === defaultExpenseAccountCode)
+      : pickable.find((a) => a.code === "5200");
+    if (preferred) setExpenseAccountId(preferred.id);
+    else if (pickable[0]) setExpenseAccountId(pickable[0].id);
     if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
-  }, [entityId]);
+  }, [entityId, defaultExpenseAccountCode]);
 
   useEffect(() => {
     if (open) void loadOptions().catch(() => undefined);
@@ -109,7 +118,15 @@ export function ManualExpenseForm({ open, onClose }: Props) {
   }
 
   return (
-    <Dialog open={open} title="Manual expense" onClose={onClose}>
+    <Dialog
+      open={open}
+      title={
+        defaultExpenseAccountCode === "5700"
+          ? "Cash tip expense"
+          : "Manual expense"
+      }
+      onClose={onClose}
+    >
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="exp-date">Date (DD.MM.YYYY)</Label>

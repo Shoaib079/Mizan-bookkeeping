@@ -2,6 +2,12 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-21
+
+**Phase 9 Slice 6 — Staff, partners, receivables, tips (frontend):** Wired existing Phase 5 staff/partner/customer/receivables APIs. Pages: `/staff` + `/staff/[id]` (employees, salary accrual, advance, payment, ledger); `/partners` + `/partners/[id]` (expense fronted, reimbursement); `/customers` + `/customers/[id]` (credit sale, payment); `/receivables` (summary like payables). Tips remain **5700 cash expense only** — New → Cash tip and Expenses → Record cash tip (no tip pot, no POS tip UI). Sidebar: Staff, Partners, Customers, Receivables. **545 pytest green**; frontend build green. Tag `v0.62.0-phase9-staff-partners-receivables`.
+
+**Phase 9 Slice 2d — money-entry UX gaps:** Manual daily sales sends optional Z when `card_tips_z_report_enabled`; `needs_review` keeps dialog open with backend `review_reason`; manual expense picks 5200/5700. Tag `v0.60.1-phase9-slice-2d-money-entry-ux`.
+
 ## 2026-06-24
 
 **Phase 9 Slice 5 — POS & delivery sales (frontend):** Wired existing Phase 6 POS/delivery APIs into the UI. Pages: `/sales` (list + POS photo upload), `/sales/[id]` (confirm/reject daily summary with Z match-or-review), `/cards` (card sales batches, POS settlements, clearing reconciliation, clear commission), `/delivery` (per-platform reconciliation hub), `/delivery/platforms` (CRUD), `/delivery/reports` + `/delivery/reports/[id]` (create/post/reject), `/delivery/settlements`. Invoice draft review extended for delivery commission e-Fatura — link posted delivery report, confirm, post commission to platform clearing (not payables). New menu entries: POS summary (photo), card sales batch, delivery report; sidebar **Delivery** nav added. **545 pytest green** (no backend changes); frontend build green. Tag `v0.61.0-phase9-pos-delivery-sales`.
