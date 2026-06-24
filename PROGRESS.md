@@ -4,9 +4,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 9 — frontend |
-| **Active slice** | — (Phase 9 complete — owner sign-off pending) |
-| **Last completed slice** | Phase 9 Slice 10 — Theme refinement + UX polish (`v0.65.0-phase9-theme-ux-polish`) |
+| **Phase** | Phase 11 — pre-launch UX & FX wiring |
+| **Active slice** | 11.1 — Shared date picker (small calendar; see `ROADMAP.md` Phase 11) |
+| **Last completed slice** | Phase 9 Slice 10 — Theme + UX polish (`v0.65.0`) |
 | **Branch** | `main` |
 | **Last tag** | `v0.65.0-phase9-theme-ux-polish` |
 
@@ -26,6 +26,15 @@
 - `/settings/members` — list/add/change roles (`owner`/`partner`/`cashier`/`partner_view_only`); 403 friendly message
 - Link to `/delivery/platforms` from settings hub
 - Entity list refreshes after create
+
+**Next:** Phase 11.1 → 11.2 → 11.3 per `ROADMAP.md`.
+
+**Owner decisions locked in ROADMAP (2026-06-24):**
+- Dates: typable + **small** calendar popup (no toggle).
+- FX buy: **cash drawer + bank** (as in UI today — not credit card); backend must accept bank; cash path must write drawer movement.
+- Delivery nav: **nested under Delivery** (confirmed).
+
+**Do not start Phase 10** until 11.3 complete + owner sign-off on 11.3.
 
 **Phase 9 Slice 10 complete** — Theme refinement + UX polish (frontend only):
 - Refined `globals.css` tokens (radius, spacing, focus ring, skeleton animation)
