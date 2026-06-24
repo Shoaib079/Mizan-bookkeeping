@@ -64,7 +64,10 @@ For local dev without Clerk sign-in, these must be set:
 ```
 AUTH_ENFORCEMENT=false
 IDEMPOTENCY_ENFORCEMENT=false
+DATABASE_URL=postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan
 ```
+
+With Docker Compose, also set `DATABASE_ADMIN_URL=postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres` so bootstrap can create DBs and the `mizan_app` role.
 
 Optional frontend env (create `frontend/.env.local` if you change the API URL):
 
@@ -94,7 +97,16 @@ bash backend/scripts/verify_fresh_install.sh
 
 CI runs the same script on every push/PR (`.github/workflows/ci.yml`).
 
-Tests use `mizan_test` database. On first run, bootstrap creates the `mizan` role and databases (uses `DATABASE_ADMIN_URL`, default `postgres@localhost`).
+Tests use `mizan_test` database. On first run, bootstrap creates the `mizan` role and databases.
+
+**With Docker Compose** (`POSTGRES_USER=mizan`), pass the admin URL so bootstrap can create DBs and apply `NOBYPASSRLS` on the app role (required for entity-isolation tests):
+
+```bash
+cd backend && source .venv/bin/activate
+DATABASE_ADMIN_URL='postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres' pytest -q
+```
+
+Without Docker, default `DATABASE_ADMIN_URL` is `postgres@localhost` (see `.env.example`).
 
 ## Migrations
 

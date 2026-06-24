@@ -29,7 +29,7 @@ jobs:
       APP_ENV: test
       AUTH_ENFORCEMENT: "false"
       CLERK_TEST_MODE: "true"
-      DATABASE_URL: postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan
+      DATABASE_URL: postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan
       DATABASE_ADMIN_URL: postgresql+psycopg://postgres:mizan_dev@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4

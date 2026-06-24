@@ -10,7 +10,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-24
 
-## 2026-06-24
+**DB RLS test hardening:** App and pytest connect as non-superuser `mizan_app` so PostgreSQL RLS applies in entity-isolation tests; admin (`mizan`) used for bootstrap/migrations only. Transaction-local `app.current_entity_id` GUC with `after_begin` re-sync. Fixed `test_database_admin_url` password serialization (`mizan_dev` no longer truncated). Test teardown: admin grants `TRUNCATE` to `mizan_app` + locked fresh-connection cleanup. CI/docker/DEV docs updated. ROADMAP/PROGRESS renumbered: Phase 10 = pre-launch UX/FX, Phase 11 = deployment. **545 pytest green**. Tag `v0.65.2-db-rls-test-hardening`.
 
 **Phase 9 Slice 10 — Theme refinement + UX polish (frontend):** Final UX pass — no new accounting logic. Refined design tokens in `globals.css` (radius, spacing, focus ring). Custom lightweight toast system (no new npm deps) confirms saves on manual expense/sales, supplier, member, entity create, employee/partner/customer, opening balances post. Shared `TableSkeleton`/`PageSkeleton` and `EmptyState` on all `useEntityList` list pages. Cmd/Ctrl-K command palette in app shell (sidebar nav + New menu shortcuts). Dialog: Esc closes, auto-focus first field, focus trap. Token-based focus rings on Button/Input/Select. Sticky `DataTable` headers. **545 pytest green**; frontend build green. Tag `v0.65.0-phase9-theme-ux-polish`. **Phase 9 complete — owner sign-off pending.**
 

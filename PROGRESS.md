@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 11 — pre-launch UX & FX wiring |
-| **Active slice** | 11.1 — Shared date picker (small calendar; see `ROADMAP.md` Phase 11) |
+| **Phase** | Phase 10 — pre-launch UX & FX wiring |
+| **Active slice** | 10.1 — Shared `DateInput` (see `ROADMAP.md` Phase 10 audit) |
 | **Last completed slice** | Phase 9 Slice 10 — Theme + UX polish (`v0.65.0`) |
 | **Branch** | `main` |
 | **Last tag** | `v0.65.0-phase9-theme-ux-polish` |
@@ -27,14 +27,14 @@
 - Link to `/delivery/platforms` from settings hub
 - Entity list refreshes after create
 
-**Next:** Phase 11.1 → 11.2 → 11.3 per `ROADMAP.md`.
+**Next:** Phase 10.1 → 10.2 → 10.3 per `ROADMAP.md` (code audit in ROADMAP — do not trust tests alone).
 
-**Owner decisions locked in ROADMAP (2026-06-24):**
-- Dates: typable + **small** calendar popup (no toggle).
-- FX buy: **cash drawer + bank** (as in UI today — not credit card); backend must accept bank; cash path must write drawer movement.
+**Owner decisions locked in ROADMAP:**
+- Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.
+- FX buy: **cash drawer + bank** (not credit card); backend + cash movement fix in 10.3.
 - Delivery nav: **nested under Delivery** (confirmed).
 
-**Do not start Phase 10** until 11.3 complete + owner sign-off on 11.3.
+**Do not start Phase 11 (deployment)** until Phase 10.3 complete + owner sign-off on 10.3.
 
 **Phase 9 Slice 10 complete** — Theme refinement + UX polish (frontend only):
 - Refined `globals.css` tokens (radius, spacing, focus ring, skeleton animation)
@@ -45,7 +45,7 @@
 - Dialog: Esc close, focus first field, focus trap; token-based focus rings on Button/Input/Select
 - Sticky table headers in `DataTable`
 
-**Phase 9 complete** — owner sign-off pending. Next: Phase 10 — Deployment & go-live.
+**Phase 9 complete** — owner sign-off pending. **Next:** Phase 10 (pre-launch), then Phase 11 (deployment).
 
 ## Verification (2026-06-24)
 

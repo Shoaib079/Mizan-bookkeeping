@@ -5,14 +5,15 @@ Tests/dev set ``AUTH_ENFORCEMENT=false`` and ``CLERK_TEST_MODE=true``.
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine.url import make_url
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_env: str = "development"
-    database_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan"
-    test_database_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan_test"
+    database_url: str = "postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan"
+    test_database_url: str = "postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan_test"
     database_admin_url: str = "postgresql+psycopg://postgres@localhost:5432/postgres"
     upload_dir: str = "data/uploads"
     auth_enforcement: bool = True
@@ -49,6 +50,13 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"
+
+    @property
+    def test_database_admin_url(self) -> str:
+        """Superuser URL targeting ``mizan_test`` for schema reset + migrations."""
+        admin = make_url(self.database_admin_url)
+        test_db = make_url(self.test_database_url).database
+        return admin.set(database=test_db).render_as_string(hide_password=False)
 
 
 settings = Settings()

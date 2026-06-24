@@ -41,6 +41,8 @@ from app.db.receivables_immutability import apply_receivables_immutability
 from app.db.rls import apply_entity_rls
 from app.db.staff_immutability import apply_staff_immutability
 
+APP_DB_ROLE = "mizan_app"
+
 LEDGER_IMMUTABILITY_TRIGGERS = frozenset(
     {
         "journal_entry_lines_immutable",
@@ -69,6 +71,25 @@ def apply_database_integrity(connection: Connection) -> None:
     apply_receivables_immutability(connection)
 
 
+def grant_app_role_privileges(connection: Connection) -> None:
+    """Grant mizan_app DML on all objects — app connects as non-superuser for RLS."""
+    connection.execute(text(f"GRANT USAGE ON SCHEMA public TO {APP_DB_ROLE}"))
+    connection.execute(
+        text(
+            f"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {APP_DB_ROLE}"
+        )
+    )
+    connection.execute(
+        text(f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {APP_DB_ROLE}")
+    )
+    connection.execute(
+        text(
+            f"ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+            f"GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {APP_DB_ROLE}"
+        )
+    )
+
+
 def reset_public_schema(engine: Engine) -> None:
     """Drop and recreate public schema (empty database shell for Alembic)."""
     with engine.begin() as connection:
@@ -76,6 +97,7 @@ def reset_public_schema(engine: Engine) -> None:
         connection.execute(text("CREATE SCHEMA public"))
         connection.execute(text("GRANT ALL ON SCHEMA public TO PUBLIC"))
         connection.execute(text("GRANT ALL ON SCHEMA public TO mizan"))
+        connection.execute(text(f"GRANT ALL ON SCHEMA public TO {APP_DB_ROLE}"))
 
 
 def alembic_config(database_url: str) -> Config:
@@ -85,11 +107,22 @@ def alembic_config(database_url: str) -> Config:
     return cfg
 
 
-def provision_database_via_alembic(database_url: str) -> None:
-    """Reset schema and apply ``alembic upgrade head`` (canonical path)."""
-    engine = create_engine(database_url, pool_pre_ping=True)
+def provision_database_via_alembic(
+    database_url: str,
+    *,
+    admin_url: str | None = None,
+) -> None:
+    """Reset schema and apply ``alembic upgrade head`` (canonical path).
+
+    ``admin_url`` — superuser/migrator connection (schema reset). Defaults to ``database_url``.
+    ``database_url`` — retained for callers; grants are applied after migrate.
+    """
+    migrate_url = admin_url or database_url
+    engine = create_engine(migrate_url, pool_pre_ping=True)
     reset_public_schema(engine)
-    command.upgrade(alembic_config(database_url), "head")
+    command.upgrade(alembic_config(migrate_url), "head")
+    with engine.begin() as connection:
+        grant_app_role_privileges(connection)
     engine.dispose()
 
 

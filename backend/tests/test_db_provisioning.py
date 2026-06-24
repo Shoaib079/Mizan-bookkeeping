@@ -28,8 +28,10 @@ PROVISION_TEST_DB = "mizan_alembic_provision_test"
 def alembic_provisioned_url() -> str:
     """Empty database provisioned only via ``alembic upgrade head``."""
     ensure_test_database()
-    base = settings.test_database_url.rsplit("/", 1)[0]
-    url = f"{base}/{PROVISION_TEST_DB}"
+    admin_base = settings.test_database_admin_url.rsplit("/", 1)[0]
+    app_base = settings.test_database_url.rsplit("/", 1)[0]
+    admin_url = f"{admin_base}/{PROVISION_TEST_DB}"
+    app_url = f"{app_base}/{PROVISION_TEST_DB}"
 
     admin_engine = create_engine(settings.database_admin_url, isolation_level="AUTOCOMMIT")
     with admin_engine.connect() as conn:
@@ -44,10 +46,13 @@ def alembic_provisioned_url() -> str:
         )
         conn.execute(text(f'DROP DATABASE IF EXISTS "{PROVISION_TEST_DB}"'))
         conn.execute(text(f'CREATE DATABASE "{PROVISION_TEST_DB}" OWNER mizan'))
+        conn.execute(
+            text(f'GRANT ALL PRIVILEGES ON DATABASE "{PROVISION_TEST_DB}" TO mizan_app')
+        )
     admin_engine.dispose()
 
-    provision_database_via_alembic(url)
-    yield url
+    provision_database_via_alembic(app_url, admin_url=admin_url)
+    yield app_url
 
     admin_engine = create_engine(settings.database_admin_url, isolation_level="AUTOCOMMIT")
     with admin_engine.connect() as conn:

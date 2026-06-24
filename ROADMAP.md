@@ -12,13 +12,13 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 11 — pre-launch UX & FX wiring |
-| **Active slice** | **11.1** — Shared date picker (calendar popup, typable) |
+| **Active phase** | Phase 10 — pre-launch UX & FX wiring |
+| **Active slice** | **10.1** — Shared `DateInput` (small calendar, typable) |
 | **Last completed slice** | Phase 9 Slice 10 — Theme refinement + UX polish (`v0.65.0-phase9-theme-ux-polish`) |
-| **Last commit/tag** | `v0.65.0-phase9-theme-ux-polish` |
-| **Next up** | Phase 11.1 → 11.2 → 11.3 (strict order; see below) |
+| **Last commit/tag** | `v0.65.0-phase9-theme-ux-polish` (plan docs: `5bb5207`) |
+| **Next up** | Phase 10.1 → 10.2 → 10.3 (strict order; see below) |
 
-**The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = expense-receipt OCR + manual daily-sales API (DONE). **Phase 8.8** = adversarial review hardening (DONE). **Phase 9** = frontend v1 (DONE, `v0.65.0`). **Phase 11 (slices 11.1–11.3)** = owner-requested UX/accounting gaps **before** Phase 10 go-live (build in order). **Phase 10** = deployment. **Phase 11 parking lot** (after 11.3) = longer-term enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
+**The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = owner-requested pre-launch gaps (dates, delivery nav, FX wiring) — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
 ### Do not rebuild (already done — git is source of truth)
 
@@ -386,183 +386,162 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Phase 9 complete** — all slices done, tested, committed (`v0.65.0`). **Owner sign-off pending** → frontend v1 complete.
 
-**Known gap (owner 2026-06-24):** Phase 9 Slice 10 did not ship the locked **shared date picker** from `DESIGN_SYSTEM.md` §10 — every screen still uses plain text `DD.MM.YYYY` inputs. **→ Phase 11.1** (owner: small calendar popup is enough). FX buy must pay from **cash drawer or bank** with correct GL + cash subledger when from drawer; today backend rejects bank and skips `cash_movements`. **→ Phase 11.3.** Delivery child routes duplicate top-level sidebar links — **→ Phase 11.2** (owner confirmed nested layout).
+**Known gap (code audit 2026-06-24):** `DESIGN_SYSTEM.md` §10 requires a **shared date picker** (type `DD.MM.YYYY` **or** small calendar) — **not shipped** despite Phase 9 Slice 10. See **Phase 10 audit** below. Delivery nav duplicates still in `app-routes.ts`. FX buy: UI lists cash+bank; backend accepts **cash only** and writes **no** `cash_movements` row.
 
 ---
 
-## Phase 11 — Pre-launch UX & FX wiring (owner 2026-06-24)
+## Phase 10 — Pre-launch UX & FX wiring (owner 2026-06-24)
 
-**Status: PLANNED** — build **before Phase 10 go-live**, in strict order **11.1 → 11.2 → 11.3**. Do not start Phase 10 until 11.3 passes the completion gate (11.1 and 11.2 are frontend-only; 11.3 is money-critical).
+**Status: PLANNED** — build **before Phase 11 (go-live)**, strict order **10.1 → 10.2 → 10.3**. Do not start Phase 11 deployment until 10.3 passes the completion gate (10.1–10.2 frontend-only; 10.3 money-critical).
 
-**Owner decisions (locked for this phase):**
+### Code audit (do not trust ROADMAP/tests alone — verified in repo)
+
+| Area | ROADMAP / tests say | **Actual code (audit)** | Phase 10 action |
+|------|---------------------|-------------------------|-----------------|
+| **Date typing** | — | `parseTrDate` / `formatTrDate` in `frontend/src/lib/money.ts` ✓ | **Keep** — `DateInput` wraps these |
+| **Date picker component** | DESIGN_SYSTEM §5 + §10 | **No** `DateInput`, **no** calendar dep in `package.json`, **no** `react-day-picker` | **Build** in 10.1 |
+| **Date fields** | “~20 forms” | **22 source files** still use raw `<Input>` + `dateText` / `DD.MM.YYYY` (see checklist below) | **Replace** in 10.1 |
+| **Report date range** | Dashboard + reports wired | `ReportDateRange` = two plain inputs + Apply + “This month” on `/`, `/reports`, P&L, BS, cash flow, KDV, delivery sales, period comparison ✓ wired, **no calendar** | **Swap** to `DateInput` in 10.1 |
+| **Balance sheet as-of** | — | `report-as-of-date.tsx` = plain input | **Swap** in 10.1 |
+| **Review screens** | Listed 4 review UIs | Only **`pos-summary-review.tsx`** has an **editable** date field; `receipt-review`, `invoice-draft-review`, `delivery-report-review` show dates as **read-only text** only | **Do not** add date pickers there unless product asks |
+| **Phase 9 Slice 10** | “UX polish” done | Toasts, command palette, dialog Esc/focus, skeletons, tokens ✓ — **date picker not included** | 10.1 completes §10 date slice of Slice 10 |
+| **Delivery nav** | Slice 5 built `/delivery/*` | `app-routes.ts` lines 51–53 still duplicate flat Books links; `app-shell.tsx` has **no** nested nav | **Build** in 10.2 |
+| **FX form UI** | Banking slice wired | `fx-purchase-form.tsx` loads **cash + bank** ✓ | **Label only** in 10.3 (already lists both) |
+| **FX backend** | Phase 5 FX purchase done | `post_fx_purchase()` → `_validate_try_cash_money_account` **CASH only**; `test_rejects_bank_as_try_payment_account` expects reject | **Extend** to BANK in 10.3 |
+| **FX cash subledger** | — | **No** `CashMovement` on FX purchase (GL `Dr` FX / `Cr` cash GL only); drawer page won’t list FX buys | **Add** OUT movement when source is cash in 10.3 |
+| **FX conversion** | — | `fx-conversion-form.tsx` already loads cash+bank for TRY receive; `spend_posting` allows CASH\|BANK | **Out of scope** 10.3 unless audit finds gap |
+
+**Already implemented — do NOT redo in Phase 10:**
+
+- Phases 0–9 backend + frontend v1 (`v0.65.0`); Phase 8.7/8.8; Z match-or-review (`v0.57.0`); tips expense-only; expense receipt OCR; manual daily sales; POS/delivery/banking UIs.
+- `ReportDateRange` / dashboard / reports **API wiring** (only upgrade inputs to `DateInput`).
+- `fx-purchase-form` **account fetch** (cash+bank) — fix backend + labels, don’t rebuild form from scratch.
+- `/delivery` hub + child **pages** — only **sidebar IA** changes in 10.2.
+
+### Owner decisions (locked)
 
 | Topic | Decision |
 |-------|----------|
-| **Dates** | Stay **typable** `DD.MM.YYYY`; add a **small calendar** popup from an icon in the field — **no separate toggle/mode**. |
-| **FX buy USD/EUR** | **Cash drawer and bank** (TRY `MoneyAccountKind.CASH` + `BANK`) — same sources as the form lists today. **Not** credit card (`CREDIT_CARD`). Full GL + cash subledger when from drawer. |
-| **Delivery nav** | **Confirmed:** platforms, reports, settlements **nested under Delivery** in the sidebar (remove duplicate top-level links). |
+| **Dates** | Typable `DD.MM.YYYY` + **small calendar** from icon in field — **no toggle/mode** (`DESIGN_SYSTEM.md` §10). |
+| **FX buy USD/EUR** | **Cash drawer + bank** (`CASH` + `BANK`). **Not** credit card. Cash path → drawer movement + GL. |
+| **Delivery nav** | **Confirmed:** nest platforms / reports / settlements under **Delivery**. |
 
-**Why this phase exists:** Close three gaps before go-live: (1) date picker per `DESIGN_SYSTEM.md` §10; (2) FX purchase wired to real ledger paths for cash **and** bank; (3) delivery IA cleanup.
-
-**References:** `DESIGN_SYSTEM.md` §10 (date pickers); `Restaurant_Bookkeeping_App_Decisions.md` §14–§15 (update §15 on build — FX TRY may leave drawer **or** bank); `frontend/src/lib/app-routes.ts` + `app-shell.tsx` (nav).
+**References:** `DESIGN_SYSTEM.md` §5 (date picker component), §10 (interaction); `Restaurant_Bookkeeping_App_Decisions.md` §14–§15 (update §15 on 10.3 commit); `frontend/src/lib/app-routes.ts`, `app-shell.tsx`.
 
 ### Build order (mandatory)
 
 ```
-11.1 DateInput (small calendar)  →  11.2 Delivery nav nesting  →  11.3 FX purchase (cash + bank)
+10.1 DateInput (small calendar)  →  10.2 Delivery nav  →  10.3 FX purchase (cash + bank)
 ```
 
-Slices 11.1 and 11.2 may ship in one commit if the completion gate passes for both; **11.3 must be its own commit/tag** (money-critical).
+10.1 and 10.2 may share one commit if both gates pass; **10.3 = separate commit/tag** (money-critical).
 
 ---
 
-### Slice 11.1 — Shared `DateInput` (small calendar + typable, no toggle)
+### Slice 10.1 — Shared `DateInput` (`DESIGN_SYSTEM.md` §10)
 
 | | |
 |---|---|
 | **Status** | planned |
-| **Implements** | `DESIGN_SYSTEM.md` §10 — “type `DD.MM.YYYY` **or** pick from calendar”; dates remain editable |
-| **Owner** | **Small calendar is enough** — keep it compact; no heavy date UI |
-| **Decisions** | No product change — UX only |
+| **Implements** | §10: type `DD.MM.YYYY` **or** pick from calendar; sensible default; Enter confirms; Esc closes popover |
+| **Owner** | **Small calendar is enough** — compact single-month popover |
 | **Suggested tag** | `v0.66.0-date-picker` |
 
-**Characterize (acceptance):**
+**What §10 requires (checklist when done):**
 
-- One shared component: `frontend/src/components/ui/date-input.tsx`.
-- Single field: user **always types** `DD.MM.YYYY`; trailing **calendar icon inside the field** opens a **small** popover month grid — **not** a separate “calendar mode” toggle or second control.
-- Calendar popover: compact (single month, minimal chrome); picking a day updates the text; typing still works; `parseTrDate` / `formatTrDate` from `lib/money.ts` stay the API boundary.
-- Default: today (forms); document date on review screens where applicable.
-- Enter submits parent form; Esc closes popover; visible focus ring per design tokens.
-- Replace **every** raw date `<Input>` — forms (~20), `report-date-range.tsx`, `report-as-of-date.tsx`, `opening-balances/page.tsx`, review screens (`pos-summary-review`, `receipt-review`, `invoice-draft-review`, `delivery-report-review`).
+- [ ] One shared `frontend/src/components/ui/date-input.tsx` (+ minimal popover; token-styled).
+- [ ] Field always **typable**; trailing **calendar icon inside** input opens **small** month grid — **not** a separate mode toggle.
+- [ ] Pick day → updates display string; invalid typed date → existing submit-time errors unchanged.
+- [ ] Default today on new forms; pre-fill document date on `pos-summary-review` when summary loads.
+- [ ] Arrow keys change day **while popover open** (nice-to-have; document if skipped).
+- [ ] `parseTrDate` / `formatTrDate` remain the API boundary — no backend date format changes.
 
-**Audit before coding:**
+**Replace raw date inputs (grep-verified file list):**
 
-- Grep `DD.MM.YYYY`, `dateText`, `parseTrDate` in `frontend/` — no ad-hoc date inputs when done.
-- Do **not** add a global date-format setting; do **not** change backend date fields.
+| File | Notes |
+|------|--------|
+| `components/forms/manual-expense-form.tsx` | |
+| `components/forms/manual-daily-sales-form.tsx` | |
+| `components/forms/cash-movement-form.tsx` | |
+| `components/forms/transfer-form.tsx` | |
+| `components/forms/card-sales-form.tsx` | |
+| `components/forms/pos-settlement-form.tsx` | |
+| `components/forms/supplier-payment-form.tsx` | |
+| `components/forms/customer-payment-form.tsx` | |
+| `components/forms/customer-credit-sale-form.tsx` | |
+| `components/forms/partner-reimbursement-form.tsx` | |
+| `components/forms/partner-expense-fronted-form.tsx` | |
+| `components/forms/staff-accrual-form.tsx` | |
+| `components/forms/staff-cash-movement-form.tsx` | |
+| `components/forms/delivery-report-form.tsx` | |
+| `components/forms/delivery-settlement-form.tsx` | |
+| `components/forms/fx-purchase-form.tsx` | |
+| `components/forms/fx-conversion-form.tsx` | |
+| `components/forms/fx-expense-spend-form.tsx` | |
+| `components/pos-summary-review.tsx` | editable confirm date |
+| `components/reports/report-date-range.tsx` | two fields |
+| `components/reports/report-as-of-date.tsx` | |
+| `app/settings/opening-balances/page.tsx` | go-live date |
 
-**Implementation notes:**
+**Manual verify (required — not only `npm run build`):** open manual expense, dashboard range, opening balances, POS review confirm — type date, pick from calendar, submit.
 
-- Prefer a **lightweight** calendar (e.g. small `react-day-picker` month view or minimal custom grid) + small popover anchored to the input — **no hardcoded colors in pages** (tokens only).
-- `DateInput` props: `value` / `onChange` as display `string` or `Date | null` + `id`, `disabled`, `placeholder`, `className`.
-
-**Test / verify:**
-
-- `npm run build` green.
-- Manual: type invalid date → error on submit; small calendar pick → text updates; report range Apply still works.
-
-**Out of scope:** time-of-day; range calendar in one control; non-TR display locales.
+**Out of scope:** time-of-day; combobox pickers (§10 other bullets → Phase 12); `receipt-review` / invoice / delivery review read-only dates.
 
 ---
 
-### Slice 11.2 — Delivery nav: nest under Delivery (**owner confirmed**)
+### Slice 10.2 — Delivery nav nested under Delivery (**owner confirmed**)
 
 | | |
 |---|---|
 | **Status** | planned |
-| **Implements** | `DESIGN_SYSTEM.md` §6 — grouped nav |
-| **Owner** | **Confirmed** — nested under Delivery as specified below |
-| **Decisions** | No product change — IA only |
-| **Suggested tag** | `v0.66.1-delivery-nav` (or combined with 11.1 if one commit) |
+| **Implements** | `DESIGN_SYSTEM.md` §6 grouped nav |
+| **Suggested tag** | `v0.66.1-delivery-nav` |
 
-**Characterize (acceptance):**
+**Acceptance:** One Delivery group in sidebar: hub + Platforms + Reports + Settlements; remove flat duplicates (lines 51–53 in `app-routes.ts`); parent active on `/delivery/*`; command palette unchanged.
 
-- Sidebar **Books** shows **one** Delivery group with **nested children** (indented sub-list):
-  - **Delivery** → `/delivery` (hub)
-  - **Platforms** → `/delivery/platforms`
-  - **Reports** → `/delivery/reports`
-  - **Settlements** → `/delivery/settlements`
-- **Remove** the three duplicate top-level Books links (`Delivery platforms`, `Delivery reports`, `Delivery settlements`) from `app-routes.ts`.
-- Parent **Delivery** is **active** when `pathname.startsWith('/delivery')`.
-- **Command palette** still indexes all four URLs + keywords.
-- `/delivery` hub page unchanged (may keep quick links).
+**Audit before:** `app-routes.ts`, `app-shell.tsx` — **no** nested nav exists today.
 
-**Audit before coding:**
-
-- `frontend/src/lib/app-routes.ts`, `frontend/src/components/layout/app-shell.tsx`, `navGroups`.
-- Extend route type with `children` or `parentHref` — single source of truth for hrefs.
-
-**Test / verify:**
-
-- `npm run build` green.
-- Manual: nested Delivery only once in sidebar; all four routes work; active state on parent + children.
-
-**Out of scope (follow-up):** hide Delivery when `delivery_enabled` is false; collapsible sidebar.
+**Out of scope:** hide when `delivery_enabled` off; nest Banking transfers/cash (same pattern, not requested).
 
 ---
 
-### Slice 11.3 — FX purchase from cash drawer **or** bank (full wiring)
+### Slice 10.3 — FX purchase: cash drawer **or** bank (full wiring)
 
 | | |
 |---|---|
 | **Status** | planned |
-| **Implements** | Owner decision — FX buy TRY may leave **cash drawer or bank**; `Restaurant_Bookkeeping_App_Decisions.md` §15 update on build |
-| **Money-critical** | **Yes** — owner sign-off required |
+| **Money-critical** | Yes — owner sign-off |
 | **Suggested tag** | `v0.67.0-fx-purchase-cash-and-bank` |
 
-**Problem today (fix, do not re-litigate):**
+**Audit gap (today):**
 
-| Layer | Current | Must become |
-|-------|---------|-------------|
-| Frontend `fx-purchase-form.tsx` | Lists bank + cash but label unclear | **Cash + bank** in one dropdown; group or label: “Cash drawer” / “Bank” |
-| Backend `post_fx_purchase()` | **Cash only**; rejects bank | Accept `MoneyAccountKind.CASH` **or** `MoneyAccountKind.BANK` as TRY source |
-| GL | `Dr` FX / `Cr` cash GL when from drawer | `Dr` FX / `Cr` **payer GL** (cash or bank sub-account) — one JE |
-| Cash subledger | No `cash_movements` on FX buy | When paid from **cash**: `CashMovement` **OUT** on same `journal_entry_id`; when from **bank**: **no** cash movement (bank via GL only) |
-| Cash drawer UI | FX buy invisible in movements | Drawer OUT appears when source was cash |
-| Corrections | FX subledger only | Amend/void cash movement when source is cash; bank path unchanged |
+| Layer | Now | Target |
+|-------|-----|--------|
+| UI | Cash+bank in dropdown | Clear labels; **no** `CREDIT_CARD` |
+| Backend | `test_rejects_bank_as_try_payment_account` | Accept `BANK`; still reject card/FX wallet |
+| GL | `Dr` FX / `Cr` cash GL | `Cr` payer GL (cash or bank) |
+| Cash drawer | No movement row | `CashMovement` OUT when payer is `CASH` (same `journal_entry_id`) |
+| Corrections | FX subledger only | Cash movement void/amend when cash-sourced |
 
-**Out of scope for 11.3:** **Credit card** (`MoneyAccountKind.CREDIT_CARD`) as FX payment source — owner confirmed banks only (plus cash drawer), not card payable accounts.
+**Tests:** update/replace bank-reject test; add bank purchase + cash movement tests; **manual:** buy from drawer → see line on `/banking/cash`; buy from bank → FX up, bank GL down, no drawer line.
 
-**Characterize (acceptance):**
-
-1. **UI (`FxPurchaseForm`):** Keep loading active **cash + bank** TRY accounts (as today). Label **“Pay from (cash or bank)”**; show kind in option text (e.g. “Main Drawer — cash”, “Garanti TRY — bank”). Do **not** add credit card accounts to this dropdown.
-2. **Backend validation:** Replace `_validate_try_cash_money_account` with payer validation: `CASH` or `BANK` only; resolve `try_*_gl_account_id` from selected money account’s `gl_account_id`.
-3. **Posting (`post_fx_purchase`):**
-   - `build_fx_purchase_posting_lines(fx_gl, payer_gl, try_cost_kurus)` — `Cr` payer GL (unchanged shape).
-   - **If `CASH`:** after JE, persist `CashMovement` OUT (same `journal_entry_id`, offset = FX GL) + open drawer session — mirror POS cash-in pattern (**one JE, no double post**).
-   - **If `BANK`:** JE only; `Cr` bank GL; no `cash_movements` row.
-4. **FX subledger:** unchanged `PURCHASE` row; cash-flow `FX_PURCHASE` → investing.
-5. **Correction (`correct_fx_purchase`):** if original or corrected source is cash, reverse/amend linked `cash_movements`; handle payer account change (cash ↔ bank) on correct.
-6. **API schema:** rename field in docs/OpenAPI to `try_payment_money_account_id` (or keep `try_cash_money_account_id` with widened semantics — document in `DECISIONS.md`; prefer clear name if cheap).
-
-**Tests (mandatory):**
-
-- Purchase from **cash** — existing `test_fx_purchase_posts_dr_fx_cr_try_cash` + **new:** `cash_movements` row, drawer session lists OUT.
-- Purchase from **bank** — **new:** `Dr` FX / `Cr` bank GL; **no** `cash_movements` row; API 201.
-- Bank rejection test **replaced:** credit card / foreign_currency still rejected.
-- Correction from cash: movement void/amend with corrected entry.
-- Guard consideration: `FX_PURCHASE` + cash source ⇒ exactly one `cash_movements` row; bank source ⇒ zero.
-
-**Connected-surface audit:**
-
-- `correction.py`; cash-flow (unchanged); RLS `cash_movements`; bank balance read via existing GL/tree — no new `JournalEntrySource`.
-
-**Docs (on commit):**
-
-- **Decisions §15:** Buying FX — TRY may leave **cash drawer or bank** (owner 2026-06-24); cash path records drawer OUT movement.
-- `DECISIONS.md` + `CHANGELOG.md`.
-
-**Verify (owner-visible):**
-
-- Buy USD from **drawer** → FX up, drawer movement TRY out, EOD ties.
-- Buy EUR from **bank** → FX up, bank GL credited, no drawer movement.
-
-**Do not rebuild:** FX quantity model, average-cost conversion, `post_fx_conversion` / `post_fx_expense_spend` behavior.
+**Do not rebuild:** `post_fx_conversion`, `post_fx_expense_spend`, FX quantity model.
 
 ---
 
-### Phase 11 complete when
+### Phase 10 complete when
 
 | Slice | Gate |
 |-------|------|
-| 11.1 | All date fields use `DateInput` with **small** calendar; build green |
-| 11.2 | **Confirmed** nested Delivery nav; no duplicate flat links |
-| 11.3 | Cash **and** bank purchase paths; cash movement when from drawer; full `pytest`; **owner sign-off** |
+| 10.1 | Checklist files use `DateInput`; manual date verify on 4 screens; build green |
+| 10.2 | Nested Delivery nav; duplicates removed |
+| 10.3 | Bank path works; cash path + movement; full `pytest`; **owner sign-off** |
 
-Then proceed to **Phase 10 — Deployment & go-live**.
+Then proceed to **Phase 11 — Deployment & go-live**.
 
 ---
 
-## Phase 10 — Deployment & go-live
+## Phase 11 — Deployment & go-live
 
 Take the tested app to a real, secure production environment and put real data in it.
 
@@ -575,17 +554,17 @@ Take the tested app to a real, secure production environment and put real data i
 | 5. Pre-launch security pass | planned | Tighten `create_entity` (auth required); dependency scan (no high/critical CVEs); secrets audit; full suite green under production settings; final guard-test run. |
 | 6. Owner onboarding & smoke test | planned | Create the real restaurant(s), seed chart, enter opening balances, invite users with roles; run the end-to-end smoke test in production; **go live.** |
 
-**Phase 10 complete when:** app is live, backed up, monitored, and the owner has recorded real data successfully.
+**Phase 11 complete when:** app is live, backed up, monitored, and the owner has recorded real data successfully.
 
 ---
 
-## Phase 11 — Post-launch enhancements (parking lot)
+## Phase 12 — Post-launch enhancements (parking lot)
 
-**Note:** Slices **11.1–11.3** above are **pre-launch** (build before Phase 10). This section is for work **after** go-live. Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. Sequence by need.
+**Note:** Phase **10** slices (10.1–10.3) are **pre-launch**. This section is **after** go-live. Promote to Decisions before building.
 
-- **Shared date picker (small calendar)** — **→ Phase 11.1** (pre-launch; owner 2026-06-24).
-- **Delivery sidebar nesting** — **→ Phase 11.2** (pre-launch; owner **confirmed** nested layout).
-- **FX purchase from cash drawer and bank** — **→ Phase 11.3** (pre-launch; owner 2026-06-24).
+- **Shared date picker** — **→ Phase 10.1** (pre-launch).
+- **Delivery sidebar nesting** — **→ Phase 10.2** (owner confirmed).
+- **FX purchase cash + bank** — **→ Phase 10.3** (pre-launch).
 - **Bank feed (read-only) adapter** — account-information / transaction pull only; never payment-initiation (the app never moves money). Same normalized transaction rows as manual statement import, feeding the existing classify → clearing → near-match → anti-double-count pipeline (downstream unchanged). Manual upload stays permanently as universal fallback; both coexist. When built: dedup on bank unique transaction ID, consent/token expiry + reconnect, reconcile feed balance to statement, confirm route (direct bank API vs aggregator).
 - **Proper KDV/tax-return module** — output − input, declaration, periods (input VAT already captured per rate).
 - **FX revaluation** — period-end holding revaluation (today FX is cost-only; gain/loss accounts already exist).

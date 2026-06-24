@@ -8,8 +8,7 @@ from sqlalchemy.engine.url import make_url
 
 from app.config import settings
 from app.db.base import Base
-from app.db.provisioning import apply_database_integrity
-from app.features.entities.models import Entity, EntitySetting  # noqa: F401
+from app.db.provisioning import apply_database_integrity, APP_DB_ROLE
 from app.core.chart_of_accounts.models import Account  # noqa: F401
 from app.core.ledger.models import JournalEntry, JournalEntryLine, LedgerAuditEvent  # noqa: F401
 from app.features.invoices.models import InvoiceDraft  # noqa: F401
@@ -32,6 +31,26 @@ from app.features.delivery.models import DeliveryReport, DeliverySettlement, Own
 from app.features.expenses.models import ExpenseEntry, ExpenseItem, ExpenseItemAlias  # noqa: F401
 from app.features.auth.models import EntityMembership, User, AuthAuditEvent  # noqa: F401
 from app.core.idempotency.models import IdempotencyRecord  # noqa: F401
+from app.features.entities.models import Entity, EntitySetting  # noqa: F401
+
+
+APP_DB_PASSWORD = "mizan_dev"
+
+
+def ensure_mizan_app_role(conn) -> None:
+    """Non-superuser app role — RLS applies (superuser mizan bypasses RLS)."""
+    conn.execute(
+        text(
+            f"""
+            DO $$ BEGIN
+                CREATE ROLE {APP_DB_ROLE} LOGIN PASSWORD '{APP_DB_PASSWORD}'
+                    NOSUPERUSER NOBYPASSRLS;
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END $$;
+            """
+        )
+    )
+    conn.execute(text(f"ALTER ROLE {APP_DB_ROLE} NOSUPERUSER NOBYPASSRLS"))
 
 
 def ensure_mizan_role_and_databases() -> None:
@@ -51,6 +70,7 @@ def ensure_mizan_role_and_databases() -> None:
                     """
                 )
             )
+        ensure_mizan_app_role(conn)
         for db_name in ("mizan", "mizan_test"):
             exists = conn.execute(
                 text("SELECT 1 FROM pg_database WHERE datname = :name"),
@@ -58,6 +78,9 @@ def ensure_mizan_role_and_databases() -> None:
             ).scalar()
             if not exists:
                 conn.execute(text(f'CREATE DATABASE "{db_name}" OWNER mizan'))
+            conn.execute(text(f'GRANT ALL PRIVILEGES ON DATABASE "{db_name}" TO {APP_DB_ROLE}'))
+        # Docker POSTGRES_USER=mizan is superuser — keep NOBYPASSRLS for any direct use.
+        conn.execute(text("ALTER ROLE mizan NOBYPASSRLS"))
     admin_engine.dispose()
 
 

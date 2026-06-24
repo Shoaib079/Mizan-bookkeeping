@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Generator
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -38,17 +38,30 @@ def get_session() -> Generator[Session, None, None]:
         session.close()
 
 
+def _entity_guc_value(entity_id: uuid.UUID | None) -> str:
+    return str(entity_id) if entity_id else ""
+
+
 def _apply_entity_guc(session: Session, entity_id: uuid.UUID | None) -> None:
-    """Set PostgreSQL RLS variable on the session's current connection."""
+    """Set PostgreSQL RLS variable for the current transaction."""
     session.execute(
-        text("SELECT set_config('app.current_entity_id', :entity_id, false)"),
-        {"entity_id": str(entity_id) if entity_id else ""},
+        text("SELECT set_config('app.current_entity_id', :entity_id, true)"),
+        {"entity_id": _entity_guc_value(entity_id)},
+    )
+
+
+@event.listens_for(Session, "after_begin")
+def _sync_entity_guc_after_begin(session, transaction, connection) -> None:  # noqa: ARG001
+    """Re-apply entity GUC after commit — transaction-local settings do not survive."""
+    connection.execute(
+        text("SELECT set_config('app.current_entity_id', :entity_id, true)"),
+        {"entity_id": _entity_guc_value(get_current_entity_id())},
     )
 
 
 @contextmanager
 def entity_context(session: Session, entity_id: uuid.UUID):
-    """Set PostgreSQL RLS variable (connection-scoped) and Python context."""
+    """Set PostgreSQL RLS variable (transaction-scoped) and Python context."""
     token = _current_entity_id.set(entity_id)
     _apply_entity_guc(session, entity_id)
     try:
