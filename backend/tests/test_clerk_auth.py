@@ -82,6 +82,27 @@ def test_invalid_token_returns_401(
     assert response.status_code == 401
 
 
+def test_users_me_returns_provisioned_user(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    user = _create_user(db_session, "me-endpoint@example.com")
+    response = client.get("/users/me", headers=auth_headers(user))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == str(user.id)
+    assert body["email"] == "me-endpoint@example.com"
+
+
+def test_users_me_requires_auth_when_enforced(
+    auth_enforced,
+    client: TestClient,
+) -> None:
+    response = client.get("/users/me")
+    assert response.status_code == 401
+
+
 def test_inactive_user_denied(
     auth_enforced,
     client: TestClient,

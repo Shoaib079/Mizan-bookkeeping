@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
-from app.core.auth.deps import require_admin_members
+from app.config import settings
+from app.core.auth.deps import require_admin_members, resolve_current_user
 from app.db.session import get_session
 from app.features.auth import service
 from app.features.auth.schema import (
@@ -31,6 +32,18 @@ def create_user(
         user = service.create_user(session, payload)
     except service.DuplicateUserError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return UserRead.model_validate(user)
+
+
+@users_router.get("/me", response_model=UserRead)
+def get_current_user_profile(
+    session: Session = Depends(get_session),
+    authorization: str | None = Header(None),
+) -> UserRead:
+    """Return the provisioned local user for the verified Clerk session."""
+    if not settings.auth_enforcement:
+        raise HTTPException(status_code=404, detail="Auth enforcement is disabled")
+    user = resolve_current_user(session, authorization)
     return UserRead.model_validate(user)
 
 

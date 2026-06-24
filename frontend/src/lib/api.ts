@@ -12,6 +12,14 @@ export class ApiError extends Error {
   }
 }
 
+type AuthHeaderProvider = () => Promise<Record<string, string>>;
+
+let authHeaderProvider: AuthHeaderProvider | null = null;
+
+export function setAuthHeaderProvider(provider: AuthHeaderProvider | null) {
+  authHeaderProvider = provider;
+}
+
 async function parseError(response: Response): Promise<string> {
   try {
     const body = await response.json();
@@ -27,9 +35,11 @@ export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
+  const authHeaders = authHeaderProvider ? await authHeaderProvider() : {};
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
+      ...authHeaders,
       ...(init?.headers ?? {}),
     },
   });

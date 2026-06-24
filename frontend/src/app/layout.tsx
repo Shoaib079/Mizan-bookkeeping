@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
-import { EntityProvider } from "@/lib/entity-context";
+import { Providers } from "@/app/providers";
 
 import "./globals.css";
 
@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans`}>
-        <EntityProvider>{children}</EntityProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

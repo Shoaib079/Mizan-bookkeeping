@@ -2,21 +2,29 @@
 
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import {
   BarChart3,
   Building2,
   CreditCard,
   LayoutDashboard,
   Settings,
+  ShoppingBag,
   Upload,
   Users,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { NewMenu } from "@/components/new-menu";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, Select } from "@/components/ui/input";
+import { useApiAuth } from "@/lib/api-auth";
 import { useEntity } from "@/lib/entity-context";
+import { cn } from "@/lib/utils";
+
+const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
 const navGroups = [
   {
@@ -26,6 +34,8 @@ const navGroups = [
   {
     label: "Books",
     items: [
+      { href: "/sales", label: "Sales", icon: ShoppingBag },
+      { href: "/expenses", label: "Expenses", icon: Wallet },
       { href: "/uploads", label: "Uploads", icon: Upload },
       { href: "/suppliers", label: "Suppliers", icon: Users },
       { href: "/banking", label: "Banking", icon: Building2 },
@@ -49,7 +59,16 @@ export function AppShell({
   children: React.ReactNode;
   title?: string;
 }) {
-  const { entityId, setEntityId, actorId, setActorId } = useEntity();
+  const pathname = usePathname();
+  const { clerkEnabled: authOn } = useApiAuth();
+  const {
+    entityId,
+    setEntityId,
+    actorId,
+    setActorId,
+    entities,
+    entitiesLoading,
+  } = useEntity();
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -60,23 +79,43 @@ export function AppShell({
         </div>
         <NewMenu />
         <div className="border-b border-border px-3 py-3">
-          <Label htmlFor="entity-id">Entity ID</Label>
-          <Input
-            id="entity-id"
-            className="mt-1 font-mono text-xs"
-            placeholder="uuid"
-            value={entityId}
-            onChange={(e) => setEntityId(e.target.value)}
-          />
-          <Label htmlFor="actor-id" className="mt-2">
-            Actor ID
-          </Label>
-          <Input
-            id="actor-id"
-            className="mt-1 font-mono text-xs"
-            value={actorId}
-            onChange={(e) => setActorId(e.target.value)}
-          />
+          <Label htmlFor="entity-select">Restaurant</Label>
+          {entities.length > 0 ? (
+            <Select
+              id="entity-select"
+              className="mt-1"
+              value={entityId}
+              onChange={(e) => setEntityId(e.target.value)}
+            >
+              <option value="">Select…</option>
+              {entities.map((entity) => (
+                <option key={entity.id} value={entity.id}>
+                  {entity.name}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Input
+              id="entity-select"
+              className="mt-1 font-mono text-xs"
+              placeholder={entitiesLoading ? "Loading…" : "uuid"}
+              value={entityId}
+              onChange={(e) => setEntityId(e.target.value)}
+            />
+          )}
+          {!authOn && (
+            <>
+              <Label htmlFor="actor-id" className="mt-2">
+                Actor ID (dev)
+              </Label>
+              <Input
+                id="actor-id"
+                className="mt-1 font-mono text-xs"
+                value={actorId}
+                onChange={(e) => setActorId(e.target.value)}
+              />
+            </>
+          )}
         </div>
         <nav className="flex-1 space-y-4 p-3">
           {navGroups.map((group) => (
@@ -85,17 +124,26 @@ export function AppShell({
                 {group.label}
               </p>
               <ul className="space-y-0.5">
-                {group.items.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent"
-                    >
-                      <item.icon className="size-4" />
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
+                {group.items.map((item) => {
+                  const active =
+                    item.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent",
+                          active && "bg-sidebar-accent font-medium text-primary",
+                        )}
+                      >
+                        <item.icon className="size-4" />
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -106,6 +154,7 @@ export function AppShell({
           <h1 className="text-sm font-semibold">{title}</h1>
           <div className="flex items-center gap-2">
             <Button variant="secondary">This month</Button>
+            {clerkEnabled && <UserButton afterSignOutUrl="/sign-in" />}
           </div>
         </header>
         <main className="flex-1 p-6">{children}</main>

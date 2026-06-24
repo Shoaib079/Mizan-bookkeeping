@@ -12,11 +12,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 9 — frontend (New menu + receipt review) |
-| **Active slice** | Phase 8.7 D0–D3 implemented; Phase 9 slices 1–2b + receipt review — awaiting owner sign-off + tags |
-| **Last completed slice** | Phase 8.7 D0–D3 — expense receipt OCR + manual daily sales (uncommitted) |
-| **Last commit/tag** | `v0.51.0-expense-photo-tip-ocr-slice-c` |
-| **Next up** | Owner sign-off on money-critical slices; commit/tags `v0.52.0` … `v0.55.0` |
+| **Active phase** | Phase 9 — frontend |
+| **Active slice** | Phase 9 Slice 3 — Suppliers & payables |
+| **Last completed slice** | Phase 9 read-back lists + Clerk login (`v0.56.0-phase9-readback-clerk`) |
+| **Last commit/tag** | `v0.56.0-phase9-readback-clerk` |
+| **Next up** | Suppliers & payables UI; owner sign-off on money-critical Phase 8.7 slices |
 
 **The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = finish expense-receipt OCR + manual daily-sales API before the UI depends on them. Phase 9 = frontend (including the **New** dropdown for manual expense, manual sales, and receipt upload). Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -285,7 +285,7 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 
 ## Phase 8.7 — Expense receipt OCR + manual sales (backend, pre-frontend)
 
-**Status: IMPLEMENTED (2026-06-24)** — D0–D3 built; pytest green; awaiting owner sign-off on money-critical slices before production reliance.
+**Status: DONE (2026-06-24)** — D0–D3 built, committed `d2a624b`, tagged `v0.52.0`–`v0.54.0`; awaiting owner sign-off on money-critical slices.
 
 **Why before Phase 9:** Slice C reads **only a tip** from a receipt photo. The owner needs **all handwritten lines** (peynir, süt, …) as separate cash expenses under their names, plus typed sales/expenses from the Add button. Backend APIs must exist before the frontend wires them.
 
@@ -300,9 +300,9 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 | Slice | Status | Purpose | Tag (planned) |
 |-------|--------|---------|---------------|
 | **D0 — Promote Decisions** | done | Multi-line receipt OCR + cash-only + vision OCR in Decisions docs | docs only |
-| **D1 — Expense receipt intake** | done | migration `048`, upload/confirm/reject API, `tip-photos` wrapper | `v0.52.0-expense-receipt-intake` (pending tag) |
-| **D2 — Complete OCR adapter** | done | `expense_receipt.py` fixture/heuristics/vision; multi-line + tip tests | `v0.53.0-expense-receipt-ocr` (pending tag) |
-| **D3 — Manual daily sales API** | done | `POST .../pos/manual-daily-sales`; reuse POS confirm posting | `v0.54.0-manual-daily-sales` (pending tag) |
+| **D1 — Expense receipt intake** | done | migration `048`, upload/confirm/reject API, `tip-photos` wrapper | `v0.52.0-expense-receipt-intake` |
+| **D2 — Complete OCR adapter** | done | `expense_receipt.py` fixture/heuristics/vision; multi-line + tip tests | `v0.53.0-expense-receipt-ocr` |
+| **D3 — Manual daily sales API** | done | `POST .../pos/manual-daily-sales`; reuse POS confirm posting | `v0.54.0-manual-daily-sales` |
 
 **APIs (planned):**
 
@@ -335,14 +335,15 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| 1. Shell + login + **New** menu | in progress | App shell + sidebar **New** dropdown (manual expense, daily sales, receipt upload); entity/actor ID fields; no Clerk yet | `v0.55.0-phase9-new-menu` (pending tag) |
-| 2. Manual sales + expenses | in progress | Forms wired to `POST /expenses` and `POST /pos/manual-daily-sales` | — |
-| 2b. Expense receipt upload | in progress | Upload → `POST /expense-receipts` → review route | — |
+| 1. Shell + login + **New** menu | done | App shell + sidebar **New** dropdown; Clerk login when `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` set; entity switcher | `v0.55.0-phase9-new-menu` |
+| 2. Manual sales + expenses | done | Forms wired to `POST /expenses` and `POST /pos/manual-daily-sales` | — |
+| 2b. Expense receipt upload | done | Upload → `POST /expense-receipts` → review route | — |
+| 2c. Read-back lists + Clerk | done | `/expenses` + `/sales` lists; Clerk login + entity switcher + `GET /users/me` | `v0.56.0-phase9-readback-clerk` |
 | 3. Suppliers & payables | planned | Supplier master CRUD; invoice draft → confirm; record payment; supplier ledger + payables (running balances) views. |
 | 4. Banking & cash | planned | Account tree + balances; statement upload → classify → Needs Review; transfers; cash drawer (open / movements / EOD close with over-short); FX wallets (purchase / convert / spend). |
 | 5. POS & delivery sales | planned | POS daily-summary + card-sales intake; delivery platform reports + settlements + reconciliation; user-managed delivery platforms; commission e-Faturas. |
 | 6. Staff, partners, receivables, tips | planned | Entry forms + ledger views for each subledger (salary vs advance, partner reimbursements, customer receivables, cash tip expense). Update: tips are cash expense (`5700`), not a tip pot. |
-| 7. Needs-review queue + document review | in progress | Expense receipt review screen (`/review/receipts/[id]`) — photo left, editable lines, confirm | — |
+| 7. Needs-review queue + document review | done | Expense receipt review screen (`/review/receipts/[id]`) — photo left, editable lines, confirm | — |
 | 8. Dashboard + reports | planned | Dashboard tiles; Reports card-library landing; P&L / balance sheet / cash flow / KDV input / delivery sales / period comparison read views. **Export = ONE "Download" control per report (dropdown menu of formats), NOT separate buttons:** all reports offer Excel; the three financial statements (P&L / balance sheet / cash flow) additionally offer PDF (backend from Phase 8.5 Slice 5). Shared download component, consistent everywhere. Role-gated (cashier can't see financials). |
 | 9. Settings & onboarding | planned | Opening-balances wizard; members/roles management; entity settings; delivery-platform management; backup status; create / switch restaurants. |
 | 10. Theme refinement + UX polish | planned | Apply final theme via the one token file (zero page rework); empty states, loading skeletons, toasts, command palette, full keyboard + touch + accessibility pass. |
@@ -392,7 +393,8 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| 2026-06-24 | Tips Slice C — expense-photo OCR cash-tip | `v0.51.0-expense-photo-tip-ocr-slice-c` | `expense_photo.py` reads a tip → `5700` cash-tip draft in Needs Review; confirm posts Dr 5700/Cr cash; `expenses/tip-photos` upload+confirm; per-entity dup guard (`source_document_fingerprint`); migration `047`; 522 pytest |
+| 2026-06-24 | Phase 9 — read-back lists + Clerk | `v0.56.0-phase9-readback-clerk` | `/expenses` + `/sales` list pages; `@clerk/nextjs` auth; entity switcher; `GET /users/me`; 535 pytest |
+| 2026-06-24 | Phase 8.7 + Phase 9 New menu | `v0.55.0-phase9-new-menu` | Multi-line receipt OCR, manual sales API, New dropdown, receipt review; tags `v0.52.0`–`v0.55.0`; 533 pytest |
 | 2026-06-24 | Tips Slice B2 — card commission total clearance | `v0.50.0-pos-commission-total-clearance-slice-b2` | One-button `1400` residual → `5300` sweep; `POS_COMMISSION_SWEEP`; no migration; 511 pytest |
 | 2026-06-24 | Tips Slice B1 — card tips via Z report | `v0.49.0-pos-card-tips-z-report-slice-b1` | Per-entity `card_sale_basis`; `tip = Z − card`; Needs Review guards; `POS_CARD_TIP`; migration `046`; 506 pytest |
 | 2026-06-23 | Tips Slice A — tips are an expense | `v0.48.0-tips-expense-slice-a` | Retire `2260`/tips subsystem; gross sales; `5700 Tips Expense`; migration `045`; 497 pytest |

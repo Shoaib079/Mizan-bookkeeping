@@ -4,20 +4,22 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 9 — frontend (New menu + receipt review in progress) |
-| **Last completed slice** | Phase 8.7 D0–D3 — expense receipt OCR + manual daily sales (implementation; awaiting sign-off/tags) |
-| **Next slice** | Owner sign-off on Phase 8.7 money-critical slices; Phase 9 read-back lists + Clerk login |
+| **Phase** | Phase 9 — frontend |
+| **Last completed slice** | Phase 9 read-back lists + Clerk login (`v0.56.0`) |
+| **Next slice** | Phase 9 Slice 3 — Suppliers & payables; owner sign-off on money-critical Phase 8.7 slices |
 | **Branch** | `main` |
-| **Last tag** | `v0.51.0-expense-photo-tip-ocr-slice-c` |
+| **Last tag** | `v0.56.0-phase9-readback-clerk` |
 
 ## Resume point
 
-**Phase 8.7 + Phase 9 core (2026-06-24)** — implemented per plan `.cursor/plans/expense_ocr_+_add_menu_a4ddb775.plan.md`:
+**Phase 8.7 + Phase 9 core (2026-06-24)** — committed `d2a624b`, tags `v0.52.0` … `v0.55.0`:
 
-- **Backend:** migration `048`, `expense_receipt_intakes` + lines, `POST /expense-receipts` upload/confirm/reject, `expense_receipt.py` OCR adapter, `POST /pos/manual-daily-sales`, `tip-photos` folded into unified intake wrapper.
-- **Frontend:** sidebar **New** menu (manual expense, manual daily sales, receipt upload), receipt review at `/review/receipts/[id]`.
+- **Backend:** migration `048`, expense receipt intake/OCR, manual daily sales, `tip-photos` wrapper.
+- **Frontend:** sidebar **New** menu, receipt review at `/review/receipts/[id]`.
 
-**Awaiting:** owner sign-off on money-critical backend slices; version tags `v0.52.0` … `v0.55.0`; commit when requested.
+**In progress:** Phase 9 Slice 3 — Suppliers & payables UI.
+
+**Awaiting:** owner sign-off on money-critical backend slices (Phase 8.7 D1–D3, tips A/B/C).
 
 ## Pre-sign-off verification (2026-06-24)
 
@@ -29,6 +31,7 @@
 
 ## Recent
 
-- 2026-06-24 — **IMPLEMENTED** Phase 8.7 D0–D3 + Phase 9 New menu + receipt review (uncommitted; awaiting sign-off/tags)
+- 2026-06-24 — **DONE** Phase 9 read-back lists + Clerk login (`v0.56.0-phase9-readback-clerk`, 535 pytest)
+- 2026-06-24 — **DONE** Phase 8.7 D0–D3 + Phase 9 New menu + receipt review (`d2a624b`, `v0.52.0`–`v0.55.0`)
 - 2026-06-24 — **PLANNED** Phase 8.7 + Phase 9 New menu — plan + ROADMAP
 - 2026-06-24 — Expense-photo OCR cash-tip (Slice C): tip-only stub (`v0.51.0-expense-photo-tip-ocr-slice-c`, 522 pytest; awaiting sign-off)
