@@ -8,11 +8,13 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **What changed:** `_z_mismatch_review_reason()` in `daily_summary_service.py`; Decisions §9 operator note; integration test in `test_pos_card_tips.py`.
 
-**Not in slice:** Frontend copy (Phase 9 Slice 2d); DECISIONS B1 dedup (H5).
+**Not in slice:** Frontend copy (Phase 9 Slice 2d).
 
 ## 2026-06-24 — Z report match-or-review; no POS tip posting (supersedes Slice B1 tip basis)
 
-**Choice:** Simplify POS daily-summary confirm per owner direction: tips are **only** on the expense list (`Dr 5700 / Cr cash` via `post_expense_entry`), never derived or posted at POS. When `card_tips_z_report_enabled` is on, the owner enters the card-terminal **Z report** with the intake; the app compares **Z to system card sale** — **match → post** cash + card as on the system slip; **mismatch → Needs Review** (owner corrects figures). Removed `card_sale_basis` / `expected_tip_kurus` from confirm APIs; `card_sale_basis` entity setting is **deprecated** (ignored). Removed `POS_CARD_TIP` posting from `confirm_pos_daily_summary`; card clearing (`1400`) debits **system card sale** only. `JournalEntrySource.POS_CARD_TIP` retained in the registry for voiding any historical rows.
+**Canonical Z description (`v0.57.0`).** Single source of truth for card-terminal Z handling — supersedes original Slice B1 (`v0.49.0`) `system`/`z_report`/`ask` GL model below.
+
+**Choice:** Simplify POS daily-summary confirm per owner direction: tips are **only** on the expense list (`Dr 5700 / Cr cash` via `post_expense_entry`), never derived or posted at POS. When `card_tips_z_report_enabled` is on, the owner enters the card-terminal **Z report** with the intake; the app compares **Z to system card sale** — **match → post** cash + card as on the system slip; **mismatch → Needs Review** (owner corrects figures). Removed `card_sale_basis` / `expected_tip_kurus` from confirm APIs; `card_sale_basis` entity setting is **deprecated** (ignored). Removed `POS_CARD_TIP` posting from `confirm_pos_daily_summary`; card clearing (`1400`) debits **system card sale** only. `JournalEntrySource.POS_CARD_TIP` retained in the registry for voiding any historical rows. Ops workflow when Z > system card: Phase 8.8 H4 (reallocate cash→card, expense-paper tip, re-confirm).
 
 **GL:** Sales gross — `Dr cash / Cr 4000` + `Dr 1400 / Cr 4000` (card = system slip). Tips on expense paper roll into P&L (`5700`) and reduce cash on the balance sheet — same as any expense line.
 
@@ -63,6 +65,8 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 **API:** `POST /entities/{id}/pos/clearing-reconciliation/clear-commission` → `{commission_kurus, clearing_balance_before_kurus, clearing_balance_after_kurus, clearance_date, journal_entry_id}`. Core: `post_card_commission_clearance()`. New `JournalEntrySource.POS_COMMISSION_SWEEP` (cash-flow operating; correction void-and-reenter).
 
 ## 2026-06-24 — Card tips via the card-terminal Z report (Slice B1; owner decision)
+
+> **SUPERSEDED (`v0.49.0` → removed in `v0.57.0`).** Canonical model: see **"Z report match-or-review; no POS tip posting"** above. Do **not** re-implement `card_sale_basis`, `system`/`z_report`/`ask` GL legs, or `POS_CARD_TIP` posting at confirm. Historical record only.
 
 **Choice:** Restaurants that collect tips on the card terminal reconcile them with the terminal's **Z report**. Z report total = system card sale + card tips, so the day's card tip is `tip = Z − system card sale`. Whether and how this is applied is **per-entity** (every restaurant runs differently — some take platform sales as cash on the Z report, some are card-only, etc.).
 

@@ -4,11 +4,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 9 — frontend; Phase 8.8 adversarial follow-ups (H5 remains) |
-| **Last completed slice** | Phase 8.8 H4 — card-tip day ops guidance (`v0.58.3-phase8.8-h4-z-ops-guidance`) |
-| **Next slice** | Phase 8.8 H5 — docs dedup; Phase 9 Slice 3 — Suppliers & payables |
+| **Phase** | Phase 9 — frontend |
+| **Last completed slice** | Phase 8.8 H5 — docs dedup (`v0.58.4-phase8.8-complete`) |
+| **Next slice** | Phase 9 Slice 3 — Suppliers & payables |
 | **Branch** | `main` |
-| **Last tag** | `v0.58.3-phase8.8-h4-z-ops-guidance` |
+| **Last tag** | `v0.58.4-phase8.8-complete` |
 
 ## Resume point
 
@@ -19,7 +19,14 @@
 - Phase 9 New menu + receipt review (`v0.55.0`), read-back + Clerk (`v0.56.0`)
 - Z match-or-review (`v0.57.0`, `a6dd4e6`)
 
-**Next:** Phase 8.8 H5 — docs dedup. Phase 9 Slice 3 — Suppliers & payables UI.
+**Next:** Phase 9 Slice 3 — Suppliers & payables UI.
+
+## Verification (2026-06-24 — H5)
+
+| Check | Result |
+|-------|--------|
+| Full pytest (Alembic-provisioned test DB) | **543 passed**, 2 skipped |
+| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
 
 ## Verification (2026-06-24 — H4)
 
@@ -60,7 +67,8 @@
 
 ## Recent
 
-- 2026-06-24 — **Phase 8.8 H3** — expense receipt test gaps (`v0.58.2-phase8.8-h3-expense-receipt-guards`, 542 pytest)
+- 2026-06-24 — **Phase 8.8 H5** — docs dedup (`v0.58.4-phase8.8-complete`; Phase 8.8 complete)
+- 2026-06-24 — **Phase 8.8 H4** — card-tip day ops guidance (`v0.58.3-phase8.8-h4-z-ops-guidance`, 543 pytest)
 - 2026-06-24 — **Phase 8.8 H2** — tips expense cash-only at API (`v0.58.1-phase8.8-h2-tips-cash-only`, 538 pytest)
 - 2026-06-24 — **Phase 8.8 H1** — commission sweep timing guard (`v0.58.0-phase8.8-h1-commission-sweep-guard`, 536 pytest)
 - 2026-06-21 — **Owner sign-off** — tips A/B2/C, Phase 8.7, Phase 9 core, Z (`v0.57.1-owner-sign-off`)

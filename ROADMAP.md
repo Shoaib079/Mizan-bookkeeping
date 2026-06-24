@@ -14,9 +14,9 @@
 |-------|-------|
 | **Active phase** | Phase 9 — frontend |
 | **Active slice** | Phase 9 Slice 3 — Suppliers & payables |
-| **Last completed slice** | Phase 8.8 H3 — expense receipt test gaps (`v0.58.2-phase8.8-h3-expense-receipt-guards`) |
-| **Last commit/tag** | `v0.58.2-phase8.8-h3-expense-receipt-guards` |
-| **Next up** | Phase 8.8 H5 — docs dedup; Phase 9 Slice 3 — Suppliers & payables |
+| **Last completed slice** | Phase 8.8 H5 — docs dedup (`v0.58.4-phase8.8-complete`) |
+| **Last commit/tag** | `v0.58.4-phase8.8-complete` |
+| **Next up** | Phase 9 Slice 3 — Suppliers & payables |
 
 **The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = expense-receipt OCR + manual daily-sales API (DONE). **Phase 8.8** = remaining backend gaps from the 2026-06-24 adversarial review (not a re-do of tips/Z — see **Do not rebuild** below). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -197,7 +197,7 @@ POS daily-summary photo + delivery platform reports; commission e-Faturas (e-Fat
 | Delivery platform reports (gross / commission / net) | done | `delivery_reports` + `delivery_settlements`; `post_delivery_report()` Dr clearing / Cr `4000` gross; `post_delivery_settlement()` Dr bank / Cr clearing net; statement classify `delivery_settlement` (`delivery_platform_id`); reconciliation iterates entity platforms; Alembic `030` |
 | User-managed delivery platforms | done | `delivery_platforms` table — owner add / rename / deactivate; auto clearing GL sub-account under parent `1450` (mirrors bank/card sub-accounts); reports/settlements/commission/reconciliation keyed by `delivery_platform_id`; removed fixed enum + comma-separated `delivery_platforms` setting; legacy `1410`–`1430` migrated; API `POST/GET/PATCH .../delivery/platforms`; Alembic `032`; 300 pytest |
 | Commission e-Faturas | done | Reuse `invoice_drafts` with `invoice_kind=delivery_commission` + `delivery_report_id` FK; `post_delivery_commission_draft()` Dr `5500` + Dr `1500` / **Cr platform clearing GL** (via linked platform) — **not** `2000` AP; link/report mismatch → `needs_review`; `commission_journal_entry_id` on report; Alembic `031` |
-| Tips (pass-through, not revenue/expense) | done | `tip_accruals` + `tip_payouts`; card Dr `1400`/Cr `2260`; cash held Dr cash/Cr `2260`; payout Dr `2260`/Cr cash (not expense); balance check on pot; chart `2260` Tips Payable; API `POST/GET .../tips/accruals`, `POST/GET .../tips/payouts`, `GET .../tips/balance`; Alembic `033`; tag `v0.35.0`; 307 pytest |
+| Tips (pass-through, not revenue/expense) | **superseded** | Was `v0.35.0` — `tip_accruals`/`tip_payouts`/`2260`; **reversed by Slice A `v0.48.0`** — tips are cash expense (`5700`), gross sales; subsystem removed migration `045`; see **Do not rebuild** |
 | Expenses + spelling tolerance | done | `expense_items` + `expense_item_aliases` + `expense_entries`; Turkish-aware normalization + fuzzy match → `needs_review`; confirm remembers alias; manual Dr expense / Cr bank or cash; `rent_utility` bank classify with `expense_account_id`; `has_source_document=false` on manual entry; API `POST/GET .../expense-items`, `POST .../merge`, `POST/GET .../expenses`, `POST .../confirm-item`; Alembic `034`; tag `v0.36.0`; 317 pytest |
 
 **Phase 6 complete when:** all slices above done, tested, committed, owner sign-off. **→ Phase 6 COMPLETE (owner signed off).**
@@ -341,7 +341,7 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 
 ## Phase 8.8 — Adversarial review follow-ups (backend hardening)
 
-**Status: IN PROGRESS** — H1–H4 done (`v0.58.0`–`v0.58.3`). Surfaced by independent adversarial review after `v0.57.0`. These are **gaps in guards/tests/ops safety**, not a re-do of Slice A/B/C or Phase 8.7. Do **not** re-open `card_sale_basis` or POS tip posting (see **Do not rebuild** above).
+**Status: COMPLETE ✓** — H1–H5 done (`v0.58.0`–`v0.58.4`). Surfaced by independent adversarial review after `v0.57.0`. These were **gaps in guards/tests/ops safety/docs**, not a re-do of Slice A/B/C or Phase 8.7. Do **not** re-open `card_sale_basis` or POS tip posting (see **Do not rebuild** above).
 
 **Purpose:** Close remaining money/ops risks before owner sign-off and production. Each slice = completion gate + tag. Can run in parallel with Phase 9 frontend where noted.
 
@@ -351,9 +351,9 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 | **H2 — Tips expense cash-only at API** | done | Adversarial finding: generic `post_expense_entry` allows `5700` from bank | `post_expense_entry` rejects `5700` unless `money_account` is cash (`InvalidExpensePostingError` → 422); receipt intake unchanged (already cash-only); 2 tests; `DECISIONS.md` § tips updated. Tag `v0.58.1-phase8.8-h2-tips-cash-only`. |
 | **H3 — Expense receipt test gaps** | done | Adversarial finding: missing negative/isolation coverage | Guard already in `confirm_expense_receipt` (line sum vs `receipt_total_kurus`); 4 permanent tests — mismatch blocked, override fix posts, API + service cross-entity read/confirm 404, RLS hides intakes/lines. Tag `v0.58.2-phase8.8-h3-expense-receipt-guards`. **542 pytest green.** |
 | **H4 — Card-tip day ops guidance** | done | Adversarial finding: when Z > system card, review message does not explain cash↔card reallocation workflow | Needs Review copy explains reallocate cash→card (same total) + expense-paper tip + re-confirm; Decisions §9 operator note; integration test mismatch → expense tip → corrected confirm → deposit + sweep clears `1400`. Tag `v0.58.3-phase8.8-h4-z-ops-guidance`. |
-| **H5 — Docs dedup** | planned | Stale `DECISIONS.md` Slice B1 (`system`/`z_report` GL) contradicts `v0.57.0` entry | Mark B1 section superseded at top; single canonical Z description; no code change |
+| **H5 — Docs dedup** | done | Stale `DECISIONS.md` Slice B1 (`system`/`z_report` GL) contradicts `v0.57.0` entry | B1 marked superseded; canonical Z match-or-review in v0.57.0 entry; Phase 6 tips pass-through row updated; no code change. Tag `v0.58.4-phase8.8-complete`. |
 
-**Phase 8.8 complete when:** H1–H5 done (or explicitly deferred by owner in Decisions), full pytest green, ROADMAP updated, owner sign-off on money-critical items H1–H2.
+**Phase 8.8 complete when:** H1–H5 done (or explicitly deferred by owner in Decisions), full pytest green, ROADMAP updated, owner sign-off on money-critical items H1–H2. **→ Phase 8.8 COMPLETE ✓**
 
 **Out of scope for Phase 8.8:** Re-building Z tip derivation at POS; re-adding `card_sale_basis`; frontend forms (→ Phase 9 Slice 2d).
 
@@ -430,6 +430,8 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-24 | Phase 8.8 H5 — docs dedup | `v0.58.4-phase8.8-complete` | B1 superseded banner; canonical Z in v0.57.0 entry; Phase 6 tips row superseded; Phase 8.8 complete |
+| 2026-06-24 | Phase 8.8 H4 — card-tip day ops guidance | `v0.58.3-phase8.8-h4-z-ops-guidance` | Z mismatch review copy; Decisions §9 operator note; integration test; 543 pytest |
 | 2026-06-24 | Phase 8.8 H3 — expense receipt test gaps | `v0.58.2-phase8.8-h3-expense-receipt-guards` | Line-sum mismatch confirm blocked (existing guard); cross-entity read/confirm + RLS isolation; 4 tests; 542 pytest |
 | 2026-06-24 | Phase 8.8 H2 — tips expense cash-only at API | `v0.58.1-phase8.8-h2-tips-cash-only` | `post_expense_entry` rejects `5700` from bank; `InvalidExpensePostingError` → 422; 2 tests; 538 pytest |
 | 2026-06-24 | Phase 8.8 H1 — commission sweep timing guard | `v0.58.0-phase8.8-h1-commission-sweep-guard` | `clear-commission` rejects undeposited card sales (`in_transit > 0`, no settlements); `InTransitCardSalesError` → 422; 2 tests; 536 pytest |
