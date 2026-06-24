@@ -13,13 +13,15 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: mizan
+          # Superuser for bootstrap (creates mizan role + mizan / mizan_test DBs).
+          # Must match DATABASE_ADMIN_URL below — not the app DATABASE_URL user.
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: mizan_dev
-          POSTGRES_DB: mizan
+          POSTGRES_DB: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U mizan -d mizan"
+          --health-cmd "pg_isready -U postgres -d postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10

@@ -39,7 +39,7 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+psycopg://mizan:mizan_dev@db:5432/mizan
-      DATABASE_ADMIN_URL: postgresql+psycopg://postgres:mizan_dev@db:5432/postgres
+      DATABASE_ADMIN_URL: postgresql+psycopg://mizan:mizan_dev@db:5432/postgres
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       REDIS_URL: redis://redis:6379/0
@@ -62,7 +62,7 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+psycopg://mizan:mizan_dev@db:5432/mizan
-      DATABASE_ADMIN_URL: postgresql+psycopg://postgres:mizan_dev@db:5432/postgres
+      DATABASE_ADMIN_URL: postgresql+psycopg://mizan:mizan_dev@db:5432/postgres
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       BACKUP_SCHEDULE_HOUR: "3"

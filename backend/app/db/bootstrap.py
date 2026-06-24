@@ -4,6 +4,7 @@ Production and pytest use ``alembic upgrade head`` (see ``app.db.provisioning``)
 """
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
 
 from app.config import settings
 from app.db.base import Base
@@ -36,17 +37,20 @@ from app.core.idempotency.models import IdempotencyRecord  # noqa: F401
 def ensure_mizan_role_and_databases() -> None:
     """Create mizan role + app/test DBs when using local Postgres (no Docker yet)."""
     admin_engine = create_engine(settings.database_admin_url, isolation_level="AUTOCOMMIT")
+    admin_user = (make_url(settings.database_admin_url).username or "").lower()
     with admin_engine.connect() as conn:
-        conn.execute(
-            text(
-                """
-                DO $$ BEGIN
-                    CREATE ROLE mizan LOGIN PASSWORD 'mizan_dev';
-                EXCEPTION WHEN duplicate_object THEN NULL;
-                END $$;
-                """
+        # Docker Compose uses POSTGRES_USER=mizan — role already exists; skip CREATEROLE.
+        if admin_user != "mizan":
+            conn.execute(
+                text(
+                    """
+                    DO $$ BEGIN
+                        CREATE ROLE mizan LOGIN PASSWORD 'mizan_dev';
+                    EXCEPTION WHEN duplicate_object THEN NULL;
+                    END $$;
+                    """
+                )
             )
-        )
         for db_name in ("mizan", "mizan_test"):
             exists = conn.execute(
                 text("SELECT 1 FROM pg_database WHERE datname = :name"),
