@@ -1,15 +1,25 @@
 "use client";
 
-import { ChevronDown, Plus, Receipt, ShoppingBag, Wallet } from "lucide-react";
+import {
+  ChevronDown,
+  FileText,
+  Plus,
+  Receipt,
+  ShoppingBag,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { useState } from "react";
 
+import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
 import { ExpenseReceiptUploadForm } from "@/components/forms/expense-receipt-upload-form";
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
+import { SupplierForm } from "@/components/forms/supplier-form";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type MenuKey = "expense" | "sales" | "receipt" | null;
+type MenuKey = "expense" | "sales" | "receipt" | "supplier" | "efatura" | null;
 
 export function NewMenu() {
   const [open, setOpen] = useState(false);
@@ -59,6 +69,22 @@ export function NewMenu() {
             <Receipt className="size-4 text-primary" />
             Expense receipt (photo)
           </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+            onClick={() => openForm("supplier")}
+          >
+            <Users className="size-4 text-primary" />
+            Supplier
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+            onClick={() => openForm("efatura")}
+          >
+            <FileText className="size-4 text-primary" />
+            Supplier invoice (e-Fatura)
+          </button>
         </div>
       )}
 
@@ -68,6 +94,8 @@ export function NewMenu() {
         open={active === "receipt"}
         onClose={() => setActive(null)}
       />
+      <SupplierForm open={active === "supplier"} onClose={() => setActive(null)} />
+      <EfaturaUploadForm open={active === "efatura"} onClose={() => setActive(null)} />
     </div>
   );
 }

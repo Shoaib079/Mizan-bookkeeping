@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 9 — frontend |
-| **Active slice** | Phase 9 Slice 3 — Suppliers & payables |
-| **Last completed slice** | Phase 8.8 H5 — docs dedup (`v0.58.4-phase8.8-complete`) |
-| **Last commit/tag** | `v0.58.4-phase8.8-complete` |
-| **Next up** | Phase 9 Slice 3 — Suppliers & payables (in progress) |
+| **Active slice** | Phase 9 Slice 4 — Banking & cash |
+| **Last completed slice** | Phase 9 Slice 3 — Suppliers & payables (`v0.59.0-phase9-suppliers-payables`) |
+| **Last commit/tag** | `v0.59.0-phase9-suppliers-payables` |
+| **Next up** | Phase 9 Slice 4 — Banking & cash |
 
 **The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = expense-receipt OCR + manual daily-sales API (DONE). **Phase 8.8** = remaining backend gaps from the 2026-06-24 adversarial review (not a re-do of tips/Z — see **Do not rebuild** below). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -375,7 +375,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | 2b. Expense receipt upload | done | Upload → `POST /expense-receipts` → review route | — |
 | 2c. Read-back lists + Clerk | done | `/expenses` + `/sales` lists; Clerk login + entity switcher + `GET /users/me` | `v0.56.0-phase9-readback-clerk` |
 | **2d. Money-entry UX gaps (adversarial follow-up)** | **planned** | **Do not re-build 2/2b — patch only.** | When `card_tips_z_report_enabled`: manual daily sales form sends `z_report_kurus`; treat API `status: needs_review` as failure (not success); manual expense allows picking `5700`; double-submit lock on confirm buttons. Maps to Phase 8.8 H4 operator flow. |
-| 3. Suppliers & payables | planned | Supplier master CRUD; invoice draft → confirm; record payment; supplier ledger + payables (running balances) views. |
+| 3. Suppliers & payables | done | Supplier master CRUD; e-Fatura upload → link supplier → confirm → post; record payment; supplier ledger + `/payables` summary. Wired to existing Phase 2 APIs — no new backend logic. | `v0.59.0-phase9-suppliers-payables` |
 | 4. Banking & cash | planned | Account tree + balances; statement upload → classify → Needs Review; transfers; cash drawer (open / movements / EOD close with over-short); FX wallets (purchase / convert / spend). |
 | 5. POS & delivery sales | planned | POS daily-summary + card-sales intake; delivery platform reports + settlements + reconciliation; user-managed delivery platforms; commission e-Faturas. |
 | 6. Staff, partners, receivables, tips | planned | Entry forms + ledger views for each subledger (salary vs advance, partner reimbursements, customer receivables, cash tip expense). Update: tips are cash expense (`5700`), not a tip pot. |

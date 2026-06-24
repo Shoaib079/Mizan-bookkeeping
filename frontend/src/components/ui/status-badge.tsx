@@ -5,6 +5,10 @@ const statusStyles: Record<string, string> = {
   needs_review: "bg-warning/10 text-warning",
   draft: "bg-muted text-muted-foreground",
   rejected: "bg-destructive/10 text-destructive",
+  confirmed: "bg-primary/10 text-primary",
+  duplicate: "bg-warning/10 text-warning",
+  active: "bg-success/10 text-success",
+  inactive: "bg-muted text-muted-foreground",
 };
 
 const statusLabels: Record<string, string> = {
@@ -12,6 +16,10 @@ const statusLabels: Record<string, string> = {
   needs_review: "Needs review",
   draft: "Draft",
   rejected: "Rejected",
+  confirmed: "Confirmed",
+  duplicate: "Duplicate",
+  active: "Active",
+  inactive: "Inactive",
 };
 
 export function StatusBadge({
