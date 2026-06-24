@@ -2,22 +2,52 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import uuid
 from dataclasses import dataclass
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import URL, make_url
 
 
-def pg_tool_database_url(sqlalchemy_url: str) -> str:
-    """Convert SQLAlchemy URL to a libpq-compatible connection string."""
+def _normalize_pg_host(host: str | None) -> str:
+    """Force TCP on CI — libpq uses a Unix socket for ``localhost`` on Linux."""
+    if not host or host in {"localhost", "::1"}:
+        return "127.0.0.1"
+    return host
+
+
+def _pg_tool_url(sqlalchemy_url: str) -> URL:
     url = make_url(sqlalchemy_url)
     driver = url.drivername.split("+", 1)[0]
     if driver != "postgresql":
         raise ValueError(f"unsupported database driver for pg_dump: {url.drivername}")
-    # pg_dump/pg_restore expect postgresql://… — not postgresql+psycopg://…
-    return url.set(drivername="postgresql").render_as_string(hide_password=False)
+    return url.set(drivername="postgresql", host=_normalize_pg_host(url.host))
+
+
+def pg_tool_database_url(sqlalchemy_url: str) -> str:
+    """Convert SQLAlchemy URL to a libpq-compatible connection string."""
+    return _pg_tool_url(sqlalchemy_url).render_as_string(hide_password=False)
+
+
+def _pg_tool_invocation(sqlalchemy_url: str) -> tuple[list[str], dict[str, str]]:
+    """Build pg_dump/pg_restore connection flags and env (PGPASSWORD)."""
+    url = _pg_tool_url(sqlalchemy_url)
+    args: list[str] = []
+    if url.host:
+        args.extend(["-h", url.host])
+    if url.port:
+        args.extend(["-p", str(url.port)])
+    if url.username:
+        args.extend(["-U", url.username])
+    database = url.database or "postgres"
+    args.extend(["-d", database])
+
+    env = os.environ.copy()
+    if url.password:
+        env["PGPASSWORD"] = url.password
+    return args, env
 
 
 def parse_database_name(sqlalchemy_url: str) -> str:
@@ -64,12 +94,13 @@ def collect_row_counts(database_url: str) -> RowCounts:
 
 def run_pg_dump(database_url: str, output_path: str) -> None:
     """Custom-format compressed dump (-Fc) via pg_dump."""
-    url = pg_tool_database_url(database_url)
+    conn_args, env = _pg_tool_invocation(database_url)
     result = subprocess.run(
-        ["pg_dump", "--format=custom", "--no-owner", "--no-acl", f"--dbname={url}", f"--file={output_path}"],
+        ["pg_dump", *conn_args, "--format=custom", "--no-owner", "--no-acl", f"--file={output_path}"],
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
     if result.returncode != 0:
         raise RuntimeError(f"pg_dump failed: {result.stderr.strip() or result.stdout.strip()}")
@@ -77,12 +108,13 @@ def run_pg_dump(database_url: str, output_path: str) -> None:
 
 def run_pg_restore(database_url: str, dump_path: str) -> None:
     """Restore a custom-format dump into the target database."""
-    url = pg_tool_database_url(database_url)
+    conn_args, env = _pg_tool_invocation(database_url)
     result = subprocess.run(
-        ["pg_restore", "--no-owner", "--no-acl", f"--dbname={url}", dump_path],
+        ["pg_restore", *conn_args, "--no-owner", "--no-acl", dump_path],
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
     if result.returncode not in (0, 1):
         raise RuntimeError(f"pg_restore failed: {result.stderr.strip() or result.stdout.strip()}")

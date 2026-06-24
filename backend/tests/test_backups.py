@@ -59,10 +59,13 @@ def backup_settings(tmp_path, monkeypatch, test_engine):
 
 def test_pg_tool_database_url_strips_sqlalchemy_driver() -> None:
     url = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan_test"
-    assert pg_tool_database_url(url) == "postgresql://mizan:mizan_dev@localhost:5432/mizan_test"
+    assert (
+        pg_tool_database_url(url)
+        == "postgresql://mizan:mizan_dev@127.0.0.1:5432/mizan_test"
+    )
     assert (
         replace_database_in_url(url, "scratch_db")
-        == "postgresql://mizan:mizan_dev@localhost:5432/scratch_db"
+        == "postgresql://mizan:mizan_dev@127.0.0.1:5432/scratch_db"
     )
 
 
