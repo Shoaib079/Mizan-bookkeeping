@@ -54,4 +54,40 @@ export function documentUrl(entityId: string, intakeId: string): string {
   return `${API_BASE}/entities/${entityId}/expense-receipts/${intakeId}/document`;
 }
 
+function parseContentDispositionFilename(
+  header: string | null,
+): string | null {
+  if (!header) return null;
+  const quoted = header.match(/filename="([^"]+)"/i);
+  if (quoted?.[1]) return quoted[1];
+  const unquoted = header.match(/filename=([^;\s]+)/i);
+  return unquoted?.[1] ?? null;
+}
+
+/** Authenticated binary download (Excel/PDF exports). */
+export async function apiDownload(
+  path: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const authHeaders = authHeaderProvider ? await authHeaderProvider() : {};
+  const response = await fetch(`${API_BASE}${path}`, { headers: authHeaders });
+  if (!response.ok) {
+    throw new ApiError(await parseError(response), response.status);
+  }
+  const blob = await response.blob();
+  const filename =
+    parseContentDispositionFilename(
+      response.headers.get("Content-Disposition"),
+    ) ?? "download";
+  return { blob, filename };
+}
+
+export function triggerBlobDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export { API_BASE };
