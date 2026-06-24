@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/api";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { useToast } from "@/lib/toast";
 
 type MoneyAccount = { id: string; name: string };
 
@@ -25,6 +26,7 @@ type Props = {
 
 export function ManualDailySalesForm({ open, onClose }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [zReportEnabled, setZReportEnabled] = useState(false);
   const [moneyAccountId, setMoneyAccountId] = useState("");
@@ -116,6 +118,7 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
       }
 
       onClose();
+      toast("Daily sales posted");
       setCashText("");
       setCardText("");
       setZReportText("");

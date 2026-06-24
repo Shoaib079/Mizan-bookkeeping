@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useToast } from "@/lib/toast";
 
 export type EmployeeRow = {
   id: string;
@@ -25,6 +26,7 @@ type Props = {
 
 export function EmployeeForm({ open, onClose, employee, onSaved }: Props) {
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const editing = Boolean(employee);
   const [name, setName] = useState("");
   const [payCurrency, setPayCurrency] = useState("TRY");
@@ -77,6 +79,7 @@ export function EmployeeForm({ open, onClose, employee, onSaved }: Props) {
       }
       onSaved?.();
       onClose();
+      toast(editing ? "Employee updated" : "Employee added");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {

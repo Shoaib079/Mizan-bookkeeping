@@ -8,6 +8,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { useToast } from "@/lib/toast";
 
 type MoneyAccount = { id: string; name: string; account_kind: string };
 type Account = { id: string; code: string; name: string };
@@ -27,6 +28,7 @@ export function ManualExpenseForm({
   defaultExpenseAccountCode,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
@@ -108,6 +110,11 @@ export function ManualExpenseForm({
         }),
       });
       onClose();
+      toast(
+        defaultExpenseAccountCode === "5700"
+          ? "Cash tip expense saved"
+          : "Expense saved",
+      );
       setItemName("");
       setAmountText("");
     } catch (err) {

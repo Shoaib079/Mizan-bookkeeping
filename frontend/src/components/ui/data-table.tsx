@@ -10,7 +10,7 @@ export function DataTable({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-lg border border-border bg-card",
+        "overflow-auto rounded-lg border border-border bg-card",
         className,
       )}
     >
@@ -21,7 +21,7 @@ export function DataTable({
 
 export function DataTableHead({ children }: { children: React.ReactNode }) {
   return (
-    <thead className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
+    <thead className="sticky top-0 z-10 border-b border-border bg-muted/80 text-left text-xs text-muted-foreground backdrop-blur-sm">
       {children}
     </thead>
   );

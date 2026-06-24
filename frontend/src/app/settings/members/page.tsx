@@ -17,7 +17,10 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { Select } from "@/components/ui/input";
+import { Users } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import {
@@ -82,9 +85,9 @@ export default function MembersPage() {
         <>
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {loading
-                ? "Loading…"
-                : `${total} member${total === 1 ? "" : "s"}`}
+              {!loading
+                ? `${total} member${total === 1 ? "" : "s"}`
+                : "\u00a0"}
             </p>
             <Button type="button" onClick={() => setFormOpen(true)}>
               Add member
@@ -98,7 +101,9 @@ export default function MembersPage() {
             <p className="mb-4 text-sm text-destructive">{actionError}</p>
           )}
 
-          {items.length > 0 && (
+          {loading && <TableSkeleton columns={4} />}
+
+          {!loading && items.length > 0 && (
             <DataTable>
               <DataTableHead>
                 <tr>
@@ -139,9 +144,11 @@ export default function MembersPage() {
           )}
 
           {!loading && items.length === 0 && !error && (
-            <p className="text-sm text-muted-foreground">
-              No members listed yet. Add a user by email to grant access.
-            </p>
+            <EmptyState
+              icon={Users}
+              title="No members yet"
+              hint="Add a user by email to grant access."
+            />
           )}
         </>
       )}

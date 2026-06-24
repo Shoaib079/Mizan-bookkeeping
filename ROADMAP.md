@@ -382,9 +382,9 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | 7. Needs-review queue + document review | done | Expense receipt review screen (`/review/receipts/[id]`) — photo left, editable lines, confirm | — |
 | 8. Dashboard + reports | done | Dashboard `/` wired to `GET .../dashboard` (date range, live KPIs); Reports landing `/reports` card library; read views P&L, balance sheet, cash flow, KDV input, delivery sales, period comparison with query params; shared `ReportDownloadMenu` (Excel all, PDF on financial statements) via authenticated blob download; 403 friendly message for cashier role. | `v0.63.0-phase9-dashboard-reports` |
 | 9. Settings & onboarding | done | `/settings` hub; `/settings/opening-balances` wizard (validate → preview → post); `/settings/members` (CRUD roles, 403 message); `/settings/entity` (create restaurant, seed chart, feature toggles); link to `/delivery/platforms`; informational backup panel (no status API). Wired to existing Phase 0/8 onboarding + auth APIs — no new backend logic. | `v0.64.0-phase9-settings-onboarding` |
-| 10. Theme refinement + UX polish | planned | Apply final theme via the one token file (zero page rework); empty states, loading skeletons, toasts, command palette, full keyboard + touch + accessibility pass. |
+| 10. Theme refinement + UX polish | done | Refined token file (`globals.css`); custom toast system on form saves; `TableSkeleton`/`EmptyState` on `useEntityList` pages; Cmd/Ctrl-K command palette; Dialog Esc/focus trap; token focus rings; sticky table headers. No new backend logic. | `v0.65.0-phase9-theme-ux-polish` |
 
-**Phase 9 complete when:** all slices done, tested, committed, owner sign-off → **frontend v1 complete.**
+**Phase 9 complete** — all slices done, tested, committed. **Owner sign-off pending** → frontend v1 complete.
 
 ---
 
@@ -430,7 +430,8 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| 2026-06-24 | Phase 9 Slice 4 — Banking & cash | `v0.60.0-phase9-banking-cash` | Account tree; statement upload/classify; transfers; cash drawer; FX wallets; 543 pytest; frontend build green |
+| 2026-06-24 | Phase 9 Slice 10 — Theme + UX polish | `v0.65.0-phase9-theme-ux-polish` | Toasts, skeletons, empty states, command palette, a11y pass; 545 pytest; Phase 9 complete |
+| 2026-06-24 | Phase 9 Slice 9 — Settings & onboarding | `v0.64.0-phase9-settings-onboarding` | Settings hub, OB wizard, members, entity create; 545 pytest |
 | 2026-06-24 | Phase 9 Slice 3 — Suppliers & payables | `v0.59.0-phase9-suppliers-payables` | Supplier CRUD; e-Fatura upload/review; payables summary; record payment |
 | 2026-06-24 | Phase 8.8 H4 — card-tip day ops guidance | `v0.58.3-phase8.8-h4-z-ops-guidance` | Z mismatch review copy; Decisions §9 operator note; integration test; 543 pytest |
 | 2026-06-24 | Phase 8.8 H3 — expense receipt test gaps | `v0.58.2-phase8.8-h3-expense-receipt-guards` | Line-sum mismatch confirm blocked (existing guard); cross-entity read/confirm + RLS isolation; 4 tests; 542 pytest |

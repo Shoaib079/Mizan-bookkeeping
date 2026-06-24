@@ -14,7 +14,10 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Wallet } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
@@ -55,15 +58,14 @@ export default function ExpensesPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading expenses…</p>
-      )}
+      {loading && <TableSkeleton columns={4} />}
 
       {!loading && entityId && items.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No expenses yet. Use <strong>New → Manual expense</strong> or upload a
-          receipt.
-        </p>
+        <EmptyState
+          icon={Wallet}
+          title="No expenses yet"
+          hint="Use New → Manual expense or upload a receipt to get started."
+        />
       )}
 
       {items.length > 0 && (

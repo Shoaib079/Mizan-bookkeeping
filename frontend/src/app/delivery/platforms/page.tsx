@@ -13,7 +13,10 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Truck } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityList } from "@/lib/use-entity-list";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
@@ -49,14 +52,14 @@ export default function DeliveryPlatformsPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading platforms…</p>
-      )}
+      {loading && <TableSkeleton columns={4} />}
 
       {!loading && entityId && items.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No delivery platforms yet. Add Getir, Yemeksepeti, or other partners.
-        </p>
+        <EmptyState
+          icon={Truck}
+          title="No delivery platforms yet"
+          hint="Add Getir, Yemeksepeti, or other delivery partners."
+        />
       )}
 
       {items.length > 0 && (

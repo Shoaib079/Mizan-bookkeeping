@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useToast } from "@/lib/toast";
 
 export type PartnerRow = {
   id: string;
@@ -24,6 +25,7 @@ type Props = {
 
 export function PartnerForm({ open, onClose, partner, onSaved }: Props) {
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const editing = Boolean(partner);
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
@@ -67,6 +69,7 @@ export function PartnerForm({ open, onClose, partner, onSaved }: Props) {
       }
       onSaved?.();
       onClose();
+      toast(editing ? "Partner updated" : "Partner added");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {

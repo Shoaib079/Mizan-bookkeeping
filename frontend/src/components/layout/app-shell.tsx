@@ -3,66 +3,20 @@
 "use client";
 
 import { UserButton } from "@clerk/nextjs";
-import {
-  BarChart3,
-  Banknote,
-  Building2,
-  CreditCard,
-  HandCoins,
-  Handshake,
-  LayoutDashboard,
-  Settings,
-  ShoppingBag,
-  Truck,
-  Upload,
-  UserCircle,
-  Users,
-  Wallet,
-  UsersRound,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { CommandPalette } from "@/components/command-palette";
 import { NewMenu } from "@/components/new-menu";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { useApiAuth } from "@/lib/api-auth";
+import { navGroups } from "@/lib/app-routes";
 import { useEntity } from "@/lib/entity-context";
 import { cn } from "@/lib/utils";
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-
-const navGroups = [
-  {
-    label: "Overview",
-    items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }],
-  },
-  {
-    label: "Books",
-    items: [
-      { href: "/sales", label: "Sales", icon: ShoppingBag },
-      { href: "/delivery", label: "Delivery", icon: Truck },
-      { href: "/expenses", label: "Expenses", icon: Wallet },
-      { href: "/uploads", label: "Uploads", icon: Upload },
-      { href: "/suppliers", label: "Suppliers", icon: Users },
-      { href: "/payables", label: "Payables", icon: HandCoins },
-      { href: "/staff", label: "Staff", icon: UsersRound },
-      { href: "/partners", label: "Partners", icon: Handshake },
-      { href: "/customers", label: "Customers", icon: UserCircle },
-      { href: "/receivables", label: "Receivables", icon: Banknote },
-      { href: "/banking", label: "Banking", icon: Building2 },
-      { href: "/cards", label: "Cards", icon: CreditCard },
-    ],
-  },
-  {
-    label: "Reports",
-    items: [{ href: "/reports", label: "Reports", icon: BarChart3 }],
-  },
-  {
-    label: "Settings",
-    items: [{ href: "/settings", label: "Settings", icon: Settings }],
-  },
-];
 
 export function AppShell({
   children,
@@ -162,15 +116,30 @@ export function AppShell({
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-border px-6">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background px-6">
           <h1 className="text-sm font-semibold">{title}</h1>
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="hidden gap-2 sm:inline-flex"
+              onClick={() =>
+                window.dispatchEvent(new Event("mizan:command-palette"))
+              }
+            >
+              <Search className="size-4" />
+              <span className="text-muted-foreground">Search</span>
+              <kbd className="rounded border border-border px-1 text-[10px] text-muted-foreground">
+                ⌘K
+              </kbd>
+            </Button>
             <Button variant="secondary">This month</Button>
             {clerkEnabled && <UserButton afterSignOutUrl="/sign-in" />}
           </div>
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>
+      <CommandPalette />
     </div>
   );
 }

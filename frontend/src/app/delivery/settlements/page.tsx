@@ -13,6 +13,9 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { Truck } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
@@ -42,15 +45,14 @@ export default function DeliverySettlementsPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading settlements…</p>
-      )}
+      {loading && <TableSkeleton columns={4} />}
 
       {!loading && entityId && items.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No delivery settlements yet. Record bank payouts from delivery
-          platforms.
-        </p>
+        <EmptyState
+          icon={Truck}
+          title="No delivery settlements yet"
+          hint="Record bank payouts from delivery platforms."
+        />
       )}
 
       {items.length > 0 && (

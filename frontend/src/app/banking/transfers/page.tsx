@@ -16,6 +16,9 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { ArrowLeftRight } from "lucide-react";
 import type { AccountTransferRead } from "@/lib/banking-types";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
@@ -65,14 +68,14 @@ export default function TransfersPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading transfers…</p>
-      )}
+      {loading && <TableSkeleton columns={5} />}
 
       {!loading && entityId && items.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No transfers recorded yet.
-        </p>
+        <EmptyState
+          icon={ArrowLeftRight}
+          title="No transfers recorded yet"
+          hint="Move money between bank and cash accounts."
+        />
       )}
 
       {items.length > 0 && (

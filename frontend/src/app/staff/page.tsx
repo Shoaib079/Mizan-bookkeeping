@@ -14,7 +14,10 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { UsersRound } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityList } from "@/lib/use-entity-list";
 
@@ -40,15 +43,14 @@ export default function StaffPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading staff…</p>
-      )}
+      {loading && <TableSkeleton columns={3} />}
 
       {!loading && entityId && items.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No employees yet. Add staff to track salary accruals, advances, and
-          payments.
-        </p>
+        <EmptyState
+          icon={UsersRound}
+          title="No employees yet"
+          hint="Add staff to track salary accruals, advances, and payments."
+        />
       )}
 
       {items.length > 0 && (

@@ -13,9 +13,11 @@ import {
   KNOWN_ENTITY_SETTINGS,
   type EntitySettingRow,
 } from "@/lib/settings-types";
+import { useToast } from "@/lib/toast";
 
 export default function EntitySettingsPage() {
   const { entityId, setEntityId, refreshEntities } = useEntity();
+  const { toast } = useToast();
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export default function EntitySettingsPage() {
       await refreshEntities();
       setEntityId(entity.id);
       setNewName("");
+      toast("Restaurant created");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setCreateError("Sign in is required to create a restaurant.");

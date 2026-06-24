@@ -14,7 +14,10 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Handshake } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityList } from "@/lib/use-entity-list";
 
@@ -40,14 +43,14 @@ export default function PartnersPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading partners…</p>
-      )}
+      {loading && <TableSkeleton columns={2} />}
 
       {!loading && entityId && items.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No partners yet. Track expenses fronted by owners and reimbursements.
-        </p>
+        <EmptyState
+          icon={Handshake}
+          title="No partners yet"
+          hint="Track expenses fronted by owners and reimbursements."
+        />
       )}
 
       {items.length > 0 && (

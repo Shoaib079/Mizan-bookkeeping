@@ -10,6 +10,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { ENTITY_ROLES, type EntityRole } from "@/lib/settings-types";
+import { useToast } from "@/lib/toast";
 
 type Props = {
   open: boolean;
@@ -19,6 +20,7 @@ type Props = {
 
 export function MemberForm({ open, onClose, onSaved }: Props) {
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<EntityRole>("cashier");
@@ -57,6 +59,7 @@ export function MemberForm({ open, onClose, onSaved }: Props) {
       });
       onSaved?.();
       onClose();
+      toast("Member added");
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setError(

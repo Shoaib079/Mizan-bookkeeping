@@ -14,7 +14,10 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Truck } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
@@ -46,15 +49,14 @@ export default function DeliveryReportsPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading reports…</p>
-      )}
+      {loading && <TableSkeleton columns={5} />}
 
       {!loading && entityId && items.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No delivery reports yet. Enter gross, commission, and net from the
-          platform statement.
-        </p>
+        <EmptyState
+          icon={Truck}
+          title="No delivery reports yet"
+          hint="Enter gross, commission, and net from the platform statement."
+        />
       )}
 
       {items.length > 0 && (

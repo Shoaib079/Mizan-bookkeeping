@@ -20,13 +20,18 @@
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
+  --color-ring: var(--ring);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
+  --spacing-card: var(--spacing-card);
+  --spacing-section: var(--spacing-section);
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.625rem;
+  --spacing-card: 1.25rem;
+  --spacing-section: 1.5rem;
   /* Mizan locked palette — DESIGN_SYSTEM.md §2 */
   --background: #ffffff;
   --foreground: #334155;
@@ -42,6 +47,7 @@
   --sidebar: #ffffff;
   --sidebar-foreground: #334155;
   --sidebar-accent: #eff6ff;
+  --ring: #2563eb;
 }
 
 @layer base {
@@ -53,5 +59,21 @@
   }
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .animate-pulse {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
   }
 }

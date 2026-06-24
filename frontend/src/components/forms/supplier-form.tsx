@@ -9,6 +9,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useToast } from "@/lib/toast";
 
 export type SupplierRow = {
   id: string;
@@ -28,6 +29,7 @@ type Props = {
 
 export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const editing = Boolean(supplier);
   const [name, setName] = useState("");
   const [vkn, setVkn] = useState("");
@@ -81,6 +83,7 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
       }
       onSaved?.();
       onClose();
+      toast(editing ? "Supplier updated" : "Supplier saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {

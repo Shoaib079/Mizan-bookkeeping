@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useToast } from "@/lib/toast";
 
 export type CustomerRow = {
   id: string;
@@ -25,6 +26,7 @@ type Props = {
 
 export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const editing = Boolean(customer);
   const [name, setName] = useState("");
   const [identifier, setIdentifier] = useState("");
@@ -75,6 +77,7 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
       }
       onSaved?.();
       onClose();
+      toast(editing ? "Customer updated" : "Customer added");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {

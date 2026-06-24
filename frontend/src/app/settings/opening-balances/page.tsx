@@ -19,6 +19,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { loadBankAndCashAccounts } from "@/lib/load-money-accounts";
+import { useToast } from "@/lib/toast";
 import {
   formatTry,
   formatTrDate,
@@ -84,6 +85,7 @@ function lineToPayload(line: OpeningBalanceLineDraft) {
 
 export default function OpeningBalancesPage() {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [wizardSteps, setWizardSteps] = useState<string[]>([]);
   const [chartCount, setChartCount] = useState<number | null>(null);
   const [obAccounts, setObAccounts] = useState<OpeningBalanceAccount[]>([]);
@@ -231,6 +233,7 @@ export default function OpeningBalancesPage() {
       );
       setPosted(res);
       setPreview(res.journal_lines);
+      toast("Opening balances posted");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
     } finally {
