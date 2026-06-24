@@ -20,8 +20,15 @@ from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
 from app.features.expenses import receipt_service
-from app.features.expenses.models import ExpenseReceiptIntakeStatus
-from app.features.expenses.schema import ConfirmExpenseReceiptRequest
+from app.features.expenses.models import (
+    ExpenseReceiptIntake,
+    ExpenseReceiptIntakeStatus,
+    ExpenseReceiptLine,
+)
+from app.features.expenses.schema import (
+    ConfirmExpenseReceiptLineRequest,
+    ConfirmExpenseReceiptRequest,
+)
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
@@ -248,6 +255,168 @@ def test_registered_fixture_multi_line(db_session, restaurant_a) -> None:
 
     assert len(intake.lines) == 2
     assert intake.expense_date == date(2026, 6, 20)
+
+
+def test_confirm_blocked_when_line_sum_mismatches_receipt_total(
+    db_session, restaurant_a
+) -> None:
+    """Line total must match receipt_total_kurus before confirm (Phase 8.8 H3)."""
+    drawer, _ = _setup(db_session, restaurant_a)
+    image = b"\x89PNG\r\n\x1a\nMIZAN-RECEIPT-MISMATCH-001"
+    register_expense_receipt_fixture(
+        image,
+        {
+            "expense_date": date(2026, 6, 20),
+            "receipt_total_kurus": 10_000,
+            "lines": [
+                {"description": "peynir", "amount_kurus": 8_000, "is_tip": False},
+                {"description": "sut", "amount_kurus": 1_000, "is_tip": False},
+            ],
+        },
+    )
+
+    intake = receipt_service.create_expense_receipt_from_upload(
+        db_session,
+        restaurant_a.id,
+        image,
+        money_account_id=drawer.id,
+        actor_id=ACTOR_ID,
+        filename="receipt.png",
+        content_type="image/png",
+    )
+
+    assert intake.status == ExpenseReceiptIntakeStatus.NEEDS_REVIEW
+    assert intake.receipt_total_kurus == 10_000
+    assert sum(line.amount_kurus for line in intake.lines) == 9_000
+
+    with pytest.raises(receipt_service.ExpenseReceiptNotReviewableError) as exc:
+        receipt_service.confirm_expense_receipt(
+            db_session,
+            restaurant_a.id,
+            intake.id,
+            ConfirmExpenseReceiptRequest(actor_id=ACTOR_ID),
+        )
+    assert "does not match receipt total" in str(exc.value)
+
+
+def test_confirm_succeeds_after_override_fixes_receipt_total_mismatch(
+    db_session, restaurant_a
+) -> None:
+    drawer, accounts = _setup(db_session, restaurant_a)
+    general_id = accounts[GENERAL_EXPENSE_CODE].id
+    image = b"\x89PNG\r\n\x1a\nMIZAN-RECEIPT-MISMATCH-002"
+    register_expense_receipt_fixture(
+        image,
+        {
+            "expense_date": date(2026, 6, 20),
+            "receipt_total_kurus": 10_000,
+            "lines": [
+                {"description": "peynir", "amount_kurus": 8_000, "is_tip": False},
+                {"description": "sut", "amount_kurus": 1_000, "is_tip": False},
+            ],
+        },
+    )
+
+    intake = receipt_service.create_expense_receipt_from_upload(
+        db_session,
+        restaurant_a.id,
+        image,
+        money_account_id=drawer.id,
+        actor_id=ACTOR_ID,
+        filename="receipt.png",
+        content_type="image/png",
+    )
+    sut_line = next(
+        line for line in intake.lines if line.written_item_description == "sut"
+    )
+
+    posted = receipt_service.confirm_expense_receipt(
+        db_session,
+        restaurant_a.id,
+        intake.id,
+        ConfirmExpenseReceiptRequest(
+            actor_id=ACTOR_ID,
+            lines=[
+                ConfirmExpenseReceiptLineRequest(
+                    line_id=sut_line.id,
+                    amount_kurus=2_000,
+                )
+            ],
+        ),
+    )
+
+    assert posted.status == ExpenseReceiptIntakeStatus.POSTED
+    assert _gl_balance(db_session, restaurant_a.id, general_id, AccountNormalBalance.DEBIT) == 10_000
+
+
+def test_cross_entity_expense_receipt_isolation(
+    client, db_session, restaurant_a, restaurant_b
+) -> None:
+    drawer, _ = _setup(db_session, restaurant_a)
+    seed_default_chart(db_session, restaurant_b.id)
+
+    intake = receipt_service.create_expense_receipt_from_upload(
+        db_session,
+        restaurant_a.id,
+        _MULTI_LINE_RECEIPT,
+        money_account_id=drawer.id,
+        actor_id=ACTOR_ID,
+    )
+
+    get_b = client.get(
+        f"/entities/{restaurant_b.id}/expense-receipts/{intake.id}",
+    )
+    assert get_b.status_code == 404
+
+    confirm_b = client.post(
+        f"/entities/{restaurant_b.id}/expense-receipts/{intake.id}/confirm",
+        json={"actor_id": str(ACTOR_ID)},
+    )
+    assert confirm_b.status_code == 404
+
+    with pytest.raises(LookupError):
+        receipt_service.get_expense_receipt(db_session, restaurant_b.id, intake.id)
+
+    with pytest.raises(LookupError):
+        receipt_service.confirm_expense_receipt(
+            db_session,
+            restaurant_b.id,
+            intake.id,
+            ConfirmExpenseReceiptRequest(actor_id=ACTOR_ID),
+        )
+
+
+def test_rls_hides_other_entity_expense_receipts(
+    db_session, restaurant_a, restaurant_b
+) -> None:
+    drawer, _ = _setup(db_session, restaurant_a)
+    seed_default_chart(db_session, restaurant_b.id)
+
+    intake = receipt_service.create_expense_receipt_from_upload(
+        db_session,
+        restaurant_a.id,
+        _MULTI_LINE_RECEIPT,
+        money_account_id=drawer.id,
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, restaurant_a.id):
+        assert db_session.get(ExpenseReceiptIntake, intake.id) is not None
+        visible_lines = list(db_session.scalars(select(ExpenseReceiptLine)))
+        assert len(visible_lines) == len(intake.lines)
+
+    with entity_context(db_session, restaurant_b.id):
+        assert db_session.get(ExpenseReceiptIntake, intake.id) is None
+        assert list(db_session.scalars(select(ExpenseReceiptIntake))) == []
+        assert list(db_session.scalars(select(ExpenseReceiptLine))) == []
+        assert (
+            db_session.scalar(
+                select(ExpenseReceiptLine).where(
+                    ExpenseReceiptLine.intake_id == intake.id
+                )
+            )
+            is None
+        )
 
 
 def test_upload_and_confirm_via_api(client, db_session, restaurant_a) -> None:

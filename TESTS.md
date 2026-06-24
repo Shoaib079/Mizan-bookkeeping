@@ -43,7 +43,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_pos_card_tips.py` | Card tips via Z report (Slice B1) — toggle off ignores Z; `ask`+tip → Needs Review; `system` pass-through vs `z_report` expense; deposits+sweep clear `1400` to zero; `tip<0` / Z-no-sale / `expected_tip` mismatch → Needs Review; per-entry basis override | pass |
 | `backend/tests/test_pos_commission_clearance.py` | Card commission total clearance (Slice B2) — two banks one `1400` residual → `5300` sweep; repeatable after more sales; zero/negative rejected; void restores residual | pass |
 | `backend/tests/test_expense_photo_tip.py` | Expense-photo OCR cash-tip (Slice C) — unified intake wrapper; photo → `5700` Needs Review draft; confirm posts `Dr 5700 / Cr cash`; duplicate 409; cross-entity; API E2E | pass |
-| `backend/tests/test_expense_receipt.py` | Multi-line expense receipt intake — OCR lines, confirm posts N GL entries (5200/5700 + cash), duplicate 409, idempotent confirm, fixture registry, API E2E | pass |
+| `backend/tests/test_expense_receipt.py` | Multi-line expense receipt intake — OCR lines, confirm posts N GL entries (5200/5700 + cash), line-sum mismatch blocked (H3), override fix posts, duplicate 409, idempotent confirm, cross-entity read/confirm + RLS isolation, fixture registry, API E2E | pass |
 | `backend/tests/test_manual_daily_sales.py` | Manual daily sales — typed cash+card without POS photo, reuses POS posting, zero/duplicate-date rejected, API E2E | pass |
 | `backend/tests/test_expenses.py` | Daily expenses — manual Dr expense/Cr bank (no AP); `has_source_document=false`; Turkish alias memory; fuzzy → needs_review (no GL); confirm posts + alias; merge items; `rent_utility` bank classify; cross-entity RLS | pass |
 | `backend/tests/test_delivery_sales_report.py` | Delivery sales report — gross per platform + total from posted reports only; date range filter; draft/needs_review/rejected excluded; inactive platform with history; zero rows for platforms without reports; `delivery_enabled` + `from>to` → 422; cross-entity RLS; API E2E | pass |
@@ -57,7 +57,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
-**Count:** 533 pytest (last run 2026-06-24).
+**Count:** 542 pytest (last run 2026-06-24).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 
