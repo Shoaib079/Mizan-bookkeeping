@@ -5,73 +5,33 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 9 — frontend |
-| **Last completed slice** | Phase 8.8 H5 — docs dedup (`v0.58.4-phase8.8-complete`) |
-| **Next slice** | Phase 9 Slice 3 — Suppliers & payables |
+| **Active slice** | Slice 3 — Suppliers & payables |
+| **Last completed slice** | Phase 8.8 complete + owner sign-off (`v0.58.5-owner-sign-off`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.58.4-phase8.8-complete` |
+| **Last tag** | `v0.58.5-owner-sign-off` |
 
 ## Resume point
 
-**Owner sign-off complete (2026-06-21)** — money-critical slices approved:
+**Phase 8.8 owner sign-off (2026-06-21)** — money-critical H1 (commission sweep timing guard) and H2 (tips cash-only at API) approved. Phase 8.8 closed (`v0.58.0`–`v0.58.4`).
 
-- Tips Slice A (`v0.48.0`), B2 (`v0.50.0`), C (`v0.51.0`); B1 (`v0.49.0`) superseded by `v0.57.0`
-- Phase 8.7 D1–D3 (`v0.52.0`–`v0.54.0`, `d2a624b`)
-- Phase 9 New menu + receipt review (`v0.55.0`), read-back + Clerk (`v0.56.0`)
-- Z match-or-review (`v0.57.0`, `a6dd4e6`)
+**In progress:** Phase 9 Slice 3 — Suppliers & payables UI:
+- Supplier master CRUD
+- Invoice draft → confirm
+- Record payment
+- Supplier ledger + payables running balances views
 
-**Next:** Phase 9 Slice 3 — Suppliers & payables UI.
+Follow `DESIGN_SYSTEM.md` and existing frontend patterns (`/expenses`, `/sales`, forms in `components/forms/`).
 
-## Verification (2026-06-24 — H5)
-
-| Check | Result |
-|-------|--------|
-| Full pytest (Alembic-provisioned test DB) | **543 passed**, 2 skipped |
-| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
-
-## Verification (2026-06-24 — H4)
+## Verification (2026-06-21)
 
 | Check | Result |
 |-------|--------|
-| Full pytest (Alembic-provisioned test DB) | **543 passed**, 2 skipped |
-| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
-
-## Verification (2026-06-24 — H3)
-
-| Check | Result |
-|-------|--------|
-| Full pytest (Alembic-provisioned test DB) | **542 passed**, 2 skipped |
-| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
-
-## Verification (2026-06-24 — H2)
-
-| Check | Result |
-|-------|--------|
-| Full pytest (Alembic-provisioned test DB) | **538 passed**, 2 skipped |
-| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
-
-## Verification (2026-06-24 — H1)
-
-| Check | Result |
-|-------|--------|
-| Full pytest (Alembic-provisioned test DB) | **536 passed**, 2 skipped |
-| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
-
-## Pre-sign-off verification (2026-06-21)
-
-| Check | Result |
-|-------|--------|
-| Full pytest (Alembic-provisioned test DB) | **535 passed**, 2 skipped |
-| `alembic upgrade head` on empty DB | **GREEN** (through `048_expense_receipt_intake`) |
-| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
-| Frontend `npm run build` | **GREEN** |
+| Full pytest | **543 passed**, 2 skipped |
+| `verify_fresh_install.sh` | **GREEN** |
 
 ## Recent
 
-- 2026-06-24 — **Phase 8.8 H5** — docs dedup (`v0.58.4-phase8.8-complete`; Phase 8.8 complete)
-- 2026-06-24 — **Phase 8.8 H4** — card-tip day ops guidance (`v0.58.3-phase8.8-h4-z-ops-guidance`, 543 pytest)
-- 2026-06-24 — **Phase 8.8 H2** — tips expense cash-only at API (`v0.58.1-phase8.8-h2-tips-cash-only`, 538 pytest)
-- 2026-06-24 — **Phase 8.8 H1** — commission sweep timing guard (`v0.58.0-phase8.8-h1-commission-sweep-guard`, 536 pytest)
-- 2026-06-21 — **Owner sign-off** — tips A/B2/C, Phase 8.7, Phase 9 core, Z (`v0.57.1-owner-sign-off`)
-- 2026-06-24 — Z match-or-review — no POS tip posting (`v0.57.0-pos-z-match-or-review`, 534 pytest)
-- 2026-06-24 — Phase 9 read-back lists + Clerk login (`v0.56.0-phase9-readback-clerk`, 535 pytest)
-- 2026-06-24 — Phase 8.7 D0–D3 + Phase 9 New menu + receipt review (`d2a624b`, `v0.52.0`–`v0.55.0`)
+- 2026-06-21 — **Owner sign-off** — Phase 8.8 H1–H2 (`v0.58.5-owner-sign-off`)
+- 2026-06-24 — Phase 8.8 H5 docs dedup (`v0.58.4-phase8.8-complete`, 543 pytest)
+- 2026-06-24 — Phase 8.8 H1–H4 (`v0.58.0`–`v0.58.3`)
+- 2026-06-21 — Owner sign-off — tips, Phase 8.7, Phase 9 core, Z (`v0.57.1-owner-sign-off`)

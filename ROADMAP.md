@@ -16,7 +16,7 @@
 | **Active slice** | Phase 9 Slice 3 — Suppliers & payables |
 | **Last completed slice** | Phase 8.8 H5 — docs dedup (`v0.58.4-phase8.8-complete`) |
 | **Last commit/tag** | `v0.58.4-phase8.8-complete` |
-| **Next up** | Phase 9 Slice 3 — Suppliers & payables |
+| **Next up** | Phase 9 Slice 3 — Suppliers & payables (in progress) |
 
 **The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = expense-receipt OCR + manual daily-sales API (DONE). **Phase 8.8** = remaining backend gaps from the 2026-06-24 adversarial review (not a re-do of tips/Z — see **Do not rebuild** below). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -353,7 +353,7 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 | **H4 — Card-tip day ops guidance** | done | Adversarial finding: when Z > system card, review message does not explain cash↔card reallocation workflow | Needs Review copy explains reallocate cash→card (same total) + expense-paper tip + re-confirm; Decisions §9 operator note; integration test mismatch → expense tip → corrected confirm → deposit + sweep clears `1400`. Tag `v0.58.3-phase8.8-h4-z-ops-guidance`. |
 | **H5 — Docs dedup** | done | Stale `DECISIONS.md` Slice B1 (`system`/`z_report` GL) contradicts `v0.57.0` entry | B1 marked superseded; canonical Z match-or-review in v0.57.0 entry; Phase 6 tips pass-through row updated; no code change. Tag `v0.58.4-phase8.8-complete`. |
 
-**Phase 8.8 complete when:** H1–H5 done (or explicitly deferred by owner in Decisions), full pytest green, ROADMAP updated, owner sign-off on money-critical items H1–H2. **→ Phase 8.8 COMPLETE ✓**
+**Phase 8.8 complete when:** H1–H5 done (or explicitly deferred by owner in Decisions), full pytest green, ROADMAP updated, owner sign-off on money-critical items H1–H2. **→ Phase 8.8 COMPLETE ✓ (owner signed off H1–H2, 2026-06-21).** Tag `v0.58.5-owner-sign-off`.
 
 **Out of scope for Phase 8.8:** Re-building Z tip derivation at POS; re-adding `card_sale_basis`; frontend forms (→ Phase 9 Slice 2d).
 

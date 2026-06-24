@@ -16,6 +16,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-21
 
+**Owner sign-off — Phase 8.8 H1–H2:** Owner approved money-critical adversarial fixes: commission sweep timing guard (`v0.58.0`, blocks `clear-commission` while card sales undeposited) and tips expense cash-only at API (`v0.58.1`, `5700` rejected unless paid from cash). Phase 8.8 fully closed (H3–H5 non-money-critical). **543 pytest green** at sign-off. Tag `v0.58.5-owner-sign-off`. Next: Phase 9 Slice 3 — Suppliers & payables.
+
 **Owner sign-off — tips, Phase 8.7, Phase 9 core, Z match-or-review:** Owner approved all money-critical slices built 2026-06-23–24: tips expense treatment (Slice A `v0.48.0`, commission sweep B2 `v0.50.0`, expense-photo C `v0.51.0`); multi-line expense receipt intake + manual daily sales (Phase 8.7 `v0.52.0`–`v0.54.0`); Phase 9 New menu + receipt review (`v0.55.0`), read-back lists + Clerk (`v0.56.0`); Z match-or-review (`v0.57.0`, supersedes original Slice B1 `v0.49.0`). **535 pytest green** at sign-off. Phase 8.7 closed; Phase 8.8 adversarial follow-ups (H1–H5) remain. Tag `v0.57.1-owner-sign-off`.
 
 ## 2026-06-24
