@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 9 — frontend |
-| **Active slice** | Phase 9 Slice 5 — POS & delivery sales |
-| **Last completed slice** | Phase 9 Slice 4 — Banking & cash (`v0.60.0-phase9-banking-cash`) |
-| **Last commit/tag** | `v0.60.0-phase9-banking-cash` |
-| **Next up** | Phase 9 Slice 5 — POS & delivery sales |
+| **Active slice** | Phase 9 Slice 6 — Staff, partners, receivables, tips |
+| **Last completed slice** | Phase 9 Slice 5 — POS & delivery sales (`v0.61.0-phase9-pos-delivery-sales`) |
+| **Last commit/tag** | `v0.61.0-phase9-pos-delivery-sales` |
+| **Next up** | Phase 9 Slice 6 — Staff, partners, receivables, tips |
 
 **The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = expense-receipt OCR + manual daily-sales API (DONE). **Phase 8.8** = remaining backend gaps from the 2026-06-24 adversarial review (not a re-do of tips/Z — see **Do not rebuild** below). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -377,7 +377,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **2d. Money-entry UX gaps (adversarial follow-up)** | done | Z field when `card_tips_z_report_enabled`; `needs_review` on manual sales stays open with `review_reason`; manual expense picks 5200/5700; double-submit on both forms. Maps to Phase 8.8 H4. |
 | 3. Suppliers & payables | done | Supplier master CRUD; e-Fatura upload → link supplier → confirm → post; record payment; supplier ledger + `/payables` summary. Wired to existing Phase 2 APIs — no new backend logic. | `v0.59.0-phase9-suppliers-payables` |
 | 4. Banking & cash | done | Account tree + balances; statement upload → classify → Needs Review; transfers; cash drawer (open / movements / EOD close with over-short); FX wallets (purchase / convert / spend). Wired to existing Phase 3–5 APIs — no new backend logic. | `v0.60.0-phase9-banking-cash` |
-| 5. POS & delivery sales | planned | POS daily-summary + card-sales intake; delivery platform reports + settlements + reconciliation; user-managed delivery platforms; commission e-Faturas. |
+| 5. POS & delivery sales | done | POS daily-summary photo upload → review/confirm (`/sales/[id]`); card-sales batches + POS settlements + clearing reconciliation + commission clearance (`/cards`); delivery platforms CRUD, reports, settlements, per-platform reconciliation (`/delivery/*`); commission e-Fatura via extended invoice review (link posted report → post to clearing). Wired to existing Phase 6 POS/delivery APIs — no new backend logic. | `v0.61.0-phase9-pos-delivery-sales` |
 | 6. Staff, partners, receivables, tips | planned | Entry forms + ledger views for each subledger (salary vs advance, partner reimbursements, customer receivables, cash tip expense). Update: tips are cash expense (`5700`), not a tip pot. |
 | 7. Needs-review queue + document review | done | Expense receipt review screen (`/review/receipts/[id]`) — photo left, editable lines, confirm | — |
 | 8. Dashboard + reports | planned | Dashboard tiles wired to `GET .../dashboard` (**replace hardcoded KPI placeholders** on `/`); Reports card-library landing; P&L / balance sheet / cash flow / KDV input / delivery sales / period comparison read views. **Export = ONE "Download" control per report (dropdown menu of formats), NOT separate buttons:** all reports offer Excel; the three financial statements (P&L / balance sheet / cash flow) additionally offer PDF (backend from Phase 8.5 Slice 5). Shared download component, consistent everywhere. Role-gated (cashier can't see financials). |

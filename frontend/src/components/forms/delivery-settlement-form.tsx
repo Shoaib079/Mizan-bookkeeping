@@ -1,0 +1,160 @@
+"use client";
+
+import { FormEvent, useCallback, useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Input, Label, Select } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api";
+import { useEntity } from "@/lib/entity-context";
+import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import type { DeliveryPlatform, MoneyAccountOption } from "@/lib/pos-delivery-types";
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  onSaved?: () => void;
+};
+
+export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
+  const { entityId, actorId } = useEntity();
+  const [platforms, setPlatforms] = useState<DeliveryPlatform[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<MoneyAccountOption[]>([]);
+  const [platformId, setPlatformId] = useState("");
+  const [moneyAccountId, setMoneyAccountId] = useState("");
+  const [dateText, setDateText] = useState("");
+  const [amountText, setAmountText] = useState("");
+  const [description, setDescription] = useState("Delivery settlement");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadOptions = useCallback(async () => {
+    if (!entityId) return;
+    const [platRes, bankRes] = await Promise.all([
+      apiFetch<{ items: DeliveryPlatform[] }>(
+        `/entities/${entityId}/delivery/platforms?limit=50`,
+      ),
+      apiFetch<{ items: MoneyAccountOption[] }>(
+        `/entities/${entityId}/banking/accounts?account_kind=bank&limit=50`,
+      ),
+    ]);
+    const active = platRes.items.filter((p) => p.is_active);
+    setPlatforms(active);
+    setBankAccounts(bankRes.items);
+    if (active[0]) setPlatformId(active[0].id);
+    if (bankRes.items[0]) setMoneyAccountId(bankRes.items[0].id);
+  }, [entityId]);
+
+  useEffect(() => {
+    if (open) void loadOptions().catch(() => undefined);
+  }, [open, loadOptions]);
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!entityId) {
+      setError("Select a restaurant in the sidebar first.");
+      return;
+    }
+    const settlementDate = parseTrDate(dateText);
+    const amountKurus = parseTryToKurus(amountText);
+    if (!settlementDate) {
+      setError("Date must be DD.MM.YYYY.");
+      return;
+    }
+    if (amountKurus === null || amountKurus <= 0) {
+      setError("Enter a valid settlement amount.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await apiFetch(`/entities/${entityId}/delivery/settlements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          delivery_platform_id: platformId,
+          money_account_id: moneyAccountId,
+          settlement_date: settlementDate,
+          amount_kurus: amountKurus,
+          description: description.trim() || "Delivery settlement",
+          actor_id: actorId,
+        }),
+      });
+      onSaved?.();
+      onClose();
+      setDateText("");
+      setAmountText("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} title="Delivery settlement" onClose={onClose}>
+      <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <Label htmlFor="ds-platform">Platform</Label>
+          <Select
+            id="ds-platform"
+            value={platformId}
+            onChange={(e) => setPlatformId(e.target.value)}
+          >
+            {platforms.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="ds-bank">Bank account</Label>
+          <Select
+            id="ds-bank"
+            value={moneyAccountId}
+            onChange={(e) => setMoneyAccountId(e.target.value)}
+          >
+            {bankAccounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="ds-date">Settlement date (DD.MM.YYYY)</Label>
+          <Input
+            id="ds-date"
+            placeholder="23.06.2026"
+            value={dateText}
+            onChange={(e) => setDateText(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="ds-amount">Net payout amount</Label>
+          <Input
+            id="ds-amount"
+            placeholder="0,00"
+            value={amountText}
+            onChange={(e) => setAmountText(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="ds-desc">Description</Label>
+          <Input
+            id="ds-desc"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Posting…" : "Record settlement"}
+        </Button>
+      </form>
+    </Dialog>
+  );
+}

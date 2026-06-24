@@ -24,8 +24,9 @@ export function useEntityList<T>(path: string, entityId: string) {
     setLoading(true);
     setError(null);
     try {
+      const separator = path.includes("?") ? "&" : "?";
       const res = await apiFetch<PaginatedResponse<T>>(
-        `/entities/${entityId}${path}?limit=50`,
+        `/entities/${entityId}${path}${separator}limit=50`,
       );
       setItems(res.items);
       setTotal(res.total);

@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Settings,
   ShoppingBag,
+  Truck,
   Upload,
   Users,
   Wallet,
@@ -36,6 +37,7 @@ const navGroups = [
     label: "Books",
     items: [
       { href: "/sales", label: "Sales", icon: ShoppingBag },
+      { href: "/delivery", label: "Delivery", icon: Truck },
       { href: "/expenses", label: "Expenses", icon: Wallet },
       { href: "/uploads", label: "Uploads", icon: Upload },
       { href: "/suppliers", label: "Suppliers", icon: Users },

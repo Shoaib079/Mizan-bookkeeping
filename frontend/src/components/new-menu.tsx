@@ -2,24 +2,38 @@
 
 import {
   ChevronDown,
+  CreditCard,
   FileText,
   Plus,
   Receipt,
   ShoppingBag,
+  Truck,
   Users,
   Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
 import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
+import { CardSalesForm } from "@/components/forms/card-sales-form";
+import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { ExpenseReceiptUploadForm } from "@/components/forms/expense-receipt-upload-form";
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
+import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
 import { SupplierForm } from "@/components/forms/supplier-form";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type MenuKey = "expense" | "sales" | "receipt" | "supplier" | "efatura" | null;
+type MenuKey =
+  | "expense"
+  | "sales"
+  | "posPhoto"
+  | "cardSales"
+  | "deliveryReport"
+  | "receipt"
+  | "supplier"
+  | "efatura"
+  | null;
 
 export function NewMenu() {
   const [open, setOpen] = useState(false);
@@ -64,6 +78,30 @@ export function NewMenu() {
           <button
             type="button"
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+            onClick={() => openForm("posPhoto")}
+          >
+            <ShoppingBag className="size-4 text-primary" />
+            POS summary (photo)
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+            onClick={() => openForm("cardSales")}
+          >
+            <CreditCard className="size-4 text-primary" />
+            Card sales batch
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+            onClick={() => openForm("deliveryReport")}
+          >
+            <Truck className="size-4 text-primary" />
+            Delivery report
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
             onClick={() => openForm("receipt")}
           >
             <Receipt className="size-4 text-primary" />
@@ -90,6 +128,9 @@ export function NewMenu() {
 
       <ManualExpenseForm open={active === "expense"} onClose={() => setActive(null)} />
       <ManualDailySalesForm open={active === "sales"} onClose={() => setActive(null)} />
+      <PosSummaryUploadForm open={active === "posPhoto"} onClose={() => setActive(null)} />
+      <CardSalesForm open={active === "cardSales"} onClose={() => setActive(null)} />
+      <DeliveryReportForm open={active === "deliveryReport"} onClose={() => setActive(null)} />
       <ExpenseReceiptUploadForm
         open={active === "receipt"}
         onClose={() => setActive(null)}

@@ -1,6 +1,11 @@
 "use client";
 
+import Link from "next/link";
+import { useState } from "react";
+
+import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
 import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
 import {
   DataTable,
   DataTableBody,
@@ -13,23 +18,15 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
-
-type SalesRow = {
-  id: string;
-  summary_date: string | null;
-  cash_kurus: number;
-  card_kurus: number;
-  total_kurus: number;
-  status: string;
-  review_reason: string | null;
-};
+import type { PosDailySummary } from "@/lib/pos-delivery-types";
 
 export default function SalesPage() {
   const { entityId } = useEntity();
-  const { items, total, loading, error } = useEntityList<SalesRow>(
+  const { items, total, loading, error } = useEntityList<PosDailySummary>(
     "/pos/daily-summaries",
     entityId,
   );
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   return (
     <AppShell title="Daily sales">
@@ -39,6 +36,13 @@ export default function SalesPage() {
             ? `${total} daily summar${total === 1 ? "y" : "ies"}`
             : "Select a restaurant in the sidebar"}
         </p>
+        <Button
+          type="button"
+          disabled={!entityId}
+          onClick={() => setUploadOpen(true)}
+        >
+          Upload POS photo
+        </Button>
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
@@ -68,7 +72,20 @@ export default function SalesPage() {
             {items.map((row) => (
               <DataTableRow key={row.id}>
                 <DataTableCell>
-                  {row.summary_date ? formatTrDate(row.summary_date) : "—"}
+                  {(row.status === "draft" ||
+                    row.status === "needs_review") &&
+                  row.summary_date ? (
+                    <Link
+                      href={`/sales/${row.id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {formatTrDate(row.summary_date)}
+                    </Link>
+                  ) : row.summary_date ? (
+                    formatTrDate(row.summary_date)
+                  ) : (
+                    "—"
+                  )}
                 </DataTableCell>
                 <DataTableCell align="right">
                   {formatTry(row.cash_kurus)}
@@ -81,12 +98,22 @@ export default function SalesPage() {
                 </DataTableCell>
                 <DataTableCell>
                   <StatusBadge status={row.status} />
+                  {row.review_reason && row.status === "needs_review" && (
+                    <p className="mt-1 max-w-xs truncate text-xs text-warning">
+                      {row.review_reason}
+                    </p>
+                  )}
                 </DataTableCell>
               </DataTableRow>
             ))}
           </DataTableBody>
         </DataTable>
       )}
+
+      <PosSummaryUploadForm
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+      />
     </AppShell>
   );
 }

@@ -1,0 +1,105 @@
+"use client";
+
+import { useState } from "react";
+
+import { DeliveryPlatformForm } from "@/components/forms/delivery-platform-form";
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/components/ui/data-table";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { useEntity } from "@/lib/entity-context";
+import { useEntityList } from "@/lib/use-entity-list";
+import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
+
+export default function DeliveryPlatformsPage() {
+  const { entityId } = useEntity();
+  const { items, total, loading, error, reload } =
+    useEntityList<DeliveryPlatform>("/delivery/platforms?include_inactive=true", entityId);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<DeliveryPlatform | null>(null);
+
+  function openCreate() {
+    setEditing(null);
+    setFormOpen(true);
+  }
+
+  function openEdit(platform: DeliveryPlatform) {
+    setEditing(platform);
+    setFormOpen(true);
+  }
+
+  return (
+    <AppShell title="Delivery platforms">
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {entityId
+            ? `${total} platform${total === 1 ? "" : "s"}`
+            : "Select a restaurant in the sidebar"}
+        </p>
+        <Button type="button" disabled={!entityId} onClick={openCreate}>
+          New platform
+        </Button>
+      </div>
+
+      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {loading && (
+        <p className="text-sm text-muted-foreground">Loading platforms…</p>
+      )}
+
+      {!loading && entityId && items.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          No delivery platforms yet. Add Getir, Yemeksepeti, or other partners.
+        </p>
+      )}
+
+      {items.length > 0 && (
+        <DataTable>
+          <DataTableHead>
+            <tr>
+              <DataTableHeaderCell>Name</DataTableHeaderCell>
+              <DataTableHeaderCell>Clearing GL</DataTableHeaderCell>
+              <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell align="right"> </DataTableHeaderCell>
+            </tr>
+          </DataTableHead>
+          <DataTableBody>
+            {items.map((row) => (
+              <DataTableRow key={row.id}>
+                <DataTableCell>{row.name}</DataTableCell>
+                <DataTableCell>{row.gl_account_code}</DataTableCell>
+                <DataTableCell>
+                  <StatusBadge
+                    status={row.is_active ? "active" : "inactive"}
+                  />
+                </DataTableCell>
+                <DataTableCell align="right">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => openEdit(row)}
+                  >
+                    Edit
+                  </Button>
+                </DataTableCell>
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
+      )}
+
+      <DeliveryPlatformForm
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        platform={editing}
+        onSaved={() => void reload()}
+      />
+    </AppShell>
+  );
+}
