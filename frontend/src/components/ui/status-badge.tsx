@@ -9,6 +9,11 @@ const statusStyles: Record<string, string> = {
   duplicate: "bg-warning/10 text-warning",
   active: "bg-success/10 text-success",
   inactive: "bg-muted text-muted-foreground",
+  open: "bg-primary/10 text-primary",
+  closed: "bg-muted text-muted-foreground",
+  imported: "bg-muted text-muted-foreground",
+  classified: "bg-primary/10 text-primary",
+  linked: "bg-success/10 text-success",
 };
 
 const statusLabels: Record<string, string> = {
@@ -20,6 +25,11 @@ const statusLabels: Record<string, string> = {
   duplicate: "Duplicate",
   active: "Active",
   inactive: "Inactive",
+  open: "Open",
+  closed: "Closed",
+  imported: "Imported",
+  classified: "Classified",
+  linked: "Linked",
 };
 
 export function StatusBadge({

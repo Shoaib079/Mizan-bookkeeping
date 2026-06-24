@@ -1,0 +1,192 @@
+"use client";
+
+/** FX wallet — purchase, convert, spend, ledger — Phase 9 Slice 4. */
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+
+import { FxConversionForm } from "@/components/forms/fx-conversion-form";
+import { FxExpenseSpendForm } from "@/components/forms/fx-expense-spend-form";
+import { FxPurchaseForm } from "@/components/forms/fx-purchase-form";
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/components/ui/data-table";
+import { apiFetch } from "@/lib/api";
+import type {
+  FxBalanceRead,
+  FxLedgerEntryRead,
+  MoneyAccountRead,
+} from "@/lib/banking-types";
+import { formatFxNative } from "@/lib/fx-money";
+import { useEntity } from "@/lib/entity-context";
+import { formatTrDate, formatTry } from "@/lib/money";
+
+export default function FxWalletPage() {
+  const params = useParams<{ id: string }>();
+  const accountId = params.id;
+  const { entityId } = useEntity();
+  const [account, setAccount] = useState<MoneyAccountRead | null>(null);
+  const [balance, setBalance] = useState<FxBalanceRead | null>(null);
+  const [ledger, setLedger] = useState<FxLedgerEntryRead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [spendOpen, setSpendOpen] = useState(false);
+
+  const reload = useCallback(async () => {
+    if (!entityId || !accountId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const [acct, bal, ledRes] = await Promise.all([
+        apiFetch<MoneyAccountRead>(
+          `/entities/${entityId}/banking/accounts/${accountId}`,
+        ),
+        apiFetch<FxBalanceRead>(
+          `/entities/${entityId}/fx/accounts/${accountId}/balance`,
+        ),
+        apiFetch<{ items: FxLedgerEntryRead[] }>(
+          `/entities/${entityId}/fx/accounts/${accountId}/ledger?limit=50`,
+        ),
+      ]);
+      setAccount(acct);
+      setBalance(bal);
+      setLedger(ledRes.items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Load failed");
+    } finally {
+      setLoading(false);
+    }
+  }, [entityId, accountId]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const currency = balance?.currency ?? account?.currency ?? "USD";
+
+  if (!entityId) {
+    return (
+      <AppShell title="FX wallet">
+        <p className="text-sm text-muted-foreground">
+          Select a restaurant in the sidebar.
+        </p>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell title={account?.name ?? "FX wallet"}>
+      <div className="mb-4">
+        <Link href="/banking" className="text-sm text-primary hover:underline">
+          ← Banking
+        </Link>
+      </div>
+
+      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {loading && (
+        <p className="text-sm text-muted-foreground">Loading wallet…</p>
+      )}
+
+      {balance && account && (
+        <>
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">{currency} wallet</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">
+                {formatFxNative(balance.native_quantity, currency)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                TRY cost basis: {formatTry(balance.try_cost_kurus)} · GL:{" "}
+                {formatTry(balance.gl_balance_kurus)}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setPurchaseOpen(true)}>Buy {currency}</Button>
+              <Button variant="secondary" onClick={() => setConvertOpen(true)}>
+                Convert to TRY
+              </Button>
+              <Button variant="secondary" onClick={() => setSpendOpen(true)}>
+                Spend on expense
+              </Button>
+            </div>
+          </div>
+
+          <section>
+            <h2 className="mb-3 text-sm font-semibold">Ledger</h2>
+            {ledger.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No FX movements yet.
+              </p>
+            ) : (
+              <DataTable>
+                <DataTableHead>
+                  <tr>
+                    <DataTableHeaderCell>Date</DataTableHeaderCell>
+                    <DataTableHeaderCell>Type</DataTableHeaderCell>
+                    <DataTableHeaderCell>Description</DataTableHeaderCell>
+                    <DataTableHeaderCell align="right">
+                      {currency}
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell align="right">TRY cost</DataTableHeaderCell>
+                  </tr>
+                </DataTableHead>
+                <DataTableBody>
+                  {ledger.map((row) => (
+                    <DataTableRow key={row.id}>
+                      <DataTableCell>
+                        {formatTrDate(row.movement_date)}
+                      </DataTableCell>
+                      <DataTableCell>{row.movement_type}</DataTableCell>
+                      <DataTableCell>{row.description}</DataTableCell>
+                      <DataTableCell align="right">
+                        {formatFxNative(
+                          Math.abs(row.native_quantity),
+                          currency,
+                        )}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        {formatTry(row.try_cost_kurus)}
+                      </DataTableCell>
+                    </DataTableRow>
+                  ))}
+                </DataTableBody>
+              </DataTable>
+            )}
+          </section>
+        </>
+      )}
+
+      <FxPurchaseForm
+        open={purchaseOpen}
+        onClose={() => setPurchaseOpen(false)}
+        fxAccountId={accountId}
+        currency={currency}
+        onSaved={() => void reload()}
+      />
+      <FxConversionForm
+        open={convertOpen}
+        onClose={() => setConvertOpen(false)}
+        fxAccountId={accountId}
+        currency={currency}
+        onSaved={() => void reload()}
+      />
+      <FxExpenseSpendForm
+        open={spendOpen}
+        onClose={() => setSpendOpen(false)}
+        fxAccountId={accountId}
+        currency={currency}
+        onSaved={() => void reload()}
+      />
+    </AppShell>
+  );
+}
