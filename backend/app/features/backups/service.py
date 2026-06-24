@@ -17,6 +17,7 @@ from app.adapters.backup.postgres import (
     collect_row_counts,
     create_scratch_database,
     drop_scratch_database,
+    parse_database_name,
     pg_tools_available,
     replace_database_in_url,
     run_pg_dump,
@@ -27,6 +28,12 @@ from app.adapters.backup.storage import get_backup_storage
 from app.config import settings
 from app.features.backups.integrity import verify_restored_database
 from app.features.backups.schema import BackupRunResult, BackupVerifyResult
+
+
+def _backup_database_url() -> str:
+    """Admin credentials for pg_dump/pg_restore (bypasses FORCE RLS on app tables)."""
+    db_name = parse_database_name(settings.database_url)
+    return replace_database_in_url(settings.database_admin_url, db_name)
 
 
 def resolve_git_tag() -> str:
@@ -48,14 +55,15 @@ def run_backup(*, timestamp: str | None = None) -> BackupRunResult:
 
     ts = timestamp or utc_timestamp_label()
     git_tag = resolve_git_tag()
-    row_counts = collect_row_counts(settings.database_url).as_dict()
+    backup_url = _backup_database_url()
+    row_counts = collect_row_counts(backup_url).as_dict()
     uploads_root = Path(settings.upload_dir)
     storage = get_backup_storage()
 
     with tempfile.TemporaryDirectory(prefix="mizan-backup-run-") as workdir:
         work = Path(workdir)
         dump_path = work / DATABASE_DUMP_NAME
-        run_pg_dump(settings.database_url, str(dump_path))
+        run_pg_dump(backup_url, str(dump_path))
         artifact_path, manifest = create_backup_bundle(
             dump_path=dump_path,
             uploads_root=uploads_root,
@@ -84,7 +92,7 @@ def verify_latest_backup() -> BackupVerifyResult:
     scratch_name = scratch_database_name()
     admin_url = settings.database_admin_url
     create_scratch_database(admin_url, scratch_name)
-    scratch_url = replace_database_in_url(settings.database_url, scratch_name)
+    scratch_url = replace_database_in_url(admin_url, scratch_name)
 
     try:
         with tempfile.TemporaryDirectory(prefix="mizan-backup-verify-") as workdir:

@@ -63,9 +63,13 @@ def test_pg_tool_database_url_strips_sqlalchemy_driver() -> None:
         pg_tool_database_url(url)
         == "postgresql://mizan:mizan_dev@127.0.0.1:5432/mizan_test"
     )
+
+
+def test_replace_database_in_url_keeps_sqlalchemy_driver() -> None:
+    url = "postgresql+psycopg://postgres:mizan_dev@localhost:5432/postgres"
     assert (
-        replace_database_in_url(url, "scratch_db")
-        == "postgresql://mizan:mizan_dev@127.0.0.1:5432/scratch_db"
+        replace_database_in_url(url, "mizan_test")
+        == "postgresql+psycopg://postgres:mizan_dev@localhost:5432/mizan_test"
     )
 
 
@@ -150,7 +154,7 @@ def test_run_backup_restore_and_integrity_pass(db_session, restaurant_a, backup_
 
     scratch = scratch_database_name()
     create_scratch_database(settings.database_admin_url, scratch)
-    scratch_url = replace_database_in_url(settings.test_database_url, scratch)
+    scratch_url = replace_database_in_url(settings.database_admin_url, scratch)
     try:
         extracted = backup_settings["backup_dir"] / "extract"
         extracted.mkdir()

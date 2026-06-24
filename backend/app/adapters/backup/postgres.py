@@ -80,7 +80,7 @@ KEY_TABLES: tuple[str, ...] = (
 
 
 def collect_row_counts(database_url: str) -> RowCounts:
-    """Row counts for manifest — uses admin-visible connection."""
+    """Row counts for manifest — caller should pass an admin/superuser URL."""
     engine = create_engine(database_url, pool_pre_ping=True)
     counts: dict[str, int] = {}
     with engine.connect() as conn:
@@ -175,5 +175,4 @@ def pg_tools_available() -> bool:
 
 
 def replace_database_in_url(sqlalchemy_url: str, database: str) -> str:
-    url = make_url(sqlalchemy_url).set(database=database)
-    return pg_tool_database_url(url.render_as_string(hide_password=False))
+    return make_url(sqlalchemy_url).set(database=database).render_as_string(hide_password=False)
