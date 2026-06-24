@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { parseFxNative } from "@/lib/fx-money";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 
 type Props = {
@@ -25,6 +26,7 @@ export function StaffAccrualForm({
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const isTry = payCurrency === "TRY";
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("Salary accrual");
@@ -37,7 +39,9 @@ export function StaffAccrualForm({
       setError("Select a restaurant in the sidebar first.");
       return;
     }
-    const amountMinor = parseTryToKurus(amountText);
+    const amountMinor = isTry
+      ? parseTryToKurus(amountText)
+      : parseFxNative(amountText);
     const accrualDate = parseTrDate(dateText);
     if (amountMinor === null || amountMinor <= 0) {
       setError("Enter a valid amount.");
@@ -92,7 +96,7 @@ export function StaffAccrualForm({
           <Label htmlFor="acc-amount">Amount ({payCurrency})</Label>
           <Input
             id="acc-amount"
-            placeholder="15.000,00"
+            placeholder={isTry ? "15.000,00" : "1.000,00"}
             value={amountText}
             onChange={(e) => setAmountText(e.target.value)}
             required

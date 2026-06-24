@@ -8,26 +8,76 @@
 
 ## Quick start
 
-```bash
-# 1. Database
-docker compose up -d
+Run each block in its **own terminal**. Do not paste inline `# comments` on command lines — zsh may pass them as arguments.
 
-# 2. Backend (from repo root)
+### Terminal 1 — database
+
+```bash
+cd /Users/shoaib/Documents/NEW_APP_PLAN
+docker compose up -d
+```
+
+If you see **port 5432 already allocated**, another Postgres container is running (often `erp-pytest-pg`). Either stop it:
+
+```bash
+docker stop erp-pytest-pg
+docker compose up -d
+```
+
+…or skip `mizan-db` if you already have `mizan` / `mizan_dev` on localhost:5432 from another dev database.
+
+### Terminal 2 — backend
+
+```bash
+cd /Users/shoaib/Documents/NEW_APP_PLAN
+cp .env.example .env
+cp .env backend/.env
+
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"       # needs python-multipart; packages only app* (see BUGLOG)
+source .venv/bin/activate
+pip install -e ".[dev]"
+alembic upgrade head
 uvicorn app.main:app --reload --port 8000
+```
 
-# 3. Frontend (new terminal)
-cd frontend
+**Important:** `backend/.env` must exist. The API loads settings from `backend/.env` when you run uvicorn from the `backend/` folder. Without it, auth defaults to ON and the server crashes with a Clerk error.
+
+Check: http://localhost:8000/docs should load.
+
+### Terminal 3 — frontend
+
+```bash
+cd /Users/shoaib/Documents/NEW_APP_PLAN/frontend
 npm install
 npm run dev
 ```
 
+Check: http://localhost:3000
+
+## Environment (`.env`)
+
+Copy `.env.example` to **both** repo root and `backend/.env` (same contents).
+
+For local dev without Clerk sign-in, these must be set:
+
+```
+AUTH_ENFORCEMENT=false
+IDEMPOTENCY_ENFORCEMENT=false
+```
+
+Optional frontend env (create `frontend/.env.local` if you change the API URL):
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+Leave `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` unset unless you have real Clerk keys.
+
+## URLs
+
 - **API:** http://localhost:8000 — docs at `/docs`
 - **App:** http://localhost:3000
-- Copy `.env.example` to `.env` when wiring the database (Phase 0+).
 
 ## Tests
 

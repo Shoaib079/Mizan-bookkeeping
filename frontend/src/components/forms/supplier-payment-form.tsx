@@ -9,9 +9,11 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import {
+  loadBankAndCashAccounts,
+  type MoneyAccountOption,
+} from "@/lib/load-money-accounts";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
-
-type MoneyAccount = { id: string; name: string; account_kind: string };
 
 type Props = {
   open: boolean;
@@ -29,8 +31,8 @@ export function SupplierPaymentForm({
   onPaid,
 }: Props) {
   const { entityId, actorId } = useEntity();
-  const [accounts, setAccounts] = useState<MoneyAccount[]>([]);
-  const [paymentAccountId, setPaymentAccountId] = useState("");
+  const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
+  const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("Supplier payment");
@@ -40,17 +42,9 @@ export function SupplierPaymentForm({
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
-    const [bankRes, cashRes] = await Promise.all([
-      apiFetch<{ items: MoneyAccount[] }>(
-        `/entities/${entityId}/banking/accounts?account_kind=bank&limit=50`,
-      ),
-      apiFetch<{ items: MoneyAccount[] }>(
-        `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
-      ),
-    ]);
-    const merged = [...bankRes.items, ...cashRes.items];
+    const merged = await loadBankAndCashAccounts(entityId);
     setAccounts(merged);
-    if (merged[0]) setPaymentAccountId(merged[0].id);
+    if (merged[0]) setPaymentGlAccountId(merged[0].gl_account_id);
   }, [entityId]);
 
   useEffect(() => {
@@ -73,6 +67,10 @@ export function SupplierPaymentForm({
       setError("Date must be DD.MM.YYYY.");
       return;
     }
+    if (!paymentGlAccountId) {
+      setError("Choose a cash or bank account.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -86,7 +84,7 @@ export function SupplierPaymentForm({
             amount_kurus: amountKurus,
             description,
             actor_id: actorId,
-            payment_account_id: paymentAccountId,
+            payment_account_id: paymentGlAccountId,
             reference: reference || null,
           }),
         },
@@ -151,11 +149,11 @@ export function SupplierPaymentForm({
           <Label htmlFor="pay-account">Pay from</Label>
           <Select
             id="pay-account"
-            value={paymentAccountId}
-            onChange={(e) => setPaymentAccountId(e.target.value)}
+            value={paymentGlAccountId}
+            onChange={(e) => setPaymentGlAccountId(e.target.value)}
           >
             {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
+              <option key={a.id} value={a.gl_account_id}>
                 {a.name} ({a.account_kind})
               </option>
             ))}

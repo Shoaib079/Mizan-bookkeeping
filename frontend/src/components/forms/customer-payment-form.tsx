@@ -30,7 +30,7 @@ export function CustomerPaymentForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
-  const [paymentAccountId, setPaymentAccountId] = useState("");
+  const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("Customer payment");
@@ -41,7 +41,7 @@ export function CustomerPaymentForm({
     if (!entityId) return;
     const merged = await loadBankAndCashAccounts(entityId);
     setAccounts(merged);
-    if (merged[0]) setPaymentAccountId(merged[0].id);
+    if (merged[0]) setPaymentGlAccountId(merged[0].gl_account_id);
   }, [entityId]);
 
   useEffect(() => {
@@ -64,6 +64,10 @@ export function CustomerPaymentForm({
       setError("Date must be DD.MM.YYYY.");
       return;
     }
+    if (!paymentGlAccountId) {
+      setError("Choose a cash or bank account.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -77,7 +81,7 @@ export function CustomerPaymentForm({
             amount_kurus: amountKurus,
             description,
             actor_id: actorId,
-            payment_account_id: paymentAccountId,
+            payment_account_id: paymentGlAccountId,
           }),
         },
       );
@@ -130,11 +134,11 @@ export function CustomerPaymentForm({
           <Label htmlFor="cp-account">Receive into</Label>
           <Select
             id="cp-account"
-            value={paymentAccountId}
-            onChange={(e) => setPaymentAccountId(e.target.value)}
+            value={paymentGlAccountId}
+            onChange={(e) => setPaymentGlAccountId(e.target.value)}
           >
             {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
+              <option key={a.id} value={a.gl_account_id}>
                 {a.name} ({a.account_kind})
               </option>
             ))}
