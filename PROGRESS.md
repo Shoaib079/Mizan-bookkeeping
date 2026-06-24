@@ -4,11 +4,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 9 — frontend; Phase 8.8 adversarial follow-ups (H4–H5 remain) |
-| **Last completed slice** | Phase 8.8 H3 — expense receipt test gaps (`v0.58.2-phase8.8-h3-expense-receipt-guards`) |
-| **Next slice** | Phase 8.8 H4 — card-tip day ops guidance; Phase 9 Slice 3 — Suppliers & payables |
+| **Phase** | Phase 9 — frontend; Phase 8.8 adversarial follow-ups (H5 remains) |
+| **Last completed slice** | Phase 8.8 H4 — card-tip day ops guidance (`v0.58.3-phase8.8-h4-z-ops-guidance`) |
+| **Next slice** | Phase 8.8 H5 — docs dedup; Phase 9 Slice 3 — Suppliers & payables |
 | **Branch** | `main` |
-| **Last tag** | `v0.58.2-phase8.8-h3-expense-receipt-guards` |
+| **Last tag** | `v0.58.3-phase8.8-h4-z-ops-guidance` |
 
 ## Resume point
 
@@ -19,7 +19,14 @@
 - Phase 9 New menu + receipt review (`v0.55.0`), read-back + Clerk (`v0.56.0`)
 - Z match-or-review (`v0.57.0`, `a6dd4e6`)
 
-**Next:** Phase 8.8 H4 — card-tip day ops guidance. Phase 9 Slice 3 — Suppliers & payables UI.
+**Next:** Phase 8.8 H5 — docs dedup. Phase 9 Slice 3 — Suppliers & payables UI.
+
+## Verification (2026-06-24 — H4)
+
+| Check | Result |
+|-------|--------|
+| Full pytest (Alembic-provisioned test DB) | **543 passed**, 2 skipped |
+| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
 
 ## Verification (2026-06-24 — H3)
 

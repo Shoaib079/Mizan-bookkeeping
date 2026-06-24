@@ -16,7 +16,7 @@
 | **Active slice** | Phase 9 Slice 3 — Suppliers & payables |
 | **Last completed slice** | Phase 8.8 H3 — expense receipt test gaps (`v0.58.2-phase8.8-h3-expense-receipt-guards`) |
 | **Last commit/tag** | `v0.58.2-phase8.8-h3-expense-receipt-guards` |
-| **Next up** | Phase 8.8 H4 — card-tip day ops guidance; Phase 9 Slice 3 — Suppliers & payables |
+| **Next up** | Phase 8.8 H5 — docs dedup; Phase 9 Slice 3 — Suppliers & payables |
 
 **The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = expense-receipt OCR + manual daily-sales API (DONE). **Phase 8.8** = remaining backend gaps from the 2026-06-24 adversarial review (not a re-do of tips/Z — see **Do not rebuild** below). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -341,7 +341,7 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 
 ## Phase 8.8 — Adversarial review follow-ups (backend hardening)
 
-**Status: IN PROGRESS** — H1–H3 done (`v0.58.0`–`v0.58.2`). Surfaced by independent adversarial review after `v0.57.0`. These are **gaps in guards/tests/ops safety**, not a re-do of Slice A/B/C or Phase 8.7. Do **not** re-open `card_sale_basis` or POS tip posting (see **Do not rebuild** above).
+**Status: IN PROGRESS** — H1–H4 done (`v0.58.0`–`v0.58.3`). Surfaced by independent adversarial review after `v0.57.0`. These are **gaps in guards/tests/ops safety**, not a re-do of Slice A/B/C or Phase 8.7. Do **not** re-open `card_sale_basis` or POS tip posting (see **Do not rebuild** above).
 
 **Purpose:** Close remaining money/ops risks before owner sign-off and production. Each slice = completion gate + tag. Can run in parallel with Phase 9 frontend where noted.
 
@@ -350,7 +350,7 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 | **H1 — Commission sweep timing guard** | done | Adversarial finding: `clear-commission` sweeps all of `1400` even when card sales are still in transit | `POST .../clear-commission` rejects when `GET .../clearing-reconciliation` shows `in_transit_kurus > 0` and no settlements (`pos_settlement_count == 0`) → 422 + clear message; 2 permanent tests; `DECISIONS.md` § commission sweep updated. Tag `v0.58.0-phase8.8-h1-commission-sweep-guard`. **536 pytest green.** |
 | **H2 — Tips expense cash-only at API** | done | Adversarial finding: generic `post_expense_entry` allows `5700` from bank | `post_expense_entry` rejects `5700` unless `money_account` is cash (`InvalidExpensePostingError` → 422); receipt intake unchanged (already cash-only); 2 tests; `DECISIONS.md` § tips updated. Tag `v0.58.1-phase8.8-h2-tips-cash-only`. |
 | **H3 — Expense receipt test gaps** | done | Adversarial finding: missing negative/isolation coverage | Guard already in `confirm_expense_receipt` (line sum vs `receipt_total_kurus`); 4 permanent tests — mismatch blocked, override fix posts, API + service cross-entity read/confirm 404, RLS hides intakes/lines. Tag `v0.58.2-phase8.8-h3-expense-receipt-guards`. **542 pytest green.** |
-| **H4 — Card-tip day ops guidance** | planned | Adversarial finding: when Z > system card, review message does not explain cash↔card reallocation workflow | Update Needs Review copy (and Decisions §9 operator note): on Z mismatch, owner may adjust cash/card split on confirm so card matches Z **without changing total**, record tip on expense paper, then re-confirm; optional integration test: mismatch → expense tip → corrected confirm → deposit + sweep clears `1400` |
+| **H4 — Card-tip day ops guidance** | done | Adversarial finding: when Z > system card, review message does not explain cash↔card reallocation workflow | Needs Review copy explains reallocate cash→card (same total) + expense-paper tip + re-confirm; Decisions §9 operator note; integration test mismatch → expense tip → corrected confirm → deposit + sweep clears `1400`. Tag `v0.58.3-phase8.8-h4-z-ops-guidance`. |
 | **H5 — Docs dedup** | planned | Stale `DECISIONS.md` Slice B1 (`system`/`z_report` GL) contradicts `v0.57.0` entry | Mark B1 section superseded at top; single canonical Z description; no code change |
 
 **Phase 8.8 complete when:** H1–H5 done (or explicitly deferred by owner in Decisions), full pytest green, ROADMAP updated, owner sign-off on money-critical items H1–H2.
@@ -421,7 +421,7 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 - **Tip treatment — Slice B2 DONE (`v0.50.0`) ✓ signed off.** Commission sweep done; **H1** in-transit guard done (`v0.58.0`).
 - **Tip treatment — Slice C DONE (`v0.51.0`) ✓ signed off;** folded into Phase 8.7.
 - **Phase 8.7 + Phase 9 core DONE (`v0.52.0`–`v0.56.0`) ✓ signed off.** Frontend gaps → Phase 9 Slice 2d + 8.
-- **Z match-or-review DONE (`v0.57.0`) ✓ signed off.** Ops copy + integration test → Phase 8.8 H4.
+- **Z match-or-review DONE (`v0.57.0`) ✓ signed off.** Ops copy + integration test → Phase 8.8 H4 **done** (`v0.58.3`).
 - **Bank deposit exceeds card sale (no Z entered):** still rejected at settlement (`test_inferred_commission_rejects_net_exceeding_batch_gross`). With Z tracking off, owner records deposits manually; with Z on, mismatch routes to Needs Review — not auto-resolved.
 
 ---

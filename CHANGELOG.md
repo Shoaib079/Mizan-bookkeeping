@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-24
 
+**Phase 8.8 H4 — card-tip day ops guidance:** Needs Review copy for Z ≠ system card now explains the owner workflow — when Z exceeds system card, reallocate cash→card on re-confirm (same daily total), record the tip on the expense paper (`Dr 5700 / Cr cash`), then confirm again. Decisions §9 operator note added. Integration test: mismatch → expense tip → corrected confirm → deposit + sweep clears `1400`. Tag `v0.58.3-phase8.8-h4-z-ops-guidance`.
+
 **Phase 8.8 H3 — expense receipt test gaps:** Permanent tests for adversarial gaps in expense receipt intake — `confirm` blocked when line sum ≠ `receipt_total_kurus` without a fix (guard already in `confirm_expense_receipt`); override that corrects the mismatch allows post; cross-restaurant read/confirm returns 404 at API and service layer; RLS hides `expense_receipt_intakes` / `expense_receipt_lines` from other entities. 4 new tests; **542 pytest green**; fresh-install verify green. Tag `v0.58.2-phase8.8-h3-expense-receipt-guards`.
 
 **Phase 8.8 H2 — tips expense cash-only at API:** `post_expense_entry` now rejects Tips Expense (`5700`) unless the payment `money_account` is cash — `InvalidExpensePostingError` → HTTP 422 ("tips expense must be paid from a cash account"). Closes adversarial gap where generic `POST .../expenses` could book tips from a bank account. Receipt intake unchanged (already cash-only at upload). Guard lives at the single posting boundary in `core/expenses/posting.py`. `DECISIONS.md` § tips updated. 2 new tests; **538 pytest green**; fresh-install verify green. Tag `v0.58.1-phase8.8-h2-tips-cash-only`. **Money-critical — owner sign-off required.**

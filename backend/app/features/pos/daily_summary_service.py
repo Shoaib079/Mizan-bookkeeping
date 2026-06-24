@@ -286,6 +286,23 @@ class _NeedsReview:
         self.reason = reason
 
 
+def _z_mismatch_review_reason(z_value: int, card_kurus: int) -> str:
+    """Operator guidance when the card-terminal Z total differs from system card."""
+    if z_value > card_kurus:
+        gap = z_value - card_kurus
+        return (
+            f"Z report ({z_value}) exceeds system card ({card_kurus}) by {gap}. "
+            "On re-confirm: raise card and lower cash by that amount so card equals Z "
+            "(same daily total), record the tip on the expense paper (Dr 5700 / Cr cash), "
+            "then confirm again."
+        )
+    return (
+        f"Z report ({z_value}) is below system card ({card_kurus}). "
+        "On re-confirm: adjust cash and card so card equals Z without changing the daily "
+        "total, or verify the Z and POS slip figures."
+    )
+
+
 def _resolve_z_report(
     session: Session,
     entity_id: uuid.UUID,
@@ -318,10 +335,7 @@ def _resolve_z_report(
         )
 
     if z_value != card_kurus:
-        return z_value, _NeedsReview(
-            f"Z report ({z_value}) does not match system card ({card_kurus}) — "
-            "correct the figures or record tips on the expense list"
-        )
+        return z_value, _NeedsReview(_z_mismatch_review_reason(z_value, card_kurus))
 
     return z_value, None
 

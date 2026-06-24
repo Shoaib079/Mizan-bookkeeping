@@ -2,6 +2,14 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-24 — Card-tip day ops guidance (Phase 8.8 H4)
+
+**Choice:** When Z ≠ system card, Needs Review `review_reason` explains the owner workflow instead of a generic mismatch line. If Z exceeds system card: on re-confirm, reallocate cash→card so card equals Z (same daily total), record the tip on the expense paper (`Dr 5700 / Cr cash`), then confirm again. Decisions §9 operator note documents the same steps.
+
+**What changed:** `_z_mismatch_review_reason()` in `daily_summary_service.py`; Decisions §9 operator note; integration test in `test_pos_card_tips.py`.
+
+**Not in slice:** Frontend copy (Phase 9 Slice 2d); DECISIONS B1 dedup (H5).
+
 ## 2026-06-24 — Z report match-or-review; no POS tip posting (supersedes Slice B1 tip basis)
 
 **Choice:** Simplify POS daily-summary confirm per owner direction: tips are **only** on the expense list (`Dr 5700 / Cr cash` via `post_expense_entry`), never derived or posted at POS. When `card_tips_z_report_enabled` is on, the owner enters the card-terminal **Z report** with the intake; the app compares **Z to system card sale** — **match → post** cash + card as on the system slip; **mismatch → Needs Review** (owner corrects figures). Removed `card_sale_basis` / `expected_tip_kurus` from confirm APIs; `card_sale_basis` entity setting is **deprecated** (ignored). Removed `POS_CARD_TIP` posting from `confirm_pos_daily_summary`; card clearing (`1400`) debits **system card sale** only. `JournalEntrySource.POS_CARD_TIP` retained in the registry for voiding any historical rows.
