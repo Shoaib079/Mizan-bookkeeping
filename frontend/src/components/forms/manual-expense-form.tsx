@@ -12,6 +12,8 @@ import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 type MoneyAccount = { id: string; name: string; account_kind: string };
 type Account = { id: string; code: string; name: string };
 
+const MANUAL_EXPENSE_ACCOUNT_CODES = ["5200", "5700"];
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -20,6 +22,7 @@ type Props = {
 export function ManualExpenseForm({ open, onClose }: Props) {
   const { entityId, actorId } = useEntity();
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [moneyAccountId, setMoneyAccountId] = useState("");
   const [itemName, setItemName] = useState("");
@@ -40,7 +43,11 @@ export function ManualExpenseForm({ open, onClose }: Props) {
       ),
     ]);
     setCashAccounts(accountsRes.items);
-    const general = chartRes.items.find((a) => a.code === "5200");
+    const pickable = chartRes.items.filter((a) =>
+      MANUAL_EXPENSE_ACCOUNT_CODES.includes(a.code),
+    );
+    setExpenseAccounts(pickable);
+    const general = pickable.find((a) => a.code === "5200");
     if (general) setExpenseAccountId(general.id);
     if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
   }, [entityId]);
@@ -68,6 +75,10 @@ export function ManualExpenseForm({ open, onClose }: Props) {
     }
     if (!expenseDate) {
       setError("Date must be DD.MM.YYYY.");
+      return;
+    }
+    if (!expenseAccountId) {
+      setError("Choose an expense account.");
       return;
     }
     setSubmitting(true);
@@ -133,6 +144,23 @@ export function ManualExpenseForm({ open, onClose }: Props) {
               Parsed: {parsedPreview}
             </p>
           )}
+        </div>
+        <div>
+          <Label htmlFor="exp-account">Expense account</Label>
+          <Select
+            id="exp-account"
+            value={expenseAccountId}
+            onChange={(e) => setExpenseAccountId(e.target.value)}
+          >
+            {expenseAccounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.code} — {a.name}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Use 5700 Tips Expense for cash tips paid from the drawer.
+          </p>
         </div>
         <div>
           <Label htmlFor="exp-cash">Cash drawer</Label>

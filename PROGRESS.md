@@ -6,21 +6,18 @@
 |-------|-------|
 | **Phase** | Phase 9 — frontend |
 | **Active slice** | Slice 5 — POS & delivery sales |
-| **Last completed slice** | Phase 9 Slice 4 — Banking & cash (`v0.60.0-phase9-banking-cash`) |
+| **Last completed slice** | Phase 9 Slice 2d — money-entry UX gaps |
 | **Branch** | `main` |
 | **Last tag** | `v0.60.0-phase9-banking-cash` |
 
 ## Resume point
 
-**Phase 9 Slice 4 complete (2026-06-24)** — Banking & cash UI:
-- `/banking` — account tree with balances (banks, cash, cards, FX)
-- `/banking/accounts/[id]` — account detail, statement upload/list (bank)
-- `/banking/statements/[id]` — statement lines + classify UI (Needs Review prominent)
-- `/banking/transfers` — transfer form + history
-- `/banking/cash` — drawer sessions, movements, EOD close with over/short
-- `/banking/fx/[id]` — FX purchase, convert, spend, ledger
+**Phase 9 Slice 2d complete** — money-entry UX gaps (uncommitted):
+- Manual daily sales: optional Z when `card_tips_z_report_enabled`; `needs_review` keeps dialog open with backend `review_reason` + Sales link
+- Manual expense: expense-account picker (5200 / 5700); cash drawer unchanged
+- `frontend/src/lib/entity-settings.ts` — read boolean entity settings
 
-**Next:** Phase 9 Slice 5 — POS & delivery sales.
+Slices 3–4 already shipped (`v0.59.0`, `v0.60.0`). **Next:** Phase 9 Slice 5 — POS & delivery sales.
 
 ## Verification (2026-06-24)
 
