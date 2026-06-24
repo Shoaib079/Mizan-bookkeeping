@@ -16,17 +16,14 @@ from app.core.cash.posting import (
 from app.core.chart_of_accounts.default_chart import (
     CARD_SALES_CLEARING_CODE,
     SALES_REVENUE_CODE,
-    TIPS_EXPENSE_CODE,
 )
 from app.core.chart_of_accounts.models import Account
-from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntry, JournalEntrySource
-from app.core.ledger.posting import InvalidAccountError, PostingLine, prepare_journal_entry
+from app.core.ledger.posting import InvalidAccountError, prepare_journal_entry
 from app.core.pos.posting import (
     build_card_sales_batch_posting_lines,
     persist_card_sales_batch,
 )
-from app.features.pos.settings import CardSaleBasis
 from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
@@ -117,21 +114,12 @@ def confirm_pos_daily_summary(
     actor_id: uuid.UUID,
     description: str,
     z_report_kurus: int | None = None,
-    tip_basis: CardSaleBasis | None = None,
 ) -> PosDailySummaryPostResult:
     """Post card sales batch + cash in for a confirmed daily summary — one transaction.
 
-    When ``z_report_kurus`` is provided (card-terminal Z report = system card sale
-    + card tips), the card tip = ``z_report_kurus - card_kurus`` is booked per
-    ``tip_basis``:
-
-    - ``SYSTEM``   — book the system card sale as revenue; the tip is a
-                     pass-through (Dr 1400 / Cr cash drawer), no P&L impact.
-    - ``Z_REPORT`` — book the Z total as revenue; expense the tip to 5700
-                     (Dr 5700 / Cr cash drawer).
-
-    In both cases the card clearing account (1400) is debited by the full Z total
-    so that later bank deposits + the commission sweep clear it to zero.
+    Sales are always posted **gross** from the system slip (cash + card). When a Z
+    report was reconciled upstream, ``z_report_kurus`` is stored on the summary for
+    audit only — tips are recorded on the expense list, not here.
     """
     if cash_kurus < 0 or card_kurus < 0:
         raise PosDailySummaryPostError("cash and card amounts must be >= 0")
@@ -141,21 +129,6 @@ def confirm_pos_daily_summary(
         raise PosDailySummaryPostError(
             "cash + card must equal total before posting — correct amounts or reject"
         )
-
-    card_tip_kurus = 0
-    if z_report_kurus is not None and card_kurus > 0:
-        card_tip_kurus = z_report_kurus - card_kurus
-        if card_tip_kurus < 0:
-            raise PosDailySummaryPostError(
-                "Z report total is below the system card sale — cannot derive a tip"
-            )
-        if card_tip_kurus > 0 and tip_basis not in (
-            CardSaleBasis.SYSTEM,
-            CardSaleBasis.Z_REPORT,
-        ):
-            raise PosDailySummaryPostError(
-                "card tip present but no card_sale_basis decision (system|z_report)"
-            )
 
     status = PosDailySummaryStatus(summary.status)
     if status not in {
@@ -177,18 +150,11 @@ def confirm_pos_daily_summary(
 
         money_account = _validate_cash_money_account(session, entity_id, money_account_id)
         sales_revenue_account = _get_account_by_code(session, SALES_REVENUE_CODE)
-        # Sales are posted gross — no tip carve-out (owner decision 2026-06-23).
         cash_revenue = cash_kurus
-        # Card revenue: book the Z total when the owner chose the z_report basis
-        # for a tip-bearing day; otherwise book the system card sale.
-        if card_tip_kurus > 0 and tip_basis == CardSaleBasis.Z_REPORT:
-            card_revenue = card_kurus + card_tip_kurus
-        else:
-            card_revenue = card_kurus
+        card_revenue = card_kurus
 
         card_batch: CardSalesBatch | None = None
         card_journal: JournalEntry | None = None
-        card_tip_journal: JournalEntry | None = None
         cash_movement: CashMovement | None = None
         cash_journal: JournalEntry | None = None
 
@@ -208,64 +174,14 @@ def confirm_pos_daily_summary(
                 actor_id=actor_id,
                 source=JournalEntrySource.CARD_SALES,
             )
-            # The card clearing (1400) must total the full Z deposit so that bank
-            # deposits + the commission sweep clear it to zero. Batch gross = Z.
-            batch_gross = card_kurus + card_tip_kurus
             card_batch = persist_card_sales_batch(
                 session,
                 sales_date=sales_date,
-                gross_amount_kurus=batch_gross,
+                gross_amount_kurus=card_kurus,
                 description=f"{description} — card",
                 actor_id=actor_id,
                 journal_entry_id=card_journal.id,
             )
-
-            if card_tip_kurus > 0:
-                if tip_basis == CardSaleBasis.Z_REPORT:
-                    # Tip is an expense paid to staff from the drawer; revenue
-                    # already includes the tip via the Z total above.
-                    tips_expense_account = _get_account_by_code(
-                        session, TIPS_EXPENSE_CODE
-                    )
-                    tip_lines = [
-                        PostingLine(
-                            account_id=tips_expense_account.id,
-                            amount_kurus=card_tip_kurus,
-                            side=AccountNormalBalance.DEBIT,
-                        ),
-                        PostingLine(
-                            account_id=money_account.gl_account_id,
-                            amount_kurus=card_tip_kurus,
-                            side=AccountNormalBalance.CREDIT,
-                        ),
-                    ]
-                    tip_description = f"{description} — card tip (expense)"
-                else:
-                    # System basis: tip is a pass-through. It is received via card
-                    # clearing (debit 1400) and paid to staff from the drawer.
-                    tip_lines = [
-                        PostingLine(
-                            account_id=clearing_account.id,
-                            amount_kurus=card_tip_kurus,
-                            side=AccountNormalBalance.DEBIT,
-                        ),
-                        PostingLine(
-                            account_id=money_account.gl_account_id,
-                            amount_kurus=card_tip_kurus,
-                            side=AccountNormalBalance.CREDIT,
-                        ),
-                    ]
-                    tip_description = f"{description} — card tip (pass-through)"
-
-                card_tip_journal = prepare_journal_entry(
-                    session,
-                    entity_id,
-                    sales_date,
-                    tip_description,
-                    tip_lines,
-                    actor_id=actor_id,
-                    source=JournalEntrySource.POS_CARD_TIP,
-                )
 
         if cash_kurus > 0:
             drawer_session = _get_or_create_open_session(
@@ -320,9 +236,6 @@ def confirm_pos_daily_summary(
         if card_batch is not None:
             session.refresh(card_batch)
             _ = list(card_journal.lines)  # type: ignore[union-attr]
-        if card_tip_journal is not None:
-            session.refresh(card_tip_journal)
-            _ = list(card_tip_journal.lines)
         if cash_movement is not None:
             session.refresh(cash_movement)
             _ = list(cash_journal.lines)  # type: ignore[union-attr]
@@ -333,5 +246,5 @@ def confirm_pos_daily_summary(
             cash_movement=cash_movement,
             card_journal_entry=card_journal,
             cash_journal_entry=cash_journal,
-            card_tip_journal_entry=card_tip_journal,
+            card_tip_journal_entry=None,
         )

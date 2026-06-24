@@ -1,8 +1,8 @@
 """Expense receipt OCR — multi-line daily expense paper (Phase 8.7, Decisions §8, §22).
 
-One uploaded photo → N item lines + optional tip. Three tiers: fixture registry,
-UTF-8 text heuristics, optional vision OCR (strict JSON, env-gated). Real phone
-photos without vision configured route to Needs Review (empty lines for manual entry).
+One uploaded photo → N item lines. Three tiers: fixture registry, UTF-8 text
+heuristics, optional vision OCR (strict JSON, env-gated). Every line is a cash
+expense (tips use the same pipeline; default GL may differ on review).
 """
 
 from __future__ import annotations

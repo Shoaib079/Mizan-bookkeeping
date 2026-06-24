@@ -1,20 +1,14 @@
 """POS module entity settings helpers (Decisions §9, §13).
 
-Per-restaurant configuration for card-tip handling via the card-terminal Z report:
+Per-restaurant configuration for card-terminal Z-report reconciliation:
 
-- ``card_tips_z_report_enabled`` — whether this restaurant reconciles card tips
-  using a card-terminal Z report (Z total = system card sale + card tips). When
-  off, the daily summary posts gross card sales exactly as before (no tip leg).
-- ``card_sale_basis`` — which figure to book as card revenue when a card tip
-  exists for the day:
-    * ``system``   — book the POS system card sale as revenue; the tip is a
-                     pass-through (received via card clearing, paid to staff from
-                     the drawer) and does NOT touch the P&L.
-    * ``z_report`` — book the Z-report total as revenue and expense the tip to
-                     5700 (tip paid to staff from the drawer).
-    * ``ask``      — never auto-post a day that has a card tip; route it to
-                     Needs Review so the owner decides system vs z_report per
-                     entry (default — safest).
+- ``card_tips_z_report_enabled`` — when on, the owner enters the card-terminal
+  **Z report** total with the POS daily summary. The app compares **Z to the
+  system card sale**; match → post as entered, mismatch → Needs Review. Tips
+  are **not** derived or posted at POS — they belong on the expense list only.
+
+``card_sale_basis`` is **deprecated** (ignored by the app). Existing stored
+values are left in place for audit; new installs should not set it.
 """
 
 from __future__ import annotations
@@ -31,6 +25,8 @@ CARD_SALE_BASIS_KEY = "card_sale_basis"
 
 
 class CardSaleBasis(str, enum.Enum):
+    """Deprecated — retained for parsing legacy entity settings only."""
+
     SYSTEM = "system"
     Z_REPORT = "z_report"
     ASK = "ask"
@@ -62,6 +58,7 @@ def is_card_tips_z_report_enabled(session: Session, entity_id: uuid.UUID) -> boo
 
 
 def get_card_sale_basis(session: Session, entity_id: uuid.UUID) -> CardSaleBasis:
+    """Deprecated — no longer used for POS posting."""
     setting = entity_service.get_entity_setting_by_key(
         session, entity_id, CARD_SALE_BASIS_KEY
     )

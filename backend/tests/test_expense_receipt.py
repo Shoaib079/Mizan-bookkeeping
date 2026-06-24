@@ -14,6 +14,7 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntryLine
+from app.features.reports import financial_statements
 from app.db.session import entity_context
 from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
@@ -127,6 +128,46 @@ def test_confirm_posts_all_lines_dr_expense_cr_cash(db_session, restaurant_a) ->
         _gl_balance(db_session, restaurant_a.id, drawer_gl_id, AccountNormalBalance.DEBIT)
         == -25_000
     )
+
+
+def test_expense_tip_line_rolls_into_pl_and_balance_sheet(db_session, restaurant_a) -> None:
+    """Bahşiş on the expense paper hits P&L (5700) and reduces cash on the balance sheet."""
+    drawer, accounts = _setup(db_session, restaurant_a)
+    tips_id = accounts[TIPS_EXPENSE_CODE].id
+
+    intake = receipt_service.create_expense_receipt_from_upload(
+        db_session,
+        restaurant_a.id,
+        _MULTI_LINE_RECEIPT,
+        money_account_id=drawer.id,
+        actor_id=ACTOR_ID,
+    )
+    receipt_service.confirm_expense_receipt(
+        db_session,
+        restaurant_a.id,
+        intake.id,
+        ConfirmExpenseReceiptRequest(actor_id=ACTOR_ID),
+    )
+
+    period_from = date(2026, 6, 1)
+    period_to = date(2026, 6, 30)
+    pl = financial_statements.get_profit_and_loss(
+        db_session, restaurant_a.id, period_from, period_to
+    )
+    tips_line = next(
+        (row for row in pl.accounts if row.account_id == tips_id),
+        None,
+    )
+    assert tips_line is not None
+    assert tips_line.amount_kurus == 2_000
+
+    bs = financial_statements.get_balance_sheet(db_session, restaurant_a.id, period_to)
+    cash_row = next(
+        (row for row in bs.assets.accounts if row.account_id == drawer.gl_account_id),
+        None,
+    )
+    assert cash_row is not None
+    assert cash_row.balance_kurus == -25_000
 
 
 def test_duplicate_receipt_rejected(db_session, restaurant_a) -> None:

@@ -5,10 +5,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 9 — frontend |
-| **Last completed slice** | Phase 9 read-back lists + Clerk login (`v0.56.0`) |
-| **Next slice** | Phase 9 Slice 3 — Suppliers & payables; owner sign-off on money-critical Phase 8.7 slices |
+| **Last completed slice** | Z report match-or-review — no POS tip posting (`v0.57.0`) |
+| **Next slice** | Phase 9 Slice 3 — Suppliers & payables; owner sign-off on money-critical slices |
 | **Branch** | `main` |
-| **Last tag** | `v0.56.0-phase9-readback-clerk` |
+| **Last tag** | `v0.57.0-pos-z-match-or-review` |
 
 ## Resume point
 
@@ -19,7 +19,7 @@
 
 **In progress:** Phase 9 Slice 3 — Suppliers & payables UI.
 
-**Awaiting:** owner sign-off on money-critical backend slices (Phase 8.7 D1–D3, tips A/B/C).
+**Awaiting:** owner sign-off on money-critical backend slices (Phase 8.7 D1–D3, tips A/B/C, Z simplification).
 
 ## Pre-sign-off verification (2026-06-24)
 

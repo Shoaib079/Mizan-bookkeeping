@@ -1,13 +1,8 @@
-"""POS card tips via card-terminal Z report (Slice B1).
+"""POS Z-report reconciliation — match-or-review only (Decisions §9).
 
-Z report total = system card sale + card tips. The card tip for a day is derived
-as ``z_report_kurus - card`` and booked per the entity ``card_sale_basis``:
-
-- system   — tip is a pass-through (Dr 1400 / Cr cash drawer); revenue = card.
-- z_report  — tip is an expense (Dr 5700 / Cr cash drawer); revenue = Z total.
-
-In both cases the card clearing (1400) is debited the full Z total so that bank
-deposits + the commission sweep clear it to zero.
+When ``card_tips_z_report_enabled`` is on, the card-terminal Z total must equal the
+system card sale before posting. Tips are **not** derived or posted at POS — they
+belong on the expense list (``Dr 5700 / Cr cash`` via the expenses pipeline).
 """
 
 from __future__ import annotations
@@ -24,7 +19,6 @@ from app.core.chart_of_accounts.default_chart import (
     TIPS_EXPENSE_CODE,
 )
 from app.core.chart_of_accounts.models import Account
-from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource
 from app.core.pos import posting as pos_posting
@@ -34,33 +28,30 @@ from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
 from app.features.entities import service as entity_service
 from app.features.entities.schema import EntitySettingCreate
-from app.features.pos.settings import (
-    CARD_SALE_BASIS_KEY,
-    CARD_TIPS_Z_REPORT_ENABLED_KEY,
-)
+from app.features.pos.settings import CARD_TIPS_Z_REPORT_ENABLED_KEY
 
 FIXTURES = __import__("pathlib").Path(__file__).resolve().parent / "fixtures" / "pos"
 SAMPLE_SUMMARY = FIXTURES / "sample_summary.txt"
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
+# sample_summary.txt: cash 150_000, card 350_000, total 500_000
+SYSTEM_CARD_KURUS = 350_000
 
-def _enable_z_report(db_session, entity_id, basis: str | None) -> None:
+
+def _enable_z_report(db_session, entity_id) -> None:
     entity_service.create_entity_setting(
         db_session,
         entity_id,
         EntitySettingCreate(key=CARD_TIPS_Z_REPORT_ENABLED_KEY, value="true"),
     )
-    if basis is not None:
-        entity_service.create_entity_setting(
-            db_session,
-            entity_id,
-            EntitySettingCreate(key=CARD_SALE_BASIS_KEY, value=basis),
-        )
 
 
 @pytest.fixture
 def setup(db_session, restaurant_a):
+    seed_default_chart = __import__(
+        "app.core.chart_of_accounts.seed", fromlist=["seed_default_chart"]
+    ).seed_default_chart
     seed_default_chart(db_session, restaurant_a.id)
     drawer = banking_service.create_money_account(
         db_session,
@@ -118,7 +109,7 @@ def _upload(client, entity_id) -> str:
 
 
 def test_toggle_off_ignores_z_report(client, db_session, setup) -> None:
-    """No setting: a passed Z report is ignored — posts gross card sale, no tip leg."""
+    """No setting: a passed Z report is ignored — posts gross card sale only."""
     entity_id = setup["entity_id"]
     summary_id = _upload(client, entity_id)
 
@@ -128,7 +119,7 @@ def test_toggle_off_ignores_z_report(client, db_session, setup) -> None:
             "money_account_id": str(setup["drawer"].id),
             "actor_id": str(ACTOR_ID),
             "summary_date": "2026-06-22",
-            "z_report_kurus": 360_000,
+            "z_report_kurus": SYSTEM_CARD_KURUS + 10_000,
         },
     )
     assert confirm.status_code == 200
@@ -142,12 +133,13 @@ def test_toggle_off_ignores_z_report(client, db_session, setup) -> None:
             .where(JournalEntry.source == JournalEntrySource.POS_CARD_TIP)
         )
     assert tip_count == 0
-    # 1400 = card only (no tip), revenue = card.
-    assert _gl_balance(db_session, entity_id, setup["accounts"][CARD_SALES_CLEARING_CODE]) == 350_000
+    assert _gl_balance(db_session, entity_id, setup["accounts"][CARD_SALES_CLEARING_CODE]) == (
+        SYSTEM_CARD_KURUS
+    )
 
 
-def test_ask_basis_routes_to_needs_review(client, db_session, setup) -> None:
-    _enable_z_report(db_session, entity_id := setup["entity_id"], basis="ask")
+def test_z_enabled_missing_z_needs_review(client, db_session, setup) -> None:
+    _enable_z_report(db_session, entity_id := setup["entity_id"])
     summary_id = _upload(client, entity_id)
 
     confirm = client.post(
@@ -156,21 +148,17 @@ def test_ask_basis_routes_to_needs_review(client, db_session, setup) -> None:
             "money_account_id": str(setup["drawer"].id),
             "actor_id": str(ACTOR_ID),
             "summary_date": "2026-06-22",
-            "z_report_kurus": 360_000,
         },
     )
     assert confirm.status_code == 200
     body = confirm.json()
     assert body["status"] == "needs_review"
-    assert "choose" in body["review_reason"]
-    assert body["z_report_kurus"] == 360_000
+    assert "Z report required" in body["review_reason"]
 
 
-def test_system_basis_tip_is_pass_through(client, db_session, setup) -> None:
-    _enable_z_report(db_session, entity_id := setup["entity_id"], basis="system")
-    clearing_id = setup["accounts"][CARD_SALES_CLEARING_CODE]
-    revenue_id = setup["accounts"][SALES_REVENUE_CODE]
-    drawer_gl = setup["drawer"].gl_account_id
+def test_z_mismatch_needs_review(client, db_session, setup) -> None:
+    """Z above system card (would have been a 'tip' under B1) → review, no auto-post."""
+    _enable_z_report(db_session, entity_id := setup["entity_id"])
     summary_id = _upload(client, entity_id)
 
     confirm = client.post(
@@ -179,77 +167,79 @@ def test_system_basis_tip_is_pass_through(client, db_session, setup) -> None:
             "money_account_id": str(setup["drawer"].id),
             "actor_id": str(ACTOR_ID),
             "summary_date": "2026-06-22",
-            "z_report_kurus": 360_000,
+            "z_report_kurus": SYSTEM_CARD_KURUS + 10_000,
+        },
+    )
+    assert confirm.status_code == 200
+    body = confirm.json()
+    assert body["status"] == "needs_review"
+    assert "does not match" in body["review_reason"]
+    assert body["z_report_kurus"] == SYSTEM_CARD_KURUS + 10_000
+
+    with entity_context(db_session, entity_id):
+        tip_count = db_session.scalar(
+            select(func.count())
+            .select_from(JournalEntry)
+            .where(JournalEntry.source == JournalEntrySource.POS_CARD_TIP)
+        )
+    assert tip_count == 0
+
+
+def test_z_match_posts_gross_card_no_tip_leg(client, db_session, setup) -> None:
+    _enable_z_report(db_session, entity_id := setup["entity_id"])
+    clearing_id = setup["accounts"][CARD_SALES_CLEARING_CODE]
+    revenue_id = setup["accounts"][SALES_REVENUE_CODE]
+    summary_id = _upload(client, entity_id)
+
+    confirm = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries/{summary_id}/confirm",
+        json={
+            "money_account_id": str(setup["drawer"].id),
+            "actor_id": str(ACTOR_ID),
+            "summary_date": "2026-06-22",
+            "z_report_kurus": SYSTEM_CARD_KURUS,
         },
     )
     assert confirm.status_code == 200
     assert confirm.json()["status"] == "posted"
-    assert confirm.json()["z_report_kurus"] == 360_000
+    assert confirm.json()["z_report_kurus"] == SYSTEM_CARD_KURUS
 
-    # Revenue = system card (350k) + cash (150k); tip not in revenue.
     revenue_credit = -_gl_balance(db_session, entity_id, revenue_id)
     assert revenue_credit == 500_000
-    # 1400 debited the full Z (card 350k + tip 10k).
-    assert _gl_balance(db_session, entity_id, clearing_id) == 360_000
-    # Tip leg: Dr 1400 / Cr drawer; no tips-expense.
-    with entity_context(db_session, entity_id):
-        tip_je = db_session.scalar(
-            select(JournalEntry).where(
-                JournalEntry.source == JournalEntrySource.POS_CARD_TIP
-            )
-        )
-        assert tip_je is not None
-        lines = {l.account_id: l for l in tip_je.lines}
-    assert lines[clearing_id].side == AccountNormalBalance.DEBIT
-    assert lines[clearing_id].amount_kurus == 10_000
-    assert lines[drawer_gl].side == AccountNormalBalance.CREDIT
-    assert lines[drawer_gl].amount_kurus == 10_000
+    assert _gl_balance(db_session, entity_id, clearing_id) == SYSTEM_CARD_KURUS
     assert _gl_balance(db_session, entity_id, setup["accounts"][TIPS_EXPENSE_CODE]) == 0
 
-
-def test_z_basis_tip_is_expense(client, db_session, setup) -> None:
-    _enable_z_report(db_session, entity_id := setup["entity_id"], basis="z_report")
-    clearing_id = setup["accounts"][CARD_SALES_CLEARING_CODE]
-    revenue_id = setup["accounts"][SALES_REVENUE_CODE]
-    tips_id = setup["accounts"][TIPS_EXPENSE_CODE]
-    drawer_gl = setup["drawer"].gl_account_id
-    summary_id = _upload(client, entity_id)
-
-    confirm = client.post(
-        f"/entities/{entity_id}/pos/daily-summaries/{summary_id}/confirm",
-        json={
-            "money_account_id": str(setup["drawer"].id),
-            "actor_id": str(ACTOR_ID),
-            "summary_date": "2026-06-22",
-            "z_report_kurus": 360_000,
-        },
-    )
-    assert confirm.status_code == 200
-    assert confirm.json()["status"] == "posted"
-
-    # Revenue = Z card (360k) + cash (150k); tip included in revenue.
-    revenue_credit = -_gl_balance(db_session, entity_id, revenue_id)
-    assert revenue_credit == 510_000
-    # 1400 debited the full Z.
-    assert _gl_balance(db_session, entity_id, clearing_id) == 360_000
-    # Tip expense 5700 = tip; drawer credited tip.
-    assert _gl_balance(db_session, entity_id, tips_id) == 10_000
     with entity_context(db_session, entity_id):
-        tip_je = db_session.scalar(
-            select(JournalEntry).where(
-                JournalEntry.source == JournalEntrySource.POS_CARD_TIP
-            )
+        tip_count = db_session.scalar(
+            select(func.count())
+            .select_from(JournalEntry)
+            .where(JournalEntry.source == JournalEntrySource.POS_CARD_TIP)
         )
-        lines = {l.account_id: l for l in tip_je.lines}
-    assert lines[tips_id].side == AccountNormalBalance.DEBIT
-    assert lines[drawer_gl].side == AccountNormalBalance.CREDIT
-    assert lines[drawer_gl].amount_kurus == 10_000
+    assert tip_count == 0
 
 
-@pytest.mark.parametrize("basis", ["system", "z_report"])
-def test_deposit_plus_commission_clears_1400_to_zero(client, db_session, setup, basis) -> None:
-    """Full clearance: after the Z deposit (net) + commission, 1400 returns to 0."""
-    _enable_z_report(db_session, entity_id := setup["entity_id"], basis=basis)
+def test_z_below_card_needs_review(client, db_session, setup) -> None:
+    _enable_z_report(db_session, entity_id := setup["entity_id"])
+    summary_id = _upload(client, entity_id)
+
+    confirm = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries/{summary_id}/confirm",
+        json={
+            "money_account_id": str(setup["drawer"].id),
+            "actor_id": str(ACTOR_ID),
+            "summary_date": "2026-06-22",
+            "z_report_kurus": SYSTEM_CARD_KURUS - 10_000,
+        },
+    )
+    assert confirm.status_code == 200
+    body = confirm.json()
+    assert body["status"] == "needs_review"
+    assert "does not match" in body["review_reason"]
+
+
+def test_deposit_plus_commission_clears_1400_to_zero(client, db_session, setup) -> None:
+    """After a matched Z post, bank deposit (net) + commission sweep zeros clearing."""
+    _enable_z_report(db_session, entity_id := setup["entity_id"])
     clearing_id = setup["accounts"][CARD_SALES_CLEARING_CODE]
     summary_id = _upload(client, entity_id)
 
@@ -259,80 +249,52 @@ def test_deposit_plus_commission_clears_1400_to_zero(client, db_session, setup, 
             "money_account_id": str(setup["drawer"].id),
             "actor_id": str(ACTOR_ID),
             "summary_date": "2026-06-22",
-            "z_report_kurus": 360_000,
+            "z_report_kurus": SYSTEM_CARD_KURUS,
         },
     )
     assert confirm.status_code == 200
-    assert _gl_balance(db_session, entity_id, clearing_id) == 360_000
+    assert _gl_balance(db_session, entity_id, clearing_id) == SYSTEM_CARD_KURUS
 
-    # Bank deposits Z minus a hidden 3,000 commission.
     pos_posting.post_pos_settlement(
         db_session,
         entity_id,
         money_account_id=setup["bank"].id,
         settlement_date=date(2026, 6, 24),
-        amount_kurus=357_000,
-        description="Z deposit",
+        amount_kurus=SYSTEM_CARD_KURUS - 3_000,
+        description="Card deposit",
         actor_id=ACTOR_ID,
         commission_kurus=3_000,
     )
     assert _gl_balance(db_session, entity_id, clearing_id) == 0
 
 
-def test_negative_tip_needs_review(client, db_session, setup) -> None:
-    _enable_z_report(db_session, entity_id := setup["entity_id"], basis="z_report")
+def test_review_corrected_to_match_then_posts(client, db_session, setup) -> None:
+    """Owner fixes card to match Z in review, then confirm succeeds."""
+    _enable_z_report(db_session, entity_id := setup["entity_id"])
     summary_id = _upload(client, entity_id)
 
-    confirm = client.post(
+    first = client.post(
         f"/entities/{entity_id}/pos/daily-summaries/{summary_id}/confirm",
         json={
             "money_account_id": str(setup["drawer"].id),
             "actor_id": str(ACTOR_ID),
             "summary_date": "2026-06-22",
-            "z_report_kurus": 340_000,
+            "z_report_kurus": SYSTEM_CARD_KURUS + 10_000,
         },
     )
-    assert confirm.status_code == 200
-    body = confirm.json()
-    assert body["status"] == "needs_review"
-    assert "below" in body["review_reason"]
+    assert first.json()["status"] == "needs_review"
 
-
-def test_expected_tip_mismatch_needs_review(client, db_session, setup) -> None:
-    _enable_z_report(db_session, entity_id := setup["entity_id"], basis="z_report")
-    summary_id = _upload(client, entity_id)
-
-    confirm = client.post(
+    second = client.post(
         f"/entities/{entity_id}/pos/daily-summaries/{summary_id}/confirm",
         json={
             "money_account_id": str(setup["drawer"].id),
             "actor_id": str(ACTOR_ID),
             "summary_date": "2026-06-22",
-            "z_report_kurus": 360_000,
-            "expected_tip_kurus": 7_000,
+            "cash_kurus": 140_000,
+            "card_kurus": SYSTEM_CARD_KURUS + 10_000,
+            "z_report_kurus": SYSTEM_CARD_KURUS + 10_000,
         },
     )
-    assert confirm.status_code == 200
-    body = confirm.json()
-    assert body["status"] == "needs_review"
-    assert "mismatch" in body["review_reason"]
-
-
-def test_per_entry_override_resolves_ask(client, db_session, setup) -> None:
-    """Entity default is ask; a per-entry basis override lets the day post."""
-    _enable_z_report(db_session, entity_id := setup["entity_id"], basis="ask")
-    summary_id = _upload(client, entity_id)
-
-    confirm = client.post(
-        f"/entities/{entity_id}/pos/daily-summaries/{summary_id}/confirm",
-        json={
-            "money_account_id": str(setup["drawer"].id),
-            "actor_id": str(ACTOR_ID),
-            "summary_date": "2026-06-22",
-            "z_report_kurus": 360_000,
-            "card_sale_basis": "z_report",
-        },
-    )
-    assert confirm.status_code == 200
-    assert confirm.json()["status"] == "posted"
-    assert _gl_balance(db_session, entity_id, setup["accounts"][TIPS_EXPENSE_CODE]) == 10_000
+    assert second.status_code == 200
+    assert second.json()["status"] == "posted"
+    assert second.json()["confirmed_card_kurus"] == SYSTEM_CARD_KURUS + 10_000

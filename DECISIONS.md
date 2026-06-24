@@ -2,6 +2,16 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-24 — Z report match-or-review; no POS tip posting (supersedes Slice B1 tip basis)
+
+**Choice:** Simplify POS daily-summary confirm per owner direction: tips are **only** on the expense list (`Dr 5700 / Cr cash` via `post_expense_entry`), never derived or posted at POS. When `card_tips_z_report_enabled` is on, the owner enters the card-terminal **Z report** with the intake; the app compares **Z to system card sale** — **match → post** cash + card as on the system slip; **mismatch → Needs Review** (owner corrects figures). Removed `card_sale_basis` / `expected_tip_kurus` from confirm APIs; `card_sale_basis` entity setting is **deprecated** (ignored). Removed `POS_CARD_TIP` posting from `confirm_pos_daily_summary`; card clearing (`1400`) debits **system card sale** only. `JournalEntrySource.POS_CARD_TIP` retained in the registry for voiding any historical rows.
+
+**GL:** Sales gross — `Dr cash / Cr 4000` + `Dr 1400 / Cr 4000` (card = system slip). Tips on expense paper roll into P&L (`5700`) and reduce cash on the balance sheet — same as any expense line.
+
+**Tests:** `test_pos_card_tips.py` rewritten for match-or-review; `test_expense_receipt` asserts P&L + balance sheet after multi-line confirm.
+
+**Status:** money-critical — owner sign-off required.
+
 ## 2026-06-24 — Expense receipt OCR multi-line + manual daily sales (Phase 8.7; owner decision)
 
 **Choice:** Supersedes Slice C tip-only OCR with a **parent intake** model (`expense_receipt_intakes` + `expense_receipt_lines`). One uploaded photo → N draft lines → atomic confirm posts N `ExpenseEntry` rows via existing `post_expense_entry` (`source=expense_entry`, no new `JournalEntrySource`). Fingerprint dedup moves to the intake table; migration `048` drops the per-row unique on `expense_entries.source_document_fingerprint` (blocked multi-line from one photo).
