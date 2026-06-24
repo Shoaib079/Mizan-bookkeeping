@@ -1,0 +1,527 @@
+"use client";
+
+/** Opening balances wizard — Phase 9 Slice 9 (Decisions §19). */
+
+import Link from "next/link";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/components/ui/data-table";
+import { Input, Label, Select } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api";
+import { useEntity } from "@/lib/entity-context";
+import { loadBankAndCashAccounts } from "@/lib/load-money-accounts";
+import {
+  formatTry,
+  formatTrDate,
+  parseTrDate,
+  parseTryToKurus,
+} from "@/lib/money";
+import type {
+  JournalLineOut,
+  OpeningBalanceAccount,
+  OpeningBalanceLineDraft,
+  OpeningBalanceLineTarget,
+  OpeningBalancePostResponse,
+  OpeningBalanceValidateResponse,
+} from "@/lib/settings-types";
+
+type NamedRow = { id: string; name: string };
+
+function newLine(): OpeningBalanceLineDraft {
+  return {
+    id: crypto.randomUUID(),
+    target: "account",
+    accountCode: "",
+    side: "",
+    moneyAccountId: "",
+    supplierId: "",
+    partnerId: "",
+    customerId: "",
+    amountTry: "",
+  };
+}
+
+function lineToPayload(line: OpeningBalanceLineDraft) {
+  const amount_kurus = parseTryToKurus(line.amountTry);
+  if (amount_kurus === null || amount_kurus <= 0) {
+    throw new Error("Each line needs a valid amount.");
+  }
+  switch (line.target) {
+    case "account":
+      if (!line.accountCode || !line.side) {
+        throw new Error("Account lines need code and debit/credit side.");
+      }
+      return {
+        account_code: line.accountCode,
+        side: line.side,
+        amount_kurus,
+      };
+    case "money_account":
+      if (!line.moneyAccountId) throw new Error("Pick a bank or cash account.");
+      return { money_account_id: line.moneyAccountId, amount_kurus };
+    case "supplier":
+      if (!line.supplierId) throw new Error("Pick a supplier.");
+      return { supplier_id: line.supplierId, amount_kurus };
+    case "partner":
+      if (!line.partnerId) throw new Error("Pick a partner.");
+      return { partner_id: line.partnerId, amount_kurus };
+    case "customer":
+      if (!line.customerId) throw new Error("Pick a customer.");
+      return { customer_id: line.customerId, amount_kurus };
+    default:
+      throw new Error("Unknown line type.");
+  }
+}
+
+export default function OpeningBalancesPage() {
+  const { entityId, actorId } = useEntity();
+  const [wizardSteps, setWizardSteps] = useState<string[]>([]);
+  const [chartCount, setChartCount] = useState<number | null>(null);
+  const [obAccounts, setObAccounts] = useState<OpeningBalanceAccount[]>([]);
+  const [moneyAccounts, setMoneyAccounts] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [suppliers, setSuppliers] = useState<NamedRow[]>([]);
+  const [partners, setPartners] = useState<NamedRow[]>([]);
+  const [customers, setCustomers] = useState<NamedRow[]>([]);
+  const [goLiveDate, setGoLiveDate] = useState("");
+  const [lines, setLines] = useState<OpeningBalanceLineDraft[]>([newLine()]);
+  const [preview, setPreview] = useState<JournalLineOut[] | null>(null);
+  const [previewMessage, setPreviewMessage] = useState<string | null>(null);
+  const [posted, setPosted] = useState<OpeningBalancePostResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  const loadRefs = useCallback(async () => {
+    if (!entityId) return;
+    setError(null);
+    try {
+      const [chartRes, obRes, money, supRes, partRes, custRes] =
+        await Promise.all([
+          apiFetch<{ total: number }>(
+            `/entities/${entityId}/chart-of-accounts?limit=1`,
+          ),
+          apiFetch<OpeningBalanceAccount[]>(
+            "/chart-of-accounts/default/opening-balance-accounts",
+          ),
+          loadBankAndCashAccounts(entityId),
+          apiFetch<{ items: NamedRow[] }>(
+            `/entities/${entityId}/suppliers?limit=100`,
+          ),
+          apiFetch<{ items: NamedRow[] }>(
+            `/entities/${entityId}/partners?limit=100`,
+          ),
+          apiFetch<{ items: NamedRow[] }>(
+            `/entities/${entityId}/customers?limit=100`,
+          ),
+        ]);
+      setChartCount(chartRes.total);
+      setObAccounts(obRes);
+      setMoneyAccounts(money);
+      setSuppliers(supRes.items);
+      setPartners(partRes.items);
+      setCustomers(custRes.items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load references");
+    }
+  }, [entityId]);
+
+  useEffect(() => {
+    void apiFetch<string[]>("/onboarding/wizard-steps")
+      .then(setWizardSteps)
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    void loadRefs();
+  }, [loadRefs]);
+
+  function updateLine(
+    id: string,
+    patch: Partial<OpeningBalanceLineDraft>,
+  ) {
+    setLines((prev) =>
+      prev.map((line) => (line.id === id ? { ...line, ...patch } : line)),
+    );
+    setPreview(null);
+    setPosted(null);
+  }
+
+  function removeLine(id: string) {
+    setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)));
+    setPreview(null);
+    setPosted(null);
+  }
+
+  async function onSeedChart() {
+    if (!entityId) return;
+    setSeeding(true);
+    setError(null);
+    try {
+      await apiFetch(`/entities/${entityId}/chart-of-accounts/seed`, {
+        method: "POST",
+      });
+      await loadRefs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Seed failed");
+    } finally {
+      setSeeding(false);
+    }
+  }
+
+  async function onValidate(event?: FormEvent) {
+    event?.preventDefault();
+    if (!entityId) return;
+    setValidating(true);
+    setError(null);
+    setPreview(null);
+    setPosted(null);
+    try {
+      const payloadLines = lines.map(lineToPayload);
+      const res = await apiFetch<OpeningBalanceValidateResponse>(
+        `/onboarding/entities/${entityId}/opening-balances/validate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lines: payloadLines }),
+        },
+      );
+      setPreview(res.journal_lines);
+      setPreviewMessage(res.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Validation failed");
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  async function onPost() {
+    if (!entityId || !preview) return;
+    const iso = parseTrDate(goLiveDate);
+    if (!iso) {
+      setError("Enter go-live date as DD.MM.YYYY.");
+      return;
+    }
+    setPosting(true);
+    setError(null);
+    try {
+      const payloadLines = lines.map(lineToPayload);
+      const res = await apiFetch<OpeningBalancePostResponse>(
+        `/onboarding/entities/${entityId}/opening-balances/post`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            go_live_date: iso,
+            actor_id: actorId,
+            lines: payloadLines,
+          }),
+        },
+      );
+      setPosted(res);
+      setPreview(res.journal_lines);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Post failed");
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  function targetPicker(line: OpeningBalanceLineDraft) {
+    switch (line.target) {
+      case "account":
+        return (
+          <>
+            <Select
+              value={line.accountCode}
+              onChange={(e) => {
+                const acct = obAccounts.find((a) => a.code === e.target.value);
+                updateLine(line.id, {
+                  accountCode: e.target.value,
+                  side: acct?.normal_balance ?? "",
+                });
+              }}
+              className="min-w-[10rem]"
+            >
+              <option value="">Account…</option>
+              {obAccounts.map((a) => (
+                <option key={a.code} value={a.code}>
+                  {a.code} — {a.name_en}
+                </option>
+              ))}
+            </Select>
+            <Select
+              value={line.side}
+              onChange={(e) =>
+                updateLine(line.id, {
+                  side: e.target.value as "debit" | "credit",
+                })
+              }
+              className="w-28"
+            >
+              <option value="">Side</option>
+              <option value="debit">Debit</option>
+              <option value="credit">Credit</option>
+            </Select>
+          </>
+        );
+      case "money_account":
+        return (
+          <Select
+            value={line.moneyAccountId}
+            onChange={(e) =>
+              updateLine(line.id, { moneyAccountId: e.target.value })
+            }
+            className="min-w-[12rem]"
+          >
+            <option value="">Bank / cash…</option>
+            {moneyAccounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </Select>
+        );
+      case "supplier":
+        return (
+          <Select
+            value={line.supplierId}
+            onChange={(e) => updateLine(line.id, { supplierId: e.target.value })}
+            className="min-w-[12rem]"
+          >
+            <option value="">Supplier…</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </Select>
+        );
+      case "partner":
+        return (
+          <Select
+            value={line.partnerId}
+            onChange={(e) => updateLine(line.id, { partnerId: e.target.value })}
+            className="min-w-[12rem]"
+          >
+            <option value="">Partner…</option>
+            {partners.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+        );
+      case "customer":
+        return (
+          <Select
+            value={line.customerId}
+            onChange={(e) =>
+              updateLine(line.id, { customerId: e.target.value })
+            }
+            className="min-w-[12rem]"
+          >
+            <option value="">Customer…</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        );
+      default:
+        return null;
+    }
+  }
+
+  return (
+    <AppShell title="Opening balances">
+      <p className="mb-4 text-sm text-muted-foreground">
+        <Link href="/settings" className="text-primary hover:underline">
+          ← Settings
+        </Link>
+      </p>
+
+      {!entityId && (
+        <p className="text-sm text-muted-foreground">
+          Select a restaurant in the sidebar.
+        </p>
+      )}
+
+      {entityId && (
+        <div className="max-w-4xl space-y-6">
+          {wizardSteps.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Onboarding steps: {wizardSteps.join(" → ")}
+            </p>
+          )}
+
+          {chartCount === 0 && (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">
+                Seed the chart of accounts before entering opening balances.
+              </p>
+              <Button
+                type="button"
+                className="mt-2"
+                disabled={seeding}
+                onClick={() => void onSeedChart()}
+              >
+                {seeding ? "Seeding…" : "Seed default chart"}
+              </Button>
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={onValidate}>
+            <div className="max-w-xs">
+              <Label htmlFor="go-live">Go-live date</Label>
+              <Input
+                id="go-live"
+                placeholder="DD.MM.YYYY"
+                value={goLiveDate}
+                onChange={(e) => setGoLiveDate(e.target.value)}
+              />
+              {posted && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Posted for {formatTrDate(posted.go_live_date)}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Balance lines</h2>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setLines((prev) => [...prev, newLine()])}
+                >
+                  Add line
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {lines.map((line) => (
+                  <div
+                    key={line.id}
+                    className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-card p-3"
+                  >
+                    <div>
+                      <Label>Type</Label>
+                      <Select
+                        value={line.target}
+                        onChange={(e) =>
+                          updateLine(line.id, {
+                            target: e.target.value as OpeningBalanceLineTarget,
+                            accountCode: "",
+                            side: "",
+                            moneyAccountId: "",
+                            supplierId: "",
+                            partnerId: "",
+                            customerId: "",
+                          })
+                        }
+                        className="w-36"
+                      >
+                        <option value="account">GL account</option>
+                        <option value="money_account">Bank / cash</option>
+                        <option value="supplier">Supplier</option>
+                        <option value="partner">Partner</option>
+                        <option value="customer">Customer</option>
+                      </Select>
+                    </div>
+                    <div className="flex flex-wrap gap-2">{targetPicker(line)}</div>
+                    <div>
+                      <Label>Amount (₺)</Label>
+                      <Input
+                        className="w-28"
+                        value={line.amountTry}
+                        onChange={(e) =>
+                          updateLine(line.id, { amountTry: e.target.value })
+                        }
+                        placeholder="0,00"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={lines.length <= 1}
+                      onClick={() => removeLine(line.id)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={validating || chartCount === 0}>
+                {validating ? "Validating…" : "Validate & preview journal"}
+              </Button>
+              {preview && !posted && (
+                <Button
+                  type="button"
+                  disabled={posting || !goLiveDate}
+                  onClick={() => void onPost()}
+                >
+                  {posting ? "Posting…" : "Post opening balances"}
+                </Button>
+              )}
+            </div>
+          </form>
+
+          {previewMessage && !posted && (
+            <p className="text-sm text-muted-foreground">{previewMessage}</p>
+          )}
+
+          {preview && preview.length > 0 && (
+            <section>
+              <h2 className="mb-2 text-sm font-semibold">
+                {posted ? "Posted journal" : "Journal preview"}
+              </h2>
+              <DataTable>
+                <DataTableHead>
+                  <tr>
+                    <DataTableHeaderCell>Account</DataTableHeaderCell>
+                    <DataTableHeaderCell>Side</DataTableHeaderCell>
+                    <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  </tr>
+                </DataTableHead>
+                <DataTableBody>
+                  {preview.map((row, i) => (
+                    <DataTableRow key={`${row.account_code}-${i}`}>
+                      <DataTableCell>{row.account_code}</DataTableCell>
+                      <DataTableCell className="capitalize">{row.side}</DataTableCell>
+                      <DataTableCell align="right" className="tabular-nums">
+                        {formatTry(row.amount_kurus)}
+                      </DataTableCell>
+                    </DataTableRow>
+                  ))}
+                </DataTableBody>
+              </DataTable>
+              {posted && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Journal entry {posted.journal_entry_id} posted successfully.
+                </p>
+              )}
+            </section>
+          )}
+        </div>
+      )}
+    </AppShell>
+  );
+}
