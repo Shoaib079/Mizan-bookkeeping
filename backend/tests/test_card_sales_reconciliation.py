@@ -202,6 +202,29 @@ def test_reconciliation_in_transit_after_sale_before_settlement(
     assert data["pos_settlement_count"] == 0
 
 
+def test_clear_commission_rejected_while_sales_in_transit(
+    client: TestClient, db_session, pos_setup
+) -> None:
+    """Phase 8.8 H1 — sweep blocked when reconciliation shows unsettled card sales."""
+    entity_id = pos_setup["entity_id"]
+
+    pos_posting.post_card_sales_batch(
+        db_session,
+        entity_id,
+        sales_date=date(2026, 3, 3),
+        gross_amount_kurus=800_000,
+        description="Unreconciled sales",
+        actor_id=ACTOR_ID,
+    )
+
+    resp = client.post(
+        f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
+        json={"actor_id": str(ACTOR_ID)},
+    )
+    assert resp.status_code == 422
+    assert "in transit" in resp.json()["detail"].lower()
+
+
 def test_net_only_settlement_unchanged_two_line_journal(db_session, pos_setup) -> None:
     entity_id = pos_setup["entity_id"]
     bank = pos_setup["bank"]

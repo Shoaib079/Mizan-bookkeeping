@@ -36,6 +36,10 @@ class NothingToClearError(ValueError):
     """Card clearing balance is zero or negative — nothing to sweep as commission."""
 
 
+class InTransitCardSalesError(ValueError):
+    """Card sales not yet deposited — commission sweep would mis-book clearing."""
+
+
 @dataclass(frozen=True, slots=True)
 class PosSettlementPostResult:
     journal_entry: JournalEntry

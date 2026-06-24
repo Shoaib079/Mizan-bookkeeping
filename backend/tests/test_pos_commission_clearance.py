@@ -180,6 +180,31 @@ def test_clear_negative_balance_rejected(client, db_session, setup) -> None:
     assert "negative" in resp.json()["detail"].lower()
 
 
+def test_clear_rejected_when_sales_in_transit_no_deposits(
+    client, db_session, setup
+) -> None:
+    """Sweep must not book undeposited card sales as commission (Phase 8.8 H1)."""
+    entity_id = setup["entity_id"]
+    clearing_id = setup["accounts"][CARD_SALES_CLEARING_CODE]
+
+    _card_sales(db_session, entity_id, 800_000)
+    assert _gl_balance(db_session, entity_id, clearing_id) == 800_000
+
+    recon = client.get(f"/entities/{entity_id}/pos/clearing-reconciliation")
+    assert recon.status_code == 200
+    assert recon.json()["in_transit_kurus"] == 800_000
+    assert recon.json()["pos_settlement_count"] == 0
+
+    resp = client.post(
+        f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
+        json={"actor_id": str(ACTOR_ID)},
+    )
+    assert resp.status_code == 422
+    assert "in transit" in resp.json()["detail"].lower()
+    assert "800" in resp.json()["detail"]
+    assert _gl_balance(db_session, entity_id, clearing_id) == 800_000
+
+
 def test_void_clearance_restores_residual(client, db_session, setup) -> None:
     """Sweep is void-and-reenter: voiding it puts the commission back in clearing."""
     from app.core.ledger.posting import void_journal_entry

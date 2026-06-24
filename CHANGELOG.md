@@ -2,6 +2,10 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-24
+
+**Phase 8.8 H1 — commission sweep timing guard:** `POST .../pos/clearing-reconciliation/clear-commission` now rejects when card sales are still in transit — reconciliation shows `in_transit_kurus > 0` with no bank deposits recorded (`pos_settlement_count == 0`). Returns HTTP 422 with a clear message (`InTransitCardSalesError`) so undeposited card sales cannot be mis-booked as commission. Reuses `get_clearing_reconciliation()` in the clearance path; Slice B2 net-deposit + sweep workflow unchanged once deposits exist. `DECISIONS.md` § commission sweep updated. 2 new tests; **536 pytest green**; fresh-install verify green. Tag `v0.58.0-phase8.8-h1-commission-sweep-guard`. **Money-critical — owner sign-off required.**
+
 ## 2026-06-21
 
 **Owner sign-off — tips, Phase 8.7, Phase 9 core, Z match-or-review:** Owner approved all money-critical slices built 2026-06-23–24: tips expense treatment (Slice A `v0.48.0`, commission sweep B2 `v0.50.0`, expense-photo C `v0.51.0`); multi-line expense receipt intake + manual daily sales (Phase 8.7 `v0.52.0`–`v0.54.0`); Phase 9 New menu + receipt review (`v0.55.0`), read-back lists + Clerk (`v0.56.0`); Z match-or-review (`v0.57.0`, supersedes original Slice B1 `v0.49.0`). **535 pytest green** at sign-off. Phase 8.7 closed; Phase 8.8 adversarial follow-ups (H1–H5) remain. Tag `v0.57.1-owner-sign-off`.

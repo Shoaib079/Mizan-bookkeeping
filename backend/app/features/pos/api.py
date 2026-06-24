@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.pos.posting import (
+    InTransitCardSalesError,
     InvalidCardSalesBatchError,
     InvalidPosSettlementError,
     NothingToClearError,
@@ -178,6 +179,8 @@ def clear_card_commission(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except NothingToClearError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InTransitCardSalesError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

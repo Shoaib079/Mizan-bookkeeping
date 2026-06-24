@@ -14,9 +14,9 @@
 |-------|-------|
 | **Active phase** | Phase 9 — frontend |
 | **Active slice** | Phase 9 Slice 3 — Suppliers & payables |
-| **Last completed slice** | Z match-or-review — no POS tip posting (`v0.57.0-pos-z-match-or-review`) |
-| **Last commit/tag** | `v0.57.0-pos-z-match-or-review` (`a6dd4e6`) |
-| **Next up** | Phase 9 Slice 3 — Suppliers & payables; **Phase 8.8** adversarial follow-ups (H1–H5) |
+| **Last completed slice** | Phase 8.8 H1 — commission sweep timing guard (`v0.58.0-phase8.8-h1-commission-sweep-guard`) |
+| **Last commit/tag** | `v0.58.0-phase8.8-h1-commission-sweep-guard` |
+| **Next up** | Phase 8.8 H2 — tips expense cash-only at API; Phase 9 Slice 3 — Suppliers & payables |
 
 **The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = expense-receipt OCR + manual daily-sales API (DONE). **Phase 8.8** = remaining backend gaps from the 2026-06-24 adversarial review (not a re-do of tips/Z — see **Do not rebuild** below). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -341,13 +341,13 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 
 ## Phase 8.8 — Adversarial review follow-ups (backend hardening)
 
-**Status: NOT STARTED** — surfaced by independent adversarial review after `v0.57.0`. These are **gaps in guards/tests/ops safety**, not a re-do of Slice A/B/C or Phase 8.7. Do **not** re-open `card_sale_basis` or POS tip posting (see **Do not rebuild** above).
+**Status: IN PROGRESS** — H1 done (`v0.58.0`). Surfaced by independent adversarial review after `v0.57.0`. These are **gaps in guards/tests/ops safety**, not a re-do of Slice A/B/C or Phase 8.7. Do **not** re-open `card_sale_basis` or POS tip posting (see **Do not rebuild** above).
 
 **Purpose:** Close remaining money/ops risks before owner sign-off and production. Each slice = completion gate + tag. Can run in parallel with Phase 9 frontend where noted.
 
 | Slice | Status | Implements | Acceptance (minimum) |
 |-------|--------|------------|----------------------|
-| **H1 — Commission sweep timing guard** | planned | Adversarial finding: `clear-commission` sweeps all of `1400` even when card sales are still in transit | `POST .../clear-commission` rejects when `GET .../clearing-reconciliation` shows `in_transit_kurus > 0` (422 + clear message); permanent test; doc in `DECISIONS.md` § commission sweep |
+| **H1 — Commission sweep timing guard** | done | Adversarial finding: `clear-commission` sweeps all of `1400` even when card sales are still in transit | `POST .../clear-commission` rejects when `GET .../clearing-reconciliation` shows `in_transit_kurus > 0` and no settlements (`pos_settlement_count == 0`) → 422 + clear message; 2 permanent tests; `DECISIONS.md` § commission sweep updated. Tag `v0.58.0-phase8.8-h1-commission-sweep-guard`. **536 pytest green.** |
 | **H2 — Tips expense cash-only at API** | planned | Adversarial finding: generic `post_expense_entry` allows `5700` from bank | Posting boundary rejects `5700` unless `money_account` is cash (receipt intake already cash-only); test for bank + 5700 → 422 |
 | **H3 — Expense receipt test gaps** | planned | Adversarial finding: missing negative/isolation coverage | (a) `confirm` blocked when line sum ≠ `receipt_total_kurus` without fix; (b) entity-isolation test for `expense_receipt_intakes` / lines (cross-restaurant read/confirm) |
 | **H4 — Card-tip day ops guidance** | planned | Adversarial finding: when Z > system card, review message does not explain cash↔card reallocation workflow | Update Needs Review copy (and Decisions §9 operator note): on Z mismatch, owner may adjust cash/card split on confirm so card matches Z **without changing total**, record tip on expense paper, then re-confirm; optional integration test: mismatch → expense tip → corrected confirm → deposit + sweep clears `1400` |
@@ -418,7 +418,7 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 - **Restore UI + configurable backup schedules**; **scheduled/emailed reports**; **custom report builder**.
 - **Tip treatment — Slice A DONE (`v0.48.0`) ✓ signed off.** See **Do not rebuild**.
 - **Tip treatment — original Slice B1 (`v0.49.0`) SUPERSEDED by `v0.57.0`.** Do not re-implement `card_sale_basis` / `POS_CARD_TIP` at confirm. Current model: Z match-or-review; tips expense-only.
-- **Tip treatment — Slice B2 DONE (`v0.50.0`) ✓ signed off.** Commission sweep done; **H1** (in-transit guard) still planned in Phase 8.8.
+- **Tip treatment — Slice B2 DONE (`v0.50.0`) ✓ signed off.** Commission sweep done; **H1** in-transit guard done (`v0.58.0`).
 - **Tip treatment — Slice C DONE (`v0.51.0`) ✓ signed off;** folded into Phase 8.7.
 - **Phase 8.7 + Phase 9 core DONE (`v0.52.0`–`v0.56.0`) ✓ signed off.** Frontend gaps → Phase 9 Slice 2d + 8.
 - **Z match-or-review DONE (`v0.57.0`) ✓ signed off.** Ops copy + integration test → Phase 8.8 H4.
@@ -430,6 +430,7 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-24 | Phase 8.8 H1 — commission sweep timing guard | `v0.58.0-phase8.8-h1-commission-sweep-guard` | `clear-commission` rejects undeposited card sales (`in_transit > 0`, no settlements); `InTransitCardSalesError` → 422; 2 tests; 536 pytest |
 | 2026-06-24 | Z match-or-review (supersedes B1 tip basis) | `v0.57.0-pos-z-match-or-review` | No POS tip posting; Z == system card → post; tips expense-only; P&L/BS test; 534 pytest |
 | 2026-06-24 | Phase 9 — read-back lists + Clerk | `v0.56.0-phase9-readback-clerk` | `/expenses` + `/sales` list pages; `@clerk/nextjs` auth; entity switcher; `GET /users/me`; 534 pytest |
 | 2026-06-24 | Phase 8.7 + Phase 9 New menu | `v0.55.0-phase9-new-menu` | Multi-line receipt OCR, manual sales API, New dropdown, receipt review; tags `v0.52.0`–`v0.55.0`; 533 pytest |
