@@ -14,11 +14,26 @@
 |-------|-------|
 | **Active phase** | Phase 9 — frontend |
 | **Active slice** | Phase 9 Slice 3 — Suppliers & payables |
-| **Last completed slice** | Phase 9 read-back lists + Clerk login (`v0.56.0-phase9-readback-clerk`) |
-| **Last commit/tag** | `v0.56.0-phase9-readback-clerk` |
-| **Next up** | Suppliers & payables UI; owner sign-off on money-critical Phase 8.7 slices |
+| **Last completed slice** | Z match-or-review — no POS tip posting (`v0.57.0-pos-z-match-or-review`) |
+| **Last commit/tag** | `v0.57.0-pos-z-match-or-review` (`a6dd4e6`) |
+| **Next up** | Phase 9 Slice 3 — Suppliers & payables; **Phase 8.8** adversarial follow-ups (H1–H5) |
 
-**The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = finish expense-receipt OCR + manual daily-sales API before the UI depends on them. Phase 9 = frontend (including the **New** dropdown for manual expense, manual sales, and receipt upload). Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
+**The whole journey:** Phases 0–8 = backend core (DONE). **Phase 8.7** = expense-receipt OCR + manual daily-sales API (DONE). **Phase 8.8** = remaining backend gaps from the 2026-06-24 adversarial review (not a re-do of tips/Z — see **Do not rebuild** below). Phase 9 = frontend. Phase 10 = deployment & go-live. Phase 11 = post-launch enhancements. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
+
+### Do not rebuild (already done — git is source of truth)
+
+| Work | Tag / commit | Status | Do **not** duplicate |
+|------|--------------|--------|----------------------|
+| Tips = cash expense (`5700`), gross sales, no `2260` | `v0.48.0-tips-expense-slice-a` | done | Re-add tips payable pot, POS carve-out, or `2260` |
+| Card commission total-clearance sweep | `v0.50.0-pos-commission-total-clearance-slice-b2` | done | Re-add `commission_recognition` setting or per-deposit commission UI |
+| Tip photo OCR stub | `v0.51.0-expense-photo-tip-ocr-slice-c` | done | New tip-only pipeline — use unified `expense-receipts` |
+| Multi-line expense receipt + manual sales API | `v0.52.0`–`v0.54.0`, `d2a624b` | done | Re-build D1–D3 intake from scratch |
+| **Original Slice B1** (`card_sale_basis`, `POS_CARD_TIP` at confirm) | `v0.49.0` | **superseded** | Re-implement `system`/`z_report`/`ask` tip posting at POS |
+| **Z match-or-review** (Z == system card; tips expense-only) | `v0.57.0-pos-z-match-or-review`, `a6dd4e6` | done | Re-derive `tip = Z − card` at POS or book `5700` on confirm |
+| Phase 9 New menu + receipt review | `v0.55.0-phase9-new-menu` | done | Re-scaffold shell / New dropdown |
+| Phase 9 read-back + Clerk | `v0.56.0-phase9-readback-clerk` | done | Re-wire auth from scratch |
+
+**Owner sign-off ✓ (2026-06-21)** on money-critical rows above — tips A/B2/C, Phase 8.7 D1–D3, Phase 9 core (`v0.52.0`–`v0.56.0`), Z match-or-review (`v0.57.0`). Original Slice B1 (`v0.49.0`) was superseded before sign-off. Tag `v0.57.1-owner-sign-off`.
 
 **Detailed plan:** `.cursor/plans/expense_ocr_+_add_menu_a4ddb775.plan.md` (owner confirmed: one expense per receipt line, cash-only payment).
 
@@ -277,7 +292,7 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 | 1 | `v0.47.14-phase8.6-staff-advance-fix` | `ADVANCE_APPLIED` subledger; full payable clearance |
 | 2 | `v0.47.15-phase8.6-payables-gl-tie` | AP adjustments through GL posting boundary |
 | 3 | `v0.47.16-phase8.6-settlement-idempotency` | POS/delivery settlement dedup + batch unique |
-| 4 | `v0.47.17-phase8.6-pos-tips-carveout` | POS tips carved from revenue at confirm |
+| 4 | `v0.47.17-phase8.6-pos-tips-carveout` | POS tips carved from revenue at confirm — **superseded** by Slice A (`v0.48.0`) then Z match-or-review (`v0.57.0`) |
 | 5 | `v0.47.18-phase8.6-cash-flow-investing` | `FX_PURCHASE` → investing; source registry guard |
 | 6 | `v0.47.19-phase8.6-subledger-immutability-guards` | `IMMUTABLE_SUBLEDGER_TABLES` + raw SQL tests |
 
@@ -285,7 +300,7 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 
 ## Phase 8.7 — Expense receipt OCR + manual sales (backend, pre-frontend)
 
-**Status: DONE (2026-06-24)** — D0–D3 built, committed `d2a624b`, tagged `v0.52.0`–`v0.54.0`; awaiting owner sign-off on money-critical slices.
+**Status: COMPLETE ✓ (owner signed off 2026-06-21)** — D0–D3 built, committed `d2a624b`, tagged `v0.52.0`–`v0.54.0`. **Follow-up:** Z simplification landed after 8.7 as `v0.57.0` (not part of D1–D3 — do not re-build 8.7). Remaining gaps → **Phase 8.8**.
 
 **Why before Phase 9:** Slice C reads **only a tip** from a receipt photo. The owner needs **all handwritten lines** (peynir, süt, …) as separate cash expenses under their names, plus typed sales/expenses from the Add button. Backend APIs must exist before the frontend wires them.
 
@@ -320,7 +335,27 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 
 **Out of scope for Phase 8.7:** bank-paid expense receipts; supplier e-Fatura fields on market receipts; Receipt AI learning store (`FUTURE_IDEAS.md`); manual↔receipt duplicate linking (later slice).
 
-**Phase 8.7 complete when:** D0–D3 done, full pytest + fresh-install verify green, ROADMAP updated, owner sign-off on money-critical slices → **then** Phase 9 frontend.
+**Phase 8.7 complete when:** D0–D3 done, full pytest + fresh-install verify green, ROADMAP updated, owner sign-off on money-critical slices → **then** Phase 9 frontend. **→ Phase 8.7 COMPLETE ✓ (owner signed off 2026-06-21).** Phase 8.8 gaps remain.
+
+---
+
+## Phase 8.8 — Adversarial review follow-ups (backend hardening)
+
+**Status: NOT STARTED** — surfaced by independent adversarial review after `v0.57.0`. These are **gaps in guards/tests/ops safety**, not a re-do of Slice A/B/C or Phase 8.7. Do **not** re-open `card_sale_basis` or POS tip posting (see **Do not rebuild** above).
+
+**Purpose:** Close remaining money/ops risks before owner sign-off and production. Each slice = completion gate + tag. Can run in parallel with Phase 9 frontend where noted.
+
+| Slice | Status | Implements | Acceptance (minimum) |
+|-------|--------|------------|----------------------|
+| **H1 — Commission sweep timing guard** | planned | Adversarial finding: `clear-commission` sweeps all of `1400` even when card sales are still in transit | `POST .../clear-commission` rejects when `GET .../clearing-reconciliation` shows `in_transit_kurus > 0` (422 + clear message); permanent test; doc in `DECISIONS.md` § commission sweep |
+| **H2 — Tips expense cash-only at API** | planned | Adversarial finding: generic `post_expense_entry` allows `5700` from bank | Posting boundary rejects `5700` unless `money_account` is cash (receipt intake already cash-only); test for bank + 5700 → 422 |
+| **H3 — Expense receipt test gaps** | planned | Adversarial finding: missing negative/isolation coverage | (a) `confirm` blocked when line sum ≠ `receipt_total_kurus` without fix; (b) entity-isolation test for `expense_receipt_intakes` / lines (cross-restaurant read/confirm) |
+| **H4 — Card-tip day ops guidance** | planned | Adversarial finding: when Z > system card, review message does not explain cash↔card reallocation workflow | Update Needs Review copy (and Decisions §9 operator note): on Z mismatch, owner may adjust cash/card split on confirm so card matches Z **without changing total**, record tip on expense paper, then re-confirm; optional integration test: mismatch → expense tip → corrected confirm → deposit + sweep clears `1400` |
+| **H5 — Docs dedup** | planned | Stale `DECISIONS.md` Slice B1 (`system`/`z_report` GL) contradicts `v0.57.0` entry | Mark B1 section superseded at top; single canonical Z description; no code change |
+
+**Phase 8.8 complete when:** H1–H5 done (or explicitly deferred by owner in Decisions), full pytest green, ROADMAP updated, owner sign-off on money-critical items H1–H2.
+
+**Out of scope for Phase 8.8:** Re-building Z tip derivation at POS; re-adding `card_sale_basis`; frontend forms (→ Phase 9 Slice 2d).
 
 ---
 
@@ -339,12 +374,13 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | 2. Manual sales + expenses | done | Forms wired to `POST /expenses` and `POST /pos/manual-daily-sales` | — |
 | 2b. Expense receipt upload | done | Upload → `POST /expense-receipts` → review route | — |
 | 2c. Read-back lists + Clerk | done | `/expenses` + `/sales` lists; Clerk login + entity switcher + `GET /users/me` | `v0.56.0-phase9-readback-clerk` |
+| **2d. Money-entry UX gaps (adversarial follow-up)** | **planned** | **Do not re-build 2/2b — patch only.** | When `card_tips_z_report_enabled`: manual daily sales form sends `z_report_kurus`; treat API `status: needs_review` as failure (not success); manual expense allows picking `5700`; double-submit lock on confirm buttons. Maps to Phase 8.8 H4 operator flow. |
 | 3. Suppliers & payables | planned | Supplier master CRUD; invoice draft → confirm; record payment; supplier ledger + payables (running balances) views. |
 | 4. Banking & cash | planned | Account tree + balances; statement upload → classify → Needs Review; transfers; cash drawer (open / movements / EOD close with over-short); FX wallets (purchase / convert / spend). |
 | 5. POS & delivery sales | planned | POS daily-summary + card-sales intake; delivery platform reports + settlements + reconciliation; user-managed delivery platforms; commission e-Faturas. |
 | 6. Staff, partners, receivables, tips | planned | Entry forms + ledger views for each subledger (salary vs advance, partner reimbursements, customer receivables, cash tip expense). Update: tips are cash expense (`5700`), not a tip pot. |
 | 7. Needs-review queue + document review | done | Expense receipt review screen (`/review/receipts/[id]`) — photo left, editable lines, confirm | — |
-| 8. Dashboard + reports | planned | Dashboard tiles; Reports card-library landing; P&L / balance sheet / cash flow / KDV input / delivery sales / period comparison read views. **Export = ONE "Download" control per report (dropdown menu of formats), NOT separate buttons:** all reports offer Excel; the three financial statements (P&L / balance sheet / cash flow) additionally offer PDF (backend from Phase 8.5 Slice 5). Shared download component, consistent everywhere. Role-gated (cashier can't see financials). |
+| 8. Dashboard + reports | planned | Dashboard tiles wired to `GET .../dashboard` (**replace hardcoded KPI placeholders** on `/`); Reports card-library landing; P&L / balance sheet / cash flow / KDV input / delivery sales / period comparison read views. **Export = ONE "Download" control per report (dropdown menu of formats), NOT separate buttons:** all reports offer Excel; the three financial statements (P&L / balance sheet / cash flow) additionally offer PDF (backend from Phase 8.5 Slice 5). Shared download component, consistent everywhere. Role-gated (cashier can't see financials). |
 | 9. Settings & onboarding | planned | Opening-balances wizard; members/roles management; entity settings; delivery-platform management; backup status; create / switch restaurants. |
 | 10. Theme refinement + UX polish | planned | Apply final theme via the one token file (zero page rework); empty states, loading skeletons, toasts, command palette, full keyboard + touch + accessibility pass. |
 
@@ -380,12 +416,13 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 - **Recipe costing / food-cost %** — ingredient → recipe → menu item; the COGS world deliberately out of v1.
 - **Receipt AI learning store** — remember owner corrections to pre-fill future reads.
 - **Restore UI + configurable backup schedules**; **scheduled/emailed reports**; **custom report builder**.
-- **POS card-tip / commission separation (Z-report system)** — when a card terminal collects tips, the bank deposit exceeds the system card sale; if the bank hides commission, tip and commission are tangled in one difference and become unexplainable. Capturing the card-terminal **Z-report** total as an optional third figure separates them cleanly: `tip = Z − system card sale`; `commission = Z − bank deposit`; `bank = sale + tip − commission`. Make Z an **optional / progressive** input (e.g. a per-entity "tracks card tips" toggle) so tip-free businesses are unaffected. Reconciliation rule: Z absent → today's commission-only behavior; `Z = sale` → no tip; `Z > sale` → book tip + derive commission; can't reconcile → `needs_review`. Deferred (owner, 2026-06-23): decide later whether to build; money-critical, needs owner sign-off. Until then the bank-deposit-exceeds-card-sale case stays unhandled (today the linked settlement is rejected — `test_inferred_commission_rejects_net_exceeding_batch_gross`).
-- **Tip treatment: expense, not pass-through liability (reverses Phase 6) — DONE (Slice A, 2026-06-23, `v0.48.0-tips-expense-slice-a`).** Promoted to Decisions §9/§14 + `DECISIONS.md`. Tips now book to `5700 Tips Expense` from cash (`Dr 5700 / Cr cash`) via the expenses pipeline; sales post **gross**. Retired `2260 Tips Payable`, the `tip_accruals`/`tip_payouts` subsystem, the tips feature/router, the `JournalEntrySource.TIP_*` sources, the control-account tie + RLS + cash-flow wiring, and the Phase 8.6 Item 4 POS carve-out (`tips_kurus`). Migration `045_tips_expense_not_liability` (guarded). **Money-critical — awaiting owner sign-off.** Remaining tip work: Slice B (Z-report total-clearance) and Slice C (expense-photo OCR), below.
-- **Tip treatment — Slice B1 superseded (2026-06-24):** Z report is **match-or-review only** (`Z == system card` → post; else Needs Review). No `card_sale_basis`, no `POS_CARD_TIP` posting at confirm. Tips on expense paper only. **`card_tips_z_report_enabled`** kept per restaurant. **Money-critical — awaiting owner sign-off.**
-- **Tip treatment — Slice B2 DONE (2026-06-24, `v0.50.0-pos-commission-total-clearance-slice-b2`):** card commission via **total clearance** — both banks' deposits land in the one `1400` clearing account; the leftover after net deposits **is** the commission. One button (`POST .../pos/clearing-reconciliation/clear-commission`) books the current `1400` residual → `5300` and zeros clearing; repeatable; rejects zero/negative. **No `commission_recognition` setting** (owner dropped it — keep it automatic) and **no migration**. New `JournalEntrySource.POS_COMMISSION_SWEEP`. **Money-critical — awaiting owner sign-off.**
-- **Tip treatment — Slice C DONE (2026-06-24, `v0.51.0-expense-photo-tip-ocr-slice-c`):** tip-only OCR stub — reads a tip off an uploaded expense photo into a `5700` cash-tip draft in Needs Review. **Superseded by Phase 8.7** (full multi-line receipt OCR); `tip-photos` endpoint will fold into unified `expense-receipts` intake. **Money-critical — awaiting owner sign-off.**
-- **Expense receipt OCR + manual sales + New menu (Phase 8.7 + Phase 9 — IMPLEMENTED 2026-06-24):** Multi-line receipt OCR, manual daily sales API, New dropdown forms, receipt review screen. Awaiting owner sign-off + version tags `v0.52.0` … `v0.55.0`.
+- **Tip treatment — Slice A DONE (`v0.48.0`) ✓ signed off.** See **Do not rebuild**.
+- **Tip treatment — original Slice B1 (`v0.49.0`) SUPERSEDED by `v0.57.0`.** Do not re-implement `card_sale_basis` / `POS_CARD_TIP` at confirm. Current model: Z match-or-review; tips expense-only.
+- **Tip treatment — Slice B2 DONE (`v0.50.0`) ✓ signed off.** Commission sweep done; **H1** (in-transit guard) still planned in Phase 8.8.
+- **Tip treatment — Slice C DONE (`v0.51.0`) ✓ signed off;** folded into Phase 8.7.
+- **Phase 8.7 + Phase 9 core DONE (`v0.52.0`–`v0.56.0`) ✓ signed off.** Frontend gaps → Phase 9 Slice 2d + 8.
+- **Z match-or-review DONE (`v0.57.0`) ✓ signed off.** Ops copy + integration test → Phase 8.8 H4.
+- **Bank deposit exceeds card sale (no Z entered):** still rejected at settlement (`test_inferred_commission_rejects_net_exceeding_batch_gross`). With Z tracking off, owner records deposits manually; with Z on, mismatch routes to Needs Review — not auto-resolved.
 
 ---
 
@@ -394,10 +431,10 @@ Not built until promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. S
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
 | 2026-06-24 | Z match-or-review (supersedes B1 tip basis) | `v0.57.0-pos-z-match-or-review` | No POS tip posting; Z == system card → post; tips expense-only; P&L/BS test; 534 pytest |
-| 2026-06-24 | Phase 9 — read-back lists + Clerk | `v0.56.0-phase9-readback-clerk` | `/expenses` + `/sales` list pages; `@clerk/nextjs` auth; entity switcher; `GET /users/me`; 535 pytest |
+| 2026-06-24 | Phase 9 — read-back lists + Clerk | `v0.56.0-phase9-readback-clerk` | `/expenses` + `/sales` list pages; `@clerk/nextjs` auth; entity switcher; `GET /users/me`; 534 pytest |
 | 2026-06-24 | Phase 8.7 + Phase 9 New menu | `v0.55.0-phase9-new-menu` | Multi-line receipt OCR, manual sales API, New dropdown, receipt review; tags `v0.52.0`–`v0.55.0`; 533 pytest |
 | 2026-06-24 | Tips Slice B2 — card commission total clearance | `v0.50.0-pos-commission-total-clearance-slice-b2` | One-button `1400` residual → `5300` sweep; `POS_COMMISSION_SWEEP`; no migration; 511 pytest |
-| 2026-06-24 | Tips Slice B1 — card tips via Z report | `v0.49.0-pos-card-tips-z-report-slice-b1` | Per-entity `card_sale_basis`; `tip = Z − card`; Needs Review guards; `POS_CARD_TIP`; migration `046`; 506 pytest |
+| 2026-06-24 | Tips Slice B1 — card tips via Z report | `v0.49.0-pos-card-tips-z-report-slice-b1` | **Superseded by `v0.57.0`** — was `card_sale_basis` + `POS_CARD_TIP`; do not restore |
 | 2026-06-23 | Tips Slice A — tips are an expense | `v0.48.0-tips-expense-slice-a` | Retire `2260`/tips subsystem; gross sales; `5700 Tips Expense`; migration `045`; 497 pytest |
 | 2026-06-23 | Period locks review fixes | `v0.47.12` | IMMUTABLE_AUDIT_TABLES registry; append-only audit triggers; period_locks no-delete; split correction tests; 483 pytest |
 | 2026-06-23 | PDF export review fixes | `v0.47.11` | Lazy reportlab; bundled DejaVu fonts; ₺/Turkish glyph tests; fresh-install CI guard; 473 pytest |

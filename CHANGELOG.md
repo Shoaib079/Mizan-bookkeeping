@@ -2,6 +2,10 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-21
+
+**Owner sign-off — tips, Phase 8.7, Phase 9 core, Z match-or-review:** Owner approved all money-critical slices built 2026-06-23–24: tips expense treatment (Slice A `v0.48.0`, commission sweep B2 `v0.50.0`, expense-photo C `v0.51.0`); multi-line expense receipt intake + manual daily sales (Phase 8.7 `v0.52.0`–`v0.54.0`); Phase 9 New menu + receipt review (`v0.55.0`), read-back lists + Clerk (`v0.56.0`); Z match-or-review (`v0.57.0`, supersedes original Slice B1 `v0.49.0`). **535 pytest green** at sign-off. Phase 8.7 closed; Phase 8.8 adversarial follow-ups (H1–H5) remain. Tag `v0.57.1-owner-sign-off`.
+
 ## 2026-06-24
 
 **Z report simplified — no POS tip posting (supersedes Slice B1 tip basis):** Per owner direction, tips are **only** on the expense list — same pipeline as peynir, süt, etc. (`Dr 5700 / Cr cash` via `post_expense_entry`), rolling into **P&L and balance sheet** through the ledger. POS confirm no longer derives `tip = Z − card` or posts `POS_CARD_TIP` / pass-through legs. When `card_tips_z_report_enabled` is on: enter Z with the daily summary; **Z must match system card** to post — mismatch → Needs Review. Removed `card_sale_basis` and `expected_tip_kurus` from confirm APIs; entity `card_sale_basis` setting deprecated (ignored). Card clearing (`1400`) debits system card sale only. Decisions §9 + `DECISIONS.md` updated. **534 pytest green.**
