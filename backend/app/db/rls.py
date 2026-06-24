@@ -35,6 +35,8 @@ RLS_TABLES = (
     "expense_items",
     "expense_item_aliases",
     "expense_entries",
+    "expense_receipt_lines",
+    "expense_receipt_intakes",
     "entity_memberships",
     "period_locks",
     "period_lock_audit_events",

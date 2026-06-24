@@ -7,7 +7,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
-from app.features.expenses.models import ExpenseEntryStatus
+from app.features.expenses.models import ExpenseEntryStatus, ExpenseReceiptIntakeStatus
 
 
 class ExpenseItemCreate(BaseModel):
@@ -86,3 +86,50 @@ class ExpenseRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ExpenseReceiptLineRead(BaseModel):
+    id: uuid.UUID
+    line_order: int
+    written_item_description: str | None
+    amount_kurus: int
+    expense_account_id: uuid.UUID
+    review_reason: str | None
+    candidate_expense_item_id: uuid.UUID | None
+    expense_entry_id: uuid.UUID | None
+
+
+class ExpenseReceiptRead(BaseModel):
+    id: uuid.UUID
+    entity_id: uuid.UUID
+    status: ExpenseReceiptIntakeStatus
+    file_fingerprint: str
+    source_document_path: str
+    expense_date: date
+    money_account_id: uuid.UUID
+    receipt_total_kurus: int | None
+    extraction_payload: dict
+    review_reason: str | None
+    actor_id: uuid.UUID
+    posted_at: datetime | None
+    lines: list[ExpenseReceiptLineRead]
+    created_at: datetime
+
+
+class ConfirmExpenseReceiptLineRequest(BaseModel):
+    line_id: uuid.UUID
+    written_item_description: str | None = Field(default=None, max_length=512)
+    amount_kurus: int | None = Field(default=None, gt=0)
+    expense_account_id: uuid.UUID | None = None
+    confirm_expense_item_id: uuid.UUID | None = None
+
+
+class ConfirmExpenseReceiptRequest(BaseModel):
+    actor_id: uuid.UUID
+    expense_date: date | None = None
+    money_account_id: uuid.UUID | None = None
+    lines: list[ConfirmExpenseReceiptLineRequest] | None = None
+
+
+class RejectExpenseReceiptRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=512)

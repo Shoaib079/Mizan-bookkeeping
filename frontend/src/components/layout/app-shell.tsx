@@ -1,10 +1,11 @@
-/** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6). Phase 0 scaffold. */
+/** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6). */
+
+"use client";
 
 import {
   BarChart3,
   Building2,
   CreditCard,
-  FileText,
   LayoutDashboard,
   Settings,
   Upload,
@@ -12,7 +13,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { NewMenu } from "@/components/new-menu";
 import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
+import { useEntity } from "@/lib/entity-context";
 
 const navGroups = [
   {
@@ -38,7 +42,15 @@ const navGroups = [
   },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  title = "Overview",
+}: {
+  children: React.ReactNode;
+  title?: string;
+}) {
+  const { entityId, setEntityId, actorId, setActorId } = useEntity();
+
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
@@ -46,13 +58,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="text-lg font-semibold text-primary">Mizan</p>
           <p className="text-xs text-muted-foreground">Restaurant bookkeeping</p>
         </div>
+        <NewMenu />
         <div className="border-b border-border px-3 py-3">
-          <label className="mb-1 block text-xs text-muted-foreground">
-            Entity
-          </label>
-          <select className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm">
-            <option>Meze Kadıköy</option>
-          </select>
+          <Label htmlFor="entity-id">Entity ID</Label>
+          <Input
+            id="entity-id"
+            className="mt-1 font-mono text-xs"
+            placeholder="uuid"
+            value={entityId}
+            onChange={(e) => setEntityId(e.target.value)}
+          />
+          <Label htmlFor="actor-id" className="mt-2">
+            Actor ID
+          </Label>
+          <Input
+            id="actor-id"
+            className="mt-1 font-mono text-xs"
+            value={actorId}
+            onChange={(e) => setActorId(e.target.value)}
+          />
         </div>
         <nav className="flex-1 space-y-4 p-3">
           {navGroups.map((group) => (
@@ -79,10 +103,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-border px-6">
-          <h1 className="text-sm font-semibold">Overview</h1>
+          <h1 className="text-sm font-semibold">{title}</h1>
           <div className="flex items-center gap-2">
             <Button variant="secondary">This month</Button>
-            <Button>Upload</Button>
           </div>
         </header>
         <main className="flex-1 p-6">{children}</main>

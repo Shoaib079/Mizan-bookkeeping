@@ -94,6 +94,7 @@ def post_expense_entry(
     notes: str | None = None,
     bank_statement_line_id: uuid.UUID | None = None,
     existing_expense_entry: ExpenseEntry | None = None,
+    commit: bool = True,
 ) -> ExpenseEntryPostResult:
     """Post daily expense — Dr expense / Cr bank or cash GL."""
     if amount_kurus <= 0:
@@ -159,9 +160,14 @@ def post_expense_entry(
             )
             session.add(entry)
 
-        session.commit()
-        session.refresh(journal_entry)
-        session.refresh(entry)
-        _ = list(journal_entry.lines)
+        if commit:
+            session.commit()
+            session.refresh(journal_entry)
+            session.refresh(entry)
+            _ = list(journal_entry.lines)
+        else:
+            session.flush()
+            session.refresh(journal_entry)
+            session.refresh(entry)
 
         return ExpenseEntryPostResult(journal_entry=journal_entry, expense_entry=entry)

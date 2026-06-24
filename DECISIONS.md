@@ -2,6 +2,20 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-24 — Expense receipt OCR multi-line + manual daily sales (Phase 8.7; owner decision)
+
+**Choice:** Supersedes Slice C tip-only OCR with a **parent intake** model (`expense_receipt_intakes` + `expense_receipt_lines`). One uploaded photo → N draft lines → atomic confirm posts N `ExpenseEntry` rows via existing `post_expense_entry` (`source=expense_entry`, no new `JournalEntrySource`). Fingerprint dedup moves to the intake table; migration `048` drops the per-row unique on `expense_entries.source_document_fingerprint` (blocked multi-line from one photo).
+
+**Receipt OCR:** `adapters/ocr_ai/expense_receipt.py` — fixture registry → UTF-8 heuristics → vision OCR (strict JSON, env-gated). One line per item; tip → `5700`, others → `5200`. Cash-only (`money_account_id` must be cash). Review-first; deterministic Needs Review guards (no lines, zero amounts, fuzzy items, optional total mismatch).
+
+**API:** `POST/GET .../expense-receipts`, `POST .../confirm`, `POST .../reject`. Legacy `POST .../expenses/tip-photos` delegates to unified intake.
+
+**Manual sales:** `POST .../pos/manual-daily-sales` — typed cash + card; reuses `confirm_pos_daily_summary` posting path; optional Z-report tip when entity enabled.
+
+**Frontend (Phase 9):** **New** dropdown — manual expense, manual daily sales, expense receipt upload; receipt review screen (photo + editable lines).
+
+**Status:** money-critical — independent review + owner sign-off per slice.
+
 ## 2026-06-24 — Expense-photo OCR cash-tip (Slice C; owner ask)
 
 **Choice:** Reuse the existing **expenses pipeline** to capture a cash tip read from an uploaded receipt photo, rather than build a new intake table. A tip is already a cash expense (`Dr 5700 Tips Expense / Cr cash`, Slice A); the only new need is reading the tip off a photo and holding it for review. The photo upload creates an `ExpenseEntry` in `needs_review` pointed at `5700`; confirm posts it through the unchanged `post_expense_entry` boundary with `source=expense_entry`. Because no new `JournalEntrySource` is introduced, the correction registry, cash-flow categorization, and RLS registries need **no changes** (connected-surface audit).

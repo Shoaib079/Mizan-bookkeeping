@@ -482,3 +482,56 @@ def reject_pos_daily_summary(
         session.refresh(summary)
 
     return _to_read(summary)
+
+
+def create_manual_daily_sales(
+    session: Session,
+    entity_id: uuid.UUID,
+    payload,
+) -> PosDailySummaryRead:
+    """Typed cash + card daily sales without a POS photo — posts via shared confirm path."""
+    from app.features.pos.schema import ConfirmPosDailySummaryRequest, ManualDailySalesRequest
+
+    if not isinstance(payload, ManualDailySalesRequest):
+        payload = ManualDailySalesRequest.model_validate(payload)
+
+    _require_entity(session, entity_id)
+
+    if payload.cash_kurus == 0 and payload.card_kurus == 0:
+        raise PosDailySummaryConfirmError("at least one of cash or card must be positive")
+
+    total_kurus = payload.cash_kurus + payload.card_kurus
+
+    if _find_posted_summary_for_date(session, entity_id, payload.sales_date) is not None:
+        raise PosDailySummaryConfirmError(_duplicate_date_review_reason(payload.sales_date))
+
+    fingerprint = f"manual:{uuid.uuid4()}"
+    with entity_context(session, entity_id):
+        summary = PosDailySummary(
+            status=PosDailySummaryStatus.DRAFT,
+            file_fingerprint=fingerprint,
+            summary_date=payload.sales_date,
+            cash_kurus=payload.cash_kurus,
+            card_kurus=payload.card_kurus,
+            total_kurus=total_kurus,
+            z_report_kurus=payload.z_report_kurus,
+            extraction_payload={"source": "manual_daily_sales"},
+            review_reason=None,
+            money_account_id=payload.money_account_id,
+        )
+        session.add(summary)
+        session.commit()
+        session.refresh(summary)
+
+    confirm_payload = ConfirmPosDailySummaryRequest(
+        money_account_id=payload.money_account_id,
+        actor_id=payload.actor_id,
+        cash_kurus=payload.cash_kurus,
+        card_kurus=payload.card_kurus,
+        summary_date=payload.sales_date,
+        description=payload.description or "Manual daily sales",
+        z_report_kurus=payload.z_report_kurus,
+        card_sale_basis=payload.card_sale_basis,
+        expected_tip_kurus=payload.expected_tip_kurus,
+    )
+    return confirm_pos_daily_summary_intake(session, entity_id, summary.id, confirm_payload)

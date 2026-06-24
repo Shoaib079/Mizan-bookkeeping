@@ -23,11 +23,12 @@ export default function HomePage() {
       <div className="mt-6 rounded-lg border border-border bg-card p-4">
         <div className="mb-3 flex items-center gap-2">
           <FileText className="size-[18px] text-primary" />
-          <h2 className="font-semibold">Phase 0 scaffold</h2>
+          <h2 className="font-semibold">Phase 9 — New menu</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          App shell and design tokens are wired. Ledger core and real data land in
-          Phase 1.
+          App shell with <strong>New</strong> menu — manual expense, daily sales,
+          and expense receipt upload wired to Phase 8.7 APIs. Set your entity ID in
+          the sidebar (from onboarding).
         </p>
       </div>
     </AppShell>

@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     backup_s3_access_key_id: str | None = None
     backup_s3_secret_access_key: str | None = None
 
+    expense_receipt_vision_url: str | None = None
+    expense_receipt_vision_api_key: str | None = None
+    expense_receipt_vision_model: str = "gpt-4o-mini"
+
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"

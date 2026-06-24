@@ -14,7 +14,7 @@ from datetime import date
 import pytest
 from sqlalchemy import func, select
 
-from app.adapters.ocr_ai.expense_photo import register_expense_photo_fixture
+from app.adapters.ocr_ai.expense_receipt import register_expense_receipt_fixture
 from app.core.chart_of_accounts.default_chart import TIPS_EXPENSE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
@@ -264,24 +264,37 @@ def test_no_tip_detected_routes_to_zero_draft(db_session, restaurant_a) -> None:
     assert posted.amount_kurus == 3_000
 
 
-def test_binary_photo_unsupported(db_session, restaurant_a) -> None:
+def test_binary_photo_routes_to_needs_review_draft(db_session, restaurant_a) -> None:
     drawer, _ = _setup(db_session, restaurant_a)
 
-    with pytest.raises(expenses_service.ExpensePhotoUnsupportedError):
-        expenses_service.create_tip_expense_from_photo(
-            db_session,
-            restaurant_a.id,
-            _BINARY_PHOTO,
-            money_account_id=drawer.id,
-            actor_id=ACTOR_ID,
-        )
+    draft = expenses_service.create_tip_expense_from_photo(
+        db_session,
+        restaurant_a.id,
+        _BINARY_PHOTO,
+        money_account_id=drawer.id,
+        actor_id=ACTOR_ID,
+    )
+
+    assert draft.status == ExpenseEntryStatus.NEEDS_REVIEW
+    assert draft.amount_kurus == 0
+    assert draft.review_reason is not None
 
 
 def test_registered_fixture_image_extracts_tip(db_session, restaurant_a) -> None:
     drawer, _ = _setup(db_session, restaurant_a)
     image = b"\x89PNG\r\n\x1a\nMIZAN-TIP-FIXTURE-001"
-    register_expense_photo_fixture(
-        image, {"tip_kurus": 12_000, "expense_date": date(2026, 6, 20)}
+    register_expense_receipt_fixture(
+        image,
+        {
+            "expense_date": date(2026, 6, 20),
+            "lines": [
+                {
+                    "description": "Bahşiş",
+                    "amount_kurus": 12_000,
+                    "is_tip": True,
+                }
+            ],
+        },
     )
 
     draft = expenses_service.create_tip_expense_from_photo(

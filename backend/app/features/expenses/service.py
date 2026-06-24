@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from datetime import date
 
 from sqlalchemy import or_, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.listing import (
@@ -19,27 +17,31 @@ from app.core.listing import (
     text_search_filter,
 )
 
-from app.adapters.ocr_ai.expense_photo import (
-    ExpensePhotoExtractionError,
-    ExpensePhotoUnsupportedError,
-    extract_expense_photo,
-    extraction_to_payload,
+from app.adapters.ocr_ai.expense_receipt import (
+    ExpenseReceiptExtractionError,
+    ExpenseReceiptUnsupportedError,
 )
-from app.adapters.storage.local import save_upload
-from app.core.chart_of_accounts.default_chart import TIPS_EXPENSE_CODE
+from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE, TIPS_EXPENSE_CODE
 from app.core.chart_of_accounts.seed import get_account_by_code
 from app.core.expenses.items import InvalidExpenseItemError, merge_expense_items, resolve_expense_item
 from app.core.expenses.posting import (
     InvalidExpensePostingError,
-    _validate_money_account,
     post_expense_entry,
 )
 from app.core.expenses.normalize import normalize_expense_item_text
 from app.core.money import format_try
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
-from app.features.expenses.models import ExpenseEntry, ExpenseEntryStatus, ExpenseItem
+from app.features.expenses import receipt_service
+from app.features.expenses.models import (
+    ExpenseEntry,
+    ExpenseEntryStatus,
+    ExpenseItem,
+    ExpenseReceiptIntakeStatus,
+)
 from app.features.expenses.schema import (
+    ConfirmExpenseReceiptLineRequest,
+    ConfirmExpenseReceiptRequest,
     ConfirmTipPhotoRequest,
     ExpenseConfirmItemRequest,
     ExpenseCreate,
@@ -47,6 +49,7 @@ from app.features.expenses.schema import (
     ExpenseItemMergeRequest,
     ExpenseItemRead,
     ExpenseRead,
+    ExpenseReceiptRead,
 )
 
 
@@ -62,6 +65,88 @@ class DuplicateExpenseDocumentError(Exception):
     def __init__(self, existing: ExpenseRead) -> None:
         self.existing = existing
         super().__init__("Duplicate expense document for this entity")
+
+
+# Backward-compat alias for Slice C tests importing ExpensePhotoUnsupportedError.
+ExpensePhotoUnsupportedError = ExpenseReceiptUnsupportedError
+ExpensePhotoExtractionError = ExpenseReceiptExtractionError
+
+
+def _pick_tip_line(intake: ExpenseReceiptRead, tips_account_id: uuid.UUID):
+    for line in intake.lines:
+        if line.expense_account_id == tips_account_id:
+            return line
+    return intake.lines[0] if len(intake.lines) == 1 else None
+
+
+def _intake_to_tip_expense_read(
+    session: Session,
+    entity_id: uuid.UUID,
+    intake: ExpenseReceiptRead,
+    tips_account_id: uuid.UUID,
+) -> ExpenseRead:
+    """Map unified receipt intake → Slice C ExpenseRead (tip line) for legacy tip-photos API."""
+    tip_line = _pick_tip_line(intake, tips_account_id)
+    amount_kurus = tip_line.amount_kurus if tip_line is not None else 0
+    expense_account_id = (
+        tip_line.expense_account_id if tip_line is not None else tips_account_id
+    )
+    written_item_description = (
+        tip_line.written_item_description if tip_line is not None else "Bahşiş"
+    )
+    candidate_expense_item_id = (
+        tip_line.candidate_expense_item_id if tip_line is not None else None
+    )
+    line_review = tip_line.review_reason if tip_line is not None else intake.review_reason
+
+    if intake.status == ExpenseReceiptIntakeStatus.POSTED:
+        status = ExpenseEntryStatus.POSTED
+        journal_entry_id: uuid.UUID | None = None
+        expense_item_id: uuid.UUID | None = None
+        if tip_line is not None and tip_line.expense_entry_id is not None:
+            with entity_context(session, entity_id):
+                entry = session.get(ExpenseEntry, tip_line.expense_entry_id)
+                if entry is not None:
+                    journal_entry_id = entry.journal_entry_id
+                    expense_item_id = entry.expense_item_id
+    else:
+        status = ExpenseEntryStatus.NEEDS_REVIEW
+        journal_entry_id = None
+        expense_item_id = None
+
+    review_reason = intake.review_reason or line_review
+    if amount_kurus <= 0 and status == ExpenseEntryStatus.NEEDS_REVIEW:
+        review_reason = (
+            "No tip detected on the expense photo — enter the tip amount before posting"
+        )
+    elif amount_kurus > 0 and status == ExpenseEntryStatus.NEEDS_REVIEW:
+        review_reason = review_reason or (
+            f"Tip read from expense photo: {format_try(amount_kurus)} "
+            "— confirm or correct before posting"
+        )
+
+    return ExpenseRead(
+        id=intake.id,
+        entity_id=intake.entity_id,
+        expense_date=intake.expense_date,
+        amount_kurus=amount_kurus,
+        expense_account_id=expense_account_id,
+        money_account_id=intake.money_account_id,
+        written_item_description=written_item_description,
+        expense_item_id=expense_item_id,
+        status=status,
+        has_source_document=True,
+        description="Cash tip (from expense photo)",
+        notes=None,
+        actor_id=intake.actor_id,
+        journal_entry_id=journal_entry_id,
+        bank_statement_line_id=None,
+        review_reason=review_reason,
+        candidate_expense_item_id=candidate_expense_item_id,
+        source_document_fingerprint=intake.file_fingerprint,
+        source_document_path=intake.source_document_path,
+        created_at=intake.created_at,
+    )
 
 
 def _to_item_read(item: ExpenseItem) -> ExpenseItemRead:
@@ -359,25 +444,6 @@ def confirm_expense_item(
     return _to_expense_read(result.expense_entry)
 
 
-def _extension_for(filename: str | None, content_type: str | None) -> str:
-    if filename:
-        lower = filename.lower()
-        for ext in (".jpg", ".jpeg", ".png", ".webp", ".pdf", ".txt"):
-            if lower.endswith(ext):
-                return ext
-    if content_type:
-        lower = content_type.lower()
-        if "jpeg" in lower or "jpg" in lower:
-            return ".jpg"
-        if "png" in lower:
-            return ".png"
-        if "webp" in lower:
-            return ".webp"
-        if "pdf" in lower:
-            return ".pdf"
-    return ".jpg"
-
-
 def create_tip_expense_from_photo(
     session: Session,
     entity_id: uuid.UUID,
@@ -388,27 +454,9 @@ def create_tip_expense_from_photo(
     filename: str | None = None,
     content_type: str | None = None,
 ) -> ExpenseRead:
-    """Read a cash tip off an uploaded expense photo → 5700 draft in Needs Review (Slice C).
-
-    Review-first: nothing posts here. The owner confirms (and may correct) the tip,
-    then ``confirm_tip_expense`` posts ``Dr 5700 Tips Expense / Cr cash``.
-    """
+    """Thin wrapper — unified expense-receipt intake, mapped to Slice C ExpenseRead."""
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
-
-    fingerprint = hashlib.sha256(content).hexdigest()
-
-    # NOTE: each entity_context clears the RLS GUC on exit, so these context-managed
-    # lookups are kept flat (never nested) to avoid wiping the entity scope mid-call.
-    with entity_context(session, entity_id):
-        require_entity_context()
-        existing = session.scalar(
-            select(ExpenseEntry).where(
-                ExpenseEntry.source_document_fingerprint == fingerprint
-            )
-        )
-        if existing is not None:
-            raise DuplicateExpenseDocumentError(_to_expense_read(existing))
 
     tips_account = get_account_by_code(session, entity_id, TIPS_EXPENSE_CODE)
     if tips_account is None:
@@ -417,73 +465,23 @@ def create_tip_expense_from_photo(
         )
     tips_account_id = tips_account.id
 
-    # Validate the cash/bank account now so a draft can never become unpostable.
-    with entity_context(session, entity_id):
-        require_entity_context()
-        _validate_money_account(session, entity_id, money_account_id)
-
-    extraction = extract_expense_photo(content)
-
-    stored_path = save_upload(
-        entity_id,
-        fingerprint,
-        content,
-        extension=_extension_for(filename, content_type),
-    )
-    payload = extraction_to_payload(extraction)
-    payload["stored_path"] = stored_path
-
-    if extraction.tip_found and extraction.tip_kurus > 0:
-        amount_kurus = extraction.tip_kurus
-        review_reason = (
-            f"Tip read from expense photo: {format_try(extraction.tip_kurus)} "
-            "— confirm or correct before posting"
-        )
-    else:
-        amount_kurus = 0
-        review_reason = (
-            "No tip detected on the expense photo — enter the tip amount before posting"
-        )
-
-    expense_date = extraction.expense_date or date.today()
-
-    with entity_context(session, entity_id):
-        require_entity_context()
-        entry = ExpenseEntry(
-            expense_date=expense_date,
-            amount_kurus=amount_kurus,
-            expense_account_id=tips_account_id,
+    try:
+        intake = receipt_service.create_expense_receipt_from_upload(
+            session,
+            entity_id,
+            content,
             money_account_id=money_account_id,
-            written_item_description="Bahşiş",
-            expense_item_id=None,
-            status=ExpenseEntryStatus.NEEDS_REVIEW,
-            has_source_document=True,
-            description="Cash tip (from expense photo)",
-            notes=None,
             actor_id=actor_id,
-            review_reason=review_reason,
-            candidate_expense_item_id=None,
-            source_document_fingerprint=fingerprint,
-            source_document_path=stored_path,
+            filename=filename,
+            content_type=content_type,
+            tip_only=True,
         )
-        session.add(entry)
-        try:
-            session.commit()
-        except IntegrityError as exc:
-            # Concurrent upload of the same photo lost the race to the per-entity
-            # unique constraint — surface it as a clean duplicate, not a 500.
-            session.rollback()
-            if "uq_expense_entries_entity_source_fingerprint" in str(exc.orig):
-                existing = session.scalar(
-                    select(ExpenseEntry).where(
-                        ExpenseEntry.source_document_fingerprint == fingerprint
-                    )
-                )
-                if existing is not None:
-                    raise DuplicateExpenseDocumentError(_to_expense_read(existing)) from exc
-            raise
-        session.refresh(entry)
-        return _to_expense_read(entry)
+    except receipt_service.DuplicateExpenseReceiptError as exc:
+        raise DuplicateExpenseDocumentError(
+            _intake_to_tip_expense_read(session, entity_id, exc.existing, tips_account_id)
+        ) from exc
+
+    return _intake_to_tip_expense_read(session, entity_id, intake, tips_account_id)
 
 
 def confirm_tip_expense(
@@ -492,48 +490,59 @@ def confirm_tip_expense(
     expense_id: uuid.UUID,
     payload: ConfirmTipPhotoRequest,
 ) -> ExpenseRead:
-    """Post a reviewed photo-tip draft → Dr 5700 / Cr cash (Slice C)."""
+    """Confirm a photo-tip draft via unified receipt intake (expense_id = intake_id)."""
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
-    with entity_context(session, entity_id):
-        require_entity_context()
-        entry = session.get(ExpenseEntry, expense_id)
-        if entry is None:
-            raise LookupError("Expense not found")
-        if entry.source_document_fingerprint is None:
-            raise NotATipPhotoError("expense did not come from a photo-tip upload")
-        if entry.status != ExpenseEntryStatus.NEEDS_REVIEW:
-            raise ExpenseNotReviewableError("expense is not awaiting review")
+    tips_account = get_account_by_code(session, entity_id, TIPS_EXPENSE_CODE)
+    if tips_account is None:
+        raise ValueError("Tips Expense account not found")
+    tips_account_id = tips_account.id
 
-        amount_kurus = (
-            payload.amount_kurus if payload.amount_kurus is not None else entry.amount_kurus
-        )
-        money_account_id = payload.money_account_id or entry.money_account_id
-        expense_date = payload.expense_date or entry.expense_date
-        description = payload.description or entry.description
-        notes = payload.notes if payload.notes is not None else entry.notes
-        expense_account_id = entry.expense_account_id
-        written_item_description = entry.written_item_description
+    try:
+        intake = receipt_service.get_expense_receipt(session, entity_id, expense_id)
+    except LookupError:
+        with entity_context(session, entity_id):
+            entry = session.get(ExpenseEntry, expense_id)
+            if entry is not None:
+                raise NotATipPhotoError("expense did not come from a photo-tip upload") from None
+        raise LookupError("Expense not found")
 
+    if _pick_tip_line(intake, tips_account_id) is None:
+        raise NotATipPhotoError("expense did not come from a photo-tip upload")
+
+    if intake.status not in {
+        ExpenseReceiptIntakeStatus.DRAFT,
+        ExpenseReceiptIntakeStatus.NEEDS_REVIEW,
+    }:
+        raise ExpenseNotReviewableError("expense is not awaiting review")
+
+    tip_line = _pick_tip_line(intake, tips_account_id)
+    assert tip_line is not None
+    amount_kurus = (
+        payload.amount_kurus if payload.amount_kurus is not None else tip_line.amount_kurus
+    )
     if amount_kurus <= 0:
         raise ExpenseNotReviewableError(
             "No tip amount — enter a positive amount to post this tip"
         )
 
-    result = post_expense_entry(
+    line_overrides: list[ConfirmExpenseReceiptLineRequest] = [
+        ConfirmExpenseReceiptLineRequest(
+            line_id=tip_line.id,
+            amount_kurus=amount_kurus,
+        )
+    ]
+
+    confirmed = receipt_service.confirm_expense_receipt(
         session,
         entity_id,
-        expense_date=expense_date,
-        amount_kurus=amount_kurus,
-        expense_account_id=expense_account_id,
-        money_account_id=money_account_id,
-        description=description,
-        actor_id=payload.actor_id,
-        written_item_description=written_item_description,
-        expense_item_id=None,
-        has_source_document=True,
-        notes=notes,
-        existing_expense_entry=entry,
+        expense_id,
+        ConfirmExpenseReceiptRequest(
+            actor_id=payload.actor_id,
+            expense_date=payload.expense_date,
+            money_account_id=payload.money_account_id,
+            lines=line_overrides,
+        ),
     )
-    return _to_expense_read(result.expense_entry)
+    return _intake_to_tip_expense_read(session, entity_id, confirmed, tips_account_id)

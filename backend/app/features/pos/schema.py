@@ -132,3 +132,15 @@ class ConfirmPosDailySummaryRequest(BaseModel):
 
 class RejectPosDailySummaryRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=512)
+
+
+class ManualDailySalesRequest(BaseModel):
+    sales_date: date
+    cash_kurus: int = Field(ge=0)
+    card_kurus: int = Field(ge=0)
+    money_account_id: uuid.UUID
+    actor_id: uuid.UUID
+    description: str | None = Field(default=None, max_length=512)
+    z_report_kurus: int | None = Field(default=None, ge=0)
+    card_sale_basis: str | None = None
+    expected_tip_kurus: int | None = Field(default=None, ge=0)

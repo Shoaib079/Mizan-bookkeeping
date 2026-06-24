@@ -54,7 +54,7 @@ def db_session(test_engine) -> Session:
             "card_sales_batches, pos_daily_summaries, credit_card_payments, fx_ledger_entries, "
             "staff_ledger_entries, employees, partner_ledger_entries, partners, "
             "cash_movements, cash_drawer_sessions, "
-            "expense_entries, expense_item_aliases, expense_items, "
+            "expense_entries, expense_receipt_lines, expense_receipt_intakes, expense_item_aliases, expense_items, "
             "entity_memberships, users, auth_audit_events, idempotency_records, "
             "period_lock_audit_events, period_locks, "
             "money_accounts, accounts, "

@@ -26,6 +26,7 @@ from app.features.pos.schema import (
     CardSalesBatchRead,
     ClearingReconciliationRead,
     ConfirmPosDailySummaryRequest,
+    ManualDailySalesRequest,
     PosDailySummaryListOut,
     PosDailySummaryRead,
     PosSettlementCreate,
@@ -41,6 +42,7 @@ reconciliation_router = APIRouter(
 daily_summaries_router = APIRouter(
     prefix="/entities/{entity_id}/pos/daily-summaries", tags=["pos"]
 )
+manual_sales_router = APIRouter(prefix="/entities/{entity_id}/pos", tags=["pos"])
 
 
 @settlements_router.post("", response_model=PosSettlementRead, status_code=201)
@@ -293,3 +295,18 @@ def reject_pos_daily_summary(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except daily_summary_service.PosDailySummaryImmutableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@manual_sales_router.post("/manual-daily-sales", response_model=PosDailySummaryRead, status_code=201)
+def create_manual_daily_sales(
+    entity_id: uuid.UUID,
+    payload: ManualDailySalesRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> PosDailySummaryRead:
+    try:
+        return daily_summary_service.create_manual_daily_sales(session, entity_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except daily_summary_service.PosDailySummaryConfirmError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

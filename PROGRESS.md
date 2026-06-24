@@ -4,32 +4,31 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Tips treatment fix — Slice C complete (expense-photo OCR cash-tip) |
-| **Last completed slice** | Slice C — expense-photo OCR reads a tip → `5700` cash-tip draft in Needs Review |
-| **Next slice** | Phase 9 frontend |
+| **Phase** | Phase 9 — frontend (New menu + receipt review in progress) |
+| **Last completed slice** | Phase 8.7 D0–D3 — expense receipt OCR + manual daily sales (implementation; awaiting sign-off/tags) |
+| **Next slice** | Owner sign-off on Phase 8.7 money-critical slices; Phase 9 read-back lists + Clerk login |
 | **Branch** | `main` |
 | **Last tag** | `v0.51.0-expense-photo-tip-ocr-slice-c` |
 
 ## Resume point
 
-**Slice C complete** (2026-06-24) — expense-photo OCR cash-tip. `adapters/ocr_ai/expense_photo.py` reads a tip off an uploaded receipt photo (fixture registry → UTF-8 text heuristics; Turkish `Bahşiş`/`Servis` + English `Tip`/`Gratuity`; amounts via shared `parse_try_loose`) and the expenses service creates a `5700 Tips Expense` draft in **Needs Review** — review-first, nothing auto-posts. `POST .../expenses/tip-photos` (multipart: file + `money_account_id` + `actor_id`); `POST .../expenses/tip-photos/{id}/confirm` posts `Dr 5700 / Cr cash` via the existing posting boundary (`JournalEntrySource.EXPENSE_ENTRY`, editable amount/account/date on confirm). Per-entity duplicate-photo guard: new nullable `expense_entries.source_document_fingerprint` (+ `source_document_path`) + unique `(entity_id, source_document_fingerprint)`; concurrent-upload race caught → clean 409. No-tip read → zero-amount draft the owner must fill before it can post. Migration `047_expense_source_document` (additive/nullable — manual expenses unchanged; no new `JournalEntrySource`, so no correction/cash-flow/RLS registry changes). Full suite **522 passed**, 2 skipped. **Money-critical — awaiting owner sign-off.** This completes the tips-treatment work (Slices A + B + C). Next: **Phase 9 frontend**.
+**Phase 8.7 + Phase 9 core (2026-06-24)** — implemented per plan `.cursor/plans/expense_ocr_+_add_menu_a4ddb775.plan.md`:
+
+- **Backend:** migration `048`, `expense_receipt_intakes` + lines, `POST /expense-receipts` upload/confirm/reject, `expense_receipt.py` OCR adapter, `POST /pos/manual-daily-sales`, `tip-photos` folded into unified intake wrapper.
+- **Frontend:** sidebar **New** menu (manual expense, manual daily sales, receipt upload), receipt review at `/review/receipts/[id]`.
+
+**Awaiting:** owner sign-off on money-critical backend slices; version tags `v0.52.0` … `v0.55.0`; commit when requested.
 
 ## Pre-sign-off verification (2026-06-24)
 
 | Check | Result |
 |-------|--------|
-| Full pytest (Alembic-provisioned test DB) | **522 passed**, 2 skipped |
-| `alembic upgrade head` on empty DB | **GREEN** (through `047_expense_source_document`) |
-| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
+| Full pytest (Alembic-provisioned test DB) | **533 passed**, 2 skipped (incl. `test_expense_receipt`, `test_manual_daily_sales`) |
+| `alembic upgrade head` on empty DB | **GREEN** (through `048_expense_receipt_intake`) |
+| Frontend `npm run build` | **GREEN** |
 
 ## Recent
 
-- 2026-06-24 — Expense-photo OCR cash-tip (Slice C): photo → 5700 Needs Review draft → confirm Dr 5700/Cr cash (`v0.51.0-expense-photo-tip-ocr-slice-c`, 522 pytest)
-- 2026-06-24 — Card commission total clearance (Slice B2): one-button residual → 5300 sweep (`v0.50.0-pos-commission-total-clearance-slice-b2`, 511 pytest)
-- 2026-06-24 — Card tips via Z report (Slice B1): per-entity basis + Needs Review (`v0.49.0-pos-card-tips-z-report-slice-b1`, 506 pytest)
-- 2026-06-23 — Tips → expense (Slice A): retire 2260/tips subsystem, gross sales (`v0.48.0-tips-expense-slice-a`, 497 pytest)
-- 2026-06-23 — Phase 8.6 audit fixes (`v0.47.13` … `v0.47.19`, 501 pytest)
-- 2026-06-23 — Period locks review fixes (`v0.47.12`, 483 pytest)
-- 2026-06-23 — PDF export review fixes (`v0.47.11`, 473 pytest)
-- 2026-06-23 — PDF export — financial statements (`v0.47.10-phase8.5-pdf-export`, 469 pytest)
-- 2026-06-23 — Flexible dates + soft period locks (`v0.47.9-phase8.5-period-locks`, 464 pytest)
+- 2026-06-24 — **IMPLEMENTED** Phase 8.7 D0–D3 + Phase 9 New menu + receipt review (uncommitted; awaiting sign-off/tags)
+- 2026-06-24 — **PLANNED** Phase 8.7 + Phase 9 New menu — plan + ROADMAP
+- 2026-06-24 — Expense-photo OCR cash-tip (Slice C): tip-only stub (`v0.51.0-expense-photo-tip-ocr-slice-c`, 522 pytest; awaiting sign-off)
