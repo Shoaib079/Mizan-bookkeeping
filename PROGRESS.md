@@ -4,11 +4,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 9 — frontend; Phase 8.8 adversarial follow-ups (H2–H5 remain) |
-| **Last completed slice** | Phase 8.8 H1 — commission sweep timing guard (`v0.58.0-phase8.8-h1-commission-sweep-guard`) |
-| **Next slice** | Phase 8.8 H2 — tips expense cash-only at API; Phase 9 Slice 3 — Suppliers & payables |
+| **Phase** | Phase 9 — frontend; Phase 8.8 adversarial follow-ups (H3–H5 remain) |
+| **Last completed slice** | Phase 8.8 H2 — tips expense cash-only at API (`v0.58.1-phase8.8-h2-tips-cash-only`) |
+| **Next slice** | Phase 8.8 H3 — expense receipt test gaps; Phase 9 Slice 3 — Suppliers & payables |
 | **Branch** | `main` |
-| **Last tag** | `v0.58.0-phase8.8-h1-commission-sweep-guard` |
+| **Last tag** | `v0.58.1-phase8.8-h2-tips-cash-only` |
 
 ## Resume point
 
@@ -19,7 +19,14 @@
 - Phase 9 New menu + receipt review (`v0.55.0`), read-back + Clerk (`v0.56.0`)
 - Z match-or-review (`v0.57.0`, `a6dd4e6`)
 
-**Next:** Phase 8.8 H2 — tips expense cash-only at API. Phase 9 Slice 3 — Suppliers & payables UI.
+**Next:** Phase 8.8 H3 — expense receipt test gaps. Phase 9 Slice 3 — Suppliers & payables UI.
+
+## Verification (2026-06-24 — H2)
+
+| Check | Result |
+|-------|--------|
+| Full pytest (Alembic-provisioned test DB) | **538 passed**, 2 skipped |
+| `backend/scripts/verify_fresh_install.sh` | **GREEN** |
 
 ## Verification (2026-06-24 — H1)
 
@@ -39,6 +46,7 @@
 
 ## Recent
 
+- 2026-06-24 — **Phase 8.8 H2** — tips expense cash-only at API (`v0.58.1-phase8.8-h2-tips-cash-only`, 538 pytest)
 - 2026-06-24 — **Phase 8.8 H1** — commission sweep timing guard (`v0.58.0-phase8.8-h1-commission-sweep-guard`, 536 pytest)
 - 2026-06-21 — **Owner sign-off** — tips A/B2/C, Phase 8.7, Phase 9 core, Z (`v0.57.1-owner-sign-off`)
 - 2026-06-24 — Z match-or-review — no POS tip posting (`v0.57.0-pos-z-match-or-review`, 534 pytest)

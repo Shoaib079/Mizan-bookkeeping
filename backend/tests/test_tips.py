@@ -11,13 +11,15 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
+import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from app.core.chart_of_accounts.default_chart import TIPS_EXPENSE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
-from app.core.expenses.posting import post_expense_entry
+from app.core.expenses.posting import InvalidExpensePostingError, post_expense_entry
 from app.core.ledger.models import JournalEntryLine, JournalEntrySource
 from app.db.session import entity_context
 from app.features.banking import service as banking_service
@@ -34,9 +36,18 @@ def _setup(db_session, entity):
         entity.id,
         MoneyAccountCreate(account_kind=MoneyAccountKind.CASH, name="Main Drawer"),
     )
+    bank = banking_service.create_money_account(
+        db_session,
+        entity.id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.BANK,
+            name="Garanti TRY",
+            bank_name="Garanti BBVA",
+        ),
+    )
     with entity_context(db_session, entity.id):
         accounts = {a.code: a for a in db_session.scalars(select(Account))}
-    return drawer, accounts
+    return drawer, bank, accounts
 
 
 def _gl_balance(db_session, entity_id, account_id, normal: AccountNormalBalance) -> int:
@@ -58,7 +69,7 @@ def _gl_balance(db_session, entity_id, account_id, normal: AccountNormalBalance)
 
 
 def test_tips_expense_account_in_default_chart_not_payable(db_session, restaurant_a) -> None:
-    _, accounts = _setup(db_session, restaurant_a)
+    _, _, accounts = _setup(db_session, restaurant_a)
 
     assert "2260" not in accounts  # Tips Payable retired
     tips_expense = accounts[TIPS_EXPENSE_CODE]
@@ -68,7 +79,7 @@ def test_tips_expense_account_in_default_chart_not_payable(db_session, restauran
 
 
 def test_tip_posts_dr_5700_cr_cash(db_session, restaurant_a) -> None:
-    drawer, accounts = _setup(db_session, restaurant_a)
+    drawer, _, accounts = _setup(db_session, restaurant_a)
     tips_expense_id = accounts[TIPS_EXPENSE_CODE].id
     drawer_id = drawer.id
     drawer_gl_id = drawer.gl_account_id
@@ -107,3 +118,43 @@ def test_tip_posts_dr_5700_cr_cash(db_session, restaurant_a) -> None:
     assert _gl_balance(
         db_session, restaurant_a.id, drawer_gl_id, AccountNormalBalance.DEBIT
     ) == -4_500
+
+
+def test_tips_expense_rejects_bank_account(db_session, restaurant_a) -> None:
+    _, bank, accounts = _setup(db_session, restaurant_a)
+    tips_expense_id = accounts[TIPS_EXPENSE_CODE].id
+
+    with pytest.raises(InvalidExpensePostingError, match="cash account"):
+        post_expense_entry(
+            db_session,
+            restaurant_a.id,
+            expense_date=date(2026, 6, 24),
+            amount_kurus=1_000,
+            expense_account_id=tips_expense_id,
+            money_account_id=bank.id,
+            description="Tip from bank",
+            actor_id=ACTOR_ID,
+        )
+
+
+def test_api_tips_expense_bank_account_returns_422(
+    client: TestClient, db_session, restaurant_a
+) -> None:
+    _, bank, accounts = _setup(db_session, restaurant_a)
+    tips_expense_id = accounts[TIPS_EXPENSE_CODE].id
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/expenses",
+        json={
+            "expense_date": "2026-06-24",
+            "amount_kurus": 1_000,
+            "expense_account_id": str(tips_expense_id),
+            "money_account_id": str(bank.id),
+            "written_item_description": "Bahşiş",
+            "has_source_document": False,
+            "description": "Tip from bank",
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert response.status_code == 422
+    assert "cash account" in response.json()["detail"].lower()

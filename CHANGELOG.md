@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-24
 
+**Phase 8.8 H2 — tips expense cash-only at API:** `post_expense_entry` now rejects Tips Expense (`5700`) unless the payment `money_account` is cash — `InvalidExpensePostingError` → HTTP 422 ("tips expense must be paid from a cash account"). Closes adversarial gap where generic `POST .../expenses` could book tips from a bank account. Receipt intake unchanged (already cash-only at upload). Guard lives at the single posting boundary in `core/expenses/posting.py`. `DECISIONS.md` § tips updated. 2 new tests; **538 pytest green**; fresh-install verify green. Tag `v0.58.1-phase8.8-h2-tips-cash-only`. **Money-critical — owner sign-off required.**
+
 **Phase 8.8 H1 — commission sweep timing guard:** `POST .../pos/clearing-reconciliation/clear-commission` now rejects when card sales are still in transit — reconciliation shows `in_transit_kurus > 0` with no bank deposits recorded (`pos_settlement_count == 0`). Returns HTTP 422 with a clear message (`InTransitCardSalesError`) so undeposited card sales cannot be mis-booked as commission. Reuses `get_clearing_reconciliation()` in the clearance path; Slice B2 net-deposit + sweep workflow unchanged once deposits exist. `DECISIONS.md` § commission sweep updated. 2 new tests; **536 pytest green**; fresh-install verify green. Tag `v0.58.0-phase8.8-h1-commission-sweep-guard`. **Money-critical — owner sign-off required.**
 
 ## 2026-06-21
