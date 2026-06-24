@@ -20,6 +20,7 @@ from app.adapters.backup.archive import (
 from app.adapters.backup.postgres import (
     create_scratch_database,
     drop_scratch_database,
+    pg_tool_database_url,
     pg_tools_available,
     replace_database_in_url,
     run_pg_restore,
@@ -54,6 +55,15 @@ def backup_settings(tmp_path, monkeypatch, test_engine):
     monkeypatch.setattr(settings, "backup_s3_bucket", None)
     monkeypatch.setattr(settings, "database_url", settings.test_database_url)
     return {"backup_dir": backup_dir, "upload_dir": upload_dir}
+
+
+def test_pg_tool_database_url_strips_sqlalchemy_driver() -> None:
+    url = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/mizan_test"
+    assert pg_tool_database_url(url) == "postgresql://mizan:mizan_dev@localhost:5432/mizan_test"
+    assert (
+        replace_database_in_url(url, "scratch_db")
+        == "postgresql://mizan:mizan_dev@localhost:5432/scratch_db"
+    )
 
 
 def test_retention_keeps_daily_and_weekly() -> None:

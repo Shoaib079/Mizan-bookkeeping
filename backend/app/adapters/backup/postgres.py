@@ -16,7 +16,8 @@ def pg_tool_database_url(sqlalchemy_url: str) -> str:
     driver = url.drivername.split("+", 1)[0]
     if driver != "postgresql":
         raise ValueError(f"unsupported database driver for pg_dump: {url.drivername}")
-    return url.render_as_string(hide_password=False)
+    # pg_dump/pg_restore expect postgresql://… — not postgresql+psycopg://…
+    return url.set(drivername="postgresql").render_as_string(hide_password=False)
 
 
 def parse_database_name(sqlalchemy_url: str) -> str:
@@ -127,7 +128,9 @@ def drop_scratch_database(admin_url: str, db_name: str) -> None:
 
 def scratch_database_url(base_url: str, db_name: str) -> str:
     url = make_url(base_url)
-    return url.set(database=db_name).render_as_string(hide_password=False)
+    return pg_tool_database_url(
+        url.set(database=db_name).render_as_string(hide_password=False)
+    )
 
 
 def pg_tools_available() -> bool:
@@ -140,4 +143,5 @@ def pg_tools_available() -> bool:
 
 
 def replace_database_in_url(sqlalchemy_url: str, database: str) -> str:
-    return make_url(sqlalchemy_url).set(database=database).render_as_string(hide_password=False)
+    url = make_url(sqlalchemy_url).set(database=database)
+    return pg_tool_database_url(url.render_as_string(hide_password=False))
