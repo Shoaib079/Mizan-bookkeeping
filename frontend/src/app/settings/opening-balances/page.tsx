@@ -7,6 +7,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import {
   DataTable,
   DataTableBody,
@@ -389,11 +390,10 @@ export default function OpeningBalancesPage() {
           <form className="space-y-4" onSubmit={onValidate}>
             <div className="max-w-xs">
               <Label htmlFor="go-live">Go-live date</Label>
-              <Input
+              <DateInput
                 id="go-live"
-                placeholder="DD.MM.YYYY"
                 value={goLiveDate}
-                onChange={(e) => setGoLiveDate(e.target.value)}
+                onChange={setGoLiveDate}
               />
               {posted && (
                 <p className="mt-1 text-xs text-muted-foreground">

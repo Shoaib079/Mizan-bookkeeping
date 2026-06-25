@@ -3,11 +3,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
 
 type MoneyAccount = { id: string; name: string; account_kind: string };
@@ -64,7 +66,10 @@ export function ManualExpenseForm({
   }, [entityId, defaultExpenseAccountCode]);
 
   useEffect(() => {
-    if (open) void loadOptions().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadOptions().catch(() => undefined);
+    }
   }, [open, loadOptions]);
 
   useEffect(() => {
@@ -137,11 +142,10 @@ export function ManualExpenseForm({
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="exp-date">Date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="exp-date"
-            placeholder="23.06.2026"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

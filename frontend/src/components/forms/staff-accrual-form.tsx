@@ -1,14 +1,16 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 
 type Props = {
   open: boolean;
@@ -32,6 +34,10 @@ export function StaffAccrualForm({
   const [description, setDescription] = useState("Salary accrual");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) setDateText(todayTrDate());
+  }, [open]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -85,10 +91,10 @@ export function StaffAccrualForm({
         </p>
         <div>
           <Label htmlFor="acc-date">Accrual date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="acc-date"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

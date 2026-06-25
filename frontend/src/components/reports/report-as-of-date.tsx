@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
+import { Label } from "@/components/ui/input";
 import { isoToday } from "@/lib/date-range";
 import { formatTrDate, parseTrDate } from "@/lib/money";
 
@@ -29,13 +30,12 @@ export function ReportAsOfDate({ asOf, onChange, disabled }: Props) {
     <div className="flex flex-wrap items-end gap-3">
       <div>
         <Label htmlFor="report-as-of">As of</Label>
-        <Input
+        <DateInput
           id="report-as-of"
           className="mt-1 w-36"
-          placeholder="DD.MM.YYYY"
           value={display}
           disabled={disabled}
-          onChange={(e) => setDisplay(e.target.value)}
+          onChange={setDisplay}
           onKeyDown={(e) => {
             if (e.key === "Enter") apply();
           }}

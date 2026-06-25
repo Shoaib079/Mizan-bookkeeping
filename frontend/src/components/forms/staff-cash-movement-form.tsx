@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -14,6 +15,7 @@ import {
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 
 type Props = {
   open: boolean;
@@ -65,7 +67,10 @@ export function StaffCashMovementForm({
   }, [entityId, isTry, payCurrency]);
 
   useEffect(() => {
-    if (open) void loadAccounts().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadAccounts().catch(() => undefined);
+    }
   }, [open, loadAccounts]);
 
   async function onSubmit(event: FormEvent) {
@@ -158,10 +163,10 @@ export function StaffCashMovementForm({
         </p>
         <div>
           <Label htmlFor="staff-date">Date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="staff-date"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

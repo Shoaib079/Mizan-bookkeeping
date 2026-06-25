@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input, Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
@@ -206,12 +207,12 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
           <div className="space-y-3">
             <div>
               <Label htmlFor="pos-date">Date (DD.MM.YYYY)</Label>
-              <Input
-                id="pos-date"
-                value={dateText}
-                onChange={(e) => setDateText(e.target.value)}
-                required
-              />
+              <DateInput
+            id="pos-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>

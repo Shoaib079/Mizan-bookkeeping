@@ -4,11 +4,13 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 import type { DeliveryPlatform, DeliveryReport } from "@/lib/pos-delivery-types";
 
 type Props = {
@@ -41,7 +43,10 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
   }, [entityId]);
 
   useEffect(() => {
-    if (open) void loadPlatforms().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadPlatforms().catch(() => undefined);
+    }
   }, [open, loadPlatforms]);
 
   const grossKurus = parseTryToKurus(grossText) ?? 0;
@@ -123,11 +128,10 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
         </div>
         <div>
           <Label htmlFor="dr-date">Report date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="dr-date"
-            placeholder="23.06.2026"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

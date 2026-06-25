@@ -5,6 +5,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -14,6 +15,7 @@ import {
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 
 type Props = {
   open: boolean;
@@ -48,7 +50,10 @@ export function SupplierPaymentForm({
   }, [entityId]);
 
   useEffect(() => {
-    if (open) void loadAccounts().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadAccounts().catch(() => undefined);
+    }
   }, [open, loadAccounts]);
 
   async function onSubmit(event: FormEvent) {
@@ -110,11 +115,10 @@ export function SupplierPaymentForm({
         )}
         <div>
           <Label htmlFor="pay-date">Payment date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="pay-date"
-            placeholder="24.06.2026"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

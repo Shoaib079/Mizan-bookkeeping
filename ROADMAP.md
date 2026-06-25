@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | **10.1** — Shared `DateInput` (small calendar, typable) |
-| **Last completed slice** | Phase 9 Slice 10 — Theme refinement + UX polish (`v0.65.0-phase9-theme-ux-polish`) |
-| **Last commit/tag** | `v0.65.0-phase9-theme-ux-polish` (plan docs: `5bb5207`) |
-| **Next up** | Phase 10.1 → 10.8 (strict order; full `DESIGN_SYSTEM.md` §10 + FX; see below) |
+| **Active slice** | **10.2** — Delivery nav nested under Delivery |
+| **Last completed slice** | Phase 10 Slice 1 — Shared `DateInput` (`v0.66.0`) |
+| **Last commit/tag** | `v0.66.0-date-picker` |
+| **Next up** | Phase 10.2 → 10.8 (strict order; full `DESIGN_SYSTEM.md` §10 + FX; see below) |
 
 **The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = pre-launch: complete **all** locked `DESIGN_SYSTEM.md` §10 interaction UX + delivery nav + FX wiring — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -399,10 +399,10 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | Area | ROADMAP / tests say | **Actual code (audit)** | Phase 10 action |
 |------|---------------------|-------------------------|-----------------|
 | **Date typing** | — | `parseTrDate` / `formatTrDate` in `frontend/src/lib/money.ts` ✓ | **Keep** — `DateInput` wraps these |
-| **Date picker component** | DESIGN_SYSTEM §5 + §10 | **No** `DateInput`, **no** calendar dep in `package.json`, **no** `react-day-picker` | **Build** in 10.1 |
-| **Date fields** | “~20 forms” | **22 source files** still use raw `<Input>` + `dateText` / `DD.MM.YYYY` (see checklist below) | **Replace** in 10.1 |
-| **Report date range** | Dashboard + reports wired | `ReportDateRange` = two plain inputs + Apply + “This month” on `/`, `/reports`, P&L, BS, cash flow, KDV, delivery sales, period comparison ✓ wired, **no calendar** | **Swap** to `DateInput` in 10.1 |
-| **Balance sheet as-of** | — | `report-as-of-date.tsx` = plain input | **Swap** in 10.1 |
+| Date picker component | DESIGN_SYSTEM §5 + §10 | **`DateInput`** + `lib/dates.ts` in `v0.66.0` | **Done** in 10.1 |
+| **Date fields** | “~20 forms” | **22 files** migrated to `DateInput` | **Done** in 10.1 |
+| **Report date range** | Dashboard + reports wired | `ReportDateRange` / `ReportAsOfDate` use `DateInput` | **Done** in 10.1 |
+| **Balance sheet as-of** | — | `report-as-of-date.tsx` uses `DateInput` | **Done** in 10.1 |
 | **Review screens** | Listed 4 review UIs | Only **`pos-summary-review.tsx`** has an **editable** date field; `receipt-review`, `invoice-draft-review`, `delivery-report-review` show dates as **read-only text** only | **Do not** add date pickers there unless product asks |
 | **Phase 9 Slice 10** | “UX polish” done | Toasts, command palette, dialog Esc/focus, skeletons, tokens ✓ — **date picker not included** | 10.1 completes §10 date slice of Slice 10 |
 | **Delivery nav** | Slice 5 built `/delivery/*` | `app-routes.ts` lines 51–53 still duplicate flat Books links; `app-shell.tsx` has **no** nested nav | **Build** in 10.2 |
@@ -461,19 +461,19 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | done |
 | **Implements** | §10: type `DD.MM.YYYY` **or** pick from calendar; sensible default; Enter confirms; Esc closes popover |
 | **Owner** | **Small calendar is enough** — compact single-month popover |
-| **Suggested tag** | `v0.66.0-date-picker` |
+| **Tag** | `v0.66.0-date-picker` |
 
 **What §10 requires (checklist when done):**
 
-- [ ] One shared `frontend/src/components/ui/date-input.tsx` (+ minimal popover; token-styled).
-- [ ] Field always **typable**; trailing **calendar icon inside** input opens **small** month grid — **not** a separate mode toggle.
-- [ ] Pick day → updates display string; invalid typed date → existing submit-time errors unchanged.
-- [ ] Default today on new forms; pre-fill document date on `pos-summary-review` when summary loads.
-- [ ] Arrow keys change day **while popover open** (nice-to-have; document if skipped).
-- [ ] `parseTrDate` / `formatTrDate` remain the API boundary — no backend date format changes.
+- [x] One shared `frontend/src/components/ui/date-input.tsx` (+ minimal popover; token-styled).
+- [x] Field always **typable**; trailing **calendar icon inside** input opens **small** month grid — **not** a separate mode toggle.
+- [x] Pick day → updates display string; invalid typed date → existing submit-time errors unchanged.
+- [x] Default today on new forms; pre-fill document date on `pos-summary-review` when summary loads.
+- [x] Arrow keys change day **while popover open**.
+- [x] `parseTrDate` / `formatTrDate` remain the API boundary — no backend date format changes.
 
 **Replace raw date inputs (grep-verified file list):**
 
@@ -679,7 +679,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | Slice | Gate |
 |-------|------|
-| 10.1 | All checklist files use `DateInput`; manual date verify on 4 screens; build green |
+| 10.1 | All checklist files use `DateInput`; manual date verify on 4 screens; build green | **done** (`v0.66.0`) |
 | 10.2 | Nested Delivery nav; duplicates removed |
 | 10.3 | Toasts on all POST saves; palette/Esc/skeletons verified |
 | 10.4 | Enter-submit + focus audit passed; OB wizard + dialogs checked |
@@ -737,7 +737,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| 2026-06-24 | Phase 9 Slice 10 — Theme + UX polish | `v0.65.0-phase9-theme-ux-polish` | Toasts, skeletons, empty states, command palette, a11y pass; 545 pytest; Phase 9 complete |
+| 2026-06-24 | Phase 10 Slice 1 — Shared DateInput | `v0.66.0-date-picker` | `DateInput` + calendar popover; 22 date fields migrated; default today on forms; build green; 545 pytest |
 | 2026-06-24 | Phase 9 Slice 9 — Settings & onboarding | `v0.64.0-phase9-settings-onboarding` | Settings hub, OB wizard, members, entity create; 545 pytest |
 | 2026-06-24 | Phase 9 Slice 3 — Suppliers & payables | `v0.59.0-phase9-suppliers-payables` | Supplier CRUD; e-Fatura upload/review; payables summary; record payment |
 | 2026-06-24 | Phase 8.8 H4 — card-tip day ops guidance | `v0.58.3-phase8.8-h4-z-ops-guidance` | Z mismatch review copy; Decisions §9 operator note; integration test; 543 pytest |

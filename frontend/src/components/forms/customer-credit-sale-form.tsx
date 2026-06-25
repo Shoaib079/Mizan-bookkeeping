@@ -3,11 +3,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 
 type Account = { id: string; code: string; name: string };
 
@@ -46,7 +48,10 @@ export function CustomerCreditSaleForm({
   }, [entityId]);
 
   useEffect(() => {
-    if (open) void loadChart().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadChart().catch(() => undefined);
+    }
   }, [open, loadChart]);
 
   async function onSubmit(event: FormEvent) {
@@ -97,10 +102,10 @@ export function CustomerCreditSaleForm({
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="cs-date">Sale date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="cs-date"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

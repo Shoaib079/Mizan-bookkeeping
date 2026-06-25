@@ -3,11 +3,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 import type { DeliveryPlatform, MoneyAccountOption } from "@/lib/pos-delivery-types";
 
 type Props = {
@@ -46,7 +48,10 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
   }, [entityId]);
 
   useEffect(() => {
-    if (open) void loadOptions().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadOptions().catch(() => undefined);
+    }
   }, [open, loadOptions]);
 
   async function onSubmit(event: FormEvent) {
@@ -82,7 +87,7 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
       });
       onSaved?.();
       onClose();
-      setDateText("");
+      setDateText(todayTrDate());
       setAmountText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -124,11 +129,10 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
         </div>
         <div>
           <Label htmlFor="ds-date">Settlement date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="ds-date"
-            placeholder="23.06.2026"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

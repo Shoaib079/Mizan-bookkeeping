@@ -3,11 +3,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 import type { MoneyAccountOption } from "@/lib/pos-delivery-types";
 
 type Props = {
@@ -37,7 +39,10 @@ export function PosSettlementForm({ open, onClose, onSaved }: Props) {
   }, [entityId]);
 
   useEffect(() => {
-    if (open) void loadOptions().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadOptions().catch(() => undefined);
+    }
   }, [open, loadOptions]);
 
   async function onSubmit(event: FormEvent) {
@@ -77,7 +82,7 @@ export function PosSettlementForm({ open, onClose, onSaved }: Props) {
       });
       onSaved?.();
       onClose();
-      setDateText("");
+      setDateText(todayTrDate());
       setAmountText("");
       setCommissionText("");
     } catch (err) {
@@ -92,11 +97,10 @@ export function PosSettlementForm({ open, onClose, onSaved }: Props) {
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="pos-settle-date">Settlement date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="pos-settle-date"
-            placeholder="23.06.2026"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

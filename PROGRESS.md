@@ -5,10 +5,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | 10.1 — Shared `DateInput` (see `ROADMAP.md` Phase 10 audit) |
-| **Last completed slice** | Phase 9 Slice 10 — Theme + UX polish (`v0.65.0`) |
+| **Active slice** | 10.2 — Delivery nav nested under Delivery |
+| **Last completed slice** | Phase 10 Slice 1 — Shared `DateInput` (`v0.66.0`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.65.0-phase9-theme-ux-polish` |
+| **Last tag** | `v0.66.0-date-picker` |
 
 ## Resume point
 
@@ -27,7 +27,13 @@
 - Link to `/delivery/platforms` from settings hub
 - Entity list refreshes after create
 
-**Next:** Phase 10.1 → 10.8 per `ROADMAP.md` (full `DESIGN_SYSTEM.md` §10 + FX; code audit in ROADMAP).
+**Phase 10 Slice 1 complete** — Shared `DateInput` (frontend only):
+- `components/ui/date-input.tsx` — typable `DD.MM.YYYY` + compact calendar popover (no new npm deps)
+- `lib/dates.ts` — calendar helpers + `todayTrDate()`
+- Migrated **22** date fields (forms, report range/as-of, opening balances, POS review)
+- Default **today** when dialog forms open; POS review pre-fills document date from API
+
+**Next:** Phase 10.2 → 10.8 per `ROADMAP.md` (full `DESIGN_SYSTEM.md` §10 + FX; code audit in ROADMAP).
 
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.
@@ -57,7 +63,7 @@
 
 ## Recent
 
-- 2026-06-24 — Phase 9 Slice 10 — theme + UX polish (`v0.65.0-phase9-theme-ux-polish`)
+- 2026-06-24 — Phase 10 Slice 1 — shared DateInput (`v0.66.0-date-picker`)
 - 2026-06-24 — Phase 9 Slice 8 — dashboard + reports UI (`v0.63.0-phase9-dashboard-reports`)
 - 2026-06-21 — Phase 9 Slice 6 — staff/partners/receivables/tips UI (`v0.62.0-phase9-staff-partners-receivables`)
 - 2026-06-21 — Phase 9 Slice 2d — money-entry UX gaps (`v0.60.1-phase9-slice-2d-money-entry-ux`)

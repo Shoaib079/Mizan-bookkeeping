@@ -4,12 +4,14 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
 
 type MoneyAccount = { id: string; name: string };
@@ -52,7 +54,10 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
   }, [entityId]);
 
   useEffect(() => {
-    if (open) void loadOptions().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadOptions().catch(() => undefined);
+    }
   }, [open, loadOptions]);
 
   const cashKurus = parseTryToKurus(cashText) ?? 0;
@@ -134,11 +139,10 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="sales-date">Date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="sales-date"
-            placeholder="23.06.2026"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

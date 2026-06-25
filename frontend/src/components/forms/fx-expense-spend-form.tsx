@@ -5,12 +5,14 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import { parseTrDate } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 
 type ChartAccount = { id: string; code: string; name_en: string };
 
@@ -49,7 +51,10 @@ export function FxExpenseSpendForm({
   }, [entityId]);
 
   useEffect(() => {
-    if (open) void loadAccounts().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadAccounts().catch(() => undefined);
+    }
   }, [open, loadAccounts]);
 
   async function onSubmit(event: FormEvent) {
@@ -122,11 +127,10 @@ export function FxExpenseSpendForm({
         </div>
         <div>
           <Label htmlFor="fx-spend-date">Date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="fx-spend-date"
-            placeholder="24.06.2026"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

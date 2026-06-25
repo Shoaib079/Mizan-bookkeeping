@@ -5,6 +5,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -12,6 +13,7 @@ import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 
 type Props = {
   open: boolean;
@@ -58,7 +60,10 @@ export function FxPurchaseForm({
   }, [entityId]);
 
   useEffect(() => {
-    if (open) void loadAccounts().catch(() => undefined);
+    if (open) {
+      setDateText(todayTrDate());
+      void loadAccounts().catch(() => undefined);
+    }
   }, [open, loadAccounts]);
 
   async function onSubmit(event: FormEvent) {
@@ -148,11 +153,10 @@ export function FxPurchaseForm({
         </div>
         <div>
           <Label htmlFor="fx-buy-date">Date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="fx-buy-date"
-            placeholder="24.06.2026"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
+import { Label } from "@/components/ui/input";
 import { currentMonthRange } from "@/lib/date-range";
 import { formatTrDate, parseTrDate } from "@/lib/money";
 
@@ -33,13 +34,12 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
     <div className="flex flex-wrap items-end gap-3">
       <div>
         <Label htmlFor="report-from">From</Label>
-        <Input
+        <DateInput
           id="report-from"
           className="mt-1 w-36"
-          placeholder="DD.MM.YYYY"
           value={fromDisplay}
           disabled={disabled}
-          onChange={(e) => setFromDisplay(e.target.value)}
+          onChange={setFromDisplay}
           onKeyDown={(e) => {
             if (e.key === "Enter") apply();
           }}
@@ -47,13 +47,12 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
       </div>
       <div>
         <Label htmlFor="report-to">To</Label>
-        <Input
+        <DateInput
           id="report-to"
           className="mt-1 w-36"
-          placeholder="DD.MM.YYYY"
           value={toDisplay}
           disabled={disabled}
-          onChange={(e) => setToDisplay(e.target.value)}
+          onChange={setToDisplay}
           onKeyDown={(e) => {
             if (e.key === "Enter") apply();
           }}

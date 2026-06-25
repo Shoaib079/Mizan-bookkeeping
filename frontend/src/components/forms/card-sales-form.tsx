@@ -3,11 +3,13 @@
 import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 
 type Props = {
   open: boolean;
@@ -25,6 +27,7 @@ export function CardSalesForm({ open, onClose, onSaved }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    setDateText(todayTrDate());
     setError(null);
   }, [open]);
 
@@ -59,7 +62,7 @@ export function CardSalesForm({ open, onClose, onSaved }: Props) {
       });
       onSaved?.();
       onClose();
-      setDateText("");
+      setDateText(todayTrDate());
       setAmountText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -73,11 +76,10 @@ export function CardSalesForm({ open, onClose, onSaved }: Props) {
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="card-date">Sales date (DD.MM.YYYY)</Label>
-          <Input
+          <DateInput
             id="card-date"
-            placeholder="23.06.2026"
             value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
+            onChange={setDateText}
             required
           />
         </div>
