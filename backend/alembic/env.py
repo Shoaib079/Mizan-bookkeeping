@@ -7,12 +7,13 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import settings
 from app.db.base import Base
+from app.db.provisioning import finalize_migration_grants
 import app.db.bootstrap  # noqa: F401 — register all ORM models for autogenerate/check
 
 config = context.config
 _configured_url = config.get_main_option("sqlalchemy.url")
 if not _configured_url or _configured_url.startswith("driver://"):
-    config.set_main_option("sqlalchemy.url", settings.database_url)
+    config.set_main_option("sqlalchemy.url", settings.database_migration_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -60,6 +61,7 @@ def run_migrations_online() -> None:
         )
         with context.begin_transaction():
             context.run_migrations()
+    finalize_migration_grants(config.get_main_option("sqlalchemy.url"))
 
 
 if context.is_offline_mode():

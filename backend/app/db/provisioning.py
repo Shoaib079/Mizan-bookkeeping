@@ -40,6 +40,7 @@ from app.db.period_locks_immutability import (
 from app.db.receivables_immutability import apply_receivables_immutability
 from app.db.rls import apply_entity_rls
 from app.db.staff_immutability import apply_staff_immutability
+from app.config import settings
 
 APP_DB_ROLE = "mizan_app"
 
@@ -69,6 +70,21 @@ def apply_database_integrity(connection: Connection) -> None:
     apply_staff_immutability(connection)
     apply_partners_immutability(connection)
     apply_receivables_immutability(connection)
+
+
+def finalize_migration_grants(migration_url: str) -> None:
+    """After ``alembic upgrade head``: ensure ``mizan_app`` exists and grant DML on all objects."""
+    from app.db.bootstrap import ensure_mizan_app_role
+
+    admin_engine = create_engine(settings.database_cluster_admin_url, isolation_level="AUTOCOMMIT")
+    with admin_engine.connect() as conn:
+        ensure_mizan_app_role(conn)
+    admin_engine.dispose()
+
+    engine = create_engine(migration_url, pool_pre_ping=True)
+    with engine.begin() as connection:
+        grant_app_role_privileges(connection)
+    engine.dispose()
 
 
 def grant_app_role_privileges(connection: Connection) -> None:
@@ -121,8 +137,7 @@ def provision_database_via_alembic(
     engine = create_engine(migrate_url, pool_pre_ping=True)
     reset_public_schema(engine)
     command.upgrade(alembic_config(migrate_url), "head")
-    with engine.begin() as connection:
-        grant_app_role_privileges(connection)
+    finalize_migration_grants(migrate_url)
     engine.dispose()
 
 

@@ -37,6 +37,7 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
+# Uses schema owner (mizan) via DATABASE_ADMIN_URL — see Migrations section
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
@@ -110,9 +111,13 @@ Without Docker, default `DATABASE_ADMIN_URL` is `postgres@localhost` (see `.env.
 
 ## Migrations
 
+Alembic runs as the **schema owner** (`mizan` with Docker Compose), not as `mizan_app`. After each upgrade it grants DML to `mizan_app` automatically.
+
 ```bash
 cd backend && .venv/bin/alembic upgrade head
 ```
+
+With Docker Compose, set `DATABASE_ADMIN_URL` in `.env` (see Environment above) so migrations and role bootstrap use `mizan:mizan_dev`.
 
 ## Project layout
 

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str = "postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan"
     test_database_url: str = "postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan_test"
-    database_admin_url: str = "postgresql+psycopg://postgres@localhost:5432/postgres"
+    database_admin_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres"
     upload_dir: str = "data/uploads"
     auth_enforcement: bool = True
     idempotency_enforcement: bool = True
@@ -50,6 +50,22 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"
+
+    @property
+    def database_cluster_admin_url(self) -> str:
+        """Admin connection to the Postgres cluster (``postgres`` catalog database)."""
+        admin = make_url(self.database_admin_url)
+        if (admin.username or "").lower() == "postgres" and not admin.password:
+            app = make_url(self.database_url)
+            admin = admin.set(username="mizan", password=app.password or "mizan_dev")
+        return admin.render_as_string(hide_password=False)
+
+    @property
+    def database_migration_url(self) -> str:
+        """Schema-owner URL for Alembic on the app database (``mizan`` in dev)."""
+        admin = make_url(self.database_cluster_admin_url)
+        app_db = make_url(self.database_url).database
+        return admin.set(database=app_db).render_as_string(hide_password=False)
 
     @property
     def test_database_admin_url(self) -> str:
