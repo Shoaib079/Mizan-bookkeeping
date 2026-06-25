@@ -312,14 +312,14 @@ permanent test, full suite green from a clean venv, owner sign-off. **Done ✓**
 
 **Build order (each slice = completion gate + tag + owner sign-off on money-critical slices):**
 
-| Slice | Status | Purpose | Tag (planned) |
+| Slice | Status | Purpose | Tag |
 |-------|--------|---------|---------------|
 | **D0 — Promote Decisions** | done | Multi-line receipt OCR + cash-only + vision OCR in Decisions docs | docs only |
 | **D1 — Expense receipt intake** | done | migration `048`, upload/confirm/reject API, `tip-photos` wrapper | `v0.52.0-expense-receipt-intake` |
 | **D2 — Complete OCR adapter** | done | `expense_receipt.py` fixture/heuristics/vision; multi-line + tip tests | `v0.53.0-expense-receipt-ocr` |
 | **D3 — Manual daily sales API** | done | `POST .../pos/manual-daily-sales`; reuse POS confirm posting | `v0.54.0-manual-daily-sales` |
 
-**APIs (planned):**
+**APIs (implemented ✓ — do not re-build):**
 
 | Method | Path | Role |
 |--------|------|------|
@@ -745,12 +745,48 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 4 | Dialog steals focus while typing | `dialog.tsx` effect re-runs when `dirty` flips → refocus first field | **11.4** |
 | 5 | New restaurant invisible with auth on | `POST /entities` does **not** add creator to `entity_memberships` | **11.5** |
 | 6 | Partner share % | `partners` has name/notes only | **11.6** |
-| 7 | Partner expense separate flow | Manual expense = cash only; fronted expense on `/partners/[id]` | **11.7** |
+| 7 | Partner expense separate flow | Manual expense = cash only; `expenses-fronted` **API done** (partner detail only) | **11.7** (UI) |
 | 8 | Dashboard FX shows TRY cost | API has `native_quantity`; UI uses `try_cost_kurus` | **11.8** |
 | 9 | **Cannot fix posted daily sales** | `PosDailySummary` posted = immutable; no `correct_pos_daily_summary` | **11.9** |
-| 10 | **Cannot fix posted expenses** | `correct_expense_entry()` in core; **no HTTP route or UI** | **11.10** |
-| 11 | Corrections API-only | Payment/FX/manual correct exist; **zero** frontend `/void` or `/correct` | **11.11** |
-| 12 | Other posted types stuck | Invoice, credit sale, staff, partner, FX conversion — core helpers, no routes | **11.12** |
+| 10 | **Cannot fix posted expenses** | `correct_expense_entry()` **core done**; **no HTTP route or UI** | **11.10** |
+| 11 | Corrections **UI** missing | Supplier/customer payment, FX purchase, manual journal **void**, generic ledger **correct/void** — **HTTP done** (Phase 8.5); **zero** frontend calls; no `period_unlock_reason` in forms | **11.11** (UI only) |
+| 12 | Other posted types stuck | Invoice, credit sale, staff, partner, FX conversion/spend — **core helpers only**; no HTTP routes or tests | **11.12** |
+
+### Correction API inventory (verified in repo, 2026-06-25)
+
+**HTTP done ✓ (Phase 8.5 — record as done; Phase 11 work is UI unless noted):**
+
+| Method | Path | Core helper | HTTP tests |
+|--------|------|-------------|------------|
+| `POST` | `.../ledger/entries/{id}/void` | generic void | yes |
+| `POST` | `.../ledger/entries/{id}/correct` | generic correct (`MANUAL`, `BANK_FEE` only) | yes |
+| `POST` | `.../payables/suppliers/{id}/payments/{je_id}/correct` | `correct_supplier_payment` | core only |
+| `POST` | `.../customers/{id}/payments/{je_id}/correct` | `correct_customer_payment` | core only |
+| `POST` | `.../fx/purchases/{je_id}/correct` | `correct_fx_purchase` | core only |
+| `POST` | `.../manual-journals/{id}/void` | void manual | yes |
+
+**Core only — HTTP still planned (Phase 11.10 / 11.12):**
+
+| Helper in `correction.py` | Planned HTTP slice |
+|---------------------------|-------------------|
+| `correct_expense_entry` | **11.10** |
+| `correct_supplier_invoice` | **11.12** |
+| `correct_credit_sale` | **11.12** |
+| `correct_staff_journal_entry` | **11.12** |
+| `correct_partner_journal_entry` | **11.12** |
+| `correct_fx_conversion_or_spend` | **11.12** |
+
+**Not started (no core, no HTTP):** `correct_pos_daily_summary` — `CARD_SALES` / `CASH_MOVEMENT` are **void-and-reenter** in registry → **11.9** must add dedicated flow.
+
+**Other Phase 11 APIs (not correction):**
+
+| Item | API today | Slice |
+|------|-----------|-------|
+| Default cash money account | **not built** — manual `POST .../banking/accounts` only | **11.1** |
+| `PATCH .../entities/{id}/settings/{key}` | **not built** — `POST` create-only | **11.2** |
+| `POST /entities` → owner membership | **not built** | **11.5** |
+| `partners.ownership_share_pct` | **not built** | **11.6** |
+| `POST .../partners/{id}/expenses-fronted` | **done ✓** (Phase 5) — slice **11.7** is **UI** unification only | **11.7** |
 
 **Explicitly out of Phase 11** (promote later if owner requires before go-live): unified **document archive** UI (Decisions §7 — files stored per intake, no searchable archive); full **manual journal** composer UI; **period locks** admin UI; **credit card statement** import; bank feeds.
 
@@ -879,14 +915,14 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | planned (**API done** — `POST .../partners/{id}/expenses-fronted` since Phase 5; partner detail form exists) |
 | **Money-critical** | Yes — uses `post_expense_fronted` |
 | **Suggested tag** | `v0.68.6-expense-partner-mode` |
 
 **Acceptance:**
 
 - [ ] Manual expense form: **Payment** — Cash drawer | **Partner paid (owe partner)**.
-- [ ] Partner mode → `POST .../partners/{id}/expenses-fronted` (reuse existing posting).
+- [ ] Partner mode → existing `POST .../partners/{id}/expenses-fronted` (no new backend route).
 - [ ] Minimum scope: expense fronted only (reimbursement inverse → clarify with owner if needed).
 
 ---
@@ -928,17 +964,17 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | planned (**core done** — `correct_expense_entry()` in `correction.py`; **HTTP + UI not built**) |
 | **Money-critical** | Yes — owner sign-off |
 | **Suggested tag** | `v0.69.1-correct-expense` |
 
-**Problem:** `correct_expense_entry()` exists in `core/ledger/correction.py`; no route; raw ledger void desyncs `expense_entries`.
+**Problem:** Core helper exists; no HTTP route; raw ledger void desyncs `expense_entries`.
 
 **Acceptance:**
 
-- [ ] `POST .../expenses/{id}/correct` (or by `journal_entry_id`) wrapping `correct_expense_entry()`.
+- [ ] `POST .../expenses/{id}/correct` (or by `journal_entry_id`) wrapping existing `correct_expense_entry()`.
 - [ ] UI on `/expenses` posted rows → Correct dialog.
-- [ ] Tests: amount/account/date change; subledger + GL tie; period locks.
+- [ ] Tests: amount/account/date change; subledger + GL tie; period locks (HTTP integration).
 
 ---
 
@@ -946,16 +982,17 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | planned (**frontend-only** — correction HTTP routes exist; see inventory above) |
 | **Suggested tag** | `v0.69.2-correction-ui` |
 
-**Problem:** Backend has correct/void for payments, FX purchase, manual journals; frontend never calls them. No `period_unlock_reason` in any form.
+**Problem:** Backend correct/void routes are live (Phase 8.5); frontend never calls them. No `period_unlock_reason` in any form (API already accepts it on payment/FX correct payloads).
 
 **Acceptance:**
 
-- [ ] UI flows: supplier payment correct, customer payment correct, FX purchase correct, manual journal void/correct (ledger or manual-journals API).
+- [ ] UI flows wired to **existing** routes: supplier payment correct, customer payment correct, FX purchase correct, manual journal void (`.../manual-journals/{id}/void`), manual/BANK_FEE correct via `.../ledger/entries/{id}/correct`.
 - [ ] Shared pattern: when API returns 422 period lock, prompt owner for **unlock reason** and retry with `period_unlock_reason`.
 - [ ] **Do not** use raw ledger void for subledger-backed types without dedicated flow.
+- [ ] **Do not redo:** Phase 8.5 correction HTTP layer.
 
 ---
 
@@ -963,15 +1000,15 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | planned (**core done** for all five helpers; **HTTP routes + integration tests not built**) |
 | **Money-critical** | Yes — owner sign-off |
 | **Suggested tag** | `v0.69.3-correction-apis` |
 
-**Problem:** Core helpers exist; DECISIONS deferred HTTP “until frontend needs them.”
+**Problem:** Core helpers exist in `correction.py`; no feature HTTP routes yet (unlike payment/FX correct from Phase 8.5).
 
 **Acceptance:**
 
-- [ ] HTTP routes + tests for: `correct_supplier_invoice`, `correct_credit_sale`, `correct_staff_journal_entry`, `correct_partner_journal_entry`, `correct_fx_conversion_or_spend`.
+- [ ] HTTP routes + **HTTP** tests for: `correct_supplier_invoice`, `correct_credit_sale`, `correct_staff_journal_entry`, `correct_partner_journal_entry`, `correct_fx_conversion_or_spend`.
 - [ ] Minimal UI entry points on respective detail/list pages (or document API-only if UI deferred by owner).
 - [ ] Void-and-reenter types (`TRANSFER`, `OPENING_BALANCE`, `POS_SETTLEMENT`, etc.) remain **out of scope** — document void + re-enter playbook only.
 
@@ -991,8 +1028,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.8 | Dashboard FX shows native currency |
 | 11.9 | Correct posted daily sales E2E; owner sign-off |
 | 11.10 | Correct posted expense E2E; owner sign-off |
-| 11.11 | Correction UI for existing APIs; period unlock works |
-| 11.12 | Remaining correction APIs green in pytest; owner sign-off |
+| 11.11 | Correction **UI** for existing Phase 8.5 APIs; period unlock works |
+| 11.12 | Remaining correction **HTTP** routes + integration tests green; owner sign-off |
 
 Then proceed to **Phase 12 — Deployment & go-live**.
 
