@@ -512,13 +512,11 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | done |
 | **Implements** | `DESIGN_SYSTEM.md` §6 grouped nav |
-| **Suggested tag** | `v0.66.1-delivery-nav` |
+| **Tag** | `v0.66.1-delivery-nav` |
 
-**Acceptance:** One Delivery group in sidebar: hub + Platforms + Reports + Settlements; remove flat duplicates (lines 51–53 in `app-routes.ts`); parent active on `/delivery/*`; command palette unchanged.
-
-**Audit before:** `app-routes.ts`, `app-shell.tsx` — **no** nested nav exists today.
+**Acceptance:** One Delivery group in sidebar: hub + Platforms + Reports + Settlements; flat duplicates removed; parent active on `/delivery/*`; command palette unchanged.
 
 **Out of scope:** hide when `delivery_enabled` off; nest Banking transfers/cash (same pattern, not requested).
 
@@ -680,7 +678,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | Slice | Gate |
 |-------|------|
 | 10.1 | All checklist files use `DateInput`; manual date verify on 4 screens; build green | **done** (`v0.66.0`) |
-| 10.2 | Nested Delivery nav; duplicates removed |
+| 10.2 | Nested Delivery nav; duplicates removed | **done** (`v0.66.1`) |
 | 10.3 | Toasts on all POST saves; palette/Esc/skeletons verified |
 | 10.4 | Enter-submit + focus audit passed; OB wizard + dialogs checked |
 | 10.5 | Combobox on long pickers; manual type-to-filter verify |
@@ -737,6 +735,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-25 | Phase 10 Slice 2 — Delivery nav nesting | `v0.66.1-delivery-nav` | Nested Delivery sidebar; removed flat duplicates; palette unchanged; build green |
 | 2026-06-24 | Phase 10 Slice 1 — Shared DateInput | `v0.66.0-date-picker` | `DateInput` + calendar popover; 22 date fields migrated; default today on forms; build green; 545 pytest |
 | 2026-06-24 | Phase 9 Slice 9 — Settings & onboarding | `v0.64.0-phase9-settings-onboarding` | Settings hub, OB wizard, members, entity create; 545 pytest |
 | 2026-06-24 | Phase 9 Slice 3 — Suppliers & payables | `v0.59.0-phase9-suppliers-payables` | Supplier CRUD; e-Fatura upload/review; payables summary; record payment |

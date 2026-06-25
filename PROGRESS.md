@@ -5,10 +5,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | 10.2 — Delivery nav nested under Delivery |
-| **Last completed slice** | Phase 10 Slice 1 — Shared `DateInput` (`v0.66.0`) |
+| **Active slice** | 10.3 — Shell feedback (toasts on all saves) |
+| **Last completed slice** | Phase 10 Slice 2 — Delivery nav nesting (`v0.66.1`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.66.0-date-picker` |
+| **Last tag** | `v0.66.1-delivery-nav` |
 
 ## Resume point
 
@@ -27,13 +27,12 @@
 - Link to `/delivery/platforms` from settings hub
 - Entity list refreshes after create
 
-**Phase 10 Slice 1 complete** — Shared `DateInput` (frontend only):
-- `components/ui/date-input.tsx` — typable `DD.MM.YYYY` + compact calendar popover (no new npm deps)
-- `lib/dates.ts` — calendar helpers + `todayTrDate()`
-- Migrated **22** date fields (forms, report range/as-of, opening balances, POS review)
-- Default **today** when dialog forms open; POS review pre-fills document date from API
+**Phase 10 Slice 2 complete** — Delivery nav nested under Delivery (frontend only):
+- `app-routes.ts` — `nestedUnder` + `sidebarChildren()`; removed flat duplicate Books links
+- `app-shell.tsx` — indented child links under Delivery; parent active on `/delivery/*`
+- Command palette still indexes all four delivery URLs + keywords
 
-**Next:** Phase 10.2 → 10.8 per `ROADMAP.md` (full `DESIGN_SYSTEM.md` §10 + FX; code audit in ROADMAP).
+**Next:** Phase 10.3 → 10.8 per `ROADMAP.md`.
 
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.
@@ -63,6 +62,7 @@
 
 ## Recent
 
+- 2026-06-25 — Phase 10 Slice 2 — delivery nav nesting (`v0.66.1-delivery-nav`)
 - 2026-06-24 — Phase 10 Slice 1 — shared DateInput (`v0.66.0-date-picker`)
 - 2026-06-24 — Phase 9 Slice 8 — dashboard + reports UI (`v0.63.0-phase9-dashboard-reports`)
 - 2026-06-21 — Phase 9 Slice 6 — staff/partners/receivables/tips UI (`v0.62.0-phase9-staff-partners-receivables`)

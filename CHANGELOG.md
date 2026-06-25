@@ -2,6 +2,10 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-25
+
+**Phase 10 Slice 2 — Delivery nav nesting (frontend):** Nested Delivery in sidebar — hub plus Platforms, Reports, and Settlements as indented children; removed flat duplicate Books links. `nestedUnder` on `AppRoute`; command palette unchanged. Frontend build green. Tag `v0.66.1-delivery-nav`. **Next:** Phase 10.3 shell feedback.
+
 ## 2026-06-21
 
 **Phase 9 Slice 6 — Staff, partners, receivables, tips (frontend):** Wired existing Phase 5 staff/partner/customer/receivables APIs. Pages: `/staff` + `/staff/[id]` (employees, salary accrual, advance, payment, ledger); `/partners` + `/partners/[id]` (expense fronted, reimbursement); `/customers` + `/customers/[id]` (credit sale, payment); `/receivables` (summary like payables). Tips remain **5700 cash expense only** — New → Cash tip and Expenses → Record cash tip (no tip pot, no POS tip UI). Sidebar: Staff, Partners, Customers, Receivables. **545 pytest green**; frontend build green. Tag `v0.62.0-phase9-staff-partners-receivables`.
