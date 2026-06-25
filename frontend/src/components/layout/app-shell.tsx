@@ -12,7 +12,7 @@ import { NewMenu } from "@/components/new-menu";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { useApiAuth } from "@/lib/api-auth";
-import { navGroups } from "@/lib/app-routes";
+import { navGroups, isNavChildActive, isNavItemActive, sidebarChildren } from "@/lib/app-routes";
 import { useEntity } from "@/lib/entity-context";
 import { cn } from "@/lib/utils";
 
@@ -91,10 +91,8 @@ export function AppShell({
               </p>
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
-                  const active =
-                    item.href === "/"
-                      ? pathname === "/"
-                      : pathname.startsWith(item.href);
+                  const active = isNavItemActive(pathname, item);
+                  const children = sidebarChildren(item.href);
                   return (
                     <li key={item.href}>
                       <Link
@@ -107,6 +105,27 @@ export function AppShell({
                         <item.icon className="size-4" />
                         {item.label}
                       </Link>
+                      {children.length > 0 && (
+                        <ul className="mt-0.5 space-y-0.5 border-l border-border pl-3 ml-4">
+                          {children.map((child) => {
+                            const childActive = isNavChildActive(pathname, child);
+                            return (
+                              <li key={child.href}>
+                                <Link
+                                  href={child.href}
+                                  className={cn(
+                                    "block rounded-md px-2 py-1 text-sm hover:bg-sidebar-accent",
+                                    childActive &&
+                                      "bg-sidebar-accent font-medium text-primary",
+                                  )}
+                                >
+                                  {child.label}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </li>
                   );
                 })}

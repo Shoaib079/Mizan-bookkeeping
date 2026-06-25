@@ -13,9 +13,9 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | **10.2** — Delivery nav nested under Delivery |
-| **Last completed slice** | Phase 10 Slice 1 — Shared `DateInput` (`v0.66.0`) |
-| **Last commit/tag** | `v0.66.0-date-picker` |
+| **Active slice** | **10.3** — Shell feedback (verify palette/Esc/skeletons; toasts on all saves) |
+| **Last completed slice** | Phase 10 Slice 2 — Delivery nav nesting (`v0.66.1`) |
+| **Last commit/tag** | `v0.66.1-delivery-nav` |
 | **Next up** | Phase 10.2 → 10.8 (strict order; full `DESIGN_SYSTEM.md` §10 + FX; see below) |
 
 **The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = pre-launch: complete **all** locked `DESIGN_SYSTEM.md` §10 interaction UX + delivery nav + FX wiring — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
@@ -405,7 +405,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **Balance sheet as-of** | — | `report-as-of-date.tsx` uses `DateInput` | **Done** in 10.1 |
 | **Review screens** | Listed 4 review UIs | Only **`pos-summary-review.tsx`** has an **editable** date field; `receipt-review`, `invoice-draft-review`, `delivery-report-review` show dates as **read-only text** only | **Do not** add date pickers there unless product asks |
 | **Phase 9 Slice 10** | “UX polish” done | Toasts, command palette, dialog Esc/focus, skeletons, tokens ✓ — **date picker not included** | 10.1 completes §10 date slice of Slice 10 |
-| **Delivery nav** | Slice 5 built `/delivery/*` | `app-routes.ts` lines 51–53 still duplicate flat Books links; `app-shell.tsx` has **no** nested nav | **Build** in 10.2 |
+| **Delivery nav** | Slice 5 built `/delivery/*` | Nested under **Delivery** in sidebar (`nestedUnder` + children) | **Done** in 10.2 |
 | **FX form UI** | Banking slice wired | `fx-purchase-form.tsx` loads **cash + bank** ✓ | **Label only** in 10.8 (already lists both) |
 | **FX backend** | Phase 5 FX purchase done | `post_fx_purchase()` → `_validate_try_cash_money_account` **CASH only**; `test_rejects_bank_as_try_payment_account` expects reject | **Extend** to BANK in **10.8** |
 | **FX cash subledger** | — | **No** `CashMovement` on FX purchase (GL `Dr` FX / `Cr` cash GL only); drawer page won’t list FX buys | **Add** OUT movement when source is cash in **10.8** |

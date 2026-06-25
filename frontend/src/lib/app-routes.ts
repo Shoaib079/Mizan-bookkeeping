@@ -27,12 +27,38 @@ export type AppRoute = {
   keywords?: string;
   icon: LucideIcon;
   group: string;
+  /** Nested under this parent href in the sidebar only (still indexed in command palette). */
+  nestedUnder?: string;
 };
 
 export const appRoutes: AppRoute[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
   { href: "/sales", label: "Sales", icon: ShoppingBag, group: "Books" },
   { href: "/delivery", label: "Delivery", icon: Truck, group: "Books" },
+  {
+    href: "/delivery/platforms",
+    label: "Platforms",
+    keywords: "delivery platforms",
+    icon: Truck,
+    group: "Books",
+    nestedUnder: "/delivery",
+  },
+  {
+    href: "/delivery/reports",
+    label: "Reports",
+    keywords: "delivery reports",
+    icon: Truck,
+    group: "Books",
+    nestedUnder: "/delivery",
+  },
+  {
+    href: "/delivery/settlements",
+    label: "Settlements",
+    keywords: "delivery settlements",
+    icon: Truck,
+    group: "Books",
+    nestedUnder: "/delivery",
+  },
   { href: "/expenses", label: "Expenses", icon: Wallet, group: "Books" },
   { href: "/uploads", label: "Uploads", icon: Upload, group: "Books" },
   { href: "/suppliers", label: "Suppliers", icon: Users, group: "Books" },
@@ -45,12 +71,25 @@ export const appRoutes: AppRoute[] = [
   { href: "/cards", label: "Cards", icon: CreditCard, group: "Books" },
   { href: "/reports", label: "Reports", icon: BarChart3, group: "Reports" },
   { href: "/settings", label: "Settings", icon: Settings, group: "Settings" },
-  { href: "/settings/entity", label: "Restaurant settings", keywords: "entity create", icon: Settings, group: "Settings" },
-  { href: "/settings/opening-balances", label: "Opening balances", icon: Settings, group: "Settings" },
-  { href: "/settings/members", label: "Members & roles", icon: Users, group: "Settings" },
-  { href: "/delivery/platforms", label: "Delivery platforms", icon: Truck, group: "Books" },
-  { href: "/delivery/reports", label: "Delivery reports", icon: Truck, group: "Books" },
-  { href: "/delivery/settlements", label: "Delivery settlements", icon: Truck, group: "Books" },
+  {
+    href: "/settings/entity",
+    label: "Restaurant settings",
+    keywords: "entity create",
+    icon: Settings,
+    group: "Settings",
+  },
+  {
+    href: "/settings/opening-balances",
+    label: "Opening balances",
+    icon: Settings,
+    group: "Settings",
+  },
+  {
+    href: "/settings/members",
+    label: "Members & roles",
+    icon: Users,
+    group: "Settings",
+  },
   { href: "/banking/transfers", label: "Bank transfers", icon: Building2, group: "Books" },
   { href: "/banking/cash", label: "Cash drawer", icon: Wallet, group: "Books" },
   // New menu shortcuts (navigate to relevant list pages)
@@ -62,12 +101,52 @@ export const appRoutes: AppRoute[] = [
   { href: "/delivery/reports", label: "New: Delivery report", icon: Truck, group: "New" },
   { href: "/expenses", label: "New: Expense receipt (photo)", icon: Receipt, group: "New" },
   { href: "/suppliers", label: "New: Supplier", icon: Users, group: "New" },
-  { href: "/suppliers", label: "New: Supplier invoice (e-Fatura)", keywords: "efatura upload", icon: FileText, group: "New" },
+  {
+    href: "/suppliers",
+    label: "New: Supplier invoice (e-Fatura)",
+    keywords: "efatura upload",
+    icon: FileText,
+    group: "New",
+  },
 ];
 
+export function sidebarChildren(parentHref: string): AppRoute[] {
+  return appRoutes.filter((route) => route.nestedUnder === parentHref);
+}
+
 export const navGroups = [
-  { label: "Overview", items: appRoutes.filter((r) => r.group === "Overview") },
-  { label: "Books", items: appRoutes.filter((r) => r.group === "Books" && !r.label.startsWith("New:")) },
-  { label: "Reports", items: appRoutes.filter((r) => r.group === "Reports") },
-  { label: "Settings", items: appRoutes.filter((r) => r.group === "Settings" && r.href === "/settings") },
+  { label: "Overview", items: appRoutes.filter((route) => route.group === "Overview") },
+  {
+    label: "Books",
+    items: appRoutes.filter(
+      (route) =>
+        route.group === "Books" &&
+        !route.label.startsWith("New:") &&
+        !route.nestedUnder,
+    ),
+  },
+  { label: "Reports", items: appRoutes.filter((route) => route.group === "Reports") },
+  {
+    label: "Settings",
+    items: appRoutes.filter(
+      (route) => route.group === "Settings" && route.href === "/settings",
+    ),
+  },
 ] as const;
+
+function routeActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function isNavItemActive(pathname: string, item: AppRoute): boolean {
+  const children = sidebarChildren(item.href);
+  if (children.length > 0) {
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  }
+  return routeActive(pathname, item.href);
+}
+
+export function isNavChildActive(pathname: string, child: AppRoute): boolean {
+  return routeActive(pathname, child.href);
+}
