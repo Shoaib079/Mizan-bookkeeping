@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.2** — Feature toggles (post-create step + PATCH) |
-| **Last completed slice** | Phase 11 Slice 11.1 — default cash drawer on chart seed (`v0.68.0-default-money-accounts`) |
+| **Active slice** | **11.3** — Numeric-only money inputs |
+| **Last completed slice** | Phase 11 Slice 11.2 — editable feature toggles (`v0.68.1-entity-settings-editable`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.68.0-default-money-accounts` |
+| **Last tag** | `v0.68.1-entity-settings-editable` |
 
 ## Resume point
 
@@ -21,7 +21,12 @@
 - Banking page hint when cash branch empty; opening balances default bank/cash line to main drawer
 - Tests: `test_default_cash_drawer_onboarding.py` (4 tests)
 
-**Next:** Phase 11 Slice 11.2 — feature toggles post-create + PATCH. Full plan in `ROADMAP.md` Phase 11 (slices 11.2–11.12). Deployment is **Phase 12**.
+**Phase 11 Slice 11.2 complete** — editable feature toggles (`v0.68.1-entity-settings-editable`):
+- `PATCH /entities/{id}/settings/{key}` + duplicate POST → 409
+- Frontend post-create wizard step 2 (toggles + Save & continue); settings page toggles always editable
+- Tests: `test_entity_settings.py` (6 tests)
+
+**Next:** Phase 11 Slice 11.3 — numeric-only money inputs. Full plan in `ROADMAP.md` Phase 11 (slices 11.3–11.12). Deployment is **Phase 12**.
 
 **Phase 9 Slice 8 complete** — Dashboard + reports (frontend only):
 - `/` — live dashboard from `GET .../dashboard` (current-month default, date range picker)

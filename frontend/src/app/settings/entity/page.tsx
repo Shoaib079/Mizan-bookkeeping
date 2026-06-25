@@ -1,6 +1,6 @@
 "use client";
 
-/** Restaurant create + entity settings — Phase 9 Slice 9. */
+/** Restaurant create + entity settings — Phase 9 Slice 9; Phase 11.2 editable toggles. */
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
@@ -15,6 +15,14 @@ import {
 } from "@/lib/settings-types";
 import { useToast } from "@/lib/toast";
 
+type WizardDraft = Record<string, boolean>;
+
+function defaultWizardDraft(): WizardDraft {
+  return Object.fromEntries(
+    KNOWN_ENTITY_SETTINGS.map((def) => [def.key, false]),
+  );
+}
+
 export default function EntitySettingsPage() {
   const { entityId, setEntityId, refreshEntities } = useEntity();
   const { toast } = useToast();
@@ -27,9 +35,15 @@ export default function EntitySettingsPage() {
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [chartCount, setChartCount] = useState<number | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [wizardEntityId, setWizardEntityId] = useState<string | null>(null);
+  const [wizardDraft, setWizardDraft] = useState<WizardDraft>(defaultWizardDraft);
+  const [wizardSaving, setWizardSaving] = useState(false);
+
+  const activeEntityId = wizardEntityId ?? entityId;
+  const inSetupWizard = wizardEntityId !== null;
 
   const reloadSettings = useCallback(async () => {
-    if (!entityId) {
+    if (!activeEntityId) {
       setSettings([]);
       setChartCount(null);
       return;
@@ -39,10 +53,10 @@ export default function EntitySettingsPage() {
     try {
       const [settingsRes, chartRes] = await Promise.all([
         apiFetch<{ items: EntitySettingRow[] }>(
-          `/entities/${entityId}/settings?limit=200`,
+          `/entities/${activeEntityId}/settings?limit=200`,
         ),
         apiFetch<{ total: number }>(
-          `/entities/${entityId}/chart-of-accounts?limit=1`,
+          `/entities/${activeEntityId}/chart-of-accounts?limit=1`,
         ),
       ]);
       setSettings(settingsRes.items);
@@ -54,15 +68,39 @@ export default function EntitySettingsPage() {
     } finally {
       setSettingsLoading(false);
     }
-  }, [entityId]);
+  }, [activeEntityId]);
 
   useEffect(() => {
     void reloadSettings();
   }, [reloadSettings]);
 
   useEffect(() => {
-    window.setTimeout(() => document.getElementById("entity-name")?.focus(), 0);
-  }, []);
+    if (!inSetupWizard) {
+      window.setTimeout(() => document.getElementById("entity-name")?.focus(), 0);
+    }
+  }, [inSetupWizard]);
+
+  async function saveSetting(
+    targetEntityId: string,
+    key: string,
+    enabled: boolean,
+    existingKeys: Set<string>,
+  ) {
+    const value = enabled ? "true" : "false";
+    if (existingKeys.has(key)) {
+      await apiFetch(`/entities/${targetEntityId}/settings/${key}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+      });
+    } else {
+      await apiFetch(`/entities/${targetEntityId}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value }),
+      });
+    }
+  }
 
   async function onCreateRestaurant(event: FormEvent) {
     event.preventDefault();
@@ -78,6 +116,8 @@ export default function EntitySettingsPage() {
       await refreshEntities();
       setEntityId(entity.id);
       setNewName("");
+      setWizardEntityId(entity.id);
+      setWizardDraft(defaultWizardDraft());
       toast("Restaurant created");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -113,21 +153,12 @@ export default function EntitySettingsPage() {
   }
 
   async function onToggleSetting(key: string, enabled: boolean) {
-    if (!entityId) return;
-    if (settings.some((s) => s.key === key)) {
-      setSettingsError(
-        `“${key}” is already set for this restaurant. Settings cannot be changed after creation in v1 — contact your operator if you need a different value.`,
-      );
-      return;
-    }
+    if (!entityId || inSetupWizard) return;
     setSavingKey(key);
     setSettingsError(null);
     try {
-      await apiFetch(`/entities/${entityId}/settings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key, value: enabled ? "true" : "false" }),
-      });
+      const existingKeys = new Set(settings.map((s) => s.key));
+      await saveSetting(entityId, key, enabled, existingKeys);
       await reloadSettings();
       const label =
         KNOWN_ENTITY_SETTINGS.find((s) => s.key === key)?.label ?? key;
@@ -137,6 +168,113 @@ export default function EntitySettingsPage() {
     } finally {
       setSavingKey(null);
     }
+  }
+
+  async function onWizardContinue() {
+    if (!wizardEntityId) return;
+    setWizardSaving(true);
+    setSettingsError(null);
+    try {
+      const existingKeys = new Set(settings.map((s) => s.key));
+      for (const def of KNOWN_ENTITY_SETTINGS) {
+        const enabled = wizardDraft[def.key] ?? false;
+        if (enabled || existingKeys.has(def.key)) {
+          await saveSetting(
+            wizardEntityId,
+            def.key,
+            enabled,
+            existingKeys,
+          );
+          existingKeys.add(def.key);
+        }
+      }
+      setWizardEntityId(null);
+      await reloadSettings();
+      toast("Feature toggles saved");
+    } catch (err) {
+      setSettingsError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setWizardSaving(false);
+    }
+  }
+
+  function renderToggleList(
+    checkedFor: (key: string) => boolean,
+    onChange: (key: string, enabled: boolean) => void,
+    disabled: boolean,
+  ) {
+    return (
+      <ul className="mt-4 space-y-4">
+        {KNOWN_ENTITY_SETTINGS.map((def) => {
+          const checked = checkedFor(def.key);
+          const exists = settings.some((s) => s.key === def.key);
+          return (
+            <li
+              key={def.key}
+              className="flex items-start justify-between gap-4"
+            >
+              <div>
+                <p className="text-sm font-medium">{def.label}</p>
+                <p className="text-xs text-muted-foreground">
+                  {def.description}
+                </p>
+                {!inSetupWizard && (
+                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                    {def.key}
+                    {exists ? ` = ${checked ? "true" : "false"}` : " (not set)"}
+                  </p>
+                )}
+              </div>
+              <label className="flex shrink-0 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled || savingKey === def.key}
+                  onChange={(e) => onChange(def.key, e.target.checked)}
+                />
+                {savingKey === def.key ? "Saving…" : checked ? "On" : "Off"}
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  if (inSetupWizard) {
+    return (
+      <AppShell title="Set up restaurant">
+        <div className="max-w-xl space-y-6">
+          <section className="rounded-lg border border-border bg-card p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Step 2 of 2
+            </p>
+            <h2 className="mt-1 text-sm font-semibold">Feature toggles</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Choose which modules this restaurant needs. You can change these
+              when your needs change. Leave off anything you do not need yet.
+            </p>
+            {settingsError && (
+              <p className="mt-3 text-sm text-destructive">{settingsError}</p>
+            )}
+            {renderToggleList(
+              (key) => wizardDraft[key] ?? false,
+              (key, enabled) =>
+                setWizardDraft((prev) => ({ ...prev, [key]: enabled })),
+              wizardSaving,
+            )}
+            <Button
+              type="button"
+              className="mt-6"
+              disabled={wizardSaving}
+              onClick={() => void onWizardContinue()}
+            >
+              {wizardSaving ? "Saving…" : "Save & continue"}
+            </Button>
+          </section>
+        </div>
+      </AppShell>
+    );
   }
 
   return (
@@ -193,7 +331,8 @@ export default function EntitySettingsPage() {
             <section className="rounded-lg border border-border bg-card p-5">
               <h2 className="text-sm font-semibold">Feature toggles</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Per-restaurant settings (create-only — each key can be set once).
+                Per-restaurant settings. You can change these when your needs
+                change.
               </p>
               {settingsLoading && (
                 <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
@@ -201,40 +340,11 @@ export default function EntitySettingsPage() {
               {settingsError && (
                 <p className="mt-3 text-sm text-destructive">{settingsError}</p>
               )}
-              <ul className="mt-4 space-y-4">
-                {KNOWN_ENTITY_SETTINGS.map((def) => {
-                  const exists = settings.some((s) => s.key === def.key);
-                  const checked = settingValue(def.key);
-                  return (
-                    <li
-                      key={def.key}
-                      className="flex items-start justify-between gap-4"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{def.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {def.description}
-                        </p>
-                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                          {def.key}
-                          {exists ? ` = ${checked ? "true" : "false"}` : " (not set)"}
-                        </p>
-                      </div>
-                      <label className="flex shrink-0 items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={exists || savingKey === def.key}
-                          onChange={(e) =>
-                            void onToggleSetting(def.key, e.target.checked)
-                          }
-                        />
-                        {savingKey === def.key ? "Saving…" : exists ? "Set" : "Enable"}
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
+              {renderToggleList(
+                settingValue,
+                (key, enabled) => void onToggleSetting(key, enabled),
+                settingsLoading,
+              )}
             </section>
           </>
         )}

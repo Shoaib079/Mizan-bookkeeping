@@ -25,6 +25,10 @@ class EntitySettingCreate(BaseModel):
     value: str = Field(max_length=1024)
 
 
+class EntitySettingUpdate(BaseModel):
+    value: str = Field(max_length=1024)
+
+
 class EntitySettingRead(BaseModel):
     id: uuid.UUID
     entity_id: uuid.UUID

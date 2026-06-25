@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.2** — Feature toggles (post-create step + PATCH) |
-| **Last completed slice** | Phase 11 Slice 11.1 — default cash drawer on chart seed (`v0.68.0-default-money-accounts`) |
-| **Last commit/tag** | `v0.68.0-default-money-accounts` |
-| **Next up** | **11.2** (in progress) → **11.1a** follow-ups → 11.3–11.12 → Phase 12 |
+| **Active slice** | **11.3** — Numeric-only money inputs |
+| **Last completed slice** | Phase 11 Slice 11.2 — editable feature toggles (`v0.68.1-entity-settings-editable`) |
+| **Last commit/tag** | `v0.68.1-entity-settings-editable` |
+| **Next up** | **11.3** → 11.4–11.12 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -731,7 +731,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ## Phase 11 — Pre-go-live product fixes (owner 2026-06-25, audit-driven)
 
-**Status: IN PROGRESS** — **11.1 done** (`v0.68.0-default-money-accounts`). Build **before Phase 12 (deployment)**. Order **11.2 → 11.12** (money-critical slices get separate commits/tags + owner sign-off).
+**Status: IN PROGRESS** — **11.1–11.2 done** (`v0.68.0`–`v0.68.1`). Build **before Phase 12 (deployment)**. Order **11.3 → 11.12** (money-critical slices get separate commits/tags + owner sign-off).
 
 **Purpose:** Close gaps found by adversarial code audit vs `DECISIONS.md` / owner daily workflow — onboarding traps (empty cash picker), post-post corrections, entity setup, and UX bugs — **without** re-litigating Phase 10 or core posting rules.
 
@@ -740,7 +740,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | # | Finding | **Today** | Phase 11 slice |
 |---|---------|-----------|----------------|
 | 1 | **Empty cash account picker** | **Partial (11.1)** — new seeds get `"Main Drawer"`; **legacy** entities (chart seeded before `v0.68.0`) still empty; seed API undercounts; forms don't use `defaultMainDrawerId` | **11.1** ✓ + **11.1a** |
-| 2 | Feature toggles wrong timing / locked forever | Create selects entity immediately; toggles create-only (no PATCH) | **11.2** |
+| 2 | Feature toggles wrong timing / locked forever | ~~Create selects entity immediately; toggles create-only (no PATCH)~~ **Done 11.2** — post-create wizard step + PATCH | **11.2 ✓** |
 | 3 | Money fields accept letters | `parseTryToKurus` on submit only | **11.3** |
 | 4 | Dialog steals focus while typing | `dialog.tsx` effect re-runs when `dirty` flips → refocus first field | **11.4** |
 | 5 | New restaurant invisible with auth on | `POST /entities` does **not** add creator to `entity_memberships` | **11.5** |
@@ -868,17 +868,19 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | **in progress** (other agent) |
-| **Suggested tag** | `v0.68.1-entity-settings-editable` |
+| **Status** | **done** |
+| **Tag** | `v0.68.1-entity-settings-editable` |
 
 **Problem:** Toggles beside create form; once set, **disabled forever** (frontend + POST-only API).
 
 **Acceptance:**
 
-- [ ] Create flow: `POST /entities` → **setup step** (name only on create) → toggles on step 2 with **Save & continue**.
-- [ ] `PATCH /entities/{id}/settings/{key}` or upsert POST (update existing value).
-- [ ] Settings page: toggles **editable** anytime; copy: “You can change these when your needs change.”
-- [ ] **Do not redo:** setting keys, `delivery_enabled` / `card_tips_z_report_enabled` readers.
+- [x] Create flow: `POST /entities` → **setup step** (name only on create) → toggles on step 2 with **Save & continue**.
+- [x] `PATCH /entities/{id}/settings/{key}` or upsert POST (update existing value).
+- [x] Settings page: toggles **editable** anytime; copy: “You can change these when your needs change.”
+- [x] **Do not redo:** setting keys, `delivery_enabled` / `card_tips_z_report_enabled` readers.
+
+**Done:** `PATCH /entities/{entity_id}/settings/{key}` + `update_entity_setting()`; duplicate POST → 409. Frontend: post-create wizard step 2 (toggles + Save & continue); settings page toggles always enabled (PATCH when exists, POST when not). Tests: `test_entity_settings.py` (6 tests). **557 pytest green**; frontend build green.
 
 ---
 

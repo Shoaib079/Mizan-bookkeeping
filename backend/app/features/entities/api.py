@@ -23,6 +23,7 @@ from app.features.entities.schema import (
     EntityRead,
     EntitySettingCreate,
     EntitySettingRead,
+    EntitySettingUpdate,
 )
 
 router = APIRouter(prefix="/entities", tags=["entities"])
@@ -80,7 +81,29 @@ def create_setting(
 ) -> EntitySettingRead:
     if service.get_entity(session, entity_id) is None:
         raise HTTPException(status_code=404, detail="Entity not found")
-    return service.create_entity_setting(session, entity_id, payload)
+    try:
+        return service.create_entity_setting(session, entity_id, payload)
+    except service.DuplicateEntitySettingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.patch(
+    "/{entity_id}/settings/{key}",
+    response_model=EntitySettingRead,
+)
+def update_setting(
+    entity_id: uuid.UUID,
+    key: str,
+    payload: EntitySettingUpdate,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> EntitySettingRead:
+    if service.get_entity(session, entity_id) is None:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    setting = service.update_entity_setting(session, entity_id, key, payload.value)
+    if setting is None:
+        raise HTTPException(status_code=404, detail="Setting not found")
+    return EntitySettingRead.model_validate(setting)
 
 
 @router.get("/{entity_id}/settings", response_model=PaginatedListOut[EntitySettingRead])

@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
@@ -12,6 +13,10 @@ from app.db.session import entity_context, require_entity_context, user_membersh
 from app.features.auth.models import EntityMembership
 from app.features.entities.models import Entity, EntitySetting
 from app.features.entities.schema import EntityCreate, EntitySettingCreate
+
+
+class DuplicateEntitySettingError(ValueError):
+    """Setting key already exists for this entity."""
 
 
 def create_entity(session: Session, payload: EntityCreate) -> Entity:
@@ -66,9 +71,28 @@ def get_entity(session: Session, entity_id: uuid.UUID) -> Entity | None:
 def create_entity_setting(
     session: Session, entity_id: uuid.UUID, payload: EntitySettingCreate
 ) -> EntitySetting:
+    try:
+        with entity_context(session, entity_id):
+            setting = EntitySetting(key=payload.key, value=payload.value)
+            session.add(setting)
+            session.commit()
+            session.refresh(setting)
+            return setting
+    except IntegrityError as exc:
+        session.rollback()
+        raise DuplicateEntitySettingError(
+            f"Setting {payload.key!r} already exists for this entity"
+        ) from exc
+
+
+def update_entity_setting(
+    session: Session, entity_id: uuid.UUID, key: str, value: str
+) -> EntitySetting | None:
     with entity_context(session, entity_id):
-        setting = EntitySetting(key=payload.key, value=payload.value)
-        session.add(setting)
+        setting = session.scalar(select(EntitySetting).where(EntitySetting.key == key))
+        if setting is None:
+            return None
+        setting.value = value
         session.commit()
         session.refresh(setting)
         return setting
