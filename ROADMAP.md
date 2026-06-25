@@ -614,7 +614,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | done |
 | **Implements** | §10 “inline validation as you go … plain language — not a wall of errors after submit” |
 | **Suggested tag** | `v0.66.5-inline-validation` |
 
@@ -631,9 +631,9 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Acceptance:**
 
-- [ ] Shared pattern: field-level or summary `text-destructive` / `text-muted-foreground` hints **while editing**, not only `setError` on submit.
-- [ ] Plain Turkish/English copy per `DESIGN_SYSTEM.md` tone.
-- [ ] Submit still blocked when invalid (existing server validation unchanged).
+- [x] Shared pattern: field-level or summary `text-destructive` / `text-muted-foreground` hints **while editing**, not only `setError` on submit.
+- [x] Plain Turkish/English copy per `DESIGN_SYSTEM.md` tone.
+- [x] Submit still blocked when invalid (existing server validation unchanged).
 
 **Manual verify:** manual daily sales — clear cash+card hint without clicking Save.
 

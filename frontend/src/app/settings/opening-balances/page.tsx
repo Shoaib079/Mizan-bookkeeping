@@ -3,7 +3,7 @@
 /** Opening balances wizard — Phase 9 Slice 9 (Decisions §19). */
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/data-table";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
+import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { loadBankAndCashAccounts } from "@/lib/load-money-accounts";
@@ -85,6 +86,35 @@ function lineToPayload(line: OpeningBalanceLineDraft) {
   }
 }
 
+function openingBalanceLineHint(line: OpeningBalanceLineDraft): string | null {
+  if (!line.amountTry.trim()) {
+    return "Enter an amount.";
+  }
+  const amountKurus = parseTryToKurus(line.amountTry);
+  if (amountKurus === null || amountKurus <= 0) {
+    return "Amount must be greater than zero.";
+  }
+  switch (line.target) {
+    case "account":
+      if (!line.accountCode) return "Pick an account.";
+      if (!line.side) return "Pick debit or credit.";
+      break;
+    case "money_account":
+      if (!line.moneyAccountId) return "Pick a bank or cash account.";
+      break;
+    case "supplier":
+      if (!line.supplierId) return "Pick a supplier.";
+      break;
+    case "partner":
+      if (!line.partnerId) return "Pick a partner.";
+      break;
+    case "customer":
+      if (!line.customerId) return "Pick a customer.";
+      break;
+  }
+  return null;
+}
+
 export default function OpeningBalancesPage() {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -108,6 +138,40 @@ export default function OpeningBalancesPage() {
   const [seeding, setSeeding] = useState(false);
   const [focusLineId, setFocusLineId] = useState<string | null>(null);
   const goLiveFocusedRef = useRef(false);
+
+  const lineHints = useMemo(
+    () =>
+      lines.map((line) => ({
+        id: line.id,
+        hint: openingBalanceLineHint(line),
+      })),
+    [lines],
+  );
+  const hasLineIssues = lineHints.some((row) => row.hint !== null);
+  const debitTotal = useMemo(
+    () =>
+      lines.reduce((sum, line) => {
+        if (line.target !== "account" || line.side !== "debit") return sum;
+        const k = parseTryToKurus(line.amountTry);
+        return k !== null && k > 0 ? sum + k : sum;
+      }, 0),
+    [lines],
+  );
+  const creditTotal = useMemo(
+    () =>
+      lines.reduce((sum, line) => {
+        if (line.target !== "account" || line.side !== "credit") return sum;
+        const k = parseTryToKurus(line.amountTry);
+        return k !== null && k > 0 ? sum + k : sum;
+      }, 0),
+    [lines],
+  );
+  const hasAccountSides = lines.some(
+    (line) => line.target === "account" && line.side,
+  );
+  const balanceMismatch =
+    hasAccountSides && debitTotal > 0 && creditTotal > 0 && debitTotal !== creditTotal;
+  const validateBlocked = hasLineIssues;
 
   const loadRefs = useCallback(async () => {
     if (!entityId) return;
@@ -446,7 +510,10 @@ export default function OpeningBalancesPage() {
               </div>
 
               <div className="space-y-3">
-                {lines.map((line) => (
+                {lines.map((line) => {
+                  const lineHint =
+                    lineHints.find((row) => row.id === line.id)?.hint ?? null;
+                  return (
                   <div
                     key={line.id}
                     className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-card p-3"
@@ -496,15 +563,36 @@ export default function OpeningBalancesPage() {
                     >
                       Remove
                     </Button>
+                    {lineHint && (
+                      <div className="w-full">
+                        <ValidationHint>{lineHint}</ValidationHint>
+                      </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
+
+            {balanceMismatch && (
+              <ValidationHint variant="warning">
+                GL debits ({formatTry(debitTotal)}) and credits ({formatTry(creditTotal)})
+                do not match yet — validation may still balance other line types.
+              </ValidationHint>
+            )}
+            {hasLineIssues && (
+              <ValidationHint>
+                Complete every line before validating — amount and account are required.
+              </ValidationHint>
+            )}
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={validating || chartCount === 0}>
+              <Button
+                type="submit"
+                disabled={validating || chartCount === 0 || validateBlocked}
+              >
                 {validating ? "Validating…" : "Validate & preview journal"}
               </Button>
               {preview && !posted && (

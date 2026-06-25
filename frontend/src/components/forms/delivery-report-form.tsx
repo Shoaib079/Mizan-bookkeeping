@@ -8,6 +8,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -57,6 +58,11 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
   const netKurus = parseTryToKurus(netText) ?? 0;
   const mathOk =
     grossKurus > 0 && grossKurus - commissionKurus === netKurus && netKurus >= 0;
+  const hasAmounts =
+    grossText.trim() !== "" ||
+    commissionText.trim() !== "" ||
+    netText.trim() !== "";
+  const submitBlocked = grossKurus <= 0 || (hasAmounts && grossKurus > 0 && !mathOk);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -169,11 +175,17 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
             />
           </div>
         </div>
-        {grossKurus > 0 && !mathOk && (
-          <p className="text-xs text-warning">
+        {hasAmounts && grossKurus > 0 && !mathOk && (
+          <ValidationHint variant="error">
             Gross − commission must equal net ({formatTry(grossKurus)} −{" "}
             {formatTry(commissionKurus)} ≠ {formatTry(netKurus)}).
-          </p>
+          </ValidationHint>
+        )}
+        {grossKurus > 0 && mathOk && (
+          <ValidationHint variant="hint">
+            Net checks out: {formatTry(grossKurus)} − {formatTry(commissionKurus)} ={" "}
+            {formatTry(netKurus)}.
+          </ValidationHint>
         )}
         <div>
           <Label htmlFor="dr-desc">Description</Label>
@@ -184,7 +196,7 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting || submitBlocked}>
           {submitting ? "Saving…" : "Create report & review"}
         </Button>
       </form>

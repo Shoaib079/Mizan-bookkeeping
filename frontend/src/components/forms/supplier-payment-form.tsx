@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -58,6 +59,18 @@ export function SupplierPaymentForm({
       void loadAccounts().catch(() => undefined);
     }
   }, [open, loadAccounts]);
+
+  const amountKurus = parseTryToKurus(amountText);
+  const amountInvalid =
+    amountText.trim() !== "" &&
+    (amountKurus === null || amountKurus <= 0);
+  const overBalance =
+    balanceKurus !== undefined &&
+    balanceKurus > 0 &&
+    amountKurus !== null &&
+    amountKurus > balanceKurus;
+  const submitBlocked =
+    amountKurus === null || amountKurus <= 0 || overBalance;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -135,6 +148,14 @@ export function SupplierPaymentForm({
             onChange={(e) => setAmountText(e.target.value)}
             required
           />
+          {amountInvalid && (
+            <ValidationHint>Enter an amount greater than zero.</ValidationHint>
+          )}
+          {overBalance && balanceKurus !== undefined && (
+            <ValidationHint>
+              Amount cannot exceed outstanding balance ({formatTry(balanceKurus)}).
+            </ValidationHint>
+          )}
         </div>
         <div>
           <Label htmlFor="pay-desc">Description</Label>
@@ -167,7 +188,7 @@ export function SupplierPaymentForm({
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting || submitBlocked}>
           {submitting ? "Recording…" : "Record payment"}
         </Button>
       </form>

@@ -5,10 +5,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | 10.6 — Inline validation (`DESIGN_SYSTEM.md` §10) |
-| **Last completed slice** | Phase 10 Slice 5 — Shared Combobox (`v0.66.4-combobox`) |
+| **Active slice** | 10.7 — Autosave + discard confirm (`DESIGN_SYSTEM.md` §10) |
+| **Last completed slice** | Phase 10 Slice 6 — Inline validation (`v0.66.5-inline-validation`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.66.4-combobox` |
+| **Last tag** | `v0.66.5-inline-validation` |
 
 ## Resume point
 
@@ -38,7 +38,12 @@
 - Migrated 34 dynamic/long pickers across forms, review screens, opening balances, app-shell entity switcher
 - Short static enums kept as native `<Select>` (Dr/Cr, direction, classification, roles, currency, ≤8 expense accounts)
 
-**Next:** Phase 10.6 → 10.8 per `ROADMAP.md`.
+**Phase 10 Slice 6 complete** — Inline validation (frontend only):
+- New `validation-hint.tsx` — shared `error` / `hint` / `warning` tones per `DESIGN_SYSTEM.md` §10
+- Live hints + submit guard on money-critical forms: manual daily sales, POS summary review, delivery report, opening balances, transfer, cash movement, supplier/customer payment
+- Server `setError` on submit unchanged; obvious invalid states disable submit while editing
+
+**Next:** Phase 10.7 → 10.8 per `ROADMAP.md`.
 
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.

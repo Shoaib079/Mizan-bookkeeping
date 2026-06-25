@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
@@ -177,6 +178,20 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
   const canConfirm =
     summary.status === "draft" || summary.status === "needs_review";
 
+  const cashKurusLive = parseTryToKurus(cashText) ?? 0;
+  const cardKurusLive = parseTryToKurus(cardText) ?? 0;
+  const totalKurusLive = cashKurusLive + cardKurusLive;
+  const zReportKurusLive = zReportEnabled ? parseTryToKurus(zReportText) : null;
+  const hasSalesInput = cashText.trim() !== "" || cardText.trim() !== "";
+  const salesTotalInvalid = hasSalesInput && totalKurusLive <= 0;
+  const zMismatch =
+    zReportEnabled &&
+    zReportKurusLive !== null &&
+    zReportKurusLive > 0 &&
+    cardKurusLive !== zReportKurusLive;
+  const confirmBlocked =
+    totalKurusLive <= 0 || !moneyAccountId || cashText.trim() === "" || cardText.trim() === "";
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="rounded-lg border border-border bg-card p-4">
@@ -261,6 +276,19 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
                 </p>
               </div>
             )}
+            {hasSalesInput && (
+              <ValidationHint variant={salesTotalInvalid ? "error" : "hint"}>
+                {salesTotalInvalid
+                  ? "Enter cash and/or card sales — total cannot be zero."
+                  : `Total: ${formatTry(totalKurusLive)}`}
+              </ValidationHint>
+            )}
+            {zMismatch && (
+              <ValidationHint variant="warning">
+                Z report ({formatTry(zReportKurusLive!)}) does not match card (
+                {formatTry(cardKurusLive)}). The day will route to Needs Review.
+              </ValidationHint>
+            )}
             <div>
               <Label htmlFor="pos-drawer">Cash drawer</Label>
               <Combobox
@@ -277,7 +305,7 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
           </div>
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button type="submit" disabled={confirming}>
+            <Button type="submit" disabled={confirming || confirmBlocked}>
               {confirming ? "Posting…" : "Confirm & post daily sales"}
             </Button>
             <div className="flex flex-1 flex-wrap items-end gap-2">

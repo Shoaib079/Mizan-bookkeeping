@@ -8,6 +8,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
@@ -65,6 +66,14 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
   const cardKurus = parseTryToKurus(cardText) ?? 0;
   const totalKurus = cashKurus + cardKurus;
   const zReportKurus = zReportEnabled ? parseTryToKurus(zReportText) : null;
+  const hasSalesInput = cashText.trim() !== "" || cardText.trim() !== "";
+  const salesTotalInvalid = hasSalesInput && totalKurus <= 0;
+  const zMismatch =
+    zReportEnabled &&
+    zReportKurus !== null &&
+    zReportKurus > 0 &&
+    cardKurus !== zReportKurus;
+  const submitBlocked = totalKurus <= 0 || !moneyAccountId;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -180,10 +189,18 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
             </p>
           </div>
         )}
-        {totalKurus > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Total: {formatTry(totalKurus)} (cash + card must match)
-          </p>
+        {hasSalesInput && (
+          <ValidationHint variant={salesTotalInvalid ? "error" : "hint"}>
+            {salesTotalInvalid
+              ? "Enter cash and/or card sales — total cannot be zero."
+              : `Total: ${formatTry(totalKurus)}`}
+          </ValidationHint>
+        )}
+        {zMismatch && (
+          <ValidationHint variant="warning">
+            Z report ({formatTry(zReportKurus!)}) does not match card sales (
+            {formatTry(cardKurus)}). The day will route to Needs Review.
+          </ValidationHint>
         )}
         <div>
           <Label htmlFor="sales-drawer">Cash drawer</Label>
@@ -213,7 +230,7 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
             )}
           </div>
         )}
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting || submitBlocked}>
           {submitting ? "Posting…" : "Post daily sales"}
         </Button>
       </form>

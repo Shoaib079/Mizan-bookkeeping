@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
+import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
@@ -67,6 +68,12 @@ export function CashMovementForm({
       void loadData().catch(() => undefined);
     }
   }, [open, loadData]);
+
+  const amountKurus = parseTryToKurus(amountText);
+  const amountInvalid =
+    amountText.trim() !== "" &&
+    (amountKurus === null || amountKurus <= 0);
+  const submitBlocked = amountKurus === null || amountKurus <= 0;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -172,6 +179,9 @@ export function CashMovementForm({
             onChange={(e) => setAmountText(e.target.value)}
             required
           />
+          {amountInvalid && (
+            <ValidationHint>Enter an amount greater than zero.</ValidationHint>
+          )}
         </div>
         <div>
           <Label htmlFor="cash-desc">Description</Label>
@@ -183,7 +193,7 @@ export function CashMovementForm({
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting || submitBlocked}>
           {submitting ? "Recording…" : "Record movement"}
         </Button>
       </form>

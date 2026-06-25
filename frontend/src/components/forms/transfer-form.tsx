@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
@@ -60,6 +61,18 @@ export function TransferForm({
       void loadAccounts().catch(() => undefined);
     }
   }, [open, loadAccounts]);
+
+  const amountKurus = parseTryToKurus(amountText);
+  const sameAccount = fromId !== "" && toId !== "" && fromId === toId;
+  const amountInvalid =
+    amountText.trim() !== "" &&
+    (amountKurus === null || amountKurus <= 0);
+  const submitBlocked =
+    sameAccount ||
+    amountKurus === null ||
+    amountKurus <= 0 ||
+    !fromId ||
+    !toId;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -135,6 +148,9 @@ export function TransferForm({
             placeholder="To account…"
           />
         </div>
+        {sameAccount && (
+          <ValidationHint>From and to accounts must be different.</ValidationHint>
+        )}
         <div>
           <Label htmlFor="xfer-date">Date (DD.MM.YYYY)</Label>
           <DateInput
@@ -153,6 +169,9 @@ export function TransferForm({
             onChange={(e) => setAmountText(e.target.value)}
             required
           />
+          {amountInvalid && (
+            <ValidationHint>Enter an amount greater than zero.</ValidationHint>
+          )}
         </div>
         <div>
           <Label htmlFor="xfer-desc">Description</Label>
@@ -164,7 +183,7 @@ export function TransferForm({
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting || submitBlocked}>
           {submitting ? "Transferring…" : "Record transfer"}
         </Button>
       </form>
