@@ -12,13 +12,13 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | — (Phase 10 complete) |
-| **Last completed slice** | Phase 10 Slice 8 — FX purchase cash drawer (`v0.67.0`) |
-| **Last commit/tag** | `v0.67.0-fx-purchase-cash-drawer` |
-| **Next up** | Phase 11 — Deployment & go-live |
+| **Active phase** | Phase 11 — Pre-go-live product fixes |
+| **Active slice** | **11.1** — Default money accounts + onboarding bootstrap |
+| **Last completed slice** | Phase 10 Slice 8 — FX purchase cash drawer (`v0.67.0`); infra fix `v0.67.2-alembic-migration-grants` |
+| **Last commit/tag** | `v0.67.2-alembic-migration-grants` |
+| **Next up** | Phase 11.1 → 11.12 (then Phase 12 deployment) |
 
-**The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = pre-launch: complete **all** locked `DESIGN_SYSTEM.md` §10 interaction UX + delivery nav + FX wiring — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
+**The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
 ### Do not rebuild (already done — git is source of truth)
 
@@ -386,13 +386,13 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Phase 9 complete** — all slices done, tested, committed (`v0.65.0`). **Owner sign-off pending** → frontend v1 complete.
 
-**Known gap (remaining before go-live):** None — Phase 10 slices **10.1–10.8** are **done** (`v0.67.0-fx-purchase-cash-drawer`). Proceed to **Phase 11**.
+**Known gap (remaining before go-live):** Phase **11** — onboarding bootstrap (empty cash picker), corrections after post, entity setup UX — see **Phase 11** audit table. Phase 10 slices **10.1–10.8** are **done** (`v0.67.0`). Slice 10.8 owner sign-off **pending**.
 
 ---
 
 ## Phase 10 — Pre-launch UX (`DESIGN_SYSTEM.md` §10) & FX wiring (owner 2026-06-24)
 
-**Status: DONE** — all slices **10.1 → 10.8** complete. Proceed to **Phase 11 (go-live)**. Slice 10.8 owner sign-off **pending**.
+**Status: DONE** — all slices **10.1 → 10.8** complete. Proceed to **Phase 11**. Slice 10.8 owner sign-off **pending**.
 
 ### Code audit (do not trust ROADMAP/tests alone — verified in repo)
 
@@ -725,35 +725,306 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | 10.7 | Discard confirm on dirty dialogs; autosave on listed forms | **done** (`v0.66.6-draft-safety`) |
 | 10.8 | Cash-only UI + API; cash movement on purchase; bank still rejected; full `pytest`; **owner sign-off pending** | **done** (`v0.67.0`) |
 
-Then proceed to **Phase 11 — Deployment & go-live**.
+Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ---
 
-## Phase 11 — Deployment & go-live
+## Phase 11 — Pre-go-live product fixes (owner 2026-06-25, audit-driven)
+
+**Status: PLANNED** — build **before Phase 12 (deployment)**. Order **11.1 → 11.12** (money-critical slices get separate commits/tags + owner sign-off).
+
+**Purpose:** Close gaps found by adversarial code audit vs `DECISIONS.md` / owner daily workflow — onboarding traps (empty cash picker), post-post corrections, entity setup, and UX bugs — **without** re-litigating Phase 10 or core posting rules.
+
+### Code audit (verified in repo, 2026-06-25)
+
+| # | Finding | **Today** | Phase 11 slice |
+|---|---------|-----------|----------------|
+| 1 | **Empty cash account picker** | Chart bucket `1000` exists after seed; **no** `money_accounts` row until Banking → New account | **11.1** |
+| 2 | Feature toggles wrong timing / locked forever | Create selects entity immediately; toggles create-only (no PATCH) | **11.2** |
+| 3 | Money fields accept letters | `parseTryToKurus` on submit only | **11.3** |
+| 4 | Dialog steals focus while typing | `dialog.tsx` effect re-runs when `dirty` flips → refocus first field | **11.4** |
+| 5 | New restaurant invisible with auth on | `POST /entities` does **not** add creator to `entity_memberships` | **11.5** |
+| 6 | Partner share % | `partners` has name/notes only | **11.6** |
+| 7 | Partner expense separate flow | Manual expense = cash only; fronted expense on `/partners/[id]` | **11.7** |
+| 8 | Dashboard FX shows TRY cost | API has `native_quantity`; UI uses `try_cost_kurus` | **11.8** |
+| 9 | **Cannot fix posted daily sales** | `PosDailySummary` posted = immutable; no `correct_pos_daily_summary` | **11.9** |
+| 10 | **Cannot fix posted expenses** | `correct_expense_entry()` in core; **no HTTP route or UI** | **11.10** |
+| 11 | Corrections API-only | Payment/FX/manual correct exist; **zero** frontend `/void` or `/correct` | **11.11** |
+| 12 | Other posted types stuck | Invoice, credit sale, staff, partner, FX conversion — core helpers, no routes | **11.12** |
+
+**Explicitly out of Phase 11** (promote later if owner requires before go-live): unified **document archive** UI (Decisions §7 — files stored per intake, no searchable archive); full **manual journal** composer UI; **period locks** admin UI; **credit card statement** import; bank feeds.
+
+### Build order
+
+```
+11.1 Default money accounts (Main drawer) + setup hint
+  → 11.2 Feature toggles (post-create step + PATCH)
+  → 11.3 MoneyInput
+  → 11.4 Dialog focus (once on open)
+  → 11.5 Create entity → owner membership
+  → 11.6 Partner share %
+  → 11.7 Unified expense (partner-fronted)
+  → 11.8 Dashboard FX native display
+  → 11.9 Correct posted daily sales          ← money-critical
+  → 11.10 Expense correction API + UI      ← money-critical
+  → 11.11 Correction UI (existing APIs) + period_unlock_reason on mutations
+  → 11.12 Remaining correction APIs (invoice, staff, partner, credit sale, FX conversion/spend)
+```
+
+11.1–11.4 may batch if gates pass. **11.9, 11.10, 11.12** = separate commits; **11.9–11.12** need owner sign-off when money-critical.
+
+---
+
+### Slice 11.1 — Default money accounts + onboarding bootstrap
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.68.0-default-money-accounts` |
+
+**Problem:** Every cash picker (`manual expense`, daily sales, cash drawer, FX buy, receipt upload) lists `GET .../banking/accounts?account_kind=cash` — **empty** until owner manually creates an account.
+
+**Acceptance:**
+
+- [ ] After **seed chart** (or dedicated setup step), auto-create **one** TRY cash money account per entity (e.g. `"Main drawer"` / `"Kasa"`) unless one already exists.
+- [ ] Optional: prompt on first visit to Banking / New menu if no cash account (“Set up your cash drawer”).
+- [ ] Opening balances wizard: if cash line needed, default to the main drawer account.
+- [ ] **Do not** auto-create bank accounts (statement-driven); cash only for v1.
+- [ ] Tests: new entity + seed → cash account exists; pickers non-empty.
+
+---
+
+### Slice 11.2 — Feature toggles: after create + editable
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.68.1-entity-settings-editable` |
+
+**Problem:** Toggles beside create form; once set, **disabled forever** (frontend + POST-only API).
+
+**Acceptance:**
+
+- [ ] Create flow: `POST /entities` → **setup step** (name only on create) → toggles on step 2 with **Save & continue**.
+- [ ] `PATCH /entities/{id}/settings/{key}` or upsert POST (update existing value).
+- [ ] Settings page: toggles **editable** anytime; copy: “You can change these when your needs change.”
+- [ ] **Do not redo:** setting keys, `delivery_enabled` / `card_tips_z_report_enabled` readers.
+
+---
+
+### Slice 11.3 — Numeric-only money inputs
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.68.2-money-input` |
+
+**Acceptance:**
+
+- [ ] Shared `MoneyInput` (TRY) — `inputMode="decimal"`, strip non-numeric except `,` `.`; live preview optional.
+- [ ] Migrate priority forms: manual expense, manual daily sales, POS review, payments, transfers, cash movement, opening balances, FX, delivery amounts.
+- [ ] Paste with letters → strip or visible reject.
+
+---
+
+### Slice 11.4 — Dialog focus: stay on active field
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.68.3-dialog-focus-fix` |
+
+**Root cause:** `dialog.tsx` auto-focus effect depends on `requestClose` → refocuses **first** field when `dirty` becomes true.
+
+**Acceptance:**
+
+- [ ] Auto-focus **only on dialog open** (`focusedOnOpenRef`); never on `dirty` / `requestClose` change.
+- [ ] Manual verify: manual expense → focus Item → type/delete → cursor stays in Item.
+
+---
+
+### Slice 11.5 — Create entity → owner membership
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.68.4-entity-create-membership` |
+
+**Problem:** With `AUTH_ENFORCEMENT=true`, new restaurant not in `GET /entities` for creator (membership missing).
+
+**Acceptance:**
+
+- [ ] `POST /entities` (authenticated) adds creator as **`owner`** `entity_memberships` row atomically.
+- [ ] Tests: create → list entities for user includes new id.
+- [ ] Dev mode (`AUTH_ENFORCEMENT=false`) unchanged.
+
+---
+
+### Slice 11.6 — Partner ownership share %
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Decisions** | Extend §17 — **informational only** (not capital GL) |
+| **Suggested tag** | `v0.68.5-partner-share-pct` |
+
+**Acceptance:**
+
+- [ ] `partners.ownership_share_pct` — nullable `Numeric(5,2)`, 0–100; sum **warn only** if ≠ 100%.
+- [ ] Partner form + detail show Share %.
+
+---
+
+### Slice 11.7 — Unified expense entry (partner-fronted)
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Money-critical** | Yes — uses `post_expense_fronted` |
+| **Suggested tag** | `v0.68.6-expense-partner-mode` |
+
+**Acceptance:**
+
+- [ ] Manual expense form: **Payment** — Cash drawer | **Partner paid (owe partner)**.
+- [ ] Partner mode → `POST .../partners/{id}/expenses-fronted` (reuse existing posting).
+- [ ] Minimum scope: expense fronted only (reimbursement inverse → clarify with owner if needed).
+
+---
+
+### Slice 11.8 — Dashboard FX: native currency display
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.68.7-dashboard-fx-native` |
+
+**Acceptance:**
+
+- [ ] `frontend/src/app/page.tsx` — `formatFxNative(native_quantity, currency)` primary; optional muted TRY book cost subtitle.
+- [ ] **Do not redo:** dashboard API shape.
+
+---
+
+### Slice 11.9 — Correct posted daily sales
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Money-critical** | Yes — owner sign-off |
+| **Suggested tag** | `v0.69.0-correct-daily-sales` |
+
+**Problem:** Posted manual/photo daily sales hit GL (`CARD_SALES` + `CASH_MOVEMENT`); mistakes need manual journals today.
+
+**Acceptance:**
+
+- [ ] `POST .../pos/daily-summaries/{id}/correct` — void linked JEs + card batch + cash movements; repost with new date/cash/card/Z; same shape as confirm.
+- [ ] UI: posted row on `/sales` → **Correct** → pre-filled form.
+- [ ] Register in `correction.py`; tests mirror `test_fx_purchase_correct_*`.
+- [ ] Period lock + duplicate-date guards unchanged.
+
+---
+
+### Slice 11.10 — Posted expense correction
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Money-critical** | Yes — owner sign-off |
+| **Suggested tag** | `v0.69.1-correct-expense` |
+
+**Problem:** `correct_expense_entry()` exists in `core/ledger/correction.py`; no route; raw ledger void desyncs `expense_entries`.
+
+**Acceptance:**
+
+- [ ] `POST .../expenses/{id}/correct` (or by `journal_entry_id`) wrapping `correct_expense_entry()`.
+- [ ] UI on `/expenses` posted rows → Correct dialog.
+- [ ] Tests: amount/account/date change; subledger + GL tie; period locks.
+
+---
+
+### Slice 11.11 — Correction UI + period unlock on mutations
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.69.2-correction-ui` |
+
+**Problem:** Backend has correct/void for payments, FX purchase, manual journals; frontend never calls them. No `period_unlock_reason` in any form.
+
+**Acceptance:**
+
+- [ ] UI flows: supplier payment correct, customer payment correct, FX purchase correct, manual journal void/correct (ledger or manual-journals API).
+- [ ] Shared pattern: when API returns 422 period lock, prompt owner for **unlock reason** and retry with `period_unlock_reason`.
+- [ ] **Do not** use raw ledger void for subledger-backed types without dedicated flow.
+
+---
+
+### Slice 11.12 — Remaining dedicated correction APIs
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Money-critical** | Yes — owner sign-off |
+| **Suggested tag** | `v0.69.3-correction-apis` |
+
+**Problem:** Core helpers exist; DECISIONS deferred HTTP “until frontend needs them.”
+
+**Acceptance:**
+
+- [ ] HTTP routes + tests for: `correct_supplier_invoice`, `correct_credit_sale`, `correct_staff_journal_entry`, `correct_partner_journal_entry`, `correct_fx_conversion_or_spend`.
+- [ ] Minimal UI entry points on respective detail/list pages (or document API-only if UI deferred by owner).
+- [ ] Void-and-reenter types (`TRANSFER`, `OPENING_BALANCE`, `POS_SETTLEMENT`, etc.) remain **out of scope** — document void + re-enter playbook only.
+
+---
+
+### Phase 11 complete when
+
+| Slice | Gate |
+|-------|------|
+| 11.1 | Main cash account exists after setup; cash pickers non-empty |
+| 11.2 | Post-create toggle step; PATCH works; toggles editable later |
+| 11.3 | Money fields reject letters on priority forms |
+| 11.4 | Dialog focus stable while editing |
+| 11.5 | Creator is owner member; entity appears in list |
+| 11.6 | Partner share % on CRUD |
+| 11.7 | Partner-fronted expense from New → Expense |
+| 11.8 | Dashboard FX shows native currency |
+| 11.9 | Correct posted daily sales E2E; owner sign-off |
+| 11.10 | Correct posted expense E2E; owner sign-off |
+| 11.11 | Correction UI for existing APIs; period unlock works |
+| 11.12 | Remaining correction APIs green in pytest; owner sign-off |
+
+Then proceed to **Phase 12 — Deployment & go-live**.
+
+---
+
+## Phase 12 — Deployment & go-live
 
 Take the tested app to a real, secure production environment and put real data in it.
 
 | Slice | Status | Notes |
 |-------|--------|-------|
 | 1. Hosting & infrastructure | planned | Provision managed Postgres + Redis + app host + object storage (uploads & backups); set all secrets/env vars; HTTPS/SSL + domain. |
-| 2. Production provisioning | planned | Stand up the DB via the canonical `alembic upgrade head`; confirm RLS + immutability triggers present on the prod-equivalent DB; Clerk **production** keys + JWT template emitting `email`/`email_verified`; `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE` off (boot guard verified). |
-| 3. Backups live | planned | Scheduled backups running to off-site storage; run a real restore-verify in production and confirm the books tie; alert on backup failure. |
+| 2. Production provisioning | planned | Stand up the DB via canonical `alembic upgrade head` (schema owner + `mizan_app` grants — `v0.67.2`); confirm RLS + immutability triggers; Clerk **production** keys; `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE` off. |
+| 3. Backups live | planned | Scheduled backups to off-site storage; restore-verify in production; alert on failure. |
 | 4. Observability | planned | Error tracking, structured logging, uptime/health checks, basic rate limiting. |
-| 5. Pre-launch security pass | planned | Tighten `create_entity` (auth required); dependency scan (no high/critical CVEs); secrets audit; full suite green under production settings; final guard-test run. |
-| 6. Owner onboarding & smoke test | planned | Create the real restaurant(s), seed chart, enter opening balances, invite users with roles; run the end-to-end smoke test in production; **go live.** |
+| 5. Pre-launch security pass | planned | Dependency scan; secrets audit; full suite under production settings; final guard-test run. |
+| 6. Owner onboarding & smoke test | planned | Real restaurant(s), chart, opening balances, users/roles; end-to-end smoke in production; **go live.** |
 
-**Phase 11 complete when:** app is live, backed up, monitored, and the owner has recorded real data successfully.
+**Phase 12 complete when:** app is live, backed up, monitored, and the owner has recorded real data successfully.
 
 ---
 
-## Phase 12 — Post-launch enhancements (parking lot)
+## Phase 13 — Post-launch enhancements (parking lot)
 
-**Note:** Phase **10** slices (10.1–10.8) are **pre-launch** (`DESIGN_SYSTEM.md` §10 + FX). This section is **after** go-live. Promote to Decisions before building.
+**Note:** Phase **10** = §10 UX + FX (done). Phase **11** = product fixes before deploy. This section is **after** go-live. Promote to Decisions before building.
 
 - **§10 interaction UX (dates, combobox, validation, drafts, toasts, focus)** — **→ Phase 10** (pre-launch; slices 10.1–10.7).
 - **Delivery sidebar nesting** — **→ Phase 10.2** (owner confirmed).
 - **FX purchase cash drawer + movement** — **→ Phase 10.8** (pre-launch; **cash only**, not bank).
-- **Bank feed (read-only) adapter** — account-information / transaction pull only; never payment-initiation (the app never moves money). Same normalized transaction rows as manual statement import, feeding the existing classify → clearing → near-match → anti-double-count pipeline (downstream unchanged). Manual upload stays permanently as universal fallback; both coexist. When built: dedup on bank unique transaction ID, consent/token expiry + reconnect, reconcile feed balance to statement, confirm route (direct bank API vs aggregator).
+- **Document searchable archive** (Decisions §7) — unified list/filter by type, supplier, date; files already stored per intake.
+- **Manual journal composer UI** — backend API exists; accountant adjustments from app.
+- **Period locks admin UI** — close/reopen/unlock from settings.
 - **Proper KDV/tax-return module** — output − input, declaration, periods (input VAT already captured per rate).
 - **FX revaluation** — period-end holding revaluation (today FX is cost-only; gain/loss accounts already exist).
 - **Owner combined-restaurant view** — cross-entity, read-only overview (entity-stamped data already supports it).
@@ -774,6 +1045,8 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-25 | Alembic migration grants fix | `v0.67.2-alembic-migration-grants` | `alembic upgrade head` uses schema owner; auto-grant `mizan_app`; 547 pytest |
+| 2026-06-25 | Phase 11 plan restored | — | Audit-driven pre-go-live slices 11.1–11.12; deployment → Phase 12 |
 | 2026-06-25 | Phase 10 Slice 3 — Shell feedback | `v0.66.2-shell-feedback` | Toasts on all POST saves; verified palette/Esc/skeletons; build green |
 | 2026-06-25 | Phase 10 Slice 2 — Delivery nav nesting | `v0.66.1-delivery-nav` | Nested Delivery sidebar; removed flat duplicates; palette unchanged; build green |
 | 2026-06-24 | Phase 10 Slice 1 — Shared DateInput | `v0.66.0-date-picker` | `DateInput` + calendar popover; 22 date fields migrated; default today on forms; build green; 545 pytest |

@@ -4,13 +4,17 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | — (Phase 10 complete) |
-| **Last completed slice** | Phase 10 Slice 8 — FX purchase cash drawer (`v0.67.0-fx-purchase-cash-drawer`) |
+| **Phase** | Phase 11 — Pre-go-live product fixes |
+| **Active slice** | **11.1** — Default money accounts + onboarding bootstrap |
+| **Last completed slice** | Phase 10 Slice 8 — FX purchase cash drawer (`v0.67.0`); `v0.67.2-alembic-migration-grants` |
 | **Branch** | `main` |
-| **Last tag** | `v0.67.0-fx-purchase-cash-drawer` |
+| **Last tag** | `v0.67.2-alembic-migration-grants` |
 
 ## Resume point
+
+**Phase 10 complete** — all slices 10.1–10.8 done (`v0.67.0`). Slice 10.8 owner sign-off pending.
+
+**Next:** **Phase 11** (audit-driven product fixes before deployment) — start **11.1** default cash drawer / money account bootstrap. Full plan in `ROADMAP.md` Phase 11 (slices 11.1–11.12: onboarding, corrections, UX). Deployment moved to **Phase 12**.
 
 **Phase 9 Slice 8 complete** — Dashboard + reports (frontend only):
 - `/` — live dashboard from `GET .../dashboard` (current-month default, date range picker)
