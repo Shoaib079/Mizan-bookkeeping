@@ -386,7 +386,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Phase 9 complete** — all slices done, tested, committed (`v0.65.0`). **Owner sign-off pending** → frontend v1 complete.
 
-**Known gap (code audit 2026-06-24):** `DESIGN_SYSTEM.md` §10 is only **partly** shipped (Phase 9 Slice 10: toasts, palette, dialog Esc/focus trap, skeletons). **Missing:** shared date picker, combobox pickers, systematic autofocus, inline validation, autosave/discard confirm, toasts on all forms. Delivery nav duplicates in `app-routes.ts`. FX buy: UI lists cash+bank; backend **cash only**, no `cash_movements`. See **Phase 10 audit** below.
+**Known gap (code audit 2026-06-24):** `DESIGN_SYSTEM.md` §10 is only **partly** shipped (Phase 9 Slice 10: toasts, palette, dialog Esc/focus trap, skeletons). **Missing:** combobox pickers, inline validation, autosave/discard confirm (slices 10.5–10.7). FX buy: backend is **cash-only** ✓ (owner 2026-06-24: **keep cash only** — bank is statement-driven); UI still lists bank accounts wrongly; **no** `cash_movements` on purchase. See **Phase 10 audit** below.
 
 ---
 
@@ -406,10 +406,11 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **Review screens** | Listed 4 review UIs | Only **`pos-summary-review.tsx`** has an **editable** date field; `receipt-review`, `invoice-draft-review`, `delivery-report-review` show dates as **read-only text** only | **Do not** add date pickers there unless product asks |
 | **Phase 9 Slice 10** | “UX polish” done | Toasts, command palette, dialog Esc/focus, skeletons, tokens ✓ — **date picker not included** | 10.1 completes §10 date slice of Slice 10 |
 | **Delivery nav** | Slice 5 built `/delivery/*` | Nested under **Delivery** in sidebar (`nestedUnder` + children) | **Done** in 10.2 |
-| **FX form UI** | Banking slice wired | `fx-purchase-form.tsx` loads **cash + bank** ✓ | **Label only** in 10.8 (already lists both) |
-| **FX backend** | Phase 5 FX purchase done | `post_fx_purchase()` → `_validate_try_cash_money_account` **CASH only**; `test_rejects_bank_as_try_payment_account` expects reject | **Extend** to BANK in **10.8** |
-| **FX cash subledger** | — | **No** `CashMovement` on FX purchase (GL `Dr` FX / `Cr` cash GL only); drawer page won’t list FX buys | **Add** OUT movement when source is cash in **10.8** |
-| **FX conversion** | — | `fx-conversion-form.tsx` already loads cash+bank for TRY receive; `spend_posting` allows CASH\|BANK | **Out of scope** 10.8 unless audit finds gap |
+| **FX form UI** | Banking slice wired | `fx-purchase-form.tsx` merges **bank + cash** in dropdown — **wrong** per owner | **Fix** in 10.8: **cash drawer only** |
+| **FX backend** | Phase 5 FX purchase done | `post_fx_purchase()` → `_validate_try_cash_money_account` **CASH only** ✓; `test_rejects_bank_as_try_payment_account` ✓ | **Keep** cash-only; **do not** accept `BANK` |
+| **FX cash subledger** | — | **No** `CashMovement` on FX purchase (GL `Dr` FX / `Cr` cash GL only); drawer page won’t list FX buys | **Add** OUT movement in **10.8** |
+| **FX conversion** | — | `fx-conversion-form.tsx` loads cash+bank for TRY **received** (FX→TRY) — separate flow | **Out of scope** 10.8; conversion/spend unchanged |
+| **Bank activity** | Statement import | Bank movements enter via **statement upload + classify** only — not manual bank pay for FX buy | **Owner locked** — reinforces 10.8 cash-only |
 | **Cmd/Ctrl-K palette** | §10 | `command-palette.tsx` in `app-shell.tsx` ✓ | **Verify** in 10.3; fix gaps only |
 | **Dialog Esc + focus trap** | Phase 9 Slice 10 | `dialog.tsx`: Esc closes, Tab trap, auto-focus first input on open ✓ | **Verify** in 10.3 |
 | **Skeletons / empty states** | Phase 9 Slice 10 | `PageSkeleton`, `TableSkeleton`, `EmptyState` on list pages ✓ | **Verify** in 10.3 |
@@ -424,7 +425,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 - Phases 0–9 backend + frontend v1 (`v0.65.0`); Phase 8.7/8.8; Z match-or-review (`v0.57.0`); tips expense-only; expense receipt OCR; manual daily sales; POS/delivery/banking UIs.
 - `ReportDateRange` / dashboard / reports **API wiring** (only upgrade inputs to `DateInput`).
-- `fx-purchase-form` **account fetch** (cash+bank) — fix backend + labels, don’t rebuild form from scratch.
+- `fx-purchase-form` — **remove bank** from dropdown in 10.8 (backend already cash-only); add cash movement posting.
 - `/delivery` hub + child **pages** — only **sidebar IA** changes in 10.2.
 - `Dialog` Esc/focus-trap/first-field focus — **verify** in 10.3, don’t rewrite unless broken.
 - `CommandPalette`, skeletons, empty states — **verify** in 10.3.
@@ -435,7 +436,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | Topic | Decision |
 |-------|----------|
 | **Dates** | Typable `DD.MM.YYYY` + **small calendar** from icon in field — **no toggle/mode** (`DESIGN_SYSTEM.md` §10). |
-| **FX buy USD/EUR** | **Cash drawer + bank** (`CASH` + `BANK`). **Not** credit card. Cash path → drawer movement + GL. |
+| **FX buy USD/EUR** | **Cash drawer only** (`CASH`). **Not** bank — bank activity is **statement import + classify** only; owner buys FX with physical TRY from the drawer. **Not** credit card. |
 | **Delivery nav** | **Confirmed:** nest platforms / reports / settlements under **Delivery**. |
 
 **References:** `DESIGN_SYSTEM.md` §5 (date picker component), §10 (interaction); `Restaurant_Bookkeeping_App_Decisions.md` §14–§15 (update §15 on **10.8** commit); `frontend/src/lib/app-routes.ts`, `app-shell.tsx`.
@@ -450,7 +451,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
   → 10.5 Combobox pickers
   → 10.6 Inline validation
   → 10.7 Autosave + discard confirm
-  → 10.8 FX purchase (cash + bank)   ← money-critical; last before go-live
+  → 10.8 FX purchase (cash drawer only + cash movement)   ← money-critical; last before go-live
 ```
 
 10.1 and 10.2 may share one commit if both gates pass. **10.8 = separate commit/tag** (money-critical). Slices 10.3–10.7 may batch where gates pass, but **order is fixed** — don’t start 10.5 before 10.4 audit documents Enter/focus baseline.
@@ -665,27 +666,50 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 ---
 
-### Slice 10.8 — FX purchase: cash drawer **or** bank (full wiring)
+### Slice 10.8 — FX purchase: **cash drawer only** (subledger wiring)
 
 | | |
 |---|---|
 | **Status** | planned |
 | **Money-critical** | Yes — owner sign-off |
-| **Suggested tag** | `v0.67.0-fx-purchase-cash-and-bank` |
+| **Owner (2026-06-24, revised)** | Buy FX **from cash drawer only**. Bank accounts are **automated via statements** — everything that hits the bank is picked up from statement import/classify, not manual bank payment in this form. |
+| **Aligns with** | `Restaurant_Bookkeeping_App_Decisions.md` §15 — “TRY leaves the drawer” |
+| **Suggested tag** | `v0.67.0-fx-purchase-cash-drawer` |
 
-**Audit gap (today):**
+**Problem today (fix, do not re-litigate):**
 
 | Layer | Now | Target |
 |-------|-----|--------|
-| UI | Cash+bank in dropdown | Clear labels; **no** `CREDIT_CARD` |
-| Backend | `test_rejects_bank_as_try_payment_account` | Accept `BANK`; still reject card/FX wallet |
-| GL | `Dr` FX / `Cr` cash GL | `Cr` payer GL (cash or bank) |
-| Cash drawer | No movement row | `CashMovement` OUT when payer is `CASH` (same `journal_entry_id`) |
-| Corrections | FX subledger only | Cash movement void/amend when cash-sourced |
+| UI `fx-purchase-form.tsx` | Fetches **bank + cash**, merged dropdown | **Cash accounts only**; label “Pay from cash drawer”; remove bank API fetch |
+| Backend `post_fx_purchase()` | **CASH only** ✓; rejects bank ✓ | **Unchanged** — keep `_validate_try_cash_money_account`; **do not** accept `BANK` |
+| GL | `Dr` FX / `Cr` cash GL ✓ | Unchanged |
+| Cash subledger | **No** `cash_movements` row on FX buy | `CashMovement` **OUT** on same `journal_entry_id` (mirror POS cash-out / transfer pattern) |
+| Cash drawer UI | FX buy invisible on `/banking/cash` | Drawer OUT line when FX purchased |
+| Corrections | FX subledger only | Void/amend linked `cash_movements` when correcting cash-sourced purchase |
 
-**Tests:** update/replace bank-reject test; add bank purchase + cash movement tests; **manual:** buy from drawer → see line on `/banking/cash`; buy from bank → FX up, bank GL down, no drawer line.
+**Out of scope for 10.8:**
 
-**Do not rebuild:** `post_fx_conversion`, `post_fx_expense_spend`, FX quantity model.
+- **Bank** (`BANK`) as FX payment source — owner confirmed **not** wanted.
+- **Credit card** (`CREDIT_CARD`) — still rejected.
+- `post_fx_conversion` / `post_fx_expense_spend` (FX→TRY may still credit bank/cash when owner converts — different flow).
+
+**Tests (mandatory):**
+
+- Keep **`test_rejects_bank_as_try_payment_account`** — bank must still be rejected.
+- Extend **`test_fx_purchase_posts_dr_fx_cr_try_cash`** — assert `cash_movements` OUT row + drawer session visibility.
+- Correction from cash: movement void/amend with corrected entry.
+
+**Docs (on commit):**
+
+- **Decisions §15:** Buying FX — TRY leaves **cash drawer only**; bank not a manual FX source (statements handle bank).
+- `DECISIONS.md` + `CHANGELOG.md`.
+
+**Verify (owner-visible):**
+
+- Buy USD from **drawer** → FX up, drawer movement TRY out, EOD ties.
+- Bank accounts **not** in FX buy dropdown; attempting bank via API still 422.
+
+**Do not rebuild:** FX quantity model, average-cost conversion, bank statement pipeline.
 
 ---
 
@@ -700,7 +724,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | 10.5 | Combobox on long pickers; manual type-to-filter verify |
 | 10.6 | Inline hints on priority money forms |
 | 10.7 | Discard confirm on dirty dialogs; autosave on listed forms |
-| 10.8 | Bank path works; cash path + movement; full `pytest`; **owner sign-off** |
+| 10.8 | Cash-only UI + API; cash movement on purchase; bank still rejected; full `pytest`; **owner sign-off** |
 
 Then proceed to **Phase 11 — Deployment & go-live**.
 
@@ -729,7 +753,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 - **§10 interaction UX (dates, combobox, validation, drafts, toasts, focus)** — **→ Phase 10** (pre-launch; slices 10.1–10.7).
 - **Delivery sidebar nesting** — **→ Phase 10.2** (owner confirmed).
-- **FX purchase cash + bank** — **→ Phase 10.8** (pre-launch).
+- **FX purchase cash drawer + movement** — **→ Phase 10.8** (pre-launch; **cash only**, not bank).
 - **Bank feed (read-only) adapter** — account-information / transaction pull only; never payment-initiation (the app never moves money). Same normalized transaction rows as manual statement import, feeding the existing classify → clearing → near-match → anti-double-count pipeline (downstream unchanged). Manual upload stays permanently as universal fallback; both coexist. When built: dedup on bank unique transaction ID, consent/token expiry + reconnect, reconcile feed balance to statement, confirm route (direct bank API vs aggregator).
 - **Proper KDV/tax-return module** — output − input, declaration, periods (input VAT already captured per rate).
 - **FX revaluation** — period-end holding revaluation (today FX is cost-only; gain/loss accounts already exist).

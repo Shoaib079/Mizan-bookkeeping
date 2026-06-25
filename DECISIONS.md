@@ -393,6 +393,14 @@ The `card_sales_batch.gross_amount_kurus` is stored as the full **Z** total (the
 
 **Not in slice:** ~~Spending FX, conversion back to TRY~~ (see FX spend slice), salaries, ~~gain/loss~~ (realized on conversion only), live rates, FX opening balances (quantity model), UI.
 
+## 2026-06-25 — FX purchase: cash drawer only (owner revision, Phase 10.8)
+
+**Choice:** `post_fx_purchase()` TRY source is **TRY cash drawer** (`MoneyAccountKind.CASH`) **only**. **Bank** (`BANK`) is **not** accepted — bank movements enter via statement import/classify, not manual FX buy. Keep `_validate_try_cash_money_account` and `test_rejects_bank_as_try_payment_account`. UI (`fx-purchase-form`) must list **cash accounts only** (remove erroneous bank merge). Phase 10.8 adds `CashMovement` OUT on purchase (same `journal_entry_id`) so `/banking/cash` shows FX buys.
+
+**Why:** Owner 2026-06-24 — bank is statement-driven; owner buys FX with physical TRY from the drawer. Aligns with Decisions §15.
+
+**Unchanged:** `post_fx_conversion()` may credit bank **or** cash when FX→TRY (owner-entered TRY received) — separate money movement from FX purchase.
+
 ## 2026-06-21 — Cash drawer (Phase 5)
 
 **Choice:** `post_cash_movement()` in `core/cash/posting.py` — cash in Dr cash GL / Cr offset; cash out Dr offset / Cr cash GL. Auto-open `cash_drawer_sessions` per `(money_account_id, session_date)` on first movement. `close_cash_drawer_session()` reads GL expected balance, compares owner counted balance; over posts Dr cash / Cr `5400`, short posts Dr `5400` / Cr cash; zero variance = no close journal; session status → closed (no further movements). Reuses Phase 3 `MoneyAccountKind.CASH` under bucket `1000`.

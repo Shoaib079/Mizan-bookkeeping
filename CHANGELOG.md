@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-25
 
+**Owner decision — FX purchase cash drawer only (docs):** Reversed prior plan to allow bank as FX buy source. Buying FX stays **cash drawer only** (`CASH`); bank activity via **statement import + classify** only. Backend already rejects bank; Phase 10.8 scope = fix UI dropdown + add `cash_movements` OUT. Updated `ROADMAP.md`, `PROGRESS.md`, `Restaurant_Bookkeeping_App_Decisions.md` §15, `DECISIONS.md`.
+
 **Phase 10 Slice 4 — Focus + Enter-submit audit (frontend):** Audited all 31 forms — every one uses `<form onSubmit>` + `type="submit"` (Enter submits; no button-only or `onKeyDown` Enter hacks). Verified `dialog.tsx` auto-focuses first input/select/textarea. Added first-field focus on full-page surfaces: opening balances (go-live on load, amount on Add line), entity create name, receipt/POS/delivery review panels, statement line classify. Tab order clean. **545 pytest green**; frontend build green. Tag `v0.66.3-focus-enter`. **Next:** Phase 10.5 combobox.
 
 **Phase 10 Slice 3 — Shell feedback (frontend):** Extended `useToast` to every successful POST — all 31 forms, review confirms (POS summary, receipt, invoice draft, delivery report), statement line classify, chart seed, and opening-balance validate/post. Errors stay inline (`setError`); no toast on validation failures. Verified existing command palette, dialog Esc, skeletons, empty states unchanged. Frontend build green. Tag `v0.66.2-shell-feedback`. **Next:** Phase 10.4 focus + Enter audit.

@@ -38,7 +38,7 @@
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.
 - Complete remaining §10: toasts everywhere, combobox pickers, focus/Enter audit, inline validation, autosave/discard confirm.
-- FX buy: **cash drawer + bank** (not credit card); backend + cash movement fix in **10.8**.
+- FX buy: **cash drawer only** (not bank — bank via statements; not credit card); UI fix + cash movement in **10.8**.
 - Delivery nav: **nested under Delivery** (confirmed).
 
 **Do not start Phase 11 (deployment)** until Phase **10.8** complete + owner sign-off on 10.8.

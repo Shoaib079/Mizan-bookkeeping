@@ -191,7 +191,7 @@ Upload/ingestion (+ fingerprint) · AI read · Match & identify · Needs Review 
 **Decided: track FX by QUANTITY in its own currency; do NOT convert to TRY on the dashboard for now.** This sidesteps the "bought at different rates" problem — counting units doesn't depend on the purchase rate.
 
 - **Each currency is its own wallet** (own ledger) under Cash, **measured in its own currency**.
-- **Buying FX:** TRY leaves the drawer (amount entered by owner — **no online rates, ever**) → FX **units** arrive.
+- **Buying FX:** TRY leaves the **cash drawer only** (amount entered by owner — **no online rates, ever**) → FX **units** arrive. **Not** from bank — bank activity is recorded via **statement import and classify**, not manual FX buy from a bank account.
 - **Dashboard:** each FX balance shown in its own currency (`$1,000 / €500 / £200`) **next to TRY cash, NOT converted**, with a short plain-English note.
 - **Quiet safeguard:** store the TRY paid at each purchase (typed anyway, so free); not displayed; enables average-cost TRY valuation later if ever wanted.
 - **Realized gain/loss on conversion only:** when FX → TRY, owner enters TRY received; difference from average book cost posts to FX Gain (`4200`) or FX Loss (`5600`). **Holdings are never revalued** — no mark-to-market.
