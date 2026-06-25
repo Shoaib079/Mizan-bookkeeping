@@ -8,6 +8,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
+from app.core.cash.posting import _get_or_create_open_session
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.fx.ledger import record_fx_movement
@@ -21,6 +22,7 @@ from app.features.banking.models import (
     MoneyAccount,
     MoneyAccountKind,
 )
+from app.features.cash.models import CashMovement, CashMovementDirection
 from app.features.entities import service as entity_service
 
 
@@ -32,6 +34,7 @@ class InvalidFxPurchaseError(ValueError):
 class FxPurchasePostResult:
     journal_entry: JournalEntry
     fx_ledger_entry: FxLedgerEntry
+    cash_movement: CashMovement
 
 
 def build_fx_purchase_posting_lines(
@@ -106,6 +109,40 @@ def _validate_try_cash_money_account(
     return money_account, gl_account
 
 
+def record_fx_purchase_cash_movement(
+    session: Session,
+    *,
+    try_cash_account: MoneyAccount,
+    fx_gl_account_id: uuid.UUID,
+    try_cost_kurus: int,
+    movement_date: date,
+    description: str,
+    actor_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+) -> CashMovement:
+    """Persist drawer OUT movement tied to an FX purchase journal entry."""
+    drawer_session = _get_or_create_open_session(
+        session,
+        money_account_id=try_cash_account.id,
+        session_date=movement_date,
+    )
+    movement = CashMovement(
+        session_id=drawer_session.id,
+        money_account_id=try_cash_account.id,
+        movement_date=movement_date,
+        direction=CashMovementDirection.OUT,
+        amount_kurus=try_cost_kurus,
+        offset_account_id=fx_gl_account_id,
+        description=description,
+        actor_id=actor_id,
+        journal_entry_id=journal_entry_id,
+    )
+    session.add(movement)
+    session.flush()
+    session.refresh(movement)
+    return movement
+
+
 def post_fx_purchase(
     session: Session,
     entity_id: uuid.UUID,
@@ -161,12 +198,25 @@ def post_fx_purchase(
             journal_entry_id=journal_entry.id,
         )
 
+        cash_movement = record_fx_purchase_cash_movement(
+            session,
+            try_cash_account=try_cash_account,
+            fx_gl_account_id=fx_gl.id,
+            try_cost_kurus=try_cost_kurus,
+            movement_date=purchase_date,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+        )
+
         session.commit()
         session.refresh(journal_entry)
         session.refresh(fx_entry)
+        session.refresh(cash_movement)
         _ = list(journal_entry.lines)
 
         return FxPurchasePostResult(
             journal_entry=journal_entry,
             fx_ledger_entry=fx_entry,
+            cash_movement=cash_movement,
         )

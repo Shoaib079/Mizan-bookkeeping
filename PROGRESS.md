@@ -5,10 +5,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | 10.8 — FX purchase cash drawer only (money-critical) |
-| **Last completed slice** | Phase 10 Slice 7 — Autosave + discard confirm (`v0.66.6-draft-safety`) |
+| **Active slice** | — (Phase 10 complete) |
+| **Last completed slice** | Phase 10 Slice 8 — FX purchase cash drawer (`v0.67.0-fx-purchase-cash-drawer`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.66.6-draft-safety` |
+| **Last tag** | `v0.67.0-fx-purchase-cash-drawer` |
 
 ## Resume point
 
@@ -49,7 +49,14 @@
 - `ResumeDraftBanner` — one-time “Resume draft?” on reopen
 - Wired: `manual-expense-form` (dirty confirm + draft), `opening-balances` (wizard lines draft), `receipt-review` (line edits draft, cleared on confirm POST)
 
-**Next:** Phase 10.8 FX purchase (cash drawer only + cash movement) per `ROADMAP.md`.
+**Phase 10 Slice 8 complete** — FX purchase cash drawer only (money-critical):
+- `post_fx_purchase()` records `CashMovement` OUT on same `journal_entry_id` (drawer session auto-opens)
+- `correct_fx_purchase()` voids/reposts linked cash movements (IN reversal + OUT on corrected entry)
+- `fx-purchase-form.tsx` — cash accounts only; label “Pay from cash drawer”; bank fetch removed
+- Tests: extended `test_fx_purchase_posts_dr_fx_cr_try_cash`; `test_fx_purchase_cash_movement_visible_on_drawer_session`; `test_fx_purchase_correct_voids_and_reposts_cash_movement`; bank rejection kept
+- **Owner sign-off on 10.8: PENDING** (money-critical gate)
+
+**Next:** Phase 11 — Deployment & go-live per `ROADMAP.md`.
 
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.
@@ -57,7 +64,7 @@
 - FX buy: **cash drawer only** (not bank — bank via statements; not credit card); UI fix + cash movement in **10.8**.
 - Delivery nav: **nested under Delivery** (confirmed).
 
-**Do not start Phase 11 (deployment)** until Phase **10.8** complete + owner sign-off on 10.8.
+**Do not start Phase 11 (deployment)** until **owner sign-off on Phase 10.8** (money-critical).
 
 **Phase 9 Slice 10 complete** — Theme refinement + UX polish (frontend only):
 - Refined `globals.css` tokens (radius, spacing, focus ring, skeleton animation)

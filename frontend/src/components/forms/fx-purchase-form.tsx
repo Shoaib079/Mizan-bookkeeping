@@ -47,19 +47,12 @@ export function FxPurchaseForm({
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
-    const [bankRes, cashRes] = await Promise.all([
-      apiFetch<{ items: MoneyAccountLeaf[] }>(
-        `/entities/${entityId}/banking/accounts?account_kind=bank&limit=50`,
-      ),
-      apiFetch<{ items: MoneyAccountLeaf[] }>(
-        `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
-      ),
-    ]);
-    const merged = [...bankRes.items, ...cashRes.items].filter(
-      (a) => a.is_active,
+    const cashRes = await apiFetch<{ items: MoneyAccountLeaf[] }>(
+      `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
     );
-    setTryCashAccounts(merged);
-    if (merged[0]) setTryCashId(merged[0].id);
+    const accounts = cashRes.items.filter((a) => a.is_active);
+    setTryCashAccounts(accounts);
+    if (accounts[0]) setTryCashId(accounts[0].id);
   }, [entityId]);
 
   useEffect(() => {
@@ -142,7 +135,7 @@ export function FxPurchaseForm({
           />
         </div>
         <div>
-          <Label htmlFor="fx-buy-from">Pay from (TRY)</Label>
+          <Label htmlFor="fx-buy-from">Pay from cash drawer</Label>
           <Combobox
             id="fx-buy-from"
             value={tryCashId}
@@ -151,7 +144,7 @@ export function FxPurchaseForm({
               value: a.id,
               label: a.name,
             }))}
-            placeholder="Pay from account…"
+            placeholder="Cash drawer…"
           />
         </div>
         <div>

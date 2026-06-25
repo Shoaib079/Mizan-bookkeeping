@@ -20,6 +20,7 @@ from app.db.session import entity_context
 from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
+from app.features.cash.models import CashMovement, CashMovementDirection
 
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
@@ -110,6 +111,21 @@ def test_fx_purchase_posts_dr_fx_cr_try_cash(db_session, fx_setup) -> None:
     assert by_account[wallet.gl_account_id].side == AccountNormalBalance.DEBIT
     assert by_account[drawer.gl_account_id].amount_kurus == 350_000
     assert by_account[drawer.gl_account_id].side == AccountNormalBalance.CREDIT
+
+    assert result.cash_movement.direction == CashMovementDirection.OUT
+    assert result.cash_movement.amount_kurus == 350_000
+    assert result.cash_movement.journal_entry_id == result.journal_entry.id
+    assert result.cash_movement.money_account_id == drawer.id
+    assert result.cash_movement.offset_account_id == wallet.gl_account_id
+
+    with entity_context(db_session, entity_id):
+        linked = db_session.scalar(
+            select(CashMovement).where(
+                CashMovement.journal_entry_id == result.journal_entry.id
+            )
+        )
+    assert linked is not None
+    assert linked.id == result.cash_movement.id
 
 
 def test_control_account_try_cost_matches_gl(db_session, fx_setup) -> None:
@@ -299,6 +315,91 @@ def test_tree_includes_foreign_currency_branches(db_session, fx_setup) -> None:
     assert tree.foreign_currency.gbp.bucket_code == "1030"
 
     assert eur_wallet.gl_account_code == "1021"
+
+
+def test_fx_purchase_cash_movement_visible_on_drawer_session(
+    client: TestClient, fx_setup, db_session
+) -> None:
+    entity_id = fx_setup["entity_id"]
+    drawer = fx_setup["drawer"]
+    wallet = fx_setup["usd_wallet"]
+
+    purchase = client.post(
+        f"/entities/{entity_id}/fx/purchases",
+        json={
+            "fx_money_account_id": str(wallet.id),
+            "try_cash_money_account_id": str(drawer.id),
+            "native_quantity": 5000,
+            "try_cost_kurus": 175000,
+            "purchase_date": "2026-05-15",
+            "description": "Drawer FX buy",
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert purchase.status_code == 201
+
+    sessions = client.get(
+        f"/entities/{entity_id}/cash/drawer-sessions?money_account_id={drawer.id}"
+    )
+    assert sessions.status_code == 200
+    session_id = sessions.json()["items"][0]["id"]
+
+    detail = client.get(f"/entities/{entity_id}/cash/drawer-sessions/{session_id}")
+    assert detail.status_code == 200
+    movements = detail.json()["movements"]
+    assert len(movements) == 1
+    assert movements[0]["direction"] == "out"
+    assert movements[0]["amount_kurus"] == 175_000
+    assert movements[0]["description"] == "Drawer FX buy"
+
+
+def test_fx_purchase_correct_voids_and_reposts_cash_movement(
+    db_session, fx_setup
+) -> None:
+    entity_id = fx_setup["entity_id"]
+    drawer = fx_setup["drawer"]
+    wallet = fx_setup["usd_wallet"]
+
+    purchase = fx_posting.post_fx_purchase(
+        db_session,
+        entity_id,
+        fx_money_account_id=wallet.id,
+        try_cash_money_account_id=drawer.id,
+        native_quantity=10_000,
+        try_cost_kurus=350_000,
+        purchase_date=date(2026, 5, 1),
+        description="Buy USD",
+        actor_id=ACTOR_ID,
+    )
+
+    from app.core.ledger.correction import correct_fx_purchase
+
+    result = correct_fx_purchase(
+        db_session,
+        entity_id,
+        purchase.journal_entry.id,
+        purchase_date=date(2026, 5, 2),
+        native_quantity=12_000,
+        try_cost_kurus=420_000,
+        description="Corrected buy",
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, entity_id):
+        movements = db_session.scalars(
+            select(CashMovement).order_by(CashMovement.created_at.asc())
+        ).all()
+
+    assert len(movements) == 3
+    original_out, reversal_in, corrected_out = movements
+    assert original_out.journal_entry_id == purchase.journal_entry.id
+    assert original_out.direction == CashMovementDirection.OUT
+    assert reversal_in.journal_entry_id == result.reversal.id
+    assert reversal_in.direction == CashMovementDirection.IN
+    assert reversal_in.amount_kurus == 350_000
+    assert corrected_out.journal_entry_id == result.corrected.id
+    assert corrected_out.direction == CashMovementDirection.OUT
+    assert corrected_out.amount_kurus == 420_000
 
 
 def test_api_fx_purchase_ledger_and_balance(

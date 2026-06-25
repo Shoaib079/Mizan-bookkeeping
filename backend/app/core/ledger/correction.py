@@ -16,7 +16,7 @@ from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.expenses.posting import build_expense_entry_lines
 from app.core.fx.ledger import record_fx_movement
 from app.core.fx.models import FxLedgerEntry
-from app.core.fx.posting import build_fx_purchase_posting_lines
+from app.core.fx.posting import build_fx_purchase_posting_lines, record_fx_purchase_cash_movement
 from app.core.fx.types import FxMovementType
 from app.core.invoices.posting import build_invoice_posting_lines
 from app.core.ledger.models import JournalEntry, JournalEntrySource
@@ -43,6 +43,8 @@ from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.expenses.models import ExpenseEntry
 from app.features.invoices.models import InvoiceDraft
+from app.features.cash.models import CashMovement, CashMovementDirection
+from app.core.cash.posting import _get_or_create_open_session
 
 
 class SubledgerBackedCorrectionError(ValueError):
@@ -384,6 +386,50 @@ def _get_fx_ledger_row(session: Session, journal_entry_id: uuid.UUID) -> FxLedge
     return row
 
 
+def _get_cash_movement_for_journal(
+    session: Session, journal_entry_id: uuid.UUID
+) -> CashMovement | None:
+    return session.scalar(
+        select(CashMovement).where(CashMovement.journal_entry_id == journal_entry_id)
+    )
+
+
+def _append_cash_movement_reversal(
+    session: Session,
+    original: CashMovement,
+    reversal: JournalEntry,
+    *,
+    actor_id: uuid.UUID,
+    void_date: date | None,
+) -> CashMovement:
+    reversal_direction = (
+        CashMovementDirection.IN
+        if original.direction == CashMovementDirection.OUT
+        else CashMovementDirection.OUT
+    )
+    reversal_date = _effective_void_date(void_date, reversal)
+    drawer_session = _get_or_create_open_session(
+        session,
+        money_account_id=original.money_account_id,
+        session_date=reversal_date,
+    )
+    entry = CashMovement(
+        session_id=drawer_session.id,
+        money_account_id=original.money_account_id,
+        movement_date=reversal_date,
+        direction=reversal_direction,
+        amount_kurus=original.amount_kurus,
+        offset_account_id=original.offset_account_id,
+        description=f"Void: {original.description}",
+        actor_id=actor_id,
+        journal_entry_id=reversal.id,
+    )
+    session.add(entry)
+    session.flush()
+    session.refresh(entry)
+    return entry
+
+
 def correct_supplier_payment(
     session: Session,
     entity_id: uuid.UUID,
@@ -611,6 +657,29 @@ def correct_fx_purchase(
             actor_id=actor_id,
             journal_entry_id=corrected.id,
         )
+
+        original_cash = _get_cash_movement_for_journal(sess, journal_entry_id)
+        if original_cash is not None:
+            _append_cash_movement_reversal(
+                sess, original_cash, reversal, actor_id=actor_id, void_date=void_date
+            )
+            try_cash_id = try_cash_money_account_id or original_cash.money_account_id
+            try_cash = sess.get(MoneyAccount, try_cash_id)
+            if try_cash is None:
+                raise LookupError("TRY cash money account not found")
+            fx_money = sess.get(MoneyAccount, fx_account_id)
+            if fx_money is None:
+                raise LookupError("FX money account not found")
+            record_fx_purchase_cash_movement(
+                sess,
+                try_cash_account=try_cash,
+                fx_gl_account_id=fx_money.gl_account_id,
+                try_cost_kurus=try_cost_kurus,
+                movement_date=purchase_date,
+                description=description,
+                actor_id=actor_id,
+                journal_entry_id=corrected.id,
+            )
 
     def build_lines(sess: Session) -> list[PostingLine]:
         original_row = _get_fx_ledger_row(sess, journal_entry_id)

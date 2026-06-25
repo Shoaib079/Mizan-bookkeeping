@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | **10.8** — FX purchase cash drawer only (money-critical) |
-| **Last completed slice** | Phase 10 Slice 7 — Autosave + discard confirm (`v0.66.6`) |
-| **Last commit/tag** | `v0.66.6-draft-safety` |
-| **Next up** | Phase 10.8 only — then Phase 11 go-live (see below) |
+| **Active slice** | — (Phase 10 complete) |
+| **Last completed slice** | Phase 10 Slice 8 — FX purchase cash drawer (`v0.67.0`) |
+| **Last commit/tag** | `v0.67.0-fx-purchase-cash-drawer` |
+| **Next up** | Phase 11 — Deployment & go-live |
 
 **The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = pre-launch: complete **all** locked `DESIGN_SYSTEM.md` §10 interaction UX + delivery nav + FX wiring — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -386,13 +386,13 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Phase 9 complete** — all slices done, tested, committed (`v0.65.0`). **Owner sign-off pending** → frontend v1 complete.
 
-**Known gap (remaining before go-live):** `DESIGN_SYSTEM.md` §10 slices **10.1–10.7** are **done** (`v0.66.6-draft-safety`). **Only 10.8 remains:** FX buy UI still lists bank accounts wrongly; **no** `cash_movements` on purchase. See **Phase 10 audit** below.
+**Known gap (remaining before go-live):** None — Phase 10 slices **10.1–10.8** are **done** (`v0.67.0-fx-purchase-cash-drawer`). Proceed to **Phase 11**.
 
 ---
 
 ## Phase 10 — Pre-launch UX (`DESIGN_SYSTEM.md` §10) & FX wiring (owner 2026-06-24)
 
-**Status: PLANNED** — build **before Phase 11 (go-live)**, strict order **10.1 → 10.8**. Do not start Phase 11 deployment until **10.8** passes the completion gate (10.1–10.7 frontend UX; **10.8** money-critical + owner sign-off).
+**Status: DONE** — all slices **10.1 → 10.8** complete. Proceed to **Phase 11 (go-live)**. Slice 10.8 owner sign-off **pending**.
 
 ### Code audit (do not trust ROADMAP/tests alone — verified in repo)
 
@@ -406,9 +406,9 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **Review screens** | Listed 4 review UIs | Only **`pos-summary-review.tsx`** has an **editable** date field; `receipt-review`, `invoice-draft-review`, `delivery-report-review` show dates as **read-only text** only | **Do not** add date pickers there unless product asks |
 | **Phase 9 Slice 10** | “UX polish” done | Toasts, command palette, dialog Esc/focus, skeletons, tokens ✓ — **date picker not included** | 10.1 completes §10 date slice of Slice 10 |
 | **Delivery nav** | Slice 5 built `/delivery/*` | Nested under **Delivery** in sidebar (`nestedUnder` + children) | **Done** in 10.2 |
-| **FX form UI** | Banking slice wired | `fx-purchase-form.tsx` merges **bank + cash** in dropdown — **wrong** per owner | **Fix** in 10.8: **cash drawer only** |
-| **FX backend** | Phase 5 FX purchase done | `post_fx_purchase()` → `_validate_try_cash_money_account` **CASH only** ✓; `test_rejects_bank_as_try_payment_account` ✓ | **Keep** cash-only; **do not** accept `BANK` |
-| **FX cash subledger** | — | **No** `CashMovement` on FX purchase (GL `Dr` FX / `Cr` cash GL only); drawer page won’t list FX buys | **Add** OUT movement in **10.8** |
+| **FX form UI** | Banking slice wired | `fx-purchase-form.tsx` **cash drawer only** ✓ | **Done** in 10.8 |
+| **FX backend** | Phase 5 FX purchase done | `post_fx_purchase()` CASH only ✓; `CashMovement` OUT on purchase ✓ | **Done** in 10.8 |
+| **FX cash subledger** | — | `cash_movements` OUT on FX buy; drawer page lists FX buys ✓ | **Done** in 10.8 |
 | **FX conversion** | — | `fx-conversion-form.tsx` loads cash+bank for TRY **received** (FX→TRY) — separate flow | **Out of scope** 10.8; conversion/spend unchanged |
 | **Bank activity** | Statement import | Bank movements enter via **statement upload + classify** only — not manual bank pay for FX buy | **Owner locked** — reinforces 10.8 cash-only |
 | **Cmd/Ctrl-K palette** | §10 | `command-palette.tsx` in `app-shell.tsx` ✓ | **Verify** in 10.3; fix gaps only |
@@ -669,11 +669,11 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | | |
 |---|---|
-| **Status** | planned |
-| **Money-critical** | Yes — owner sign-off |
+| **Status** | done |
+| **Money-critical** | Yes — **owner sign-off pending** |
 | **Owner (2026-06-24, revised)** | Buy FX **from cash drawer only**. Bank accounts are **automated via statements** — everything that hits the bank is picked up from statement import/classify, not manual bank payment in this form. |
 | **Aligns with** | `Restaurant_Bookkeeping_App_Decisions.md` §15 — “TRY leaves the drawer” |
-| **Suggested tag** | `v0.67.0-fx-purchase-cash-drawer` |
+| **Tag** | `v0.67.0-fx-purchase-cash-drawer` |
 
 **Problem today (fix, do not re-litigate):**
 
@@ -723,7 +723,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | 10.5 | Combobox on long pickers; manual type-to-filter verify | **done** (`v0.66.4`) |
 | 10.6 | Inline hints on priority money forms | **done** (`v0.66.5`) |
 | 10.7 | Discard confirm on dirty dialogs; autosave on listed forms | **done** (`v0.66.6-draft-safety`) |
-| 10.8 | Cash-only UI + API; cash movement on purchase; bank still rejected; full `pytest`; **owner sign-off** |
+| 10.8 | Cash-only UI + API; cash movement on purchase; bank still rejected; full `pytest`; **owner sign-off pending** | **done** (`v0.67.0`) |
 
 Then proceed to **Phase 11 — Deployment & go-live**.
 
