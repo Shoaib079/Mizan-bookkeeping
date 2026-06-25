@@ -16,7 +16,7 @@
 | **Active slice** | **11.2** — Feature toggles (post-create step + PATCH) |
 | **Last completed slice** | Phase 11 Slice 11.1 — default cash drawer on chart seed (`v0.68.0-default-money-accounts`) |
 | **Last commit/tag** | `v0.68.0-default-money-accounts` |
-| **Next up** | Phase 11.2 → 11.12 (then Phase 12 deployment) |
+| **Next up** | **11.2** (in progress) → **11.1a** follow-ups → 11.3–11.12 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -739,7 +739,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | # | Finding | **Today** | Phase 11 slice |
 |---|---------|-----------|----------------|
-| 1 | **Empty cash account picker** | **Fixed in 11.1** — `ensure_default_cash_drawer()` on chart seed; `"Main Drawer"` TRY cash account | **11.1** ✓ |
+| 1 | **Empty cash account picker** | **Partial (11.1)** — new seeds get `"Main Drawer"`; **legacy** entities (chart seeded before `v0.68.0`) still empty; seed API undercounts; forms don't use `defaultMainDrawerId` | **11.1** ✓ + **11.1a** |
 | 2 | Feature toggles wrong timing / locked forever | Create selects entity immediately; toggles create-only (no PATCH) | **11.2** |
 | 3 | Money fields accept letters | `parseTryToKurus` on submit only | **11.3** |
 | 4 | Dialog steals focus while typing | `dialog.tsx` effect re-runs when `dirty` flips → refocus first field | **11.4** |
@@ -782,7 +782,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | Item | API today | Slice |
 |------|-----------|-------|
-| Default cash money account | **done ✓** — `ensure_default_cash_drawer()` on `POST .../chart-of-accounts/seed`; cash only | **11.1** ✓ |
+| Default cash money account | **partial** — on chart seed only (`v0.68.0`); legacy entities + API response gaps → **11.1a** | **11.1** ✓ / **11.1a** |
 | `PATCH .../entities/{id}/settings/{key}` | **not built** — `POST` create-only | **11.2** |
 | `POST /entities` → owner membership | **not built** | **11.5** |
 | `partners.ownership_share_pct` | **not built** | **11.6** |
@@ -793,8 +793,9 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 ### Build order
 
 ```
-11.1 Default money accounts (Main drawer) + setup hint
-  → 11.2 Feature toggles (post-create step + PATCH)
+11.1 Default money accounts (Main drawer) + setup hint          ← done (v0.68.0); gaps → 11.1a
+  → 11.2 Feature toggles (post-create step + PATCH)           ← ACTIVE — do not interrupt
+  → 11.1a 11.1 follow-ups (legacy backfill, API, form defaults)  ← after 11.2
   → 11.3 MoneyInput
   → 11.4 Dialog focus (once on open)
   → 11.5 Create entity → owner membership
@@ -822,13 +823,44 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 **Acceptance:**
 
-- [x] After **seed chart** (or dedicated setup step), auto-create **one** TRY cash money account per entity (e.g. `"Main drawer"` / `"Kasa"`) unless one already exists.
-- [x] Optional: prompt on first visit to Banking / New menu if no cash account (“Set up your cash drawer”).
-- [x] Opening balances wizard: if cash line needed, default to the main drawer account.
+- [x] After **seed chart**, auto-create **one** TRY cash money account per entity (`"Main Drawer"`) unless one already exists.
+- [x] Banking page hint when cash branch empty.
+- [ ] New menu / cash-picker forms: empty-state hint when no cash account (deferred → **11.1a**).
+- [x] Opening balances wizard: default bank/cash line to main drawer (`defaultMainDrawerId`).
 - [x] **Do not** auto-create bank accounts (statement-driven); cash only for v1.
 - [x] Tests: new entity + seed → cash account exists; pickers non-empty.
 
-**Done:** `banking_service.ensure_default_cash_drawer()` called from `seed_chart_for_entity()` after `seed_default_chart()`; idempotent skip when any CASH account exists. Frontend: Banking empty-cash hint; opening balances defaults `money_account` lines to main drawer via `defaultMainDrawerId()`. Tests: `test_default_cash_drawer_onboarding.py` (4 tests); `test_chart_of_accounts` list count +1 for GL sub-account `1001`.
+**Done (`v0.68.0`):** `banking_service.ensure_default_cash_drawer()` called from `seed_chart_for_entity()` after `seed_default_chart()`; idempotent skip when any CASH account exists. Frontend: Banking empty-cash hint; opening balances uses `defaultMainDrawerId()`. Tests: `test_default_cash_drawer_onboarding.py` (4 tests); `test_chart_of_accounts` list count +1 for GL sub-account `1001`.
+
+**Known gaps (adversarial review 2026-06-25 — fix in 11.1a, not 11.2):**
+
+| # | Gap | Impact |
+|---|-----|--------|
+| A | **No backfill** for entities that seeded chart **before** `v0.68.0` | Cash pickers still empty until manual New account |
+| B | **Seed API** `accounts_created` / `accounts[]` omit drawer GL sub-account (`1001`) | Misleading response; list `total` is +1 vs `accounts_created` |
+| C | Cash forms use `items[0]` not `defaultMainDrawerId()` | Wrong default when multiple cash accounts (name-sorted list) |
+| D | New menu forms lack empty-cash hint | Only Banking has setup copy |
+
+---
+
+### Slice 11.1a — 11.1 follow-ups (post-review)
+
+| | |
+|---|---|
+| **Status** | planned — **after 11.2** (other agent owns 11.2; do not touch) |
+| **Suggested tag** | `v0.68.1a-default-cash-followups` |
+
+**Purpose:** Close gaps left by 11.1 without re-doing `ensure_default_cash_drawer()` on seed.
+
+**Acceptance:**
+
+- [ ] **A — Legacy backfill:** Idempotent `ensure_default_cash_drawer()` (or equivalent) when entity has seeded chart but **zero** CASH accounts — e.g. on `GET .../banking/accounts?account_kind=cash` or dedicated setup check (not on re-seed; chart stays one-time).
+- [ ] **B — Seed API honesty:** `POST .../chart-of-accounts/seed` response includes drawer GL (`1001`) in `accounts` and `accounts_created` matches list `total`.
+- [ ] **C — Form defaults:** Use shared `defaultMainDrawerId()` in manual expense, manual daily sales, FX purchase, POS/receipt review, cash movement (not `items[0]`).
+- [ ] **D — Empty-cash UX:** Short hint on New-menu cash pickers when list is empty (match Banking copy).
+- [ ] Tests: legacy entity (chart only, no cash) → backfill creates drawer; seed response count; form default selects `"Main Drawer"` when present.
+
+**Do not redo:** 11.1 seed hook, `DEFAULT_CASH_DRAWER_NAME`, or 11.2 entity-settings work.
 
 ---
 
@@ -836,7 +868,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | **in progress** (other agent) |
 | **Suggested tag** | `v0.68.1-entity-settings-editable` |
 
 **Problem:** Toggles beside create form; once set, **disabled forever** (frontend + POST-only API).
@@ -1020,7 +1052,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | Slice | Gate |
 |-------|------|
-| 11.1 | Main cash account exists after setup; cash pickers non-empty |
+| 11.1 | Main cash account on **new** chart seed; Banking hint; OB default |
+| 11.1a | Legacy backfill; seed API count; `defaultMainDrawerId` on forms; New-menu hint |
 | 11.2 | Post-create toggle step; PATCH works; toggles editable later |
 | 11.3 | Money fields reject letters on priority forms |
 | 11.4 | Dialog focus stable while editing |
@@ -1084,6 +1117,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-25 | Phase 11.1a plan (docs) | `v0.68.0.1-phase11-1a-roadmap` | Adversarial review gaps A–D; slice after 11.2; 11.2 marked in progress |
 | 2026-06-25 | Alembic migration grants fix | `v0.67.2-alembic-migration-grants` | `alembic upgrade head` uses schema owner; auto-grant `mizan_app`; 547 pytest |
 | 2026-06-25 | Phase 11 Slice 11.1 — default cash drawer | `v0.68.0-default-money-accounts` | `ensure_default_cash_drawer` on chart seed; Banking hint; OB default drawer; 549 pytest |
 | 2026-06-25 | Phase 11 plan restored | — | Audit-driven pre-go-live slices 11.1–11.12; deployment → Phase 12 |
