@@ -8,15 +8,15 @@
 
 ## Current status
 
-**Crash / new session:** read this file + `PROGRESS.md`, then run the Recovery Protocol in `CURSOR_RULES.md` §5 before changing code. Git wins if docs disagree — then fix the docs.
+**Crash / new session:** read this file + `PROGRESS.md` **Current** table only, then run the Recovery Protocol in `CURSOR_RULES.md` §5 before changing code. **Git + last tag win** if docs disagree — then fix the docs. **One agent, one active slice** — do not start the next slice until the current one is committed and tagged.
 
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.1** — Default money accounts + onboarding bootstrap |
-| **Last completed slice** | Phase 10 Slice 8 — FX purchase cash drawer (`v0.67.0`); infra fix `v0.67.2-alembic-migration-grants` |
-| **Last commit/tag** | `v0.67.2-alembic-migration-grants` |
-| **Next up** | Phase 11.1 → 11.12 (then Phase 12 deployment) |
+| **Active slice** | **11.2** — Feature toggles (post-create step + PATCH) |
+| **Last completed slice** | Phase 11 Slice 11.1 — default cash drawer on chart seed (`v0.68.0-default-money-accounts`) |
+| **Last commit/tag** | `v0.68.0-default-money-accounts` |
+| **Next up** | Phase 11.2 → 11.12 (then Phase 12 deployment) |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -386,13 +386,13 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Phase 9 complete** — all slices done, tested, committed (`v0.65.0`). **Owner sign-off pending** → frontend v1 complete.
 
-**Known gap (remaining before go-live):** Phase **11** — onboarding bootstrap (empty cash picker), corrections after post, entity setup UX — see **Phase 11** audit table. Phase 10 slices **10.1–10.8** are **done** (`v0.67.0`). Slice 10.8 owner sign-off **pending**.
+**Known gap (remaining before go-live):** Phase **11** slices **11.2–11.12** — corrections after post, entity setup UX — see **Phase 11** audit table. Phase 10 slices **10.1–10.8** are **done** (`v0.67.0`); Slice 10.8 owner sign-off **APPROVED (2026-06-25)**.
 
 ---
 
 ## Phase 10 — Pre-launch UX (`DESIGN_SYSTEM.md` §10) & FX wiring (owner 2026-06-24)
 
-**Status: DONE** — all slices **10.1 → 10.8** complete. Proceed to **Phase 11**. Slice 10.8 owner sign-off **pending**.
+**Status: DONE** — all slices **10.1 → 10.8** complete. Slice 10.8 owner sign-off **APPROVED (2026-06-25)**. Proceed to **Phase 11**.
 
 ### Code audit (do not trust ROADMAP/tests alone — verified in repo)
 
@@ -670,7 +670,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | | |
 |---|---|
 | **Status** | done |
-| **Money-critical** | Yes — **owner sign-off pending** |
+| **Money-critical** | Yes — **owner sign-off APPROVED (2026-06-25)** |
 | **Owner (2026-06-24, revised)** | Buy FX **from cash drawer only**. Bank accounts are **automated via statements** — everything that hits the bank is picked up from statement import/classify, not manual bank payment in this form. |
 | **Aligns with** | `Restaurant_Bookkeeping_App_Decisions.md` §15 — “TRY leaves the drawer” |
 | **Tag** | `v0.67.0-fx-purchase-cash-drawer` |
@@ -723,7 +723,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | 10.5 | Combobox on long pickers; manual type-to-filter verify | **done** (`v0.66.4`) |
 | 10.6 | Inline hints on priority money forms | **done** (`v0.66.5`) |
 | 10.7 | Discard confirm on dirty dialogs; autosave on listed forms | **done** (`v0.66.6-draft-safety`) |
-| 10.8 | Cash-only UI + API; cash movement on purchase; bank still rejected; full `pytest`; **owner sign-off pending** | **done** (`v0.67.0`) |
+| 10.8 | Cash-only UI + API; cash movement on purchase; bank still rejected; full `pytest`; owner sign-off **APPROVED** | **done** (`v0.67.0`) |
 
 Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
@@ -731,7 +731,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ## Phase 11 — Pre-go-live product fixes (owner 2026-06-25, audit-driven)
 
-**Status: PLANNED** — build **before Phase 12 (deployment)**. Order **11.1 → 11.12** (money-critical slices get separate commits/tags + owner sign-off).
+**Status: IN PROGRESS** — **11.1 done** (`v0.68.0-default-money-accounts`). Build **before Phase 12 (deployment)**. Order **11.2 → 11.12** (money-critical slices get separate commits/tags + owner sign-off).
 
 **Purpose:** Close gaps found by adversarial code audit vs `DECISIONS.md` / owner daily workflow — onboarding traps (empty cash picker), post-post corrections, entity setup, and UX bugs — **without** re-litigating Phase 10 or core posting rules.
 
@@ -739,7 +739,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | # | Finding | **Today** | Phase 11 slice |
 |---|---------|-----------|----------------|
-| 1 | **Empty cash account picker** | Chart bucket `1000` exists after seed; **no** `money_accounts` row until Banking → New account | **11.1** |
+| 1 | **Empty cash account picker** | **Fixed in 11.1** — `ensure_default_cash_drawer()` on chart seed; `"Main Drawer"` TRY cash account | **11.1** ✓ |
 | 2 | Feature toggles wrong timing / locked forever | Create selects entity immediately; toggles create-only (no PATCH) | **11.2** |
 | 3 | Money fields accept letters | `parseTryToKurus` on submit only | **11.3** |
 | 4 | Dialog steals focus while typing | `dialog.tsx` effect re-runs when `dirty` flips → refocus first field | **11.4** |
@@ -782,7 +782,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | Item | API today | Slice |
 |------|-----------|-------|
-| Default cash money account | **not built** — manual `POST .../banking/accounts` only | **11.1** |
+| Default cash money account | **done ✓** — `ensure_default_cash_drawer()` on `POST .../chart-of-accounts/seed`; cash only | **11.1** ✓ |
 | `PATCH .../entities/{id}/settings/{key}` | **not built** — `POST` create-only | **11.2** |
 | `POST /entities` → owner membership | **not built** | **11.5** |
 | `partners.ownership_share_pct` | **not built** | **11.6** |
@@ -807,7 +807,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
   → 11.12 Remaining correction APIs (invoice, staff, partner, credit sale, FX conversion/spend)
 ```
 
-11.1–11.4 may batch if gates pass. **11.9, 11.10, 11.12** = separate commits; **11.9–11.12** need owner sign-off when money-critical.
+11.1–11.4 are sequential (**one slice at a time** unless the owner explicitly assigns parallel work). **11.9, 11.10, 11.12** = separate commits; **11.9–11.12** need owner sign-off when money-critical.
 
 ---
 
@@ -815,18 +815,20 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
-| **Suggested tag** | `v0.68.0-default-money-accounts` |
+| **Status** | **done** |
+| **Tag** | `v0.68.0-default-money-accounts` |
 
 **Problem:** Every cash picker (`manual expense`, daily sales, cash drawer, FX buy, receipt upload) lists `GET .../banking/accounts?account_kind=cash` — **empty** until owner manually creates an account.
 
 **Acceptance:**
 
-- [ ] After **seed chart** (or dedicated setup step), auto-create **one** TRY cash money account per entity (e.g. `"Main drawer"` / `"Kasa"`) unless one already exists.
-- [ ] Optional: prompt on first visit to Banking / New menu if no cash account (“Set up your cash drawer”).
-- [ ] Opening balances wizard: if cash line needed, default to the main drawer account.
-- [ ] **Do not** auto-create bank accounts (statement-driven); cash only for v1.
-- [ ] Tests: new entity + seed → cash account exists; pickers non-empty.
+- [x] After **seed chart** (or dedicated setup step), auto-create **one** TRY cash money account per entity (e.g. `"Main drawer"` / `"Kasa"`) unless one already exists.
+- [x] Optional: prompt on first visit to Banking / New menu if no cash account (“Set up your cash drawer”).
+- [x] Opening balances wizard: if cash line needed, default to the main drawer account.
+- [x] **Do not** auto-create bank accounts (statement-driven); cash only for v1.
+- [x] Tests: new entity + seed → cash account exists; pickers non-empty.
+
+**Done:** `banking_service.ensure_default_cash_drawer()` called from `seed_chart_for_entity()` after `seed_default_chart()`; idempotent skip when any CASH account exists. Frontend: Banking empty-cash hint; opening balances defaults `money_account` lines to main drawer via `defaultMainDrawerId()`. Tests: `test_default_cash_drawer_onboarding.py` (4 tests); `test_chart_of_accounts` list count +1 for GL sub-account `1001`.
 
 ---
 
@@ -1083,6 +1085,7 @@ Take the tested app to a real, secure production environment and put real data i
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
 | 2026-06-25 | Alembic migration grants fix | `v0.67.2-alembic-migration-grants` | `alembic upgrade head` uses schema owner; auto-grant `mizan_app`; 547 pytest |
+| 2026-06-25 | Phase 11 Slice 11.1 — default cash drawer | `v0.68.0-default-money-accounts` | `ensure_default_cash_drawer` on chart seed; Banking hint; OB default drawer; 549 pytest |
 | 2026-06-25 | Phase 11 plan restored | — | Audit-driven pre-go-live slices 11.1–11.12; deployment → Phase 12 |
 | 2026-06-25 | Phase 10 Slice 3 — Shell feedback | `v0.66.2-shell-feedback` | Toasts on all POST saves; verified palette/Esc/skeletons; build green |
 | 2026-06-25 | Phase 10 Slice 2 — Delivery nav nesting | `v0.66.1-delivery-nav` | Nested Delivery sidebar; removed flat duplicates; palette unchanged; build green |

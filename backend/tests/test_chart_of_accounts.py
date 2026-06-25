@@ -61,7 +61,8 @@ def test_api_seed_and_list(client: TestClient, restaurant_a) -> None:
 
     listing = client.get(f"/entities/{restaurant_a.id}/chart-of-accounts")
     assert listing.status_code == 200
-    assert listing.json()["total"] == len(DEFAULT_CHART)
+    # Seed also creates default cash drawer GL sub-account (1001) via Slice 11.1.
+    assert listing.json()["total"] == len(DEFAULT_CHART) + 1
 
 
 def test_api_seed_conflict(client: TestClient, restaurant_a) -> None:

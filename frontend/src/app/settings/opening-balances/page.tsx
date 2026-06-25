@@ -23,7 +23,11 @@ import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useFormDraft } from "@/lib/form-draft";
 import { useEntity } from "@/lib/entity-context";
-import { loadBankAndCashAccounts } from "@/lib/load-money-accounts";
+import {
+  defaultMainDrawerId,
+  loadBankAndCashAccounts,
+  type MoneyAccountOption,
+} from "@/lib/load-money-accounts";
 import { useToast } from "@/lib/toast";
 import {
   formatTry,
@@ -142,9 +146,7 @@ export default function OpeningBalancesPage() {
   const [wizardSteps, setWizardSteps] = useState<string[]>([]);
   const [chartCount, setChartCount] = useState<number | null>(null);
   const [obAccounts, setObAccounts] = useState<OpeningBalanceAccount[]>([]);
-  const [moneyAccounts, setMoneyAccounts] = useState<
-    { id: string; name: string }[]
-  >([]);
+  const [moneyAccounts, setMoneyAccounts] = useState<MoneyAccountOption[]>([]);
   const [suppliers, setSuppliers] = useState<NamedRow[]>([]);
   const [partners, setPartners] = useState<NamedRow[]>([]);
   const [customers, setCustomers] = useState<NamedRow[]>([]);
@@ -586,17 +588,24 @@ export default function OpeningBalancesPage() {
                       <Label>Type</Label>
                       <Select
                         value={line.target}
-                        onChange={(e) =>
-                          updateLine(line.id, {
-                            target: e.target.value as OpeningBalanceLineTarget,
+                        onChange={(e) => {
+                          const target =
+                            e.target.value as OpeningBalanceLineTarget;
+                          const patch: Partial<OpeningBalanceLineDraft> = {
+                            target,
                             accountCode: "",
                             side: "",
                             moneyAccountId: "",
                             supplierId: "",
                             partnerId: "",
                             customerId: "",
-                          })
-                        }
+                          };
+                          if (target === "money_account") {
+                            patch.moneyAccountId =
+                              defaultMainDrawerId(moneyAccounts) ?? "";
+                          }
+                          updateLine(line.id, patch);
+                        }}
                         className="w-36"
                       >
                         <option value="account">GL account</option>

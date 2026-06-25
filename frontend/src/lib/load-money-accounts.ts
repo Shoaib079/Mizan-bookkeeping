@@ -27,6 +27,17 @@ function toOption(row: MoneyAccountApiRow): MoneyAccountOption {
   };
 }
 
+export const DEFAULT_CASH_DRAWER_NAME = "Main Drawer";
+
+/** Prefer seeded main drawer; else first cash account. */
+export function defaultMainDrawerId(
+  accounts: MoneyAccountOption[],
+): string | null {
+  const cash = accounts.filter((a) => a.account_kind === "cash");
+  const named = cash.find((a) => a.name === DEFAULT_CASH_DRAWER_NAME);
+  return (named ?? cash[0])?.id ?? null;
+}
+
 /** Bank + cash accounts for payment pickers. */
 export async function loadBankAndCashAccounts(
   entityId: string,

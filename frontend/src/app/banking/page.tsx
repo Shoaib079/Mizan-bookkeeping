@@ -148,6 +148,13 @@ export default function BankingPage() {
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <PageSkeleton />}
 
+      {tree && tree.cash.accounts.length === 0 && (
+        <p className="mb-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Set up your cash drawer — seed the chart from Settings → Entity, or
+          add a cash account with New account.
+        </p>
+      )}
+
       {tree && (
         <div className="space-y-4">
           <BranchSection

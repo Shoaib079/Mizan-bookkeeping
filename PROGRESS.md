@@ -1,20 +1,27 @@
 # PROGRESS
 
+**Handoff:** Read the **Current** table below only for active work. Older sections are history. **Git + last tag win** over uncommitted doc edits. **One agent per active slice.**
+
 ## Current
 
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.1** — Default money accounts + onboarding bootstrap |
-| **Last completed slice** | Phase 10 Slice 8 — FX purchase cash drawer (`v0.67.0`); `v0.67.2-alembic-migration-grants` |
+| **Active slice** | **11.2** — Feature toggles (post-create step + PATCH) |
+| **Last completed slice** | Phase 11 Slice 11.1 — default cash drawer on chart seed (`v0.68.0-default-money-accounts`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.67.2-alembic-migration-grants` |
+| **Last tag** | `v0.68.0-default-money-accounts` |
 
 ## Resume point
 
-**Phase 10 complete** — all slices 10.1–10.8 done (`v0.67.0`). Slice 10.8 owner sign-off pending.
+**Phase 10 complete** — all slices 10.1–10.8 done (`v0.67.0`). **Slice 10.8 owner sign-off: APPROVED (2026-06-25).**
 
-**Next:** **Phase 11** (audit-driven product fixes before deployment) — start **11.1** default cash drawer / money account bootstrap. Full plan in `ROADMAP.md` Phase 11 (slices 11.1–11.12: onboarding, corrections, UX). Deployment moved to **Phase 12**.
+**Phase 11 Slice 11.1 complete** — default cash drawer on chart seed (`v0.68.0-default-money-accounts`):
+- `ensure_default_cash_drawer()` after `seed_chart_for_entity()` — one TRY `"Main Drawer"` unless CASH exists
+- Banking page hint when cash branch empty; opening balances default bank/cash line to main drawer
+- Tests: `test_default_cash_drawer_onboarding.py` (4 tests)
+
+**Next:** Phase 11 Slice 11.2 — feature toggles post-create + PATCH. Full plan in `ROADMAP.md` Phase 11 (slices 11.2–11.12). Deployment is **Phase 12**.
 
 **Phase 9 Slice 8 complete** — Dashboard + reports (frontend only):
 - `/` — live dashboard from `GET .../dashboard` (current-month default, date range picker)
@@ -58,9 +65,7 @@
 - `correct_fx_purchase()` voids/reposts linked cash movements (IN reversal + OUT on corrected entry)
 - `fx-purchase-form.tsx` — cash accounts only; label “Pay from cash drawer”; bank fetch removed
 - Tests: extended `test_fx_purchase_posts_dr_fx_cr_try_cash`; `test_fx_purchase_cash_movement_visible_on_drawer_session`; `test_fx_purchase_correct_voids_and_reposts_cash_movement`; bank rejection kept
-- **Owner sign-off on 10.8: PENDING** (money-critical gate)
-
-**Next:** Phase 11 — Deployment & go-live per `ROADMAP.md`.
+- **Owner sign-off on 10.8: APPROVED (2026-06-25)** (money-critical gate)
 
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.
@@ -68,7 +73,7 @@
 - FX buy: **cash drawer only** (not bank — bank via statements; not credit card); UI fix + cash movement in **10.8**.
 - Delivery nav: **nested under Delivery** (confirmed).
 
-**Do not start Phase 11 (deployment)** until **owner sign-off on Phase 10.8** (money-critical).
+**Do not start Phase 12 (deployment)** until Phase 11 pre-go-live slices are complete per `ROADMAP.md`.
 
 **Phase 9 Slice 10 complete** — Theme refinement + UX polish (frontend only):
 - Refined `globals.css` tokens (radius, spacing, focus ring, skeleton animation)
@@ -79,18 +84,19 @@
 - Dialog: Esc close, focus first field, focus trap; token-based focus rings on Button/Input/Select
 - Sticky table headers in `DataTable`
 
-**Phase 9 complete** — owner sign-off pending. **Next:** Phase 10 (pre-launch), then Phase 11 (deployment).
-
-## Verification (2026-06-24)
+## Verification (2026-06-25)
 
 | Check | Result |
 |-------|--------|
-| Full pytest | **545 passed**, 2 skipped |
+| Slice 11.1 tests | **4 passed** (`test_default_cash_drawer_onboarding.py`) |
+| Chart + seed API tests | **6 passed** (`test_chart_of_accounts.py`) |
+| Full pytest | **549 passed**, 2 skipped (545 baseline + 4 new) |
 | `npm run build` | **GREEN** |
 
 ## Recent
 
-- 2026-06-25 — Phase 10 Slice 4 — focus + Enter-submit audit (`v0.66.3-focus-enter`)
+- 2026-06-25 — Phase 11 Slice 11.1 — default cash drawer on chart seed (`v0.68.0-default-money-accounts`)
+- 2026-06-25 — Phase 10 Slice 10.8 owner sign-off APPROVED
 - 2026-06-25 — Phase 10 Slice 3 — shell feedback toasts (`v0.66.2-shell-feedback`)
 - 2026-06-25 — Phase 10 Slice 2 — delivery nav nesting (`v0.66.1-delivery-nav`)
 - 2026-06-24 — Phase 10 Slice 1 — shared DateInput (`v0.66.0-date-picker`)

@@ -44,6 +44,31 @@ class InvalidMoneyAccountError(ValueError):
     """Money account payload failed validation."""
 
 
+DEFAULT_CASH_DRAWER_NAME = "Main Drawer"
+
+
+def ensure_default_cash_drawer(
+    session: Session, entity_id: uuid.UUID
+) -> MoneyAccountRead | None:
+    """Create one TRY cash drawer after chart seed — skip if any cash account exists."""
+    with entity_context(session, entity_id):
+        existing_count = session.scalar(
+            select(func.count())
+            .select_from(MoneyAccount)
+            .where(MoneyAccount.account_kind == MoneyAccountKind.CASH)
+        ) or 0
+    if existing_count > 0:
+        return None
+    return create_money_account(
+        session,
+        entity_id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.CASH,
+            name=DEFAULT_CASH_DRAWER_NAME,
+        ),
+    )
+
+
 def gl_balance_kurus(
     session: Session, account_id: uuid.UUID, normal_balance: AccountNormalBalance
 ) -> int:
