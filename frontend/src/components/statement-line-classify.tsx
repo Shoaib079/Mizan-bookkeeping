@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import type {
   BankStatementLine,
   StatementLineClassification,
@@ -45,6 +46,7 @@ export function StatementLineClassify({
   onClassified,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [classification, setClassification] =
     useState<StatementLineClassification>("supplier_payment");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -127,6 +129,7 @@ export function StatementLineClassify({
           body: JSON.stringify(body),
         },
       );
+      toast("Line classified");
       onClassified();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Classify failed");

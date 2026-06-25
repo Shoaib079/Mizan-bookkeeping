@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -28,6 +29,7 @@ export function StaffAccrualForm({
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const isTry = payCurrency === "TRY";
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
@@ -74,6 +76,7 @@ export function StaffAccrualForm({
         },
       );
       onSaved?.();
+      toast("Salary accrued");
       onClose();
       setAmountText("");
     } catch (err) {

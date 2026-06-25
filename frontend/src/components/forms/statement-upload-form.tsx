@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import type { BankStatementRead } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 
@@ -27,6 +28,7 @@ export function StatementUploadForm({
 }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -51,6 +53,7 @@ export function StatementUploadForm({
         { method: "POST", body },
       );
       onUploaded?.();
+      toast("Statement imported");
       onClose();
       setFile(null);
       router.push(`/banking/statements/${statement.id}`);

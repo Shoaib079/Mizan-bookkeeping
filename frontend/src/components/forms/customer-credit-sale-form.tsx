@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
@@ -27,6 +28,7 @@ export function CustomerCreditSaleForm({
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [revenueAccounts, setRevenueAccounts] = useState<Account[]>([]);
   const [revenueAccountId, setRevenueAccountId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -88,6 +90,7 @@ export function CustomerCreditSaleForm({
         },
       );
       onSaved?.();
+      toast("Credit sale recorded");
       onClose();
       setAmountText("");
     } catch (err) {

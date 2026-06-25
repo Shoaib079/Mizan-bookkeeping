@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
@@ -19,6 +20,7 @@ type Props = {
 
 export function CardSalesForm({ open, onClose, onSaved }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("Card sales batch");
@@ -61,6 +63,7 @@ export function CardSalesForm({ open, onClose, onSaved }: Props) {
         }),
       });
       onSaved?.();
+      toast("Card sales batch saved");
       onClose();
       setDateText(todayTrDate());
       setAmountText("");

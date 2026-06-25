@@ -8,6 +8,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
@@ -22,6 +23,7 @@ type Props = {
 export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [platforms, setPlatforms] = useState<DeliveryPlatform[]>([]);
   const [platformId, setPlatformId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -94,6 +96,7 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
         },
       );
       onSaved?.();
+      toast("Delivery report saved");
       onClose();
       setGrossText("");
       setCommissionText("");

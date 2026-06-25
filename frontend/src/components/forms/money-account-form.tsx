@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import type { MoneyAccountKind } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 
@@ -27,6 +28,7 @@ export function MoneyAccountForm({
   onSaved,
 }: Props) {
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const [accountKind, setAccountKind] = useState<MoneyAccountKind>(defaultKind);
   const [currency, setCurrency] = useState(defaultCurrency ?? "USD");
   const [name, setName] = useState("");
@@ -70,6 +72,7 @@ export function MoneyAccountForm({
         }),
       });
       onSaved?.();
+      toast("Account added");
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");

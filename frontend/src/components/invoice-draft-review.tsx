@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 
@@ -56,6 +57,7 @@ type Props = {
 
 export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [draft, setDraft] = useState<InvoiceDraft | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [deliveryReports, setDeliveryReports] = useState<DeliveryReportOption[]>(
@@ -128,6 +130,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
       );
       setDraft(updated);
       onUpdated?.();
+      toast("Delivery report linked");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Link report failed");
     } finally {
@@ -153,6 +156,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
       );
       setDraft(updated);
       onUpdated?.();
+      toast("Supplier linked");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Link failed");
     } finally {
@@ -175,6 +179,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
       );
       setDraft(updated);
       onUpdated?.();
+      toast("Invoice confirmed");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Confirm failed");
     } finally {
@@ -200,6 +205,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
       );
       await load();
       onUpdated?.();
+      toast("Invoice posted");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
     } finally {
@@ -222,6 +228,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
       );
       setDraft(updated);
       onUpdated?.();
+      toast("Invoice rejected");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {

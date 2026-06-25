@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-25
 
+**Phase 10 Slice 3 — Shell feedback (frontend):** Extended `useToast` to every successful POST — all 31 forms, review confirms (POS summary, receipt, invoice draft, delivery report), statement line classify, chart seed, and opening-balance validate/post. Errors stay inline (`setError`); no toast on validation failures. Verified existing command palette, dialog Esc, skeletons, empty states unchanged. Frontend build green. Tag `v0.66.2-shell-feedback`. **Next:** Phase 10.4 focus + Enter audit.
+
 **Phase 10 Slice 2 — Delivery nav nesting (frontend):** Nested Delivery in sidebar — hub plus Platforms, Reports, and Settlements as indented children; removed flat duplicate Books links. `nestedUnder` on `AppRoute`; command palette unchanged. Frontend build green. Tag `v0.66.1-delivery-nav`. **Next:** Phase 10.3 shell feedback.
 
 ## 2026-06-21

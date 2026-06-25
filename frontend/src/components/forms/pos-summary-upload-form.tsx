@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
 
@@ -18,6 +19,7 @@ type Props = {
 export function PosSummaryUploadForm({ open, onClose }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -43,6 +45,7 @@ export function PosSummaryUploadForm({ open, onClose }: Props) {
       );
       onClose();
       setFile(null);
+      toast("POS summary uploaded");
       router.push(`/sales/${summary.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");

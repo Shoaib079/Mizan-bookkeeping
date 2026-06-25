@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import { parseTrDate } from "@/lib/money";
@@ -32,6 +33,7 @@ export function FxExpenseSpendForm({
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [nativeText, setNativeText] = useState("");
@@ -89,6 +91,7 @@ export function FxExpenseSpendForm({
         }),
       });
       onSaved?.();
+      toast("FX spend recorded");
       onClose();
       setNativeText("");
     } catch (err) {

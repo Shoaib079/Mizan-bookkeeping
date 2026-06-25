@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
 
 export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [description, setDescription] = useState("Clear card commission");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -46,6 +48,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
         },
       );
       onCleared?.();
+      toast("Commission cleared");
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Clear failed");

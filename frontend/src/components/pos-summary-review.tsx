@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Input, Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
 import {
@@ -25,6 +26,7 @@ type Props = {
 
 export function PosSummaryReview({ summaryId, onUpdated }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [summary, setSummary] = useState<PosDailySummary | null>(null);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccountOption[]>([]);
   const [zReportEnabled, setZReportEnabled] = useState(false);
@@ -116,6 +118,8 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
           updated.review_reason ??
             "Daily summary needs review before posting.",
         );
+      } else {
+        toast("Daily sales posted");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Confirm failed");
@@ -139,6 +143,7 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
       );
       setSummary(updated);
       onUpdated?.();
+      toast("Summary rejected");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {

@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import {
   loadBankAndCashAccounts,
@@ -33,6 +34,7 @@ export function SupplierPaymentForm({
   onPaid,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
   const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -95,6 +97,7 @@ export function SupplierPaymentForm({
         },
       );
       onPaid?.();
+      toast("Payment recorded");
       onClose();
       setAmountText("");
       setReference("");

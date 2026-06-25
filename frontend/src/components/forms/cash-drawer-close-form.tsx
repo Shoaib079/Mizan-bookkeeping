@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import type { CashDrawerSessionRead } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTryToKurus } from "@/lib/money";
@@ -26,6 +27,7 @@ export function CashDrawerCloseForm({
   onClosed,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [countedText, setCountedText] = useState("");
   const [description, setDescription] = useState("Cash drawer EOD close");
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +60,7 @@ export function CashDrawerCloseForm({
         },
       );
       onClosed?.();
+      toast("Drawer closed");
       onClose();
       setCountedText("");
     } catch (err) {

@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
@@ -20,6 +21,7 @@ type Props = {
 
 export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [platforms, setPlatforms] = useState<DeliveryPlatform[]>([]);
   const [bankAccounts, setBankAccounts] = useState<MoneyAccountOption[]>([]);
   const [platformId, setPlatformId] = useState("");
@@ -86,6 +88,7 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
         }),
       });
       onSaved?.();
+      toast("Settlement recorded");
       onClose();
       setDateText(todayTrDate());
       setAmountText("");

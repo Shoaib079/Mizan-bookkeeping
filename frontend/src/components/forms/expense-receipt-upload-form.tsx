@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 
 type MoneyAccount = { id: string; name: string };
@@ -24,6 +25,7 @@ type Props = {
 export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [moneyAccountId, setMoneyAccountId] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -66,6 +68,7 @@ export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
       );
       onClose();
       setFile(null);
+      toast("Receipt uploaded");
       router.push(`/review/receipts/${intake.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");

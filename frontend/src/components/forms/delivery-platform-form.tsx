@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
 
@@ -20,6 +21,7 @@ type Props = {
 
 export function DeliveryPlatformForm({ open, onClose, platform, onSaved }: Props) {
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const editing = Boolean(platform);
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -56,6 +58,7 @@ export function DeliveryPlatformForm({ open, onClose, platform, onSaved }: Props
         });
       }
       onSaved?.();
+      toast(editing ? "Platform updated" : "Platform added");
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");

@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -30,6 +31,7 @@ export function CashMovementForm({
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [cashAccounts, setCashAccounts] = useState<MoneyAccountLeaf[]>([]);
   const [offsetAccounts, setOffsetAccounts] = useState<ChartAccount[]>([]);
   const [moneyAccountId, setMoneyAccountId] = useState("");
@@ -98,6 +100,7 @@ export function CashMovementForm({
         }),
       });
       onSaved?.();
+      toast("Cash movement saved");
       onClose();
       setAmountText("");
     } catch (err) {

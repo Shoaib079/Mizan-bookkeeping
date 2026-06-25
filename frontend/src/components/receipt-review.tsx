@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch, documentUrl } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatKurus, formatTrDate, parseTryToKurus } from "@/lib/money";
 
@@ -37,6 +38,7 @@ type Props = {
 export function ReceiptReview({ intakeId }: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [intake, setIntake] = useState<ExpenseReceipt | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [lines, setLines] = useState<ReceiptLine[]>([]);
@@ -89,6 +91,7 @@ export function ReceiptReview({ intakeId }: Props) {
           })),
         }),
       });
+      toast("Receipt expenses posted");
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Confirm failed");

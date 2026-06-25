@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import {
   formatKurus,
@@ -22,6 +23,7 @@ type Props = {
 
 export function DeliveryReportReview({ reportId, onUpdated }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [report, setReport] = useState<DeliveryReport | null>(null);
   const [grossText, setGrossText] = useState("");
   const [commissionText, setCommissionText] = useState("");
@@ -80,6 +82,7 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
       );
       setReport(updated);
       onUpdated?.();
+      toast("Delivery report posted");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
     } finally {
@@ -98,6 +101,7 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
       );
       setReport(updated);
       onUpdated?.();
+      toast("Delivery report rejected");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {

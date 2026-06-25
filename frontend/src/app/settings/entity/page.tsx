@@ -95,6 +95,7 @@ export default function EntitySettingsPage() {
         method: "POST",
       });
       await reloadSettings();
+      toast("Chart seeded");
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : "Seed failed");
     } finally {

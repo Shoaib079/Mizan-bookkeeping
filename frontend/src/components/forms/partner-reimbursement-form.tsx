@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { loadBankAndCashAccounts, type MoneyAccountOption } from "@/lib/load-money-accounts";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -28,6 +29,7 @@ export function PartnerReimbursementForm({
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
   const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -88,6 +90,7 @@ export function PartnerReimbursementForm({
         },
       );
       onSaved?.();
+      toast("Reimbursement recorded");
       onClose();
       setAmountText("");
     } catch (err) {

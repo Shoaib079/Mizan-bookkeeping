@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 
 type InvoiceDraftRead = {
@@ -25,6 +26,7 @@ type Props = {
 export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -50,6 +52,7 @@ export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
       );
       onClose();
       setFile(null);
+      toast("Invoice uploaded");
       const reviewPath = supplierId
         ? `/suppliers/${supplierId}?draft=${draft.id}`
         : `/review/invoices/${draft.id}`;

@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -30,6 +31,7 @@ export function TransferForm({
   onTransferred,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [accounts, setAccounts] = useState<MoneyAccountLeaf[]>([]);
   const [fromId, setFromId] = useState("");
   const [toId, setToId] = useState("");
@@ -94,6 +96,7 @@ export function TransferForm({
         }),
       });
       onTransferred?.();
+      toast("Transfer recorded");
       onClose();
       setAmountText("");
     } catch (err) {

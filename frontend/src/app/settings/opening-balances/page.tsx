@@ -176,6 +176,7 @@ export default function OpeningBalancesPage() {
         method: "POST",
       });
       await loadRefs();
+      toast("Chart seeded");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Seed failed");
     } finally {
@@ -202,6 +203,7 @@ export default function OpeningBalancesPage() {
       );
       setPreview(res.journal_lines);
       setPreviewMessage(res.message);
+      toast("Balances validated — review preview below");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Validation failed");
     } finally {

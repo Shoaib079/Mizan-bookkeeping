@@ -13,9 +13,9 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | **10.3** — Shell feedback (verify palette/Esc/skeletons; toasts on all saves) |
-| **Last completed slice** | Phase 10 Slice 2 — Delivery nav nesting (`v0.66.1`) |
-| **Last commit/tag** | `v0.66.1-delivery-nav` |
+| **Active slice** | **10.4** — Focus + Enter-submit audit |
+| **Last completed slice** | Phase 10 Slice 3 — Shell feedback (`v0.66.2`) |
+| **Last commit/tag** | `v0.66.2-shell-feedback` |
 | **Next up** | Phase 10.2 → 10.8 (strict order; full `DESIGN_SYSTEM.md` §10 + FX; see below) |
 
 **The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = pre-launch: complete **all** locked `DESIGN_SYSTEM.md` §10 interaction UX + delivery nav + FX wiring — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
@@ -413,7 +413,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **Cmd/Ctrl-K palette** | §10 | `command-palette.tsx` in `app-shell.tsx` ✓ | **Verify** in 10.3; fix gaps only |
 | **Dialog Esc + focus trap** | Phase 9 Slice 10 | `dialog.tsx`: Esc closes, Tab trap, auto-focus first input on open ✓ | **Verify** in 10.3 |
 | **Skeletons / empty states** | Phase 9 Slice 10 | `PageSkeleton`, `TableSkeleton`, `EmptyState` on list pages ✓ | **Verify** in 10.3 |
-| **Toasts on save** | §10 | `useToast` on **~9** forms/pages only (expense, sales, entity, OB, CRUD masters) — **~22** POST forms without toast | **Extend** in 10.3 |
+| **Toasts on save** | §10 | `useToast` on **all** POST save/upload/confirm flows (forms + review + classify) | **Done** in 10.3 |
 | **Enter submits form** | §10 | All **31** `components/forms/*` use `<form onSubmit>` + `type="submit"` ✓ | **Audit** in 10.4; fix any outliers |
 | **First-field autofocus** | §10 | **No** `autoFocus` props; `Dialog` focuses first field when dialog opens ✓; Clerk `/sign-in` is third-party | **Extend** in 10.4 for app-owned full pages (e.g. OB wizard step open) |
 | **Combobox / type-to-filter** | §10 | **No** `Combobox` component; **~20** forms use plain `<Select>` for long lists (supplier, account, GL, etc.) | **Build** in 10.5 |
