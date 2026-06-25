@@ -7,7 +7,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
@@ -142,17 +143,16 @@ export function FxPurchaseForm({
         </div>
         <div>
           <Label htmlFor="fx-buy-from">Pay from (TRY)</Label>
-          <Select
+          <Combobox
             id="fx-buy-from"
             value={tryCashId}
-            onChange={(e) => setTryCashId(e.target.value)}
-          >
-            {tryCashAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setTryCashId}
+            options={tryCashAccounts.map((a) => ({
+              value: a.id,
+              label: a.name,
+            }))}
+            placeholder="Pay from account…"
+          />
         </div>
         <div>
           <Label htmlFor="fx-buy-date">Date (DD.MM.YYYY)</Label>

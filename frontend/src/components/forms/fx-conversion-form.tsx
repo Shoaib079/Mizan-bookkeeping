@@ -7,7 +7,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
@@ -140,17 +141,16 @@ export function FxConversionForm({
         </div>
         <div>
           <Label htmlFor="fx-conv-to">Deposit to (TRY)</Label>
-          <Select
+          <Combobox
             id="fx-conv-to"
             value={tryAccountId}
-            onChange={(e) => setTryAccountId(e.target.value)}
-          >
-            {tryAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setTryAccountId}
+            options={tryAccounts.map((a) => ({
+              value: a.id,
+              label: a.name,
+            }))}
+            placeholder="TRY account…"
+          />
         </div>
         <div>
           <Label htmlFor="fx-conv-date">Date (DD.MM.YYYY)</Label>

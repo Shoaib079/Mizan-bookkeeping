@@ -5,10 +5,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | 10.5 — Shared Combobox (type-to-filter pickers) |
-| **Last completed slice** | Phase 10 Slice 4 — Focus + Enter-submit audit (`v0.66.3`) |
+| **Active slice** | 10.6 — Inline validation (`DESIGN_SYSTEM.md` §10) |
+| **Last completed slice** | Phase 10 Slice 5 — Shared Combobox (`v0.66.4-combobox`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.66.3-focus-enter` |
+| **Last tag** | `v0.66.4-combobox` |
 
 ## Resume point
 
@@ -33,7 +33,12 @@
 - Full-page focus: opening balances (go-live on load, amount on Add line), entity create name, receipt/POS/delivery review, statement classify
 - Tab order clean — only intentional `tabIndex={-1}` on DateInput calendar button
 
-**Next:** Phase 10.5 → 10.8 per `ROADMAP.md`.
+**Phase 10 Slice 5 complete** — Shared Combobox (frontend only):
+- New `combobox.tsx` — type-to-filter, ↑↓ navigate, Enter select, Esc close; token-styled like existing inputs
+- Migrated 34 dynamic/long pickers across forms, review screens, opening balances, app-shell entity switcher
+- Short static enums kept as native `<Select>` (Dr/Cr, direction, classification, roles, currency, ≤8 expense accounts)
+
+**Next:** Phase 10.6 → 10.8 per `ROADMAP.md`.
 
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.

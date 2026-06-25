@@ -10,7 +10,8 @@ import { usePathname } from "next/navigation";
 import { CommandPalette } from "@/components/command-palette";
 import { NewMenu } from "@/components/new-menu";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { useApiAuth } from "@/lib/api-auth";
 import { navGroups, isNavChildActive, isNavItemActive, sidebarChildren } from "@/lib/app-routes";
 import { useEntity } from "@/lib/entity-context";
@@ -47,19 +48,20 @@ export function AppShell({
         <div className="border-b border-border px-3 py-3">
           <Label htmlFor="entity-select">Restaurant</Label>
           {entities.length > 0 ? (
-            <Select
+            <Combobox
               id="entity-select"
               className="mt-1"
               value={entityId}
-              onChange={(e) => setEntityId(e.target.value)}
-            >
-              <option value="">Select…</option>
-              {entities.map((entity) => (
-                <option key={entity.id} value={entity.id}>
-                  {entity.name}
-                </option>
-              ))}
-            </Select>
+              onValueChange={setEntityId}
+              options={[
+                { value: "", label: "Select…" },
+                ...entities.map((entity) => ({
+                  value: entity.id,
+                  label: entity.name,
+                })),
+              ]}
+              placeholder="Select…"
+            />
           ) : (
             <Input
               id="entity-select"

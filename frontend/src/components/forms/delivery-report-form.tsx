@@ -6,7 +6,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -114,20 +115,21 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="dr-platform">Platform</Label>
-          <Select
+          <Combobox
             id="dr-platform"
             value={platformId}
-            onChange={(e) => setPlatformId(e.target.value)}
-          >
-            {platforms.length === 0 && (
-              <option value="">No active platforms</option>
-            )}
-            {platforms.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setPlatformId}
+            options={
+              platforms.length === 0
+                ? [{ value: "", label: "No active platforms" }]
+                : platforms.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                  }))
+            }
+            placeholder="Platform…"
+            disabled={platforms.length === 0}
+          />
         </div>
         <div>
           <Label htmlFor="dr-date">Report date (DD.MM.YYYY)</Label>

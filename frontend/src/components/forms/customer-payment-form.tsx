@@ -5,7 +5,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -140,17 +141,16 @@ export function CustomerPaymentForm({
         </div>
         <div>
           <Label htmlFor="cp-account">Receive into</Label>
-          <Select
+          <Combobox
             id="cp-account"
             value={paymentGlAccountId}
-            onChange={(e) => setPaymentGlAccountId(e.target.value)}
-          >
-            {accounts.map((a) => (
-              <option key={a.id} value={a.gl_account_id}>
-                {a.name} ({a.account_kind})
-              </option>
-            ))}
-          </Select>
+            onValueChange={setPaymentGlAccountId}
+            options={accounts.map((a) => ({
+              value: a.gl_account_id,
+              label: `${a.name} (${a.account_kind})`,
+            }))}
+            placeholder="Receive to account…"
+          />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>

@@ -5,7 +5,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -92,17 +93,16 @@ export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
         </div>
         <div>
           <Label htmlFor="receipt-cash">Cash drawer</Label>
-          <Select
+          <Combobox
             id="receipt-cash"
             value={moneyAccountId}
-            onChange={(e) => setMoneyAccountId(e.target.value)}
-          >
-            {cashAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setMoneyAccountId}
+            options={cashAccounts.map((a) => ({
+              value: a.id,
+              label: a.name,
+            }))}
+            placeholder="Cash drawer…"
+          />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>

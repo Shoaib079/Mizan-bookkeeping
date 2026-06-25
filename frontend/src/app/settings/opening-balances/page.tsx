@@ -16,6 +16,7 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
@@ -266,24 +267,25 @@ export default function OpeningBalancesPage() {
       case "account":
         return (
           <>
-            <Select
+            <Combobox
               value={line.accountCode}
-              onChange={(e) => {
-                const acct = obAccounts.find((a) => a.code === e.target.value);
+              onValueChange={(code) => {
+                const acct = obAccounts.find((a) => a.code === code);
                 updateLine(line.id, {
-                  accountCode: e.target.value,
+                  accountCode: code,
                   side: acct?.normal_balance ?? "",
                 });
               }}
               className="min-w-[10rem]"
-            >
-              <option value="">Account…</option>
-              {obAccounts.map((a) => (
-                <option key={a.code} value={a.code}>
-                  {a.code} — {a.name_en}
-                </option>
-              ))}
-            </Select>
+              options={[
+                { value: "", label: "Account…" },
+                ...obAccounts.map((a) => ({
+                  value: a.code,
+                  label: `${a.code} — ${a.name_en}`,
+                })),
+              ]}
+              placeholder="Account…"
+            />
             <Select
               value={line.side}
               onChange={(e) =>
@@ -301,67 +303,73 @@ export default function OpeningBalancesPage() {
         );
       case "money_account":
         return (
-          <Select
+          <Combobox
             value={line.moneyAccountId}
-            onChange={(e) =>
-              updateLine(line.id, { moneyAccountId: e.target.value })
+            onValueChange={(moneyAccountId) =>
+              updateLine(line.id, { moneyAccountId })
             }
             className="min-w-[12rem]"
-          >
-            <option value="">Bank / cash…</option>
-            {moneyAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: "", label: "Bank / cash…" },
+              ...moneyAccounts.map((a) => ({
+                value: a.id,
+                label: a.name,
+              })),
+            ]}
+            placeholder="Bank / cash…"
+          />
         );
       case "supplier":
         return (
-          <Select
+          <Combobox
             value={line.supplierId}
-            onChange={(e) => updateLine(line.id, { supplierId: e.target.value })}
+            onValueChange={(supplierId) =>
+              updateLine(line.id, { supplierId })
+            }
             className="min-w-[12rem]"
-          >
-            <option value="">Supplier…</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: "", label: "Supplier…" },
+              ...suppliers.map((s) => ({
+                value: s.id,
+                label: s.name,
+              })),
+            ]}
+            placeholder="Supplier…"
+          />
         );
       case "partner":
         return (
-          <Select
+          <Combobox
             value={line.partnerId}
-            onChange={(e) => updateLine(line.id, { partnerId: e.target.value })}
+            onValueChange={(partnerId) => updateLine(line.id, { partnerId })}
             className="min-w-[12rem]"
-          >
-            <option value="">Partner…</option>
-            {partners.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: "", label: "Partner…" },
+              ...partners.map((p) => ({
+                value: p.id,
+                label: p.name,
+              })),
+            ]}
+            placeholder="Partner…"
+          />
         );
       case "customer":
         return (
-          <Select
+          <Combobox
             value={line.customerId}
-            onChange={(e) =>
-              updateLine(line.id, { customerId: e.target.value })
+            onValueChange={(customerId) =>
+              updateLine(line.id, { customerId })
             }
             className="min-w-[12rem]"
-          >
-            <option value="">Customer…</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: "", label: "Customer…" },
+              ...customers.map((c) => ({
+                value: c.id,
+                label: c.name,
+              })),
+            ]}
+            placeholder="Customer…"
+          />
         );
       default:
         return null;

@@ -7,6 +7,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
+import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
@@ -118,17 +119,16 @@ export function CashMovementForm({
         </p>
         <div>
           <Label htmlFor="cash-acct">Cash account</Label>
-          <Select
+          <Combobox
             id="cash-acct"
             value={moneyAccountId}
-            onChange={(e) => setMoneyAccountId(e.target.value)}
-          >
-            {cashAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setMoneyAccountId}
+            options={cashAccounts.map((a) => ({
+              value: a.id,
+              label: a.name,
+            }))}
+            placeholder="Cash account…"
+          />
         </div>
         <div>
           <Label htmlFor="cash-dir">Direction</Label>
@@ -143,17 +143,16 @@ export function CashMovementForm({
         </div>
         <div>
           <Label htmlFor="cash-offset">Offset account (expense)</Label>
-          <Select
+          <Combobox
             id="cash-offset"
             value={offsetAccountId}
-            onChange={(e) => setOffsetAccountId(e.target.value)}
-          >
-            {offsetAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.code} — {a.name_en}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setOffsetAccountId}
+            options={offsetAccounts.map((a) => ({
+              value: a.id,
+              label: `${a.code} — ${a.name_en}`,
+            }))}
+            placeholder="Expense account…"
+          />
         </div>
         <div>
           <Label htmlFor="cash-date">Date (DD.MM.YYYY)</Label>

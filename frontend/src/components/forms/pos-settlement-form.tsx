@@ -5,7 +5,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -109,17 +110,16 @@ export function PosSettlementForm({ open, onClose, onSaved }: Props) {
         </div>
         <div>
           <Label htmlFor="pos-settle-bank">Bank account</Label>
-          <Select
+          <Combobox
             id="pos-settle-bank"
             value={moneyAccountId}
-            onChange={(e) => setMoneyAccountId(e.target.value)}
-          >
-            {bankAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setMoneyAccountId}
+            options={bankAccounts.map((a) => ({
+              value: a.id,
+              label: a.name,
+            }))}
+            placeholder="Bank account…"
+          />
         </div>
         <div>
           <Label htmlFor="pos-settle-amount">Net settlement amount</Label>

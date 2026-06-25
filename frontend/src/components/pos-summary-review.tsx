@@ -4,7 +4,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
@@ -262,17 +263,16 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
             )}
             <div>
               <Label htmlFor="pos-drawer">Cash drawer</Label>
-              <Select
+              <Combobox
                 id="pos-drawer"
                 value={moneyAccountId}
-                onChange={(e) => setMoneyAccountId(e.target.value)}
-              >
-                {cashAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={setMoneyAccountId}
+                options={cashAccounts.map((a) => ({
+                  value: a.id,
+                  label: a.name,
+                }))}
+                placeholder="Cash drawer…"
+              />
             </div>
           </div>
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}

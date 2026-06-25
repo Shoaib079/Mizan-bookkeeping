@@ -5,7 +5,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -104,31 +105,29 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="ds-platform">Platform</Label>
-          <Select
+          <Combobox
             id="ds-platform"
             value={platformId}
-            onChange={(e) => setPlatformId(e.target.value)}
-          >
-            {platforms.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setPlatformId}
+            options={platforms.map((p) => ({
+              value: p.id,
+              label: p.name,
+            }))}
+            placeholder="Platform…"
+          />
         </div>
         <div>
           <Label htmlFor="ds-bank">Bank account</Label>
-          <Select
+          <Combobox
             id="ds-bank"
             value={moneyAccountId}
-            onChange={(e) => setMoneyAccountId(e.target.value)}
-          >
-            {bankAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setMoneyAccountId}
+            options={bankAccounts.map((a) => ({
+              value: a.id,
+              label: a.name,
+            }))}
+            placeholder="Bank account…"
+          />
         </div>
         <div>
           <Label htmlFor="ds-date">Settlement date (DD.MM.YYYY)</Label>

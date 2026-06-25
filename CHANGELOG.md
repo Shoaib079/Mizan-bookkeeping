@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-25
 
+**Phase 10 Slice 5 — Shared Combobox (frontend):** New `combobox.tsx` — type-to-filter picker with keyboard navigation (↑↓, Enter, Esc) matching `DESIGN_SYSTEM.md` §10. Migrated 34 dynamic or long-list pickers (money accounts, suppliers/customers/partners, GL/expense/revenue accounts, delivery platforms, entity switcher, opening-balance targets) across forms and review screens. Short static enums (Dr/Cr, direction, classification, roles, currency, small expense-account sets) stay native `<Select>`. **545 pytest green**; frontend build green. Tag `v0.66.4-combobox`. **Next:** Phase 10.6 inline validation.
+
 **Owner decision — FX purchase cash drawer only (docs):** Reversed prior plan to allow bank as FX buy source. Buying FX stays **cash drawer only** (`CASH`); bank activity via **statement import + classify** only. Backend already rejects bank; Phase 10.8 scope = fix UI dropdown + add `cash_movements` OUT. Updated `ROADMAP.md`, `PROGRESS.md`, `Restaurant_Bookkeeping_App_Decisions.md` §15, `DECISIONS.md`.
 
 **Phase 10 Slice 4 — Focus + Enter-submit audit (frontend):** Audited all 31 forms — every one uses `<form onSubmit>` + `type="submit"` (Enter submits; no button-only or `onKeyDown` Enter hacks). Verified `dialog.tsx` auto-focuses first input/select/textarea. Added first-field focus on full-page surfaces: opening balances (go-live on load, amount on Add line), entity create name, receipt/POS/delivery review panels, statement line classify. Tab order clean. **545 pytest green**; frontend build green. Tag `v0.66.3-focus-enter`. **Next:** Phase 10.5 combobox.

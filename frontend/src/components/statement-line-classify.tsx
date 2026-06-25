@@ -5,6 +5,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
@@ -197,81 +198,76 @@ export function StatementLineClassify({
           {classification === "supplier_payment" && (
             <div>
               <Label htmlFor={`sup-${line.id}`}>Supplier</Label>
-              <Select
+              <Combobox
                 id={`sup-${line.id}`}
                 value={supplierId}
-                onChange={(e) => setSupplierId(e.target.value)}
-              >
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={setSupplierId}
+                options={suppliers.map((s) => ({
+                  value: s.id,
+                  label: s.name,
+                }))}
+                placeholder="Supplier…"
+              />
             </div>
           )}
           {classification === "transfer" && (
             <div>
               <Label htmlFor={`cp-${line.id}`}>Counterpart account</Label>
-              <Select
+              <Combobox
                 id={`cp-${line.id}`}
                 value={counterpartId}
-                onChange={(e) => setCounterpartId(e.target.value)}
-              >
-                {moneyAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={setCounterpartId}
+                options={moneyAccounts.map((a) => ({
+                  value: a.id,
+                  label: a.name,
+                }))}
+                placeholder="Counterpart account…"
+              />
             </div>
           )}
           {classification === "credit_card_payment" && (
             <div>
               <Label htmlFor={`cc-${line.id}`}>Credit card</Label>
-              <Select
+              <Combobox
                 id={`cc-${line.id}`}
                 value={creditCardId}
-                onChange={(e) => setCreditCardId(e.target.value)}
-              >
-                {creditCards.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={setCreditCardId}
+                options={creditCards.map((a) => ({
+                  value: a.id,
+                  label: a.name,
+                }))}
+                placeholder="Credit card…"
+              />
             </div>
           )}
           {classification === "customer_payment" && (
             <div>
               <Label htmlFor={`cust-${line.id}`}>Customer</Label>
-              <Select
+              <Combobox
                 id={`cust-${line.id}`}
                 value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-              >
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={setCustomerId}
+                options={customers.map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                }))}
+                placeholder="Customer…"
+              />
             </div>
           )}
           {classification === "rent_utility" && (
             <div>
               <Label htmlFor={`exp-${line.id}`}>Expense account</Label>
-              <Select
+              <Combobox
                 id={`exp-${line.id}`}
                 value={expenseAccountId}
-                onChange={(e) => setExpenseAccountId(e.target.value)}
-              >
-                {expenseAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.code} — {a.name_en}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={setExpenseAccountId}
+                options={expenseAccounts.map((a) => ({
+                  value: a.id,
+                  label: `${a.code} — ${a.name_en}`,
+                }))}
+                placeholder="Expense account…"
+              />
             </div>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}

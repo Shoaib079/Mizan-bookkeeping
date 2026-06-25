@@ -5,7 +5,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -132,17 +133,16 @@ export function PartnerExpenseFrontedForm({
         </div>
         <div>
           <Label htmlFor="pf-account">Expense account</Label>
-          <Select
+          <Combobox
             id="pf-account"
             value={expenseAccountId}
-            onChange={(e) => setExpenseAccountId(e.target.value)}
-          >
-            {expenseAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.code} — {a.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setExpenseAccountId}
+            options={expenseAccounts.map((a) => ({
+              value: a.id,
+              label: `${a.code} — ${a.name}`,
+            }))}
+            placeholder="Expense account…"
+          />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>

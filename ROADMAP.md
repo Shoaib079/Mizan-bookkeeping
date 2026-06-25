@@ -592,17 +592,17 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | done |
 | **Implements** | §10 “type-to-filter in every picker (combobox): type Met → Metro” |
-| **Suggested tag** | `v0.66.4-combobox` |
+| **Tag** | `v0.66.4-combobox` |
 
 **Problem today:** long `<Select>` dropdowns (~20 forms) — supplier, customer, partner, employee, money account, GL/expense account, delivery platform, card terminal, etc. No filter-as-you-type.
 
 **Acceptance:**
 
-- [ ] Shared `frontend/src/components/ui/combobox.tsx` (or `account-combobox`, `entity-combobox` wrappers) — token-styled; keyboard: type filter, ↑↓, Enter select, Esc close.
-- [ ] Migrate **every** picker with **>8 options** or dynamic lists (grep `<Select` in `components/forms/` + review screens with account pickers).
-- [ ] Short static enums (e.g. Dr/Cr, movement direction) may stay `<Select>`.
+- [x] Shared `frontend/src/components/ui/combobox.tsx` (or `account-combobox`, `entity-combobox` wrappers) — token-styled; keyboard: type filter, ↑↓, Enter select, Esc close.
+- [x] Migrate **every** picker with **>8 options** or dynamic lists (grep `<Select` in `components/forms/` + review screens with account pickers).
+- [x] Short static enums (e.g. Dr/Cr, movement direction) may stay `<Select>`.
 
 **Manual verify:** supplier payment → type vendor name fragment → list filters → Enter selects.
 

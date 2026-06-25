@@ -6,7 +6,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
@@ -186,17 +187,16 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
         )}
         <div>
           <Label htmlFor="sales-drawer">Cash drawer</Label>
-          <Select
+          <Combobox
             id="sales-drawer"
             value={moneyAccountId}
-            onChange={(e) => setMoneyAccountId(e.target.value)}
-          >
-            {cashAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={setMoneyAccountId}
+            options={cashAccounts.map((a) => ({
+              value: a.id,
+              label: a.name,
+            }))}
+            placeholder="Cash drawer…"
+          />
         </div>
         {error && (
           <div className="space-y-1">

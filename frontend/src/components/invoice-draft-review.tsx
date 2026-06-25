@@ -6,6 +6,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
@@ -344,19 +345,19 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[200px] flex-1">
               <Label htmlFor="link-report">Posted report</Label>
-              <Select
+              <Combobox
                 id="link-report"
                 value={selectedReportId}
-                onChange={(e) => setSelectedReportId(e.target.value)}
-              >
-                <option value="">Select report…</option>
-                {deliveryReports.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.platform_name} · {formatTrDate(r.report_date)} ·{" "}
-                    {formatTry(r.commission_kurus)} commission
-                  </option>
-                ))}
-              </Select>
+                onValueChange={setSelectedReportId}
+                options={[
+                  { value: "", label: "Select report…" },
+                  ...deliveryReports.map((r) => ({
+                    value: r.id,
+                    label: `${r.platform_name} · ${formatTrDate(r.report_date)} · ${formatTry(r.commission_kurus)} commission`,
+                  })),
+                ]}
+                placeholder="Select report…"
+              />
             </div>
             <Button
               type="submit"
@@ -391,18 +392,19 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[200px] flex-1">
               <Label htmlFor="link-supplier">Supplier</Label>
-              <Select
+              <Combobox
                 id="link-supplier"
                 value={selectedSupplierId}
-                onChange={(e) => setSelectedSupplierId(e.target.value)}
-              >
-                <option value="">Auto-match by VKN</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.vkn})
-                  </option>
-                ))}
-              </Select>
+                onValueChange={setSelectedSupplierId}
+                options={[
+                  { value: "", label: "Auto-match by VKN" },
+                  ...suppliers.map((s) => ({
+                    value: s.id,
+                    label: `${s.name} (${s.vkn})`,
+                  })),
+                ]}
+                placeholder="Auto-match by VKN"
+              />
             </div>
             <Button type="submit" variant="secondary" disabled={linking}>
               {linking ? "Linking…" : "Link"}
