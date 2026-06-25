@@ -3,7 +3,7 @@
 /** Opening balances wizard — Phase 9 Slice 9 (Decisions §19). */
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,8 @@ export default function OpeningBalancesPage() {
   const [validating, setValidating] = useState(false);
   const [posting, setPosting] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [focusLineId, setFocusLineId] = useState<string | null>(null);
+  const goLiveFocusedRef = useRef(false);
 
   const loadRefs = useCallback(async () => {
     if (!entityId) return;
@@ -149,6 +151,21 @@ export default function OpeningBalancesPage() {
   useEffect(() => {
     void loadRefs();
   }, [loadRefs]);
+
+  useEffect(() => {
+    if (!entityId || goLiveFocusedRef.current) return;
+    goLiveFocusedRef.current = true;
+    window.setTimeout(() => document.getElementById("go-live")?.focus(), 0);
+  }, [entityId]);
+
+  useEffect(() => {
+    if (!focusLineId) return;
+    window.setTimeout(
+      () => document.getElementById(`ob-amount-${focusLineId}`)?.focus(),
+      0,
+    );
+    setFocusLineId(null);
+  }, [focusLineId]);
 
   function updateLine(
     id: string,
@@ -410,7 +427,11 @@ export default function OpeningBalancesPage() {
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setLines((prev) => [...prev, newLine()])}
+                  onClick={() => {
+                    const line = newLine();
+                    setLines((prev) => [...prev, line]);
+                    setFocusLineId(line.id);
+                  }}
                 >
                   Add line
                 </Button>
@@ -450,6 +471,7 @@ export default function OpeningBalancesPage() {
                     <div>
                       <Label>Amount (₺)</Label>
                       <Input
+                        id={`ob-amount-${line.id}`}
                         className="w-28"
                         value={line.amountTry}
                         onChange={(e) =>

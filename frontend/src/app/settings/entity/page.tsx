@@ -60,6 +60,10 @@ export default function EntitySettingsPage() {
     void reloadSettings();
   }, [reloadSettings]);
 
+  useEffect(() => {
+    window.setTimeout(() => document.getElementById("entity-name")?.focus(), 0);
+  }, []);
+
   async function onCreateRestaurant(event: FormEvent) {
     event.preventDefault();
     if (!newName.trim()) return;

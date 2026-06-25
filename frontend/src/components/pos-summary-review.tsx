@@ -73,6 +73,14 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
     );
   }, [load]);
 
+  useEffect(() => {
+    if (!summary) return;
+    const canConfirm =
+      summary.status === "draft" || summary.status === "needs_review";
+    if (!canConfirm) return;
+    window.setTimeout(() => document.getElementById("pos-date")?.focus(), 0);
+  }, [summary]);
+
   async function onConfirm(event: FormEvent) {
     event.preventDefault();
     if (!entityId || !summary) return;

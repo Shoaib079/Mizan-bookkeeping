@@ -5,10 +5,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | 10.3 — Shell feedback (toasts on all saves) |
-| **Last completed slice** | Phase 10 Slice 2 — Delivery nav nesting (`v0.66.1`) |
+| **Active slice** | 10.5 — Shared Combobox (type-to-filter pickers) |
+| **Last completed slice** | Phase 10 Slice 4 — Focus + Enter-submit audit (`v0.66.3`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.66.1-delivery-nav` |
+| **Last tag** | `v0.66.3-focus-enter` |
 
 ## Resume point
 
@@ -27,12 +27,13 @@
 - Link to `/delivery/platforms` from settings hub
 - Entity list refreshes after create
 
-**Phase 10 Slice 2 complete** — Delivery nav nested under Delivery (frontend only):
-- `app-routes.ts` — `nestedUnder` + `sidebarChildren()`; removed flat duplicate Books links
-- `app-shell.tsx` — indented child links under Delivery; parent active on `/delivery/*`
-- Command palette still indexes all four delivery URLs + keywords
+**Phase 10 Slice 4 complete** — Focus + Enter-submit audit (frontend only):
+- Audited all 31 `components/forms/*`: `<form onSubmit>` + `type="submit"` — no outliers
+- Dialog first-field focus via existing `dialog.tsx` (verified)
+- Full-page focus: opening balances (go-live on load, amount on Add line), entity create name, receipt/POS/delivery review, statement classify
+- Tab order clean — only intentional `tabIndex={-1}` on DateInput calendar button
 
-**Next:** Phase 10.3 → 10.8 per `ROADMAP.md`.
+**Next:** Phase 10.5 → 10.8 per `ROADMAP.md`.
 
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.
@@ -62,6 +63,8 @@
 
 ## Recent
 
+- 2026-06-25 — Phase 10 Slice 4 — focus + Enter-submit audit (`v0.66.3-focus-enter`)
+- 2026-06-25 — Phase 10 Slice 3 — shell feedback toasts (`v0.66.2-shell-feedback`)
 - 2026-06-25 — Phase 10 Slice 2 — delivery nav nesting (`v0.66.1-delivery-nav`)
 - 2026-06-24 — Phase 10 Slice 1 — shared DateInput (`v0.66.0-date-picker`)
 - 2026-06-24 — Phase 9 Slice 8 — dashboard + reports UI (`v0.63.0-phase9-dashboard-reports`)

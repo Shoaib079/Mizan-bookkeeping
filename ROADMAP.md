@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | **10.4** — Focus + Enter-submit audit |
-| **Last completed slice** | Phase 10 Slice 3 — Shell feedback (`v0.66.2`) |
-| **Last commit/tag** | `v0.66.2-shell-feedback` |
-| **Next up** | Phase 10.2 → 10.8 (strict order; full `DESIGN_SYSTEM.md` §10 + FX; see below) |
+| **Active slice** | **10.5** — Shared `Combobox` (type-to-filter pickers) |
+| **Last completed slice** | Phase 10 Slice 4 — Focus + Enter-submit audit (`v0.66.3`) |
+| **Last commit/tag** | `v0.66.3-focus-enter` |
+| **Next up** | Phase 10.5 → 10.8 (strict order; full `DESIGN_SYSTEM.md` §10 + FX; see below) |
 
 **The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = pre-launch: complete **all** locked `DESIGN_SYSTEM.md` §10 interaction UX + delivery nav + FX wiring — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -414,8 +414,8 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **Dialog Esc + focus trap** | Phase 9 Slice 10 | `dialog.tsx`: Esc closes, Tab trap, auto-focus first input on open ✓ | **Verify** in 10.3 |
 | **Skeletons / empty states** | Phase 9 Slice 10 | `PageSkeleton`, `TableSkeleton`, `EmptyState` on list pages ✓ | **Verify** in 10.3 |
 | **Toasts on save** | §10 | `useToast` on **all** POST save/upload/confirm flows (forms + review + classify) | **Done** in 10.3 |
-| **Enter submits form** | §10 | All **31** `components/forms/*` use `<form onSubmit>` + `type="submit"` ✓ | **Audit** in 10.4; fix any outliers |
-| **First-field autofocus** | §10 | **No** `autoFocus` props; `Dialog` focuses first field when dialog opens ✓; Clerk `/sign-in` is third-party | **Extend** in 10.4 for app-owned full pages (e.g. OB wizard step open) |
+| **Enter submits form** | §10 | All **31** `components/forms/*` use `<form onSubmit>` + `type="submit"` ✓ | **Done** in 10.4 |
+| **First-field autofocus** | §10 | `Dialog` + full-page surfaces (OB wizard, entity create, review panels) ✓; Clerk `/sign-in` is third-party | **Done** in 10.4 |
 | **Combobox / type-to-filter** | §10 | **No** `Combobox` component; **~20** forms use plain `<Select>` for long lists (supplier, account, GL, etc.) | **Build** in 10.5 |
 | **Inline validation** | §10 | Submit-time errors only; `manual-daily-sales-form` shows running total label but no live mismatch styling | **Build** in 10.6 |
 | **Autosave / discard confirm** | §10 | **No** draft persistence; dialog backdrop/Esc closes without unsaved warning | **Build** in 10.7 |
@@ -526,23 +526,23 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | done |
 | **Implements** | §10 instant feedback: toasts, loading/skeletons; verify keyboard shell behaviors |
-| **Suggested tag** | `v0.66.2-shell-feedback` |
+| **Tag** | `v0.66.2-shell-feedback` |
 
-**Already shipped (verify, don’t rebuild):**
+**Already shipped (verified, don’t rebuild):**
 
 | Item | Location | Gate |
 |------|----------|------|
-| Cmd/Ctrl-K command palette | `command-palette.tsx`, `app-shell.tsx` | Opens from anywhere; indexes routes |
-| Esc closes dialog | `components/ui/dialog.tsx` | Manual on 3 dialogs |
-| Skeletons on list pages | `PageSkeleton` / `TableSkeleton` | Spot-check expenses, sales, banking |
-| Empty states | `EmptyState` | Spot-check one list page |
+| Cmd/Ctrl-K command palette | `command-palette.tsx`, `app-shell.tsx` | ✓ |
+| Esc closes dialog | `components/ui/dialog.tsx` | ✓ |
+| Skeletons on list pages | `PageSkeleton` / `TableSkeleton` | ✓ |
+| Empty states | `EmptyState` | ✓ |
 
-**Build / extend:**
+**Build / extend (done):**
 
-- [ ] **`useToast` on every successful POST** — audit all `components/forms/*` + review confirm flows (`pos-summary-review`, `receipt-review`, `invoice-draft-review`, `delivery-report-review`, `statement-line-classify`). Today only ~9 call sites; **all** money/master/upload saves get a plain-language toast (e.g. “Expense saved”).
-- [ ] **Consistent error display** — failed POST still uses inline `setError` (no toast spam on validation errors).
+- [x] **`useToast` on every successful POST** — all `components/forms/*`, review confirms (`pos-summary-review`, `receipt-review`, `invoice-draft-review`, `delivery-report-review`), `statement-line-classify`.
+- [x] **Consistent error display** — failed POST still uses inline `setError` (no toast on validation errors).
 
 **Manual verify:** save manual expense → toast; open list → skeleton then rows; Cmd+K → navigate; Esc closes New → form dialog.
 
@@ -554,18 +554,34 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | done |
 | **Implements** | §10 keyboard-first: Enter submits; first field focused; sensible Tab order |
-| **Suggested tag** | `v0.66.3-focus-enter` |
+| **Tag** | `v0.66.3-focus-enter` |
 
-**Audit baseline (code):** all 31 `components/forms/*` already use `<form onSubmit>` + submit button — **Enter should work** in dialogs. `Dialog` auto-focuses first `input|select|textarea` on open.
+**Audit baseline (code):** all 31 `components/forms/*` already use `<form onSubmit>` + `type="submit"` — **Enter works** in dialogs. `Dialog` auto-focuses first `input|select|textarea` on open.
+
+**Audit checklist (2026-06-25):**
+
+| Surface | Enter-submit | First-field focus | Notes |
+|---------|--------------|-------------------|-------|
+| 31 `components/forms/*` | ✓ `<form onSubmit>` + `type="submit"` | ✓ via `dialog.tsx` | No outliers; no `onKeyDown` Enter hacks |
+| `dialog.tsx` | n/a | ✓ `setTimeout` focus first input/select/textarea | Esc close + Tab trap unchanged |
+| `opening-balances/page.tsx` | ✓ validate form | ✓ go-live on load; amount on Add line | Full-page wizard |
+| `settings/entity/page.tsx` | ✓ create form | ✓ restaurant name on load | |
+| `receipt-review.tsx` | ✓ | ✓ first line item input | |
+| `pos-summary-review.tsx` | ✓ | ✓ date field when confirmable | |
+| `delivery-report-review.tsx` | ✓ | ✓ gross amount when postable | |
+| `invoice-draft-review.tsx` | ✓ (link forms) | — read-mostly; supplier select is first action | |
+| `statement-line-classify.tsx` | ✓ | ✓ classification select | |
+| Tab order | ✓ visual order | — | Only intentional `tabIndex={-1}` on DateInput calendar button + uploads disabled state |
+| Clerk SignIn/SignUp | out of scope | out of scope | third-party widget |
 
 **Acceptance:**
 
-- [ ] Documented audit checklist: every dialog form + full-page forms (`opening-balances`, settings entity) — Enter submits without clicking Save.
-- [ ] **First field focused** when app-owned surface opens: all `Dialog` forms (rely on existing `dialog.tsx` focus); **opening-balances wizard** first field on each step; review panels with editable fields focus first editable on load where practical.
-- [ ] Tab order follows visual order (fix any `tabIndex` hacks or focus traps blocking Tab).
-- [ ] **Out of scope:** Clerk `SignIn` / `SignUp` focus (third-party widget).
+- [x] Documented audit checklist: every dialog form + full-page forms (`opening-balances`, settings entity) — Enter submits without clicking Save.
+- [x] **First field focused** when app-owned surface opens: all `Dialog` forms (rely on existing `dialog.tsx` focus); **opening-balances wizard** first field on load + new line; review panels focus first editable on load.
+- [x] Tab order follows visual order (no blocking `tabIndex` hacks found).
+- [x] **Out of scope:** Clerk `SignIn` / `SignUp` focus (third-party widget).
 
 **Manual verify:** open manual expense dialog → type immediately; Enter saves; Tab through fields in order.
 
@@ -679,7 +695,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 |-------|------|
 | 10.1 | All checklist files use `DateInput`; manual date verify on 4 screens; build green | **done** (`v0.66.0`) |
 | 10.2 | Nested Delivery nav; duplicates removed | **done** (`v0.66.1`) |
-| 10.3 | Toasts on all POST saves; palette/Esc/skeletons verified |
+| 10.3 | Toasts on all POST saves; palette/Esc/skeletons verified | **done** (`v0.66.2`) |
 | 10.4 | Enter-submit + focus audit passed; OB wizard + dialogs checked |
 | 10.5 | Combobox on long pickers; manual type-to-filter verify |
 | 10.6 | Inline hints on priority money forms |
@@ -735,6 +751,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-25 | Phase 10 Slice 3 — Shell feedback | `v0.66.2-shell-feedback` | Toasts on all POST saves; verified palette/Esc/skeletons; build green |
 | 2026-06-25 | Phase 10 Slice 2 — Delivery nav nesting | `v0.66.1-delivery-nav` | Nested Delivery sidebar; removed flat duplicates; palette unchanged; build green |
 | 2026-06-24 | Phase 10 Slice 1 — Shared DateInput | `v0.66.0-date-picker` | `DateInput` + calendar popover; 22 date fields migrated; default today on forms; build green; 545 pytest |
 | 2026-06-24 | Phase 9 Slice 9 — Settings & onboarding | `v0.64.0-phase9-settings-onboarding` | Settings hub, OB wizard, members, entity create; 545 pytest |

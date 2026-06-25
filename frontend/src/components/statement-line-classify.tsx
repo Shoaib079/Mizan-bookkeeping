@@ -103,6 +103,14 @@ export function StatementLineClassify({
     void loadPickers().catch(() => undefined);
   }, [loadPickers]);
 
+  useEffect(() => {
+    if (resolved) return;
+    window.setTimeout(
+      () => document.getElementById(`cls-${line.id}`)?.focus(),
+      0,
+    );
+  }, [line.id, resolved]);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!entityId || resolved) return;

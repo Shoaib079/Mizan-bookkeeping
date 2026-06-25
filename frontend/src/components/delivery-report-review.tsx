@@ -50,6 +50,14 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
     );
   }, [load]);
 
+  useEffect(() => {
+    if (!report) return;
+    const canPost =
+      report.status === "draft" || report.status === "needs_review";
+    if (!canPost) return;
+    window.setTimeout(() => document.getElementById("rep-gross")?.focus(), 0);
+  }, [report]);
+
   async function onPost(event: FormEvent) {
     event.preventDefault();
     if (!entityId || !report) return;

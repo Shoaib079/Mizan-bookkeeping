@@ -66,6 +66,14 @@ export function ReceiptReview({ intakeId }: Props) {
     );
   }, [load]);
 
+  useEffect(() => {
+    if (!intake || intake.status === "posted") return;
+    window.setTimeout(
+      () => document.getElementById("receipt-line-0-item")?.focus(),
+      0,
+    );
+  }, [intake]);
+
   function updateLine(index: number, patch: Partial<ReceiptLine>) {
     setLines((prev) =>
       prev.map((line, i) => (i === index ? { ...line, ...patch } : line)),
@@ -145,6 +153,7 @@ export function ReceiptReview({ intakeId }: Props) {
               <div>
                 <Label>Item</Label>
                 <Input
+                  id={index === 0 ? "receipt-line-0-item" : undefined}
                   value={line.written_item_description ?? ""}
                   onChange={(e) =>
                     updateLine(index, {
