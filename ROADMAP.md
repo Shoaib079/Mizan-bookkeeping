@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | **10.5** — Shared `Combobox` (type-to-filter pickers) |
-| **Last completed slice** | Phase 10 Slice 4 — Focus + Enter-submit audit (`v0.66.3`) |
-| **Last commit/tag** | `v0.66.3-focus-enter` |
-| **Next up** | Phase 10.5 → 10.8 (strict order; full `DESIGN_SYSTEM.md` §10 + FX; see below) |
+| **Active slice** | **10.8** — FX purchase cash drawer only (money-critical) |
+| **Last completed slice** | Phase 10 Slice 7 — Autosave + discard confirm (`v0.66.6`) |
+| **Last commit/tag** | `v0.66.6-draft-safety` |
+| **Next up** | Phase 10.8 only — then Phase 11 go-live (see below) |
 
 **The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = pre-launch: complete **all** locked `DESIGN_SYSTEM.md` §10 interaction UX + delivery nav + FX wiring — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -386,7 +386,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Phase 9 complete** — all slices done, tested, committed (`v0.65.0`). **Owner sign-off pending** → frontend v1 complete.
 
-**Known gap (code audit 2026-06-24):** `DESIGN_SYSTEM.md` §10 is only **partly** shipped (Phase 9 Slice 10: toasts, palette, dialog Esc/focus trap, skeletons). **Missing:** combobox pickers, inline validation, autosave/discard confirm (slices 10.5–10.7). FX buy: backend is **cash-only** ✓ (owner 2026-06-24: **keep cash only** — bank is statement-driven); UI still lists bank accounts wrongly; **no** `cash_movements` on purchase. See **Phase 10 audit** below.
+**Known gap (remaining before go-live):** `DESIGN_SYSTEM.md` §10 slices **10.1–10.7** are **done** (`v0.66.6-draft-safety`). **Only 10.8 remains:** FX buy UI still lists bank accounts wrongly; **no** `cash_movements` on purchase. See **Phase 10 audit** below.
 
 ---
 
@@ -417,8 +417,8 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **Toasts on save** | §10 | `useToast` on **all** POST save/upload/confirm flows (forms + review + classify) | **Done** in 10.3 |
 | **Enter submits form** | §10 | All **31** `components/forms/*` use `<form onSubmit>` + `type="submit"` ✓ | **Done** in 10.4 |
 | **First-field autofocus** | §10 | `Dialog` + full-page surfaces (OB wizard, entity create, review panels) ✓; Clerk `/sign-in` is third-party | **Done** in 10.4 |
-| **Combobox / type-to-filter** | §10 | **No** `Combobox` component; **~20** forms use plain `<Select>` for long lists (supplier, account, GL, etc.) | **Build** in 10.5 |
-| **Inline validation** | §10 | Submit-time errors only; `manual-daily-sales-form` shows running total label but no live mismatch styling | **Build** in 10.6 |
+| **Combobox / type-to-filter** | §10 | `combobox.tsx`; **34** long pickers migrated across 22 files | **Done** in 10.5 |
+| **Inline validation** | §10 | `ValidationHint` + live hints on priority money forms | **Done** in 10.6 |
 | **Autosave / discard confirm** | §10 | **`useFormDraft` + Dialog `dirty`** — entity-scoped localStorage drafts; discard confirm on Esc/backdrop/X | **Done** in 10.7 |
 
 **Already implemented — do NOT redo in Phase 10:**
@@ -719,9 +719,9 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | 10.1 | All checklist files use `DateInput`; manual date verify on 4 screens; build green | **done** (`v0.66.0`) |
 | 10.2 | Nested Delivery nav; duplicates removed | **done** (`v0.66.1`) |
 | 10.3 | Toasts on all POST saves; palette/Esc/skeletons verified | **done** (`v0.66.2`) |
-| 10.4 | Enter-submit + focus audit passed; OB wizard + dialogs checked |
-| 10.5 | Combobox on long pickers; manual type-to-filter verify |
-| 10.6 | Inline hints on priority money forms |
+| 10.4 | Enter-submit + focus audit passed; OB wizard + dialogs checked | **done** (`v0.66.3`) |
+| 10.5 | Combobox on long pickers; manual type-to-filter verify | **done** (`v0.66.4`) |
+| 10.6 | Inline hints on priority money forms | **done** (`v0.66.5`) |
 | 10.7 | Discard confirm on dirty dialogs; autosave on listed forms | **done** (`v0.66.6-draft-safety`) |
 | 10.8 | Cash-only UI + API; cash movement on purchase; bank still rejected; full `pytest`; **owner sign-off** |
 
