@@ -27,14 +27,15 @@
 - Link to `/delivery/platforms` from settings hub
 - Entity list refreshes after create
 
-**Next:** Phase 10.1 → 10.2 → 10.3 per `ROADMAP.md` (code audit in ROADMAP — do not trust tests alone).
+**Next:** Phase 10.1 → 10.8 per `ROADMAP.md` (full `DESIGN_SYSTEM.md` §10 + FX; code audit in ROADMAP).
 
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.
-- FX buy: **cash drawer + bank** (not credit card); backend + cash movement fix in 10.3.
+- Complete remaining §10: toasts everywhere, combobox pickers, focus/Enter audit, inline validation, autosave/discard confirm.
+- FX buy: **cash drawer + bank** (not credit card); backend + cash movement fix in **10.8**.
 - Delivery nav: **nested under Delivery** (confirmed).
 
-**Do not start Phase 11 (deployment)** until Phase 10.3 complete + owner sign-off on 10.3.
+**Do not start Phase 11 (deployment)** until Phase **10.8** complete + owner sign-off on 10.8.
 
 **Phase 9 Slice 10 complete** — Theme refinement + UX polish (frontend only):
 - Refined `globals.css` tokens (radius, spacing, focus ring, skeleton animation)

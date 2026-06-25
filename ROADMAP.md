@@ -16,9 +16,9 @@
 | **Active slice** | **10.1** — Shared `DateInput` (small calendar, typable) |
 | **Last completed slice** | Phase 9 Slice 10 — Theme refinement + UX polish (`v0.65.0-phase9-theme-ux-polish`) |
 | **Last commit/tag** | `v0.65.0-phase9-theme-ux-polish` (plan docs: `5bb5207`) |
-| **Next up** | Phase 10.1 → 10.2 → 10.3 (strict order; see below) |
+| **Next up** | Phase 10.1 → 10.8 (strict order; full `DESIGN_SYSTEM.md` §10 + FX; see below) |
 
-**The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = owner-requested pre-launch gaps (dates, delivery nav, FX wiring) — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
+**The whole journey:** Phases 0–9 = backend + frontend v1 (DONE, `v0.65.0`). **Phase 10** = pre-launch: complete **all** locked `DESIGN_SYSTEM.md` §10 interaction UX + delivery nav + FX wiring — **build before go-live**. **Phase 11** = deployment & go-live. **Phase 12** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
 ### Do not rebuild (already done — git is source of truth)
 
@@ -386,13 +386,13 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Phase 9 complete** — all slices done, tested, committed (`v0.65.0`). **Owner sign-off pending** → frontend v1 complete.
 
-**Known gap (code audit 2026-06-24):** `DESIGN_SYSTEM.md` §10 requires a **shared date picker** (type `DD.MM.YYYY` **or** small calendar) — **not shipped** despite Phase 9 Slice 10. See **Phase 10 audit** below. Delivery nav duplicates still in `app-routes.ts`. FX buy: UI lists cash+bank; backend accepts **cash only** and writes **no** `cash_movements` row.
+**Known gap (code audit 2026-06-24):** `DESIGN_SYSTEM.md` §10 is only **partly** shipped (Phase 9 Slice 10: toasts, palette, dialog Esc/focus trap, skeletons). **Missing:** shared date picker, combobox pickers, systematic autofocus, inline validation, autosave/discard confirm, toasts on all forms. Delivery nav duplicates in `app-routes.ts`. FX buy: UI lists cash+bank; backend **cash only**, no `cash_movements`. See **Phase 10 audit** below.
 
 ---
 
-## Phase 10 — Pre-launch UX & FX wiring (owner 2026-06-24)
+## Phase 10 — Pre-launch UX (`DESIGN_SYSTEM.md` §10) & FX wiring (owner 2026-06-24)
 
-**Status: PLANNED** — build **before Phase 11 (go-live)**, strict order **10.1 → 10.2 → 10.3**. Do not start Phase 11 deployment until 10.3 passes the completion gate (10.1–10.2 frontend-only; 10.3 money-critical).
+**Status: PLANNED** — build **before Phase 11 (go-live)**, strict order **10.1 → 10.8**. Do not start Phase 11 deployment until **10.8** passes the completion gate (10.1–10.7 frontend UX; **10.8** money-critical + owner sign-off).
 
 ### Code audit (do not trust ROADMAP/tests alone — verified in repo)
 
@@ -406,10 +406,19 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **Review screens** | Listed 4 review UIs | Only **`pos-summary-review.tsx`** has an **editable** date field; `receipt-review`, `invoice-draft-review`, `delivery-report-review` show dates as **read-only text** only | **Do not** add date pickers there unless product asks |
 | **Phase 9 Slice 10** | “UX polish” done | Toasts, command palette, dialog Esc/focus, skeletons, tokens ✓ — **date picker not included** | 10.1 completes §10 date slice of Slice 10 |
 | **Delivery nav** | Slice 5 built `/delivery/*` | `app-routes.ts` lines 51–53 still duplicate flat Books links; `app-shell.tsx` has **no** nested nav | **Build** in 10.2 |
-| **FX form UI** | Banking slice wired | `fx-purchase-form.tsx` loads **cash + bank** ✓ | **Label only** in 10.3 (already lists both) |
-| **FX backend** | Phase 5 FX purchase done | `post_fx_purchase()` → `_validate_try_cash_money_account` **CASH only**; `test_rejects_bank_as_try_payment_account` expects reject | **Extend** to BANK in 10.3 |
-| **FX cash subledger** | — | **No** `CashMovement` on FX purchase (GL `Dr` FX / `Cr` cash GL only); drawer page won’t list FX buys | **Add** OUT movement when source is cash in 10.3 |
-| **FX conversion** | — | `fx-conversion-form.tsx` already loads cash+bank for TRY receive; `spend_posting` allows CASH\|BANK | **Out of scope** 10.3 unless audit finds gap |
+| **FX form UI** | Banking slice wired | `fx-purchase-form.tsx` loads **cash + bank** ✓ | **Label only** in 10.8 (already lists both) |
+| **FX backend** | Phase 5 FX purchase done | `post_fx_purchase()` → `_validate_try_cash_money_account` **CASH only**; `test_rejects_bank_as_try_payment_account` expects reject | **Extend** to BANK in **10.8** |
+| **FX cash subledger** | — | **No** `CashMovement` on FX purchase (GL `Dr` FX / `Cr` cash GL only); drawer page won’t list FX buys | **Add** OUT movement when source is cash in **10.8** |
+| **FX conversion** | — | `fx-conversion-form.tsx` already loads cash+bank for TRY receive; `spend_posting` allows CASH\|BANK | **Out of scope** 10.8 unless audit finds gap |
+| **Cmd/Ctrl-K palette** | §10 | `command-palette.tsx` in `app-shell.tsx` ✓ | **Verify** in 10.3; fix gaps only |
+| **Dialog Esc + focus trap** | Phase 9 Slice 10 | `dialog.tsx`: Esc closes, Tab trap, auto-focus first input on open ✓ | **Verify** in 10.3 |
+| **Skeletons / empty states** | Phase 9 Slice 10 | `PageSkeleton`, `TableSkeleton`, `EmptyState` on list pages ✓ | **Verify** in 10.3 |
+| **Toasts on save** | §10 | `useToast` on **~9** forms/pages only (expense, sales, entity, OB, CRUD masters) — **~22** POST forms without toast | **Extend** in 10.3 |
+| **Enter submits form** | §10 | All **31** `components/forms/*` use `<form onSubmit>` + `type="submit"` ✓ | **Audit** in 10.4; fix any outliers |
+| **First-field autofocus** | §10 | **No** `autoFocus` props; `Dialog` focuses first field when dialog opens ✓; Clerk `/sign-in` is third-party | **Extend** in 10.4 for app-owned full pages (e.g. OB wizard step open) |
+| **Combobox / type-to-filter** | §10 | **No** `Combobox` component; **~20** forms use plain `<Select>` for long lists (supplier, account, GL, etc.) | **Build** in 10.5 |
+| **Inline validation** | §10 | Submit-time errors only; `manual-daily-sales-form` shows running total label but no live mismatch styling | **Build** in 10.6 |
+| **Autosave / discard confirm** | §10 | **No** draft persistence; dialog backdrop/Esc closes without unsaved warning | **Build** in 10.7 |
 
 **Already implemented — do NOT redo in Phase 10:**
 
@@ -417,6 +426,9 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 - `ReportDateRange` / dashboard / reports **API wiring** (only upgrade inputs to `DateInput`).
 - `fx-purchase-form` **account fetch** (cash+bank) — fix backend + labels, don’t rebuild form from scratch.
 - `/delivery` hub + child **pages** — only **sidebar IA** changes in 10.2.
+- `Dialog` Esc/focus-trap/first-field focus — **verify** in 10.3, don’t rewrite unless broken.
+- `CommandPalette`, skeletons, empty states — **verify** in 10.3.
+- All forms already use `onSubmit` — **audit** in 10.4, don’t rebuild form structure.
 
 ### Owner decisions (locked)
 
@@ -426,15 +438,22 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **FX buy USD/EUR** | **Cash drawer + bank** (`CASH` + `BANK`). **Not** credit card. Cash path → drawer movement + GL. |
 | **Delivery nav** | **Confirmed:** nest platforms / reports / settlements under **Delivery**. |
 
-**References:** `DESIGN_SYSTEM.md` §5 (date picker component), §10 (interaction); `Restaurant_Bookkeeping_App_Decisions.md` §14–§15 (update §15 on 10.3 commit); `frontend/src/lib/app-routes.ts`, `app-shell.tsx`.
+**References:** `DESIGN_SYSTEM.md` §5 (date picker component), §10 (interaction); `Restaurant_Bookkeeping_App_Decisions.md` §14–§15 (update §15 on **10.8** commit); `frontend/src/lib/app-routes.ts`, `app-shell.tsx`.
 
 ### Build order (mandatory)
 
 ```
-10.1 DateInput (small calendar)  →  10.2 Delivery nav  →  10.3 FX purchase (cash + bank)
+10.1 DateInput
+  → 10.2 Delivery nav
+  → 10.3 Shell feedback (verify palette/Esc/skeletons; toasts on all saves)
+  → 10.4 Focus + Enter audit
+  → 10.5 Combobox pickers
+  → 10.6 Inline validation
+  → 10.7 Autosave + discard confirm
+  → 10.8 FX purchase (cash + bank)   ← money-critical; last before go-live
 ```
 
-10.1 and 10.2 may share one commit if both gates pass; **10.3 = separate commit/tag** (money-critical).
+10.1 and 10.2 may share one commit if both gates pass. **10.8 = separate commit/tag** (money-critical). Slices 10.3–10.7 may batch where gates pass, but **order is fixed** — don’t start 10.5 before 10.4 audit documents Enter/focus baseline.
 
 ---
 
@@ -485,7 +504,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Manual verify (required — not only `npm run build`):** open manual expense, dashboard range, opening balances, POS review confirm — type date, pick from calendar, submit.
 
-**Out of scope:** time-of-day; combobox pickers (§10 other bullets → Phase 12); `receipt-review` / invoice / delivery review read-only dates.
+**Out of scope:** time-of-day; `receipt-review` / invoice / delivery review read-only dates.
 
 ---
 
@@ -505,7 +524,134 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 ---
 
-### Slice 10.3 — FX purchase: cash drawer **or** bank (full wiring)
+### Slice 10.3 — Shell feedback completion (`DESIGN_SYSTEM.md` §10 — partial items)
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Implements** | §10 instant feedback: toasts, loading/skeletons; verify keyboard shell behaviors |
+| **Suggested tag** | `v0.66.2-shell-feedback` |
+
+**Already shipped (verify, don’t rebuild):**
+
+| Item | Location | Gate |
+|------|----------|------|
+| Cmd/Ctrl-K command palette | `command-palette.tsx`, `app-shell.tsx` | Opens from anywhere; indexes routes |
+| Esc closes dialog | `components/ui/dialog.tsx` | Manual on 3 dialogs |
+| Skeletons on list pages | `PageSkeleton` / `TableSkeleton` | Spot-check expenses, sales, banking |
+| Empty states | `EmptyState` | Spot-check one list page |
+
+**Build / extend:**
+
+- [ ] **`useToast` on every successful POST** — audit all `components/forms/*` + review confirm flows (`pos-summary-review`, `receipt-review`, `invoice-draft-review`, `delivery-report-review`, `statement-line-classify`). Today only ~9 call sites; **all** money/master/upload saves get a plain-language toast (e.g. “Expense saved”).
+- [ ] **Consistent error display** — failed POST still uses inline `setError` (no toast spam on validation errors).
+
+**Manual verify:** save manual expense → toast; open list → skeleton then rows; Cmd+K → navigate; Esc closes New → form dialog.
+
+**Do not redo:** toast provider, command palette implementation, skeleton components.
+
+---
+
+### Slice 10.4 — Focus + Enter-submit audit (`DESIGN_SYSTEM.md` §10)
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Implements** | §10 keyboard-first: Enter submits; first field focused; sensible Tab order |
+| **Suggested tag** | `v0.66.3-focus-enter` |
+
+**Audit baseline (code):** all 31 `components/forms/*` already use `<form onSubmit>` + submit button — **Enter should work** in dialogs. `Dialog` auto-focuses first `input|select|textarea` on open.
+
+**Acceptance:**
+
+- [ ] Documented audit checklist: every dialog form + full-page forms (`opening-balances`, settings entity) — Enter submits without clicking Save.
+- [ ] **First field focused** when app-owned surface opens: all `Dialog` forms (rely on existing `dialog.tsx` focus); **opening-balances wizard** first field on each step; review panels with editable fields focus first editable on load where practical.
+- [ ] Tab order follows visual order (fix any `tabIndex` hacks or focus traps blocking Tab).
+- [ ] **Out of scope:** Clerk `SignIn` / `SignUp` focus (third-party widget).
+
+**Manual verify:** open manual expense dialog → type immediately; Enter saves; Tab through fields in order.
+
+---
+
+### Slice 10.5 — Shared `Combobox` (type-to-filter pickers)
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Implements** | §10 “type-to-filter in every picker (combobox): type Met → Metro” |
+| **Suggested tag** | `v0.66.4-combobox` |
+
+**Problem today:** long `<Select>` dropdowns (~20 forms) — supplier, customer, partner, employee, money account, GL/expense account, delivery platform, card terminal, etc. No filter-as-you-type.
+
+**Acceptance:**
+
+- [ ] Shared `frontend/src/components/ui/combobox.tsx` (or `account-combobox`, `entity-combobox` wrappers) — token-styled; keyboard: type filter, ↑↓, Enter select, Esc close.
+- [ ] Migrate **every** picker with **>8 options** or dynamic lists (grep `<Select` in `components/forms/` + review screens with account pickers).
+- [ ] Short static enums (e.g. Dr/Cr, movement direction) may stay `<Select>`.
+
+**Manual verify:** supplier payment → type vendor name fragment → list filters → Enter selects.
+
+**Do not redo:** underlying option fetch APIs; only replace UI control.
+
+---
+
+### Slice 10.6 — Inline validation (`DESIGN_SYSTEM.md` §10)
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Implements** | §10 “inline validation as you go … plain language — not a wall of errors after submit” |
+| **Suggested tag** | `v0.66.5-inline-validation` |
+
+**Priority surfaces (money-critical UX):**
+
+| Form / screen | Rule (examples) |
+|---------------|-----------------|
+| `manual-daily-sales-form` | Live total; warn if cash + card = 0 before submit |
+| `pos-summary-review` | Same cash/card totals; Z vs card when Z enabled (display mismatch hint) |
+| `delivery-report-form` | Commission vs net consistency hint (already shows amounts) |
+| `opening-balances/page.tsx` | Line balance / required account before validate step |
+| `transfer-form`, `cash-movement-form` | Amount > 0; from ≠ to |
+| Payment forms | Amount ≤ outstanding where API exposes balance (optional nice-to-have) |
+
+**Acceptance:**
+
+- [ ] Shared pattern: field-level or summary `text-destructive` / `text-muted-foreground` hints **while editing**, not only `setError` on submit.
+- [ ] Plain Turkish/English copy per `DESIGN_SYSTEM.md` tone.
+- [ ] Submit still blocked when invalid (existing server validation unchanged).
+
+**Manual verify:** manual daily sales — clear cash+card hint without clicking Save.
+
+---
+
+### Slice 10.7 — Autosave + discard confirm (`DESIGN_SYSTEM.md` §10)
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Implements** | §10 “don’t lose my work: drafts autosave; confirm before discarding unsaved changes” |
+| **Suggested tag** | `v0.66.6-draft-safety` |
+
+**Problem today:** closing dialog (Esc, backdrop, Cancel) drops in-progress form state with no warning.
+
+**Acceptance:**
+
+- [ ] **`useUnsavedChanges` or `Dialog` `dirty` prop** — when form state differs from initial, Esc / backdrop / Cancel prompts “Discard unsaved changes?” (confirm/cancel).
+- [ ] **Autosave drafts** (localStorage, entity-scoped keys) for:
+  - `manual-expense-form` (multi-line),
+  - `opening-balances` wizard lines,
+  - `receipt-review` line edits (in-progress only),
+  - any other multi-field dialog flagged in audit.
+- [ ] Restore draft on reopen (“Resume draft?” optional one-time prompt).
+- [ ] Successful POST clears draft key.
+
+**Out of scope:** server-side draft API; sync across devices.
+
+**Manual verify:** start expense, add line, Esc → confirm dialog; reopen → draft restored.
+
+---
+
+### Slice 10.8 — FX purchase: cash drawer **or** bank (full wiring)
 
 | | |
 |---|---|
@@ -533,9 +679,14 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | Slice | Gate |
 |-------|------|
-| 10.1 | Checklist files use `DateInput`; manual date verify on 4 screens; build green |
+| 10.1 | All checklist files use `DateInput`; manual date verify on 4 screens; build green |
 | 10.2 | Nested Delivery nav; duplicates removed |
-| 10.3 | Bank path works; cash path + movement; full `pytest`; **owner sign-off** |
+| 10.3 | Toasts on all POST saves; palette/Esc/skeletons verified |
+| 10.4 | Enter-submit + focus audit passed; OB wizard + dialogs checked |
+| 10.5 | Combobox on long pickers; manual type-to-filter verify |
+| 10.6 | Inline hints on priority money forms |
+| 10.7 | Discard confirm on dirty dialogs; autosave on listed forms |
+| 10.8 | Bank path works; cash path + movement; full `pytest`; **owner sign-off** |
 
 Then proceed to **Phase 11 — Deployment & go-live**.
 
@@ -560,11 +711,11 @@ Take the tested app to a real, secure production environment and put real data i
 
 ## Phase 12 — Post-launch enhancements (parking lot)
 
-**Note:** Phase **10** slices (10.1–10.3) are **pre-launch**. This section is **after** go-live. Promote to Decisions before building.
+**Note:** Phase **10** slices (10.1–10.8) are **pre-launch** (`DESIGN_SYSTEM.md` §10 + FX). This section is **after** go-live. Promote to Decisions before building.
 
-- **Shared date picker** — **→ Phase 10.1** (pre-launch).
+- **§10 interaction UX (dates, combobox, validation, drafts, toasts, focus)** — **→ Phase 10** (pre-launch; slices 10.1–10.7).
 - **Delivery sidebar nesting** — **→ Phase 10.2** (owner confirmed).
-- **FX purchase cash + bank** — **→ Phase 10.3** (pre-launch).
+- **FX purchase cash + bank** — **→ Phase 10.8** (pre-launch).
 - **Bank feed (read-only) adapter** — account-information / transaction pull only; never payment-initiation (the app never moves money). Same normalized transaction rows as manual statement import, feeding the existing classify → clearing → near-match → anti-double-count pipeline (downstream unchanged). Manual upload stays permanently as universal fallback; both coexist. When built: dedup on bank unique transaction ID, consent/token expiry + reconnect, reconcile feed balance to statement, confirm route (direct bank API vs aggregator).
 - **Proper KDV/tax-return module** — output − input, declaration, periods (input VAT already captured per rate).
 - **FX revaluation** — period-end holding revaluation (today FX is cost-only; gain/loss accounts already exist).
