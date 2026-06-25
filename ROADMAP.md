@@ -419,7 +419,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | **First-field autofocus** | §10 | `Dialog` + full-page surfaces (OB wizard, entity create, review panels) ✓; Clerk `/sign-in` is third-party | **Done** in 10.4 |
 | **Combobox / type-to-filter** | §10 | **No** `Combobox` component; **~20** forms use plain `<Select>` for long lists (supplier, account, GL, etc.) | **Build** in 10.5 |
 | **Inline validation** | §10 | Submit-time errors only; `manual-daily-sales-form` shows running total label but no live mismatch styling | **Build** in 10.6 |
-| **Autosave / discard confirm** | §10 | **No** draft persistence; dialog backdrop/Esc closes without unsaved warning | **Build** in 10.7 |
+| **Autosave / discard confirm** | §10 | **`useFormDraft` + Dialog `dirty`** — entity-scoped localStorage drafts; discard confirm on Esc/backdrop/X | **Done** in 10.7 |
 
 **Already implemented — do NOT redo in Phase 10:**
 
@@ -643,7 +643,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | **done** (`v0.66.6-draft-safety`) |
 | **Implements** | §10 “don’t lose my work: drafts autosave; confirm before discarding unsaved changes” |
 | **Suggested tag** | `v0.66.6-draft-safety` |
 
@@ -651,14 +651,13 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 
 **Acceptance:**
 
-- [ ] **`useUnsavedChanges` or `Dialog` `dirty` prop** — when form state differs from initial, Esc / backdrop / Cancel prompts “Discard unsaved changes?” (confirm/cancel).
-- [ ] **Autosave drafts** (localStorage, entity-scoped keys) for:
-  - `manual-expense-form` (multi-line),
+- [x] **`useFormDraft` + `Dialog` `dirty` prop** — when form state differs from initial, Esc / backdrop / X prompts “Discard unsaved changes?” (confirm/cancel).
+- [x] **Autosave drafts** (localStorage, entity-scoped keys `mizan:draft:{entityId}:{formKey}`) for:
+  - `manual-expense-form` (multi-field dialog),
   - `opening-balances` wizard lines,
-  - `receipt-review` line edits (in-progress only),
-  - any other multi-field dialog flagged in audit.
-- [ ] Restore draft on reopen (“Resume draft?” optional one-time prompt).
-- [ ] Successful POST clears draft key.
+  - `receipt-review` line edits (in-progress only).
+- [x] Restore draft on reopen (`ResumeDraftBanner` one-time prompt).
+- [x] Successful POST clears draft key.
 
 **Out of scope:** server-side draft API; sync across devices.
 
@@ -723,7 +722,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 | 10.4 | Enter-submit + focus audit passed; OB wizard + dialogs checked |
 | 10.5 | Combobox on long pickers; manual type-to-filter verify |
 | 10.6 | Inline hints on priority money forms |
-| 10.7 | Discard confirm on dirty dialogs; autosave on listed forms |
+| 10.7 | Discard confirm on dirty dialogs; autosave on listed forms | **done** (`v0.66.6-draft-safety`) |
 | 10.8 | Cash-only UI + API; cash movement on purchase; bank still rejected; full `pytest`; **owner sign-off** |
 
 Then proceed to **Phase 11 — Deployment & go-live**.

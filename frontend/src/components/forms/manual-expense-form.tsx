@@ -1,22 +1,42 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+/** Manual expense dialog — autosave draft + discard confirm (DESIGN_SYSTEM §10, Slice 10.7). */
+
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
+import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { statesDiffer, useFormDraft } from "@/lib/form-draft";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
 
-type MoneyAccount = { id: string; name: string; account_kind: string };
+type MoneyAccount = { id: string; name: string };
 type Account = { id: string; code: string; name: string };
 
 const MANUAL_EXPENSE_ACCOUNT_CODES = ["5200", "5700"];
+
+type ExpenseFormDraft = {
+  expenseAccountId: string;
+  moneyAccountId: string;
+  itemName: string;
+  amountText: string;
+  dateText: string;
+};
+
+function isExpenseDraftEmpty(draft: ExpenseFormDraft): boolean {
+  return (
+    !draft.itemName.trim() &&
+    !draft.amountText.trim() &&
+    !draft.dateText.trim()
+  );
+}
 
 type Props = {
   open: boolean;
@@ -42,6 +62,46 @@ export function ManualExpenseForm({
   const [parsedPreview, setParsedPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [optionsLoaded, setOptionsLoaded] = useState(false);
+  const [baseline, setBaseline] = useState<ExpenseFormDraft | null>(null);
+
+  const draftFormKey =
+    defaultExpenseAccountCode === "5700"
+      ? "manual-expense:5700"
+      : "manual-expense";
+
+  const formDraft = useMemo<ExpenseFormDraft>(
+    () => ({
+      expenseAccountId,
+      moneyAccountId,
+      itemName,
+      amountText,
+      dateText,
+    }),
+    [
+      expenseAccountId,
+      moneyAccountId,
+      itemName,
+      amountText,
+      dateText,
+    ],
+  );
+
+  const {
+    resumeDraft,
+    acceptResume,
+    declineResume,
+    clearDraft,
+  } = useFormDraft({
+    entityId,
+    formKey: draftFormKey,
+    value: formDraft,
+    enabled: open,
+    isEmpty: isExpenseDraftEmpty,
+  });
+
+  const dirty =
+    baseline !== null && statesDiffer(baseline, formDraft);
 
   const loadOptions = useCallback(async () => {
     if (!entityId) return;
@@ -64,19 +124,61 @@ export function ManualExpenseForm({
     if (preferred) setExpenseAccountId(preferred.id);
     else if (pickable[0]) setExpenseAccountId(pickable[0].id);
     if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
+    setOptionsLoaded(true);
   }, [entityId, defaultExpenseAccountCode]);
 
   useEffect(() => {
-    if (open) {
-      setDateText(todayTrDate());
-      void loadOptions().catch(() => undefined);
+    if (!open) {
+      setOptionsLoaded(false);
+      setBaseline(null);
+      return;
     }
+    setDateText(todayTrDate());
+    setItemName("");
+    setAmountText("");
+    setError(null);
+    void loadOptions().catch(() => undefined);
   }, [open, loadOptions]);
+
+  useEffect(() => {
+    if (!open || !optionsLoaded || baseline !== null || resumeDraft !== null) {
+      return;
+    }
+    setBaseline(formDraft);
+  }, [open, optionsLoaded, baseline, resumeDraft, formDraft]);
 
   useEffect(() => {
     const kurus = parseTryToKurus(amountText);
     setParsedPreview(kurus !== null ? formatTry(kurus) : null);
   }, [amountText]);
+
+  function applyDraft(draft: ExpenseFormDraft) {
+    setExpenseAccountId(draft.expenseAccountId);
+    setMoneyAccountId(draft.moneyAccountId);
+    setItemName(draft.itemName);
+    setAmountText(draft.amountText);
+    setDateText(draft.dateText);
+  }
+
+  function handleResume() {
+    const draft = acceptResume();
+    if (!draft) return;
+    applyDraft(draft);
+    setBaseline(draft);
+  }
+
+  function handleDeclineResume() {
+    declineResume();
+    setBaseline(formDraft);
+  }
+
+  function handleDiscard() {
+    clearDraft();
+    setItemName("");
+    setAmountText("");
+    setDateText(todayTrDate());
+    setBaseline(null);
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -115,6 +217,8 @@ export function ManualExpenseForm({
           actor_id: actorId,
         }),
       });
+      clearDraft();
+      setBaseline(null);
       onClose();
       toast(
         defaultExpenseAccountCode === "5700"
@@ -139,7 +243,15 @@ export function ManualExpenseForm({
           : "Manual expense"
       }
       onClose={onClose}
+      dirty={dirty}
+      onDiscard={handleDiscard}
     >
+      {resumeDraft && (
+        <ResumeDraftBanner
+          onResume={handleResume}
+          onDismiss={handleDeclineResume}
+        />
+      )}
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="exp-date">Date (DD.MM.YYYY)</Label>

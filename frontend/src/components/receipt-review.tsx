@@ -1,11 +1,15 @@
 "use client";
 
+/** Expense receipt review — line edits with autosave draft (DESIGN_SYSTEM §10, Slice 10.7). */
+
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
+import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { apiFetch, documentUrl } from "@/lib/api";
+import { statesDiffer, useFormDraft } from "@/lib/form-draft";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatKurus, formatTrDate, parseTryToKurus } from "@/lib/money";
@@ -31,6 +35,30 @@ type ExpenseReceipt = {
 
 type Account = { id: string; code: string; name: string };
 
+type EditableLine = {
+  id: string;
+  written_item_description: string | null;
+  amount_kurus: number;
+  expense_account_id: string;
+};
+
+function toEditableLines(lines: ReceiptLine[]): EditableLine[] {
+  return lines.map((line) => ({
+    id: line.id,
+    written_item_description: line.written_item_description,
+    amount_kurus: line.amount_kurus,
+    expense_account_id: line.expense_account_id,
+  }));
+}
+
+function linesMatchServer(
+  current: EditableLine[],
+  server: EditableLine[] | null,
+): boolean {
+  if (!server) return true;
+  return !statesDiffer(current, server);
+}
+
 type Props = {
   intakeId: string;
 };
@@ -42,8 +70,29 @@ export function ReceiptReview({ intakeId }: Props) {
   const [intake, setIntake] = useState<ExpenseReceipt | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [lines, setLines] = useState<ReceiptLine[]>([]);
+  const [serverLines, setServerLines] = useState<EditableLine[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const editableLines = useMemo(() => toEditableLines(lines), [lines]);
+
+  const isDraftEmpty = useCallback(
+    (draft: EditableLine[]) => linesMatchServer(draft, serverLines),
+    [serverLines],
+  );
+
+  const {
+    resumeDraft,
+    acceptResume,
+    declineResume,
+    clearDraft,
+  } = useFormDraft({
+    entityId,
+    formKey: `receipt-review:${intakeId}`,
+    value: editableLines,
+    enabled: Boolean(intake && intake.status !== "posted"),
+    isEmpty: isDraftEmpty,
+  });
 
   const load = useCallback(async () => {
     if (!entityId) return;
@@ -57,6 +106,7 @@ export function ReceiptReview({ intakeId }: Props) {
     ]);
     setIntake(receipt);
     setLines(receipt.lines);
+    setServerLines(toEditableLines(receipt.lines));
     setAccounts(chart.items);
   }, [entityId, intakeId]);
 
@@ -80,6 +130,27 @@ export function ReceiptReview({ intakeId }: Props) {
     );
   }
 
+  function applyLineDraft(draft: EditableLine[]) {
+    setLines((prev) =>
+      prev.map((line) => {
+        const saved = draft.find((d) => d.id === line.id);
+        if (!saved) return line;
+        return {
+          ...line,
+          written_item_description: saved.written_item_description,
+          amount_kurus: saved.amount_kurus,
+          expense_account_id: saved.expense_account_id,
+        };
+      }),
+    );
+  }
+
+  function handleResume() {
+    const draft = acceptResume();
+    if (!draft) return;
+    applyLineDraft(draft);
+  }
+
   async function onConfirm(event: FormEvent) {
     event.preventDefault();
     if (!entityId || !intake) return;
@@ -99,6 +170,7 @@ export function ReceiptReview({ intakeId }: Props) {
           })),
         }),
       });
+      clearDraft();
       toast("Receipt expenses posted");
       router.push("/");
     } catch (err) {
@@ -144,6 +216,12 @@ export function ReceiptReview({ intakeId }: Props) {
 
       <div className="rounded-lg border border-border bg-card p-4">
         <h2 className="mb-3 text-sm font-semibold">Lines</h2>
+        {resumeDraft && intake.status !== "posted" && (
+          <ResumeDraftBanner
+            onResume={handleResume}
+            onDismiss={declineResume}
+          />
+        )}
         <div className="space-y-3">
           {lines.map((line, index) => (
             <div
@@ -160,6 +238,7 @@ export function ReceiptReview({ intakeId }: Props) {
                       written_item_description: e.target.value,
                     })
                   }
+                  disabled={intake.status === "posted"}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -171,6 +250,7 @@ export function ReceiptReview({ intakeId }: Props) {
                       const kurus = parseTryToKurus(e.target.value);
                       if (kurus !== null) updateLine(index, { amount_kurus: kurus });
                     }}
+                    disabled={intake.status === "posted"}
                   />
                 </div>
                 <div>
@@ -180,6 +260,7 @@ export function ReceiptReview({ intakeId }: Props) {
                     onChange={(e) =>
                       updateLine(index, { expense_account_id: e.target.value })
                     }
+                    disabled={intake.status === "posted"}
                   >
                     {expenseAccounts.map((a) => (
                       <option key={a.id} value={a.id}>

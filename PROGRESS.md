@@ -5,10 +5,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 10 — pre-launch UX & FX wiring |
-| **Active slice** | 10.7 — Autosave + discard confirm (`DESIGN_SYSTEM.md` §10) |
-| **Last completed slice** | Phase 10 Slice 6 — Inline validation (`v0.66.5-inline-validation`) |
+| **Active slice** | 10.8 — FX purchase cash drawer only (money-critical) |
+| **Last completed slice** | Phase 10 Slice 7 — Autosave + discard confirm (`v0.66.6-draft-safety`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.66.5-inline-validation` |
+| **Last tag** | `v0.66.6-draft-safety` |
 
 ## Resume point
 
@@ -43,7 +43,13 @@
 - Live hints + submit guard on money-critical forms: manual daily sales, POS summary review, delivery report, opening balances, transfer, cash movement, supplier/customer payment
 - Server `setError` on submit unchanged; obvious invalid states disable submit while editing
 
-**Next:** Phase 10.7 → 10.8 per `ROADMAP.md`.
+**Phase 10 Slice 7 complete** — Autosave + discard confirm (frontend only):
+- New `form-draft.ts` — `useFormDraft` hook with entity-scoped localStorage keys (`mizan:draft:{entityId}:{formKey}`), debounced autosave, resume prompt
+- `Dialog` extended with `dirty` + `onDiscard` — Esc/backdrop/X confirm before closing
+- `ResumeDraftBanner` — one-time “Resume draft?” on reopen
+- Wired: `manual-expense-form` (dirty confirm + draft), `opening-balances` (wizard lines draft), `receipt-review` (line edits draft, cleared on confirm POST)
+
+**Next:** Phase 10.8 FX purchase (cash drawer only + cash movement) per `ROADMAP.md`.
 
 **Owner decisions locked in ROADMAP:**
 - Dates: typable + **small** calendar (no toggle) — `DESIGN_SYSTEM.md` §10.

@@ -1,12 +1,13 @@
 "use client";
 
-/** Opening balances wizard — Phase 9 Slice 9 (Decisions §19). */
+/** Opening balances wizard — autosave drafts (DESIGN_SYSTEM §10, Slice 10.7). */
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { DateInput } from "@/components/ui/date-input";
 import {
   DataTable,
@@ -20,6 +21,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { useFormDraft } from "@/lib/form-draft";
 import { useEntity } from "@/lib/entity-context";
 import { loadBankAndCashAccounts } from "@/lib/load-money-accounts";
 import { useToast } from "@/lib/toast";
@@ -52,6 +54,25 @@ function newLine(): OpeningBalanceLineDraft {
     customerId: "",
     amountTry: "",
   };
+}
+
+type OpeningBalancesDraft = {
+  goLiveDate: string;
+  lines: OpeningBalanceLineDraft[];
+};
+
+function isOpeningBalancesDraftEmpty(draft: OpeningBalancesDraft): boolean {
+  if (draft.goLiveDate.trim()) return false;
+  if (draft.lines.length !== 1) return false;
+  const line = draft.lines[0];
+  return (
+    !line.amountTry.trim() &&
+    !line.accountCode &&
+    !line.moneyAccountId &&
+    !line.supplierId &&
+    !line.partnerId &&
+    !line.customerId
+  );
 }
 
 function lineToPayload(line: OpeningBalanceLineDraft) {
@@ -139,6 +160,24 @@ export default function OpeningBalancesPage() {
   const [focusLineId, setFocusLineId] = useState<string | null>(null);
   const goLiveFocusedRef = useRef(false);
 
+  const draftSnapshot = useMemo<OpeningBalancesDraft>(
+    () => ({ goLiveDate, lines }),
+    [goLiveDate, lines],
+  );
+
+  const {
+    resumeDraft,
+    acceptResume,
+    declineResume,
+    clearDraft,
+  } = useFormDraft({
+    entityId,
+    formKey: "opening-balances",
+    value: draftSnapshot,
+    enabled: Boolean(entityId) && !posted,
+    isEmpty: isOpeningBalancesDraftEmpty,
+  });
+
   const lineHints = useMemo(
     () =>
       lines.map((line) => ({
@@ -216,6 +255,23 @@ export default function OpeningBalancesPage() {
   useEffect(() => {
     void loadRefs();
   }, [loadRefs]);
+
+  function applyOpeningBalancesDraft(draft: OpeningBalancesDraft) {
+    setGoLiveDate(draft.goLiveDate);
+    setLines(draft.lines.length > 0 ? draft.lines : [newLine()]);
+    setPreview(null);
+    setPosted(null);
+  }
+
+  function handleResumeDraft() {
+    const draft = acceptResume();
+    if (!draft) return;
+    applyOpeningBalancesDraft(draft);
+  }
+
+  function handleDeclineResume() {
+    declineResume();
+  }
 
   useEffect(() => {
     if (!entityId || goLiveFocusedRef.current) return;
@@ -318,6 +374,7 @@ export default function OpeningBalancesPage() {
       );
       setPosted(res);
       setPreview(res.journal_lines);
+      clearDraft();
       toast("Opening balances posted");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
@@ -460,6 +517,13 @@ export default function OpeningBalancesPage() {
             <p className="text-xs text-muted-foreground">
               Onboarding steps: {wizardSteps.join(" → ")}
             </p>
+          )}
+
+          {resumeDraft && (
+            <ResumeDraftBanner
+              onResume={handleResumeDraft}
+              onDismiss={handleDeclineResume}
+            />
           )}
 
           {chartCount === 0 && (
