@@ -165,7 +165,8 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     }
   }
 
-  async function onConfirm() {
+  async function onConfirm(event: FormEvent) {
+    event.preventDefault();
     if (!entityId || !draft) return;
     setConfirming(true);
     setError(null);
@@ -188,7 +189,8 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     }
   }
 
-  async function onPost() {
+  async function onPost(event: FormEvent) {
+    event.preventDefault();
     if (!entityId || !draft) return;
     setPosting(true);
     setError(null);
@@ -214,7 +216,8 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     }
   }
 
-  async function onReject() {
+  async function onReject(event: FormEvent) {
+    event.preventDefault();
     if (!entityId || !draft) return;
     setRejecting(true);
     setError(null);
@@ -414,7 +417,10 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
       )}
 
       {canPost && (
-        <div className="rounded-lg border border-border bg-card p-4">
+        <form
+          onSubmit={onPost}
+          className="rounded-lg border border-border bg-card p-4"
+        >
           <h2 className="mb-2 text-sm font-semibold">
             {isCommission ? "Post commission to clearing" : "Post to ledger"}
           </h2>
@@ -434,25 +440,30 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
               ))}
             </Select>
           </div>
-          <Button onClick={onPost} disabled={posting}>
+          <Button type="submit" disabled={posting}>
             {posting
               ? "Posting…"
               : isCommission
                 ? "Post commission e-Fatura"
                 : "Post invoice & payable"}
           </Button>
-        </div>
+        </form>
       )}
 
       {!isTerminal && (
         <div className="flex flex-wrap gap-2">
           {canConfirm && (
-            <Button onClick={onConfirm} disabled={confirming}>
-              {confirming ? "Confirming…" : "Confirm draft"}
-            </Button>
+            <form onSubmit={onConfirm}>
+              <Button type="submit" disabled={confirming}>
+                {confirming ? "Confirming…" : "Confirm draft"}
+              </Button>
+            </form>
           )}
           {(draft.status === "draft" || draft.status === "needs_review") && (
-            <div className="flex flex-1 flex-wrap items-end gap-2">
+            <form
+              onSubmit={onReject}
+              className="flex flex-1 flex-wrap items-end gap-2"
+            >
               <div className="min-w-[160px] flex-1">
                 <Label htmlFor="reject-reason">Reject reason</Label>
                 <Input
@@ -462,14 +473,10 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
                   placeholder="Optional"
                 />
               </div>
-              <Button
-                variant="secondary"
-                onClick={onReject}
-                disabled={rejecting}
-              >
+              <Button type="submit" variant="secondary" disabled={rejecting}>
                 {rejecting ? "Rejecting…" : "Reject"}
               </Button>
-            </div>
+            </form>
           )}
         </div>
       )}

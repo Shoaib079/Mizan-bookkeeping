@@ -20,6 +20,26 @@ export function setAuthHeaderProvider(provider: AuthHeaderProvider | null) {
   authHeaderProvider = provider;
 }
 
+const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function mutationHeaders(init?: RequestInit): Record<string, string> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  if (!MUTATION_METHODS.has(method)) return {};
+  const existing = init?.headers;
+  if (existing instanceof Headers && existing.has("Idempotency-Key")) {
+    return {};
+  }
+  if (
+    existing &&
+    !(existing instanceof Headers) &&
+    !Array.isArray(existing) &&
+    "Idempotency-Key" in existing
+  ) {
+    return {};
+  }
+  return { "Idempotency-Key": crypto.randomUUID() };
+}
+
 async function parseError(response: Response): Promise<string> {
   try {
     const body = await response.json();
@@ -40,6 +60,7 @@ export async function apiFetch<T>(
     ...init,
     headers: {
       ...authHeaders,
+      ...mutationHeaders(init),
       ...(init?.headers ?? {}),
     },
   });

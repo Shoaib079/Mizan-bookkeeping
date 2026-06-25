@@ -19,6 +19,7 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -87,9 +88,7 @@ function KdvInputContent() {
       )}
       {forbidden && <ForbiddenMessage />}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading report…</p>
-      )}
+      {loading && <PageSkeleton />}
 
       {report && (
         <div className="space-y-6">

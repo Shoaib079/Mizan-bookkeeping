@@ -129,6 +129,9 @@ export default function EntitySettingsPage() {
         body: JSON.stringify({ key, value: enabled ? "true" : "false" }),
       });
       await reloadSettings();
+      const label =
+        KNOWN_ENTITY_SETTINGS.find((s) => s.key === key)?.label ?? key;
+      toast(`${label} saved`);
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : "Save failed");
     } finally {

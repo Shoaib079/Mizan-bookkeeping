@@ -9,6 +9,7 @@ import { ClearCommissionForm } from "@/components/forms/clear-commission-form";
 import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import {
   DataTable,
   DataTableBody,
@@ -106,9 +107,7 @@ export default function CardsPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading card data…</p>
-      )}
+      {loading && <PageSkeleton />}
 
       {recon && (
         <section className="mb-6 rounded-lg border border-border bg-card p-4">

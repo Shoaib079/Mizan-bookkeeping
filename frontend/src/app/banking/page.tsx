@@ -9,6 +9,7 @@ import { MoneyAccountForm } from "@/components/forms/money-account-form";
 import { TransferForm } from "@/components/forms/transfer-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import type {
   MoneyAccountBranch,
@@ -145,9 +146,7 @@ export default function BankingPage() {
         </p>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading accounts…</p>
-      )}
+      {loading && <PageSkeleton />}
 
       {tree && (
         <div className="space-y-4">

@@ -3,12 +3,15 @@
 /** Cash drawer sessions, movements, EOD close — Phase 9 Slice 4. */
 
 import Link from "next/link";
+import { Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { CashDrawerCloseForm } from "@/components/forms/cash-drawer-close-form";
 import { CashMovementForm } from "@/components/forms/cash-movement-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import {
   DataTable,
   DataTableBody,
@@ -102,9 +105,7 @@ export default function CashDrawerPage() {
         </p>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading sessions…</p>
-      )}
+      {loading && <TableSkeleton columns={2} rows={4} />}
 
       {sessions.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-2">
@@ -217,9 +218,11 @@ export default function CashDrawerPage() {
       )}
 
       {!loading && entityId && sessions.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No drawer sessions yet. Record a movement to open today&apos;s session.
-        </p>
+        <EmptyState
+          icon={Wallet}
+          title="No drawer sessions yet"
+          hint="Record a movement to open today's session."
+        />
       )}
 
       <CashMovementForm

@@ -3,9 +3,12 @@
 /** Payables summary — Phase 9 Slice 3. */
 
 import Link from "next/link";
+import { HandCoins } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import {
   DataTable,
   DataTableBody,
@@ -75,11 +78,9 @@ export default function PayablesPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading payables…</p>
-      )}
+      {loading && <TableSkeleton columns={3} />}
 
-      {summary && (
+      {summary && !loading && (
         <div className="mb-6 rounded-lg border border-border bg-card p-4">
           <p className="text-sm text-muted-foreground">Total payables</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
@@ -89,13 +90,19 @@ export default function PayablesPage() {
       )}
 
       {!loading && entityId && rows.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No outstanding payables. Post supplier invoices from{" "}
-          <Link href="/suppliers" className="text-primary hover:underline">
-            Suppliers
-          </Link>
-          .
-        </p>
+        <EmptyState
+          icon={HandCoins}
+          title="No outstanding payables"
+          hint={
+            <>
+              Post supplier invoices from{" "}
+              <Link href="/suppliers" className="text-primary hover:underline">
+                Suppliers
+              </Link>
+              .
+            </>
+          }
+        />
       )}
 
       {rows.length > 0 && (

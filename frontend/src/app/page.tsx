@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
@@ -86,9 +87,7 @@ export default function HomePage() {
       )}
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading dashboard…</p>
-      )}
+      {loading && <PageSkeleton />}
 
       {data && (
         <>

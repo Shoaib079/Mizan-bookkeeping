@@ -9,6 +9,7 @@ import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { DeliverySettlementForm } from "@/components/forms/delivery-settlement-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -93,9 +94,7 @@ export default function DeliveryPage() {
         </p>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading reconciliation…</p>
-      )}
+      {loading && <PageSkeleton />}
 
       {recon && recon.platforms.length === 0 && (
         <p className="text-sm text-muted-foreground">

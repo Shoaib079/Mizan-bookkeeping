@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { Banknote } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import {
   DataTable,
   DataTableBody,
@@ -73,11 +76,9 @@ export default function ReceivablesPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading receivables…</p>
-      )}
+      {loading && <TableSkeleton columns={3} />}
 
-      {summary && (
+      {summary && !loading && (
         <div className="mb-6 rounded-lg border border-border bg-card p-4">
           <p className="text-sm text-muted-foreground">Total receivables</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
@@ -87,13 +88,19 @@ export default function ReceivablesPage() {
       )}
 
       {!loading && entityId && rows.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No outstanding receivables. Record credit sales from{" "}
-          <Link href="/customers" className="text-primary hover:underline">
-            Customers
-          </Link>
-          .
-        </p>
+        <EmptyState
+          icon={Banknote}
+          title="No outstanding receivables"
+          hint={
+            <>
+              Record credit sales from{" "}
+              <Link href="/customers" className="text-primary hover:underline">
+                Customers
+              </Link>
+              .
+            </>
+          }
+        />
       )}
 
       {rows.length > 0 && (
