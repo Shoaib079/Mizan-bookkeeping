@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.8** — Dashboard FX: native currency display |
-| **Last completed slice** | Phase 11 Slice 11.7 — unified expense entry partner-fronted (`v0.68.6-expense-partner-mode`) |
+| **Active slice** | **11.9** — Correct posted daily sales |
+| **Last completed slice** | Phase 11 Slice 11.8 — dashboard FX native currency display (`v0.68.7-dashboard-fx-native`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.68.6-expense-partner-mode` |
+| **Last tag** | `v0.68.7-dashboard-fx-native` |
 
 ## Resume point
 

@@ -999,13 +999,15 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
-| **Suggested tag** | `v0.68.7-dashboard-fx-native` |
+| **Status** | done |
+| **Tag** | `v0.68.7-dashboard-fx-native` |
 
 **Acceptance:**
 
-- [ ] `frontend/src/app/page.tsx` — `formatFxNative(native_quantity, currency)` primary; optional muted TRY book cost subtitle.
-- [ ] **Do not redo:** dashboard API shape.
+- [x] `frontend/src/app/page.tsx` — `formatFxNative(native_quantity, currency)` primary; optional muted TRY book cost subtitle.
+- [x] **Do not redo:** dashboard API shape.
+
+**Done:** FX wallets section shows native balance as primary (`formatFxNative`); muted `Book cost: …` TRY subtitle per row. No backend changes.
 
 ---
 

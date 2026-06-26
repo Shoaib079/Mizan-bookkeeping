@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**Phase 11 Slice 11.8 — Dashboard FX native currency display:** FX wallets on dashboard show native balance as primary (`formatFxNative(native_quantity, currency)`); muted `Book cost: …` TRY subtitle per row. No backend changes. **563 pytest green**; frontend build green. Tag `v0.68.7-dashboard-fx-native`. **Next:** Phase 11.9 correct posted daily sales.
+
 **Phase 11 Slice 11.7 — Unified expense entry (partner-fronted):** Manual expense form adds **Payment** selector — Cash drawer (existing `POST .../expenses`) or **Partner paid (owe partner)** (`POST .../partners/{id}/expenses-fronted`). Partner Combobox loaded from partners list; draft autosave includes `paymentMode` + `partnerId`. Cash tips (5700) remain cash-only. No backend changes. **563 pytest green**; frontend build green. Tag `v0.68.6-expense-partner-mode`. **Owner sign-off PENDING** (money-critical). **Next:** Phase 11.8 dashboard FX native display.
 
 **Phase 11 Slice 11.6 — Partner ownership share %:** `partners.ownership_share_pct` (nullable 0–100, informational only). List API returns `ownership_share` summary with warn when active shares ≠ 100%. Partner form, list column, and detail page show share %. Migration `049`. **563 pytest green**; frontend build green. Tag `v0.68.5-partner-share-pct`. **Next:** Phase 11.7 unified expense (partner-fronted).

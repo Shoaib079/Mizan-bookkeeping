@@ -11,6 +11,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
+import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead } from "@/lib/report-types";
 
@@ -261,9 +262,14 @@ export default function HomePage() {
                     >
                       {row.name} ({row.currency})
                     </Link>
-                    <span className="tabular-nums">
-                      {formatTry(row.try_cost_kurus)}
-                    </span>
+                    <div className="text-right">
+                      <p className="tabular-nums">
+                        {formatFxNative(row.native_quantity, row.currency)}
+                      </p>
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        Book cost: {formatTry(row.try_cost_kurus)}
+                      </p>
+                    </div>
                   </li>
                 ))}
               </ul>
