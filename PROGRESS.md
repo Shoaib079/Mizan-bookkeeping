@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.7** — Unified expense entry (partner-fronted) |
-| **Last completed slice** | Phase 11 Slice 11.6 — partner ownership share % (`v0.68.5-partner-share-pct`) |
+| **Active slice** | **11.8** — Dashboard FX: native currency display |
+| **Last completed slice** | Phase 11 Slice 11.7 — unified expense entry partner-fronted (`v0.68.6-expense-partner-mode`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.68.5-partner-share-pct` |
+| **Last tag** | `v0.68.6-expense-partner-mode` |
 
 ## Resume point
 

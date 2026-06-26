@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**Phase 11 Slice 11.7 — Unified expense entry (partner-fronted):** Manual expense form adds **Payment** selector — Cash drawer (existing `POST .../expenses`) or **Partner paid (owe partner)** (`POST .../partners/{id}/expenses-fronted`). Partner Combobox loaded from partners list; draft autosave includes `paymentMode` + `partnerId`. Cash tips (5700) remain cash-only. No backend changes. **563 pytest green**; frontend build green. Tag `v0.68.6-expense-partner-mode`. **Owner sign-off PENDING** (money-critical). **Next:** Phase 11.8 dashboard FX native display.
+
 **Phase 11 Slice 11.6 — Partner ownership share %:** `partners.ownership_share_pct` (nullable 0–100, informational only). List API returns `ownership_share` summary with warn when active shares ≠ 100%. Partner form, list column, and detail page show share %. Migration `049`. **563 pytest green**; frontend build green. Tag `v0.68.5-partner-share-pct`. **Next:** Phase 11.7 unified expense (partner-fronted).
 
 **Phase 11 Slice 11.5 — Create entity → owner membership:** `POST /entities` (when auth enforced) atomically adds creator as `owner` in `entity_memberships` so the new restaurant appears in `GET /entities`. Dev mode unchanged (no membership). Tests: `test_create_entity_adds_creator_as_owner_and_lists_entity`, `test_create_entity_dev_mode_does_not_add_membership`. **560 pytest green**. Tag `v0.68.4-entity-create-membership`. **Next:** Phase 11.6 partner share %.

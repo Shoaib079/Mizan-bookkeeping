@@ -11,10 +11,12 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
+import { type PartnerRow } from "@/components/forms/partner-form";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
+import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
@@ -24,9 +26,13 @@ type Account = { id: string; code: string; name: string };
 
 const MANUAL_EXPENSE_ACCOUNT_CODES = ["5200", "5700"];
 
+type PaymentMode = "cash" | "partner";
+
 type ExpenseFormDraft = {
   expenseAccountId: string;
   moneyAccountId: string;
+  partnerId: string;
+  paymentMode: PaymentMode;
   itemName: string;
   amountText: string;
   dateText: string;
@@ -55,14 +61,18 @@ export function ManualExpenseForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const cashTipsOnly = defaultExpenseAccountCode === "5700";
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
+  const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [moneyAccountId, setMoneyAccountId] = useState("");
+  const [partnerId, setPartnerId] = useState("");
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("cash");
   const [itemName, setItemName] = useState("");
   const [amountText, setAmountText] = useState("");
   const [dateText, setDateText] = useState("");
@@ -80,6 +90,8 @@ export function ManualExpenseForm({
     () => ({
       expenseAccountId,
       moneyAccountId,
+      partnerId,
+      paymentMode: cashTipsOnly ? "cash" : paymentMode,
       itemName,
       amountText,
       dateText,
@@ -87,6 +99,9 @@ export function ManualExpenseForm({
     [
       expenseAccountId,
       moneyAccountId,
+      partnerId,
+      paymentMode,
+      cashTipsOnly,
       itemName,
       amountText,
       dateText,
@@ -111,15 +126,23 @@ export function ManualExpenseForm({
 
   const loadOptions = useCallback(async () => {
     if (!entityId) return;
-    const [accountsRes, chartRes] = await Promise.all([
+    const [accountsRes, chartRes, partnersRes] = await Promise.all([
       apiFetch<{ items: MoneyAccount[] }>(
         `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
       ),
       apiFetch<{ items: Account[] }>(
         `/entities/${entityId}/chart-of-accounts?limit=200`,
       ),
+      cashTipsOnly
+        ? Promise.resolve({ items: [] as PartnerRow[] })
+        : apiFetch<{ items: PartnerRow[] }>(
+            `/entities/${entityId}/partners?limit=50`,
+          ),
     ]);
     setCashAccounts(accountsRes.items);
+    setPartners(
+      partnersRes.items.filter((p) => p.is_active),
+    );
     const pickable = chartRes.items.filter((a) =>
       MANUAL_EXPENSE_ACCOUNT_CODES.includes(a.code),
     );
@@ -129,9 +152,20 @@ export function ManualExpenseForm({
       : pickable.find((a) => a.code === "5200");
     if (preferred) setExpenseAccountId(preferred.id);
     else if (pickable[0]) setExpenseAccountId(pickable[0].id);
-    if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
+    const drawerId = defaultMainDrawerId(
+      accountsRes.items.map((a) => ({
+        id: a.id,
+        gl_account_id: "",
+        name: a.name,
+        account_kind: "cash",
+      })),
+    );
+    if (drawerId) setMoneyAccountId(drawerId);
+    else if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
+    const activePartners = partnersRes.items.filter((p) => p.is_active);
+    if (activePartners[0]) setPartnerId(activePartners[0].id);
     setOptionsLoaded(true);
-  }, [entityId, defaultExpenseAccountCode]);
+  }, [entityId, defaultExpenseAccountCode, cashTipsOnly]);
 
   useEffect(() => {
     if (!open) {
@@ -142,6 +176,8 @@ export function ManualExpenseForm({
     setDateText(todayTrDate());
     setItemName("");
     setAmountText("");
+    setPaymentMode("cash");
+    setPartnerId("");
     setError(null);
     void loadOptions().catch(() => undefined);
   }, [open, loadOptions]);
@@ -156,6 +192,8 @@ export function ManualExpenseForm({
   function applyDraft(draft: ExpenseFormDraft) {
     setExpenseAccountId(draft.expenseAccountId);
     setMoneyAccountId(draft.moneyAccountId);
+    setPartnerId(draft.partnerId);
+    setPaymentMode(cashTipsOnly ? "cash" : draft.paymentMode);
     setItemName(draft.itemName);
     setAmountText(draft.amountText);
     setDateText(draft.dateText);
@@ -178,6 +216,8 @@ export function ManualExpenseForm({
     setItemName("");
     setAmountText("");
     setDateText(todayTrDate());
+    setPaymentMode("cash");
+    setPartnerId("");
     setBaseline(null);
   }
 
@@ -201,33 +241,63 @@ export function ManualExpenseForm({
       setError("Choose an expense account.");
       return;
     }
+    const effectiveMode = cashTipsOnly ? "cash" : paymentMode;
+    if (effectiveMode === "cash" && !moneyAccountId) {
+      setError("Choose a cash drawer.");
+      return;
+    }
+    if (effectiveMode === "partner" && !partnerId) {
+      setError("Choose a partner.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(`/entities/${entityId}/expenses`, {
-        method: "POST",
-        idempotencyKey,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          expense_date: expenseDate,
-          amount_kurus: amountKurus,
-          expense_account_id: expenseAccountId,
-          money_account_id: moneyAccountId,
-          written_item_description: itemName || null,
-          has_source_document: false,
-          description: itemName || "Manual expense",
-          actor_id: actorId,
-        }),
-      });
+      const description = itemName || "Manual expense";
+      if (effectiveMode === "partner") {
+        await apiFetch(
+          `/entities/${entityId}/partners/${partnerId}/expenses-fronted`,
+          {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              expense_date: expenseDate,
+              amount_kurus: amountKurus,
+              description,
+              actor_id: actorId,
+              expense_account_id: expenseAccountId,
+            }),
+          },
+        );
+      } else {
+        await apiFetch(`/entities/${entityId}/expenses`, {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expense_date: expenseDate,
+            amount_kurus: amountKurus,
+            expense_account_id: expenseAccountId,
+            money_account_id: moneyAccountId,
+            written_item_description: itemName || null,
+            has_source_document: false,
+            description,
+            actor_id: actorId,
+          }),
+        });
+      }
       submitIdempotency.completeSubmit();
       clearDraft();
       setBaseline(null);
       onClose();
       toast(
-        defaultExpenseAccountCode === "5700"
+        cashTipsOnly
           ? "Cash tip expense saved"
-          : "Expense saved",
+          : effectiveMode === "partner"
+            ? "Partner expense recorded"
+            : "Expense saved",
       );
       setItemName("");
       setAmountText("");
@@ -302,19 +372,50 @@ export function ManualExpenseForm({
             Use 5700 Tips Expense for cash tips paid from the drawer.
           </p>
         </div>
-        <div>
-          <Label htmlFor="exp-cash">Cash drawer</Label>
-          <Combobox
-            id="exp-cash"
-            value={moneyAccountId}
-            onValueChange={setMoneyAccountId}
-            options={cashAccounts.map((a) => ({
-              value: a.id,
-              label: a.name,
-            }))}
-            placeholder="Cash drawer…"
-          />
-        </div>
+        {!cashTipsOnly && (
+          <div>
+            <Label htmlFor="exp-payment">Payment</Label>
+            <Select
+              id="exp-payment"
+              value={paymentMode}
+              onChange={(e) =>
+                setPaymentMode(e.target.value as PaymentMode)
+              }
+            >
+              <option value="cash">Cash drawer</option>
+              <option value="partner">Partner paid (owe partner)</option>
+            </Select>
+          </div>
+        )}
+        {cashTipsOnly || paymentMode === "cash" ? (
+          <div>
+            <Label htmlFor="exp-cash">Cash drawer</Label>
+            <Combobox
+              id="exp-cash"
+              value={moneyAccountId}
+              onValueChange={setMoneyAccountId}
+              options={cashAccounts.map((a) => ({
+                value: a.id,
+                label: a.name,
+              }))}
+              placeholder="Cash drawer…"
+            />
+          </div>
+        ) : (
+          <div>
+            <Label htmlFor="exp-partner">Partner</Label>
+            <Combobox
+              id="exp-partner"
+              value={partnerId}
+              onValueChange={setPartnerId}
+              options={partners.map((p) => ({
+                value: p.id,
+                label: p.name,
+              }))}
+              placeholder="Partner…"
+            />
+          </div>
+        )}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Saving…" : "Save expense"}

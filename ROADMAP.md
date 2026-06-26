@@ -981,15 +981,17 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned (**API done** — `POST .../partners/{id}/expenses-fronted` since Phase 5; partner detail form exists) |
+| **Status** | **done ✓** (`v0.68.6-expense-partner-mode`) |
 | **Money-critical** | Yes — uses `post_expense_fronted` |
 | **Suggested tag** | `v0.68.6-expense-partner-mode` |
 
 **Acceptance:**
 
-- [ ] Manual expense form: **Payment** — Cash drawer | **Partner paid (owe partner)**.
-- [ ] Partner mode → existing `POST .../partners/{id}/expenses-fronted` (no new backend route).
-- [ ] Minimum scope: expense fronted only (reimbursement inverse → clarify with owner if needed).
+- [x] Manual expense form: **Payment** — Cash drawer | **Partner paid (owe partner)**.
+- [x] Partner mode → existing `POST .../partners/{id}/expenses-fronted` (no new backend route).
+- [x] Minimum scope: expense fronted only (reimbursement inverse → clarify with owner if needed).
+
+**Done:** `manual-expense-form.tsx` — payment mode selector; partner Combobox + `expenses-fronted` submit; cash tips (5700) cash-only; draft autosave includes `paymentMode` + `partnerId`. Backend unchanged; existing `test_partners.py` covers API.
 
 ---
 
