@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.5** — Create entity → owner membership |
-| **Last completed slice** | Phase 11 Slice 11.4 — dialog focus fix (`v0.68.3-dialog-focus-fix`) |
+| **Active slice** | **11.6** — Partner ownership share % |
+| **Last completed slice** | Phase 11 Slice 11.5 — create entity → owner membership (`v0.68.4-entity-create-membership`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.68.3-dialog-focus-fix` |
+| **Last tag** | `v0.68.4-entity-create-membership` |
 
 ## Resume point
 

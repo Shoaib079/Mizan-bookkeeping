@@ -6,6 +6,7 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -431,3 +432,51 @@ def test_create_entity_requires_authenticated_user(
 ) -> None:
     response = client.post("/entities", json={"name": "No Auth Entity"})
     assert response.status_code == 401
+
+
+def test_create_entity_adds_creator_as_owner_and_lists_entity(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    creator = _create_user(db_session, "creator-owner@example.com")
+
+    create = client.post(
+        "/entities",
+        json={"name": "Creator Restaurant"},
+        headers=auth_headers(creator),
+    )
+    assert create.status_code == 201
+    entity_id = uuid.UUID(create.json()["id"])
+
+    listed = client.get("/entities", headers=auth_headers(creator))
+    assert listed.status_code == 200
+    entity_ids = {row["id"] for row in listed.json()["items"]}
+    assert str(entity_id) in entity_ids
+
+    get_one = client.get(f"/entities/{entity_id}", headers=auth_headers(creator))
+    assert get_one.status_code == 200
+
+    with entity_context(db_session, entity_id):
+        membership = db_session.scalar(
+            select(EntityMembership).where(
+                EntityMembership.entity_id == entity_id,
+                EntityMembership.user_id == creator.id,
+            )
+        )
+    assert membership is not None
+    assert membership.role == EntityRole.OWNER.value
+
+
+def test_create_entity_dev_mode_does_not_add_membership(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    response = client.post("/entities", json={"name": "Dev Mode Entity"})
+    assert response.status_code == 201
+    entity_id = uuid.UUID(response.json()["id"])
+
+    count = db_session.scalar(
+        select(EntityMembership).where(EntityMembership.entity_id == entity_id)
+    )
+    assert count is None

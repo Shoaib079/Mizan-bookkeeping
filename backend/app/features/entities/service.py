@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
+from app.core.auth.types import EntityRole
 from app.db.session import entity_context, require_entity_context, user_membership_lookup
 from app.features.auth.models import EntityMembership
 from app.features.entities.models import Entity, EntitySetting
@@ -19,9 +20,28 @@ class DuplicateEntitySettingError(ValueError):
     """Setting key already exists for this entity."""
 
 
-def create_entity(session: Session, payload: EntityCreate) -> Entity:
+def create_entity(
+    session: Session,
+    payload: EntityCreate,
+    *,
+    creator_user_id: uuid.UUID | None = None,
+) -> Entity:
+    """Create entity; when creator_user_id is set, add owner membership atomically."""
     entity = Entity(name=payload.name)
     session.add(entity)
+    session.flush()
+
+    if creator_user_id is not None:
+        with entity_context(session, entity.id):
+            session.add(
+                EntityMembership(
+                    entity_id=entity.id,
+                    user_id=creator_user_id,
+                    role=EntityRole.OWNER.value,
+                )
+            )
+            session.flush()
+
     session.commit()
     session.refresh(entity)
     return entity

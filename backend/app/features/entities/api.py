@@ -17,6 +17,7 @@ from app.core.auth.deps import (
     resolve_current_user,
 )
 from app.db.session import get_session
+from app.features.auth.models import User
 from app.features.entities import service
 from app.features.entities.schema import (
     EntityCreate,
@@ -33,9 +34,13 @@ router = APIRouter(prefix="/entities", tags=["entities"])
 def create_entity(
     payload: EntityCreate,
     session: Session = Depends(get_session),
-    _: object = Depends(require_authenticated_user),
+    user: User | None = Depends(require_authenticated_user),
 ) -> EntityRead:
-    return service.create_entity(session, payload)
+    return service.create_entity(
+        session,
+        payload,
+        creator_user_id=user.id if user is not None else None,
+    )
 
 
 @router.get("", response_model=PaginatedListOut[EntityRead])

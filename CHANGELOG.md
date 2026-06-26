@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**Phase 11 Slice 11.5 — Create entity → owner membership:** `POST /entities` (when auth enforced) atomically adds creator as `owner` in `entity_memberships` so the new restaurant appears in `GET /entities`. Dev mode unchanged (no membership). Tests: `test_create_entity_adds_creator_as_owner_and_lists_entity`, `test_create_entity_dev_mode_does_not_add_membership`. **560 pytest green**. Tag `v0.68.4-entity-create-membership`. **Next:** Phase 11.6 partner share %.
+
 **Phase 11 Slice 11.4 — Dialog focus fix:** Split `dialog.tsx` keyboard trap from one-shot open focus — `focusedOnOpenRef` prevents refocus on first field when `dirty` flips true (manual expense no longer jumps cursor). Frontend build green. Tag `v0.68.3-dialog-focus-fix`. **Next:** Phase 11.5 entity create membership.
 
 **Phase 11 Slice 11.19 — Stable idempotency keys (money-critical):** New `useSubmitIdempotency()` hook — one stable `Idempotency-Key` per submit intent (`beginSubmit` / `completeSubmit` / `resetSubmit`). Removed per-call `randomUUID()` auto-gen from `apiFetch`; all 39 mutation surfaces pass explicit keys (money forms, review confirms, statement classify, opening balances, CRUD/uploads/settings). Vitest: `use-submit-idempotency.test.ts` (3 tests). Backend: `test_client_retry_contract_reuses_one_key_not_two`. **558 pytest green**; frontend build green; **10 vitest**. Tag `v0.69.10-stable-idempotency-key`. **Owner sign-off PENDING.** **Next:** Phase 11.20 entity-switch reset.
