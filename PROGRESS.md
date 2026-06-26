@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.3** — Numeric-only money inputs |
-| **Last completed slice** | Phase 11 Slice 11.2 — editable feature toggles (`v0.68.1-entity-settings-editable`) |
+| **Active slice** | **11.19** — (see ROADMAP Phase 11) |
+| **Last completed slice** | Phase 11 Slice 11.3 — numeric-only money inputs (`v0.68.2-money-input`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.68.1-entity-settings-editable` |
+| **Last tag** | `v0.68.2-money-input` |
 
 ## Resume point
 
@@ -26,7 +26,13 @@
 - Frontend post-create wizard step 2 (toggles + Save & continue); settings page toggles always editable
 - Tests: `test_entity_settings.py` (6 tests)
 
-**Next:** Phase 11 Slice 11.3 — numeric-only money inputs. Full plan in `ROADMAP.md` Phase 11 (slices 11.3–11.12). Deployment is **Phase 12**.
+**Phase 11 Slice 11.3 complete** — numeric-only money inputs (`v0.68.2-money-input`):
+- `MoneyInput` component — `inputMode="decimal"`, sanitizes keystrokes/paste, optional TRY preview
+- Strict `parseTryToKurus` + `sanitizeTryInput` — integer kuruş, rejects garbage (no parseFloat corruption)
+- Migrated all TRY amount fields: manual expense/sales, POS/delivery/receipt review, payments, transfers, cash movement, opening balances, FX, delivery amounts, and related forms
+- Vitest: `money.test.ts` (7 tests)
+
+**Next:** Phase 11 Slice 11.19 — see `ROADMAP.md` Phase 11. Full plan in `ROADMAP.md` Phase 11 (slices 11.4–11.12, 11.19). Deployment is **Phase 12**.
 
 **Phase 9 Slice 8 complete** — Dashboard + reports (frontend only):
 - `/` — live dashboard from `GET .../dashboard` (current-month default, date range picker)

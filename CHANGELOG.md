@@ -2,6 +2,10 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-27
+
+**Phase 11 Slice 11.3 — Numeric-only money inputs:** Shared `MoneyInput` (TRY) with `inputMode="decimal"`, paste/keystroke sanitization, optional live preview. Strict `parseTryToKurus` + `sanitizeTryInput` — integer kuruş parsing aligned with Turkish rules; rejects garbage (e.g. `"12,3a"` no longer corrupts to 1230). Migrated all TRY amount fields across money forms and review screens (manual expense/sales, POS/delivery/receipt review, payments, transfers, cash movement, opening balances, FX, delivery). Vitest: `money.test.ts` (7 tests). **557 pytest green**; frontend build green. Tag `v0.68.2-money-input`. **Next:** Phase 11.19.
+
 ## 2026-06-25
 
 **Phase 11 Slice 11.2 — Editable feature toggles:** `PATCH /entities/{entity_id}/settings/{key}` + `update_entity_setting()`; duplicate POST returns 409. Frontend: post-create wizard step 2 (name on step 1 → toggles + Save & continue); settings page toggles always enabled (PATCH when exists, POST when not); copy “You can change these when your needs change.” Setting readers unchanged (`delivery/settings.py`, `pos/settings.py`). Tests: `test_entity_settings.py` (6 tests). **557 pytest green**; frontend build green. Tag `v0.68.1-entity-settings-editable`. **Next:** Phase 11.3 numeric-only money inputs.

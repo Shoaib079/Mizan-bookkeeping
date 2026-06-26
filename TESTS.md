@@ -6,6 +6,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 |-----------|----------------|--------|
 | `backend/tests/test_health.py` | API liveness for deploy/dev | pass |
 | `backend/tests/test_money.py` | Integer kuruş, Turkish format, loose parse (Decisions §5) | pass |
+| `frontend/src/lib/money.test.ts` | Strict TRY parse — garbage rejection, Turkish comma/dot rules (CURSOR_RULES §1 rule 15) | pass |
 | `backend/tests/test_entity_isolation.py` | Cross-entity isolation — RLS + entity_context | pass |
 | `backend/tests/test_default_chart.py` | Default chart includes Opening Balance Equity; no inventory | pass |
 | `backend/tests/test_opening_balances.py` | OB validation — equity offset, aggregate codes, money_account_id + supplier_id lines, reject aggregate 1100/1000/2100 when sub-accounts exist, validate API | pass |
@@ -57,8 +58,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
-**Count:** 542 pytest (last run 2026-06-24).
+**Count:** 557 pytest + 7 vitest (last run 2026-06-27).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
-
-Frontend: `cd frontend && npm run build`
+Run frontend: `cd frontend && npm test && npm run build`

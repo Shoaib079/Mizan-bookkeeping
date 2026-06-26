@@ -8,6 +8,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
@@ -149,29 +150,35 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
         <div className="grid grid-cols-3 gap-2">
           <div>
             <Label htmlFor="dr-gross">Gross</Label>
-            <Input
+            <MoneyInput
               id="dr-gross"
               placeholder="0,00"
               value={grossText}
-              onChange={(e) => setGrossText(e.target.value)}
+              onChange={setGrossText}
+              showPreview={false}
+              showInvalidHint={false}
             />
           </div>
           <div>
             <Label htmlFor="dr-commission">Commission</Label>
-            <Input
+            <MoneyInput
               id="dr-commission"
               placeholder="0,00"
               value={commissionText}
-              onChange={(e) => setCommissionText(e.target.value)}
+              onChange={setCommissionText}
+              showPreview={false}
+              showInvalidHint={false}
             />
           </div>
           <div>
             <Label htmlFor="dr-net">Net</Label>
-            <Input
+            <MoneyInput
               id="dr-net"
               placeholder="0,00"
               value={netText}
-              onChange={(e) => setNetText(e.target.value)}
+              onChange={setNetText}
+              showPreview={false}
+              showInvalidHint={false}
             />
           </div>
         </div>

@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
@@ -131,11 +132,11 @@ export function FxConversionForm({
         </div>
         <div>
           <Label htmlFor="fx-conv-try">TRY received</Label>
-          <Input
+          <MoneyInput
             id="fx-conv-try"
             placeholder="1.750,00"
             value={tryReceivedText}
-            onChange={(e) => setTryReceivedText(e.target.value)}
+            onChange={setTryReceivedText}
             required
           />
         </div>

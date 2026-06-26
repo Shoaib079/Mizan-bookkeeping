@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
@@ -141,11 +142,13 @@ export function SupplierPaymentForm({
         </div>
         <div>
           <Label htmlFor="pay-amount">Amount (TRY)</Label>
-          <Input
+          <MoneyInput
             id="pay-amount"
             placeholder="1.500,00"
             value={amountText}
-            onChange={(e) => setAmountText(e.target.value)}
+            onChange={setAmountText}
+            showPreview={false}
+            showInvalidHint={false}
             required
           />
           {amountInvalid && (

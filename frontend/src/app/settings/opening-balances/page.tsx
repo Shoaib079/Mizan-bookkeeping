@@ -18,7 +18,8 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { Combobox } from "@/components/ui/combobox";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Label, Select } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useFormDraft } from "@/lib/form-draft";
@@ -618,14 +619,16 @@ export default function OpeningBalancesPage() {
                     <div className="flex flex-wrap gap-2">{targetPicker(line)}</div>
                     <div>
                       <Label>Amount (₺)</Label>
-                      <Input
+                      <MoneyInput
                         id={`ob-amount-${line.id}`}
                         className="w-28"
                         value={line.amountTry}
-                        onChange={(e) =>
-                          updateLine(line.id, { amountTry: e.target.value })
+                        onChange={(value) =>
+                          updateLine(line.id, { amountTry: value })
                         }
                         placeholder="0,00"
+                        showPreview={false}
+                        showInvalidHint={false}
                       />
                     </div>
                     <Button

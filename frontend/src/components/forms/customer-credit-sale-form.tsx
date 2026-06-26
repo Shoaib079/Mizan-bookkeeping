@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -115,10 +116,10 @@ export function CustomerCreditSaleForm({
         </div>
         <div>
           <Label htmlFor="cs-amount">Amount (TRY)</Label>
-          <Input
+          <MoneyInput
             id="cs-amount"
             value={amountText}
-            onChange={(e) => setAmountText(e.target.value)}
+            onChange={setAmountText}
             required
           />
         </div>

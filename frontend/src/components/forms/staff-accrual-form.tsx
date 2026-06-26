@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -103,13 +104,23 @@ export function StaffAccrualForm({
         </div>
         <div>
           <Label htmlFor="acc-amount">Amount ({payCurrency})</Label>
-          <Input
-            id="acc-amount"
-            placeholder={isTry ? "15.000,00" : "1.000,00"}
-            value={amountText}
-            onChange={(e) => setAmountText(e.target.value)}
-            required
-          />
+          {isTry ? (
+            <MoneyInput
+              id="acc-amount"
+              placeholder="15.000,00"
+              value={amountText}
+              onChange={setAmountText}
+              required
+            />
+          ) : (
+            <Input
+              id="acc-amount"
+              placeholder="1.000,00"
+              value={amountText}
+              onChange={(e) => setAmountText(e.target.value)}
+              required
+            />
+          )}
         </div>
         <div>
           <Label htmlFor="acc-desc">Description</Label>

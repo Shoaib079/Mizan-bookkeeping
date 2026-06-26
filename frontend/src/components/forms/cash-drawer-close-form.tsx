@@ -7,6 +7,7 @@ import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import type { CashDrawerSessionRead } from "@/lib/banking-types";
@@ -80,11 +81,11 @@ export function CashDrawerCloseForm({
         )}
         <div>
           <Label htmlFor="counted">Counted balance (TRY)</Label>
-          <Input
+          <MoneyInput
             id="counted"
             placeholder="2.350,00"
             value={countedText}
-            onChange={(e) => setCountedText(e.target.value)}
+            onChange={setCountedText}
             required
           />
         </div>

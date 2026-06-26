@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
@@ -165,26 +166,32 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label htmlFor="rep-gross">Gross</Label>
-              <Input
+              <MoneyInput
                 id="rep-gross"
                 value={grossText}
-                onChange={(e) => setGrossText(e.target.value)}
+                onChange={setGrossText}
+                showPreview={false}
+                showInvalidHint={false}
               />
             </div>
             <div>
               <Label htmlFor="rep-commission">Commission</Label>
-              <Input
+              <MoneyInput
                 id="rep-commission"
                 value={commissionText}
-                onChange={(e) => setCommissionText(e.target.value)}
+                onChange={setCommissionText}
+                showPreview={false}
+                showInvalidHint={false}
               />
             </div>
             <div>
               <Label htmlFor="rep-net">Net</Label>
-              <Input
+              <MoneyInput
                 id="rep-net"
                 value={netText}
-                onChange={(e) => setNetText(e.target.value)}
+                onChange={setNetText}
+                showPreview={false}
+                showInvalidHint={false}
               />
             </div>
           </div>

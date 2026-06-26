@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
@@ -246,29 +247,35 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label htmlFor="pos-cash">Cash</Label>
-                <Input
+                <MoneyInput
                   id="pos-cash"
                   value={cashText}
-                  onChange={(e) => setCashText(e.target.value)}
+                  onChange={setCashText}
+                  showPreview={false}
+                  showInvalidHint={false}
                 />
               </div>
               <div>
                 <Label htmlFor="pos-card">Card</Label>
-                <Input
+                <MoneyInput
                   id="pos-card"
                   value={cardText}
-                  onChange={(e) => setCardText(e.target.value)}
+                  onChange={setCardText}
+                  showPreview={false}
+                  showInvalidHint={false}
                 />
               </div>
             </div>
             {zReportEnabled && (
               <div>
                 <Label htmlFor="pos-z">Card-terminal Z total</Label>
-                <Input
+                <MoneyInput
                   id="pos-z"
                   value={zReportText}
-                  onChange={(e) => setZReportText(e.target.value)}
+                  onChange={setZReportText}
                   placeholder="0,00"
+                  showPreview={false}
+                  showInvalidHint={false}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   When entered, Z must match card sales or the day routes to

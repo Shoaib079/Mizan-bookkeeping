@@ -7,6 +7,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { apiFetch, documentUrl } from "@/lib/api";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
@@ -19,6 +20,7 @@ type ReceiptLine = {
   line_order: number;
   written_item_description: string | null;
   amount_kurus: number;
+  amountTry?: string;
   expense_account_id: string;
   review_reason: string | null;
 };
@@ -105,7 +107,12 @@ export function ReceiptReview({ intakeId }: Props) {
       ),
     ]);
     setIntake(receipt);
-    setLines(receipt.lines);
+    setLines(
+      receipt.lines.map((line) => ({
+        ...line,
+        amountTry: formatKurus(line.amount_kurus),
+      })),
+    );
     setServerLines(toEditableLines(receipt.lines));
     setAccounts(chart.items);
   }, [entityId, intakeId]);
@@ -244,12 +251,16 @@ export function ReceiptReview({ intakeId }: Props) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label>Amount (TRY)</Label>
-                  <Input
-                    defaultValue={formatKurus(line.amount_kurus)}
-                    onBlur={(e) => {
-                      const kurus = parseTryToKurus(e.target.value);
-                      if (kurus !== null) updateLine(index, { amount_kurus: kurus });
+                  <MoneyInput
+                    value={line.amountTry ?? formatKurus(line.amount_kurus)}
+                    onChange={(text) => {
+                      const kurus = parseTryToKurus(text);
+                      updateLine(index, {
+                        amountTry: text,
+                        ...(kurus !== null ? { amount_kurus: kurus } : {}),
+                      });
                     }}
+                    showPreview={false}
                     disabled={intake.status === "posted"}
                   />
                 </div>

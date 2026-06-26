@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -140,11 +141,11 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
         </div>
         <div>
           <Label htmlFor="ds-amount">Net payout amount</Label>
-          <Input
+          <MoneyInput
             id="ds-amount"
             placeholder="0,00"
             value={amountText}
-            onChange={(e) => setAmountText(e.target.value)}
+            onChange={setAmountText}
             required
           />
         </div>

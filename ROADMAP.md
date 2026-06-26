@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.3** — Numeric-only money inputs |
-| **Last completed slice** | Phase 11 Slice 11.2 — editable feature toggles (`v0.68.1-entity-settings-editable`) |
-| **Last commit/tag** | `v0.68.1-entity-settings-editable` |
-| **Next up** | **11.3** → 11.4–11.12 → Phase 12 |
+| **Active slice** | **11.19** — Stable idempotency key (BLOCKER) |
+| **Last completed slice** | Phase 11 Slice 11.3 — numeric-only money inputs (`v0.68.2-money-input`) |
+| **Last commit/tag** | `v0.68.2-money-input` |
+| **Next up** | **11.19 (idempotency BLOCKER)** → 11.4–11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -176,7 +176,7 @@ Every statement-line classification that represents a **real GL event** must pos
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| Cash drawer | done | `post_cash_movement()` Dr/Cr cash GL + offset; EOD close posts over/short to `5400`; `cash_drawer_sessions` + `cash_movements`; day locked on close; Alembic `023`; 9 tests; 224 pytest |
+| Cash drawer | done | `post_cash_movement()` Dr/Cr cash GL + offset; EOD close posts over/short to `5400`; `cash_drawer_sessions` + `cash_movements`; day locked on close *(session-gating + hard lock revised → Slice 11.13: optional session, owner-reopen)*; Alembic `023`; 9 tests; 224 pytest |
 | Forex (FX purchase / holding) | done | `MoneyAccountKind.FOREIGN_CURRENCY` + `currency`; GL sub-accounts under `1010`/`1020`/`1030` (TRY cost kuruş); `fx_ledger_entries` subledger (native quantity + try_cost_kurus); `post_fx_purchase()` Dr FX / Cr TRY cash; tree `foreign_currency` branch; Alembic `024`; 10 tests; 234 pytest |
 | Staff (salary vs advance — no double-count) | done | `employees` + `staff_ledger_entries`; `2250` Salaries Payable; TRY accrual Dr `5100`/Cr `2250`; advance Dr `1300`/Cr cash; payment Dr `2250`/Cr `1300`+cash (atomic advance offset); FX accrual subledger-only; FX payment Dr `5100`/Cr FX GL + `fx_ledger` spend; Alembic `025`; 9 tests; 243 pytest |
 | Partner reimbursements | done | `partners` + `partner_ledger_entries`; expense fronted Dr expense/Cr `2150`; reimbursement Dr `2150`/Cr cash (no expense); per-partner OB via `partner_id` lines; Alembic `026`; 10 tests; 252 pytest |
@@ -751,6 +751,16 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 10 | **Cannot fix posted expenses** | `correct_expense_entry()` **core done**; **no HTTP route or UI** | **11.10** |
 | 11 | Corrections **UI** missing | Supplier/customer payment, FX purchase, manual journal **void**, generic ledger **correct/void** — **HTTP done** (Phase 8.5); **zero** frontend calls; no `period_unlock_reason` in forms | **11.11** (UI only) |
 | 12 | Other posted types stuck | Invoice, credit sale, staff, partner, FX conversion/spend — **core helpers only**; no HTTP routes or tests | **11.12** |
+| 13 | **Cash-drawer session trap** | Daily sales + cash movements auto-open a drawer session and **hard-block** when the day is CLOSED (`daily_summary_posting.py:91`, `cash/posting.py:196`) — **no reopen**; inconsistent with period-lock owner-unlock. Expenses bypass sessions. | **11.13** |
+| 14 | Daily drivers buried / New menu flat + sticky / toggles unclear | "Daily sales (manual)" (cash+card, **already built**) + "Manual expense" live only inside the **flat 9-item** New dropdown; the dropdown **does not close on outside click** (`new-menu.tsx` has no mousedown handler — unlike `combobox.tsx`/`date-input.tsx` which do); same gap in `command-palette.tsx` + entity switcher; toggles editable + **labelled** (`settings-types.ts:35-47`, confirmed by 11.18 audit) — 11.14 only verifies each gates the right form | **11.14** |
+| 15 | No single end-of-day entry | One day = many separate modals (sales, then each expense) | **11.15** |
+| 16 | **No "all entries" ledger view** | `GET .../ledger/entries` (paginated/searchable) exists; **no frontend page**, not in reports/nav. (Distinct from the deferred *audit-events* log in FUTURE_IDEAS.) | **11.16** |
+| 17 | Date field opens calendar **only via icon** | `date-input.tsx` input has no click/focus-to-open; only the trailing icon opens it. Owner wants click-the-field-to-open, app-wide (amends 10.1 "icon-only"). | **11.17** |
+| 18 | Frontend never had an adversarial audit | Backend got Phase 8.6; the UI is surfacing hand-found bugs (items 13–17). Reviewer/owner-led frontend audit. | **11.18** |
+| 19 | **Idempotency key not stable (defeats server dedup)** | `api.ts:40` mints a **new** `crypto.randomUUID()` per call; forms never pass their own → double-click/retry = two different keys = **two ledger entries**. Server dedup only fires on a repeated key. | **11.19** ← BLOCKER, money-critical |
+| 20 | Entity-switch state bleed | `opening-balances/page.tsx` keeps `lines`/`goLiveDate` across entity change; 7 detail pages (`suppliers/[id]`, `partners/[id]`, `staff/[id]`, `customers/[id]`, `banking/accounts|fx|statements/[id]`) show prior-entity data until refetch. **RLS + account-entity validation backstop an actual leak** — this is stale-state hygiene, not an isolation breach. | **11.20** |
+| 21 | UI not role/setting-aware | Cashier dashboard shows **Net result** (contradicts "cashier can't see P&L"); `partner_view_only` sees full write chrome (backend still 403s — UI cleanliness); `delivery_enabled` off not reflected in nav/New menu. | **11.21** |
+| 22 | Small UI gaps | Expense-receipt review has no **reject** path (API exists); reports landing **swallows API errors** (blank cards); header **"This month"** button is dead. | **11.22** |
 
 ### Correction API inventory (verified in repo, 2026-06-25)
 
@@ -806,7 +816,19 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
   → 11.10 Expense correction API + UI      ← money-critical
   → 11.11 Correction UI (existing APIs) + period_unlock_reason on mutations
   → 11.12 Remaining correction APIs (invoice, staff, partner, credit sale, FX conversion/spend)
+  → 11.13 Cash-drawer session optional + owner-reopen   ← money-critical (lock model)
+  → 11.14 New menu UX: quick actions + grouping + outside-click close + toggle labels
+  → 11.15 Day close-out screen (sales + expenses in one)   ← optional / larger
+  → 11.16 General ledger / all-entries report (wire existing API)
+  → 11.17 DateInput opens on field click/focus (app-wide; amends 10.1)
+  → 11.18 Frontend adversarial audit (reviewer/owner-led)   ← captures more UI bugs
+  → 11.19 Stable idempotency key   ← BLOCKER, money-critical (DO RIGHT AFTER 11.3)
+  → 11.20 Entity-switch state reset (opening balances + detail pages)
+  → 11.21 Role/setting-aware UI (cashier KPIs, view-only chrome, delivery toggle)
+  → 11.22 Small UI gaps (receipt reject, reports error surfacing, dead button)
 ```
+
+**Priority override:** **11.19 (idempotency) is a money-critical BLOCKER** — it can duplicate ledger entries on any money form. Do it **immediately after 11.3** (they pair: 11.3 makes money input safe, 11.19 makes submit safe), before the rest of 11.4–11.18.
 
 11.1–11.4 are sequential (**one slice at a time** unless the owner explicitly assigns parallel work). **11.9, 11.10, 11.12** = separate commits; **11.9–11.12** need owner sign-off when money-critical.
 
@@ -888,14 +910,16 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
-| **Suggested tag** | `v0.68.2-money-input` |
+| **Status** | **done** |
+| **Tag** | `v0.68.2-money-input` |
 
 **Acceptance:**
 
-- [ ] Shared `MoneyInput` (TRY) — `inputMode="decimal"`, strip non-numeric except `,` `.`; live preview optional.
-- [ ] Migrate priority forms: manual expense, manual daily sales, POS review, payments, transfers, cash movement, opening balances, FX, delivery amounts.
-- [ ] Paste with letters → strip or visible reject.
+- [x] Shared `MoneyInput` (TRY) — `inputMode="decimal"`, strip non-numeric except `,` `.`; live preview optional.
+- [x] Migrate priority forms: manual expense, manual daily sales, POS review, payments, transfers, cash movement, opening balances, FX, delivery amounts.
+- [x] Paste with letters → strip or visible reject.
+
+**Done:** `MoneyInput` + strict `parseTryToKurus`/`sanitizeTryInput` (integer kuruş, rejects garbage like `"12,3a"`). Migrated all TRY amount fields across money forms and review screens. Vitest: `money.test.ts` (7 tests). **557 pytest green**; frontend build green.
 
 ---
 
@@ -1050,6 +1074,186 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ---
 
+### Slice 11.13 — Cash drawer: session optional for entry + owner-reopen
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Money-critical** | Yes — touches posting + lock model; owner sign-off |
+| **Decisions** | Amend §9 cash drawer (sessions are an **optional EOD reconciliation**, not an entry gate; closed day is owner-reopenable) |
+| **Suggested tag** | `v0.69.4-cash-drawer-optional-session` |
+
+**Problem:** Posting **daily sales** or a **cash movement** auto-opens that day's drawer session and **hard-rejects** when the day is CLOSED — *"drawer day is closed — no further movements allowed"* (`daily_summary_posting.py:91`, `cash/posting.py:196`) — with **no reopen path**. Manual *expenses* (`/expenses`) bypass sessions entirely, so the model is inconsistent, and an EOD close becomes a one-way trap that locks the owner out of fixing/adding to that day.
+
+**Acceptance:**
+
+- [ ] Daily sales + cash movements **post without requiring or force-opening** a drawer session; the session becomes an **optional** EOD count/reconcile tool, never a precondition for entry.
+- [ ] A **closed** drawer day is **owner-reopenable**, reusing the **exact period-lock owner-unlock + audit pattern** (cashier blocked; reopen records who/when/reason). Remove the dead-end "no further movements allowed" block — route to the unlock path.
+- [ ] One lock behaviour across the app — do **not** leave cash-drawer close and period locks as two different models.
+- [ ] Tests: post sales + cash movement with **no open session** succeeds; close a day → cashier post rejected, **owner reopen → post succeeds + audited**; over/short still books to `5400` on an explicit close.
+
+---
+
+### Slice 11.14 — New menu UX: quick actions, grouping, dismiss + toggle labels
+
+| | |
+|---|---|
+| **Status** | planned (forms **already built** — `manual-daily-sales-form.tsx`, `manual-expense-form.tsx`) |
+| **Suggested tag** | `v0.69.5-new-menu-ux` |
+
+**Problem:** The cash+card "Daily sales (manual)" and "Manual expense" dialogs exist but live only inside a **flat 9-item** **New** dropdown (New → scan → click). The dropdown also **does not close on outside click** (`new-menu.tsx` has no document-mousedown handler — `combobox.tsx`/`date-input.tsx` already do) — same gap in `command-palette.tsx` and the entity switcher. Toggles were made editable (11.2) but have no labels/help and aren't verified to gate the right forms.
+
+**Acceptance:**
+
+- [ ] **Quick actions** (top bar and/or dashboard): "Daily sales" and "Add expense" open the existing dialogs in one click (keep them in New too). Reuse `defaultMainDrawerId()` (11.1a).
+- [ ] **Group** the New dropdown by area — **Sales** (Daily sales, POS summary photo, Card sales batch, Delivery report) · **Expenses** (Manual expense, Cash tip, Expense receipt photo) · **Suppliers** (Supplier, Supplier invoice). Headers/dividers; same items, just organised.
+- [ ] **Dismiss on outside click + Escape:** New menu, command palette, and entity switcher close when clicking elsewhere or pressing Esc — reuse the document-mousedown pattern already in `combobox.tsx`/`date-input.tsx` (one shared hook ideally).
+- [ ] `settings/entity` toggles get a clear label + one-line help each; **verify** `delivery_enabled` hides delivery entry and `card_tips_z_report_enabled` shows/hides the Z field.
+- [ ] **Do not** rebuild the forms — wire to what exists.
+
+---
+
+### Slice 11.15 — Day close-out screen (optional, larger)
+
+| | |
+|---|---|
+| **Status** | planned — **optional**; owner confirms scope before build |
+| **Money-critical** | Yes (posts sales + expenses) — owner sign-off |
+| **Suggested tag** | `v0.69.6-day-closeout` |
+
+**Problem:** Logging one day takes many separate modals (sales, then each expense).
+
+**Acceptance:**
+
+- [ ] Single screen: pick **date once** → cash + card sales → add **N quick expense rows** (item, amount, account) → **post all atomically** (idempotent), reusing existing endpoints.
+- [ ] Honors 11.13 (no forced session), Turkish money inputs (11.3), and period locks.
+- [ ] Tests: combined post creates the daily-sales entry + each expense; partial-failure rolls back; idempotent re-submit.
+
+---
+
+### Slice 11.16 — General ledger / all-entries report
+
+| | |
+|---|---|
+| **Status** | planned (**backend done** — `GET .../ledger/entries`, paginated + `q`/date/amount/status filters, Phase 8.5; **no frontend page**) |
+| **Decisions** | DESIGN_SYSTEM §7 reports list — add "General ledger (all entries)" card |
+| **Suggested tag** | `v0.69.7-ledger-report` |
+
+**Problem:** Owner wants to see **every entry made** in one place. The list API exists; there is no UI and it's not in reports/nav.
+
+**Acceptance:**
+
+- [ ] Reports page (`/reports/ledger` or similar) listing journal entries via the existing `GET .../ledger/entries` — date range, search (`q`), source/status filters, pagination; row → entry detail (lines, source, links to void/correct/amend chain).
+- [ ] Linked from the Reports landing + sidebar; role-gated like other financial reports.
+- [ ] **Distinct** from the deferred *audit-events* log (FUTURE_IDEAS) — this is the general ledger of posted/voided journal entries, not the raw audit trail.
+- [ ] **Do not** add a new backend endpoint — wire the existing one.
+
+---
+
+### Slice 11.17 — DateInput opens on field click/focus (app-wide)
+
+| | |
+|---|---|
+| **Status** | planned (**amends 10.1** — `v0.66.0` chose icon-only open) |
+| **Suggested tag** | `v0.69.8-dateinput-click-open` |
+
+**Problem:** `date-input.tsx` opens the calendar only via the trailing icon; clicking/focusing the field does nothing. Owner wants modern click-the-field-to-open behaviour, everywhere.
+
+**Acceptance:**
+
+- [ ] Clicking or focusing the date field opens the calendar (keep the icon too); typing still works; Esc + outside-click close (already present). One shared component → applies to **all** date fields app-wide automatically.
+- [ ] Don't trap the cursor / don't reopen after pick; verify on manual expense, daily sales, payments, opening balances.
+- [ ] Updates the 10.1 "icon-only" note in this roadmap + `DESIGN_SYSTEM.md` §5/§10.
+
+---
+
+### Slice 11.18 — Frontend adversarial audit (reviewer/owner-led)
+
+| | |
+|---|---|
+| **Status** | planned — **owner runs the audit (fresh Cursor agent); reviewer/owner reviews** (not a builder self-audit) |
+| **Suggested tag** | `v0.69.9-frontend-audit` (fixes tagged per finding) |
+
+**Purpose:** The backend got the Phase 8.6 adversarial audit; the frontend never did, and the owner is finding UI bugs by hand (items 13–17). Run the same kind of independent, read-only, "assume it's broken" pass over the frontend, then fix + permanent test per gap (§2a meta-rule).
+
+**Scope:** every page + shared component — entry forms (correct money/date/account, no double-submit, idempotency key sent), popover/menu dismiss consistency, read-back correctness, role-gating in the UI, entity-switch resets state, Turkish number/date formatting at the edges, empty/loading/error states, money never shown as float.
+
+**Acceptance:**
+
+- [ ] Findings logged here (no duplicates — items 13–17 are already captured; the audit adds *new* ones).
+- [ ] Each confirmed bug → fix + a permanent test (component/e2e).
+- [ ] Money-critical UI flows (anything that posts) → owner sign-off.
+
+---
+
+### Slice 11.19 — Stable idempotency key (BLOCKER, money-critical)
+
+| | |
+|---|---|
+| **Status** | planned — **do right after 11.3**; owner sign-off |
+| **Money-critical** | Yes — can duplicate ledger entries |
+| **Suggested tag** | `v0.69.10-stable-idempotency-key` |
+
+**Problem:** `frontend/src/lib/api.ts:40` returns a **fresh** `crypto.randomUUID()` Idempotency-Key on every mutation call, and forms never pass their own. So a double-click or network retry sends **two different keys** → the server (which dedups only on a *repeated* key) records **two entries**. The auto-generate gives false safety — it defeats the very server-side idempotency it appears to use. Affects **every** money-posting form.
+
+**Acceptance:**
+
+- [ ] One **stable** Idempotency-Key per user submit *intent*: generate when the submit starts (e.g. a `useRef`), **reuse it for retries** of that same submission, regenerate only after success / a new entry. Plumb through `apiFetch` headers.
+- [ ] **Remove** the per-call `randomUUID()` auto-gen in `api.ts` (or make it require an explicit key) so a missing key can never silently become "new key every call."
+- [ ] Tests: simulate double-submit / retry on a representative money form → exactly **one** record; a genuinely new submission → new key → new record. Add to the money-flow checklist for every form (see CURSOR_RULES frontend rules).
+
+---
+
+### Slice 11.20 — Entity-switch state reset
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.69.11-entity-switch-reset` |
+
+**Problem:** Switching the active restaurant leaves stale state: `opening-balances/page.tsx` keeps `lines`/`goLiveDate`; detail pages (`suppliers/[id]`, `partners/[id]`, `staff/[id]`, `customers/[id]`, `banking/accounts|fx|statements/[id]`) show the prior entity's data until the refetch lands. (Backend RLS + account-entity validation prevent an actual cross-entity post/leak — this is state hygiene, not an isolation breach.)
+
+**Acceptance:**
+
+- [ ] On `entityId` change, every entity-scoped page/form **resets its state immediately** (clear data → skeleton → fresh fetch); forms clear or reload the entity-scoped draft.
+- [ ] Tests: switch entity → no prior-entity rows visible; opening-balance lines reset.
+- [ ] Prefer a shared hook/pattern so new pages get it for free.
+
+---
+
+### Slice 11.21 — Role/setting-aware UI
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.69.12-role-aware-ui` |
+
+**Problem:** The UI ignores role and feature settings: the cashier dashboard shows **Net result** (contradicts the "cashier can't see P&L" decision); `partner_view_only` sees the full New menu + write forms (backend 403s the writes, so this is cleanliness not a breach); `delivery_enabled=off` isn't reflected in nav/New menu/command palette.
+
+**Acceptance:**
+
+- [ ] Load the caller's role per entity; **hide/disable** the New menu + mutation forms for `partner_view_only`.
+- [ ] Cashier: hide net-result/financial KPIs on the dashboard (or gate behind `FINANCIAL_REPORTS_READ`), matching the report-page rule.
+- [ ] Gate delivery nav / New-menu item / command-palette entries on `delivery_enabled`.
+- [ ] Tests: each role/setting renders the right chrome.
+
+---
+
+### Slice 11.22 — Small UI gaps
+
+| | |
+|---|---|
+| **Status** | planned |
+| **Suggested tag** | `v0.69.13-ui-gaps` |
+
+**Acceptance:**
+
+- [ ] Expense-receipt review: add a **reject** action (API `POST .../expense-receipts/{id}/reject` exists), mirroring invoice/POS review.
+- [ ] Reports landing: **surface API errors** (`ApiError`) instead of silently blank cards.
+- [ ] Header **"This month"** button: wire to a real date range or remove it.
+
+---
+
 ### Phase 11 complete when
 
 | Slice | Gate |
@@ -1067,6 +1271,16 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.10 | Correct posted expense E2E; owner sign-off |
 | 11.11 | Correction **UI** for existing Phase 8.5 APIs; period unlock works |
 | 11.12 | Remaining correction **HTTP** routes + integration tests green; owner sign-off |
+| 11.13 | Sales/cash post with no forced session; closed day owner-reopenable + audited; owner sign-off |
+| 11.14 | Daily sales + Add expense one-click; New menu grouped + closes on outside-click/Esc; toggles labelled + verified gating |
+| 11.15 | (optional) Day close-out posts sales + expenses atomically; owner sign-off |
+| 11.16 | General-ledger "all entries" report page over existing API; linked + role-gated |
+| 11.17 | Date field opens on click/focus app-wide (icon still works) |
+| 11.18 | Frontend adversarial audit done; each finding fixed + tested; money-critical UI signed off |
+| 11.19 | Stable idempotency key per submit; double-submit/retry → one record (tested); owner sign-off |
+| 11.20 | Entity switch resets all entity-scoped state; no prior-entity data visible (tested) |
+| 11.21 | UI honors role + feature settings (cashier KPIs, view-only chrome, delivery toggle) |
+| 11.22 | Receipt reject UI; reports errors surfaced; dead "This month" button resolved |
 
 Then proceed to **Phase 12 — Deployment & go-live**.
 

@@ -9,11 +9,12 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
-import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
 
@@ -59,7 +60,6 @@ export function ManualExpenseForm({
   const [itemName, setItemName] = useState("");
   const [amountText, setAmountText] = useState("");
   const [dateText, setDateText] = useState("");
-  const [parsedPreview, setParsedPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [optionsLoaded, setOptionsLoaded] = useState(false);
@@ -146,11 +146,6 @@ export function ManualExpenseForm({
     }
     setBaseline(formDraft);
   }, [open, optionsLoaded, baseline, resumeDraft, formDraft]);
-
-  useEffect(() => {
-    const kurus = parseTryToKurus(amountText);
-    setParsedPreview(kurus !== null ? formatTry(kurus) : null);
-  }, [amountText]);
 
   function applyDraft(draft: ExpenseFormDraft) {
     setExpenseAccountId(draft.expenseAccountId);
@@ -273,18 +268,13 @@ export function ManualExpenseForm({
         </div>
         <div>
           <Label htmlFor="exp-amount">Amount (TRY)</Label>
-          <Input
+          <MoneyInput
             id="exp-amount"
             placeholder="150,00"
             value={amountText}
-            onChange={(e) => setAmountText(e.target.value)}
+            onChange={setAmountText}
             required
           />
-          {parsedPreview && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Parsed: {parsedPreview}
-            </p>
-          )}
         </div>
         <div>
           <Label htmlFor="exp-account">Expense account</Label>

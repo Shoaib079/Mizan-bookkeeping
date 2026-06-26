@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import { Input, Label } from "@/components/ui/input";
+import { Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
@@ -158,30 +159,36 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
         </div>
         <div>
           <Label htmlFor="sales-cash">Cash sales</Label>
-          <Input
+          <MoneyInput
             id="sales-cash"
             placeholder="0,00"
             value={cashText}
-            onChange={(e) => setCashText(e.target.value)}
+            onChange={setCashText}
+            showPreview={false}
+            showInvalidHint={false}
           />
         </div>
         <div>
           <Label htmlFor="sales-card">Card sales</Label>
-          <Input
+          <MoneyInput
             id="sales-card"
             placeholder="0,00"
             value={cardText}
-            onChange={(e) => setCardText(e.target.value)}
+            onChange={setCardText}
+            showPreview={false}
+            showInvalidHint={false}
           />
         </div>
         {zReportEnabled && (
           <div>
             <Label htmlFor="sales-z">Card-terminal Z report total (optional)</Label>
-            <Input
+            <MoneyInput
               id="sales-z"
               placeholder="0,00"
               value={zReportText}
-              onChange={(e) => setZReportText(e.target.value)}
+              onChange={setZReportText}
+              showPreview={false}
+              showInvalidHint={false}
             />
             <p className="mt-1 text-xs text-muted-foreground">
               When entered, Z must match card sales or the day routes to Needs
