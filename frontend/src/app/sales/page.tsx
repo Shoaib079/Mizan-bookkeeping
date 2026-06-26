@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
 import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -25,11 +26,14 @@ import type { PosDailySummary } from "@/lib/pos-delivery-types";
 
 export default function SalesPage() {
   const { entityId } = useEntity();
-  const { items, total, loading, error } = useEntityList<PosDailySummary>(
+  const { items, total, loading, error, reload } = useEntityList<PosDailySummary>(
     "/pos/daily-summaries",
     entityId,
   );
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [correctSummary, setCorrectSummary] = useState<PosDailySummary | null>(
+    null,
+  );
 
   return (
     <AppShell title="Daily sales">
@@ -68,6 +72,7 @@ export default function SalesPage() {
               <DataTableHeaderCell align="right">Card</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Total</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -106,6 +111,18 @@ export default function SalesPage() {
                     </p>
                   )}
                 </DataTableCell>
+                <DataTableCell align="right">
+                  {row.status === "posted" && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-8 px-3 text-xs"
+                      onClick={() => setCorrectSummary(row)}
+                    >
+                      Correct
+                    </Button>
+                  )}
+                </DataTableCell>
               </DataTableRow>
             ))}
           </DataTableBody>
@@ -115,6 +132,12 @@ export default function SalesPage() {
       <PosSummaryUploadForm
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
+      />
+      <CorrectDailySalesForm
+        open={correctSummary !== null}
+        summary={correctSummary}
+        onClose={() => setCorrectSummary(null)}
+        onSaved={() => void reload()}
       />
     </AppShell>
   );

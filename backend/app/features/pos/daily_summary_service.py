@@ -28,6 +28,7 @@ from app.features.entities import service as entity_service
 from app.features.pos.models import PosDailySummary, PosDailySummaryStatus
 from app.features.pos.schema import (
     ConfirmPosDailySummaryRequest,
+    CorrectPosDailySummaryRequest,
     PosDailySummaryListOut,
     PosDailySummaryRead,
     RejectPosDailySummaryRequest,
@@ -517,3 +518,86 @@ def create_manual_daily_sales(
         z_report_kurus=payload.z_report_kurus,
     )
     return confirm_pos_daily_summary_intake(session, entity_id, summary.id, confirm_payload)
+
+
+def correct_pos_daily_summary_intake(
+    session: Session,
+    entity_id: uuid.UUID,
+    summary_id: uuid.UUID,
+    payload: CorrectPosDailySummaryRequest,
+) -> PosDailySummaryRead:
+    """Correct a posted daily summary — void linked JEs and repost with new figures."""
+    from app.core.ledger.correction import (
+        PosDailySummaryCorrectionError,
+        correct_pos_daily_summary,
+    )
+
+    _require_entity(session, entity_id)
+    summary = _get_summary_row(session, entity_id, summary_id)
+    status = PosDailySummaryStatus(summary.status)
+
+    if status != PosDailySummaryStatus.POSTED:
+        raise PosDailySummaryImmutableError(
+            f"Summary status {status.value!r} cannot be corrected"
+        )
+
+    sales_date = payload.summary_date or summary.summary_date or date.today()
+    cash_kurus = (
+        payload.cash_kurus
+        if payload.cash_kurus is not None
+        else summary.confirmed_cash_kurus or summary.cash_kurus
+    )
+    card_kurus = (
+        payload.card_kurus
+        if payload.card_kurus is not None
+        else summary.confirmed_card_kurus or summary.card_kurus
+    )
+
+    if _find_posted_summary_for_date(
+        session, entity_id, sales_date, exclude_id=summary.id
+    ) is not None:
+        raise PosDailySummaryConfirmError(_duplicate_date_review_reason(sales_date))
+
+    effective_total = cash_kurus + card_kurus
+    if not math_valid(cash_kurus, card_kurus, effective_total):
+        raise PosDailySummaryConfirmError(
+            "cash + card must equal total — provide consistent amounts"
+        )
+
+    z_report_kurus, z_review = _resolve_z_report(
+        session, entity_id, summary, payload, card_kurus
+    )
+    if isinstance(z_review, _NeedsReview):
+        raise PosDailySummaryConfirmError(z_review.reason)
+
+    description = payload.description or "POS daily summary"
+
+    try:
+        result = correct_pos_daily_summary(
+            session,
+            entity_id,
+            summary,
+            money_account_id=payload.money_account_id,
+            cash_kurus=cash_kurus,
+            card_kurus=card_kurus,
+            summary_date=sales_date,
+            actor_id=payload.actor_id,
+            description=description,
+            z_report_kurus=z_report_kurus,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except PosDailySummaryCorrectionError as exc:
+        raise PosDailySummaryImmutableError(str(exc)) from exc
+    except PosDailySummaryPostError as exc:
+        raise PosDailySummaryConfirmError(str(exc)) from exc
+    except IntegrityError as exc:
+        session.rollback()
+        if "uq_pos_daily_summaries_entity_date_posted" in str(exc.orig):
+            raise PosDailySummaryConfirmError(
+                _duplicate_date_review_reason(sales_date)
+            ) from exc
+        raise
+
+    return _to_read(result.summary)

@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.7** — Unified expense entry (partner-fronted) |
-| **Last completed slice** | Phase 11 Slice 11.6 — partner ownership share % (`v0.68.5-partner-share-pct`) |
-| **Last commit/tag** | `v0.68.5-partner-share-pct` |
-| **Next up** | **11.7** → 11.8–11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.10** — Posted expense correction |
+| **Last completed slice** | Phase 11 Slice 11.9 — correct posted daily sales (`v0.69.0-correct-daily-sales`) |
+| **Last commit/tag** | `v0.69.0-correct-daily-sales` |
+| **Next up** | **11.10** → 11.11–11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -747,7 +747,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 6 | Partner share % | `ownership_share_pct` on partners; list warns if ≠ 100% | **Done** in 11.6 |
 | 7 | Partner expense separate flow | Manual expense = cash only; `expenses-fronted` **API done** (partner detail only) | **11.7** (UI) |
 | 8 | Dashboard FX shows TRY cost | API has `native_quantity`; UI uses `try_cost_kurus` | **11.8** |
-| 9 | **Cannot fix posted daily sales** | `PosDailySummary` posted = immutable; no `correct_pos_daily_summary` | **11.9** |
+| 9 | **Cannot fix posted daily sales** | ~~`PosDailySummary` posted = immutable~~ → `correct_pos_daily_summary()` + HTTP | **11.9** ✓ |
 | 10 | **Cannot fix posted expenses** | `correct_expense_entry()` **core done**; **no HTTP route or UI** | **11.10** |
 | 11 | Corrections **UI** missing | Supplier/customer payment, FX purchase, manual journal **void**, generic ledger **correct/void** — **HTTP done** (Phase 8.5); **zero** frontend calls; no `period_unlock_reason` in forms | **11.11** (UI only) |
 | 12 | Other posted types stuck | Invoice, credit sale, staff, partner, FX conversion/spend — **core helpers only**; no HTTP routes or tests | **11.12** |
@@ -773,6 +773,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | `POST` | `.../payables/suppliers/{id}/payments/{je_id}/correct` | `correct_supplier_payment` | core only |
 | `POST` | `.../customers/{id}/payments/{je_id}/correct` | `correct_customer_payment` | core only |
 | `POST` | `.../fx/purchases/{je_id}/correct` | `correct_fx_purchase` | core only |
+| `POST` | `.../pos/daily-summaries/{id}/correct` | `correct_pos_daily_summary` | yes |
 | `POST` | `.../manual-journals/{id}/void` | void manual | yes |
 
 **Core only — HTTP still planned (Phase 11.10 / 11.12):**
@@ -786,7 +787,9 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | `correct_partner_journal_entry` | **11.12** |
 | `correct_fx_conversion_or_spend` | **11.12** |
 
-**Not started (no core, no HTTP):** `correct_pos_daily_summary` — `CARD_SALES` / `CASH_MOVEMENT` are **void-and-reenter** in registry → **11.9** must add dedicated flow.
+**Dedicated POS daily summary correction (11.9 ✓):** `correct_pos_daily_summary()` voids linked `CARD_SALES` + `CASH_MOVEMENT` JEs (with cash movement reversal) and reposts atomically. Standalone card/cash JEs not linked to a posted summary remain **void-and-reenter** only.
+
+**Not started (no core, no HTTP):**
 
 **Other Phase 11 APIs (not correction):**
 
@@ -812,8 +815,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
   → 11.6 Partner share %
   → 11.7 Unified expense (partner-fronted)
   → 11.8 Dashboard FX native display
-  → 11.9 Correct posted daily sales          ← money-critical
-  → 11.10 Expense correction API + UI      ← money-critical
+  → 11.9 Correct posted daily sales          ← done (v0.69.0); owner sign-off PENDING
+  → 11.10 Expense correction API + UI      ← money-critical — ACTIVE
   → 11.11 Correction UI (existing APIs) + period_unlock_reason on mutations
   → 11.12 Remaining correction APIs (invoice, staff, partner, credit sale, FX conversion/spend)
   → 11.13 Cash-drawer session optional + owner-reopen   ← money-critical (lock model)
@@ -1015,18 +1018,20 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
-| **Money-critical** | Yes — owner sign-off |
-| **Suggested tag** | `v0.69.0-correct-daily-sales` |
+| **Status** | done |
+| **Money-critical** | Yes — owner sign-off **PENDING** |
+| **Tag** | `v0.69.0-correct-daily-sales` |
 
 **Problem:** Posted manual/photo daily sales hit GL (`CARD_SALES` + `CASH_MOVEMENT`); mistakes need manual journals today.
 
 **Acceptance:**
 
-- [ ] `POST .../pos/daily-summaries/{id}/correct` — void linked JEs + card batch + cash movements; repost with new date/cash/card/Z; same shape as confirm.
-- [ ] UI: posted row on `/sales` → **Correct** → pre-filled form.
-- [ ] Register in `correction.py`; tests mirror `test_fx_purchase_correct_*`.
-- [ ] Period lock + duplicate-date guards unchanged.
+- [x] `POST .../pos/daily-summaries/{id}/correct` — void linked JEs + card batch + cash movements; repost with new date/cash/card/Z; same shape as confirm.
+- [x] UI: posted row on `/sales` → **Correct** → pre-filled form.
+- [x] Register in `correction.py`; tests mirror `test_fx_purchase_correct_*`.
+- [x] Period lock + duplicate-date guards unchanged.
+
+**Done:** `correct_pos_daily_summary()` in `correction.py`; intake + `CorrectPosDailySummaryRequest`; `correct-daily-sales-form.tsx` + `/sales` Correct button; 5 tests in `test_pos_daily_summary_correct.py`. **568 pytest green**; frontend build green.
 
 ---
 

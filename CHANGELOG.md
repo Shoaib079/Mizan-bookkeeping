@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**Phase 11 Slice 11.9 — Correct posted daily sales (money-critical):** `correct_pos_daily_summary()` voids linked `CARD_SALES` + `CASH_MOVEMENT` journal entries (cash movement reversal on void JE), updates summary fields, reposts via shared confirm path. `POST .../pos/daily-summaries/{id}/correct` with `CorrectPosDailySummaryRequest`. Frontend: `correct-daily-sales-form.tsx`; `/sales` posted rows → **Correct** button. Period lock + duplicate-date guards preserved. **568 pytest green** (+5); frontend build green. Tag `v0.69.0-correct-daily-sales`. **Owner sign-off PENDING.** **Next:** Phase 11.10 expense correction API + UI.
+
 **Phase 11 Slice 11.8 — Dashboard FX native currency display:** FX wallets on dashboard show native balance as primary (`formatFxNative(native_quantity, currency)`); muted `Book cost: …` TRY subtitle per row. No backend changes. **563 pytest green**; frontend build green. Tag `v0.68.7-dashboard-fx-native`. **Next:** Phase 11.9 correct posted daily sales.
 
 **Phase 11 Slice 11.7 — Unified expense entry (partner-fronted):** Manual expense form adds **Payment** selector — Cash drawer (existing `POST .../expenses`) or **Partner paid (owe partner)** (`POST .../partners/{id}/expenses-fronted`). Partner Combobox loaded from partners list; draft autosave includes `paymentMode` + `partnerId`. Cash tips (5700) remain cash-only. No backend changes. **563 pytest green**; frontend build green. Tag `v0.68.6-expense-partner-mode`. **Owner sign-off PENDING** (money-critical). **Next:** Phase 11.8 dashboard FX native display.

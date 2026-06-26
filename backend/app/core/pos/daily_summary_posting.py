@@ -114,6 +114,7 @@ def confirm_pos_daily_summary(
     actor_id: uuid.UUID,
     description: str,
     z_report_kurus: int | None = None,
+    period_unlock_reason: str | None = None,
 ) -> PosDailySummaryPostResult:
     """Post card sales batch + cash in for a confirmed daily summary — one transaction.
 
@@ -173,6 +174,7 @@ def confirm_pos_daily_summary(
                 card_lines,
                 actor_id=actor_id,
                 source=JournalEntrySource.CARD_SALES,
+                period_unlock_reason=period_unlock_reason,
             )
             card_batch = persist_card_sales_batch(
                 session,
@@ -202,6 +204,7 @@ def confirm_pos_daily_summary(
                 cash_lines,
                 actor_id=actor_id,
                 source=JournalEntrySource.CASH_MOVEMENT,
+                period_unlock_reason=period_unlock_reason,
             )
             cash_movement = CashMovement(
                 session_id=drawer_session.id,

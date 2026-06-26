@@ -15,6 +15,7 @@ from app.core.pos.posting import (
     InvalidPosSettlementError,
     NothingToClearError,
 )
+from app.core.ledger.posting import PostingError
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.pos import daily_summary_service
@@ -27,6 +28,7 @@ from app.features.pos.schema import (
     CardSalesBatchRead,
     ClearingReconciliationRead,
     ConfirmPosDailySummaryRequest,
+    CorrectPosDailySummaryRequest,
     ManualDailySalesRequest,
     PosDailySummaryListOut,
     PosDailySummaryRead,
@@ -298,6 +300,28 @@ def reject_pos_daily_summary(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except daily_summary_service.PosDailySummaryImmutableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@daily_summaries_router.post("/{summary_id}/correct", response_model=PosDailySummaryRead)
+def correct_pos_daily_summary(
+    entity_id: uuid.UUID,
+    summary_id: uuid.UUID,
+    payload: CorrectPosDailySummaryRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> PosDailySummaryRead:
+    try:
+        return daily_summary_service.correct_pos_daily_summary_intake(
+            session, entity_id, summary_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except daily_summary_service.PosDailySummaryConfirmError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except daily_summary_service.PosDailySummaryImmutableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @manual_sales_router.post("/manual-daily-sales", response_model=PosDailySummaryRead, status_code=201)

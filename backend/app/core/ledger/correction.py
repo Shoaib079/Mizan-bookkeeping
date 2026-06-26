@@ -81,6 +81,7 @@ DEDICATED_CORRECTION_ROUTES: dict[JournalEntrySource, str] = {
 }
 
 # Paired feature records with no dedicated correction API yet — never generic-correct.
+# CARD_SALES / CASH_MOVEMENT from a posted PosDailySummary: use correct_pos_daily_summary().
 VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
     {
         JournalEntrySource.OPENING_BALANCE,
@@ -1195,3 +1196,166 @@ def correct_fx_conversion_or_spend(
         fx_row=fx_row,
         new_fx_row=new_fx,
     )
+
+
+class PosDailySummaryCorrectionError(ValueError):
+    """Posted POS daily summary cannot be corrected."""
+
+
+def _void_journal_entry_in_transaction(
+    session: Session,
+    entity_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> tuple[JournalEntry, JournalEntry]:
+    from app.core.ledger.posting import _create_reversal_entry, _mark_original_voided
+    from app.core.period_locks.guards import assert_entry_dates_allowed, utc_today
+
+    original = _get_voidable_entry(session, entry_id)
+    effective_void_date = void_date or utc_today()
+    assert_entry_dates_allowed(
+        session,
+        entity_id,
+        [original.entry_date, effective_void_date],
+        actor_id=actor_id,
+        unlock_reason=period_unlock_reason,
+    )
+    reversal = _create_reversal_entry(
+        session,
+        entity_id,
+        original,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    _mark_original_voided(session, original, reversal, actor_id=actor_id, reason=reason)
+    return original, reversal
+
+
+def correct_pos_daily_summary(
+    session: Session,
+    entity_id: uuid.UUID,
+    summary: "PosDailySummary",
+    *,
+    money_account_id: uuid.UUID,
+    cash_kurus: int,
+    card_kurus: int,
+    summary_date: date,
+    actor_id: uuid.UUID,
+    description: str,
+    z_report_kurus: int | None = None,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> "PosDailySummaryPostResult":
+    """Void linked card batch + cash movement JEs and repost corrected daily sales."""
+    from app.core.period_locks.guards import assert_entry_dates_allowed, mark_periods_dirty_for_dates
+    from app.core.pos.daily_summary_posting import (
+        PosDailySummaryPostError,
+        PosDailySummaryPostResult,
+        confirm_pos_daily_summary,
+    )
+    from app.features.pos.models import CardSalesBatch, PosDailySummaryStatus
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    status = PosDailySummaryStatus(summary.status)
+    if status != PosDailySummaryStatus.POSTED:
+        raise PosDailySummaryCorrectionError(
+            f"summary status {status.value!r} cannot be corrected — must be posted"
+        )
+
+    if cash_kurus < 0 or card_kurus < 0:
+        raise PosDailySummaryPostError("cash and card amounts must be >= 0")
+    if cash_kurus == 0 and card_kurus == 0:
+        raise PosDailySummaryPostError("at least one of cash or card must be positive")
+
+    total_kurus = cash_kurus + card_kurus
+    dirty_dates: list[date] = []
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+
+        from app.core.ledger.models import journal_void_update_allowed
+
+        with journal_void_update_allowed(session):
+            if summary.card_sales_batch_id is not None:
+                batch = session.get(CardSalesBatch, summary.card_sales_batch_id)
+                if batch is not None:
+                    _, card_reversal = _void_journal_entry_in_transaction(
+                        session,
+                        entity_id,
+                        batch.journal_entry_id,
+                        actor_id=actor_id,
+                        reason=reason,
+                        void_date=void_date,
+                        period_unlock_reason=period_unlock_reason,
+                    )
+                    dirty_dates.extend([batch.sales_date, card_reversal.entry_date])
+
+            if summary.cash_movement_id is not None:
+                original_cash = session.get(CashMovement, summary.cash_movement_id)
+                if original_cash is not None:
+                    _, cash_reversal = _void_journal_entry_in_transaction(
+                        session,
+                        entity_id,
+                        original_cash.journal_entry_id,
+                        actor_id=actor_id,
+                        reason=reason,
+                        void_date=void_date,
+                        period_unlock_reason=period_unlock_reason,
+                    )
+                    _append_cash_movement_reversal(
+                        session,
+                        original_cash,
+                        cash_reversal,
+                        actor_id=actor_id,
+                        void_date=void_date,
+                    )
+                    dirty_dates.extend(
+                        [original_cash.movement_date, cash_reversal.entry_date]
+                    )
+
+            summary.summary_date = summary_date
+            summary.cash_kurus = cash_kurus
+            summary.card_kurus = card_kurus
+            summary.total_kurus = total_kurus
+            summary.money_account_id = money_account_id
+            if z_report_kurus is not None:
+                summary.z_report_kurus = z_report_kurus
+            summary.status = PosDailySummaryStatus.CONFIRMED
+            summary.card_sales_batch_id = None
+            summary.cash_movement_id = None
+            session.flush()
+
+        assert_entry_dates_allowed(
+            session,
+            entity_id,
+            [summary_date],
+            actor_id=actor_id,
+            unlock_reason=period_unlock_reason,
+        )
+
+        result = confirm_pos_daily_summary(
+            session,
+            entity_id,
+            summary,
+            money_account_id=money_account_id,
+            cash_kurus=cash_kurus,
+            card_kurus=card_kurus,
+            actor_id=actor_id,
+            description=description,
+            z_report_kurus=z_report_kurus,
+            period_unlock_reason=period_unlock_reason,
+        )
+
+        if dirty_dates:
+            mark_periods_dirty_for_dates(session, entity_id, dirty_dates)
+
+        return result

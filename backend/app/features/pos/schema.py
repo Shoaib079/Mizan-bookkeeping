@@ -125,6 +125,12 @@ class ConfirmPosDailySummaryRequest(BaseModel):
     z_report_kurus: int | None = Field(default=None, ge=0)
 
 
+class CorrectPosDailySummaryRequest(ConfirmPosDailySummaryRequest):
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
 class RejectPosDailySummaryRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=512)
 

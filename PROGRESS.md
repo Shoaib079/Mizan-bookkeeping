@@ -7,12 +7,22 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.9** — Correct posted daily sales |
-| **Last completed slice** | Phase 11 Slice 11.8 — dashboard FX native currency display (`v0.68.7-dashboard-fx-native`) |
+| **Active slice** | **11.10** — Posted expense correction |
+| **Last completed slice** | Phase 11 Slice 11.9 — correct posted daily sales (`v0.69.0-correct-daily-sales`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.68.7-dashboard-fx-native` |
+| **Last tag** | `v0.69.0-correct-daily-sales` |
 
 ## Resume point
+
+**Phase 11 Slice 11.9 complete** — correct posted daily sales (`v0.69.0-correct-daily-sales`):
+- `correct_pos_daily_summary()` — voids linked card batch JE + cash movement JE (with cash reversal), reposts via shared confirm path
+- `POST .../pos/daily-summaries/{id}/correct` + `CorrectPosDailySummaryRequest` (confirm shape + reason/period_unlock_reason)
+- Frontend: `correct-daily-sales-form.tsx`; `/sales` posted rows → **Correct** dialog (pre-filled, idempotency key)
+- Tests: `test_pos_daily_summary_correct.py` (5 tests — amounts, date, non-posted 409, duplicate date 422, period lock)
+- **568 pytest green**; frontend build green
+- **Owner sign-off: PENDING** (money-critical)
+
+**Next:** Phase 11 Slice 11.10 — expense correction HTTP + UI.
 
 **Phase 10 complete** — all slices 10.1–10.8 done (`v0.67.0`). **Slice 10.8 owner sign-off: APPROVED (2026-06-25).**
 
