@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,12 +14,14 @@ from app.core.partners.types import PartnerMovementType
 class PartnerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=512)
     notes: str | None = Field(default=None, max_length=2048)
+    ownership_share_pct: Decimal | None = Field(default=None, ge=0, le=100)
 
 
 class PartnerUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=512)
     notes: str | None = Field(default=None, max_length=2048)
     is_active: bool | None = None
+    ownership_share_pct: Decimal | None = Field(default=None, ge=0, le=100)
 
 
 class PartnerRead(BaseModel):
@@ -27,9 +30,26 @@ class PartnerRead(BaseModel):
     id: uuid.UUID
     name: str
     is_active: bool
+    ownership_share_pct: Decimal | None
     notes: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class OwnershipShareSummary(BaseModel):
+    """Informational totals for active partners — warn only, not GL."""
+
+    total_pct: Decimal | None = None
+    partners_with_share: int = 0
+    warning: str | None = None
+
+
+class PartnerListOut(BaseModel):
+    items: list[PartnerRead]
+    total: int
+    limit: int
+    offset: int
+    ownership_share: OwnershipShareSummary
 
 
 class PartnerLedgerEntryRead(BaseModel):

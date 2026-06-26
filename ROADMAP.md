@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.6** — Partner ownership share % |
-| **Last completed slice** | Phase 11 Slice 11.5 — create entity → owner membership (`v0.68.4-entity-create-membership`) |
-| **Last commit/tag** | `v0.68.4-entity-create-membership` |
-| **Next up** | **11.6** → 11.7–11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.7** — Unified expense entry (partner-fronted) |
+| **Last completed slice** | Phase 11 Slice 11.6 — partner ownership share % (`v0.68.5-partner-share-pct`) |
+| **Last commit/tag** | `v0.68.5-partner-share-pct` |
+| **Next up** | **11.7** → 11.8–11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -731,7 +731,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ## Phase 11 — Pre-go-live product fixes (owner 2026-06-25, audit-driven)
 
-**Status: IN PROGRESS** — **11.1–11.5, 11.19 done** (`v0.68.0`–`v0.68.4`, `v0.69.10`). Build **before Phase 12 (deployment)**. **Next:** 11.6 → 11.18 → 11.20–11.22.
+**Status: IN PROGRESS** — **11.1–11.6, 11.19 done** (`v0.68.0`–`v0.68.5`, `v0.69.10`). Build **before Phase 12 (deployment)**. **Next:** 11.7 → 11.18 → 11.20–11.22.
 
 **Purpose:** Close gaps found by adversarial code audit vs `DECISIONS.md` / owner daily workflow — onboarding traps (empty cash picker), post-post corrections, entity setup, and UX bugs — **without** re-litigating Phase 10 or core posting rules.
 
@@ -744,7 +744,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 3 | Money fields accept letters | `MoneyInput` + strict `parseTryToKurus`; rejects garbage | **Done** in 11.3 |
 | 4 | Dialog steals focus while typing | `focusedOnOpenRef` — focus once on open only | **Done** in 11.4 |
 | 5 | New restaurant invisible with auth on | `POST /entities` adds creator as `owner` membership | **Done** in 11.5 |
-| 6 | Partner share % | `partners` has name/notes only | **11.6** |
+| 6 | Partner share % | `ownership_share_pct` on partners; list warns if ≠ 100% | **Done** in 11.6 |
 | 7 | Partner expense separate flow | Manual expense = cash only; `expenses-fronted` **API done** (partner detail only) | **11.7** (UI) |
 | 8 | Dashboard FX shows TRY cost | API has `native_quantity`; UI uses `try_cost_kurus` | **11.8** |
 | 9 | **Cannot fix posted daily sales** | `PosDailySummary` posted = immutable; no `correct_pos_daily_summary` | **11.9** |
@@ -795,7 +795,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | Default cash money account | **partial** — on chart seed only (`v0.68.0`); legacy entities + API response gaps → **11.1a** | **11.1** ✓ / **11.1a** |
 | `PATCH .../entities/{id}/settings/{key}` | **not built** — `POST` create-only | **11.2** |
 | `POST /entities` → owner membership | **not built** | **11.5** |
-| `partners.ownership_share_pct` | **not built** | **11.6** |
+| `partners.ownership_share_pct` | **done** (`v0.68.5`) | — | **Done** in 11.6 |
 | `POST .../partners/{id}/expenses-fronted` | **done ✓** (Phase 5) — slice **11.7** is **UI** unification only | **11.7** |
 
 **Explicitly out of Phase 11** (promote later if owner requires before go-live): unified **document archive** UI (Decisions §7 — files stored per intake, no searchable archive); full **manual journal** composer UI; **period locks** admin UI; **credit card statement** import; bank feeds.
@@ -964,14 +964,16 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | **done** |
 | **Decisions** | Extend §17 — **informational only** (not capital GL) |
-| **Suggested tag** | `v0.68.5-partner-share-pct` |
+| **Tag** | `v0.68.5-partner-share-pct` |
 
 **Acceptance:**
 
-- [ ] `partners.ownership_share_pct` — nullable `Numeric(5,2)`, 0–100; sum **warn only** if ≠ 100%.
-- [ ] Partner form + detail show Share %.
+- [x] `partners.ownership_share_pct` — nullable `Numeric(5,2)`, 0–100; sum **warn only** if ≠ 100%.
+- [x] Partner form + detail show Share %.
+
+**Done:** Migration `049`; `ownership_share_summary()` on list API; partner form + list/detail UI; tests in `test_partners.py`.
 
 ---
 
@@ -1276,7 +1278,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.3 | Money fields reject letters on priority forms | **done** (`v0.68.2`) |
 | 11.4 | Dialog focus stable while editing | **done** (`v0.68.3`) |
 | 11.5 | Creator is owner member; entity appears in list | **done** (`v0.68.4`) |
-| 11.6 | Partner share % on CRUD |
+| 11.6 | Partner share % on CRUD | **done** (`v0.68.5`) |
 | 11.7 | Partner-fronted expense from New → Expense |
 | 11.8 | Dashboard FX shows native currency |
 | 11.9 | Correct posted daily sales E2E; owner sign-off |

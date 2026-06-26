@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from app.features.partners.models import Partner
 from app.features.partners.schema import (
     ExpenseFrontedCreate,
     ExpenseFrontedResponse,
+    OwnershipShareSummary,
     PartnerCreate,
     PartnerLedgerEntryRead,
     PartnerLedgerRead,
@@ -23,6 +25,38 @@ from app.features.partners.schema import (
     ReimbursementPaidCreate,
     ReimbursementPaidResponse,
 )
+
+HUNDRED = Decimal("100")
+
+
+def ownership_share_summary(
+    session: Session, entity_id: uuid.UUID
+) -> OwnershipShareSummary:
+    """Sum active partners' share % — warn only when set shares ≠ 100%."""
+    with entity_context(session, entity_id):
+        require_entity_context()
+        partners = session.scalars(
+            select(Partner).where(Partner.is_active.is_(True))
+        ).all()
+        shares = [
+            p.ownership_share_pct
+            for p in partners
+            if p.ownership_share_pct is not None
+        ]
+        if not shares:
+            return OwnershipShareSummary()
+        total = sum(shares, start=Decimal("0"))
+        warning = None
+        if total != HUNDRED:
+            warning = (
+                f"Ownership shares total {total}% across active partners — "
+                "expected 100% (informational only)."
+            )
+        return OwnershipShareSummary(
+            total_pct=total,
+            partners_with_share=len(shares),
+            warning=warning,
+        )
 
 
 def create_partner(
@@ -35,6 +69,7 @@ def create_partner(
         partner = Partner(
             name=payload.name,
             notes=payload.notes,
+            ownership_share_pct=payload.ownership_share_pct,
         )
         session.add(partner)
         session.commit()
@@ -99,6 +134,8 @@ def update_partner(
             partner.notes = payload.notes
         if payload.is_active is not None:
             partner.is_active = payload.is_active
+        if "ownership_share_pct" in payload.model_fields_set:
+            partner.ownership_share_pct = payload.ownership_share_pct
 
         session.commit()
         session.refresh(partner)

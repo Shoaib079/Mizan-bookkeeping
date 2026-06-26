@@ -400,3 +400,57 @@ def test_partners_api_e2e(client: TestClient, db_session, partner_setup) -> None
     list_resp = client.get(f"/entities/{entity_id}/partners")
     assert list_resp.status_code == 200
     assert list_resp.json()["total"] >= 2
+
+
+def test_partner_ownership_share_pct(client: TestClient, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+
+    ok = client.post(
+        f"/entities/{entity_id}/partners",
+        json={"name": "Owner A", "ownership_share_pct": "60"},
+    )
+    assert ok.status_code == 201
+    assert ok.json()["ownership_share_pct"] == "60.00"
+
+    ok2 = client.post(
+        f"/entities/{entity_id}/partners",
+        json={"name": "Owner B", "ownership_share_pct": "40"},
+    )
+    assert ok2.status_code == 201
+
+    listed = client.get(f"/entities/{entity_id}/partners")
+    assert listed.status_code == 200
+    body = listed.json()
+    assert body["ownership_share"]["total_pct"] == "100.00"
+    assert body["ownership_share"]["warning"] is None
+
+
+def test_partner_ownership_share_warns_when_not_100(
+    client: TestClient, partner_setup
+) -> None:
+    entity_id = partner_setup["entity_id"]
+
+    client.post(
+        f"/entities/{entity_id}/partners",
+        json={"name": "Owner A", "ownership_share_pct": "60"},
+    )
+    client.post(
+        f"/entities/{entity_id}/partners",
+        json={"name": "Owner B", "ownership_share_pct": "30"},
+    )
+
+    listed = client.get(f"/entities/{entity_id}/partners")
+    warning = listed.json()["ownership_share"]["warning"]
+    assert warning is not None
+    assert "90" in warning
+
+
+def test_partner_ownership_share_rejects_over_100(
+    client: TestClient, partner_setup
+) -> None:
+    entity_id = partner_setup["entity_id"]
+    response = client.post(
+        f"/entities/{entity_id}/partners",
+        json={"name": "Too Much", "ownership_share_pct": "100.01"},
+    )
+    assert response.status_code == 422

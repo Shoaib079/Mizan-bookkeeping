@@ -101,6 +101,11 @@ export default function PartnerDetailPage() {
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
               <StatusBadge status={partner.is_active ? "active" : "inactive"} />
+              {partner.ownership_share_pct != null && (
+                <span className="text-sm text-muted-foreground">
+                  Share: {partner.ownership_share_pct}%
+                </span>
+              )}
               {partner.notes && (
                 <p className="mt-2 text-sm text-muted-foreground">
                   {partner.notes}
