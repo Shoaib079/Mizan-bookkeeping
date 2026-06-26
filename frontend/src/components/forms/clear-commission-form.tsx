@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 
@@ -18,6 +19,11 @@ type Props = {
 export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [description, setDescription] = useState("Clear card commission");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -36,10 +42,12 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(
         `/entities/${entityId}/pos/clearing-reconciliation/clear-commission`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             actor_id: actorId,
@@ -47,6 +55,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       onCleared?.();
       toast("Commission cleared");
       onClose();

@@ -22,6 +22,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { Select } from "@/components/ui/input";
 import { Users } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import {
   ENTITY_ROLES,
@@ -32,6 +33,7 @@ import { useEntityList } from "@/lib/use-entity-list";
 
 export default function MembersPage() {
   const { entityId } = useEntity();
+  const submitIdempotency = useSubmitIdempotency();
   const { items, total, loading, error, forbidden, reload } =
     useEntityList<MembershipRow>("/members", entityId);
   const [formOpen, setFormOpen] = useState(false);
@@ -43,11 +45,14 @@ export default function MembersPage() {
     setUpdatingId(membership.id);
     setActionError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/members/${membership.id}`, {
         method: "PATCH",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
       });
+      submitIdempotency.completeSubmit();
       await reload();
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {

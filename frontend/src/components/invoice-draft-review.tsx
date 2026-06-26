@@ -10,6 +10,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -59,6 +60,7 @@ type Props = {
 export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const [draft, setDraft] = useState<InvoiceDraft | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [deliveryReports, setDeliveryReports] = useState<DeliveryReportOption[]>(
@@ -121,14 +123,17 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     setLinkingReport(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const updated = await apiFetch<InvoiceDraft>(
         `/entities/${entityId}/invoices/drafts/${draftId}/link-delivery-report`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ delivery_report_id: selectedReportId }),
         },
       );
+      submitIdempotency.completeSubmit();
       setDraft(updated);
       onUpdated?.();
       toast("Delivery report linked");
@@ -145,16 +150,19 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     setLinking(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const updated = await apiFetch<InvoiceDraft>(
         `/entities/${entityId}/invoices/drafts/${draftId}/link-supplier`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             supplier_id: selectedSupplierId || null,
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       setDraft(updated);
       onUpdated?.();
       toast("Supplier linked");
@@ -171,14 +179,17 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     setConfirming(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const updated = await apiFetch<InvoiceDraft>(
         `/entities/${entityId}/invoices/drafts/${draftId}/confirm`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ actor_id: actorId }),
         },
       );
+      submitIdempotency.completeSubmit();
       setDraft(updated);
       onUpdated?.();
       toast("Invoice confirmed");
@@ -195,10 +206,12 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     setPosting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(
         `/entities/${entityId}/invoices/drafts/${draftId}/post`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             actor_id: actorId,
@@ -206,6 +219,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       await load();
       onUpdated?.();
       toast("Invoice posted");
@@ -222,14 +236,17 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     setRejecting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const updated = await apiFetch<InvoiceDraft>(
         `/entities/${entityId}/invoices/drafts/${draftId}/reject`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reason: rejectReason || null }),
         },
       );
+      submitIdempotency.completeSubmit();
       setDraft(updated);
       onUpdated?.();
       toast("Invoice rejected");

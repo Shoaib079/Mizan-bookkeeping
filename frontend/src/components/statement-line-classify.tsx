@@ -9,6 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type {
   BankStatementLine,
@@ -48,6 +49,7 @@ export function StatementLineClassify({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const [classification, setClassification] =
     useState<StatementLineClassification>("supplier_payment");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -112,6 +114,10 @@ export function StatementLineClassify({
     );
   }, [line.id, resolved]);
 
+  useEffect(() => {
+    submitIdempotency.resetSubmit();
+  }, [line.id, submitIdempotency]);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!entityId || resolved) return;
@@ -130,14 +136,17 @@ export function StatementLineClassify({
     if (classification === "rent_utility")
       body.expense_account_id = expenseAccountId;
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(
         `/entities/${entityId}/banking/statements/${statementId}/lines/${line.id}/classify`,
         {
           method: "PATCH",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
       );
+      submitIdempotency.completeSubmit();
       toast("Line classified");
       onClassified();
     } catch (err) {

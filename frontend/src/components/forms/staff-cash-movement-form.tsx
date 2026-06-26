@@ -9,6 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
@@ -39,6 +40,11 @@ export function StaffCashMovementForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const isTry = payCurrency === "TRY";
 
   const [tryAccounts, setTryAccounts] = useState<MoneyAccountOption[]>([]);
@@ -139,11 +145,14 @@ export function StaffCashMovementForm({
         kind === "advance"
           ? `/entities/${entityId}/staff/employees/${employeeId}/advances`
           : `/entities/${entityId}/staff/employees/${employeeId}/payments`;
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(path, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast(kind === "advance" ? "Advance recorded" : "Payment recorded");
       onClose();

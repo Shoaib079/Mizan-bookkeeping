@@ -11,6 +11,7 @@ import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -27,6 +28,11 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [platforms, setPlatforms] = useState<DeliveryPlatform[]>([]);
   const [platformId, setPlatformId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -87,10 +93,12 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const report = await apiFetch<DeliveryReport>(
         `/entities/${entityId}/delivery/reports`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             delivery_platform_id: platformId,
@@ -103,6 +111,7 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Delivery report saved");
       onClose();

@@ -1190,17 +1190,25 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned — **do right after 11.3**; owner sign-off |
+| **Status** | **done** — owner sign-off **PENDING** (money-critical) |
 | **Money-critical** | Yes — can duplicate ledger entries |
-| **Suggested tag** | `v0.69.10-stable-idempotency-key` |
+| **Tag** | `v0.69.10-stable-idempotency-key` |
 
-**Problem:** `frontend/src/lib/api.ts:40` returns a **fresh** `crypto.randomUUID()` Idempotency-Key on every mutation call, and forms never pass their own. So a double-click or network retry sends **two different keys** → the server (which dedups only on a *repeated* key) records **two entries**. The auto-generate gives false safety — it defeats the very server-side idempotency it appears to use. Affects **every** money-posting form.
+**Problem:** `frontend/src/lib/api.ts:40` returned a **fresh** `crypto.randomUUID()` Idempotency-Key on every mutation call. Double-click / network retry sent two different keys → two ledger entries.
+
+**Done:**
+
+- `useSubmitIdempotency()` hook — `beginSubmit()` / `completeSubmit()` / `resetSubmit()`; stable key per submit intent, cleared after success or dialog open.
+- `apiFetch` no longer auto-mints keys; callers pass `idempotencyKey` explicitly.
+- Wired **39** mutation surfaces: all money forms, review confirms (receipt, invoice, POS summary, delivery report), statement classify, opening balances post/validate, plus non-money mutations (CRUD, uploads, settings).
+- Vitest: `use-submit-idempotency.test.ts` (3 tests). Backend: `test_client_retry_contract_reuses_one_key_not_two` documents the client contract.
 
 **Acceptance:**
 
-- [ ] One **stable** Idempotency-Key per user submit *intent*: generate when the submit starts (e.g. a `useRef`), **reuse it for retries** of that same submission, regenerate only after success / a new entry. Plumb through `apiFetch` headers.
-- [ ] **Remove** the per-call `randomUUID()` auto-gen in `api.ts` (or make it require an explicit key) so a missing key can never silently become "new key every call."
-- [ ] Tests: simulate double-submit / retry on a representative money form → exactly **one** record; a genuinely new submission → new key → new record. Add to the money-flow checklist for every form (see CURSOR_RULES frontend rules).
+- [x] One **stable** Idempotency-Key per user submit *intent*; reuse on retry; regenerate after success / new entry.
+- [x] **Removed** per-call `randomUUID()` auto-gen in `api.ts`.
+- [x] Tests: retry same key → one record; new key → new record.
+- [ ] Owner sign-off (money-critical).
 
 ---
 

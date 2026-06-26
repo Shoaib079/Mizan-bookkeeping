@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
@@ -22,6 +23,11 @@ type Props = {
 export function DeliveryPlatformForm({ open, onClose, platform, onSaved }: Props) {
   const { entityId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const editing = Boolean(platform);
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -45,17 +51,23 @@ export function DeliveryPlatformForm({ open, onClose, platform, onSaved }: Props
     setError(null);
     try {
       if (editing && platform) {
+        const idempotencyKey = submitIdempotency.beginSubmit();
         await apiFetch(`/entities/${entityId}/delivery/platforms/${platform.id}`, {
           method: "PATCH",
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, is_active: isActive }),
         });
+        submitIdempotency.completeSubmit();
       } else {
+        const idempotencyKey = submitIdempotency.beginSubmit();
         await apiFetch(`/entities/${entityId}/delivery/platforms`, {
           method: "POST",
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name }),
         });
+        submitIdempotency.completeSubmit();
       }
       onSaved?.();
       toast(editing ? "Platform updated" : "Platform added");

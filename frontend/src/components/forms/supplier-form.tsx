@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { useToast } from "@/lib/toast";
 
@@ -30,6 +31,11 @@ type Props = {
 export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
   const { entityId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const editing = Boolean(supplier);
   const [name, setName] = useState("");
   const [vkn, setVkn] = useState("");
@@ -59,8 +65,10 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
     setError(null);
     try {
       if (editing && supplier) {
+        const idempotencyKey = submitIdempotency.beginSubmit();
         await apiFetch(`/entities/${entityId}/suppliers/${supplier.id}`, {
           method: "PATCH",
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name,
@@ -69,9 +77,12 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
             is_active: isActive,
           }),
         });
+        submitIdempotency.completeSubmit();
       } else {
+        const idempotencyKey = submitIdempotency.beginSubmit();
         await apiFetch(`/entities/${entityId}/suppliers`, {
           method: "POST",
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name,
@@ -80,6 +91,7 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
             notes: notes || null,
           }),
         });
+        submitIdempotency.completeSubmit();
       }
       onSaved?.();
       onClose();

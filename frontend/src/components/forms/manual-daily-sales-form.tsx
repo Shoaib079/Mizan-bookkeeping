@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -32,6 +33,11 @@ type Props = {
 export function ManualDailySalesForm({ open, onClose }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [zReportEnabled, setZReportEnabled] = useState(false);
   const [moneyAccountId, setMoneyAccountId] = useState("");
@@ -106,14 +112,17 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
         body.z_report_kurus = zReportKurus;
       }
 
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const result = await apiFetch<ManualDailySalesResponse>(
         `/entities/${entityId}/pos/manual-daily-sales`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
       );
+      submitIdempotency.completeSubmit();
 
       if (result.status === "needs_review") {
         const reason =
@@ -122,6 +131,7 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
         setError(
           `${reason} Fix the figures here, or open the Sales list to finish review.`,
         );
+        submitIdempotency.completeSubmit();
         setShowSalesHint(true);
         return;
       }
@@ -130,6 +140,7 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
         setError(
           `Unexpected status "${result.status}". Check the Sales list (/sales) before posting again.`,
         );
+        submitIdempotency.completeSubmit();
         return;
       }
 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountKind } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
@@ -29,6 +30,11 @@ export function MoneyAccountForm({
 }: Props) {
   const { entityId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [accountKind, setAccountKind] = useState<MoneyAccountKind>(defaultKind);
   const [currency, setCurrency] = useState(defaultCurrency ?? "USD");
   const [name, setName] = useState("");
@@ -58,8 +64,10 @@ export function MoneyAccountForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/banking/accounts`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           account_kind: accountKind,
@@ -71,6 +79,7 @@ export function MoneyAccountForm({
           last_four: lastFour || null,
         }),
       });
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Account added");
       onClose();

@@ -9,6 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -24,6 +25,11 @@ type Props = {
 export function PosSettlementForm({ open, onClose, onSaved }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [bankAccounts, setBankAccounts] = useState<MoneyAccountOption[]>([]);
   const [moneyAccountId, setMoneyAccountId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -79,11 +85,14 @@ export function PosSettlementForm({ open, onClose, onSaved }: Props) {
       if (commissionKurus !== null && commissionKurus >= 0) {
         body.commission_kurus = commissionKurus;
       }
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/pos/settlements`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("POS settlement recorded");
       onClose();

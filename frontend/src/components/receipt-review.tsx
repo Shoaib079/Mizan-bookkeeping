@@ -10,6 +10,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { apiFetch, documentUrl } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -69,6 +70,7 @@ export function ReceiptReview({ intakeId }: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const [intake, setIntake] = useState<ExpenseReceipt | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [lines, setLines] = useState<ReceiptLine[]>([]);
@@ -164,8 +166,10 @@ export function ReceiptReview({ intakeId }: Props) {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/expense-receipts/${intakeId}/confirm`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           actor_id: actorId,
@@ -177,6 +181,7 @@ export function ReceiptReview({ intakeId }: Props) {
           })),
         }),
       });
+      submitIdempotency.completeSubmit();
       clearDraft();
       toast("Receipt expenses posted");
       router.push("/");

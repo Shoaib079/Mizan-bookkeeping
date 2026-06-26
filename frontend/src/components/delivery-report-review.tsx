@@ -7,6 +7,7 @@ import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import {
@@ -25,6 +26,7 @@ type Props = {
 export function DeliveryReportReview({ reportId, onUpdated }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const [report, setReport] = useState<DeliveryReport | null>(null);
   const [grossText, setGrossText] = useState("");
   const [commissionText, setCommissionText] = useState("");
@@ -76,10 +78,12 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
     setPosting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const updated = await apiFetch<DeliveryReport>(
         `/entities/${entityId}/delivery/reports/${reportId}/post`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             actor_id: actorId,
@@ -89,6 +93,7 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       setReport(updated);
       onUpdated?.();
       toast("Delivery report posted");
@@ -104,10 +109,12 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
     setRejecting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const updated = await apiFetch<DeliveryReport>(
         `/entities/${entityId}/delivery/reports/${reportId}/reject?reason=${encodeURIComponent(rejectReason)}`,
-        { method: "POST" },
+        { method: "POST", idempotencyKey },
       );
+      submitIdempotency.completeSubmit();
       setReport(updated);
       onUpdated?.();
       toast("Delivery report rejected");

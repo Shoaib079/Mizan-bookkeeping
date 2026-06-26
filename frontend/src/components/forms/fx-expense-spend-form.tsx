@@ -10,6 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
@@ -35,6 +36,11 @@ export function FxExpenseSpendForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [nativeText, setNativeText] = useState("");
@@ -79,8 +85,10 @@ export function FxExpenseSpendForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/fx/expense-spends`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fx_money_account_id: fxAccountId,
@@ -91,6 +99,7 @@ export function FxExpenseSpendForm({
           actor_id: actorId,
         }),
       });
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("FX spend recorded");
       onClose();

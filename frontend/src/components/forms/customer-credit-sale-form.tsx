@@ -9,6 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -31,6 +32,11 @@ export function CustomerCreditSaleForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [revenueAccounts, setRevenueAccounts] = useState<Account[]>([]);
   const [revenueAccountId, setRevenueAccountId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -77,10 +83,12 @@ export function CustomerCreditSaleForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(
         `/entities/${entityId}/customers/${customerId}/credit-sales`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sale_date: saleDate,
@@ -91,6 +99,7 @@ export function CustomerCreditSaleForm({
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Credit sale recorded");
       onClose();

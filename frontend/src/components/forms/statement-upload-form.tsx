@@ -3,12 +3,13 @@
 /** Bank statement CSV upload — Phase 9 Slice 4. */
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type { BankStatementRead } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
@@ -29,6 +30,11 @@ export function StatementUploadForm({
   const router = useRouter();
   const { entityId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -48,10 +54,12 @@ export function StatementUploadForm({
     try {
       const body = new FormData();
       body.append("file", file);
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const statement = await apiFetch<BankStatementRead>(
         `/entities/${entityId}/banking/accounts/${moneyAccountId}/statements`,
-        { method: "POST", body },
+        { method: "POST", body, idempotencyKey },
       );
+      submitIdempotency.completeSubmit();
       onUploaded?.();
       toast("Statement imported");
       onClose();

@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.19** — (see ROADMAP Phase 11) |
-| **Last completed slice** | Phase 11 Slice 11.3 — numeric-only money inputs (`v0.68.2-money-input`) |
+| **Active slice** | **11.20** — entity-switch state reset (see ROADMAP Phase 11) |
+| **Last completed slice** | Phase 11 Slice 11.19 — stable idempotency keys (`v0.69.10-stable-idempotency-key`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.68.2-money-input` |
+| **Last tag** | `v0.69.10-stable-idempotency-key` |
 
 ## Resume point
 
@@ -32,7 +32,14 @@
 - Migrated all TRY amount fields: manual expense/sales, POS/delivery/receipt review, payments, transfers, cash movement, opening balances, FX, delivery amounts, and related forms
 - Vitest: `money.test.ts` (7 tests)
 
-**Next:** Phase 11 Slice 11.19 — see `ROADMAP.md` Phase 11. Full plan in `ROADMAP.md` Phase 11 (slices 11.4–11.12, 11.19). Deployment is **Phase 12**.
+**Phase 11 Slice 11.19 complete** — stable idempotency keys (`v0.69.10-stable-idempotency-key`):
+- `useSubmitIdempotency()` — `beginSubmit()` stable per intent, `completeSubmit()` after success, `resetSubmit()` on dialog open
+- Removed `api.ts` per-call `randomUUID()` auto-gen; callers pass explicit `idempotencyKey`
+- Wired 39 mutation surfaces (all money forms + review confirms + statement classify + opening balances)
+- Vitest: `use-submit-idempotency.test.ts` (3 tests); backend: `test_client_retry_contract_reuses_one_key_not_two`
+- **Owner sign-off: PENDING** (money-critical)
+
+**Next:** Phase 11 Slice 11.20 — see `ROADMAP.md` Phase 11. Full plan in `ROADMAP.md` Phase 11 (slices 11.4–11.12, 11.20). Deployment is **Phase 12**.
 
 **Phase 9 Slice 8 complete** — Dashboard + reports (frontend only):
 - `/` — live dashboard from `GET .../dashboard` (current-month default, date range picker)

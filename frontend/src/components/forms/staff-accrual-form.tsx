@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
@@ -31,6 +32,11 @@ export function StaffAccrualForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const isTry = payCurrency === "TRY";
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
@@ -63,10 +69,12 @@ export function StaffAccrualForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(
         `/entities/${entityId}/staff/employees/${employeeId}/accruals`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             accrual_date: accrualDate,
@@ -76,6 +84,7 @@ export function StaffAccrualForm({
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Salary accrued");
       onClose();

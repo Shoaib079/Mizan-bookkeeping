@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { ApiError, apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import {
   KNOWN_ENTITY_SETTINGS,
@@ -26,6 +27,7 @@ function defaultWizardDraft(): WizardDraft {
 export default function EntitySettingsPage() {
   const { entityId, setEntityId, refreshEntities } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -88,18 +90,23 @@ export default function EntitySettingsPage() {
   ) {
     const value = enabled ? "true" : "false";
     if (existingKeys.has(key)) {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${targetEntityId}/settings/${key}`, {
         method: "PATCH",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ value }),
       });
     } else {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${targetEntityId}/settings`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key, value }),
       });
     }
+    submitIdempotency.completeSubmit();
   }
 
   async function onCreateRestaurant(event: FormEvent) {
@@ -108,11 +115,14 @@ export default function EntitySettingsPage() {
     setCreating(true);
     setCreateError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const entity = await apiFetch<{ id: string; name: string }>("/entities", {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName.trim() }),
       });
+      submitIdempotency.completeSubmit();
       await refreshEntities();
       setEntityId(entity.id);
       setNewName("");
@@ -135,9 +145,12 @@ export default function EntitySettingsPage() {
     setSeeding(true);
     setSettingsError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/chart-of-accounts/seed`, {
         method: "POST",
+        idempotencyKey,
       });
+      submitIdempotency.completeSubmit();
       await reloadSettings();
       toast("Chart seeded");
     } catch (err) {

@@ -253,3 +253,38 @@ def test_same_user_repeated_key_collapses(
     assert second.status_code == 201
     assert first.json() == second.json()
     assert _expense_count(db_session, entity_id) == 1
+
+
+def test_client_retry_contract_reuses_one_key_not_two(
+    db_session,
+    client: TestClient,
+    idempotency_setup,
+    monkeypatch,
+) -> None:
+    """Slice 11.19 client contract: double-click / network retry must reuse one key.
+
+    The frontend must call beginSubmit() once per submit intent and pass the same
+    Idempotency-Key on retry. A fresh key per fetch (the old api.ts bug) would
+    create two records — this test locks the server-side expectation the UI must meet.
+    """
+    monkeypatch.setattr(settings, "idempotency_enforcement", True)
+    entity_id = idempotency_setup["entity_id"]
+    stable_key = str(uuid.uuid4())
+    url = f"/entities/{entity_id}/expenses"
+    payload = _expense_payload(idempotency_setup)
+    headers = {"Idempotency-Key": stable_key}
+
+    retry_one = client.post(url, json=payload, headers=headers)
+    retry_two = client.post(url, json=payload, headers=headers)
+    fresh_key = client.post(
+        url,
+        json=payload,
+        headers={"Idempotency-Key": str(uuid.uuid4())},
+    )
+
+    assert retry_one.status_code == 201
+    assert retry_two.status_code == 201
+    assert retry_one.json() == retry_two.json()
+    assert _expense_count(db_session, entity_id) == 2
+    assert fresh_key.status_code == 201
+    assert fresh_key.json()["id"] != retry_one.json()["id"]

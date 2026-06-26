@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { useToast } from "@/lib/toast";
 
@@ -27,6 +28,11 @@ type Props = {
 export function EmployeeForm({ open, onClose, employee, onSaved }: Props) {
   const { entityId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const editing = Boolean(employee);
   const [name, setName] = useState("");
   const [payCurrency, setPayCurrency] = useState("TRY");
@@ -54,10 +60,12 @@ export function EmployeeForm({ open, onClose, employee, onSaved }: Props) {
     setError(null);
     try {
       if (editing && employee) {
+        const idempotencyKey = submitIdempotency.beginSubmit();
         await apiFetch(
           `/entities/${entityId}/staff/employees/${employee.id}`,
           {
             method: "PATCH",
+          idempotencyKey,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name,
@@ -66,9 +74,12 @@ export function EmployeeForm({ open, onClose, employee, onSaved }: Props) {
             }),
           },
         );
+        submitIdempotency.completeSubmit();
       } else {
+        const idempotencyKey = submitIdempotency.beginSubmit();
         await apiFetch(`/entities/${entityId}/staff/employees`, {
           method: "POST",
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name,
@@ -76,6 +87,7 @@ export function EmployeeForm({ open, onClose, employee, onSaved }: Props) {
             notes: notes || null,
           }),
         });
+        submitIdempotency.completeSubmit();
       }
       onSaved?.();
       onClose();

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { useToast } from "@/lib/toast";
 
@@ -26,6 +27,11 @@ type Props = {
 export function PartnerForm({ open, onClose, partner, onSaved }: Props) {
   const { entityId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const editing = Boolean(partner);
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
@@ -51,8 +57,10 @@ export function PartnerForm({ open, onClose, partner, onSaved }: Props) {
     setError(null);
     try {
       if (editing && partner) {
+        const idempotencyKey = submitIdempotency.beginSubmit();
         await apiFetch(`/entities/${entityId}/partners/${partner.id}`, {
           method: "PATCH",
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name,
@@ -60,12 +68,16 @@ export function PartnerForm({ open, onClose, partner, onSaved }: Props) {
             is_active: isActive,
           }),
         });
+        submitIdempotency.completeSubmit();
       } else {
+        const idempotencyKey = submitIdempotency.beginSubmit();
         await apiFetch(`/entities/${entityId}/partners`, {
           method: "POST",
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, notes: notes || null }),
         });
+        submitIdempotency.completeSubmit();
       }
       onSaved?.();
       onClose();

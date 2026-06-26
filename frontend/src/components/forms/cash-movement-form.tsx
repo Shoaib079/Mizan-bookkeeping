@@ -12,6 +12,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
@@ -35,6 +36,11 @@ export function CashMovementForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccountLeaf[]>([]);
   const [offsetAccounts, setOffsetAccounts] = useState<ChartAccount[]>([]);
   const [moneyAccountId, setMoneyAccountId] = useState("");
@@ -95,8 +101,10 @@ export function CashMovementForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/cash/movements`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           money_account_id: moneyAccountId,
@@ -108,6 +116,7 @@ export function CashMovementForm({
           actor_id: actorId,
         }),
       });
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Cash movement saved");
       onClose();

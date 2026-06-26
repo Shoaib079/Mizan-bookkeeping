@@ -9,6 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -24,6 +25,11 @@ type Props = {
 export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [platforms, setPlatforms] = useState<DeliveryPlatform[]>([]);
   const [bankAccounts, setBankAccounts] = useState<MoneyAccountOption[]>([]);
   const [platformId, setPlatformId] = useState("");
@@ -77,8 +83,10 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/delivery/settlements`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           delivery_platform_id: platformId,
@@ -89,6 +97,7 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
           actor_id: actorId,
         }),
       });
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Settlement recorded");
       onClose();

@@ -12,6 +12,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -53,6 +54,11 @@ export function ManualExpenseForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
@@ -198,8 +204,10 @@ export function ManualExpenseForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/expenses`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           expense_date: expenseDate,
@@ -212,6 +220,7 @@ export function ManualExpenseForm({
           actor_id: actorId,
         }),
       });
+      submitIdempotency.completeSubmit();
       clearDraft();
       setBaseline(null);
       onClose();

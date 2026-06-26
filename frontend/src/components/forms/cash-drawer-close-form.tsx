@@ -2,13 +2,14 @@
 
 /** Cash drawer EOD close with over/short — Phase 9 Slice 4. */
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type { CashDrawerSessionRead } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
@@ -29,6 +30,11 @@ export function CashDrawerCloseForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [countedText, setCountedText] = useState("");
   const [description, setDescription] = useState("Cash drawer EOD close");
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +54,12 @@ export function CashDrawerCloseForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(
         `/entities/${entityId}/cash/drawer-sessions/${session.id}/close`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             counted_balance_kurus: countedKurus,
@@ -60,6 +68,7 @@ export function CashDrawerCloseForm({
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       onClosed?.();
       toast("Drawer closed");
       onClose();

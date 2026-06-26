@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 
@@ -27,6 +28,11 @@ export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [moneyAccountId, setMoneyAccountId] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -63,10 +69,12 @@ export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
       body.append("file", file);
       body.append("money_account_id", moneyAccountId);
       body.append("actor_id", actorId);
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const intake = await apiFetch<ExpenseReceiptRead>(
         `/entities/${entityId}/expense-receipts`,
-        { method: "POST", body },
+        { method: "POST", body, idempotencyKey },
       );
+      submitIdempotency.completeSubmit();
       onClose();
       setFile(null);
       toast("Receipt uploaded");

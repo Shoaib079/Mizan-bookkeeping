@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**Phase 11 Slice 11.19 — Stable idempotency keys (money-critical):** New `useSubmitIdempotency()` hook — one stable `Idempotency-Key` per submit intent (`beginSubmit` / `completeSubmit` / `resetSubmit`). Removed per-call `randomUUID()` auto-gen from `apiFetch`; all 39 mutation surfaces pass explicit keys (money forms, review confirms, statement classify, opening balances, CRUD/uploads/settings). Vitest: `use-submit-idempotency.test.ts` (3 tests). Backend: `test_client_retry_contract_reuses_one_key_not_two`. **558 pytest green**; frontend build green; **10 vitest**. Tag `v0.69.10-stable-idempotency-key`. **Owner sign-off PENDING.** **Next:** Phase 11.20 entity-switch reset.
+
 **Phase 11 Slice 11.3 — Numeric-only money inputs:** Shared `MoneyInput` (TRY) with `inputMode="decimal"`, paste/keystroke sanitization, optional live preview. Strict `parseTryToKurus` + `sanitizeTryInput` — integer kuruş parsing aligned with Turkish rules; rejects garbage (e.g. `"12,3a"` no longer corrupts to 1230). Migrated all TRY amount fields across money forms and review screens (manual expense/sales, POS/delivery/receipt review, payments, transfers, cash movement, opening balances, FX, delivery). Vitest: `money.test.ts` (7 tests). **557 pytest green**; frontend build green. Tag `v0.68.2-money-input`. **Next:** Phase 11.19.
 
 ## 2026-06-25

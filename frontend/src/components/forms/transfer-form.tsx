@@ -12,6 +12,7 @@ import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
@@ -35,6 +36,11 @@ export function TransferForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [accounts, setAccounts] = useState<MoneyAccountLeaf[]>([]);
   const [fromId, setFromId] = useState("");
   const [toId, setToId] = useState("");
@@ -98,8 +104,10 @@ export function TransferForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/banking/transfers`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           from_money_account_id: fromId,
@@ -110,6 +118,7 @@ export function TransferForm({
           actor_id: actorId,
         }),
       });
+      submitIdempotency.completeSubmit();
       onTransferred?.();
       toast("Transfer recorded");
       onClose();

@@ -22,22 +22,34 @@ export function setAuthHeaderProvider(provider: AuthHeaderProvider | null) {
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-function mutationHeaders(init?: RequestInit): Record<string, string> {
+function hasIdempotencyKey(headers: RequestInit["headers"]): boolean {
+  if (!headers) return false;
+  if (headers instanceof Headers) return headers.has("Idempotency-Key");
+  if (Array.isArray(headers)) {
+    return headers.some(
+      ([name]) => name.toLowerCase() === "idempotency-key",
+    );
+  }
+  return Object.keys(headers).some(
+    (name) => name.toLowerCase() === "idempotency-key",
+  );
+}
+
+export type ApiFetchInit = RequestInit & {
+  /** Caller-supplied stable key for this submit intent (mutations only). */
+  idempotencyKey?: string;
+};
+
+function resolveIdempotencyKey(
+  init?: ApiFetchInit,
+): Record<string, string> {
   const method = (init?.method ?? "GET").toUpperCase();
   if (!MUTATION_METHODS.has(method)) return {};
-  const existing = init?.headers;
-  if (existing instanceof Headers && existing.has("Idempotency-Key")) {
-    return {};
+  if (init?.idempotencyKey) {
+    return { "Idempotency-Key": init.idempotencyKey };
   }
-  if (
-    existing &&
-    !(existing instanceof Headers) &&
-    !Array.isArray(existing) &&
-    "Idempotency-Key" in existing
-  ) {
-    return {};
-  }
-  return { "Idempotency-Key": crypto.randomUUID() };
+  if (hasIdempotencyKey(init?.headers)) return {};
+  return {};
 }
 
 async function parseError(response: Response): Promise<string> {
@@ -53,15 +65,17 @@ async function parseError(response: Response): Promise<string> {
 
 export async function apiFetch<T>(
   path: string,
-  init?: RequestInit,
+  init?: ApiFetchInit,
 ): Promise<T> {
+  const { idempotencyKey: _key, ...fetchInit } = init ?? {};
+  void _key;
   const authHeaders = authHeaderProvider ? await authHeaderProvider() : {};
   const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
+    ...fetchInit,
     headers: {
       ...authHeaders,
-      ...mutationHeaders(init),
-      ...(init?.headers ?? {}),
+      ...resolveIdempotencyKey(init),
+      ...(fetchInit.headers ?? {}),
     },
   });
   if (!response.ok) {

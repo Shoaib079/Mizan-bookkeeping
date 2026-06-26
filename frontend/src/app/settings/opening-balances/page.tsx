@@ -22,6 +22,7 @@ import { Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useFormDraft } from "@/lib/form-draft";
 import { useEntity } from "@/lib/entity-context";
 import {
@@ -144,6 +145,7 @@ function openingBalanceLineHint(line: OpeningBalanceLineDraft): string | null {
 export default function OpeningBalancesPage() {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const [wizardSteps, setWizardSteps] = useState<string[]>([]);
   const [chartCount, setChartCount] = useState<number | null>(null);
   const [obAccounts, setObAccounts] = useState<OpeningBalanceAccount[]>([]);
@@ -313,9 +315,12 @@ export default function OpeningBalancesPage() {
     setSeeding(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/chart-of-accounts/seed`, {
         method: "POST",
+        idempotencyKey,
       });
+      submitIdempotency.completeSubmit();
       await loadRefs();
       toast("Chart seeded");
     } catch (err) {
@@ -334,14 +339,17 @@ export default function OpeningBalancesPage() {
     setPosted(null);
     try {
       const payloadLines = lines.map(lineToPayload);
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const res = await apiFetch<OpeningBalanceValidateResponse>(
         `/onboarding/entities/${entityId}/opening-balances/validate`,
         {
           method: "POST",
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lines: payloadLines }),
         },
       );
+      submitIdempotency.completeSubmit();
       setPreview(res.journal_lines);
       setPreviewMessage(res.message);
       toast("Balances validated — review preview below");
@@ -363,10 +371,12 @@ export default function OpeningBalancesPage() {
     setError(null);
     try {
       const payloadLines = lines.map(lineToPayload);
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const res = await apiFetch<OpeningBalancePostResponse>(
         `/onboarding/entities/${entityId}/opening-balances/post`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             go_live_date: iso,
@@ -375,6 +385,7 @@ export default function OpeningBalancesPage() {
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       setPosted(res);
       setPreview(res.journal_lines);
       clearDraft();

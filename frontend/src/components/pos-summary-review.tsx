@@ -10,6 +10,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
@@ -30,6 +31,7 @@ type Props = {
 export function PosSummaryReview({ summaryId, onUpdated }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const [summary, setSummary] = useState<PosDailySummary | null>(null);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccountOption[]>([]);
   const [zReportEnabled, setZReportEnabled] = useState(false);
@@ -114,14 +116,17 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
           body.z_report_kurus = zKurus;
         }
       }
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const updated = await apiFetch<PosDailySummary>(
         `/entities/${entityId}/pos/daily-summaries/${summaryId}/confirm`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
       );
+      submitIdempotency.completeSubmit();
       setSummary(updated);
       onUpdated?.();
       if (updated.status === "needs_review") {
@@ -129,6 +134,7 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
           updated.review_reason ??
             "Daily summary needs review before posting.",
         );
+        submitIdempotency.completeSubmit();
       } else {
         toast("Daily sales posted");
       }
@@ -144,14 +150,17 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
     setRejecting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const updated = await apiFetch<PosDailySummary>(
         `/entities/${entityId}/pos/daily-summaries/${summaryId}/reject`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reason: rejectReason || null }),
         },
       );
+      submitIdempotency.completeSubmit();
       setSummary(updated);
       onUpdated?.();
       toast("Summary rejected");

@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -22,6 +23,11 @@ type Props = {
 export function CardSalesForm({ open, onClose, onSaved }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("Card sales batch");
@@ -53,8 +59,10 @@ export function CardSalesForm({ open, onClose, onSaved }: Props) {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/pos/card-sales`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sales_date: salesDate,
@@ -63,6 +71,7 @@ export function CardSalesForm({ open, onClose, onSaved }: Props) {
           actor_id: actorId,
         }),
       });
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Card sales batch saved");
       onClose();

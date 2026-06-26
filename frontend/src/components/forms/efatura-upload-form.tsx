@@ -3,12 +3,13 @@
 /** e-Fatura PDF/XML upload → invoice draft — Phase 9 Slice 3. */
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 
@@ -27,6 +28,11 @@ export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -46,10 +52,12 @@ export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
     try {
       const body = new FormData();
       body.append("file", file);
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const draft = await apiFetch<InvoiceDraftRead>(
         `/entities/${entityId}/invoices/efatura/draft`,
-        { method: "POST", body },
+        { method: "POST", body, idempotencyKey },
       );
+      submitIdempotency.completeSubmit();
       onClose();
       setFile(null);
       toast("Invoice uploaded");

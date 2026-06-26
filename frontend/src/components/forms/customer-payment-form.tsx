@@ -10,6 +10,7 @@ import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import {
@@ -36,6 +37,11 @@ export function CustomerPaymentForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
   const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -93,10 +99,12 @@ export function CustomerPaymentForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(
         `/entities/${entityId}/customers/${customerId}/payments`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             payment_date: paymentDate,
@@ -107,6 +115,7 @@ export function CustomerPaymentForm({
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Payment received");
       onClose();

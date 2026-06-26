@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { ApiError, apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { ENTITY_ROLES, type EntityRole } from "@/lib/settings-types";
 import { useToast } from "@/lib/toast";
@@ -21,6 +22,11 @@ type Props = {
 export function MemberForm({ open, onClose, onSaved }: Props) {
   const { entityId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<EntityRole>("cashier");
@@ -44,19 +50,24 @@ export function MemberForm({ open, onClose, onSaved }: Props) {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const user = await apiFetch<{ id: string }>("/users", {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim(),
           display_name: displayName.trim() || email.trim(),
         }),
       });
+      submitIdempotency.completeSubmit();
       await apiFetch(`/entities/${entityId}/members`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.id, role }),
       });
+      submitIdempotency.completeSubmit();
       onSaved?.();
       onClose();
       toast("Member added");

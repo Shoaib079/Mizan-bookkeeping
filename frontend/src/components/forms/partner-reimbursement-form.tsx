@@ -9,6 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { loadBankAndCashAccounts, type MoneyAccountOption } from "@/lib/load-money-accounts";
@@ -32,6 +33,11 @@ export function PartnerReimbursementForm({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
   const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -77,10 +83,12 @@ export function PartnerReimbursementForm({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(
         `/entities/${entityId}/partners/${partnerId}/reimbursements`,
         {
           method: "POST",
+        idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             payment_date: paymentDate,
@@ -91,6 +99,7 @@ export function PartnerReimbursementForm({
           }),
         },
       );
+      submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Reimbursement recorded");
       onClose();
