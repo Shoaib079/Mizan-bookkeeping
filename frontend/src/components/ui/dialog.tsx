@@ -32,10 +32,14 @@ export function Dialog({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const focusedOnOpenRef = useRef(false);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
 
   useEffect(() => {
-    if (!open) setDiscardConfirmOpen(false);
+    if (!open) {
+      focusedOnOpenRef.current = false;
+      setDiscardConfirmOpen(false);
+    }
   }, [open]);
 
   const requestClose = useCallback(() => {
@@ -87,13 +91,17 @@ export function Dialog({
     }
 
     window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, requestClose, discardConfirmOpen]);
+
+  useEffect(() => {
+    if (!open || focusedOnOpenRef.current) return;
+    focusedOnOpenRef.current = true;
     const firstField = panelRef.current?.querySelector<HTMLElement>(
       "input:not([disabled]), select:not([disabled]), textarea:not([disabled])",
     );
     window.setTimeout(() => firstField?.focus(), 0);
-
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, requestClose, discardConfirmOpen]);
+  }, [open]);
 
   if (!open) return null;
 
