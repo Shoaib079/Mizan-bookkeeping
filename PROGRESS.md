@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.6** — Partner ownership share % |
-| **Last completed slice** | Phase 11 Slice 11.5 — create entity → owner membership (`v0.68.4-entity-create-membership`) |
+| **Active slice** | **11.7** — Unified expense entry (partner-fronted) |
+| **Last completed slice** | Phase 11 Slice 11.6 — partner ownership share % (`v0.68.5-partner-share-pct`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.68.4-entity-create-membership` |
+| **Last tag** | `v0.68.5-partner-share-pct` |
 
 ## Resume point
 
