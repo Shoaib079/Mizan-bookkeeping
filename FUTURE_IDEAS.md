@@ -28,7 +28,7 @@
 - **Bulk actions** on table rows — confirm or categorize many at once.
 - **Right-side slide-over panel** — quick view/entry without leaving a list.
 - **Saved views / filters** per list (started in the preview; expand later).
-- **Activity log / audit trail surfaced as its own report** (ledger audit events exist; dedicated UI/report later).
+- **Audit-events trail surfaced as its own report** (raw `ledger_audit_events` — who/when/action; dedicated UI later). *Note: the **general ledger** "all journal entries" report is NOT this — it's promoted to Phase 11.16.*
 - Extend **period locking** once a month is closed.
 
 ## Banking & automation

@@ -35,6 +35,12 @@ This file governs HOW the app is built. WHAT the app must do lives in `Restauran
 12. **Statement-first banking.** Banking flows start from statements and uploads — not from invented or assumed transactions. Import/classify real bank data first; never fabricate movements to fill gaps.
 13. **Discovery before implementation.** Search and read the codebase and docs before writing new code. Understand what already exists; extend or fix it — do not duplicate.
 14. **ROADMAP.md always current.** Update `ROADMAP.md` after every slice. Do not mark work complete without updating it.
+15. **The UI cannot weaken a core rule (frontend money-flow integrity).** The frontend does not inherit the backend's guarantees automatically — it must honor them explicitly. For **every UI action that posts money or confirms a draft that posts**:
+    - **Stable idempotency key per submit intent** — generate once when the submit starts, **reuse it on retry**, regenerate only after success/new entry. A double-click or network retry must produce **one** record, never two. Never auto-mint a fresh key per network call (that defeats server dedup).
+    - **Integer money parsing only** — parse Turkish input to whole kuruş and **reject** non-numeric/garbage input; never `parseFloat`-and-truncate (it silently corrupts, e.g. `"12,3a" → 1230`).
+    - **Disable on submit** + clear/read-back on success.
+    Each of these needs a test (double-submit → one record; garbage input rejected). (Lesson: 11.18 audit found the UI minting a new idempotency key per call — a real double-record hole on every money form.)
+16. **Entity-switch hygiene.** Every entity-scoped page/form MUST reset its state the moment the active entity changes — clear data, show a skeleton, refetch. Never display or carry one restaurant's data into another's screen, even transiently. (Backend RLS is the backstop, not an excuse for stale UI.)
 
 If a task would require breaking any of these, STOP and ask.
 
@@ -72,10 +78,12 @@ Do NOT commit or tag a slice that has not passed Characterize through Self-audit
 
 1. **Focused tests pass** — tests written for this slice pass.
 2. **Full `pytest` passes** — the entire test suite is green.
-3. **`ROADMAP.md` is updated** — slice status, what was done, what's next.
-4. **Commit/tag is recommended** — only after 1–3 pass; then commit (and tag if appropriate) and push.
+3. **Frontend slices: `npm run build` is green**, and **the feature is actually run** — for any slice that posts money or changes a money-flow/UI behavior, verify it by using it (manual click-through or an e2e/component test), not unit tests alone.
+4. **Tests assert the real user-observable outcome and would FAIL if the feature were removed.** A test that strips, normalizes, or tolerates the very thing under test (e.g. masking a currency symbol, accepting a new idempotency key each call, ignoring stale state) is forbidden — that is a self-passing test, not a test.
+5. **`ROADMAP.md` is updated** — slice status, what was done, what's next.
+6. **Commit/tag is recommended** — only after 1–5 pass; then commit (and tag if appropriate) and push.
 
-A slice is NOT done if any of the above is missing — even if the feature "works" in the UI.
+A slice is NOT done if any of the above is missing. **A green test suite is necessary, not sufficient** — the 11.18 audit found real money bugs (idempotency defeated, entity-switch bleed, date picker, popup dismiss) that all passed unit tests but failed when the app was actually used. "Tests pass" never means "it works" until it has been run.
 
 ---
 

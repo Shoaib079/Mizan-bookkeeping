@@ -182,7 +182,9 @@ Upload/ingestion (+ fingerprint) · AI read · Match & identify · Needs Review 
 
 - TRY cash account: cash sales in; cash expenses out (including tips paid to staff — a tip is a cash expense); FX purchases out; owner draws; etc.
 - Running balance = what should be in the drawer.
-- **End-of-day close:** count the drawer, compare to the expected cash; any difference posts to a **Cash Over/Short** account and the day is locked. (A real Z-report / EOD close — idea borrowed from the previous app.)
+- **Recording cash is not gated by a session (revised 2026-06-26, Phase 11.13):** posting daily sales, cash expenses, or any cash movement must **never require opening or closing a drawer "session."** Entry just debits/credits the cash account. The session is an **optional** convenience for owners who want a formal end-of-day count.
+- **End-of-day close (optional):** if the owner chooses to close a day, they count the drawer, compare to the expected cash; any difference posts to a **Cash Over/Short** account. (A real Z-report / EOD close — idea borrowed from the previous app.)
+- **A closed day is owner-reopenable — no dead-ends (revised 2026-06-26, Phase 11.13):** closing a day must **not** be a one-way trap. A closed drawer day reuses the **same period-lock owner-unlock + audit pattern** (§ soft locks): an owner can reopen with a reason (audited); a cashier cannot. One lock model across the app — cash-drawer close and period locks behave identically.
 
 ---
 

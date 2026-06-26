@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.19** — Stable idempotency key (BLOCKER) |
-| **Last completed slice** | Phase 11 Slice 11.3 — numeric-only money inputs (`v0.68.2-money-input`) |
-| **Last commit/tag** | `v0.68.2-money-input` |
-| **Next up** | **11.19 (idempotency BLOCKER)** → 11.4–11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.5** — Create entity → owner membership |
+| **Last completed slice** | Phase 11 Slice 11.4 — dialog focus fix (`v0.68.3-dialog-focus-fix`) |
+| **Last commit/tag** | `v0.68.3-dialog-focus-fix` |
+| **Next up** | **11.5** → 11.6–11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -731,7 +731,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ## Phase 11 — Pre-go-live product fixes (owner 2026-06-25, audit-driven)
 
-**Status: IN PROGRESS** — **11.1–11.2 done** (`v0.68.0`–`v0.68.1`). Build **before Phase 12 (deployment)**. Order **11.3 → 11.12** (money-critical slices get separate commits/tags + owner sign-off).
+**Status: IN PROGRESS** — **11.1–11.4, 11.19 done** (`v0.68.0`–`v0.68.3`, `v0.69.10`). Build **before Phase 12 (deployment)**. **Next:** 11.5 → 11.18 → 11.20–11.22.
 
 **Purpose:** Close gaps found by adversarial code audit vs `DECISIONS.md` / owner daily workflow — onboarding traps (empty cash picker), post-post corrections, entity setup, and UX bugs — **without** re-litigating Phase 10 or core posting rules.
 
@@ -741,8 +741,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 |---|---------|-----------|----------------|
 | 1 | **Empty cash account picker** | **Partial (11.1)** — new seeds get `"Main Drawer"`; **legacy** entities (chart seeded before `v0.68.0`) still empty; seed API undercounts; forms don't use `defaultMainDrawerId` | **11.1** ✓ + **11.1a** |
 | 2 | Feature toggles wrong timing / locked forever | ~~Create selects entity immediately; toggles create-only (no PATCH)~~ **Done 11.2** — post-create wizard step + PATCH | **11.2 ✓** |
-| 3 | Money fields accept letters | `parseTryToKurus` on submit only | **11.3** |
-| 4 | Dialog steals focus while typing | `dialog.tsx` effect re-runs when `dirty` flips → refocus first field | **11.4** |
+| 3 | Money fields accept letters | `MoneyInput` + strict `parseTryToKurus`; rejects garbage | **Done** in 11.3 |
+| 4 | Dialog steals focus while typing | `focusedOnOpenRef` — focus once on open only | **Done** in 11.4 |
 | 5 | New restaurant invisible with auth on | `POST /entities` does **not** add creator to `entity_memberships` | **11.5** |
 | 6 | Partner share % | `partners` has name/notes only | **11.6** |
 | 7 | Partner expense separate flow | Manual expense = cash only; `expenses-fronted` **API done** (partner detail only) | **11.7** (UI) |
@@ -757,7 +757,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 16 | **No "all entries" ledger view** | `GET .../ledger/entries` (paginated/searchable) exists; **no frontend page**, not in reports/nav. (Distinct from the deferred *audit-events* log in FUTURE_IDEAS.) | **11.16** |
 | 17 | Date field opens calendar **only via icon** | `date-input.tsx` input has no click/focus-to-open; only the trailing icon opens it. Owner wants click-the-field-to-open, app-wide (amends 10.1 "icon-only"). | **11.17** |
 | 18 | Frontend never had an adversarial audit | Backend got Phase 8.6; the UI is surfacing hand-found bugs (items 13–17). Reviewer/owner-led frontend audit. | **11.18** |
-| 19 | **Idempotency key not stable (defeats server dedup)** | `api.ts:40` mints a **new** `crypto.randomUUID()` per call; forms never pass their own → double-click/retry = two different keys = **two ledger entries**. Server dedup only fires on a repeated key. | **11.19** ← BLOCKER, money-critical |
+| 19 | **Idempotency key not stable** | `useSubmitIdempotency()` + explicit keys on 39 surfaces; no auto-mint in `api.ts` | **Done** in 11.19 (owner sign-off pending) |
 | 20 | Entity-switch state bleed | `opening-balances/page.tsx` keeps `lines`/`goLiveDate` across entity change; 7 detail pages (`suppliers/[id]`, `partners/[id]`, `staff/[id]`, `customers/[id]`, `banking/accounts|fx|statements/[id]`) show prior-entity data until refetch. **RLS + account-entity validation backstop an actual leak** — this is stale-state hygiene, not an isolation breach. | **11.20** |
 | 21 | UI not role/setting-aware | Cashier dashboard shows **Net result** (contradicts "cashier can't see P&L"); `partner_view_only` sees full write chrome (backend still 403s — UI cleanliness); `delivery_enabled` off not reflected in nav/New menu. | **11.21** |
 | 22 | Small UI gaps | Expense-receipt review has no **reject** path (API exists); reports landing **swallows API errors** (blank cards); header **"This month"** button is dead. | **11.22** |
@@ -927,15 +927,17 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | **done** |
 | **Suggested tag** | `v0.68.3-dialog-focus-fix` |
 
-**Root cause:** `dialog.tsx` auto-focus effect depends on `requestClose` → refocuses **first** field when `dirty` becomes true.
+**Root cause:** `dialog.tsx` auto-focus effect depended on `requestClose` → refocused **first** field when `dirty` became true.
 
 **Acceptance:**
 
-- [ ] Auto-focus **only on dialog open** (`focusedOnOpenRef`); never on `dirty` / `requestClose` change.
-- [ ] Manual verify: manual expense → focus Item → type/delete → cursor stays in Item.
+- [x] Auto-focus **only on dialog open** (`focusedOnOpenRef`); never on `dirty` / `requestClose` change.
+- [x] Manual verify: manual expense → focus Item → type/delete → cursor stays in Item.
+
+**Done:** Split keyboard trap effect from one-shot open focus; `focusedOnOpenRef` resets when dialog closes.
 
 ---
 
@@ -1269,8 +1271,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.1 | Main cash account on **new** chart seed; Banking hint; OB default |
 | 11.1a | Legacy backfill; seed API count; `defaultMainDrawerId` on forms; New-menu hint |
 | 11.2 | Post-create toggle step; PATCH works; toggles editable later |
-| 11.3 | Money fields reject letters on priority forms |
-| 11.4 | Dialog focus stable while editing |
+| 11.3 | Money fields reject letters on priority forms | **done** (`v0.68.2`) |
+| 11.4 | Dialog focus stable while editing | **done** (`v0.68.3`) |
 | 11.5 | Creator is owner member; entity appears in list |
 | 11.6 | Partner share % on CRUD |
 | 11.7 | Partner-fronted expense from New → Expense |
@@ -1285,7 +1287,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.16 | General-ledger "all entries" report page over existing API; linked + role-gated |
 | 11.17 | Date field opens on click/focus app-wide (icon still works) |
 | 11.18 | Frontend adversarial audit done; each finding fixed + tested; money-critical UI signed off |
-| 11.19 | Stable idempotency key per submit; double-submit/retry → one record (tested); owner sign-off |
+| 11.19 | Stable idempotency key per submit; double-submit/retry → one record (tested); owner sign-off | **done** (`v0.69.10`; sign-off pending) |
 | 11.20 | Entity switch resets all entity-scoped state; no prior-entity data visible (tested) |
 | 11.21 | UI honors role + feature settings (cashier KPIs, view-only chrome, delivery toggle) |
 | 11.22 | Receipt reject UI; reports errors surfaced; dead "This month" button resolved |

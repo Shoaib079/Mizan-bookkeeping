@@ -401,9 +401,19 @@ The `card_sales_batch.gross_amount_kurus` is stored as the full **Z** total (the
 
 **Unchanged:** `post_fx_conversion()` may credit bank **or** cash when FX→TRY (owner-entered TRY received) — separate money movement from FX purchase.
 
-## 2026-06-21 — Cash drawer (Phase 5)
+## 2026-06-26 — Cash drawer: optional session + owner-reopen (Phase 11.13 revision)
 
-**Choice:** `post_cash_movement()` in `core/cash/posting.py` — cash in Dr cash GL / Cr offset; cash out Dr offset / Cr cash GL. Auto-open `cash_drawer_sessions` per `(money_account_id, session_date)` on first movement. `close_cash_drawer_session()` reads GL expected balance, compares owner counted balance; over posts Dr cash / Cr `5400`, short posts Dr `5400` / Cr cash; zero variance = no close journal; session status → closed (no further movements). Reuses Phase 3 `MoneyAccountKind.CASH` under bucket `1000`.
+**Revises the 2026-06-21 Cash drawer decision below.** Owner workflow review found the session model forces a drawer open on every cash entry and **hard-blocks once a day is closed** ("drawer day is closed — no further movements allowed", `daily_summary_posting.py:91`, `cash/posting.py:196`) with **no reopen** — inconsistent with period locks, and a one-way trap.
+
+**Choice:** (1) Daily sales + cash movements **post without requiring or force-opening a session**; the session becomes an **optional** EOD count/reconcile. (2) A **closed** drawer day is **owner-reopenable**, reusing the **exact period-lock owner-unlock + audit pattern** (`period_unlock_reason`, owner-only, audited) — the dead-end "no further movements" block is removed. One lock model across the app.
+
+**Why:** Decisions §14 (revised) — entry must never be gated by a session; closing is optional and reversible by the owner. Money-critical (posting + lock model) → reviewer + owner sign-off.
+
+---
+
+## 2026-06-21 — Cash drawer (Phase 5) *(session-gating + hard day-lock SUPERSEDED 2026-06-26, see above)*
+
+**Choice:** `post_cash_movement()` in `core/cash/posting.py` — cash in Dr cash GL / Cr offset; cash out Dr offset / Cr cash GL. Auto-open `cash_drawer_sessions` per `(money_account_id, session_date)` on first movement. `close_cash_drawer_session()` reads GL expected balance, compares owner counted balance; over posts Dr cash / Cr `5400`, short posts Dr `5400` / Cr cash; zero variance = no close journal; session status → closed (~~no further movements~~ → **owner-reopenable as of 2026-06-26**). Reuses Phase 3 `MoneyAccountKind.CASH` under bucket `1000`.
 
 **Why:** Decisions §14 — running drawer balance via GL; EOD Z-close with over/short and day lock.
 
