@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch, documentUrl } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
+import { isReviewTerminalStatus } from "@/lib/review-status";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatKurus, formatTrDate, parseTryToKurus } from "@/lib/money";
@@ -77,6 +79,8 @@ export function ReceiptReview({ intakeId }: Props) {
   const [serverLines, setServerLines] = useState<EditableLine[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
 
   const editableLines = useMemo(() => toEditableLines(lines), [lines]);
 
@@ -94,7 +98,7 @@ export function ReceiptReview({ intakeId }: Props) {
     entityId,
     formKey: `receipt-review:${intakeId}`,
     value: editableLines,
-    enabled: Boolean(intake && intake.status !== "posted"),
+    enabled: Boolean(intake && !isReviewTerminalStatus(intake.status)),
     isEmpty: isDraftEmpty,
   });
 
@@ -126,7 +130,7 @@ export function ReceiptReview({ intakeId }: Props) {
   }, [load]);
 
   useEffect(() => {
-    if (!intake || intake.status === "posted") return;
+    if (!intake || isReviewTerminalStatus(intake.status)) return;
     window.setTimeout(
       () => document.getElementById("receipt-line-0-item")?.focus(),
       0,
@@ -158,6 +162,32 @@ export function ReceiptReview({ intakeId }: Props) {
     const draft = acceptResume();
     if (!draft) return;
     applyLineDraft(draft);
+  }
+
+  async function onReject() {
+    if (!entityId || !intake) return;
+    setRejecting(true);
+    setError(null);
+    try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
+      const updated = await apiFetch<ExpenseReceipt>(
+        `/entities/${entityId}/expense-receipts/${intakeId}/reject`,
+        {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: rejectReason || null }),
+        },
+      );
+      submitIdempotency.completeSubmit();
+      clearDraft();
+      setIntake(updated);
+      toast("Receipt rejected");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reject failed");
+    } finally {
+      setRejecting(false);
+    }
   }
 
   async function onConfirm(event: FormEvent) {
@@ -207,11 +237,15 @@ export function ReceiptReview({ intakeId }: Props) {
   const expenseAccounts = accounts.filter((a) =>
     ["5200", "5700"].includes(a.code),
   );
+  const isTerminal = isReviewTerminalStatus(intake.status);
 
   return (
     <form onSubmit={onConfirm} className="grid gap-6 lg:grid-cols-2">
       <div className="rounded-lg border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-semibold">Original receipt</h2>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <h2 className="text-sm font-semibold">Original receipt</h2>
+          <StatusBadge status={intake.status} />
+        </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={documentUrl(entityId, intakeId)}
@@ -219,7 +253,7 @@ export function ReceiptReview({ intakeId }: Props) {
           className="max-h-[480px] w-full rounded-md border border-border object-contain"
         />
         <p className="mt-2 text-xs text-muted-foreground">
-          {formatTrDate(intake.expense_date)} · status: {intake.status}
+          {formatTrDate(intake.expense_date)}
         </p>
         {intake.review_reason && (
           <p className="mt-2 text-sm text-warning">{intake.review_reason}</p>
@@ -228,7 +262,7 @@ export function ReceiptReview({ intakeId }: Props) {
 
       <div className="rounded-lg border border-border bg-card p-4">
         <h2 className="mb-3 text-sm font-semibold">Lines</h2>
-        {resumeDraft && intake.status !== "posted" && (
+        {resumeDraft && !isTerminal && (
           <ResumeDraftBanner
             onResume={handleResume}
             onDismiss={declineResume}
@@ -250,7 +284,7 @@ export function ReceiptReview({ intakeId }: Props) {
                       written_item_description: e.target.value,
                     })
                   }
-                  disabled={intake.status === "posted"}
+                  disabled={isTerminal}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -266,7 +300,7 @@ export function ReceiptReview({ intakeId }: Props) {
                       });
                     }}
                     showPreview={false}
-                    disabled={intake.status === "posted"}
+                    disabled={isTerminal}
                   />
                 </div>
                 <div>
@@ -276,7 +310,7 @@ export function ReceiptReview({ intakeId }: Props) {
                     onChange={(e) =>
                       updateLine(index, { expense_account_id: e.target.value })
                     }
-                    disabled={intake.status === "posted"}
+                    disabled={isTerminal}
                   >
                     {expenseAccounts.map((a) => (
                       <option key={a.id} value={a.id}>
@@ -293,11 +327,36 @@ export function ReceiptReview({ intakeId }: Props) {
           ))}
         </div>
         {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
-        <div className="mt-4 flex gap-2">
-          <Button type="submit" disabled={submitting || intake.status === "posted"}>
-            {submitting ? "Posting…" : "Confirm & post"}
-          </Button>
-        </div>
+        {!isTerminal ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button type="submit" disabled={submitting || rejecting}>
+              {submitting ? "Posting…" : "Confirm & post"}
+            </Button>
+            <div className="flex flex-1 flex-wrap items-end gap-2">
+              <div className="min-w-[140px] flex-1">
+                <Label htmlFor="receipt-reject">Reject reason</Label>
+                <Input
+                  id="receipt-reject"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onReject}
+                disabled={rejecting || submitting}
+              >
+                {rejecting ? "Rejecting…" : "Reject"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">
+            This receipt is {intake.status} and cannot be changed.
+          </p>
+        )}
       </div>
     </form>
   );

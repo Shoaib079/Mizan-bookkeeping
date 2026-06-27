@@ -18,6 +18,7 @@ import Link from "next/link";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
 import { apiFetch } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/api-error-message";
 import { buildRangeQuery, currentMonthRange } from "@/lib/date-range";
 import {
   filterDeliveryReportCards,
@@ -123,6 +124,7 @@ function ReportsBody() {
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [range, setRange] = useState(currentMonthRange);
   const [summary, setSummary] = useState<DashboardRead | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -147,6 +149,7 @@ function ReportsBody() {
   const reload = useCallback(async () => {
     if (!entityId) {
       setSummary(null);
+      setSummaryError(null);
       return;
     }
     setLoading(true);
@@ -155,8 +158,12 @@ function ReportsBody() {
         `/entities/${entityId}/dashboard?from=${range.from}&to=${range.to}`,
       );
       setSummary(res);
-    } catch {
+      setSummaryError(null);
+    } catch (err) {
       setSummary(null);
+      setSummaryError(
+        apiErrorMessage(err, "Could not load summary for this period"),
+      );
     } finally {
       setLoading(false);
     }
@@ -177,6 +184,9 @@ function ReportsBody() {
           disabled={!entityId || loading}
           onChange={(from, to) => setRange({ from, to })}
         />
+        {summaryError && (
+          <p className="text-sm text-destructive">{summaryError}</p>
+        )}
         {summary && (
           <div className="flex flex-wrap gap-6 rounded-lg border border-border bg-card px-4 py-3 text-sm">
             <div>

@@ -12,13 +12,13 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.22** — small UI gaps |
-| **Last completed slice** | Phase 11 Slice 11.21 — role/setting-aware UI (`v0.69.12-role-aware-ui`) |
-| **Last commit/tag** | `v0.69.12-role-aware-ui` |
-| **Next up** | **11.22** → Phase 12 |
+| **Active phase** | Phase 12 — Deployment & go-live |
+| **Active slice** | **12.1** — hosting & infrastructure (planned) |
+| **Last completed slice** | Phase 11 Slice 11.22 — small UI gaps (`v0.69.13-ui-gaps`) |
+| **Last commit/tag** | `v0.69.13-ui-gaps` |
+| **Next up** | Phase 12 Slice 1 — hosting & infrastructure |
 
-**The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
+**The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
 ### Do not rebuild (already done — git is source of truth)
 
@@ -731,7 +731,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ## Phase 11 — Pre-go-live product fixes (owner 2026-06-25, audit-driven)
 
-**Status: IN PROGRESS** — **11.1–11.6, 11.19 done** (`v0.68.0`–`v0.68.5`, `v0.69.10`). Build **before Phase 12 (deployment)**. **Next:** 11.7 → 11.18 → 11.20–11.22.
+**Status: COMPLETE** (`v0.69.13-ui-gaps`) — all slices 11.1–11.22 done. **Next:** Phase 12 (deployment).
 
 **Purpose:** Close gaps found by adversarial code audit vs `DECISIONS.md` / owner daily workflow — onboarding traps (empty cash picker), post-post corrections, entity setup, and UX bugs — **without** re-litigating Phase 10 or core posting rules.
 
@@ -1294,14 +1294,21 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | **done** (`v0.69.13-ui-gaps`) |
 | **Suggested tag** | `v0.69.13-ui-gaps` |
 
 **Acceptance:**
 
-- [ ] Expense-receipt review: add a **reject** action (API `POST .../expense-receipts/{id}/reject` exists), mirroring invoice/POS review.
-- [ ] Reports landing: **surface API errors** (`ApiError`) instead of silently blank cards.
-- [ ] Header **"This month"** button: wire to a real date range or remove it.
+- [x] Expense-receipt review: add a **reject** action (API `POST .../expense-receipts/{id}/reject` exists), mirroring invoice/POS review.
+- [x] Reports landing: **surface API errors** (`ApiError`) instead of silently blank cards.
+- [x] Header **"This month"** button: wire to a real date range or remove it.
+
+**Done:**
+
+- `receipt-review.tsx`: reject reason + Reject button with `useSubmitIdempotency`; `StatusBadge`; terminal guard (`posted`/`rejected`).
+- Reports landing: `apiErrorMessage()` helper; destructive error on summary fetch failure; cards still render.
+- Removed dead header **This month** button (date range lives on dashboard/reports pages).
+- Vitest: `api-error-message.test.ts` (3), `review-status.test.ts` (2). **591 pytest green**; **37 vitest**.
 
 ---
 
@@ -1331,9 +1338,9 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.19 | Stable idempotency key per submit; double-submit/retry → one record (tested); owner sign-off | **done** (`v0.69.10`; sign-off **APPROVED 2026-06-27**) |
 | 11.20 | Entity switch resets all entity-scoped state; no prior-entity data visible (tested) |
 | 11.21 | UI honors role + feature settings (cashier KPIs, view-only chrome, delivery toggle) | **done** (`v0.69.12-role-aware-ui`) |
-| 11.22 | Receipt reject UI; reports errors surfaced; dead "This month" button resolved |
+| 11.22 | Receipt reject UI; reports errors surfaced; dead "This month" button resolved | **done** (`v0.69.13-ui-gaps`) |
 
-Then proceed to **Phase 12 — Deployment & go-live**.
+**Phase 11 complete** — proceed to **Phase 12 — Deployment & go-live**.
 
 ---
 

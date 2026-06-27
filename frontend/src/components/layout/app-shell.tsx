@@ -212,7 +212,6 @@ function AppShellInner({
                 ⌘K
               </kbd>
             </Button>
-            <Button variant="secondary">This month</Button>
             {clerkEnabled && <UserButton afterSignOutUrl="/sign-in" />}
           </div>
         </header>
