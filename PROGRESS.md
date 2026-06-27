@@ -49,7 +49,7 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 **Phase 12 Slice 12.6 complete** — owner onboarding & smoke test (`v0.71.8-owner-onboarding-smoke`):
 - `scripts/smoke_onboarding.sh` — entity → OB → member → expense → P&L
 - `DEPLOY.md` §15 owner walkthrough; dashboard create-restaurant CTA
-- **Next:** Owner sign-off — run §15 on staging/production with real Clerk; record first real entity data.
+- **617 pytest green** (+2); frontend build green
 
 **Phase 12 Slice 12.5 complete** — pre-launch security pass (`v0.71.4-prelaunch-security`):
 - `security_dependency_scan.sh` (pip-audit prod deps), `security_secrets_audit.sh`, `security_production_pytest.sh`
