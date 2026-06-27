@@ -44,26 +44,44 @@ export function navGroupContainsPathname(
   return items.some((item) => isNavItemActive(pathname, item));
 }
 
-/** Merge persisted toggles with auto-expand for the active route's group. */
+/** Active collapsible group for a route — at most one, or none (e.g. Dashboard). */
+export function sidebarGroupStateForPathname(
+  pathname: string,
+  settings: EntityNavSettings,
+): SidebarGroupState {
+  for (const label of COLLAPSIBLE_NAV_GROUP_LABELS) {
+    if (navGroupContainsPathname(label, pathname, settings)) {
+      return { [label]: true };
+    }
+  }
+  return {};
+}
+
+/** Initial open group: current route wins; on Dashboard restore single persisted group. */
 export function resolveSidebarGroupState(
   pathname: string,
   settings: EntityNavSettings,
   stored: SidebarGroupState = readSidebarGroupState(),
 ): SidebarGroupState {
-  const state: SidebarGroupState = {};
-  for (const label of COLLAPSIBLE_NAV_GROUP_LABELS) {
-    if (navGroupContainsPathname(label, pathname, settings)) {
-      state[label] = true;
-    } else {
-      state[label] = stored[label] ?? false;
-    }
+  const fromRoute = sidebarGroupStateForPathname(pathname, settings);
+  if (Object.keys(fromRoute).length > 0) {
+    return fromRoute;
   }
-  return state;
+  const openStored = Object.entries(stored).find(([, open]) => open);
+  return openStored ? { [openStored[0]]: true } : {};
 }
 
+/** Accordion toggle — only one section open; re-click closes all. */
 export function toggleSidebarGroupState(
   state: SidebarGroupState,
   groupLabel: string,
 ): SidebarGroupState {
-  return { ...state, [groupLabel]: !state[groupLabel] };
+  if (state[groupLabel]) {
+    return {};
+  }
+  return { [groupLabel]: true };
+}
+
+export function openSidebarGroupCount(state: SidebarGroupState): number {
+  return Object.values(state).filter(Boolean).length;
 }

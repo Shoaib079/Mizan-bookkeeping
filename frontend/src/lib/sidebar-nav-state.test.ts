@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   COLLAPSIBLE_NAV_GROUP_LABELS,
   navGroupContainsPathname,
+  openSidebarGroupCount,
   readSidebarGroupState,
   resolveSidebarGroupState,
   SIDEBAR_NAV_STORAGE_KEY,
+  sidebarGroupStateForPathname,
   toggleSidebarGroupState,
   writeSidebarGroupState,
 } from "@/lib/sidebar-nav-state";
@@ -30,41 +32,64 @@ function stubBrowserStorage() {
   return store;
 }
 
+describe("sidebarGroupStateForPathname", () => {
+  it("opens only the group containing the current route", () => {
+    expect(sidebarGroupStateForPathname("/sales", SETTINGS)).toEqual({ Sales: true });
+    expect(openSidebarGroupCount(sidebarGroupStateForPathname("/sales", SETTINGS))).toBe(
+      1,
+    );
+  });
+
+  it("returns empty on Dashboard (pinned outside groups)", () => {
+    expect(sidebarGroupStateForPathname("/", SETTINGS)).toEqual({});
+  });
+
+  it("replaces entirely on route change — never merges prior groups", () => {
+    const sales = sidebarGroupStateForPathname("/sales", SETTINGS);
+    const banking = sidebarGroupStateForPathname("/banking", SETTINGS);
+    expect(sales).toEqual({ Sales: true });
+    expect(banking).toEqual({ "Cash & bank": true });
+    expect(openSidebarGroupCount({ ...sales, ...banking })).toBe(2);
+    expect(openSidebarGroupCount(banking)).toBe(1);
+    expect(banking.Sales).toBeUndefined();
+  });
+});
+
 describe("resolveSidebarGroupState", () => {
   beforeEach(() => {
     stubBrowserStorage();
   });
 
-  it("auto-expands the group containing the current route", () => {
+  it("auto-expands only the group containing the current route", () => {
     const state = resolveSidebarGroupState("/sales", SETTINGS, {});
-    expect(state.Sales).toBe(true);
-    expect(state["Expenses & suppliers"]).toBe(false);
+    expect(state).toEqual({ Sales: true });
+    expect(openSidebarGroupCount(state)).toBe(1);
   });
 
-  it("restores persisted open groups for non-active sections", () => {
-    const stored = { Reports: true, Settings: false };
-    const state = resolveSidebarGroupState("/sales", SETTINGS, stored);
-    expect(state.Sales).toBe(true);
-    expect(state.Reports).toBe(true);
-    expect(state.Settings).toBe(false);
-  });
-
-  it("allows multiple groups open via persisted state", () => {
-    const stored = { "Cash & bank": true, People: true };
-    const state = resolveSidebarGroupState("/", SETTINGS, stored);
-    expect(state["Cash & bank"]).toBe(true);
-    expect(state.People).toBe(true);
-    expect(state.Sales).toBe(false);
+  it("on Dashboard restores at most one persisted open group", () => {
+    const state = resolveSidebarGroupState("/", SETTINGS, { Reports: true });
+    expect(state).toEqual({ Reports: true });
+    expect(openSidebarGroupCount(state)).toBe(1);
   });
 });
 
 describe("toggleSidebarGroupState", () => {
-  it("flips one group without closing others", () => {
-    const next = toggleSidebarGroupState(
-      { Sales: true, Reports: true },
-      "Reports",
-    );
-    expect(next).toEqual({ Sales: true, Reports: false });
+  it("opens only the clicked group and closes others", () => {
+    const next = toggleSidebarGroupState({ Sales: true }, "Cash & bank");
+    expect(next).toEqual({ "Cash & bank": true });
+    expect(openSidebarGroupCount(next)).toBe(1);
+  });
+
+  it("closes the section when clicking its open header", () => {
+    expect(toggleSidebarGroupState({ Sales: true }, "Sales")).toEqual({});
+  });
+
+  it("never leaves two groups open", () => {
+    let state = toggleSidebarGroupState({}, "Sales");
+    state = toggleSidebarGroupState(state, "Cash & bank");
+    expect(state).toEqual({ "Cash & bank": true });
+    expect(state.Sales).toBeUndefined();
+    expect(openSidebarGroupCount(state)).toBe(1);
   });
 });
 
@@ -87,15 +112,16 @@ describe("localStorage persistence", () => {
     stubBrowserStorage();
   });
 
-  it("writes and reads group state", () => {
-    writeSidebarGroupState({ Sales: true, Settings: false });
-    expect(readSidebarGroupState()).toEqual({ Sales: true, Settings: false });
+  it("persists a single open group", () => {
+    writeSidebarGroupState({ Sales: true });
+    expect(readSidebarGroupState()).toEqual({ Sales: true });
     expect(window.localStorage.getItem(SIDEBAR_NAV_STORAGE_KEY)).toContain("Sales");
+    expect(openSidebarGroupCount(readSidebarGroupState())).toBe(1);
   });
 
   it("survives reload via read after write", () => {
     writeSidebarGroupState({ People: true });
-    expect(readSidebarGroupState().People).toBe(true);
+    expect(readSidebarGroupState()).toEqual({ People: true });
   });
 });
 

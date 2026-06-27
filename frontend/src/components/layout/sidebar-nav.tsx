@@ -13,8 +13,8 @@ import {
   type EntityNavSettings,
 } from "@/lib/app-routes";
 import {
-  navGroupContainsPathname,
   resolveSidebarGroupState,
+  sidebarGroupStateForPathname,
   toggleSidebarGroupState,
   writeSidebarGroupState,
 } from "@/lib/sidebar-nav-state";
@@ -31,23 +31,9 @@ export function SidebarNav({ pathname, settings }: SidebarNavProps) {
   );
 
   useEffect(() => {
-    setOpenGroups((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const group of navGroups) {
-        if (group.label === "Overview") continue;
-        if (navGroupContainsPathname(group.label, pathname, settings)) {
-          if (!next[group.label]) {
-            next[group.label] = true;
-            changed = true;
-          }
-        }
-      }
-      if (changed) {
-        writeSidebarGroupState(next);
-      }
-      return changed ? next : prev;
-    });
+    const next = sidebarGroupStateForPathname(pathname, settings);
+    setOpenGroups(next);
+    writeSidebarGroupState(next);
   }, [pathname, settings]);
 
   function toggleGroup(label: string) {

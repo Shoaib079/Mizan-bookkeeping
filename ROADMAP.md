@@ -1627,6 +1627,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-21 | Sidebar accordion fix | `v0.71.7.1-sidebar-accordion` | True single-open accordion; route replace not merge |
 | 2026-06-21 | Collapsible sidebar sections | `v0.71.7-collapsible-sidebar` | Collapsible nav groups + localStorage; Dashboard pinned; delivery sub-pages → tabs on /delivery |
 | 2026-06-21 | Auto-seed chart on restaurant create | `v0.71.6-auto-seed-chart` | Atomic chart+drawer on create; expense categories 5210–5270; seed UI removed; onboarding → OB → staff → first day; 615 pytest |
 | 2026-06-27 | Phase 12 Slice 12.5 — pre-launch security pass | `v0.71.4-prelaunch-security` | pip-audit deps, secrets audit, production guard pytest, DEPLOY §14 KVKK; CI wired; 611 pytest |
