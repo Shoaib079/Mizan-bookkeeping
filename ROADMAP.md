@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.1** — hosting & infrastructure (planned) |
+| **Active slice** | **12.0** — pre-launch UX (sidebar regroup + onboarding nudge), then 12.1 hosting |
 | **Last completed slice** | Phase 11 Slice 11.22 — small UI gaps (`v0.69.13-ui-gaps`) |
 | **Last commit/tag** | `v0.69.13-ui-gaps` |
-| **Next up** | Phase 12 Slice 1 — hosting & infrastructure |
+| **Next up** | Phase 12 Slice 0 — pre-launch UX (sidebar regroup + onboarding nudge) → 12.1 hosting |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1349,12 +1349,47 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Slice | Status | Notes |
 |-------|--------|-------|
+| 0. Pre-launch UX (sidebar regroup + onboarding nudge) | planned | App code, ship before deploy — see spec below. Non-coder owner's first impression: regroup the flat `Books` nav into plain-language sections; guide first-run setup. No backend change. |
 | 1. Hosting & infrastructure | planned | Provision managed Postgres + Redis + app host + object storage (uploads & backups); set all secrets/env vars; HTTPS/SSL + domain. |
 | 2. Production provisioning | planned | Stand up the DB via canonical `alembic upgrade head` (schema owner + `mizan_app` grants — `v0.67.2`); confirm RLS + immutability triggers; Clerk **production** keys; `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE` off. |
 | 3. Backups live | planned | Scheduled backups to off-site storage; restore-verify in production; alert on failure. |
 | 4. Observability | planned | Error tracking, structured logging, uptime/health checks, basic rate limiting. |
 | 5. Pre-launch security pass | planned | Dependency scan; secrets audit; full suite under production settings; final guard-test run. |
 | 6. Owner onboarding & smoke test | planned | Real restaurant(s), chart, opening balances, users/roles; end-to-end smoke in production; **go live.** |
+
+### Slice 12.0 — Pre-launch UX: sidebar regroup + onboarding nudge
+
+| | |
+|---|---|
+| **Status** | planned (do before deploy; pure frontend) |
+| **Suggested tag** | `v0.70.0-prelaunch-ux` |
+
+**Problem:** The `Books` nav group is a flat ~17-item wall (`app-routes.ts`) — overwhelming for a non-coder owner, with related items scattered. And first-run gives no guidance toward setup.
+
+**Acceptance:**
+
+- [ ] **Regroup the sidebar** (edit `group` labels in `app-routes.ts` + group rendering in `app-shell.tsx`; keep every route + the command palette intact — only the grouping changes):
+  - **Sales** — Sales, Close day, Cards, Delivery (+ Platforms / Reports / Settlements children)
+  - **Expenses & suppliers** — Expenses, Uploads, Suppliers, Payables
+  - **People** — Staff, Partners
+  - **Customers** — Customers, Receivables
+  - **Cash & bank** — Banking, Bank transfers, Cash drawer
+  - **Reports** — Reports, General ledger, Manual journals
+  - **Settings** — Restaurant settings, Opening balances, Members & roles
+- [ ] **Onboarding nudge:** on first run / when the active entity has **no seeded chart** or **no posted opening balances**, show a non-blocking guided checklist (seed chart → opening balances → invite staff → record first day). Dismissable; reflects real state (not a static banner).
+- [ ] Honor 11.21 role-aware chrome (don't show setup/admin steps to non-owners).
+- [ ] Tests: nav renders the new groups; every route still reachable; onboarding checklist appears when chart unseeded / OB not posted and hides once done.
+
+---
+
+**Senior-dev pre-deploy must-dos (fold into the slices above — flagged 2026-06-27):**
+
+- **Staging dry-run first.** Deploy to a prod-like **staging** env and run the full smoke test there before touching production. Don't let prod be the first real deploy.
+- **Real backup→restore drill on managed Postgres.** The 2 skipped backup tests are skipped because `pg_dump`/`pg_restore` aren't in the local PATH — so restore-verify has **never actually run end-to-end**. Before trusting backups, do one real backup → restore into a scratch DB → assert the books tie, on the actual managed Postgres. (Slice 12.3 — make it a real drill, not a checkbox.)
+- **Error monitoring live BEFORE go-live** (Sentry-or-equiv), so the first real bug is visible. (Slice 12.4.)
+- **Data protection (KVKK) note.** The app stores financial + personal data (staff names, supplier/customer VKN). At minimum: encryption at rest, restricted backup-store access (separate account/region), and a known data-deletion path. Conscious decision required before storing real people's data. (Slice 12.5.)
+- **Cold-start onboarding walkthrough as the owner.** Sign up → create restaurant → seed chart → opening balances → invite staff → record a day → run a report. Do it as a first-time non-coder and fix any dead-end. (Slice 12.6.)
+- **Indexes: OK** — entity_id is indexed across tables and journal entries have date/source indexes; no action needed now. Revisit composite report indexes only if a report slows with real volume.
 
 **Phase 12 complete when:** app is live, backed up, monitored, and the owner has recorded real data successfully.
 

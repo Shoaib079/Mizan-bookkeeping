@@ -38,7 +38,7 @@
 - **Smart match suggestions** for settlements and supplier payments.
 
 ## Documents & data
-- ~~**Document archive**~~ → **promoted to v1** (basic searchable archive). *Later:* full text-search *inside* document contents.
+- **Document archive** — *partly done*: per-intake uploads exist + an `/uploads` list page; a **unified searchable archive** (filter by type/supplier/date across all documents) is **deferred** (was out-of-scope in Phase 11). *Later:* that unified archive + full text-search inside document contents.
 - ~~**Duplicate-document detection** via file fingerprints~~ → **implemented** (invoice draft upload). *Later:* near-duplicate / similar-document detection.
 - **Receipt AI learning store** — remember owner corrections (supplier, category, amount) and pre-fill future receipt reads; borrow the pattern from the previous app's learning map.
 - **Backup:** automated backups are **in v1**. *Later:* a polished restore UI and configurable schedules.
