@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+!.env.production.example
 .netlify
 __pycache__/
 .pytest_cache/

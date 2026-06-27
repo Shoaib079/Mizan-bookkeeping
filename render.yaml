@@ -1,0 +1,118 @@
+# Mizan backend — Render Blueprint (Phase 12 Slice 12.1)
+# Apply after provisioning managed Postgres + Redis (see DEPLOY.md).
+# Web + Celery worker + Celery beat share a persistent disk for uploads/backups.
+
+services:
+  - type: web
+    name: mizan-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: false
+    disk:
+      name: mizan-data
+      mountPath: /app/data
+      sizeGB: 10
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: AUTH_ENFORCEMENT
+        value: "true"
+      - key: IDEMPOTENCY_ENFORCEMENT
+        value: "true"
+      - key: CLERK_TEST_MODE
+        value: "false"
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_ADMIN_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: CELERY_RESULT_BACKEND
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_JWKS_URL
+        sync: false
+      - key: CLERK_ISSUER
+        sync: false
+      - key: CLERK_AUDIENCE
+        sync: false
+      - key: UPLOAD_DIR
+        value: /app/data/uploads
+      - key: BACKUP_LOCAL_DIR
+        value: /app/data/backups
+      - key: BACKUP_S3_BUCKET
+        sync: false
+      - key: BACKUP_S3_ENDPOINT_URL
+        sync: false
+      - key: BACKUP_S3_REGION
+        sync: false
+      - key: BACKUP_S3_ACCESS_KEY_ID
+        sync: false
+      - key: BACKUP_S3_SECRET_ACCESS_KEY
+        sync: false
+
+  - type: worker
+    name: mizan-celery-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    autoDeploy: false
+    dockerCommand: celery -A app.workers.celery_app worker --loglevel=info
+    disk:
+      name: mizan-data
+      mountPath: /app/data
+      sizeGB: 10
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_ADMIN_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: CELERY_RESULT_BACKEND
+        sync: false
+      - key: UPLOAD_DIR
+        value: /app/data/uploads
+      - key: BACKUP_LOCAL_DIR
+        value: /app/data/backups
+      - key: BACKUP_S3_BUCKET
+        sync: false
+      - key: BACKUP_S3_ENDPOINT_URL
+        sync: false
+      - key: BACKUP_S3_REGION
+        sync: false
+      - key: BACKUP_S3_ACCESS_KEY_ID
+        sync: false
+      - key: BACKUP_S3_SECRET_ACCESS_KEY
+        sync: false
+
+  - type: worker
+    name: mizan-celery-beat
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    autoDeploy: false
+    dockerCommand: celery -A app.workers.celery_app beat --loglevel=info
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: REDIS_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: CELERY_RESULT_BACKEND
+        sync: false

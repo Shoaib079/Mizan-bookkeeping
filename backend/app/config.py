@@ -7,11 +7,19 @@ Tests/dev set ``AUTH_ENFORCEMENT=false`` and ``CLERK_TEST_MODE=true``.
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine.url import make_url
 
+_DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
+
+
+def parse_cors_origins(value: str) -> list[str]:
+    """Split comma-separated CORS origins; empty segments are dropped."""
+    return [origin.strip() for origin in value.split(",") if origin.strip()]
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_env: str = "development"
+    cors_origins: str = _DEFAULT_CORS_ORIGINS
     database_url: str = "postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan"
     test_database_url: str = "postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan_test"
     database_admin_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres"
@@ -50,6 +58,10 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return parse_cors_origins(self.cors_origins)
 
     @property
     def database_cluster_admin_url(self) -> str:

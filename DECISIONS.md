@@ -2,6 +2,16 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-27 — Production hosting stack (Phase 12 Slice 12.1)
+
+**Choice:** Split hosting by layer — **Netlify** for Next.js frontend (`netlify.toml`, monorepo `base=frontend`); **Render** for FastAPI web + Celery worker + Celery beat (`render.yaml`, `backend/Dockerfile`). Managed **Postgres** (Neon/Supabase) and **Upstash Redis** via env URLs. **S3-compatible** storage (R2/S3) for off-site backup bundles only; **uploads stay on persistent disk** mounted at `/app/data/uploads` on the API host (no cheap Netlify Blobs adapter for runtime uploads).
+
+**CORS:** `CORS_ORIGINS` comma-separated env replaces hardcoded localhost in `main.py` — required for browser calls from Netlify to Render.
+
+**Out of scope this slice:** Production `alembic upgrade head`, Clerk live keys, live deploy — owner steps in `DEPLOY.md`; execution in Slice 12.2.
+
+**Alternatives considered:** Railway (equivalent to Render — documented in DEPLOY.md); Netlify Functions for API (rejected — FastAPI + Celery + pg_dump need a long-running host).
+
 ## 2026-06-24 — Card-tip day ops guidance (Phase 8.8 H4)
 
 **Choice:** When Z ≠ system card, Needs Review `review_reason` explains the owner workflow instead of a generic mismatch line. If Z exceeds system card: on re-confirm, reallocate cash→card so card equals Z (same daily total), record the tip on the expense paper (`Dr 5700 / Cr cash`), then confirm again. Decisions §9 operator note documents the same steps.

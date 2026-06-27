@@ -45,6 +45,7 @@ from app.features.reports.api import router as reports_router
 from app.features.dashboard.api import router as dashboard_router
 from app.features.auth.api import members_router as auth_members_router
 from app.features.auth.api import users_router as auth_users_router
+from app.config import settings
 from app.core.idempotency.middleware import IdempotencyMiddleware
 from app.launch import validate_launch_settings
 
@@ -59,10 +60,7 @@ app = FastAPI(
 app.add_middleware(IdempotencyMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

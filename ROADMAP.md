@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.1** — hosting & infrastructure |
-| **Last completed slice** | Phase 12 Slice 0c — member add-by-email (`v0.70.3-member-add-by-email`) |
-| **Last commit/tag** | `v0.70.3-member-add-by-email` |
-| **Next up** | Phase 12 Slice 12.1 — hosting & infrastructure |
+| **Active slice** | **12.2** — production provisioning |
+| **Last completed slice** | Phase 12 Slice 12.1 — hosting & infrastructure (`v0.71.0-hosting-infrastructure`) |
+| **Last commit/tag** | `v0.71.0-hosting-infrastructure` |
+| **Next up** | Phase 12 Slice 12.2 — production provisioning |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1354,7 +1354,7 @@ Take the tested app to a real, secure production environment and put real data i
 | 0a. UX refinements (top bar, New-menu trim, tips de-special-case) | **done** (`v0.70.1-ux-refinements`) | Remove Daily sales (+ Add expense) from top bar; remove Cash tip + Card sales batch from New menu; tips = any expense (drop forced 5700, full category picker). Migration `051`. |
 | 0b. Modern account menu + switch safeguards | **done** (`v0.70.2-restaurant-switcher-safeguards`) | Top-right account menu (avatar, name+email, account/settings, **Clerk sign out**); restaurant switch moved here with always-visible per-restaurant colour badge, confirm-on-switch, unsaved-work warning, "Recording for: X" on entry forms. Reduces wrong-restaurant entry risk. |
 | 0c. Member management: add existing user to another restaurant by email | **done** (`v0.70.3-member-add-by-email`) | `POST /entities/{id}/members` accepts email (+ optional display_name) — reuses existing user or creates one, then membership; friendly 409 when already a member. `member-form.tsx` single POST. |
-| 1. Hosting & infrastructure | planned | Provision managed Postgres + Redis + app host + object storage (uploads & backups); set all secrets/env vars; HTTPS/SSL + domain. |
+| 1. Hosting & infrastructure | **done** (`v0.71.0-hosting-infrastructure`) | Deployment scaffolding: `netlify.toml`, `backend/Dockerfile`, `render.yaml`, `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`. Owner provisions Postgres, Redis, backend, Netlify, S3. |
 | 2. Production provisioning | planned | Stand up the DB via canonical `alembic upgrade head` (schema owner + `mizan_app` grants — `v0.67.2`); confirm RLS + immutability triggers; Clerk **production** keys; `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE` off. |
 | 3. Backups live | planned | Scheduled backups to off-site storage; restore-verify in production; alert on failure. |
 | 4. Observability | planned | Error tracking, structured logging, uptime/health checks, basic rate limiting. |
@@ -1445,6 +1445,29 @@ Take the tested app to a real, secure production environment and put real data i
 
 ---
 
+### Slice 12.1 — Hosting & infrastructure
+
+| | |
+|---|---|
+| **Status** | **done** (`v0.71.0-hosting-infrastructure`) |
+| **Suggested tag** | `v0.71.0-hosting-infrastructure` |
+
+**Purpose:** Deployment scaffolding + config + docs so the owner can provision managed Postgres, Redis, API host, Netlify frontend, and S3 backups — without running production migrate or live Clerk keys (Slice 12.2).
+
+**Acceptance:**
+
+- [x] `netlify.toml` — monorepo `base=frontend`, Next.js build, security headers, optional API proxy pattern documented
+- [x] `backend/Dockerfile` — production uvicorn image (multi-stage; `postgresql-client` for backups)
+- [x] `render.yaml` — web service (API), Celery worker, Celery beat; env placeholders; health check `/health`; persistent disk for uploads/backups
+- [x] `CORS_ORIGINS` env in `config.py` + `main.py` — comma-separated origins; default localhost dev; dev still works
+- [x] `.env.production.example` — full env catalog (DB, Redis, Clerk, S3 backup, CORS, `APP_ENV=production`, `IDEMPOTENCY_ENFORCEMENT=true`)
+- [x] `DEPLOY.md` — plain-English owner guide; staging-first note; volume requirement for uploads
+- [x] Tests: `test_cors_config.py` (parse + preflight); full pytest green; frontend `npm run build` green
+
+**Out of scope (12.2):** prod `alembic upgrade head`, Clerk production keys flip, live smoke test.
+
+---
+
 **Senior-dev pre-deploy must-dos (fold into the slices above — flagged 2026-06-27):**
 
 - **Staging dry-run first.** Deploy to a prod-like **staging** env and run the full smoke test there before touching production. Don't let prod be the first real deploy.
@@ -1489,7 +1512,8 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| 2026-06-25 | Phase 11.1a plan (docs) | `v0.68.0.1-phase11-1a-roadmap` | Adversarial review gaps A–D; slice after 11.2; 11.2 marked in progress |
+| 2026-06-27 | Phase 12 Slice 12.1 — hosting & infrastructure | `v0.71.0-hosting-infrastructure` | `netlify.toml`, `backend/Dockerfile`, `render.yaml`, `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`; 596 pytest |
+| 2026-06-27 | Phase 12 Slice 0c — member add-by-email | `v0.70.3-member-add-by-email` | Email-based member invite; reuse existing user across restaurants; 592 pytest |
 | 2026-06-25 | Alembic migration grants fix | `v0.67.2-alembic-migration-grants` | `alembic upgrade head` uses schema owner; auto-grant `mizan_app`; 547 pytest |
 | 2026-06-25 | Phase 11 Slice 11.1 — default cash drawer | `v0.68.0-default-money-accounts` | `ensure_default_cash_drawer` on chart seed; Banking hint; OB default drawer; 549 pytest |
 | 2026-06-25 | Phase 11 plan restored | — | Audit-driven pre-go-live slices 11.1–11.12; deployment → Phase 12 |

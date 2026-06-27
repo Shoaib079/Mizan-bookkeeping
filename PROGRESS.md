@@ -7,13 +7,24 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.1** — hosting & infrastructure (planned) |
-| **Last completed slice** | Phase 12 Slice 0c — member add-by-email (`v0.70.3-member-add-by-email`) |
+| **Active slice** | **12.2** — production provisioning (planned) |
+| **Last completed slice** | Phase 12 Slice 12.1 — hosting & infrastructure (`v0.71.0-hosting-infrastructure`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.70.3-member-add-by-email` |
+| **Last tag** | `v0.71.0-hosting-infrastructure` |
 
 ## Resume point
 
+**Phase 12 Slice 12.1 complete** — hosting & infrastructure scaffolding (`v0.71.0-hosting-infrastructure`):
+- `netlify.toml` (frontend base, security headers, optional API proxy)
+- `backend/Dockerfile` (multi-stage uvicorn + postgresql-client)
+- `render.yaml` (web + Celery worker + beat; persistent disk; `/health`)
+- `CORS_ORIGINS` env — comma-separated; default localhost; `test_cors_config.py` (4 tests)
+- `.env.production.example`, `DEPLOY.md` (owner provisioning guide; staging-first)
+- **596 pytest green**; frontend build green; **84 vitest**
+
+**Next:** Phase 12 Slice 12.2 — production provisioning (alembic migrate, Clerk prod keys, staging smoke — do NOT skip staging).
+
+**Phase 12 Slice 0c complete** — member add-by-email (`v0.70.3-member-add-by-email`):
 **Phase 12 Slice 0c complete** — member add-by-email (`v0.70.3-member-add-by-email`):
 - `POST /entities/{id}/members` accepts `email` (+ optional `display_name`) or legacy `user_id`; `invite_member_by_email` reuses existing user or creates one, then membership
 - Friendly 409: "Already a member of this restaurant."
