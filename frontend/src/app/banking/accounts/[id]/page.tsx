@@ -22,6 +22,7 @@ import { apiFetch } from "@/lib/api";
 import type { BankStatementRead, MoneyAccountRead } from "@/lib/banking-types";
 import { formatFxNative } from "@/lib/fx-money";
 import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 
 export default function AccountDetailPage() {
@@ -34,6 +35,17 @@ export default function AccountDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+
+  const resetDetailState = useCallback(() => {
+    setAccount(null);
+    setStatements([]);
+    setLoading(true);
+    setError(null);
+    setUploadOpen(false);
+    setTransferOpen(false);
+  }, []);
+
+  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !accountId) return;
@@ -95,7 +107,7 @@ export default function AccountDetailPage() {
         <p className="text-sm text-muted-foreground">Loading account…</p>
       )}
 
-      {account && (
+      {!loading && account && (
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>

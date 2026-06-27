@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
+import { createEntitySwitchTracker } from "@/lib/use-entity-reset";
 
 type PaginatedResponse<T> = {
   items: T[];
@@ -15,12 +16,23 @@ export function useEntityList<T>(path: string, entityId: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const entityTrackerRef = useRef(createEntitySwitchTracker());
+
+  useLayoutEffect(() => {
+    if (!entityTrackerRef.current.sync(entityId)) return;
+    setItems([]);
+    setTotal(0);
+    setError(null);
+    setForbidden(false);
+    setLoading(Boolean(entityId));
+  }, [entityId]);
 
   const reload = useCallback(async () => {
     if (!entityId) {
       setItems([]);
       setTotal(0);
       setForbidden(false);
+      setLoading(false);
       return;
     }
     setLoading(true);

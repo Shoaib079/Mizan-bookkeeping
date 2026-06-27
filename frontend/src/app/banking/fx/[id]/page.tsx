@@ -35,6 +35,7 @@ import type {
 } from "@/lib/banking-types";
 import { formatFxNative } from "@/lib/fx-money";
 import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 
 export default function FxWalletPage() {
@@ -52,6 +53,21 @@ export default function FxWalletPage() {
   const [correctPurchase, setCorrectPurchase] =
     useState<CorrectableFxPurchaseRow | null>(null);
   const [correctSpend, setCorrectSpend] = useState<CorrectableFxSpendRow | null>(null);
+
+  const resetDetailState = useCallback(() => {
+    setAccount(null);
+    setBalance(null);
+    setLedger([]);
+    setLoading(true);
+    setError(null);
+    setPurchaseOpen(false);
+    setConvertOpen(false);
+    setSpendOpen(false);
+    setCorrectPurchase(null);
+    setCorrectSpend(null);
+  }, []);
+
+  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !accountId) return;
@@ -110,7 +126,7 @@ export default function FxWalletPage() {
         <p className="text-sm text-muted-foreground">Loading wallet…</p>
       )}
 
-      {balance && account && (
+      {!loading && balance && account && (
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>

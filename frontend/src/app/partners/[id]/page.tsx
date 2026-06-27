@@ -24,6 +24,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { partnerMovementLabels } from "@/lib/subledger-labels";
 
@@ -56,6 +57,19 @@ export default function PartnerDetailPage() {
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [reimburseOpen, setReimburseOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
+
+  const resetDetailState = useCallback(() => {
+    setPartner(null);
+    setLedger(null);
+    setLoading(true);
+    setError(null);
+    setEditOpen(false);
+    setExpenseOpen(false);
+    setReimburseOpen(false);
+    setCorrectEntry(null);
+  }, []);
+
+  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !partnerId) return;
@@ -104,7 +118,7 @@ export default function PartnerDetailPage() {
         <p className="text-sm text-muted-foreground">Loading partner…</p>
       )}
 
-      {partner && ledger && (
+      {!loading && partner && ledger && (
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>

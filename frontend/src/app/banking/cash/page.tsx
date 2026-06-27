@@ -30,6 +30,7 @@ import type {
   CashDrawerSessionRead,
 } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 
 export default function CashDrawerPage() {
@@ -46,6 +47,23 @@ export default function CashDrawerPage() {
   const [reopenReason, setReopenReason] = useState("");
   const [reopenError, setReopenError] = useState<string | null>(null);
   const [reopening, setReopening] = useState(false);
+
+  const resetPageState = useCallback(() => {
+    setSessions([]);
+    setSelectedId(null);
+    setDetail(null);
+    setLoading(true);
+    setError(null);
+    setMovementOpen(false);
+    setCloseOpen(false);
+    setCloseDayOpen(false);
+    setReopenOpen(false);
+    setReopenReason("");
+    setReopenError(null);
+    setReopening(false);
+  }, []);
+
+  useEntitySwitchReset(entityId, resetPageState);
 
   const reloadSessions = useCallback(async () => {
     if (!entityId) return;

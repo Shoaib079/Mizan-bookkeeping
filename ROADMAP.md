@@ -1200,8 +1200,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned — **owner runs the audit (fresh Cursor agent); reviewer/owner reviews** (not a builder self-audit) |
-| **Suggested tag** | `v0.69.9-frontend-audit` (fixes tagged per finding) |
+| **Status** | **done** — owner audit complete (2026-06-27); docs-only closure (findings tracked in slices 11.17–11.22; no separate audit-fix tag) |
+| **Suggested tag** | `v0.69.9-frontend-audit` (only if audit produced standalone fix commits — not used) |
 
 **Purpose:** The backend got the Phase 8.6 adversarial audit; the frontend never did, and the owner is finding UI bugs by hand (items 13–17). Run the same kind of independent, read-only, "assume it's broken" pass over the frontend, then fix + permanent test per gap (§2a meta-rule).
 
@@ -1209,9 +1209,9 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 **Acceptance:**
 
-- [ ] Findings logged here (no duplicates — items 13–17 are already captured; the audit adds *new* ones).
-- [ ] Each confirmed bug → fix + a permanent test (component/e2e).
-- [ ] Money-critical UI flows (anything that posts) → owner sign-off.
+- [x] Findings logged here (no duplicates — items 13–17 are already captured; the audit adds *new* ones).
+- [x] Each confirmed bug → fix + a permanent test (component/e2e) — tracked in slices 11.17–11.22.
+- [x] Money-critical UI flows (anything that posts) → owner sign-off (11.19 approved).
 
 ---
 
@@ -1245,16 +1245,23 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | **done** |
 | **Suggested tag** | `v0.69.11-entity-switch-reset` |
 
 **Problem:** Switching the active restaurant leaves stale state: `opening-balances/page.tsx` keeps `lines`/`goLiveDate`; detail pages (`suppliers/[id]`, `partners/[id]`, `staff/[id]`, `customers/[id]`, `banking/accounts|fx|statements/[id]`) show the prior entity's data until the refetch lands. (Backend RLS + account-entity validation prevent an actual cross-entity post/leak — this is state hygiene, not an isolation breach.)
 
+**Done:**
+
+- `useEntitySwitchReset()` + `useEntityResetKey()` / `createEntitySwitchTracker()` in `use-entity-reset.ts` — synchronous reset via `useLayoutEffect` before paint.
+- `useEntityList` clears items immediately on entity change (before fetch completes).
+- Wired ROADMAP-listed pages + `cards/page.tsx`, `banking/cash/page.tsx`.
+- Vitest: `use-entity-reset.test.ts` (4 tests). `useFormDraft` already keys by entityId — no bleed.
+
 **Acceptance:**
 
-- [ ] On `entityId` change, every entity-scoped page/form **resets its state immediately** (clear data → skeleton → fresh fetch); forms clear or reload the entity-scoped draft.
-- [ ] Tests: switch entity → no prior-entity rows visible; opening-balance lines reset.
-- [ ] Prefer a shared hook/pattern so new pages get it for free.
+- [x] On `entityId` change, every entity-scoped page/form **resets its state immediately** (clear data → skeleton → fresh fetch); forms clear or reload the entity-scoped draft.
+- [x] Tests: switch entity → no prior-entity rows visible; opening-balance lines reset.
+- [x] Prefer a shared hook/pattern so new pages get it for free.
 
 ---
 

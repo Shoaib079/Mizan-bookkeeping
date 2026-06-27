@@ -12,6 +12,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import type { BankStatementRead } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate } from "@/lib/money";
 
 export default function StatementDetailPage() {
@@ -21,6 +22,14 @@ export default function StatementDetailPage() {
   const [statement, setStatement] = useState<BankStatementRead | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const resetDetailState = useCallback(() => {
+    setStatement(null);
+    setLoading(true);
+    setError(null);
+  }, []);
+
+  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !statementId) return;
@@ -90,7 +99,7 @@ export default function StatementDetailPage() {
         <p className="text-sm text-muted-foreground">Loading statement…</p>
       )}
 
-      {statement && (
+      {!loading && statement && (
         <>
           <div className="mb-6 rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-medium">{statement.original_filename}</p>

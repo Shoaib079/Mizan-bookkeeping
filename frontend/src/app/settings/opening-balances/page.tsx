@@ -25,6 +25,7 @@ import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useFormDraft } from "@/lib/form-draft";
 import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import {
   defaultMainDrawerId,
   loadBankAndCashAccounts,
@@ -216,6 +217,29 @@ export default function OpeningBalancesPage() {
   const balanceMismatch =
     hasAccountSides && debitTotal > 0 && creditTotal > 0 && debitTotal !== creditTotal;
   const validateBlocked = hasLineIssues;
+
+  const resetOpeningBalancesState = useCallback(() => {
+    setWizardSteps([]);
+    setChartCount(null);
+    setObAccounts([]);
+    setMoneyAccounts([]);
+    setSuppliers([]);
+    setPartners([]);
+    setCustomers([]);
+    setGoLiveDate("");
+    setLines([newLine()]);
+    setPreview(null);
+    setPreviewMessage(null);
+    setPosted(null);
+    setError(null);
+    setValidating(false);
+    setPosting(false);
+    setSeeding(false);
+    setFocusLineId(null);
+    goLiveFocusedRef.current = false;
+  }, []);
+
+  useEntitySwitchReset(entityId, resetOpeningBalancesState);
 
   const loadRefs = useCallback(async () => {
     if (!entityId) return;

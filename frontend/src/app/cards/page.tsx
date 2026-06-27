@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/data-table";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import type {
   CardSalesBatch,
@@ -37,6 +38,16 @@ export default function CardsPage() {
   const [cardFormOpen, setCardFormOpen] = useState(false);
   const [settleFormOpen, setSettleFormOpen] = useState(false);
   const [clearFormOpen, setClearFormOpen] = useState(false);
+
+  const resetPageState = useCallback(() => {
+    setBatches([]);
+    setSettlements([]);
+    setRecon(null);
+    setLoading(true);
+    setError(null);
+  }, []);
+
+  useEntitySwitchReset(entityId, resetPageState);
 
   const reload = useCallback(async () => {
     if (!entityId) {

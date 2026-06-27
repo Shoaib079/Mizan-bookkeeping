@@ -28,6 +28,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
 
@@ -60,6 +61,20 @@ export default function CustomerDetailPage() {
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableCustomerPaymentRow | null>(null);
   const [correctSale, setCorrectSale] = useState<CorrectableCreditSaleRow | null>(null);
+
+  const resetDetailState = useCallback(() => {
+    setCustomer(null);
+    setLedger(null);
+    setLoading(true);
+    setError(null);
+    setEditOpen(false);
+    setSaleOpen(false);
+    setPaymentOpen(false);
+    setCorrectPayment(null);
+    setCorrectSale(null);
+  }, []);
+
+  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !customerId) return;
@@ -111,7 +126,7 @@ export default function CustomerDetailPage() {
         <p className="text-sm text-muted-foreground">Loading customer…</p>
       )}
 
-      {customer && ledger && (
+      {!loading && customer && ledger && (
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>

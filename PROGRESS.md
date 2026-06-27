@@ -7,12 +7,23 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.18** — frontend adversarial audit |
-| **Last completed slice** | Phase 11 Slice 11.17 — DateInput click-to-open (`v0.69.8-dateinput-click-open`) |
+| **Active slice** | **11.21** — role/setting-aware UI |
+| **Last completed slice** | Phase 11 Slice 11.20 — entity-switch state reset (`v0.69.11-entity-switch-reset`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.8-dateinput-click-open` |
+| **Last tag** | `v0.69.11-entity-switch-reset` |
 
 ## Resume point
+
+**Phase 11 Slice 11.20 complete** — entity-switch state reset (`v0.69.11-entity-switch-reset`):
+- `useEntitySwitchReset()` / `useEntityResetKey()` — clear entity-scoped state before paint on entity change
+- `useEntityList` clears items immediately when entityId changes
+- Wired opening balances + 7 detail pages + cards + cash drawer
+- Vitest: `use-entity-reset.test.ts` (4 tests)
+- **588 pytest green**; frontend build green
+
+**Next:** Phase 11.21 — role/setting-aware UI.
+
+**Phase 11 Slice 11.18 complete** — frontend adversarial audit (owner-led, docs-only closure; findings tracked in slices 11.17–11.22).
 
 **Phase 11 Slice 11.17 complete** — DateInput click-to-open (`v0.69.8-dateinput-click-open`):
 - `date-input.tsx`: click/focus field opens calendar; trailing icon still toggles; typing + Esc/outside-click unchanged
@@ -20,8 +31,6 @@
 - `DESIGN_SYSTEM.md` §5/§10 + ROADMAP 10.1 note updated (amends v0.66.0 icon-only)
 - **588 pytest green**; frontend build green; **16 vitest**
 - Frontend-only — no backend changes
-
-**Next:** Phase 11.18 — frontend adversarial audit (reviewer/owner-led).
 
 **Phase 11 Slice 11.16 complete** — general ledger report (`v0.69.7-ledger-report`):
 - Expanded `/reports/ledger` — date range, description search, source/status filters, pagination (50/page)

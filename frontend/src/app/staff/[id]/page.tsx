@@ -24,6 +24,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { staffMovementLabels } from "@/lib/subledger-labels";
 
@@ -61,6 +62,20 @@ export default function StaffDetailPage() {
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectableStaffLedgerRow | null>(null);
+
+  const resetDetailState = useCallback(() => {
+    setEmployee(null);
+    setLedger(null);
+    setLoading(true);
+    setError(null);
+    setEditOpen(false);
+    setAccrualOpen(false);
+    setAdvanceOpen(false);
+    setPaymentOpen(false);
+    setCorrectEntry(null);
+  }, []);
+
+  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !employeeId) return;
@@ -116,7 +131,7 @@ export default function StaffDetailPage() {
         <p className="text-sm text-muted-foreground">Loading employee…</p>
       )}
 
-      {employee && ledger && (
+      {!loading && employee && ledger && (
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
