@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.12** — Remaining dedicated correction APIs |
-| **Last completed slice** | Phase 11 Slice 11.11 — correction UI + period unlock (`v0.69.2-correction-ui`) |
-| **Last commit/tag** | `v0.69.2-correction-ui` |
-| **Next up** | **11.12** → 11.13–11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.14** — New menu UX |
+| **Last completed slice** | Phase 11 Slice 11.13 — cash drawer optional session (`v0.69.4-cash-drawer-optional-session`) |
+| **Last commit/tag** | `v0.69.4-cash-drawer-optional-session` |
+| **Next up** | **11.14** → 11.15–11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1080,7 +1080,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | | |
 |---|---|
 | **Status** | done |
-| **Money-critical** | Yes — **owner sign-off PENDING** |
+| **Money-critical** | Yes — owner sign-off **APPROVED (2026-06-27)** |
 | **Tag** | `v0.69.3-correction-apis` |
 
 **Problem:** Core helpers exist in `correction.py`; no feature HTTP routes yet (unlike payment/FX correct from Phase 8.5).
@@ -1099,7 +1099,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | done — **owner sign-off PENDING** (money-critical) |
+| **Status** | done — owner sign-off **APPROVED (2026-06-27)** (money-critical) |
 | **Money-critical** | Yes — touches posting + lock model; owner sign-off |
 | **Decisions** | Amend §9 cash drawer (sessions are an **optional EOD reconciliation**, not an entry gate; closed day is owner-reopenable) |
 | **Tag** | `v0.69.4-cash-drawer-optional-session` |
@@ -1301,8 +1301,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.9 | Correct posted daily sales E2E; owner sign-off | **done** (`v0.69.0`) — sign-off **APPROVED (2026-06-27)** |
 | 11.10 | Correct posted expense E2E; owner sign-off | **done** (`v0.69.1`) — sign-off **APPROVED (2026-06-27)** |
 | 11.11 | Correction **UI** for existing Phase 8.5 APIs; period unlock works | **done** (`v0.69.2`) |
-| 11.12 | Remaining correction **HTTP** routes + integration tests green; owner sign-off |
-| 11.13 | Sales/cash post with no forced session; closed day owner-reopenable + audited; owner sign-off |
+| 11.12 | Remaining correction **HTTP** routes + integration tests green; owner sign-off | **done** (`v0.69.3`) — sign-off **APPROVED (2026-06-27)** |
+| 11.13 | Sales/cash post with no forced session; closed day owner-reopenable + audited; owner sign-off | **done** (`v0.69.4`) — sign-off **APPROVED (2026-06-27)** |
 | 11.14 | Daily sales + Add expense one-click; New menu grouped + closes on outside-click/Esc; toggles labelled + verified gating |
 | 11.15 | (optional) Day close-out posts sales + expenses atomically; owner sign-off |
 | 11.16 | General-ledger "all entries" report page over existing API; linked + role-gated |

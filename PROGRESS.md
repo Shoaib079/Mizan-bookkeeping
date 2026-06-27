@@ -20,7 +20,7 @@
 - API: `POST .../drawer-sessions/close-day`, `POST .../{id}/reopen`
 - Frontend: period unlock on cash movement; Reopen + Close drawer day on `/banking/cash`
 - **582 pytest green** (+3); frontend build green
-- **Owner sign-off: PENDING** (money-critical)
+- **Owner sign-off: APPROVED (2026-06-27)** (money-critical)
 
 **Next:** Phase 11.14 — new menu UX (quick actions, grouping, dismiss).
 
@@ -29,10 +29,8 @@
 - Tests: `test_correction_apis_phase11.py` (7 tests)
 - Frontend Correct dialogs on supplier/customer/staff/partner/FX detail ledgers; period unlock via shared hook
 - **579 pytest green** (+7); frontend build green
-- **Owner sign-off: PENDING** (money-critical)
+- **Owner sign-off: APPROVED (2026-06-27)** (money-critical)
 - **Known gap:** staff payment with advance applied → 422 (needs dedicated flow)
-
-**Next:** Phase 11.13 — cash drawer optional session + owner reopen.
 
 **Phase 11 Slice 11.11 complete** — correction UI + period unlock retry (`v0.69.2-correction-ui`):
 - Shared `period-unlock.ts` + `usePeriodUnlockSubmit()` — 422 period lock → owner unlock dialog → retry with `period_unlock_reason`
@@ -161,6 +159,7 @@
 
 ## Recent
 
+- 2026-06-27 — Owner sign-off APPROVED: Phase 11.12, 11.13 (money-critical)
 - 2026-06-27 — Owner sign-off APPROVED: Phase 11.7, 11.9, 11.10, 11.19 (money-critical)
 - 2026-06-25 — Phase 11 Slice 11.1 — default cash drawer on chart seed (`v0.68.0-default-money-accounts`)
 - 2026-06-25 — Phase 10 Slice 10.8 owner sign-off APPROVED
