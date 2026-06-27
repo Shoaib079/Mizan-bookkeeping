@@ -7,6 +7,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_health.py` | API liveness for deploy/dev | pass |
 | `backend/tests/test_money.py` | Integer kuruş, Turkish format, loose parse (Decisions §5) | pass |
 | `frontend/src/lib/money.test.ts` | Strict TRY parse — garbage rejection, Turkish comma/dot rules (CURSOR_RULES §1 rule 15) | pass |
+| `frontend/src/lib/date-input-open.test.ts` | DateInput calendar opens on click only — not on focus (dialog auto-focus; amends 11.17) | pass |
 | `frontend/src/lib/use-submit-idempotency.test.ts` | Stable idempotency key per submit intent — same key on retry, new key after completeSubmit (Slice 11.19) | pass |
 | `backend/tests/test_entity_isolation.py` | Cross-entity isolation — RLS + entity_context | pass |
 | `backend/tests/test_default_chart.py` | Default chart includes Opening Balance Equity; no inventory | pass |

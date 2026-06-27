@@ -18,6 +18,7 @@ import {
   parseDisplayToDate,
   weekdayLabels,
 } from "@/lib/dates";
+import { shouldOpenCalendarOnClick } from "@/lib/date-input-open";
 import { cn } from "@/lib/utils";
 
 export type DateInputProps = {
@@ -43,7 +44,6 @@ export function DateInput({
 }: DateInputProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const suppressOpenOnFocusRef = useRef(false);
   const [open, setOpen] = useState(false);
 
   const selected = parseDisplayToDate(value);
@@ -78,23 +78,13 @@ export function DateInput({
     (date: Date) => {
       onChange(displayFromDate(date));
       setOpen(false);
-      suppressOpenOnFocusRef.current = true;
       inputRef.current?.focus();
-      window.setTimeout(() => {
-        suppressOpenOnFocusRef.current = false;
-      }, 0);
     },
     [onChange],
   );
 
   const openCalendar = useCallback(() => {
-    if (disabled) return;
-    setOpen(true);
-  }, [disabled]);
-
-  const handleInputFocus = useCallback(() => {
-    if (disabled || suppressOpenOnFocusRef.current) return;
-    setOpen(true);
+    if (shouldOpenCalendarOnClick(disabled)) setOpen(true);
   }, [disabled]);
 
   const adjustDay = useCallback(
@@ -161,7 +151,6 @@ export function DateInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onClick={openCalendar}
-        onFocus={handleInputFocus}
         onKeyDown={handleInputKeyDown}
         className={cn(
           "h-9 w-full rounded-md border border-border bg-background py-2 pl-3 pr-9 text-sm",

@@ -470,7 +470,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 **What §10 requires (checklist when done):**
 
 - [x] One shared `frontend/src/components/ui/date-input.tsx` (+ minimal popover; token-styled).
-- [x] Field always **typable**; **click/focus field or** trailing **calendar icon** opens **small** month grid — **not** a separate mode toggle (11.17 amends v0.66.0 icon-only open).
+- [x] Field always **typable**; **click field** or trailing **calendar icon** opens **small** month grid — **not** on focus (dialog auto-focus must not pop the calendar; `v0.70.0.1` amends 11.17 focus-open).
 - [x] Pick day → updates display string; invalid typed date → existing submit-time errors unchanged.
 - [x] Default today on new forms; pre-fill document date on `pos-summary-review` when summary loads.
 - [x] Arrow keys change day **while popover open**.
@@ -755,7 +755,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 14 | Daily drivers buried / New menu flat + sticky / toggles unclear | "Daily sales (manual)" (cash+card, **already built**) + "Manual expense" live only inside the **flat 9-item** New dropdown; the dropdown **does not close on outside click** (`new-menu.tsx` has no mousedown handler — unlike `combobox.tsx`/`date-input.tsx` which do); same gap in `command-palette.tsx` + entity switcher; toggles editable + **labelled** (`settings-types.ts:35-47`, confirmed by 11.18 audit) — 11.14 only verifies each gates the right form | **11.14** |
 | 15 | No single end-of-day entry | One day = many separate modals (sales, then each expense) | **11.15** ✓ |
 | 16 | **No "all entries" ledger view** | ~~`GET .../ledger/entries` exists; no frontend page~~ → `/reports/ledger` full GL report | **11.16** ✓ |
-| 17 | Date field opens calendar **only via icon** | ~~`date-input.tsx` input has no click/focus-to-open~~ → click/focus field or icon opens popover; no reopen after pick (11.17) | **11.17** ✓ |
+| 17 | Date field opens calendar **only via icon** | ~~`date-input.tsx` input has no click/focus-to-open~~ → click field or icon opens popover; not on focus (`v0.70.0.1` amends 11.17) | **11.17** ✓ |
 | 18 | Frontend never had an adversarial audit | Backend got Phase 8.6; the UI is surfacing hand-found bugs (items 13–17). Reviewer/owner-led frontend audit. | **11.18** |
 | 19 | **Idempotency key not stable** | `useSubmitIdempotency()` + explicit keys on 39 surfaces; no auto-mint in `api.ts` | **Done** in 11.19 (owner sign-off **APPROVED 2026-06-27**) |
 | 20 | Entity-switch state bleed | `opening-balances/page.tsx` keeps `lines`/`goLiveDate` across entity change; 7 detail pages (`suppliers/[id]`, `partners/[id]`, `staff/[id]`, `customers/[id]`, `banking/accounts|fx|statements/[id]`) show prior-entity data until refetch. **RLS + account-entity validation backstop an actual leak** — this is stale-state hygiene, not an isolation breach. | **11.20** |
@@ -823,7 +823,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
   → 11.14 New menu UX: quick actions + grouping + outside-click close + toggle labels
   → 11.15 Day close-out screen (sales + expenses in one)   ← optional / larger
   → 11.16 General ledger / all-entries report (wire existing API)
-  → 11.17 DateInput opens on field click/focus (app-wide; amends 10.1)
+  → 11.17 DateInput click-to-open (app-wide; amends 10.1; click only — not focus)
   → 11.18 Frontend adversarial audit (reviewer/owner-led)   ← captures more UI bugs
   → 11.19 Stable idempotency key   ← BLOCKER, money-critical (DO RIGHT AFTER 11.3)
   → 11.20 Entity-switch state reset (opening balances + detail pages)
@@ -1176,22 +1176,23 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ---
 
-### Slice 11.17 — DateInput opens on field click/focus (app-wide)
+### Slice 11.17 — DateInput click-to-open (app-wide)
 
 | | |
 |---|---|
-| **Status** | done (**amends 10.1** — `v0.66.0` chose icon-only open) |
-| **Suggested tag** | `v0.69.8-dateinput-click-open` |
+| **Status** | done (**amends 10.1** — `v0.66.0` icon-only; **click-only** amend `v0.70.0.1`) |
+| **Tag** | `v0.69.8-dateinput-click-open` (+ amend `v0.70.0.1-dateinput-click-only`) |
 
-**Problem:** `date-input.tsx` opens the calendar only via the trailing icon; clicking/focusing the field does nothing. Owner wants modern click-the-field-to-open behaviour, everywhere.
+**Problem:** `date-input.tsx` opens the calendar only via the trailing icon; clicking the field does nothing. Owner wants modern click-the-field-to-open behaviour, everywhere.
 
 **Acceptance:**
 
-- [x] Clicking or focusing the date field opens the calendar (keep the icon too); typing still works; Esc + outside-click close (already present). One shared component → applies to **all** date fields app-wide automatically.
+- [x] Clicking the date field opens the calendar (keep the icon too); **not** on focus — dialog auto-focus (11.4) must not pop the calendar.
+- [x] Typing still works; Esc + outside-click close (already present). One shared component → applies to **all** date fields app-wide automatically.
 - [x] Don't trap the cursor / don't reopen after pick; verify on manual expense, daily sales, payments, opening balances.
-- [x] Updates the 10.1 "icon-only" note in this roadmap + `DESIGN_SYSTEM.md` §5/§10.
+- [x] Updates the 10.1 note in this roadmap + `DESIGN_SYSTEM.md` §5/§10.
 
-**Done:** `date-input.tsx` — `onClick`/`onFocus` open calendar; `suppressOpenOnFocusRef` prevents reopen loop after `pickDate()` refocus; icon button still toggles. **588 pytest green**; frontend build green; **16 vitest**. **Next:** Phase 11.18 frontend adversarial audit.
+**Done:** `date-input.tsx` — `onClick` opens calendar; trailing icon toggles; no `onFocus` open. Tag `v0.69.8-dateinput-click-open`. Amend `v0.70.0.1`: removed focus-open (conflicted with dialog auto-focus on Daily sales, manual expense, day close-out, etc.).
 
 ---
 
@@ -1332,7 +1333,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.14 | Daily sales + Add expense one-click; New menu grouped + closes on outside-click/Esc; toggles labelled + verified gating |
 | 11.15 | Day close-out posts sales + expenses atomically; owner sign-off | **done** (`v0.69.6`) — sign-off **APPROVED (2026-06-27)** |
 | 11.16 | General-ledger "all entries" report page over existing API; linked + role-gated | **done** (`v0.69.7-ledger-report`) |
-| 11.17 | Date field opens on click/focus app-wide (icon still works) |
+| 11.17 | Date field click-to-open app-wide (not focus-to-open; icon still works) |
 | 11.18 | Frontend adversarial audit done; each finding fixed + tested; money-critical UI signed off |
 | 11.19 | Stable idempotency key per submit; double-submit/retry → one record (tested); owner sign-off | **done** (`v0.69.10`; sign-off **APPROVED 2026-06-27**) |
 | 11.20 | Entity switch resets all entity-scoped state; no prior-entity data visible (tested) |

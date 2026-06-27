@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**DateInput click-only amend (amends 11.17):** Removed `onFocus` calendar open from `date-input.tsx` — dialog auto-focus (11.4) no longer pops the calendar when a date field is first. Click field or trailing icon still opens; typing, Esc, outside-click unchanged. Vitest: `date-input-open.test.ts` (3). Tag `v0.70.0.1-dateinput-click-only`.
+
 **Phase 12 Slice 12.0 — Pre-launch UX (frontend-only):** Regrouped sidebar from flat **Books** into Sales, Expenses & suppliers, People, Customers, Cash & bank, Reports (nested General ledger + Manual journals), Settings (Restaurant settings, Opening balances, Members & roles). Dashboard **Get your books ready** checklist reflects chart seed, opening-balance post, staff invite (admin-only step), and first POS day via existing list APIs; dismissable per entity in localStorage; hidden for cashier/partner_view_only and when all steps complete. Vitest: `app-routes.test.ts` (7), `onboarding.test.ts` (9). **591 pytest green**; frontend build green; **54 vitest** (+17). Tag `v0.70.0-prelaunch-ux`. **Next:** Phase 12.1 hosting & infrastructure.
 
 **Phase 11 Slice 11.22 — Small UI gaps (frontend-only):** Expense receipt review adds reject action (`POST .../expense-receipts/{id}/reject`) with reason field, `useSubmitIdempotency`, `StatusBadge`, and terminal guard for `posted`/`rejected`. Reports landing surfaces `ApiError` message when dashboard summary fetch fails (cards still render). Removed dead header **This month** button. Vitest: `api-error-message.test.ts` (3), `review-status.test.ts` (2). **591 pytest green**; frontend build green; **37 vitest** (+5). Tag `v0.69.13-ui-gaps`. **Phase 11 complete.** **Next:** Phase 12 deployment.
