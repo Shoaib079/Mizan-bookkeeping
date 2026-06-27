@@ -13,6 +13,8 @@ from app.adapters.bank_parsers.row_parse import build_parsed_statement, cell_to_
 from app.adapters.bank_parsers.types import BankParseError, ParsedStatement, ParsedStatementLine
 
 DateFormat = Literal["DD.MM.YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]
+CsvEncoding = Literal["auto", "utf-8-sig", "cp1254", "latin-1"]
+CsvDelimiter = Literal["auto", ";", ",", "\t"]
 
 _DATE_STRPTIME: dict[DateFormat, str] = {
     "DD.MM.YYYY": "%d.%m.%Y",
@@ -37,6 +39,14 @@ class BankImportProfileConfig(BaseModel):
     debit_is_outflow: bool = Field(
         default=True,
         description="When using debit/credit columns, debit amounts are outflows (negative kuruş)",
+    )
+    csv_encoding: CsvEncoding = Field(
+        default="auto",
+        description="CSV text encoding — auto tries utf-8-sig, cp1254, latin-1",
+    )
+    csv_delimiter: CsvDelimiter = Field(
+        default="auto",
+        description="CSV field delimiter — auto-detects ; , or tab",
     )
 
     @model_validator(mode="after")
@@ -81,6 +91,9 @@ def parse_date_with_format(
     raw = cell_to_str(value).strip()
     if not raw:
         raise BankParseError(f"row {row_num}: transaction date is required")
+
+    if date_format in ("DD.MM.YYYY", "DD/MM/YYYY") and " " in raw:
+        raw = raw.split()[0]
 
     strptime_fmt = _DATE_STRPTIME.get(date_format)
     if strptime_fmt is None:
@@ -234,6 +247,8 @@ def parse_with_profile(
         content,
         original_filename=original_filename,
         content_type=content_type,
+        csv_encoding=profile.csv_encoding,
+        csv_delimiter=profile.csv_delimiter,
     )
     validate_profile_against_grid(grid, profile)
 

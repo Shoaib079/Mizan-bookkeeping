@@ -8,7 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig
-from app.adapters.bank_parsers.raw_grid import grid_preview_rows, read_raw_grid
+from app.adapters.bank_parsers.raw_grid import (
+    grid_preview_rows,
+    read_raw_grid,
+    resolve_csv_read_options,
+)
+from app.adapters.bank_parsers.dispatch import resolve_statement_format
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.import_profile_models import BankImportProfile
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
@@ -41,6 +46,8 @@ def profile_to_config(model: BankImportProfile) -> BankImportProfileConfig:
         date_format=model.date_format,  # type: ignore[arg-type]
         decimal_format=model.decimal_format,  # type: ignore[arg-type]
         debit_is_outflow=model.debit_is_outflow,
+        csv_encoding=model.csv_encoding,  # type: ignore[arg-type]
+        csv_delimiter=model.csv_delimiter,  # type: ignore[arg-type]
     )
 
 
@@ -108,6 +115,8 @@ def upsert_import_profile(
         existing.date_format = config.date_format
         existing.decimal_format = config.decimal_format
         existing.debit_is_outflow = config.debit_is_outflow
+        existing.csv_encoding = config.csv_encoding
+        existing.csv_delimiter = config.csv_delimiter
 
         session.commit()
         session.refresh(existing)
@@ -120,12 +129,29 @@ def preview_statement_upload(
     original_filename: str | None = None,
     content_type: str | None = None,
 ) -> BankStatementPreview:
+    fmt = resolve_statement_format(
+        original_filename=original_filename,
+        content_type=content_type,
+    )
+    csv_encoding: str | None = None
+    csv_delimiter: str | None = None
+    read_encoding: str | None = None
+    read_delimiter: str | None = None
+    if fmt == ".csv":
+        _, csv_encoding, csv_delimiter = resolve_csv_read_options(content)
+        read_encoding = csv_encoding
+        read_delimiter = csv_delimiter
+
     grid = read_raw_grid(
         content,
         original_filename=original_filename,
         content_type=content_type,
+        csv_encoding=read_encoding,
+        csv_delimiter=read_delimiter,
     )
     return BankStatementPreview(
         rows=grid_preview_rows(grid, limit=15),
         total_rows=len(grid),
+        csv_encoding=csv_encoding,
+        csv_delimiter=csv_delimiter,
     )

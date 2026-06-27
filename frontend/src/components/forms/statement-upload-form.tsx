@@ -27,6 +27,8 @@ type Props = {
 
 type DateFormat = "DD.MM.YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD";
 type DecimalFormat = "tr" | "us";
+type CsvEncoding = "auto" | "utf-8-sig" | "cp1254" | "latin-1";
+type CsvDelimiter = "auto" | ";" | "," | "\t";
 type AmountMode = "signed" | "debit_credit";
 
 type MappingState = {
@@ -41,6 +43,8 @@ type MappingState = {
   creditCol: number | null;
   dateFormat: DateFormat;
   decimalFormat: DecimalFormat;
+  csvEncoding: CsvEncoding;
+  csvDelimiter: CsvDelimiter;
   debitIsOutflow: boolean;
   saveProfile: boolean;
 };
@@ -62,6 +66,8 @@ const DEFAULT_MAPPING: MappingState = {
   creditCol: 4,
   dateFormat: "YYYY-MM-DD",
   decimalFormat: "tr",
+  csvEncoding: "auto",
+  csvDelimiter: "auto",
   debitIsOutflow: true,
   saveProfile: true,
 };
@@ -91,6 +97,8 @@ function profileToMapping(profile: BankImportProfileRead): MappingState {
     creditCol: profile.credit_col,
     dateFormat: profile.date_format as DateFormat,
     decimalFormat: profile.decimal_format as DecimalFormat,
+    csvEncoding: (profile.csv_encoding ?? "auto") as CsvEncoding,
+    csvDelimiter: (profile.csv_delimiter ?? "auto") as CsvDelimiter,
     debitIsOutflow: profile.debit_is_outflow,
     saveProfile: true,
   };
@@ -108,6 +116,8 @@ function mappingToProfilePayload(mapping: MappingState) {
     credit_col: mapping.amountMode === "debit_credit" ? mapping.creditCol : null,
     date_format: mapping.dateFormat,
     decimal_format: mapping.decimalFormat,
+    csv_encoding: mapping.csvEncoding,
+    csv_delimiter: mapping.csvDelimiter,
     debit_is_outflow: mapping.debitIsOutflow,
   };
 }
@@ -217,7 +227,11 @@ export function StatementUploadForm({
       if (profileRes) {
         setMapping(profileToMapping(profileRes));
       } else {
-        setMapping(DEFAULT_MAPPING);
+        setMapping({
+          ...DEFAULT_MAPPING,
+          csvEncoding: (previewRes.csv_encoding ?? "auto") as CsvEncoding,
+          csvDelimiter: (previewRes.csv_delimiter ?? "auto") as CsvDelimiter,
+        });
       }
       setStep("map");
     } catch (err) {
@@ -460,6 +474,42 @@ export function StatementUploadForm({
               >
                 <option value="tr">Turkish (1.234,56)</option>
                 <option value="us">US (1,234.56)</option>
+              </select>
+            </div>
+            <div>
+              <Label>CSV encoding</Label>
+              <select
+                className="mt-1 block w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                value={mapping.csvEncoding}
+                onChange={(e) =>
+                  setMapping((m) => ({
+                    ...m,
+                    csvEncoding: e.target.value as CsvEncoding,
+                  }))
+                }
+              >
+                <option value="auto">Auto-detect</option>
+                <option value="utf-8-sig">UTF-8</option>
+                <option value="cp1254">Windows-1254 (Turkish)</option>
+                <option value="latin-1">Latin-1</option>
+              </select>
+            </div>
+            <div>
+              <Label>CSV delimiter</Label>
+              <select
+                className="mt-1 block w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                value={mapping.csvDelimiter}
+                onChange={(e) =>
+                  setMapping((m) => ({
+                    ...m,
+                    csvDelimiter: e.target.value as CsvDelimiter,
+                  }))
+                }
+              >
+                <option value="auto">Auto-detect</option>
+                <option value=";">Semicolon (;)</option>
+                <option value=",">Comma (,)</option>
+                <option value={"\t"}>Tab</option>
               </select>
             </div>
           </div>

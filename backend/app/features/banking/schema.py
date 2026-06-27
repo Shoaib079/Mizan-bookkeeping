@@ -155,6 +155,8 @@ class BankImportProfileRead(BaseModel):
     date_format: str
     decimal_format: str
     debit_is_outflow: bool
+    csv_encoding: str = "auto"
+    csv_delimiter: str = "auto"
     updated_at: datetime
 
 
@@ -170,11 +172,15 @@ class BankImportProfileUpsert(BaseModel):
     date_format: str
     decimal_format: str = "tr"
     debit_is_outflow: bool = True
+    csv_encoding: str = "auto"
+    csv_delimiter: str = "auto"
 
 
 class BankStatementPreview(BaseModel):
     rows: list[list[str]]
     total_rows: int
+    csv_encoding: str | None = None
+    csv_delimiter: str | None = None
 
 
 class ClassifyStatementLineRequest(BaseModel):

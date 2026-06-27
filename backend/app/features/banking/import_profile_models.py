@@ -39,4 +39,6 @@ class BankImportProfile(EntityScopedMixin, Base):
     date_format: Mapped[str] = mapped_column(String(16), nullable=False)
     decimal_format: Mapped[str] = mapped_column(String(8), nullable=False, default="tr")
     debit_is_outflow: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    csv_encoding: Mapped[str] = mapped_column(String(16), nullable=False, default="auto")
+    csv_delimiter: Mapped[str] = mapped_column(String(8), nullable=False, default="auto")
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)

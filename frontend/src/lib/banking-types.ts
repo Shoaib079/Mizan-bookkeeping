@@ -94,6 +94,8 @@ export type BankStatementRead = {
 export type BankStatementPreview = {
   rows: string[][];
   total_rows: number;
+  csv_encoding: string | null;
+  csv_delimiter: string | null;
 };
 
 export type BankImportProfileRead = {
@@ -111,6 +113,8 @@ export type BankImportProfileRead = {
   date_format: string;
   decimal_format: string;
   debit_is_outflow: boolean;
+  csv_encoding: string;
+  csv_delimiter: string;
   updated_at: string;
 };
 
