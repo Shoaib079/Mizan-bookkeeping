@@ -3,25 +3,17 @@
 /** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6). */
 
 import { Search } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { AccountMenu } from "@/components/layout/account-menu";
 import { EntityBadge } from "@/components/layout/entity-badge";
+import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { NewMenu } from "@/components/new-menu";
 import { QuickActionsProvider, useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/input";
-import {
-  navGroups,
-  isNavChildActive,
-  isNavItemActive,
-  sidebarChildrenForNavItem,
-  filterNavItemsByEntitySettings,
-} from "@/lib/app-routes";
 import { useEntity } from "@/lib/entity-context";
-import { cn } from "@/lib/utils";
 
 export function AppShell({
   children,
@@ -75,63 +67,7 @@ function AppShellInner({
             )}
           </div>
         </div>
-        <nav className="flex-1 space-y-4 p-3">
-          {navGroups.map((group) => {
-            const items = filterNavItemsByEntitySettings(group.items, navSettings);
-            if (items.length === 0) return null;
-            return (
-              <div key={group.label}>
-                <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">
-                  {group.label}
-                </p>
-                <ul className="space-y-0.5">
-                  {items.map((item) => {
-                    const active = isNavItemActive(pathname, item);
-                    const children = sidebarChildrenForNavItem(
-                      item.href,
-                      navSettings,
-                    );
-                    return (
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          className={cn(
-                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent",
-                            active && "bg-sidebar-accent font-medium text-primary",
-                          )}
-                        >
-                          <item.icon className="size-4" />
-                          {item.label}
-                        </Link>
-                        {children.length > 0 && (
-                          <ul className="mt-0.5 space-y-0.5 border-l border-border pl-3 ml-4">
-                            {children.map((child) => {
-                              const childActive = isNavChildActive(pathname, child);
-                              return (
-                                <li key={child.href}>
-                                  <Link
-                                    href={child.href}
-                                    className={cn(
-                                      "block rounded-md px-2 py-1 text-sm hover:bg-sidebar-accent",
-                                      childActive &&
-                                        "bg-sidebar-accent font-medium text-primary",
-                                    )}
-                                  >
-                                    {child.label}
-                                  </Link>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
-        </nav>
+        <SidebarNav pathname={pathname} settings={navSettings} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background px-6">

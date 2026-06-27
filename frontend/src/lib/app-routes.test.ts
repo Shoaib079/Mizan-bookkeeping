@@ -130,6 +130,25 @@ describe("app shell header", () => {
     expect(source).not.toContain("entity-select");
     expect(source).not.toContain("actor-id");
   });
+
+  it("uses collapsible sidebar sections with pinned dashboard", async () => {
+    const shell = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/app-shell.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    const nav = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/sidebar-nav.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(shell).toContain("<SidebarNav");
+    expect(nav).toContain("aria-expanded");
+    expect(nav).toContain("rotate-180");
+    expect(nav).toContain('item.href === "/"');
+  });
 });
 
 describe("account menu", () => {
@@ -204,17 +223,8 @@ describe("entry dialogs recording context", () => {
 });
 
 describe("sidebarChildrenForNavItem", () => {
-  it("nests delivery children when delivery is enabled", () => {
-    const children = sidebarChildrenForNavItem("/delivery", { deliveryEnabled: true });
-    expect(children.map((child) => child.href)).toEqual([
-      "/delivery/platforms",
-      "/delivery/reports",
-      "/delivery/settlements",
-    ]);
-  });
-
-  it("hides delivery children when the module is off", () => {
-    expect(sidebarChildrenForNavItem("/delivery", { deliveryEnabled: false })).toEqual([]);
+  it("does not nest delivery children in the sidebar (in-page tabs instead)", () => {
+    expect(sidebarChildrenForNavItem("/delivery", { deliveryEnabled: true })).toEqual([]);
   });
 
   it("nests report children regardless of delivery setting", () => {

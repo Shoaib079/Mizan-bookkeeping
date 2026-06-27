@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import { DeliverySettlementForm } from "@/components/forms/delivery-settlement-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -28,7 +27,7 @@ export default function DeliverySettlementsPage() {
   const [formOpen, setFormOpen] = useState(false);
 
   return (
-    <AppShell title="Delivery settlements">
+    <>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {entityId
@@ -87,6 +86,6 @@ export default function DeliverySettlementsPage() {
         onClose={() => setFormOpen(false)}
         onSaved={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

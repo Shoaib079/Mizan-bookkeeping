@@ -14,8 +14,8 @@
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
 | **Active slice** | **12.6** — owner onboarding & smoke test |
-| **Last completed slice** | Auto-seed chart on restaurant create (`v0.71.6-auto-seed-chart`) |
-| **Last commit/tag** | `v0.71.6-auto-seed-chart` |
+| **Last completed slice** | Collapsible sidebar sections (`v0.71.7-collapsible-sidebar`) |
+| **Last commit/tag** | `v0.71.7-collapsible-sidebar` |
 | **Next up** | Phase 12 Slice 12.6 — owner onboarding & smoke test |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
@@ -1627,6 +1627,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-21 | Collapsible sidebar sections | `v0.71.7-collapsible-sidebar` | Collapsible nav groups + localStorage; Dashboard pinned; delivery sub-pages → tabs on /delivery |
 | 2026-06-21 | Auto-seed chart on restaurant create | `v0.71.6-auto-seed-chart` | Atomic chart+drawer on create; expense categories 5210–5270; seed UI removed; onboarding → OB → staff → first day; 615 pytest |
 | 2026-06-27 | Phase 12 Slice 12.5 — pre-launch security pass | `v0.71.4-prelaunch-security` | pip-audit deps, secrets audit, production guard pytest, DEPLOY §14 KVKK; CI wired; 611 pytest |
 | 2026-06-27 | Phase 12 Slice 12.4 — observability | `v0.71.3-observability` | Sentry optional DSN, JSON logs, request logging, rate limit middleware, DEPLOY §12; 611 pytest |

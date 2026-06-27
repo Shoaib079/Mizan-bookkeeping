@@ -8,9 +8,9 @@
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
 | **Active slice** | **12.6** — owner onboarding & smoke test |
-| **Last completed slice** | Auto-seed chart on restaurant create (`v0.71.6-auto-seed-chart`) |
+| **Last completed slice** | Collapsible sidebar sections (`v0.71.7-collapsible-sidebar`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.6-auto-seed-chart` |
+| **Last tag** | `v0.71.7-collapsible-sidebar` |
 
 ## Owner blockers (12.5)
 

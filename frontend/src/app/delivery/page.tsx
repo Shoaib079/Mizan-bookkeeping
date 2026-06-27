@@ -7,7 +7,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { DeliverySettlementForm } from "@/components/forms/delivery-settlement-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
@@ -50,42 +49,23 @@ export default function DeliveryPage() {
   }, [reload]);
 
   return (
-    <AppShell title="Delivery">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-2">
-          <Link href="/delivery/platforms">
-            <Button variant="secondary" type="button">
-              Platforms
-            </Button>
-          </Link>
-          <Link href="/delivery/reports">
-            <Button variant="secondary" type="button">
-              Reports
-            </Button>
-          </Link>
-          <Link href="/delivery/settlements">
-            <Button variant="secondary" type="button">
-              Settlements
-            </Button>
-          </Link>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            type="button"
-            disabled={!entityId}
-            onClick={() => setSettleFormOpen(true)}
-          >
-            Record settlement
-          </Button>
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setReportFormOpen(true)}
-          >
-            New report
-          </Button>
-        </div>
+    <>
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+        <Button
+          variant="secondary"
+          type="button"
+          disabled={!entityId}
+          onClick={() => setSettleFormOpen(true)}
+        >
+          Record settlement
+        </Button>
+        <Button
+          type="button"
+          disabled={!entityId}
+          onClick={() => setReportFormOpen(true)}
+        >
+          New report
+        </Button>
       </div>
 
       {!entityId && (
@@ -170,6 +150,6 @@ export default function DeliveryPage() {
         onClose={() => setSettleFormOpen(false)}
         onSaved={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import { DeliveryPlatformForm } from "@/components/forms/delivery-platform-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -39,7 +38,7 @@ export default function DeliveryPlatformsPage() {
   }
 
   return (
-    <AppShell title="Delivery platforms">
+    <>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {entityId
@@ -103,6 +102,6 @@ export default function DeliveryPlatformsPage() {
         platform={editing}
         onSaved={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

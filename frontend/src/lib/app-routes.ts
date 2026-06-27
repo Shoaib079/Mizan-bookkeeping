@@ -188,12 +188,12 @@ export const navGroups = SIDEBAR_GROUP_LABELS.map((label) => ({
   items: primarySidebarItems(label),
 }));
 
-/** Sidebar nested links — delivery children only when the module is on. */
+/** Sidebar nested links — reports children; delivery uses in-page tabs. */
 export function sidebarChildrenForNavItem(
   itemHref: string,
-  settings: EntityNavSettings,
+  _settings: EntityNavSettings,
 ): AppRoute[] {
-  if (itemHref === "/delivery" && !settings.deliveryEnabled) return [];
+  if (itemHref === "/delivery") return [];
   return sidebarChildren(itemHref);
 }
 
