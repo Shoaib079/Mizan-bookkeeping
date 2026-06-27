@@ -77,6 +77,39 @@ export type BankStatementLine = {
   supplier_id: string | null;
   review_reason: string | null;
   journal_entry_id: string | null;
+  classification_source?: string | null;
+  suggestion?: ClassificationSuggestion | null;
+};
+
+export type ClassificationSuggestion = {
+  classification: StatementLineClassification;
+  supplier_id: string | null;
+  reason: string;
+  confidence: string;
+};
+
+export type NeedsReviewStatementLine = BankStatementLine & {
+  money_account_id: string;
+  original_filename: string;
+};
+
+export type StatementLineReview = BankStatementLine & {
+  money_account_id?: string;
+  original_filename?: string;
+};
+
+export type ClassifyStatementLineResult = {
+  line: BankStatementLine;
+  linked_existing_payment: boolean;
+  linked_existing_transfer?: boolean;
+  routed_to_needs_review?: boolean;
+  journal_entry_id: string | null;
+};
+
+export type CreateSupplierFromLineResult = {
+  supplier_id: string;
+  supplier_name: string;
+  line: BankStatementLine;
 };
 
 export type BankStatementRead = {

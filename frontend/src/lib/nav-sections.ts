@@ -81,6 +81,11 @@ export const NAV_SECTIONS: NavSection[] = [
           path.startsWith("/banking/fx/"),
       },
       {
+        href: "/banking/review",
+        label: "Review",
+        match: (path) => path === "/banking/review",
+      },
+      {
         href: "/banking/transfers",
         label: "Transfers",
         match: (path) => path === "/banking/transfers",
@@ -203,6 +208,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/customers/[id]", kind: "drill-down" },
   { pattern: "/receivables", kind: "tab" },
   { pattern: "/banking", kind: "tab" },
+  { pattern: "/banking/review", kind: "tab" },
   { pattern: "/banking/transfers", kind: "tab" },
   { pattern: "/banking/cash", kind: "tab" },
   { pattern: "/banking/accounts/[id]", kind: "drill-down" },

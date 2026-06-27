@@ -234,7 +234,12 @@ function DashboardBody() {
                   <div>
                     <dt className="text-muted-foreground">Bank lines</dt>
                     <dd className="tabular-nums">
-                      {data.needs_review.bank_statement_lines}
+                      <Link
+                        href="/banking/review"
+                        className="text-primary hover:underline"
+                      >
+                        {data.needs_review.bank_statement_lines}
+                      </Link>
                     </dd>
                   </div>
                 )}

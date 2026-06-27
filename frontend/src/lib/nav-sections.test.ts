@@ -65,6 +65,7 @@ const TAB_ONLY_HREFS = [
   "/close-day",
   "/payables",
   "/receivables",
+  "/banking/review",
   "/banking/transfers",
   "/banking/cash",
   "/settings/entity",
@@ -76,8 +77,8 @@ const TAB_ONLY_HREFS = [
 ] as const;
 
 describe("REGISTERED_PAGE_ROUTES", () => {
-  it("lists exactly 45 app pages", () => {
-    expect(REGISTERED_PAGE_ROUTES).toHaveLength(45);
+  it("lists exactly 46 app pages", () => {
+    expect(REGISTERED_PAGE_ROUTES).toHaveLength(46);
   });
 
   it("assigns each route exactly one entry kind", () => {
