@@ -14,6 +14,8 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
 import { formatKurus, formatTry, formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { withPeriodUnlockReason } from "@/lib/period-unlock";
+import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useToast } from "@/lib/toast";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
 
@@ -35,6 +37,7 @@ export function CorrectDailySalesForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const { submitWithPeriodUnlock, PeriodUnlockDialog } = usePeriodUnlockSubmit();
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -114,27 +117,31 @@ export function CorrectDailySalesForm({
     setSubmitting(true);
     setError(null);
     try {
-      const body: Record<string, unknown> = {
-        money_account_id: moneyAccountId,
-        actor_id: actorId,
-        cash_kurus: cashKurus,
-        card_kurus: cardKurus,
-        summary_date: salesDate,
-      };
-      if (zReportEnabled && zReportKurus !== null && zReportKurus > 0) {
-        body.z_report_kurus = zReportKurus;
-      }
-
       const idempotencyKey = submitIdempotency.beginSubmit();
-      const result = await apiFetch<{ status: string }>(
-        `/entities/${entityId}/pos/daily-summaries/${summary.id}/correct`,
-        {
-          method: "POST",
-          idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-      );
+      const result = await submitWithPeriodUnlock(async (periodUnlockReason) => {
+        const body: Record<string, unknown> = withPeriodUnlockReason(
+          {
+            money_account_id: moneyAccountId,
+            actor_id: actorId,
+            cash_kurus: cashKurus,
+            card_kurus: cardKurus,
+            summary_date: salesDate,
+          },
+          periodUnlockReason,
+        );
+        if (zReportEnabled && zReportKurus !== null && zReportKurus > 0) {
+          body.z_report_kurus = zReportKurus;
+        }
+        return apiFetch<{ status: string }>(
+          `/entities/${entityId}/pos/daily-summaries/${summary.id}/correct`,
+          {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          },
+        );
+      });
       submitIdempotency.completeSubmit();
 
       if (result.status !== "posted") {
@@ -155,6 +162,7 @@ export function CorrectDailySalesForm({
   }
 
   return (
+    <>
     <Dialog open={open} title="Correct daily sales" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
@@ -233,5 +241,7 @@ export function CorrectDailySalesForm({
         </Button>
       </form>
     </Dialog>
+    <PeriodUnlockDialog />
+    </>
   );
 }

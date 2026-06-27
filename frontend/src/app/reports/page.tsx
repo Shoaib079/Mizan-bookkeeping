@@ -5,6 +5,7 @@
 import {
   ArrowLeftRight,
   BarChart3,
+  BookOpen,
   FileSpreadsheet,
   Landmark,
   Percent,
@@ -82,6 +83,22 @@ const reportCards: ReportCard[] = [
     icon: BarChart3,
     category: "Business overview",
     financial: true,
+  },
+  {
+    href: "/reports/ledger",
+    title: "Ledger entries",
+    description: "Correct manual journals and bank fees.",
+    icon: BookOpen,
+    category: "Accounting",
+    financial: false,
+  },
+  {
+    href: "/accounting/manual-journals",
+    title: "Manual journals",
+    description: "Posted manual journals — void with audit trail.",
+    icon: BookOpen,
+    category: "Accounting",
+    financial: false,
   },
 ];
 

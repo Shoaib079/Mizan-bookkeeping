@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.11** — Correction UI + period unlock on mutations |
-| **Last completed slice** | Phase 11 Slice 11.10 — correct posted expense (`v0.69.1-correct-expense`) |
-| **Last commit/tag** | `v0.69.1-correct-expense` |
-| **Next up** | **11.11** → 11.12–11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.12** — Remaining dedicated correction APIs |
+| **Last completed slice** | Phase 11 Slice 11.11 — correction UI + period unlock (`v0.69.2-correction-ui`) |
+| **Last commit/tag** | `v0.69.2-correction-ui` |
+| **Next up** | **11.12** → 11.13–11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -749,7 +749,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 8 | Dashboard FX shows TRY cost | API has `native_quantity`; UI uses `try_cost_kurus` | **11.8** |
 | 9 | **Cannot fix posted daily sales** | ~~`PosDailySummary` posted = immutable~~ → `correct_pos_daily_summary()` + HTTP | **11.9** ✓ |
 | 10 | **Cannot fix posted expenses** | ~~`correct_expense_entry()` core only~~ → HTTP + UI | **11.10** ✓ |
-| 11 | Corrections **UI** missing | Supplier/customer payment, FX purchase, manual journal **void**, generic ledger **correct/void** — **HTTP done** (Phase 8.5); **zero** frontend calls; no `period_unlock_reason` in forms | **11.11** (UI only) |
+| 11 | Corrections **UI** missing | ~~Supplier/customer payment, FX purchase, manual journal void, ledger correct — zero frontend~~ | **11.11** ✓ |
 | 12 | Other posted types stuck | Invoice, credit sale, staff, partner, FX conversion/spend — **core helpers only**; no HTTP routes or tests | **11.12** |
 | 13 | **Cash-drawer session trap** | Daily sales + cash movements auto-open a drawer session and **hard-block** when the day is CLOSED (`daily_summary_posting.py:91`, `cash/posting.py:196`) — **no reopen**; inconsistent with period-lock owner-unlock. Expenses bypass sessions. | **11.13** |
 | 14 | Daily drivers buried / New menu flat + sticky / toggles unclear | "Daily sales (manual)" (cash+card, **already built**) + "Manual expense" live only inside the **flat 9-item** New dropdown; the dropdown **does not close on outside click** (`new-menu.tsx` has no mousedown handler — unlike `combobox.tsx`/`date-input.tsx` which do); same gap in `command-palette.tsx` + entity switcher; toggles editable + **labelled** (`settings-types.ts:35-47`, confirmed by 11.18 audit) — 11.14 only verifies each gates the right form | **11.14** |
@@ -817,7 +817,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
   → 11.8 Dashboard FX native display
   → 11.9 Correct posted daily sales          ← done (v0.69.0); owner sign-off **APPROVED (2026-06-27)**
   → 11.10 Expense correction API + UI      ← done (v0.69.1); owner sign-off **APPROVED (2026-06-27)**
-  → 11.11 Correction UI (existing APIs) + period_unlock_reason on mutations
+  → 11.11 Correction UI (existing APIs) + period_unlock_reason on mutations  ← done (v0.69.2)
   → 11.12 Remaining correction APIs (invoice, staff, partner, credit sale, FX conversion/spend)
   → 11.13 Cash-drawer session optional + owner-reopen   ← money-critical (lock model)
   → 11.14 New menu UX: quick actions + grouping + outside-click close + toggle labels
@@ -1059,17 +1059,19 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned (**frontend-only** — correction HTTP routes exist; see inventory above) |
-| **Suggested tag** | `v0.69.2-correction-ui` |
+| **Status** | done |
+| **Tag** | `v0.69.2-correction-ui` |
 
 **Problem:** Backend correct/void routes are live (Phase 8.5); frontend never calls them. No `period_unlock_reason` in any form (API already accepts it on payment/FX correct payloads).
 
 **Acceptance:**
 
-- [ ] UI flows wired to **existing** routes: supplier payment correct, customer payment correct, FX purchase correct, manual journal void (`.../manual-journals/{id}/void`), manual/BANK_FEE correct via `.../ledger/entries/{id}/correct`.
-- [ ] Shared pattern: when API returns 422 period lock, prompt owner for **unlock reason** and retry with `period_unlock_reason`.
-- [ ] **Do not** use raw ledger void for subledger-backed types without dedicated flow.
-- [ ] **Do not redo:** Phase 8.5 correction HTTP layer.
+- [x] UI flows wired to **existing** routes: supplier payment correct, customer payment correct, FX purchase correct, manual journal void (`.../manual-journals/{id}/void`), manual/BANK_FEE correct via `.../ledger/entries/{id}/correct`.
+- [x] Shared pattern: when API returns 422 period lock, prompt owner for **unlock reason** and retry with `period_unlock_reason`.
+- [x] **Do not** use raw ledger void for subledger-backed types without dedicated flow.
+- [x] **Do not redo:** Phase 8.5 correction HTTP layer.
+
+**Done:** Shared `period-unlock.ts` + `usePeriodUnlockSubmit()` hook; correction forms for supplier/customer payment, FX purchase, ledger entry; void manual journal dialog; `/accounting/manual-journals`, `/reports/ledger`; Correct buttons on supplier/customer/FX ledgers; 11.9/11.10 forms updated for period unlock. Vitest: `period-unlock.test.ts` (6 tests). **572 pytest green**; frontend build green; **16 vitest**. **Next:** Phase 11.12 remaining dedicated correction APIs.
 
 ---
 
@@ -1294,7 +1296,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.8 | Dashboard FX shows native currency |
 | 11.9 | Correct posted daily sales E2E; owner sign-off | **done** (`v0.69.0`) — sign-off **APPROVED (2026-06-27)** |
 | 11.10 | Correct posted expense E2E; owner sign-off | **done** (`v0.69.1`) — sign-off **APPROVED (2026-06-27)** |
-| 11.11 | Correction **UI** for existing Phase 8.5 APIs; period unlock works |
+| 11.11 | Correction **UI** for existing Phase 8.5 APIs; period unlock works | **done** (`v0.69.2`) |
 | 11.12 | Remaining correction **HTTP** routes + integration tests green; owner sign-off |
 | 11.13 | Sales/cash post with no forced session; closed day owner-reopenable + audited; owner sign-off |
 | 11.14 | Daily sales + Add expense one-click; New menu grouped + closes on outside-click/Esc; toggles labelled + verified gating |

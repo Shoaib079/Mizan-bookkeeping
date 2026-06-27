@@ -5,6 +5,10 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { CustomerCreditSaleForm } from "@/components/forms/customer-credit-sale-form";
+import {
+  CorrectCustomerPaymentForm,
+  type CorrectableCustomerPaymentRow,
+} from "@/components/forms/correct-customer-payment-form";
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { AppShell } from "@/components/layout/app-shell";
@@ -29,6 +33,7 @@ type LedgerEntry = {
   movement_type: string;
   amount_kurus: number;
   description: string;
+  journal_entry_id: string | null;
 };
 
 type LedgerResponse = {
@@ -48,6 +53,8 @@ export default function CustomerDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [saleOpen, setSaleOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [correctPayment, setCorrectPayment] =
+    useState<CorrectableCustomerPaymentRow | null>(null);
 
   const reload = useCallback(async () => {
     if (!entityId || !customerId) return;
@@ -72,6 +79,7 @@ export default function CustomerDetailPage() {
   }, [entityId, customerId]);
 
   useEffect(() => {
+    setCorrectPayment(null);
     void reload();
   }, [reload]);
 
@@ -145,6 +153,7 @@ export default function CustomerDetailPage() {
                   <DataTableHeaderCell>Type</DataTableHeaderCell>
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  <DataTableHeaderCell>Actions</DataTableHeaderCell>
                 </tr>
               </DataTableHead>
               <DataTableBody>
@@ -160,6 +169,26 @@ export default function CustomerDetailPage() {
                     <DataTableCell>{entry.description}</DataTableCell>
                     <DataTableCell align="right">
                       {formatTry(entry.amount_kurus)}
+                    </DataTableCell>
+                    <DataTableCell align="right">
+                      {entry.movement_type === "payment" &&
+                        entry.journal_entry_id && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-8 px-2"
+                            onClick={() =>
+                              setCorrectPayment({
+                                journal_entry_id: entry.journal_entry_id!,
+                                movement_date: entry.movement_date,
+                                amount_kurus: entry.amount_kurus,
+                                description: entry.description,
+                              })
+                            }
+                          >
+                            Correct
+                          </Button>
+                        )}
                     </DataTableCell>
                   </DataTableRow>
                 ))}
@@ -188,6 +217,13 @@ export default function CustomerDetailPage() {
             customerId={customerId}
             balanceKurus={ledger?.balance_kurus}
             onClose={() => setPaymentOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <CorrectCustomerPaymentForm
+            open={correctPayment !== null}
+            customerId={customerId}
+            payment={correctPayment}
+            onClose={() => setCorrectPayment(null)}
             onSaved={() => void reload()}
           />
         </>

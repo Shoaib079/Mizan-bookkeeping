@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   Banknote,
+  BookOpen,
   Building2,
   CreditCard,
   FileText,
@@ -70,6 +71,22 @@ export const appRoutes: AppRoute[] = [
   { href: "/banking", label: "Banking", icon: Building2, group: "Books" },
   { href: "/cards", label: "Cards", icon: CreditCard, group: "Books" },
   { href: "/reports", label: "Reports", icon: BarChart3, group: "Reports" },
+  {
+    href: "/reports/ledger",
+    label: "Ledger entries",
+    keywords: "journal correct manual bank fee",
+    icon: BookOpen,
+    group: "Reports",
+    nestedUnder: "/reports",
+  },
+  {
+    href: "/accounting/manual-journals",
+    label: "Manual journals",
+    keywords: "void manual journal",
+    icon: BookOpen,
+    group: "Reports",
+    nestedUnder: "/reports",
+  },
   { href: "/settings", label: "Settings", icon: Settings, group: "Settings" },
   {
     href: "/settings/entity",

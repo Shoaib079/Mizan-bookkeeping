@@ -7,6 +7,10 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { FxConversionForm } from "@/components/forms/fx-conversion-form";
+import {
+  CorrectFxPurchaseForm,
+  type CorrectableFxPurchaseRow,
+} from "@/components/forms/correct-fx-purchase-form";
 import { FxExpenseSpendForm } from "@/components/forms/fx-expense-spend-form";
 import { FxPurchaseForm } from "@/components/forms/fx-purchase-form";
 import { AppShell } from "@/components/layout/app-shell";
@@ -41,6 +45,8 @@ export default function FxWalletPage() {
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [spendOpen, setSpendOpen] = useState(false);
+  const [correctPurchase, setCorrectPurchase] =
+    useState<CorrectableFxPurchaseRow | null>(null);
 
   const reload = useCallback(async () => {
     if (!entityId || !accountId) return;
@@ -69,6 +75,7 @@ export default function FxWalletPage() {
   }, [entityId, accountId]);
 
   useEffect(() => {
+    setCorrectPurchase(null);
     void reload();
   }, [reload]);
 
@@ -138,6 +145,7 @@ export default function FxWalletPage() {
                       {currency}
                     </DataTableHeaderCell>
                     <DataTableHeaderCell align="right">TRY cost</DataTableHeaderCell>
+                    <DataTableHeaderCell>Actions</DataTableHeaderCell>
                   </tr>
                 </DataTableHead>
                 <DataTableBody>
@@ -156,6 +164,27 @@ export default function FxWalletPage() {
                       </DataTableCell>
                       <DataTableCell align="right">
                         {formatTry(row.try_cost_kurus)}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        {row.movement_type === "purchase" &&
+                          row.journal_entry_id && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-8 px-2"
+                              onClick={() =>
+                                setCorrectPurchase({
+                                  journal_entry_id: row.journal_entry_id,
+                                  movement_date: row.movement_date,
+                                  native_quantity: row.native_quantity,
+                                  try_cost_kurus: row.try_cost_kurus,
+                                  description: row.description,
+                                })
+                              }
+                            >
+                              Correct
+                            </Button>
+                          )}
                       </DataTableCell>
                     </DataTableRow>
                   ))}
@@ -185,6 +214,14 @@ export default function FxWalletPage() {
         onClose={() => setSpendOpen(false)}
         fxAccountId={accountId}
         currency={currency}
+        onSaved={() => void reload()}
+      />
+      <CorrectFxPurchaseForm
+        open={correctPurchase !== null}
+        fxAccountId={accountId}
+        currency={currency}
+        purchase={correctPurchase}
+        onClose={() => setCorrectPurchase(null)}
         onSaved={() => void reload()}
       />
     </AppShell>

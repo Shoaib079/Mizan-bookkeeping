@@ -7,6 +7,10 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
+import {
+  CorrectSupplierPaymentForm,
+  type CorrectableSupplierPaymentRow,
+} from "@/components/forms/correct-supplier-payment-form";
 import { SupplierForm, type SupplierRow } from "@/components/forms/supplier-form";
 import { SupplierPaymentForm } from "@/components/forms/supplier-payment-form";
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
@@ -31,6 +35,7 @@ type LedgerEntry = {
   movement_type: string;
   amount_kurus: number;
   description: string;
+  journal_entry_id: string | null;
 };
 
 type LedgerResponse = {
@@ -68,6 +73,8 @@ export default function SupplierDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [correctPayment, setCorrectPayment] =
+    useState<CorrectableSupplierPaymentRow | null>(null);
   const [expandedDraftId, setExpandedDraftId] = useState<string | null>(
     highlightDraftId,
   );
@@ -99,6 +106,7 @@ export default function SupplierDetailPage() {
   }, [entityId, supplierId]);
 
   useEffect(() => {
+    setCorrectPayment(null);
     void reload();
   }, [reload]);
 
@@ -189,6 +197,7 @@ export default function SupplierDetailPage() {
                     <DataTableHeaderCell>Type</DataTableHeaderCell>
                     <DataTableHeaderCell>Description</DataTableHeaderCell>
                     <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                    <DataTableHeaderCell>Actions</DataTableHeaderCell>
                   </tr>
                 </DataTableHead>
                 <DataTableBody>
@@ -204,6 +213,26 @@ export default function SupplierDetailPage() {
                       <DataTableCell>{row.description}</DataTableCell>
                       <DataTableCell align="right">
                         {formatTry(row.amount_kurus)}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        {row.movement_type === "payment" &&
+                          row.journal_entry_id && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-8 px-2"
+                              onClick={() =>
+                                setCorrectPayment({
+                                  journal_entry_id: row.journal_entry_id!,
+                                  movement_date: row.movement_date,
+                                  amount_kurus: row.amount_kurus,
+                                  description: row.description,
+                                })
+                              }
+                            >
+                              Correct
+                            </Button>
+                          )}
                       </DataTableCell>
                     </DataTableRow>
                   ))}
@@ -278,6 +307,13 @@ export default function SupplierDetailPage() {
         open={uploadOpen}
         supplierId={supplierId}
         onClose={() => setUploadOpen(false)}
+      />
+      <CorrectSupplierPaymentForm
+        open={correctPayment !== null}
+        supplierId={supplierId}
+        payment={correctPayment}
+        onClose={() => setCorrectPayment(null)}
+        onSaved={() => void reload()}
       />
     </AppShell>
   );

@@ -139,5 +139,6 @@ export type FxLedgerEntryRead = {
   native_quantity: number;
   try_cost_kurus: number;
   description: string;
+  journal_entry_id: string;
   created_at: string;
 };

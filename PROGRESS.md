@@ -7,12 +7,22 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.11** — Correction UI + period unlock on mutations |
-| **Last completed slice** | Phase 11 Slice 11.10 — correct posted expense (`v0.69.1-correct-expense`) |
+| **Active slice** | **11.12** — Remaining dedicated correction APIs |
+| **Last completed slice** | Phase 11 Slice 11.11 — correction UI + period unlock (`v0.69.2-correction-ui`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.1-correct-expense` |
+| **Last tag** | `v0.69.2-correction-ui` |
 
 ## Resume point
+
+**Phase 11 Slice 11.11 complete** — correction UI + period unlock retry (`v0.69.2-correction-ui`):
+- Shared `period-unlock.ts` + `usePeriodUnlockSubmit()` — 422 period lock → owner unlock dialog → retry with `period_unlock_reason`
+- Correction forms: supplier payment, customer payment, FX purchase, ledger entry (manual/bank_fee); void manual journal dialog
+- Pages: `/accounting/manual-journals` (void), `/reports/ledger` (correct manual/bank_fee)
+- Entry points: Correct on supplier/customer payment rows, FX purchase rows; 11.9/11.10 forms updated
+- Vitest: `period-unlock.test.ts` (6 tests)
+- **572 pytest green**; frontend build green; **16 vitest**
+
+**Next:** Phase 11 Slice 11.12 — remaining dedicated correction APIs (invoice, staff, partner, credit sale, FX conversion/spend).
 
 **Phase 11 Slice 11.10 complete** — correct posted expense (`v0.69.1-correct-expense`):
 - `correct_expense_by_id()` wraps `correct_expense_entry()` — void GL + update expense row + repost

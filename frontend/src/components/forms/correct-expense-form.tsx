@@ -9,9 +9,11 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
-import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { formatKurus, formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { withPeriodUnlockReason } from "@/lib/period-unlock";
+import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
 type MoneyAccount = { id: string; name: string };
@@ -46,6 +48,7 @@ export function CorrectExpenseForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const { submitWithPeriodUnlock, PeriodUnlockDialog } = usePeriodUnlockSubmit();
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -123,23 +126,31 @@ export function CorrectExpenseForm({
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      const result = await apiFetch<{ expense: { status: string } }>(
-        `/entities/${entityId}/expenses/${expense.id}/correct`,
-        {
-          method: "POST",
-          idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            expense_date: expenseDate,
-            amount_kurus: amountKurus,
-            expense_account_id: expenseAccountId,
-            money_account_id: moneyAccountId,
-            written_item_description: itemName.trim() || null,
-            has_source_document: false,
-            description: description.trim() || itemName.trim() || "Manual expense",
-            actor_id: actorId,
-          }),
-        },
+      const result = await submitWithPeriodUnlock(async (periodUnlockReason) =>
+        apiFetch<{ expense: { status: string } }>(
+          `/entities/${entityId}/expenses/${expense.id}/correct`,
+          {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              withPeriodUnlockReason(
+                {
+                  expense_date: expenseDate,
+                  amount_kurus: amountKurus,
+                  expense_account_id: expenseAccountId,
+                  money_account_id: moneyAccountId,
+                  written_item_description: itemName.trim() || null,
+                  has_source_document: false,
+                  description:
+                    description.trim() || itemName.trim() || "Manual expense",
+                  actor_id: actorId,
+                },
+                periodUnlockReason,
+              ),
+            ),
+          },
+        ),
       );
       submitIdempotency.completeSubmit();
 
@@ -161,6 +172,7 @@ export function CorrectExpenseForm({
   }
 
   return (
+    <>
     <Dialog open={open} title="Correct expense" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
@@ -232,5 +244,7 @@ export function CorrectExpenseForm({
         </Button>
       </form>
     </Dialog>
+    <PeriodUnlockDialog />
+    </>
   );
 }
