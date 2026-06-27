@@ -17,12 +17,12 @@ describe("isPeriodLockError", () => {
     expect(isPeriodLockError(err)).toBe(true);
   });
 
-  it("rejects non-owner closed period block", () => {
+  it("detects closed period with owner unlock suffix", () => {
     const err = new ApiError(
       "one or more dates fall in a closed period; owner unlock required",
       422,
     );
-    expect(isPeriodLockError(err)).toBe(false);
+    expect(isPeriodLockError(err)).toBe(true);
   });
 
   it("rejects unrelated 422 errors", () => {
