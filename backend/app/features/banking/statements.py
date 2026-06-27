@@ -168,12 +168,14 @@ def _record_classification_learning(
     classification: StatementLineClassification,
     *,
     supplier_id: uuid.UUID | None = None,
+    match_token: str | None = None,
 ) -> None:
     """Persist a learned rule after successful user classification (never auto-posts)."""
     description = line.description
     learned_supplier_id = (
         supplier_id if supplier_id is not None else line.supplier_id
     )
+    learned_match_token = match_token.strip() if match_token and match_token.strip() else None
     with entity_context(session, entity_id):
         require_entity_context()
         learn_classification_rule(
@@ -181,6 +183,7 @@ def _record_classification_learning(
             description=description,
             classification=classification,
             supplier_id=learned_supplier_id,
+            match_token=learned_match_token,
         )
         session.commit()
 
@@ -930,6 +933,7 @@ def classify_statement_line(
     confirm_account_transfer_id: uuid.UUID | None = None,
     delivery_platform_id: uuid.UUID | None = None,
     expense_account_id: uuid.UUID | None = None,
+    match_token: str | None = None,
 ) -> ClassifyStatementLineResult:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -966,6 +970,7 @@ def classify_statement_line(
                     current_line,
                     learned_classification,
                     supplier_id=learned_supplier_id,
+                    match_token=match_token,
                 )
             return ClassifyStatementLineResult(
                 line=_line_read_by_id(session, entity_id, current_line.id),
@@ -1363,6 +1368,7 @@ def classify_statement_line(
             line,
             StatementLineClassification.SUPPLIER_PAYMENT,
             supplier_id=supplier_id,
+            match_token=match_token,
         )
         return ClassifyStatementLineResult(
             line=_line_read_by_id(session, entity_id, line_id),
@@ -1407,6 +1413,7 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.CUSTOMER_PAYMENT,
+            match_token=match_token,
         )
         return ClassifyStatementLineResult(
             line=_line_read_by_id(session, entity_id, line_id),
@@ -1449,6 +1456,7 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.POS_SETTLEMENT,
+            match_token=match_token,
         )
         return ClassifyStatementLineResult(
             line=_line_read_by_id(session, entity_id, line_id),
@@ -1494,6 +1502,7 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.DELIVERY_SETTLEMENT,
+            match_token=match_token,
         )
         return ClassifyStatementLineResult(
             line=_line_read_by_id(session, entity_id, line_id),
@@ -1532,6 +1541,7 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.BANK_FEE,
+            match_token=match_token,
         )
         return ClassifyStatementLineResult(
             line=_line_read_by_id(session, entity_id, line_id),
@@ -1574,6 +1584,7 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.CREDIT_CARD_PAYMENT,
+            match_token=match_token,
         )
         return ClassifyStatementLineResult(
             line=_line_read_by_id(session, entity_id, line_id),
@@ -1620,6 +1631,7 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.RENT_UTILITY,
+            match_token=match_token,
         )
         return ClassifyStatementLineResult(
             line=_line_read_by_id(session, entity_id, line_id),
@@ -1678,6 +1690,7 @@ def classify_statement_line(
         entity_id,
         line,
         StatementLineClassification.TRANSFER,
+        match_token=match_token,
     )
     return ClassifyStatementLineResult(
         line=_to_line_read(line, session=session),
@@ -1722,6 +1735,7 @@ def correct_statement_line(
     delivery_platform_id: uuid.UUID | None = None,
     expense_account_id: uuid.UUID | None = None,
     reason: str | None = None,
+    match_token: str | None = None,
 ) -> ClassifyStatementLineResult:
     """Reverse a resolved line via void/unlink, learn from correction, re-classify manually."""
     from app.core.ledger.posting import void_journal_entry
@@ -1771,6 +1785,7 @@ def correct_statement_line(
             description=original_description,
             corrected_classification=classification,
             corrected_supplier_id=supplier_id,
+            match_token=match_token.strip() if match_token and match_token.strip() else None,
         )
         session.commit()
 
@@ -1787,4 +1802,5 @@ def correct_statement_line(
         actor_id=actor_id,
         delivery_platform_id=delivery_platform_id,
         expense_account_id=expense_account_id,
+        match_token=match_token,
     )

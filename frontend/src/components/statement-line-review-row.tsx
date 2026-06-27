@@ -22,7 +22,6 @@ import {
 } from "@/lib/statement-review-actions";
 import {
   isLineCorrectable,
-  suggestMatchToken,
 } from "@/lib/statement-review";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
@@ -66,9 +65,7 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
   const [classification, setClassification] = useState<StatementLineClassification>(
     line.suggestion?.classification ?? line.classification ?? "supplier_payment",
   );
-  const [matchToken, setMatchToken] = useState(() =>
-    suggestMatchToken(line.description),
-  );
+  const [learnAs, setLearnAs] = useState(line.description);
   const [supplierName, setSupplierName] = useState(line.description.slice(0, 512));
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -136,8 +133,16 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
       setClassification(line.suggestion.classification);
       if (line.suggestion.supplier_id) setSupplierId(line.suggestion.supplier_id);
     }
-    setMatchToken(suggestMatchToken(line.description));
+    setLearnAs(line.description);
   }, [line.id, line.suggestion, line.description]);
+
+  function learnMatchTokenPayload(): string | undefined {
+    const trimmed = learnAs.trim();
+    if (!trimmed || trimmed === line.description.trim()) {
+      return undefined;
+    }
+    return trimmed;
+  }
 
   function buildClassifyBody(
     targetClassification: StatementLineClassification,
@@ -146,6 +151,8 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
       classification: targetClassification,
       actor_id: actorId,
     };
+    const token = learnMatchTokenPayload();
+    if (token) body.match_token = token;
     if (targetClassification === "supplier_payment") body.supplier_id = supplierId;
     if (targetClassification === "transfer")
       body.counterpart_money_account_id = counterpartId;
@@ -223,7 +230,7 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
         line.id,
         {
           name: supplierName.trim() || undefined,
-          match_token: matchToken.trim() || undefined,
+          match_token: learnMatchTokenPayload(),
         },
         idempotencyKey,
       );
@@ -334,6 +341,20 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
 
       {expanded && canAct && (
         <div className="mt-4 space-y-4 border-t border-border pt-4">
+          <div>
+            <Label htmlFor={`learn-as-${line.id}`}>Learn as</Label>
+            <Input
+              id={`learn-as-${line.id}`}
+              value={learnAs}
+              onChange={(event) => setLearnAs(event.target.value)}
+              placeholder={line.description}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shorten to the counterparty (e.g. MIGROS) so the rule matches varied
+              descriptions. Leave as-is to learn the full description.
+            </p>
+          </div>
+
           {(line.status === "needs_review" || line.status === "imported") && (
             <>
               {line.suggestion && (
@@ -460,18 +481,6 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
                     value={supplierName}
                     onChange={(event) => setSupplierName(event.target.value)}
                   />
-                </div>
-                <div>
-                  <Label htmlFor={`token-${line.id}`}>Learned match token</Label>
-                  <Input
-                    id={`token-${line.id}`}
-                    value={matchToken}
-                    onChange={(event) => setMatchToken(event.target.value)}
-                    placeholder="e.g. MIGROS"
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Short token so the rule matches varied descriptions.
-                  </p>
                 </div>
                 <Button
                   type="button"

@@ -20,12 +20,12 @@ describe("statement-review-actions", () => {
     mockedFetch.mockResolvedValue({ line: { id: "line-1" } });
   });
 
-  it("confirm calls classify endpoint", async () => {
+  it("confirm calls classify endpoint with optional match_token", async () => {
     await classifyStatementLine(
       "entity-1",
       "stmt-1",
       "line-1",
-      { classification: "bank_fee", actor_id: "actor-1" },
+      { classification: "bank_fee", actor_id: "actor-1", match_token: "MIGROS" },
       "idem-1",
     );
 
@@ -37,12 +37,13 @@ describe("statement-review-actions", () => {
         body: JSON.stringify({
           classification: "bank_fee",
           actor_id: "actor-1",
+          match_token: "MIGROS",
         }),
       }),
     );
   });
 
-  it("correct calls correct endpoint with reason", async () => {
+  it("correct calls correct endpoint with reason and match_token", async () => {
     await correctStatementLine(
       "entity-1",
       "stmt-1",
@@ -51,6 +52,7 @@ describe("statement-review-actions", () => {
         classification: "unknown",
         actor_id: "actor-1",
         reason: "Wrong fee",
+        match_token: "service fee",
       },
       "idem-2",
     );
@@ -64,6 +66,7 @@ describe("statement-review-actions", () => {
           classification: "unknown",
           actor_id: "actor-1",
           reason: "Wrong fee",
+          match_token: "service fee",
         }),
       }),
     );

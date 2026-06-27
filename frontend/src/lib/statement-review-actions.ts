@@ -10,6 +10,7 @@ import type {
 export type ClassifyLinePayload = {
   classification: StatementLineClassification;
   actor_id: string;
+  match_token?: string;
   supplier_id?: string;
   counterpart_money_account_id?: string;
   credit_card_money_account_id?: string;

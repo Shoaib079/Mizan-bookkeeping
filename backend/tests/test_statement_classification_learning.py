@@ -235,3 +235,62 @@ def test_conflicting_rules_return_no_suggestion(db_session, restaurant_a) -> Non
             db_session, "Payment to Metro Gida fee adjustment"
         )
     assert suggestion is None
+
+
+def test_classify_with_match_token_keys_rule_on_trimmed_token(
+    db_session, restaurant_a, bank_setup
+) -> None:
+    line_id = bank_setup["statement"].lines[1].id
+    statement_service.classify_statement_line(
+        db_session,
+        restaurant_a.id,
+        bank_setup["statement"].id,
+        line_id,
+        classification=StatementLineClassification.BANK_FEE,
+        actor_id=ACTOR_ID,
+        match_token="MIGROS",
+    )
+    with entity_context(db_session, restaurant_a.id):
+        rule = db_session.scalar(select(StatementClassificationRule))
+        suggestion = suggest_classification(db_session, "HAVALE MIGROS TIC AS ODEME")
+    assert rule is not None
+    assert rule.match_token == normalize_expense_item_text("MIGROS")
+    assert suggestion is not None
+    assert suggestion.classification == StatementLineClassification.BANK_FEE
+
+
+def test_correct_with_match_token_relearns_on_trimmed_token(
+    db_session, restaurant_a, bank_setup
+) -> None:
+    line_id = bank_setup["statement"].lines[1].id
+    statement_id = bank_setup["statement"].id
+    statement_service.classify_statement_line(
+        db_session,
+        restaurant_a.id,
+        statement_id,
+        line_id,
+        classification=StatementLineClassification.BANK_FEE,
+        actor_id=ACTOR_ID,
+    )
+    statement_service.correct_statement_line(
+        db_session,
+        restaurant_a.id,
+        statement_id,
+        line_id,
+        actor_id=ACTOR_ID,
+        classification=StatementLineClassification.UNKNOWN,
+        reason="Wrong fee classification",
+        match_token="service fee",
+    )
+    with entity_context(db_session, restaurant_a.id):
+        rule = db_session.scalar(
+            select(StatementClassificationRule).where(
+                StatementClassificationRule.match_token
+                == normalize_expense_item_text("service fee")
+            )
+        )
+        suggestion = suggest_classification(db_session, "Monthly service fee charge")
+    assert rule is not None
+    assert rule.classification == StatementLineClassification.UNKNOWN
+    assert suggestion is not None
+    assert suggestion.classification == StatementLineClassification.UNKNOWN

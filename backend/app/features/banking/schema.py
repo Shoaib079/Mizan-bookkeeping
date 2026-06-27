@@ -239,6 +239,11 @@ class ClassifyStatementLineRequest(BaseModel):
         default=None,
         description="Required for rent_utility — owner picks expense GL account (e.g. 5000 rent)",
     )
+    match_token: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Optional learned rule token — defaults to normalized line description when omitted",
+    )
 
 
 class CorrectStatementLineRequest(BaseModel):
@@ -251,6 +256,11 @@ class CorrectStatementLineRequest(BaseModel):
     delivery_platform_id: uuid.UUID | None = None
     expense_account_id: uuid.UUID | None = None
     reason: str | None = Field(default=None, max_length=512)
+    match_token: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Optional learned rule token for correction relearn — defaults to line description",
+    )
 
 
 class ClassifyStatementLineResult(BaseModel):

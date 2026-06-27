@@ -309,6 +309,7 @@ def classify_statement_line(
             confirm_account_transfer_id=payload.confirm_account_transfer_id,
             delivery_platform_id=payload.delivery_platform_id,
             expense_account_id=payload.expense_account_id,
+            match_token=payload.match_token,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -351,6 +352,7 @@ def correct_statement_line(
             delivery_platform_id=payload.delivery_platform_id,
             expense_account_id=payload.expense_account_id,
             reason=payload.reason,
+            match_token=payload.match_token,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
