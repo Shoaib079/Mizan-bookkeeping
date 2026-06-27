@@ -182,6 +182,8 @@ describe("app shell header", () => {
     expect(nav).toContain("rotate-180");
     expect(nav).toContain('item.href === "/"');
     expect(nav).toMatch(/group\.icon/);
+    expect(nav).toContain("items.length === 1");
+    expect(nav).toContain("NavRowLink");
   });
 });
 

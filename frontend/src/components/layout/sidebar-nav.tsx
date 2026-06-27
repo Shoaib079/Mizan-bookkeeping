@@ -8,6 +8,7 @@ import {
   filterNavItemsByEntitySettings,
   isNavItemActive,
   navGroups,
+  type AppRoute,
   type EntityNavSettings,
 } from "@/lib/app-routes";
 import {
@@ -22,6 +23,22 @@ type SidebarNavProps = {
   pathname: string;
   settings: EntityNavSettings;
 };
+
+function NavRowLink({ item, pathname }: { item: AppRoute; pathname: string }) {
+  const active = isNavItemActive(pathname, item);
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent",
+        active && "bg-sidebar-accent font-medium text-primary",
+      )}
+    >
+      <item.icon className="size-4" />
+      {item.label}
+    </Link>
+  );
+}
 
 export function SidebarNav({ pathname, settings }: SidebarNavProps) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
@@ -49,17 +66,7 @@ export function SidebarNav({ pathname, settings }: SidebarNavProps) {
     <nav className="flex-1 space-y-1 p-3">
       {dashboard && (
         <div className="mb-2">
-          <Link
-            href={dashboard.href}
-            className={cn(
-              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent",
-              isNavItemActive(pathname, dashboard) &&
-                "bg-sidebar-accent font-medium text-primary",
-            )}
-          >
-            <dashboard.icon className="size-4" />
-            {dashboard.label}
-          </Link>
+          <NavRowLink item={dashboard} pathname={pathname} />
         </div>
       )}
 
@@ -68,11 +75,26 @@ export function SidebarNav({ pathname, settings }: SidebarNavProps) {
         .map((group) => {
           const items = filterNavItemsByEntitySettings(group.items, settings);
           if (items.length === 0) return null;
+
+          if (items.length === 1) {
+            return (
+              <div
+                key={group.label}
+                className="border-t border-border pt-2 first:border-t-0 first:pt-0"
+              >
+                <NavRowLink item={items[0]!} pathname={pathname} />
+              </div>
+            );
+          }
+
           const open = openGroups[group.label] ?? false;
           const panelId = `sidebar-group-${group.label.replace(/\s+/g, "-").toLowerCase()}`;
 
           return (
-            <div key={group.label} className="border-t border-border pt-2 first:border-t-0 first:pt-0">
+            <div
+              key={group.label}
+              className="border-t border-border pt-2 first:border-t-0 first:pt-0"
+            >
               <button
                 type="button"
                 className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
@@ -94,23 +116,11 @@ export function SidebarNav({ pathname, settings }: SidebarNavProps) {
               </button>
               {open && (
                 <ul id={panelId} className="mt-0.5 space-y-0.5">
-                  {items.map((item) => {
-                    const active = isNavItemActive(pathname, item);
-                    return (
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          className={cn(
-                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent",
-                            active && "bg-sidebar-accent font-medium text-primary",
-                          )}
-                        >
-                          <item.icon className="size-4" />
-                          {item.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
+                  {items.map((item) => (
+                    <li key={item.href}>
+                      <NavRowLink item={item} pathname={pathname} />
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>

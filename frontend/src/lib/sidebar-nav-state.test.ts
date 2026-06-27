@@ -7,6 +7,7 @@ import {
   readSidebarGroupState,
   resolveSidebarGroupState,
   SIDEBAR_NAV_STORAGE_KEY,
+  sidebarGroupRenderMode,
   sidebarGroupStateForPathname,
   toggleSidebarGroupState,
   writeSidebarGroupState,
@@ -44,14 +45,25 @@ describe("sidebarGroupStateForPathname", () => {
     expect(sidebarGroupStateForPathname("/", SETTINGS)).toEqual({});
   });
 
+  it("returns empty for direct-link groups (single visible item)", () => {
+    expect(sidebarGroupStateForPathname("/banking", SETTINGS)).toEqual({});
+    expect(sidebarGroupStateForPathname("/customers", SETTINGS)).toEqual({});
+    expect(sidebarGroupStateForPathname("/reports", SETTINGS)).toEqual({});
+    expect(sidebarGroupStateForPathname("/settings", SETTINGS)).toEqual({});
+  });
+
+  it("returns empty for Sales when delivery is off (direct link)", () => {
+    expect(sidebarGroupStateForPathname("/sales", { deliveryEnabled: false })).toEqual({});
+  });
+
   it("replaces entirely on route change — never merges prior groups", () => {
     const sales = sidebarGroupStateForPathname("/sales", SETTINGS);
-    const banking = sidebarGroupStateForPathname("/banking", SETTINGS);
+    const expenses = sidebarGroupStateForPathname("/expenses", SETTINGS);
     expect(sales).toEqual({ Sales: true });
-    expect(banking).toEqual({ "Cash & bank": true });
-    expect(openSidebarGroupCount({ ...sales, ...banking })).toBe(2);
-    expect(openSidebarGroupCount(banking)).toBe(1);
-    expect(banking.Sales).toBeUndefined();
+    expect(expenses).toEqual({ "Expenses & suppliers": true });
+    expect(openSidebarGroupCount({ ...sales, ...expenses })).toBe(2);
+    expect(openSidebarGroupCount(expenses)).toBe(1);
+    expect(expenses.Sales).toBeUndefined();
   });
 });
 
@@ -66,10 +78,15 @@ describe("resolveSidebarGroupState", () => {
     expect(openSidebarGroupCount(state)).toBe(1);
   });
 
-  it("on Dashboard restores at most one persisted open group", () => {
-    const state = resolveSidebarGroupState("/", SETTINGS, { Reports: true });
-    expect(state).toEqual({ Reports: true });
+  it("on Dashboard restores at most one persisted accordion group", () => {
+    const state = resolveSidebarGroupState("/", SETTINGS, { People: true });
+    expect(state).toEqual({ People: true });
     expect(openSidebarGroupCount(state)).toBe(1);
+  });
+
+  it("ignores persisted state for direct-link groups on Dashboard", () => {
+    expect(resolveSidebarGroupState("/", SETTINGS, { Reports: true })).toEqual({});
+    expect(resolveSidebarGroupState("/", SETTINGS, { Customers: true })).toEqual({});
   });
 });
 
@@ -142,5 +159,14 @@ describe("collapsible group labels", () => {
     expect(COLLAPSIBLE_NAV_GROUP_LABELS).not.toContain("Overview");
     expect(COLLAPSIBLE_NAV_GROUP_LABELS).toContain("Sales");
     expect(COLLAPSIBLE_NAV_GROUP_LABELS).toContain("Settings");
+  });
+});
+
+describe("sidebarGroupRenderMode", () => {
+  it("Customers, Banking, Reports, and Settings are always direct links", () => {
+    for (const label of ["Customers", "Cash & bank", "Reports", "Settings"] as const) {
+      expect(sidebarGroupRenderMode(label, { deliveryEnabled: true })).toBe("link");
+      expect(sidebarGroupRenderMode(label, { deliveryEnabled: false })).toBe("link");
+    }
   });
 });
