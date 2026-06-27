@@ -7,12 +7,22 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.10** — Posted expense correction |
-| **Last completed slice** | Phase 11 Slice 11.9 — correct posted daily sales (`v0.69.0-correct-daily-sales`) |
+| **Active slice** | **11.11** — Correction UI + period unlock on mutations |
+| **Last completed slice** | Phase 11 Slice 11.10 — correct posted expense (`v0.69.1-correct-expense`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.0-correct-daily-sales` |
+| **Last tag** | `v0.69.1-correct-expense` |
 
 ## Resume point
+
+**Phase 11 Slice 11.10 complete** — correct posted expense (`v0.69.1-correct-expense`):
+- `correct_expense_by_id()` wraps `correct_expense_entry()` — void GL + update expense row + repost
+- `POST .../expenses/{id}/correct` + `ExpenseCorrect`/`ExpenseCorrectOut`
+- Frontend: `correct-expense-form.tsx`; `/expenses` posted rows → **Correct** dialog (pre-filled, idempotency key)
+- Tests: `test_expense_correct.py` (4 tests — amount, account/date, non-posted 409, period lock)
+- **572 pytest green**; frontend build green
+- **Owner sign-off: PENDING** (money-critical)
+
+**Next:** Phase 11 Slice 11.11 — wire correction UI for existing Phase 8.5 APIs + period unlock retry.
 
 **Phase 11 Slice 11.9 complete** — correct posted daily sales (`v0.69.0-correct-daily-sales`):
 - `correct_pos_daily_summary()` — voids linked card batch JE + cash movement JE (with cash reversal), reposts via shared confirm path

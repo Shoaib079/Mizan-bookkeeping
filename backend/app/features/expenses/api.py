@@ -14,6 +14,8 @@ from app.adapters.ocr_ai.expense_receipt import ExpenseReceiptExtractionError
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.expenses.items import InvalidExpenseItemError
 from app.core.expenses.posting import InvalidExpensePostingError
+from app.core.ledger.correction import CorrectionNotFoundError
+from app.core.ledger.errors import PostingError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
@@ -24,6 +26,8 @@ from app.features.expenses.schema import (
     ConfirmExpenseReceiptRequest,
     ConfirmTipPhotoRequest,
     ExpenseConfirmItemRequest,
+    ExpenseCorrect,
+    ExpenseCorrectOut,
     ExpenseCreate,
     ExpenseItemCreate,
     ExpenseItemMergeRequest,
@@ -34,6 +38,7 @@ from app.features.expenses.schema import (
 )
 from app.features.expenses.service import (
     DuplicateExpenseDocumentError,
+    ExpenseNotCorrectableError,
     ExpenseNotReviewableError,
     NotATipPhotoError,
 )
@@ -323,6 +328,32 @@ def confirm_tip_photo(
     except ExpenseNotReviewableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except (InvalidExpensePostingError, InvalidAccountError, InvalidExpenseItemError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/expenses/{expense_id}/correct", response_model=ExpenseCorrectOut)
+def correct_expense(
+    entity_id: uuid.UUID,
+    expense_id: uuid.UUID,
+    payload: ExpenseCorrect,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> ExpenseCorrectOut:
+    try:
+        return expenses_service.correct_expense_by_id(
+            session, entity_id, expense_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ExpenseNotCorrectableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (InvalidExpensePostingError, InvalidAccountError, InvalidExpenseItemError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

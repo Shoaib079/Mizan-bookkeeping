@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import {
+  CorrectExpenseForm,
+  type CorrectableExpenseRow,
+} from "@/components/forms/correct-expense-form";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -22,22 +26,13 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
 
-type ExpenseRow = {
-  id: string;
-  expense_date: string;
-  description: string;
-  written_item_description: string | null;
-  amount_kurus: number;
-  status: string;
-};
-
 export default function ExpensesPage() {
   const { entityId } = useEntity();
-  const { items, total, loading, error } = useEntityList<ExpenseRow>(
-    "/expenses",
-    entityId,
-  );
+  const { items, total, loading, error, reload } =
+    useEntityList<CorrectableExpenseRow>("/expenses", entityId);
   const [tipFormOpen, setTipFormOpen] = useState(false);
+  const [correctExpense, setCorrectExpense] =
+    useState<CorrectableExpenseRow | null>(null);
 
   return (
     <AppShell title="Expenses">
@@ -58,7 +53,7 @@ export default function ExpensesPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={4} />}
+      {loading && <TableSkeleton columns={5} />}
 
       {!loading && entityId && items.length === 0 && (
         <EmptyState
@@ -76,6 +71,7 @@ export default function ExpensesPage() {
               <DataTableHeaderCell>Description</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -90,6 +86,18 @@ export default function ExpensesPage() {
                 </DataTableCell>
                 <DataTableCell>
                   <StatusBadge status={row.status} />
+                </DataTableCell>
+                <DataTableCell align="right">
+                  {row.status === "posted" && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-8 px-3 text-xs"
+                      onClick={() => setCorrectExpense(row)}
+                    >
+                      Correct
+                    </Button>
+                  )}
                 </DataTableCell>
               </DataTableRow>
             ))}
@@ -111,6 +119,12 @@ export default function ExpensesPage() {
         open={tipFormOpen}
         onClose={() => setTipFormOpen(false)}
         defaultExpenseAccountCode="5700"
+      />
+      <CorrectExpenseForm
+        open={correctExpense !== null}
+        expense={correctExpense}
+        onClose={() => setCorrectExpense(null)}
+        onSaved={() => void reload()}
       />
     </AppShell>
   );

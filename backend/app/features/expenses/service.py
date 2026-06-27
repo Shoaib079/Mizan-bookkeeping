@@ -24,6 +24,7 @@ from app.adapters.ocr_ai.expense_receipt import (
 from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE, TIPS_EXPENSE_CODE
 from app.core.chart_of_accounts.seed import get_account_by_code
 from app.core.expenses.items import InvalidExpenseItemError, merge_expense_items, resolve_expense_item
+from app.core.ledger.correction import CorrectionNotFoundError, correct_expense_entry
 from app.core.expenses.posting import (
     InvalidExpensePostingError,
     post_expense_entry,
@@ -44,6 +45,8 @@ from app.features.expenses.schema import (
     ConfirmExpenseReceiptRequest,
     ConfirmTipPhotoRequest,
     ExpenseConfirmItemRequest,
+    ExpenseCorrect,
+    ExpenseCorrectOut,
     ExpenseCreate,
     ExpenseItemCreate,
     ExpenseItemMergeRequest,
@@ -55,6 +58,10 @@ from app.features.expenses.schema import (
 
 class ExpenseNotReviewableError(ValueError):
     """Expense is not in needs_review status."""
+
+
+class ExpenseNotCorrectableError(ValueError):
+    """Expense is not in posted status or has no journal entry."""
 
 
 class NotATipPhotoError(ValueError):
@@ -397,6 +404,70 @@ def list_expenses(
         )
         entries, total = fetch_paginated(session, stmt, params)
         return [_to_expense_read(entry) for entry in entries], total
+
+
+def correct_expense_by_id(
+    session: Session,
+    entity_id: uuid.UUID,
+    expense_id: uuid.UUID,
+    payload: ExpenseCorrect,
+) -> ExpenseCorrectOut:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        entry = session.get(ExpenseEntry, expense_id)
+        if entry is None:
+            raise LookupError("Expense not found")
+        if entry.status != ExpenseEntryStatus.POSTED:
+            raise ExpenseNotCorrectableError(
+                f"expense status {entry.status.value!r} cannot be corrected"
+            )
+        if entry.journal_entry_id is None:
+            raise ExpenseNotCorrectableError("expense has no journal entry to correct")
+
+        resolution = resolve_expense_item(
+            session,
+            entity_id,
+            payload.written_item_description,
+            confirm_expense_item_id=payload.confirm_expense_item_id,
+        )
+        if resolution.status == ExpenseEntryStatus.NEEDS_REVIEW:
+            raise InvalidExpenseItemError(
+                resolution.review_reason or "expense item needs review before correction"
+            )
+        expense_item_id = resolution.expense_item_id
+        original_journal_entry_id = entry.journal_entry_id
+
+    result = correct_expense_entry(
+        session,
+        entity_id,
+        original_journal_entry_id,
+        expense_date=payload.expense_date,
+        amount_kurus=payload.amount_kurus,
+        expense_account_id=payload.expense_account_id,
+        money_account_id=payload.money_account_id,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        written_item_description=payload.written_item_description,
+        expense_item_id=expense_item_id,
+        reason=payload.reason,
+        void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
+    )
+
+    with entity_context(session, entity_id):
+        session.refresh(entry)
+        if entry.journal_entry_id != result.corrected.id:
+            raise CorrectionNotFoundError("corrected expense entry not found")
+
+    return ExpenseCorrectOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+        corrected_journal_entry_id=result.corrected.id,
+        expense=_to_expense_read(entry),
+    )
 
 
 def confirm_expense_item(

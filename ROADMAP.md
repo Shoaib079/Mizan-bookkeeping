@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.10** — Posted expense correction |
-| **Last completed slice** | Phase 11 Slice 11.9 — correct posted daily sales (`v0.69.0-correct-daily-sales`) |
-| **Last commit/tag** | `v0.69.0-correct-daily-sales` |
-| **Next up** | **11.10** → 11.11–11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.11** — Correction UI + period unlock on mutations |
+| **Last completed slice** | Phase 11 Slice 11.10 — correct posted expense (`v0.69.1-correct-expense`) |
+| **Last commit/tag** | `v0.69.1-correct-expense` |
+| **Next up** | **11.11** → 11.12–11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -748,7 +748,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 7 | Partner expense separate flow | Manual expense = cash only; `expenses-fronted` **API done** (partner detail only) | **11.7** (UI) |
 | 8 | Dashboard FX shows TRY cost | API has `native_quantity`; UI uses `try_cost_kurus` | **11.8** |
 | 9 | **Cannot fix posted daily sales** | ~~`PosDailySummary` posted = immutable~~ → `correct_pos_daily_summary()` + HTTP | **11.9** ✓ |
-| 10 | **Cannot fix posted expenses** | `correct_expense_entry()` **core done**; **no HTTP route or UI** | **11.10** |
+| 10 | **Cannot fix posted expenses** | ~~`correct_expense_entry()` core only~~ → HTTP + UI | **11.10** ✓ |
 | 11 | Corrections **UI** missing | Supplier/customer payment, FX purchase, manual journal **void**, generic ledger **correct/void** — **HTTP done** (Phase 8.5); **zero** frontend calls; no `period_unlock_reason` in forms | **11.11** (UI only) |
 | 12 | Other posted types stuck | Invoice, credit sale, staff, partner, FX conversion/spend — **core helpers only**; no HTTP routes or tests | **11.12** |
 | 13 | **Cash-drawer session trap** | Daily sales + cash movements auto-open a drawer session and **hard-block** when the day is CLOSED (`daily_summary_posting.py:91`, `cash/posting.py:196`) — **no reopen**; inconsistent with period-lock owner-unlock. Expenses bypass sessions. | **11.13** |
@@ -774,13 +774,13 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | `POST` | `.../customers/{id}/payments/{je_id}/correct` | `correct_customer_payment` | core only |
 | `POST` | `.../fx/purchases/{je_id}/correct` | `correct_fx_purchase` | core only |
 | `POST` | `.../pos/daily-summaries/{id}/correct` | `correct_pos_daily_summary` | yes |
+| `POST` | `.../expenses/{id}/correct` | `correct_expense_entry` | yes |
 | `POST` | `.../manual-journals/{id}/void` | void manual | yes |
 
-**Core only — HTTP still planned (Phase 11.10 / 11.12):**
+**Core only — HTTP still planned (Phase 11.12):**
 
 | Helper in `correction.py` | Planned HTTP slice |
 |---------------------------|-------------------|
-| `correct_expense_entry` | **11.10** |
 | `correct_supplier_invoice` | **11.12** |
 | `correct_credit_sale` | **11.12** |
 | `correct_staff_journal_entry` | **11.12** |
@@ -816,7 +816,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
   → 11.7 Unified expense (partner-fronted)
   → 11.8 Dashboard FX native display
   → 11.9 Correct posted daily sales          ← done (v0.69.0); owner sign-off PENDING
-  → 11.10 Expense correction API + UI      ← money-critical — ACTIVE
+  → 11.10 Expense correction API + UI      ← done (v0.69.1); owner sign-off PENDING
   → 11.11 Correction UI (existing APIs) + period_unlock_reason on mutations
   → 11.12 Remaining correction APIs (invoice, staff, partner, credit sale, FX conversion/spend)
   → 11.13 Cash-drawer session optional + owner-reopen   ← money-critical (lock model)
@@ -1039,17 +1039,19 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned (**core done** — `correct_expense_entry()` in `correction.py`; **HTTP + UI not built**) |
-| **Money-critical** | Yes — owner sign-off |
-| **Suggested tag** | `v0.69.1-correct-expense` |
+| **Status** | done |
+| **Money-critical** | Yes — owner sign-off **PENDING** |
+| **Tag** | `v0.69.1-correct-expense` |
 
 **Problem:** Core helper exists; no HTTP route; raw ledger void desyncs `expense_entries`.
 
 **Acceptance:**
 
-- [ ] `POST .../expenses/{id}/correct` (or by `journal_entry_id`) wrapping existing `correct_expense_entry()`.
-- [ ] UI on `/expenses` posted rows → Correct dialog.
-- [ ] Tests: amount/account/date change; subledger + GL tie; period locks (HTTP integration).
+- [x] `POST .../expenses/{id}/correct` wrapping existing `correct_expense_entry()`.
+- [x] UI on `/expenses` posted rows → Correct dialog.
+- [x] Tests: amount/account/date change; subledger + GL tie; period locks (HTTP integration).
+
+**Done:** `correct_expense_by_id()` + `ExpenseCorrect`/`ExpenseCorrectOut`; `correct-expense-form.tsx` + `/expenses` Correct button; 4 tests in `test_expense_correct.py`. **572 pytest green**; frontend build green.
 
 ---
 
@@ -1291,7 +1293,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.7 | Partner-fronted expense from New → Expense |
 | 11.8 | Dashboard FX shows native currency |
 | 11.9 | Correct posted daily sales E2E; owner sign-off |
-| 11.10 | Correct posted expense E2E; owner sign-off |
+| 11.10 | Correct posted expense E2E; owner sign-off | **done** (`v0.69.1`) — sign-off PENDING |
 | 11.11 | Correction **UI** for existing Phase 8.5 APIs; period unlock works |
 | 11.12 | Remaining correction **HTTP** routes + integration tests green; owner sign-off |
 | 11.13 | Sales/cash post with no forced session; closed day owner-reopenable + audited; owner sign-off |

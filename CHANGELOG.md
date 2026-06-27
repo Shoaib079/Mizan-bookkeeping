@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**Phase 11 Slice 11.10 — Correct posted expense (money-critical):** `correct_expense_by_id()` wraps existing `correct_expense_entry()` — voids GL, updates `expense_entries` row, reposts atomically. `POST .../expenses/{id}/correct` with `ExpenseCorrect`/`ExpenseCorrectOut` (reason, void_date, period_unlock_reason). Frontend: `correct-expense-form.tsx`; `/expenses` posted rows → **Correct** button (pre-filled, stable idempotency key). Tests: `test_expense_correct.py` (4 tests — amount, account/date, non-posted 409, period lock). **572 pytest green**; frontend build green. Tag `v0.69.1-correct-expense`. **Owner sign-off PENDING.** **Next:** Phase 11.11 correction UI for existing APIs.
+
 **Phase 11 Slice 11.9 — Correct posted daily sales (money-critical):** `correct_pos_daily_summary()` voids linked `CARD_SALES` + `CASH_MOVEMENT` journal entries (cash movement reversal on void JE), updates summary fields, reposts via shared confirm path. `POST .../pos/daily-summaries/{id}/correct` with `CorrectPosDailySummaryRequest`. Frontend: `correct-daily-sales-form.tsx`; `/sales` posted rows → **Correct** button. Period lock + duplicate-date guards preserved. **568 pytest green** (+5); frontend build green. Tag `v0.69.0-correct-daily-sales`. **Owner sign-off PENDING.** **Next:** Phase 11.10 expense correction API + UI.
 
 **Phase 11 Slice 11.8 — Dashboard FX native currency display:** FX wallets on dashboard show native balance as primary (`formatFxNative(native_quantity, currency)`); muted `Book cost: …` TRY subtitle per row. No backend changes. **563 pytest green**; frontend build green. Tag `v0.68.7-dashboard-fx-native`. **Next:** Phase 11.9 correct posted daily sales.

@@ -43,6 +43,19 @@ class ExpenseCreate(BaseModel):
     confirm_expense_item_id: uuid.UUID | None = None
 
 
+class ExpenseCorrect(ExpenseCreate):
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
+class ExpenseCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
+    expense: ExpenseRead
+
+
 class ExpenseConfirmItemRequest(BaseModel):
     expense_item_id: uuid.UUID
     actor_id: uuid.UUID
