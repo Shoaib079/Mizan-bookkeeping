@@ -288,6 +288,7 @@ def post_supplier_payment(
     payment_account_id: uuid.UUID,
     reference_type: str | None = None,
     reference_id: uuid.UUID | None = None,
+    source: JournalEntrySource = JournalEntrySource.PAYMENT,
 ) -> SupplierPaymentPostResult:
     """Post supplier payment to GL and payables subledger in one transaction."""
     if amount_kurus <= 0:
@@ -328,7 +329,7 @@ def post_supplier_payment(
             description,
             lines,
             actor_id=actor_id,
-            source=JournalEntrySource.PAYMENT,
+            source=source,
         )
 
         supplier_entry = persist_supplier_payment_entry(

@@ -69,6 +69,7 @@ class JournalEntrySource(str, enum.Enum):
     FX_EXPENSE_SPEND = "fx_expense_spend"
     EXPENSE_ENTRY = "expense_entry"
     SYSTEM = "system"
+    RULE_AUTO = "rule_auto"
 
 
 class LedgerAuditAction(str, enum.Enum):

@@ -40,6 +40,8 @@ class StatementClassificationRule(EntityScopedMixin, Base):
         index=True,
     )
     confirmation_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    correction_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    confirmations_since_correction: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)

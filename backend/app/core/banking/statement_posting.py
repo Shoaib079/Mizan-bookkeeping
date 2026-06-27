@@ -178,6 +178,7 @@ def post_bank_fee(
     amount_kurus: int,
     description: str,
     actor_id: uuid.UUID,
+    source: JournalEntrySource = JournalEntrySource.BANK_FEE,
 ) -> BankFeePostResult:
     """Post bank fee: Dr Bank Charges (5300), Cr bank — not classify-only."""
     if amount_kurus <= 0:
@@ -211,7 +212,7 @@ def post_bank_fee(
             description,
             lines,
             actor_id=actor_id,
-            source=JournalEntrySource.BANK_FEE,
+            source=source,
         )
 
         session.commit()

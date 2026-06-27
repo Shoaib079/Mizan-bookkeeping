@@ -128,6 +128,7 @@ class BankStatementLineRead(BaseModel):
     candidate_supplier_ledger_entry_id: uuid.UUID | None = None
     candidate_account_transfer_id: uuid.UUID | None = None
     expense_entry_id: uuid.UUID | None = None
+    classification_source: str | None = None
     suggestion: ClassificationSuggestion | None = None
 
 
@@ -238,6 +239,18 @@ class ClassifyStatementLineRequest(BaseModel):
         default=None,
         description="Required for rent_utility — owner picks expense GL account (e.g. 5000 rent)",
     )
+
+
+class CorrectStatementLineRequest(BaseModel):
+    classification: StatementLineClassification
+    supplier_id: uuid.UUID | None = None
+    counterpart_money_account_id: uuid.UUID | None = None
+    credit_card_money_account_id: uuid.UUID | None = None
+    actor_id: uuid.UUID
+    customer_id: uuid.UUID | None = None
+    delivery_platform_id: uuid.UUID | None = None
+    expense_account_id: uuid.UUID | None = None
+    reason: str | None = Field(default=None, max_length=512)
 
 
 class ClassifyStatementLineResult(BaseModel):

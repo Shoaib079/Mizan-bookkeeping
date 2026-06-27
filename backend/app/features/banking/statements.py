@@ -41,12 +41,15 @@ from app.features.banking.schema import (
 )
 from app.features.banking.classification_learning import (
     learn_classification_rule,
+    record_rule_correction,
     suggest_classification,
 )
+from app.features.banking.statement_rule_auto import apply_import_rule_auto
 from app.features.banking.statement_models import (
     BankStatement,
     BankStatementLine,
     StatementLineClassification,
+    StatementLineClassificationSource,
     StatementLineStatus,
 )
 from app.features.entities import service as entity_service
@@ -83,6 +86,10 @@ class InvalidClassificationError(ValueError):
     """Raised when classification preconditions fail."""
 
 
+class LineNotCorrectableError(ValueError):
+    """Raised when a statement line cannot be corrected in its current state."""
+
+
 def file_fingerprint(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
@@ -117,6 +124,7 @@ def _to_line_read(
         candidate_supplier_ledger_entry_id=line.candidate_supplier_ledger_entry_id,
         candidate_account_transfer_id=line.candidate_account_transfer_id,
         expense_entry_id=line.expense_entry_id,
+        classification_source=line.classification_source,
         suggestion=suggestion,
     )
 
@@ -747,6 +755,25 @@ def _persist_parsed_statement(
     session.refresh(statement)
     for line in lines:
         session.refresh(line)
+
+    apply_import_rule_auto(
+        session,
+        entity_id,
+        statement.id,
+        find_matching_payment=_find_matching_payment,
+        link_payment_to_line=_link_payment_to_line,
+        route_payment_needs_review=_route_payment_needs_review,
+        find_near_matching_payments=_find_near_matching_payments,
+        get_bank_money_account=_get_bank_money_account,
+    )
+
+    lines = list(
+        session.scalars(
+            select(BankStatementLine)
+            .where(BankStatementLine.statement_id == statement.id)
+            .order_by(BankStatementLine.transaction_date, BankStatementLine.id)
+        )
+    )
     return _to_statement_read(statement, lines, session=session)
 
 
@@ -1496,6 +1523,7 @@ def classify_statement_line(
             line.classification = StatementLineClassification.BANK_FEE
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
+            line.classification_source = StatementLineClassificationSource.MANUAL.value
             session.commit()
             session.refresh(line)
 
@@ -1657,4 +1685,106 @@ def classify_statement_line(
         linked_existing_transfer=False,
         routed_to_needs_review=False,
         journal_entry_id=journal_id,
+    )
+
+
+def _reset_line_for_correction(line: BankStatementLine) -> None:
+    line.status = StatementLineStatus.IMPORTED
+    line.classification = StatementLineClassification.UNCLASSIFIED
+    line.classification_source = None
+    line.journal_entry_id = None
+    line.supplier_id = None
+    line.supplier_ledger_entry_id = None
+    line.account_transfer_id = None
+    line.pos_settlement_id = None
+    line.delivery_settlement_id = None
+    line.credit_card_payment_id = None
+    line.customer_id = None
+    line.customer_ledger_entry_id = None
+    line.expense_entry_id = None
+    line.review_reason = None
+    line.candidate_supplier_ledger_entry_id = None
+    line.candidate_account_transfer_id = None
+
+
+def correct_statement_line(
+    session: Session,
+    entity_id: uuid.UUID,
+    statement_id: uuid.UUID,
+    line_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    classification: StatementLineClassification,
+    supplier_id: uuid.UUID | None = None,
+    customer_id: uuid.UUID | None = None,
+    counterpart_money_account_id: uuid.UUID | None = None,
+    credit_card_money_account_id: uuid.UUID | None = None,
+    delivery_platform_id: uuid.UUID | None = None,
+    expense_account_id: uuid.UUID | None = None,
+    reason: str | None = None,
+) -> ClassifyStatementLineResult:
+    """Reverse a resolved line via void/unlink, learn from correction, re-classify manually."""
+    from app.core.ledger.posting import void_journal_entry
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        statement = session.get(BankStatement, statement_id)
+        if statement is None:
+            raise LookupError("Bank statement not found")
+        line = session.get(BankStatementLine, line_id)
+        if line is None or line.statement_id != statement_id:
+            raise LookupError("Statement line not found")
+
+        if line.status not in (
+            StatementLineStatus.POSTED,
+            StatementLineStatus.LINKED,
+            StatementLineStatus.CLASSIFIED,
+        ):
+            raise LineNotCorrectableError(
+                "Only posted, linked, or classified lines can be corrected"
+            )
+
+        original_description = line.description
+        was_linked = line.status == StatementLineStatus.LINKED
+        journal_entry_id = line.journal_entry_id
+
+        if line.status == StatementLineStatus.POSTED and journal_entry_id is not None:
+            void_journal_entry(
+                session,
+                entity_id,
+                journal_entry_id,
+                actor_id=actor_id,
+                reason=reason or "Statement line correction",
+            )
+        elif was_linked and journal_entry_id is not None:
+            pass
+
+        _reset_line_for_correction(line)
+        session.commit()
+        session.refresh(line)
+
+        record_rule_correction(
+            session,
+            description=original_description,
+            corrected_classification=classification,
+            corrected_supplier_id=supplier_id,
+        )
+        session.commit()
+
+    return classify_statement_line(
+        session,
+        entity_id,
+        statement_id,
+        line_id,
+        classification=classification,
+        supplier_id=supplier_id,
+        customer_id=customer_id,
+        counterpart_money_account_id=counterpart_money_account_id,
+        credit_card_money_account_id=credit_card_money_account_id,
+        actor_id=actor_id,
+        delivery_platform_id=delivery_platform_id,
+        expense_account_id=expense_account_id,
     )

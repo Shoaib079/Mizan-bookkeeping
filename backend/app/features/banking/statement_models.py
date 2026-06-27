@@ -33,6 +33,11 @@ class StatementLineStatus(str, enum.Enum):
     LINKED = "linked"
 
 
+class StatementLineClassificationSource(str, enum.Enum):
+    MANUAL = "manual"
+    RULE_AUTO = "rule_auto"
+
+
 class BankStatement(EntityScopedMixin, Base):
     __tablename__ = "bank_statements"
     __table_args__ = (
@@ -166,3 +171,4 @@ class BankStatementLine(EntityScopedMixin, Base):
         nullable=True,
         index=True,
     )
+    classification_source: Mapped[str | None] = mapped_column(String(16), nullable=True)

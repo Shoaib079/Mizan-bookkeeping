@@ -28,6 +28,7 @@ from app.features.banking.schema import (
     BankStatementRead,
     ClassifyStatementLineRequest,
     ClassifyStatementLineResult,
+    CorrectStatementLineRequest,
     CreateSupplierFromLineRequest,
     CreateSupplierFromLineResult,
     NeedsReviewStatementLineRead,
@@ -311,6 +312,50 @@ def classify_statement_line(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except statement_service.LineAlreadyResolvedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except SupplierOverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidTransferError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except statement_service.InvalidClassificationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@statements_router.post(
+    "/{statement_id}/lines/{line_id}/correct",
+    response_model=ClassifyStatementLineResult,
+)
+def correct_statement_line(
+    entity_id: uuid.UUID,
+    statement_id: uuid.UUID,
+    line_id: uuid.UUID,
+    payload: CorrectStatementLineRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> ClassifyStatementLineResult:
+    try:
+        return statement_service.correct_statement_line(
+            session,
+            entity_id,
+            statement_id,
+            line_id,
+            actor_id=payload.actor_id,
+            classification=payload.classification,
+            supplier_id=payload.supplier_id,
+            counterpart_money_account_id=payload.counterpart_money_account_id,
+            credit_card_money_account_id=payload.credit_card_money_account_id,
+            customer_id=payload.customer_id,
+            delivery_platform_id=payload.delivery_platform_id,
+            expense_account_id=payload.expense_account_id,
+            reason=payload.reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except statement_service.LineNotCorrectableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except statement_service.LineAlreadyResolvedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except SupplierOverpaymentError as exc:
