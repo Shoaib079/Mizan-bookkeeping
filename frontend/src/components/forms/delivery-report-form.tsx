@@ -10,9 +10,11 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
+import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useRegisterUnsaved } from "@/lib/unsaved-work";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
@@ -42,6 +44,14 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
   const [description, setDescription] = useState("Delivery platform report");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const dirty =
+    open &&
+    (grossText.trim() !== "" ||
+      commissionText.trim() !== "" ||
+      netText.trim() !== "");
+
+  useRegisterUnsaved("delivery-report", dirty, open);
 
   const loadPlatforms = useCallback(async () => {
     if (!entityId) return;
@@ -128,6 +138,7 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
 
   return (
     <Dialog open={open} title="Delivery platform report" onClose={onClose}>
+      <RecordingForBanner />
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="dr-platform">Platform</Label>

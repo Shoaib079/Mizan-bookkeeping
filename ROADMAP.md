@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.0b** — restaurant switcher → profile menu + switch safeguards, then 12.1 hosting |
-| **Last completed slice** | Phase 11 Slice 11.22 — small UI gaps (`v0.69.13-ui-gaps`) |
-| **Last commit/tag** | `v0.69.13-ui-gaps` |
-| **Next up** | Phase 12 Slice 0b — restaurant switcher → profile menu + switch safeguards → 12.1 hosting |
+| **Active slice** | **12.0c** — member add-by-email, then 12.1 hosting |
+| **Last completed slice** | Phase 12 Slice 0b — account menu + restaurant switch safeguards (`v0.70.2-restaurant-switcher-safeguards`) |
+| **Last commit/tag** | `v0.70.2-restaurant-switcher-safeguards` |
+| **Next up** | Phase 12 Slice 0c — member add-by-email → 12.1 hosting |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1406,24 +1406,24 @@ Take the tested app to a real, secure production environment and put real data i
 
 | | |
 |---|---|
-| **Status** | planned (frontend) |
+| **Status** | done (frontend) |
 | **Suggested tag** | `v0.70.2-restaurant-switcher-safeguards` |
 
 **Why:** the active restaurant decides which books every entry posts to. RLS prevents any cross-entity *leak*, and entries are correctable — but an accidental switch could mis-file a day's data into the wrong restaurant. Make switching deliberate and the active restaurant unmistakable. Also: a proper **modern account menu** (the standard top-right pattern — identity, switch, account, sign out).
 
 **Acceptance — modern top-right account menu (think Stripe/Linear/Notion):**
 
-- [ ] **Trigger:** a top-right button showing an **avatar (user initials)** + the active-restaurant badge. Opens a clean dropdown; closes on outside-click + Esc (reuse the shared dismiss pattern from 11.14/combobox).
-- [ ] **Header — who's signed in:** avatar, **display name**, **email** at the top of the menu.
-- [ ] **Active restaurant + switch:** current restaurant shown with its **per-restaurant colour/initial**; "Switch restaurant" lists only the user's accessible restaurants, with a **confirm** ("Switch to [B]? You're in [A]") — deliberate, not a one-click flip.
-- [ ] **Always-visible active-restaurant badge** in the top bar (name + colour) so the current restaurant is obvious at a glance even with the menu closed.
-- [ ] **Account / settings links:** Restaurant settings, Members & roles, Opening balances (role-gated per 11.21 — non-owners don't see admin items).
-- [ ] **Sign out:** a clear sign-out action wired to **Clerk `signOut()`** → clears session → redirect to sign-in. (Standard, expected, bottom of the menu.)
-- [ ] *(Optional, if cheap)* appearance/theme toggle hook — only if the token system already supports it; otherwise skip.
-- [ ] **Unsaved-work guard:** if a form/entry has unsaved input, warn before switching restaurants or signing out (don't lose/misfile work); pairs with 11.20 entity-switch reset.
-- [ ] **"Recording for: [Restaurant]"** shown on the New-menu entry dialogs, so the active restaurant is visible at the moment of posting.
-- [ ] Optional: toast "Now working in [B]" after a switch.
-- [ ] Honor role-aware chrome (11.21). Tests: menu shows the signed-in user; switcher lists only accessible restaurants + requires confirm; sign out clears session and redirects; active-restaurant badge reflects state; unsaved-work warning fires; entry dialogs show the active restaurant.
+- [x] **Trigger:** a top-right button showing an **avatar (user initials)** + the active-restaurant badge. Opens a clean dropdown; closes on outside-click + Esc (reuse the shared dismiss pattern from 11.14/combobox).
+- [x] **Header — who's signed in:** avatar, **display name**, **email** at the top of the menu.
+- [x] **Active restaurant + switch:** current restaurant shown with its **per-restaurant colour/initial**; "Switch restaurant" lists only the user's accessible restaurants, with a **confirm** ("Switch to [B]? You're in [A]") — deliberate, not a one-click flip.
+- [x] **Always-visible active-restaurant badge** in the top bar (name + colour) so the current restaurant is obvious at a glance even with the menu closed.
+- [x] **Account / settings links:** Restaurant settings, Members & roles, Opening balances (role-gated per 11.21 — non-owners don't see admin items).
+- [x] **Sign out:** a clear sign-out action wired to **Clerk `signOut()`** → clears session → redirect to sign-in. (Standard, expected, bottom of the menu.)
+- [x] *(Optional, if cheap)* appearance/theme toggle hook — only if the token system already supports it; otherwise skip.
+- [x] **Unsaved-work guard:** if a form/entry has unsaved input, warn before switching restaurants or signing out (don't lose/misfile work); pairs with 11.20 entity-switch reset.
+- [x] **"Recording for: [Restaurant]"** shown on the New-menu entry dialogs, so the active restaurant is visible at the moment of posting.
+- [x] Optional: toast "Now working in [B]" after a switch.
+- [x] Honor role-aware chrome (11.21). Tests: menu shows the signed-in user; switcher lists only accessible restaurants + requires confirm; sign out clears session and redirects; active-restaurant badge reflects state; unsaved-work warning fires; entry dialogs show the active restaurant.
 
 ---
 

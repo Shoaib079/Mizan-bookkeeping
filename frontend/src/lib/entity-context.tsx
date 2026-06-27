@@ -23,6 +23,7 @@ type EntityContextValue = {
   entities: Entity[];
   entitiesLoading: boolean;
   refreshEntities: () => Promise<void>;
+  userProfile: UserProfile | null;
 };
 
 const EntityContext = createContext<EntityContextValue | null>(null);
@@ -35,6 +36,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
   const [actorId, setActorIdState] = useState(DEFAULT_ACTOR);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [entitiesLoading, setEntitiesLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     if (clerkEnabled) return;
@@ -85,8 +87,13 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!clerkEnabled || !isAuthReady) return;
     void apiFetch<UserProfile>("/users/me")
-      .then((user) => setActorId(user.id))
-      .catch(() => undefined);
+      .then((user) => {
+        setUserProfile(user);
+        setActorId(user.id);
+      })
+      .catch(() => {
+        setUserProfile(null);
+      });
   }, [clerkEnabled, isAuthReady, setActorId]);
 
   const value = useMemo(
@@ -98,6 +105,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
       entities,
       entitiesLoading,
       refreshEntities,
+      userProfile,
     }),
     [
       entityId,
@@ -107,6 +115,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
       entities,
       entitiesLoading,
       refreshEntities,
+      userProfile,
     ],
   );
 

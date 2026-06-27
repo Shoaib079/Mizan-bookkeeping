@@ -58,7 +58,10 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_excel_export.py` | Excel export — P&L/balance sheet/KDV/period comparison xlsx 200 + content-type, valid openpyxl load, expected headers, P&L row count vs JSON, `from>to` → 422 | pass |
 | `backend/tests/test_roles_permissions.py` | Roles & permissions — `ROLE_PERMISSIONS` map, inactive user denied, owner/P&L 200, cashier P&L 403, partner_view_only P&L 200, missing header 401, non-member 403, enforcement off passes without header, membership CRUD API, **`GET .../members/me`** (auth enforced + dev default + X-User-Id), cashier dashboard OK, cashier balance-sheet export 403 | pass |
 | `frontend/src/lib/entity-access.test.ts` | Role/setting-aware UI — permission matrix, dashboard KPI filter, write chrome, delivery route/card filters | pass |
-| `frontend/src/lib/app-routes.test.ts` | Sidebar nav groups — plain-language sections, Settings sub-pages, Sales/Cards grouping, Reports nesting; New menu omits Cash tip + Card sales batch; top bar has no quick-action buttons | pass |
+| `frontend/src/lib/app-routes.test.ts` | Sidebar nav groups; New menu omissions; top bar has no quick-action buttons; AccountMenu replaces UserButton; account menu switch confirm + unsaved guard; RecordingForBanner on entry dialogs | pass |
+| `frontend/src/lib/entity-visual.test.ts` | Deterministic entity accent colour + initials; user initials from display name/email | pass |
+| `frontend/src/lib/account-menu-helpers.test.ts` | Switch confirm copy; unsaved warning; role-gated admin links; recording-for label | pass |
+| `frontend/src/lib/unsaved-work.test.ts` | Dirty-source registry — set/clear/has unsaved work | pass |
 | `frontend/src/lib/expense-accounts.test.ts` | Expense chart filter — `account_type === expense` only; `5700` absent | pass |
 | `frontend/src/lib/onboarding.test.ts` | First-run checklist — role gating, step completion from API totals, admin-only invite step | pass |
 | `frontend/src/lib/api-error-message.test.ts` | Reports landing — `apiErrorMessage()` prefers ApiError, falls back safely | pass |
@@ -67,7 +70,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
-**Count:** 591 pytest + 54 vitest (last run 2026-06-27).
+**Count:** 589 pytest + 84 vitest (last run 2026-06-27).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 Run frontend: `cd frontend && npm test && npm run build`

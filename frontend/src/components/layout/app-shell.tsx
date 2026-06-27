@@ -2,11 +2,12 @@
 
 /** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6). */
 
-import { UserButton } from "@clerk/nextjs";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { AccountMenu } from "@/components/layout/account-menu";
+import { EntityBadge } from "@/components/layout/entity-badge";
 import { CommandPalette } from "@/components/command-palette";
 import { NewMenu } from "@/components/new-menu";
 import { QuickActionsProvider, useQuickActions } from "@/components/quick-actions";
@@ -23,8 +24,6 @@ import {
 } from "@/lib/app-routes";
 import { useEntity } from "@/lib/entity-context";
 import { cn } from "@/lib/utils";
-
-const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
 export function AppShell({
   children,
@@ -60,6 +59,7 @@ function AppShellInner({
   } = useEntity();
 
   const navSettings = { deliveryEnabled };
+  const activeEntity = entities.find((entity) => entity.id === entityId);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -71,7 +71,21 @@ function AppShellInner({
         <NewMenu />
         <div className="border-b border-border px-3 py-3">
           <Label htmlFor="entity-select">Restaurant</Label>
-          {entities.length > 0 ? (
+          {authOn ? (
+            <div className="mt-1">
+              {activeEntity ? (
+                <EntityBadge
+                  entityId={activeEntity.id}
+                  name={activeEntity.name}
+                  className="w-full"
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {entitiesLoading ? "Loading…" : "Use the account menu to switch"}
+                </p>
+              )}
+            </div>
+          ) : entities.length > 0 ? (
             <Combobox
               id="entity-select"
               className="mt-1"
@@ -185,7 +199,7 @@ function AppShellInner({
                 ⌘K
               </kbd>
             </Button>
-            {clerkEnabled && <UserButton afterSignOutUrl="/sign-in" />}
+            {authOn && <AccountMenu />}
           </div>
         </header>
         <main className="flex-1 p-6">{children}</main>

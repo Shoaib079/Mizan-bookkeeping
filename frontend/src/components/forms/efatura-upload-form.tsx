@@ -7,10 +7,12 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useRegisterUnsaved } from "@/lib/unsaved-work";
 import { useEntity } from "@/lib/entity-context";
 
 type InvoiceDraftRead = {
@@ -36,6 +38,8 @@ export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useRegisterUnsaved("efatura-upload", Boolean(file), open);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -74,6 +78,7 @@ export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
 
   return (
     <Dialog open={open} title="Supplier invoice (e-Fatura)" onClose={onClose}>
+      <RecordingForBanner />
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="efatura-file">e-Fatura file</Label>

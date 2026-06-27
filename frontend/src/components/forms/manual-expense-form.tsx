@@ -11,6 +11,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
+import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { type PartnerRow } from "@/components/forms/partner-form";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
@@ -25,6 +26,7 @@ import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
+import { useRegisterUnsaved } from "@/lib/unsaved-work";
 
 type MoneyAccount = { id: string; name: string };
 
@@ -122,6 +124,8 @@ export function ManualExpenseForm({
 
   const dirty =
     baseline !== null && statesDiffer(baseline, formDraft);
+
+  useRegisterUnsaved("manual-expense", dirty, open);
 
   const loadOptions = useCallback(async () => {
     if (!entityId) return;
@@ -306,6 +310,7 @@ export function ManualExpenseForm({
       dirty={dirty}
       onDiscard={handleDiscard}
     >
+      <RecordingForBanner />
       {resumeDraft && (
         <ResumeDraftBanner
           onResume={handleResume}

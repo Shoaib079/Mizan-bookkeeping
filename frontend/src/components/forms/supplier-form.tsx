@@ -6,11 +6,13 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { useToast } from "@/lib/toast";
+import { useRegisterUnsaved } from "@/lib/unsaved-work";
 
 export type SupplierRow = {
   id: string;
@@ -44,6 +46,16 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
   const [isActive, setIsActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const dirty =
+    open &&
+    !editing &&
+    (name.trim() !== "" ||
+      vkn.trim() !== "" ||
+      iban.trim() !== "" ||
+      notes.trim() !== "");
+
+  useRegisterUnsaved("supplier-form", dirty, open);
 
   useEffect(() => {
     if (!open) return;
@@ -109,6 +121,7 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
       title={editing ? "Edit supplier" : "New supplier"}
       onClose={onClose}
     >
+      {!editing && <RecordingForBanner />}
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="sup-name">Name</Label>

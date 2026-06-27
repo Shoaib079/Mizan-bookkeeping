@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**Phase 12 Slice 0b — Account menu + restaurant switch safeguards (frontend-only):** Replaced Clerk `UserButton` with `AccountMenu` — avatar + active-restaurant badge trigger, dropdown with display name/email from `/users/me`, role-gated settings links (11.21), confirm-before-switch, unsaved-work guard (`UnsavedWorkProvider`), Clerk sign-out. Sidebar combobox removed when auth on (read-only badge); dev mode keeps combobox. `RecordingForBanner` on all New-menu entry dialogs; toast after switch. Vitest: `entity-visual.test.ts` (5), `account-menu-helpers.test.ts` (6), `unsaved-work.test.ts` (3), `app-routes.test.ts` (+6). **589 pytest green**; frontend build green; **84 vitest** (+30). Tag `v0.70.2-restaurant-switcher-safeguards`. **Next:** Phase 12.0c member add-by-email.
+
 **Phase 12 Slice 0a — UX refinements:** Removed top-bar quick actions (Daily sales, Add expense). New menu no longer offers Cash tip or Card sales batch; command palette trimmed. Dropped `5700 Tips Expense` from default chart (migration `051`); receipt/tip lines default to `5200`; expense forms use full expense chart (`expense-accounts.ts`). Removed tips-expense cash-only posting guard. Vitest: `app-routes.test.ts` (+2), `expense-accounts.test.ts` (4). Tag `v0.70.1-ux-refinements`. **Next:** Phase 12.1 hosting.
 
 **DateInput click-only amend (amends 11.17):** Removed `onFocus` calendar open from `date-input.tsx` — dialog auto-focus (11.4) no longer pops the calendar when a date field is first. Click field or trailing icon still opens; typing, Esc, outside-click unchanged. Vitest: `date-input-open.test.ts` (3). Tag `v0.70.0.1-dateinput-click-only`.

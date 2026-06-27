@@ -104,6 +104,86 @@ describe("app shell header", () => {
     expect(source).not.toMatch(/openQuickAction\("sales"\)/);
     expect(source).not.toMatch(/openQuickAction\("expense"\)/);
   });
+
+  it("uses AccountMenu instead of Clerk UserButton when auth is on", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/app-shell.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("AccountMenu");
+    expect(source).not.toContain("UserButton");
+  });
+
+  it("moves restaurant switching out of the sidebar combobox for signed-in users", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/app-shell.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("Use the account menu to switch");
+    expect(source).toMatch(/authOn \? \(/);
+  });
+});
+
+describe("account menu", () => {
+  it("fetches signed-in user from entity context", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../lib/entity-context.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("/users/me");
+    expect(source).toContain("userProfile");
+  });
+
+  it("requires confirm before switching restaurants", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/account-menu.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("switchConfirmMessage");
+    expect(source).toContain("Switch restaurant?");
+  });
+
+  it("signs out via Clerk and redirects to sign-in", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/account-menu.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("signOut");
+    expect(source).toContain("/sign-in");
+  });
+
+  it("warns before switch or sign-out when unsaved work is registered", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/account-menu.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("hasUnsavedWork");
+    expect(source).toContain("unsavedWorkWarningMessage");
+  });
+});
+
+describe("entry dialogs recording context", () => {
+  it("shows Recording for banner on manual expense dialog", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/forms/manual-expense-form.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("RecordingForBanner");
+  });
 });
 
 describe("sidebarChildrenForNavItem", () => {

@@ -10,6 +10,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
+import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
@@ -18,6 +19,7 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
+import { useRegisterUnsaved } from "@/lib/unsaved-work";
 
 type MoneyAccount = { id: string; name: string; account_kind?: string };
 
@@ -91,6 +93,13 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
     zReportKurus > 0 &&
     cardKurus !== zReportKurus;
   const submitBlocked = totalKurus <= 0 || !moneyAccountId;
+  const dirty =
+    open &&
+    (cashText.trim() !== "" ||
+      cardText.trim() !== "" ||
+      zReportText.trim() !== "");
+
+  useRegisterUnsaved("manual-daily-sales", dirty, open);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -168,6 +177,7 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} title="Daily sales (manual)" onClose={onClose}>
+      <RecordingForBanner />
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="sales-date">Date (DD.MM.YYYY)</Label>

@@ -5,10 +5,12 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useRegisterUnsaved } from "@/lib/unsaved-work";
 import { useEntity } from "@/lib/entity-context";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
 
@@ -29,6 +31,8 @@ export function PosSummaryUploadForm({ open, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useRegisterUnsaved("pos-summary-upload", Boolean(file), open);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -64,6 +68,7 @@ export function PosSummaryUploadForm({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} title="POS daily summary (photo)" onClose={onClose}>
+      <RecordingForBanner />
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="pos-summary-file">POS summary photo</Label>

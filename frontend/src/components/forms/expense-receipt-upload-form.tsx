@@ -5,11 +5,13 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useRegisterUnsaved } from "@/lib/unsaved-work";
 import { useEntity } from "@/lib/entity-context";
 
 type MoneyAccount = { id: string; name: string };
@@ -38,6 +40,8 @@ export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useRegisterUnsaved("expense-receipt-upload", Boolean(file), open);
 
   const loadOptions = useCallback(async () => {
     if (!entityId) return;
@@ -88,6 +92,7 @@ export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} title="Expense receipt (photo)" onClose={onClose}>
+      <RecordingForBanner />
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="receipt-file">Receipt photo</Label>
