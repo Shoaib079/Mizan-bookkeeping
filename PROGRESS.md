@@ -7,12 +7,21 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.17** — DateInput click-to-open |
-| **Last completed slice** | Phase 11 Slice 11.16 — general ledger report (`v0.69.7-ledger-report`) |
+| **Active slice** | **11.18** — frontend adversarial audit |
+| **Last completed slice** | Phase 11 Slice 11.17 — DateInput click-to-open (`v0.69.8-dateinput-click-open`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.7-ledger-report` |
+| **Last tag** | `v0.69.8-dateinput-click-open` |
 
 ## Resume point
+
+**Phase 11 Slice 11.17 complete** — DateInput click-to-open (`v0.69.8-dateinput-click-open`):
+- `date-input.tsx`: click/focus field opens calendar; trailing icon still toggles; typing + Esc/outside-click unchanged
+- `suppressOpenOnFocusRef` prevents calendar reopen after picking a date
+- `DESIGN_SYSTEM.md` §5/§10 + ROADMAP 10.1 note updated (amends v0.66.0 icon-only)
+- **588 pytest green**; frontend build green; **16 vitest**
+- Frontend-only — no backend changes
+
+**Next:** Phase 11.18 — frontend adversarial audit (reviewer/owner-led).
 
 **Phase 11 Slice 11.16 complete** — general ledger report (`v0.69.7-ledger-report`):
 - Expanded `/reports/ledger` — date range, description search, source/status filters, pagination (50/page)
@@ -22,10 +31,7 @@
 - **588 pytest green**; frontend build green; **16 vitest**
 - Frontend-only — no backend changes
 
-**Next:** Phase 11.17 — DateInput opens on field click/focus (app-wide).
-
 **Phase 11 Slice 11.15 complete** — day close-out screen (`v0.69.6-day-closeout`):
-- `POST /entities/{id}/operations/day-closeout` — atomic manual sales + N expenses (single commit, idempotent)
 - Frontend `/close-day` — one date, sales (cash/card/Z/drawer), dynamic expense rows; period unlock + stable idempotency key
 - Nav: Books sidebar, New → Operations, dashboard **Close day**
 - Nested `entity_context` GUC restore fix; `confirm_pos_daily_summary(commit=False)`; expense `period_unlock_reason`

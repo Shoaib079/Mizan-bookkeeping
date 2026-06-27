@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**Phase 11 Slice 11.17 — DateInput click-to-open (frontend-only):** `date-input.tsx` opens the calendar on field click/focus (not icon-only); trailing icon still toggles; typing, Esc, and outside-click unchanged. `suppressOpenOnFocusRef` prevents reopen after picking a date. Amends 10.1 / `DESIGN_SYSTEM.md` §5/§10. **588 pytest green**; frontend build green; **16 vitest**. Tag `v0.69.8-dateinput-click-open`. **Next:** Phase 11.18 frontend adversarial audit.
+
 **Phase 11 Slice 11.16 — General ledger / all-entries report (frontend-only):** Expanded `/reports/ledger` from narrow correct-only list into full GL report over existing `GET .../ledger/entries`. Date range (`from`/`to`), description search (`q`), source + status filters, pagination (50/page, prev/next). Expandable rows show GL lines (chart account code/name), amend/void chain navigation, Correct for posted manual/bank_fee via existing form; link to Manual journals for void. Reports landing card + sidebar relabelled "General ledger (all entries)" (`financial: true`); role-gated with `ForbiddenMessage`. Distinct intro copy from deferred audit-events log. **588 pytest green**; frontend build green; **16 vitest**. Tag `v0.69.7-ledger-report`. **Next:** Phase 11.17 DateInput click-to-open.
 
 **Owner sign-off — Phase 11 Slice 11.15 (day close-out):** Owner approved atomic day close-out (`v0.69.6-day-closeout`). **588 pytest green** at sign-off. **Next:** Phase 11.16 general ledger report page.

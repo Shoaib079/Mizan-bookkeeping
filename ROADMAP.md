@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.17** — DateInput click-to-open |
-| **Last completed slice** | Phase 11 Slice 11.16 — general ledger report (`v0.69.7-ledger-report`) |
-| **Last commit/tag** | `v0.69.7-ledger-report` |
-| **Next up** | **11.17** → 11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.18** — frontend adversarial audit |
+| **Last completed slice** | Phase 11 Slice 11.17 — DateInput click-to-open (`v0.69.8-dateinput-click-open`) |
+| **Last commit/tag** | `v0.69.8-dateinput-click-open` |
+| **Next up** | **11.18** → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -470,7 +470,7 @@ Phase 8.7 backend APIs must be signed off **before** slices that depend on them 
 **What §10 requires (checklist when done):**
 
 - [x] One shared `frontend/src/components/ui/date-input.tsx` (+ minimal popover; token-styled).
-- [x] Field always **typable**; trailing **calendar icon inside** input opens **small** month grid — **not** a separate mode toggle.
+- [x] Field always **typable**; **click/focus field or** trailing **calendar icon** opens **small** month grid — **not** a separate mode toggle (11.17 amends v0.66.0 icon-only open).
 - [x] Pick day → updates display string; invalid typed date → existing submit-time errors unchanged.
 - [x] Default today on new forms; pre-fill document date on `pos-summary-review` when summary loads.
 - [x] Arrow keys change day **while popover open**.
@@ -755,7 +755,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 14 | Daily drivers buried / New menu flat + sticky / toggles unclear | "Daily sales (manual)" (cash+card, **already built**) + "Manual expense" live only inside the **flat 9-item** New dropdown; the dropdown **does not close on outside click** (`new-menu.tsx` has no mousedown handler — unlike `combobox.tsx`/`date-input.tsx` which do); same gap in `command-palette.tsx` + entity switcher; toggles editable + **labelled** (`settings-types.ts:35-47`, confirmed by 11.18 audit) — 11.14 only verifies each gates the right form | **11.14** |
 | 15 | No single end-of-day entry | One day = many separate modals (sales, then each expense) | **11.15** ✓ |
 | 16 | **No "all entries" ledger view** | ~~`GET .../ledger/entries` exists; no frontend page~~ → `/reports/ledger` full GL report | **11.16** ✓ |
-| 17 | Date field opens calendar **only via icon** | `date-input.tsx` input has no click/focus-to-open; only the trailing icon opens it. Owner wants click-the-field-to-open, app-wide (amends 10.1 "icon-only"). | **11.17** |
+| 17 | Date field opens calendar **only via icon** | ~~`date-input.tsx` input has no click/focus-to-open~~ → click/focus field or icon opens popover; no reopen after pick (11.17) | **11.17** ✓ |
 | 18 | Frontend never had an adversarial audit | Backend got Phase 8.6; the UI is surfacing hand-found bugs (items 13–17). Reviewer/owner-led frontend audit. | **11.18** |
 | 19 | **Idempotency key not stable** | `useSubmitIdempotency()` + explicit keys on 39 surfaces; no auto-mint in `api.ts` | **Done** in 11.19 (owner sign-off **APPROVED 2026-06-27**) |
 | 20 | Entity-switch state bleed | `opening-balances/page.tsx` keeps `lines`/`goLiveDate` across entity change; 7 detail pages (`suppliers/[id]`, `partners/[id]`, `staff/[id]`, `customers/[id]`, `banking/accounts|fx|statements/[id]`) show prior-entity data until refetch. **RLS + account-entity validation backstop an actual leak** — this is stale-state hygiene, not an isolation breach. | **11.20** |
@@ -1173,7 +1173,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 - [x] **Distinct** from the deferred *audit-events* log (FUTURE_IDEAS) — this is the general ledger of posted/voided journal entries, not the raw audit trail.
 - [x] **Do not** add a new backend endpoint — wire the existing one.
 
-**Done:** Expanded `/reports/ledger` from narrow correct-only list into full GL report: `ReportDateRange` + description search + source/status filters + pagination (50/page); expandable row detail with chart account labels, amend/void chain navigation, Correct for posted manual/bank_fee; link to Manual journals for void. Reports card + sidebar relabelled "General ledger (all entries)" (`financial: true`). **588 pytest green**; frontend build green; **16 vitest**. **Next:** Phase 11.17 DateInput click-to-open.
+**Done:** Expanded `/reports/ledger` from narrow correct-only list into full GL report: `ReportDateRange` + description search + source/status filters + pagination (50/page); expandable row detail with chart account labels, amend/void chain navigation, Correct for posted manual/bank_fee; link to Manual journals for void. Reports card + sidebar relabelled "General ledger (all entries)" (`financial: true`). **588 pytest green**; frontend build green; **16 vitest**. **Next:** Phase 11.17 DateInput click-to-open (done in 11.17).
 
 ---
 
@@ -1181,16 +1181,18 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned (**amends 10.1** — `v0.66.0` chose icon-only open) |
+| **Status** | done (**amends 10.1** — `v0.66.0` chose icon-only open) |
 | **Suggested tag** | `v0.69.8-dateinput-click-open` |
 
 **Problem:** `date-input.tsx` opens the calendar only via the trailing icon; clicking/focusing the field does nothing. Owner wants modern click-the-field-to-open behaviour, everywhere.
 
 **Acceptance:**
 
-- [ ] Clicking or focusing the date field opens the calendar (keep the icon too); typing still works; Esc + outside-click close (already present). One shared component → applies to **all** date fields app-wide automatically.
-- [ ] Don't trap the cursor / don't reopen after pick; verify on manual expense, daily sales, payments, opening balances.
-- [ ] Updates the 10.1 "icon-only" note in this roadmap + `DESIGN_SYSTEM.md` §5/§10.
+- [x] Clicking or focusing the date field opens the calendar (keep the icon too); typing still works; Esc + outside-click close (already present). One shared component → applies to **all** date fields app-wide automatically.
+- [x] Don't trap the cursor / don't reopen after pick; verify on manual expense, daily sales, payments, opening balances.
+- [x] Updates the 10.1 "icon-only" note in this roadmap + `DESIGN_SYSTEM.md` §5/§10.
+
+**Done:** `date-input.tsx` — `onClick`/`onFocus` open calendar; `suppressOpenOnFocusRef` prevents reopen loop after `pickDate()` refocus; icon button still toggles. **588 pytest green**; frontend build green; **16 vitest**. **Next:** Phase 11.18 frontend adversarial audit.
 
 ---
 

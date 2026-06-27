@@ -67,7 +67,7 @@ Semantic colours are used mainly as small badges/pills, not large fills.
 ## 5. Components (one of each, reused everywhere)
 
 - **Buttons:** Primary (blue filled), Secondary (outline), Ghost, and icon-only (`…`). All with default / hover / focus / disabled / loading states.
-- **Inputs:** text input, **search** (icon-leading), **select / dropdown**, **date picker** — all matching height and radius.
+- **Inputs:** text input, **search** (icon-leading), **select / dropdown**, **date picker** (click/focus field or trailing calendar icon opens the popover; field stays typable) — all matching height and radius.
 - **Badges / status pills:** Approved (green), Needs review (amber), Error / Overdue (red), Draft / Partially paid (slate). Small, rounded.
 - **Data table:** dense, sortable headers, hairline row dividers, right-aligned amount columns, row actions (`…`), pagination.
 - Plus: modal/dialog, tabs, toast, command palette (Cmd/Ctrl-K), empty states, loading skeletons — all in the same style.
@@ -127,6 +127,7 @@ The app must feel fast, keyboard-friendly, and effortless — like a modern prod
 
 **Date pickers that actually work:**
 - You can **type the date** (`DD.MM.YYYY`) **or** pick it from the calendar — both work.
+- **Click or focus the date field** (or the trailing calendar icon) to open the popover; typing still works while it is open.
 - Sensible **default** (today, or the document's date); arrow keys move days; **Enter confirms**. Never force a slow click-through-the-months just to enter today.
 
 **Fewer clicks, smart defaults:**
