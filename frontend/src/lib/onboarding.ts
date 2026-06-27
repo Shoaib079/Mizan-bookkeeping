@@ -4,14 +4,12 @@ import { hasPermission } from "@/lib/entity-access";
 import type { EntityRole } from "@/lib/settings-types";
 
 export type OnboardingState = {
-  chartSeeded: boolean;
   openingBalancesPosted: boolean;
   staffInvited: boolean;
   firstDayRecorded: boolean;
 };
 
 export type OnboardingStepId =
-  | "chart"
   | "opening_balances"
   | "invite_staff"
   | "first_day";
@@ -33,12 +31,6 @@ export function buildOnboardingSteps(
   role: EntityRole,
 ): OnboardingStep[] {
   const steps: OnboardingStep[] = [
-    {
-      id: "chart",
-      label: "Seed chart of accounts",
-      href: "/settings/entity",
-      done: state.chartSeeded,
-    },
     {
       id: "opening_balances",
       label: "Post opening balances",
@@ -89,13 +81,11 @@ export type PaginatedTotal = {
 
 /** Derive checklist progress from existing list endpoints (no new backend). */
 export function deriveOnboardingState(responses: {
-  chart: PaginatedTotal;
   openingBalance: PaginatedTotal;
   members: PaginatedTotal;
   dailySummaries: PaginatedTotal;
 }): OnboardingState {
   return {
-    chartSeeded: responses.chart.total > 0,
     openingBalancesPosted: responses.openingBalance.total > 0,
     staffInvited: responses.members.total > 1,
     firstDayRecorded: responses.dailySummaries.total > 0,

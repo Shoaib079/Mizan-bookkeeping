@@ -148,7 +148,6 @@ export default function OpeningBalancesPage() {
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
   const [wizardSteps, setWizardSteps] = useState<string[]>([]);
-  const [chartCount, setChartCount] = useState<number | null>(null);
   const [obAccounts, setObAccounts] = useState<OpeningBalanceAccount[]>([]);
   const [moneyAccounts, setMoneyAccounts] = useState<MoneyAccountOption[]>([]);
   const [suppliers, setSuppliers] = useState<NamedRow[]>([]);
@@ -162,7 +161,6 @@ export default function OpeningBalancesPage() {
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
   const [posting, setPosting] = useState(false);
-  const [seeding, setSeeding] = useState(false);
   const [focusLineId, setFocusLineId] = useState<string | null>(null);
   const goLiveFocusedRef = useRef(false);
 
@@ -220,7 +218,6 @@ export default function OpeningBalancesPage() {
 
   const resetOpeningBalancesState = useCallback(() => {
     setWizardSteps([]);
-    setChartCount(null);
     setObAccounts([]);
     setMoneyAccounts([]);
     setSuppliers([]);
@@ -234,7 +231,6 @@ export default function OpeningBalancesPage() {
     setError(null);
     setValidating(false);
     setPosting(false);
-    setSeeding(false);
     setFocusLineId(null);
     goLiveFocusedRef.current = false;
   }, []);
@@ -245,11 +241,7 @@ export default function OpeningBalancesPage() {
     if (!entityId) return;
     setError(null);
     try {
-      const [chartRes, obRes, money, supRes, partRes, custRes] =
-        await Promise.all([
-          apiFetch<{ total: number }>(
-            `/entities/${entityId}/chart-of-accounts?limit=1`,
-          ),
+      const [obRes, money, supRes, partRes, custRes] = await Promise.all([
           apiFetch<OpeningBalanceAccount[]>(
             "/chart-of-accounts/default/opening-balance-accounts",
           ),
@@ -264,7 +256,6 @@ export default function OpeningBalancesPage() {
             `/entities/${entityId}/customers?limit=100`,
           ),
         ]);
-      setChartCount(chartRes.total);
       setObAccounts(obRes);
       setMoneyAccounts(money);
       setSuppliers(supRes.items);
@@ -332,26 +323,6 @@ export default function OpeningBalancesPage() {
     setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)));
     setPreview(null);
     setPosted(null);
-  }
-
-  async function onSeedChart() {
-    if (!entityId) return;
-    setSeeding(true);
-    setError(null);
-    try {
-      const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(`/entities/${entityId}/chart-of-accounts/seed`, {
-        method: "POST",
-        idempotencyKey,
-      });
-      submitIdempotency.completeSubmit();
-      await loadRefs();
-      toast("Chart seeded");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Seed failed");
-    } finally {
-      setSeeding(false);
-    }
   }
 
   async function onValidate(event?: FormEvent) {
@@ -564,22 +535,6 @@ export default function OpeningBalancesPage() {
             />
           )}
 
-          {chartCount === 0 && (
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">
-                Seed the chart of accounts before entering opening balances.
-              </p>
-              <Button
-                type="button"
-                className="mt-2"
-                disabled={seeding}
-                onClick={() => void onSeedChart()}
-              >
-                {seeding ? "Seeding…" : "Seed default chart"}
-              </Button>
-            </div>
-          )}
-
           <form className="space-y-4" onSubmit={onValidate}>
             <div className="max-w-xs">
               <Label htmlFor="go-live">Go-live date</Label>
@@ -702,7 +657,7 @@ export default function OpeningBalancesPage() {
             <div className="flex flex-wrap gap-2">
               <Button
                 type="submit"
-                disabled={validating || chartCount === 0 || validateBlocked}
+                disabled={validating || validateBlocked}
               >
                 {validating ? "Validating…" : "Validate & preview journal"}
               </Button>

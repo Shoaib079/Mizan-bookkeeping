@@ -36,7 +36,6 @@ export default function EntitySettingsPage() {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [chartCount, setChartCount] = useState<number | null>(null);
-  const [seeding, setSeeding] = useState(false);
   const [wizardEntityId, setWizardEntityId] = useState<string | null>(null);
   const [wizardDraft, setWizardDraft] = useState<WizardDraft>(defaultWizardDraft);
   const [wizardSaving, setWizardSaving] = useState(false);
@@ -137,26 +136,6 @@ export default function EntitySettingsPage() {
       }
     } finally {
       setCreating(false);
-    }
-  }
-
-  async function onSeedChart() {
-    if (!entityId) return;
-    setSeeding(true);
-    setSettingsError(null);
-    try {
-      const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(`/entities/${entityId}/chart-of-accounts/seed`, {
-        method: "POST",
-        idempotencyKey,
-      });
-      submitIdempotency.completeSubmit();
-      await reloadSettings();
-      toast("Chart seeded");
-    } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Seed failed");
-    } finally {
-      setSeeding(false);
     }
   }
 
@@ -325,20 +304,8 @@ export default function EntitySettingsPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {chartCount === null
                   ? "Loading…"
-                  : chartCount > 0
-                    ? `${chartCount} account${chartCount === 1 ? "" : "s"} seeded.`
-                    : "No chart yet — seed before opening balances."}
+                  : `${chartCount} account${chartCount === 1 ? "" : "s"} on chart.`}
               </p>
-              {chartCount === 0 && (
-                <Button
-                  type="button"
-                  className="mt-3"
-                  disabled={seeding}
-                  onClick={() => void onSeedChart()}
-                >
-                  {seeding ? "Seeding…" : "Seed default chart"}
-                </Button>
-              )}
             </section>
 
             <section className="rounded-lg border border-border bg-card p-5">

@@ -24,13 +24,11 @@ describe("deriveOnboardingState", () => {
   it("marks steps done from paginated totals", () => {
     expect(
       deriveOnboardingState({
-        chart: { total: 1 },
         openingBalance: { total: 0 },
         members: { total: 1 },
         dailySummaries: { total: 0 },
       }),
     ).toEqual({
-      chartSeeded: true,
       openingBalancesPosted: false,
       staffInvited: false,
       firstDayRecorded: false,
@@ -40,7 +38,6 @@ describe("deriveOnboardingState", () => {
   it("treats more than one member as staff invited", () => {
     expect(
       deriveOnboardingState({
-        chart: { total: 5 },
         openingBalance: { total: 1 },
         members: { total: 2 },
         dailySummaries: { total: 3 },
@@ -51,7 +48,6 @@ describe("deriveOnboardingState", () => {
 
 describe("buildOnboardingSteps", () => {
   const freshState = {
-    chartSeeded: false,
     openingBalancesPosted: false,
     staffInvited: false,
     firstDayRecorded: false,
@@ -60,7 +56,6 @@ describe("buildOnboardingSteps", () => {
   it("includes invite staff only for admin:manage_members roles", () => {
     const ownerSteps = buildOnboardingSteps(freshState, "owner");
     expect(ownerSteps.map((step) => step.id)).toEqual([
-      "chart",
       "opening_balances",
       "invite_staff",
       "first_day",
@@ -68,7 +63,6 @@ describe("buildOnboardingSteps", () => {
 
     const cashierSteps = buildOnboardingSteps(freshState, "cashier");
     expect(cashierSteps.map((step) => step.id)).toEqual([
-      "chart",
       "opening_balances",
       "first_day",
     ]);
@@ -77,7 +71,6 @@ describe("buildOnboardingSteps", () => {
   it("marks completed steps as done", () => {
     const steps = buildOnboardingSteps(
       {
-        chartSeeded: true,
         openingBalancesPosted: true,
         staffInvited: false,
         firstDayRecorded: false,
@@ -85,7 +78,6 @@ describe("buildOnboardingSteps", () => {
       "owner",
     );
     expect(steps.filter((step) => step.done).map((step) => step.id)).toEqual([
-      "chart",
       "opening_balances",
     ]);
   });
@@ -102,7 +94,6 @@ describe("isOnboardingComplete", () => {
   it("is true only when every step is done", () => {
     const steps = buildOnboardingSteps(
       {
-        chartSeeded: true,
         openingBalancesPosted: true,
         staffInvited: true,
         firstDayRecorded: true,
@@ -114,7 +105,6 @@ describe("isOnboardingComplete", () => {
       isOnboardingComplete(
         buildOnboardingSteps(
           {
-            chartSeeded: true,
             openingBalancesPosted: false,
             staffInvited: false,
             firstDayRecorded: false,

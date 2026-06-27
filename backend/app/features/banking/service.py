@@ -48,7 +48,7 @@ DEFAULT_CASH_DRAWER_NAME = "Main Drawer"
 
 
 def ensure_default_cash_drawer(
-    session: Session, entity_id: uuid.UUID
+    session: Session, entity_id: uuid.UUID, *, commit: bool = True
 ) -> MoneyAccountRead | None:
     """Create one TRY cash drawer after chart seed — skip if any cash account exists."""
     with entity_context(session, entity_id):
@@ -66,6 +66,7 @@ def ensure_default_cash_drawer(
             account_kind=MoneyAccountKind.CASH,
             name=DEFAULT_CASH_DRAWER_NAME,
         ),
+        commit=commit,
     )
 
 
@@ -153,7 +154,11 @@ def _to_read(session: Session, money_account: MoneyAccount, gl_account: Account)
 
 
 def create_money_account(
-    session: Session, entity_id: uuid.UUID, payload: MoneyAccountCreate
+    session: Session,
+    entity_id: uuid.UUID,
+    payload: MoneyAccountCreate,
+    *,
+    commit: bool = True,
 ) -> MoneyAccountRead:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -202,14 +207,17 @@ def create_money_account(
         )
         session.add(money_account)
         try:
-            session.commit()
+            if commit:
+                session.commit()
+                session.refresh(money_account)
+                session.refresh(gl_account)
+            else:
+                session.flush()
         except IntegrityError as exc:
             session.rollback()
             raise DuplicateMoneyAccountError(
                 f"Money account named {payload.name!r} already exists for this entity"
             ) from exc
-        session.refresh(money_account)
-        session.refresh(gl_account)
         return _to_read(session, money_account, gl_account)
 
 

@@ -21,16 +21,31 @@ from app.features.entities import service as entity_service
 __all__ = [
     "ChartAlreadySeededError",
     "list_accounts_for_entity",
+    "provision_entity_baseline",
     "seed_chart_for_entity",
 ]
+
+
+def provision_entity_baseline(
+    session: Session, entity_id: uuid.UUID, *, commit: bool = True
+) -> None:
+    """Seed default chart + cash drawer for a new entity — idempotent, single transaction."""
+    try:
+        seed_default_chart(session, entity_id, commit=False)
+    except ChartAlreadySeededError:
+        pass
+    banking_service.ensure_default_cash_drawer(session, entity_id, commit=False)
+    if commit:
+        session.commit()
 
 
 def seed_chart_for_entity(session: Session, entity_id: uuid.UUID) -> list[Account]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
-    accounts = seed_default_chart(session, entity_id)
+    accounts = seed_default_chart(session, entity_id, commit=False)
     chart_codes = [account.code for account in accounts]
-    banking_service.ensure_default_cash_drawer(session, entity_id)
+    banking_service.ensure_default_cash_drawer(session, entity_id, commit=False)
+    session.commit()
     with entity_context(session, entity_id):
         return list(
             session.scalars(

@@ -37,10 +37,7 @@ export function OnboardingChecklist() {
     }
     setLoading(true);
     try {
-      const [chart, openingBalance, members, dailySummaries] = await Promise.all([
-        apiFetch<PaginatedTotal>(
-          `/entities/${entityId}/chart-of-accounts?limit=1`,
-        ),
+      const [openingBalance, members, dailySummaries] = await Promise.all([
         apiFetch<PaginatedTotal>(
           `/entities/${entityId}/ledger/entries?source=opening_balance&limit=1`,
         ),
@@ -50,7 +47,7 @@ export function OnboardingChecklist() {
         ),
       ]);
       setState(
-        deriveOnboardingState({ chart, openingBalance, members, dailySummaries }),
+        deriveOnboardingState({ openingBalance, members, dailySummaries }),
       );
     } catch {
       setState(null);

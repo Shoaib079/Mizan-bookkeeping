@@ -12,6 +12,7 @@ from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.auth.types import EntityRole
 from app.db.session import entity_context, require_entity_context, user_membership_lookup
 from app.features.auth.models import EntityMembership
+from app.features.chart_of_accounts import service as chart_service
 from app.features.entities.models import Entity, EntitySetting
 from app.features.entities.schema import EntityCreate, EntitySettingCreate
 
@@ -42,7 +43,12 @@ def create_entity(
             )
             session.flush()
 
-    session.commit()
+    try:
+        chart_service.provision_entity_baseline(session, entity.id, commit=False)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     session.refresh(entity)
     return entity
 

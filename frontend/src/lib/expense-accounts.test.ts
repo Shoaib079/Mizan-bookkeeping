@@ -8,8 +8,10 @@ import {
 
 const SAMPLE: ChartAccount[] = [
   { id: "1", code: "1000", name: "Cash", account_type: "asset" },
-  { id: "2", code: "5200", name: "Utility Expense", account_type: "expense" },
-  { id: "3", code: "5100", name: "Salary Expense", account_type: "expense" },
+  { id: "2", code: "5200", name: "General Expense", account_type: "expense" },
+  { id: "3", code: "5100", name: "Salaries & Wages", account_type: "expense" },
+  { id: "5", code: "5210", name: "Utilities", account_type: "expense" },
+  { id: "6", code: "5220", name: "Supplies & Ingredients", account_type: "expense" },
   { id: "4", code: "4000", name: "Sales Revenue", account_type: "revenue" },
 ];
 
@@ -18,6 +20,8 @@ describe("filterExpenseAccounts", () => {
     expect(filterExpenseAccounts(SAMPLE).map((a) => a.code)).toEqual([
       "5200",
       "5100",
+      "5210",
+      "5220",
     ]);
   });
 

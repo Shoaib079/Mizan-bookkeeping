@@ -8,9 +8,9 @@
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
 | **Active slice** | **12.6** — owner onboarding & smoke test |
-| **Last completed slice** | Phase 12 Slice 12.5 — pre-launch security pass (`v0.71.4-prelaunch-security`) |
+| **Last completed slice** | Auto-seed chart on restaurant create (`v0.71.6-auto-seed-chart`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.4-prelaunch-security` |
+| **Last tag** | `v0.71.6-auto-seed-chart` |
 
 ## Owner blockers (12.5)
 
@@ -18,6 +18,13 @@ Owner must confirm before storing real people's data (not automatable in CI):
 
 - Review `DEPLOY.md` §14 **KVKK conscious decision** — encryption at rest, backup bucket access, data-deletion path.
 - Run `security_dependency_scan.sh`, `security_secrets_audit.sh`, `security_production_pytest.sh` locally if not relying on CI alone.
+
+**Auto-seed chart on restaurant create complete** (`v0.71.6-auto-seed-chart`):
+
+- `create_entity` atomically provisions default chart + Main Drawer; idempotent seed API kept without UI trigger
+- Expense categories 5210–5270 added; 5200 = Genel Giderler; no 5700
+- Seed buttons/hints removed; onboarding checklist → opening balances → invite staff → first day
+- 615 pytest green; frontend build green
 
 ## Owner blockers (12.4)
 

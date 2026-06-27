@@ -14,8 +14,8 @@
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
 | **Active slice** | **12.6** — owner onboarding & smoke test |
-| **Last completed slice** | Phase 12 Slice 12.5 — pre-launch security pass (`v0.71.4-prelaunch-security`) |
-| **Last commit/tag** | `v0.71.4-prelaunch-security` |
+| **Last completed slice** | Auto-seed chart on restaurant create (`v0.71.6-auto-seed-chart`) |
+| **Last commit/tag** | `v0.71.6-auto-seed-chart` |
 | **Next up** | Phase 12 Slice 12.6 — owner onboarding & smoke test |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
@@ -1561,13 +1561,35 @@ Take the tested app to a real, secure production environment and put real data i
 
 ---
 
+### Slice 12.5a — Auto-seed chart on restaurant create
+
+| | |
+|---|---|
+| **Status** | **done** (`v0.71.6-auto-seed-chart`) |
+| **Suggested tag** | `v0.71.6-auto-seed-chart` |
+
+**Purpose:** New restaurants get default chart + Main Drawer automatically — no manual seed step in onboarding.
+
+**Acceptance:**
+
+- [x] `create_entity` calls `provision_entity_baseline` in the same transaction (chart + cash drawer; rollback on failure)
+- [x] Idempotent — re-seed API returns 409; provision skips if chart already exists
+- [x] Default chart extended with common expense categories (5210–5270); 5200 = Genel Giderler; no 5700
+- [x] Manual seed UI removed from entity settings + opening balances; onboarding checklist drops chart step
+- [x] `POST …/chart-of-accounts/seed` kept (idempotent) with no user-facing trigger
+- [x] Tests: auto-provision on create, OB validate immediately, atomic rollback, expense categories; 615 pytest
+
+**Out of scope (12.6+):** owner onboarding walkthrough (12.6).
+
+---
+
 **Senior-dev pre-deploy must-dos (fold into the slices above — flagged 2026-06-27):**
 
 - **Staging dry-run first.** Deploy to a prod-like **staging** env and run the full smoke test there before touching production. Don't let prod be the first real deploy.
 - **Real backup→restore drill on managed Postgres.** The 2 skipped backup tests are skipped because `pg_dump`/`pg_restore` aren't in the local PATH — so restore-verify has **never actually run end-to-end**. Before trusting backups, do one real backup → restore into a scratch DB → assert the books tie, on the actual managed Postgres. (**Slice 12.3 done** — owner runs `run_backup_drill.sh` on staging per `DEPLOY.md` §11.)
 - **Error monitoring live BEFORE go-live** (Sentry-or-equiv), so the first real bug is visible. (**Slice 12.4 done** — owner sets `SENTRY_DSN` on Render per `DEPLOY.md` §12.)
 - **Data protection (KVKK) note.** The app stores financial + personal data (staff names, supplier/customer VKN). At minimum: encryption at rest, restricted backup-store access (separate account/region), and a known data-deletion path. Conscious decision required before storing real people's data. (**Slice 12.5 done** — owner sign-off checklist in `DEPLOY.md` §14.)
-- **Cold-start onboarding walkthrough as the owner.** Sign up → create restaurant → seed chart → opening balances → invite staff → record a day → run a report. Do it as a first-time non-coder and fix any dead-end. (Slice 12.6.)
+- **Cold-start onboarding walkthrough as the owner.** Sign up → create restaurant → opening balances → invite staff → record a day → run a report. Do it as a first-time non-coder and fix any dead-end. (Slice 12.6.)
 - **Indexes: OK** — entity_id is indexed across tables and journal entries have date/source indexes; no action needed now. Revisit composite report indexes only if a report slows with real volume.
 
 **Phase 12 complete when:** app is live, backed up, monitored, and the owner has recorded real data successfully.
@@ -1605,6 +1627,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-21 | Auto-seed chart on restaurant create | `v0.71.6-auto-seed-chart` | Atomic chart+drawer on create; expense categories 5210–5270; seed UI removed; onboarding → OB → staff → first day; 615 pytest |
 | 2026-06-27 | Phase 12 Slice 12.5 — pre-launch security pass | `v0.71.4-prelaunch-security` | pip-audit deps, secrets audit, production guard pytest, DEPLOY §14 KVKK; CI wired; 611 pytest |
 | 2026-06-27 | Phase 12 Slice 12.4 — observability | `v0.71.3-observability` | Sentry optional DSN, JSON logs, request logging, rate limit middleware, DEPLOY §12; 611 pytest |
 | 2026-06-27 | Phase 12 Slice 12.3 — backup restore drill | `v0.71.2-backup-restore-drill` | verify/drill scripts, CI postgresql-client, Celery failure logs, DEPLOY/OPS runbook; 605 pytest |

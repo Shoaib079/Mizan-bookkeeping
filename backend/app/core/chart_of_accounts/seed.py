@@ -17,7 +17,9 @@ class ChartAlreadySeededError(ValueError):
     """Entity already has a chart of accounts."""
 
 
-def seed_default_chart(session: Session, entity_id: uuid.UUID) -> list[Account]:
+def seed_default_chart(
+    session: Session, entity_id: uuid.UUID, *, commit: bool = True
+) -> list[Account]:
     """Insert default restaurant chart for one entity — idempotent guard."""
     with entity_context(session, entity_id):
         count = session.scalar(select(func.count()).select_from(Account)) or 0
@@ -36,9 +38,12 @@ def seed_default_chart(session: Session, entity_id: uuid.UUID) -> list[Account]:
             for template in DEFAULT_CHART
         ]
         session.add_all(accounts)
-        session.commit()
-        for account in accounts:
-            session.refresh(account)
+        if commit:
+            session.commit()
+            for account in accounts:
+                session.refresh(account)
+        else:
+            session.flush()
         return accounts
 
 

@@ -25,6 +25,13 @@ CASH_OVER_SHORT_CODE = "5400"
 FX_GAIN_CODE = "4200"
 FX_LOSS_CODE = "5600"
 GENERAL_EXPENSE_CODE = "5200"
+UTILITIES_EXPENSE_CODE = "5210"
+SUPPLIES_EXPENSE_CODE = "5220"
+REPAIRS_EXPENSE_CODE = "5230"
+ADVERTISING_EXPENSE_CODE = "5240"
+TRANSPORT_EXPENSE_CODE = "5250"
+CLEANING_EXPENSE_CODE = "5260"
+OFFICE_EXPENSE_CODE = "5270"
 DELIVERY_COMMISSION_EXPENSE_CODE = "5500"
 
 
@@ -102,8 +109,78 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
     DefaultAccount(FX_GAIN_CODE, "FX Gain", "Kur Kazancı", AccountType.REVENUE, AccountNormalBalance.CREDIT, False),
     # Expenses
     DefaultAccount("5000", "Rent Expense", "Kira Gideri", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
-    DefaultAccount("5100", "Salary Expense", "Maaş Gideri", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
-    DefaultAccount("5200", "Utility Expense", "Genel Giderler", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
+    DefaultAccount(
+        SALARY_EXPENSE_CODE,
+        "Salaries & Wages",
+        "Maaş ve Ücretler",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
+    DefaultAccount(
+        GENERAL_EXPENSE_CODE,
+        "General Expense",
+        "Genel Giderler",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
+    DefaultAccount(
+        UTILITIES_EXPENSE_CODE,
+        "Utilities",
+        "Elektrik, Su, Doğalgaz",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
+    DefaultAccount(
+        SUPPLIES_EXPENSE_CODE,
+        "Supplies & Ingredients",
+        "Malzeme ve Malzemeler",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
+    DefaultAccount(
+        REPAIRS_EXPENSE_CODE,
+        "Repairs & Maintenance",
+        "Bakım ve Onarım",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
+    DefaultAccount(
+        ADVERTISING_EXPENSE_CODE,
+        "Advertising",
+        "Reklam",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
+    DefaultAccount(
+        TRANSPORT_EXPENSE_CODE,
+        "Transport & Fuel",
+        "Ulaşım ve Yakıt",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
+    DefaultAccount(
+        CLEANING_EXPENSE_CODE,
+        "Cleaning",
+        "Temizlik",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
+    DefaultAccount(
+        OFFICE_EXPENSE_CODE,
+        "Office Expense",
+        "Ofis Giderleri",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
     DefaultAccount("5300", "Bank Charges", "Banka Masrafları", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount("5400", "Cash Over/Short", "Kasa Fazlası/Eksiği", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount(
