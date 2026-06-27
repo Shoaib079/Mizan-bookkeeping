@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.15** — Day close-out screen (optional) |
-| **Last completed slice** | Phase 11 Slice 11.14 — new menu UX (`v0.69.5-new-menu-ux`) |
-| **Last commit/tag** | `v0.69.5-new-menu-ux` |
-| **Next up** | **11.15** (optional) → 11.16–11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.16** — General ledger report page |
+| **Last completed slice** | Phase 11 Slice 11.15 — day close-out screen (`v0.69.6-day-closeout`) |
+| **Last commit/tag** | `v0.69.6-day-closeout` |
+| **Next up** | **11.16** → 11.17–11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1140,7 +1140,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | done — **owner sign-off PENDING** (money-critical) |
+| **Status** | done — owner sign-off **APPROVED (2026-06-27)** (money-critical) |
 | **Money-critical** | Yes (posts sales + expenses) — owner sign-off |
 | **Suggested tag** | `v0.69.6-day-closeout` |
 

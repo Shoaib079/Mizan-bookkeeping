@@ -20,7 +20,7 @@
 - Nav: Books sidebar, New → Operations, dashboard **Close day**
 - Nested `entity_context` GUC restore fix; `confirm_pos_daily_summary(commit=False)`; expense `period_unlock_reason`
 - **588 pytest green** (+6); frontend build green; **16 vitest**
-- **Owner sign-off: PENDING** (money-critical)
+- **Owner sign-off: APPROVED (2026-06-27)** (money-critical)
 
 **Next:** Phase 11.16 — general ledger / all-entries report page (backend `GET .../ledger/entries` exists).
 
@@ -178,6 +178,7 @@
 
 ## Recent
 
+- 2026-06-27 — Owner sign-off APPROVED: Phase 11.15 day close-out (money-critical)
 - 2026-06-27 — Owner sign-off APPROVED: Phase 11.12, 11.13 (money-critical)
 - 2026-06-27 — Owner sign-off APPROVED: Phase 11.7, 11.9, 11.10, 11.19 (money-critical)
 - 2026-06-25 — Phase 11 Slice 11.1 — default cash drawer on chart seed (`v0.68.0-default-money-accounts`)
