@@ -1619,6 +1619,8 @@ Take the tested app to a real, secure production environment and put real data i
 
 **Note:** Phase **10** = §10 UX + FX (done). Phase **11** = product fixes before deploy. This section is **after** go-live. Promote to Decisions before building.
 
+- **Auto-propagate new default accounts to existing restaurants** — when the default chart grows in a future release, an idempotent "ensure chart complete" sync adds any missing default accounts to every existing entity automatically (owner never manages the chart). Not needed at launch (chart is fixed then; new restaurants auto-seed via `provision_entity_baseline`). Build the first time a default account is added post-launch. Must be idempotent and never touch owner-added custom accounts.
+
 - **§10 interaction UX (dates, combobox, validation, drafts, toasts, focus)** — **→ Phase 10** (pre-launch; slices 10.1–10.7).
 - **Delivery sidebar nesting** — **→ Phase 10.2** (owner confirmed).
 - **FX purchase cash drawer + movement** — **→ Phase 10.8** (pre-launch; **cash only**, not bank).
