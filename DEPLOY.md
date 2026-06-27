@@ -234,7 +234,49 @@ Then walk through: sign up → create restaurant → seed chart → one expense 
 
 ---
 
-## 10. Production cutover checklist
+## 12. Observability (Slice 12.4)
+
+Wire these **before production go-live** so the first real bug is visible.
+
+### Sentry error tracking
+
+1. Create a project at [sentry.io](https://sentry.io) (or your Sentry org) — platform **FastAPI**.
+2. Copy the **DSN** from Project Settings → Client Keys.
+3. On Render **mizan-api** → Environment → add `SENTRY_DSN` (secret, sync: false in `render.yaml`).
+4. Redeploy the API. Trigger a test error in staging (optional) and confirm it appears in Sentry.
+5. Enable Sentry **alert rules** (e.g. new issue → email/Slack) for production.
+
+**Note:** The API boots without `SENTRY_DSN` — Sentry is optional until you set it.
+
+### Structured logs
+
+Production (`APP_ENV=production`) emits **JSON logs** on stderr (level, message, logger, request fields). Render → Logs shows one JSON object per line. No request bodies or secrets are logged.
+
+### Uptime / health checks
+
+| Layer | Check | Notes |
+|-------|-------|-------|
+| **Render (API)** | `GET /health/ready` | Already configured in `render.yaml` (`healthCheckPath`). Render restarts the service when readiness fails (DB down). |
+| **External uptime** | `GET /health/ready` on your public API URL | Optional but recommended — UptimeRobot, Better Stack, Pingdom, etc. Alert when non-200 or timeout. Interval 1–5 min. |
+| **Netlify (frontend)** | — | Static SPA — no API health check needed on Netlify. |
+
+Liveness (`GET /health`) is for quick “process up” checks; **use `/health/ready` for deploy and uptime monitors** (includes DB ping).
+
+### Rate limiting
+
+The API applies an in-memory **60 requests/minute per IP** limit in production (`RATE_LIMIT_PER_MINUTE`, default 60). Skipped on `/health`, `/health/ready`, `/docs`, and OpenAPI routes.
+
+**Limitation:** Each Render instance tracks limits separately — not a global cap across scaled instances. Sufficient for launch; revisit with Redis-backed limits if you scale out.
+
+### Render alerts (recommended)
+
+1. Render dashboard → **mizan-api** → Notifications — enable deploy failure + service unhealthy alerts.
+2. Celery worker — alert on repeated task failures (backup failures log `daily backup task failed` in worker logs).
+3. Combine with Sentry + external uptime on `/health/ready`.
+
+---
+
+## 13. Production cutover checklist
 
 1. Staging smoke green (migrate, verify, `/health/ready`, CORS, Clerk JWT template).
 2. Production Postgres: `migrate_production.sh` + `verify_production_db.sh`.
@@ -261,5 +303,6 @@ Then walk through: sign up → create restaurant → seed chart → one expense 
 | `scripts/smoke_staging.sh` | Post-deploy health + CORS smoke |
 | `backend/app/db/provisioning.py` | `run_production_migrations()`, `verify_production_database()` |
 | `backend/app/launch.py` | Production auth/CORS/key guards |
+| `backend/app/core/observability/` | Sentry init, JSON logging, request log + rate limit middleware |
 
 Questions or blockers: note them in `PROGRESS.md`.

@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     expense_receipt_vision_api_key: str | None = None
     expense_receipt_vision_model: str = "gpt-4o-mini"
 
+    sentry_dsn: str | None = None
+    rate_limit_per_minute: int = 60
+
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"

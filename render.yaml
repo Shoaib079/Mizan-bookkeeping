@@ -59,6 +59,10 @@ services:
         sync: false
       - key: BACKUP_S3_SECRET_ACCESS_KEY
         sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "60"
 
   - type: worker
     name: mizan-celery-worker

@@ -5,6 +5,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | Test file | What it guards | Status |
 |-----------|----------------|--------|
 | `backend/tests/test_health.py` | API liveness (`/health`) + readiness (`/health/ready` DB ping, 503 when down) | pass |
+| `backend/tests/test_observability.py` | Sentry optional init, production JSON logging, rate limit 429 + health exempt (Slice 12.4) | pass |
 | `backend/tests/test_launch_settings.py` | Production boot guards — CORS, Clerk live keys (Slice 12.2) | pass |
 | `backend/tests/test_cors_config.py` | `CORS_ORIGINS` parse + localhost preflight (Slice 12.1) | pass |
 | `backend/tests/test_money.py` | Integer kuruş, Turkish format, loose parse (Decisions §5) | pass |
@@ -73,7 +74,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed. Backup restore E2E tests skip locally when `pg_dump`/`pg_restore` absent; install via `brew install libpq` or rely on CI.
 
-**Count:** 605 pytest + 84 vitest (last run 2026-06-27).
+**Count:** 611 pytest + 84 vitest (last run 2026-06-27).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 Run frontend: `cd frontend && npm test && npm run build`

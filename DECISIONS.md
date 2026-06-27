@@ -24,6 +24,18 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Alternatives considered:** Railway (equivalent to Render — documented in DEPLOY.md); Netlify Functions for API (rejected — FastAPI + Celery + pg_dump need a long-running host).
 
+## 2026-06-27 — Observability (Phase 12 Slice 12.4)
+
+**Choice:** Optional **Sentry** via `SENTRY_DSN` — `sentry-sdk[fastapi]` init at boot when set; no DSN = no error tracking (dev/test unchanged). Production **JSON logs** on stderr + request logging middleware (method, path, status, duration; no bodies/secrets).
+
+**Rate limiting:** In-memory **60 req/min per IP** in production only (`RATE_LIMIT_PER_MINUTE`); exempt `/health`, `/health/ready`, `/docs`, OpenAPI. **Not shared across Render instances** — acceptable for single-instance launch; document Redis-backed limit if scaled.
+
+**Uptime:** Render health check stays on `/health/ready` (DB ping); external uptime monitor recommended on same path; Netlify frontend needs no API health check.
+
+**Owner runbook:** `DEPLOY.md` §12 — create Sentry project, set DSN on Render, enable alerts + optional external uptime.
+
+**Alternatives considered:** slowapi/Redis rate limit (deferred — extra infra for launch); mandatory Sentry in dev (rejected — optional only).
+
 ## 2026-06-27 — Backup restore drill (Phase 12 Slice 12.3)
 
 **Choice:** Restore-verify is a **real drill**, not a code-only checkbox — shell scripts (`verify_backup_restore.sh`, `run_backup_drill.sh`) for owner staging/prod on managed Postgres; CI installs `postgresql-client` so pytest restore tests run in pipeline when pg tools are present.

@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.4** — observability |
-| **Last completed slice** | Phase 12 Slice 12.3 — backup restore drill (`v0.71.2-backup-restore-drill`) |
-| **Last commit/tag** | `v0.71.2-backup-restore-drill` |
-| **Next up** | Phase 12 Slice 12.4 — observability |
+| **Active slice** | **12.5** — pre-launch security pass |
+| **Last completed slice** | Phase 12 Slice 12.4 — observability (`v0.71.3-observability`) |
+| **Last commit/tag** | `v0.71.3-observability` |
+| **Next up** | Phase 12 Slice 12.5 — pre-launch security pass |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1357,7 +1357,7 @@ Take the tested app to a real, secure production environment and put real data i
 | 1. Hosting & infrastructure | **done** (`v0.71.0-hosting-infrastructure`) | Deployment scaffolding: `netlify.toml`, `backend/Dockerfile`, `render.yaml`, `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`. Owner provisions Postgres, Redis, backend, Netlify, S3. |
 | 2. Production provisioning | **done** (`v0.71.1-prod-provisioning`) | Migrate/verify scripts, `/health/ready`, smoke script, Render preDeploy, launch guards |
 | 3. Backups live | **done** (`v0.71.2-backup-restore-drill`) | Restore drill scripts, CI pg tools, Celery failure logging, owner runbook |
-| 4. Observability | planned | Error tracking, structured logging, uptime/health checks, basic rate limiting. |
+| 4. Observability | **done** (`v0.71.3-observability`) | Sentry (optional DSN), JSON logs, request logging, rate limit, health/uptime docs |
 | 5. Pre-launch security pass | planned | Dependency scan; secrets audit; full suite under production settings; final guard-test run. |
 | 6. Owner onboarding & smoke test | planned | Real restaurant(s), chart, opening balances, users/roles; end-to-end smoke in production; **go live.** |
 
@@ -1489,7 +1489,7 @@ Take the tested app to a real, secure production environment and put real data i
 - [x] `DEPLOY.md` — full Slice 12.2 staging-first runbook
 - [x] Tests: `test_db_provisioning.py`, `test_health.py`, `test_launch_settings.py`; full pytest green
 
-**Out of scope (12.4+):** observability (12.4), owner walkthrough (12.6).
+**Out of scope (12.3+):** backup restore drill (12.3 done), observability (12.4 done), owner walkthrough (12.6).
 
 ---
 
@@ -1512,7 +1512,28 @@ Take the tested app to a real, secure production environment and put real data i
 - [x] `OPS_RESTORE.md` — drill scripts + scheduled pipeline (backup → verify → prune)
 - [x] Tests: `test_backups.py` restore tests run when pg tools in PATH (CI); full pytest green
 
-**Out of scope (12.4+):** observability (12.4), owner walkthrough (12.6).
+**Out of scope (12.5+):** pre-launch security pass (12.5), owner walkthrough (12.6).
+
+---
+
+### Slice 12.4 — Observability
+
+| | |
+|---|---|
+| **Status** | **done** (`v0.71.3-observability`) |
+| **Suggested tag** | `v0.71.3-observability` |
+
+**Purpose:** Error monitoring live before go-live (Sentry-or-equiv), structured JSON logging, uptime/health check documentation, basic rate limiting.
+
+**Acceptance:**
+
+- [x] Optional `SENTRY_DSN` in `config.py` + `.env.production.example`; `sentry-sdk[fastapi]` init when DSN set; app boots without DSN
+- [x] Production JSON logs on stderr (`APP_ENV=production`); dev/test human-readable; request logging middleware (method, path, status, duration — no bodies/secrets)
+- [x] Render health check on `/health/ready` verified in `render.yaml`; `DEPLOY.md` §12 — Sentry, uptime monitor, Render alerts
+- [x] In-memory rate limit — 60 req/min per IP in production; skip `/health`, `/health/ready`, `/docs`; 429 with clear message; multi-instance limitation documented
+- [x] Tests: `test_observability.py` (Sentry init, JSON formatter, rate limit 429, health skip); full pytest green
+
+**Out of scope (12.5+):** pre-launch security pass (12.5), owner walkthrough (12.6).
 
 ---
 
@@ -1520,7 +1541,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 - **Staging dry-run first.** Deploy to a prod-like **staging** env and run the full smoke test there before touching production. Don't let prod be the first real deploy.
 - **Real backup→restore drill on managed Postgres.** The 2 skipped backup tests are skipped because `pg_dump`/`pg_restore` aren't in the local PATH — so restore-verify has **never actually run end-to-end**. Before trusting backups, do one real backup → restore into a scratch DB → assert the books tie, on the actual managed Postgres. (**Slice 12.3 done** — owner runs `run_backup_drill.sh` on staging per `DEPLOY.md` §11.)
-- **Error monitoring live BEFORE go-live** (Sentry-or-equiv), so the first real bug is visible. (Slice 12.4.)
+- **Error monitoring live BEFORE go-live** (Sentry-or-equiv), so the first real bug is visible. (**Slice 12.4 done** — owner sets `SENTRY_DSN` on Render per `DEPLOY.md` §12.)
 - **Data protection (KVKK) note.** The app stores financial + personal data (staff names, supplier/customer VKN). At minimum: encryption at rest, restricted backup-store access (separate account/region), and a known data-deletion path. Conscious decision required before storing real people's data. (Slice 12.5.)
 - **Cold-start onboarding walkthrough as the owner.** Sign up → create restaurant → seed chart → opening balances → invite staff → record a day → run a report. Do it as a first-time non-coder and fix any dead-end. (Slice 12.6.)
 - **Indexes: OK** — entity_id is indexed across tables and journal entries have date/source indexes; no action needed now. Revisit composite report indexes only if a report slows with real volume.
@@ -1560,6 +1581,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-27 | Phase 12 Slice 12.4 — observability | `v0.71.3-observability` | Sentry optional DSN, JSON logs, request logging, rate limit middleware, DEPLOY §12; 611 pytest |
 | 2026-06-27 | Phase 12 Slice 12.3 — backup restore drill | `v0.71.2-backup-restore-drill` | verify/drill scripts, CI postgresql-client, Celery failure logs, DEPLOY/OPS runbook; 605 pytest |
 | 2026-06-27 | Phase 12 Slice 12.2 — production provisioning | `v0.71.1-prod-provisioning` | migrate/verify scripts, `/health/ready`, smoke script, Render preDeploy, launch guards, DEPLOY runbook; 605 pytest |
 | 2026-06-27 | Phase 12 Slice 12.1 — hosting & infrastructure | `v0.71.0-hosting-infrastructure` | `netlify.toml`, `backend/Dockerfile`, `render.yaml`, `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`; 596 pytest |

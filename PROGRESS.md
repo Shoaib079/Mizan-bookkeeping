@@ -7,10 +7,18 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.4** — observability |
-| **Last completed slice** | Phase 12 Slice 12.3 — backup restore drill (`v0.71.2-backup-restore-drill`) |
+| **Active slice** | **12.5** — pre-launch security pass |
+| **Last completed slice** | Phase 12 Slice 12.4 — observability (`v0.71.3-observability`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.2-backup-restore-drill` |
+| **Last tag** | `v0.71.3-observability` |
+
+## Owner blockers (12.4)
+
+Owner must wire on host dashboards (not automatable in CI):
+
+- Create Sentry project; set `SENTRY_DSN` on Render **mizan-api** (see `DEPLOY.md` §12).
+- Enable Render service unhealthy + deploy failure notifications.
+- Optional external uptime monitor on `GET /health/ready`.
 
 ## Owner blockers (12.3)
 
@@ -23,6 +31,14 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 - **Staging backup drill:** `backend/scripts/run_backup_drill.sh` (or verify after scheduled beat) per `DEPLOY.md` §11 before trusting prod backups.
 
 ## Resume point
+
+**Phase 12 Slice 12.4 complete** — observability (`v0.71.3-observability`):
+- Optional Sentry (`SENTRY_DSN`), JSON production logs, request logging middleware
+- In-memory rate limit 60/min per IP (production); health/docs exempt
+- `DEPLOY.md` §12 — Sentry, uptime, Render alerts owner runbook
+- **611 pytest green**
+
+**Next:** Phase 12 Slice 12.5 — pre-launch security pass.
 
 **Phase 12 Slice 12.3 complete** — backup restore drill (`v0.71.2-backup-restore-drill`):
 - `backend/scripts/verify_backup_restore.sh`, `run_backup_drill.sh`
