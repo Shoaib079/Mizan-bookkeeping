@@ -5,7 +5,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { ApiError, apiFetch } from "@/lib/api";
@@ -238,7 +237,7 @@ export default function EntitySettingsPage() {
 
   if (inSetupWizard) {
     return (
-      <AppShell title="Set up restaurant">
+      <>
         <div className="max-w-xl space-y-6">
           <section className="rounded-lg border border-border bg-card p-5">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -268,12 +267,12 @@ export default function EntitySettingsPage() {
             </Button>
           </section>
         </div>
-      </AppShell>
+      </>
     );
   }
 
   return (
-    <AppShell title="Restaurant & toggles">
+    <>
       <div className="max-w-xl space-y-8">
         <section className="rounded-lg border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Create restaurant</h2>
@@ -338,6 +337,6 @@ export default function EntitySettingsPage() {
           </p>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }

@@ -7,7 +7,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { MoneyAccountForm } from "@/components/forms/money-account-form";
 import { TransferForm } from "@/components/forms/transfer-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
@@ -107,7 +106,7 @@ export default function BankingPage() {
   }, [reload]);
 
   return (
-    <AppShell title="Banking">
+    <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">
           <Link href="/banking/transfers">
@@ -197,6 +196,6 @@ export default function BankingPage() {
         onClose={() => setTransferOpen(false)}
         onTransferred={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

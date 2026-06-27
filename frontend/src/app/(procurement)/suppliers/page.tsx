@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { SupplierForm, type SupplierRow } from "@/components/forms/supplier-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -32,7 +31,7 @@ export default function SuppliersPage() {
   const [formOpen, setFormOpen] = useState(false);
 
   return (
-    <AppShell title="Suppliers">
+    <>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {entityId
@@ -104,6 +103,6 @@ export default function SuppliersPage() {
         onClose={() => setFormOpen(false)}
         onSaved={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

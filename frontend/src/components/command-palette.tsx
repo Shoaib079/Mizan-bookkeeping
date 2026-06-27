@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useQuickActions } from "@/components/quick-actions";
 import { Input } from "@/components/ui/input";
 import { appRoutes, filterRoutesByEntitySettings } from "@/lib/app-routes";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
@@ -17,6 +18,7 @@ type Props = {
 
 export function CommandPalette({ deliveryEnabled }: Props) {
   const router = useRouter();
+  const { openQuickAction } = useQuickActions();
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -50,11 +52,17 @@ export function CommandPalette({ deliveryEnabled }: Props) {
   useDismissOnOutsideClick(panelRef, open, close, { escape: false });
 
   const select = useCallback(
-    (href: string) => {
+    (index: number) => {
+      const route = filtered[index];
+      if (!route) return;
       close();
-      router.push(href);
+      if (route.quickAction) {
+        openQuickAction(route.quickAction);
+        return;
+      }
+      router.push(route.href);
     },
-    [close, router],
+    [close, filtered, openQuickAction, router],
   );
 
   useEffect(() => {
@@ -81,7 +89,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
       }
       if (event.key === "Enter" && filtered[activeIndex]) {
         event.preventDefault();
-        select(filtered[activeIndex].href);
+        select(activeIndex);
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -155,7 +163,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
                   index === activeIndex && "bg-sidebar-accent text-primary",
                 )}
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => select(route.href)}
+                onClick={() => select(index)}
               >
                 <route.icon className="size-4 shrink-0" />
                 <span className="flex-1">{route.label}</span>

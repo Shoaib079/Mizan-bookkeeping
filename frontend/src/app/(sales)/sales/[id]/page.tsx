@@ -1,4 +1,3 @@
-import { AppShell } from "@/components/layout/app-shell";
 import { PosSummaryReview } from "@/components/pos-summary-review";
 
 export default async function SalesReviewPage({
@@ -8,8 +7,8 @@ export default async function SalesReviewPage({
 }) {
   const { id } = await params;
   return (
-    <AppShell title="Review daily sales">
+    <>
       <PosSummaryReview summaryId={id} />
-    </AppShell>
+    </>
   );
 }

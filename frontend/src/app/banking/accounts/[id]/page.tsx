@@ -8,7 +8,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { StatementUploadForm } from "@/components/forms/statement-upload-form";
 import { TransferForm } from "@/components/forms/transfer-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -77,11 +76,11 @@ export default function AccountDetailPage() {
 
   if (!entityId) {
     return (
-      <AppShell title="Account">
+      <>
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar.
         </p>
-      </AppShell>
+      </>
     );
   }
 
@@ -95,7 +94,7 @@ export default function AccountDetailPage() {
         : "";
 
   return (
-    <AppShell title={account?.name ?? "Account"}>
+    <>
       <div className="mb-4">
         <Link href="/banking" className="text-sm text-primary hover:underline">
           ← Banking
@@ -203,6 +202,6 @@ export default function AccountDetailPage() {
         defaultFromId={accountId}
         onTransferred={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

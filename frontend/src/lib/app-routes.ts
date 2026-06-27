@@ -22,14 +22,27 @@ import {
   Wallet,
 } from "lucide-react";
 
+import type { QuickActionKey } from "@/components/quick-actions";
+import { SIDEBAR_HIDDEN_HREFS, sidebarHrefActiveForPathname } from "@/lib/nav-sections";
+
 export type AppRoute = {
   href: string;
   label: string;
   keywords?: string;
   icon: LucideIcon;
   group: string;
-  /** Nested under this parent href in the sidebar only (still indexed in command palette). */
+  /** @deprecated nested sidebar removed — tabs/cards only; kept for palette indexing. */
   nestedUnder?: string;
+  /** Command palette: open modal instead of navigating. */
+  quickAction?: QuickActionKey;
+};
+
+export type NavGroupIcon = LucideIcon;
+
+export type NavGroup = {
+  label: string;
+  icon: NavGroupIcon;
+  items: AppRoute[];
 };
 
 export const appRoutes: AppRoute[] = [
@@ -69,7 +82,13 @@ export const appRoutes: AppRoute[] = [
     nestedUnder: "/delivery",
   },
   { href: "/expenses", label: "Expenses", icon: Wallet, group: "Expenses & suppliers" },
-  { href: "/uploads", label: "Uploads", icon: Upload, group: "Expenses & suppliers" },
+  {
+    href: "/uploads",
+    label: "Documents",
+    keywords: "uploads needs review receipts photos efatura",
+    icon: Upload,
+    group: "Expenses & suppliers",
+  },
   { href: "/suppliers", label: "Suppliers", icon: Users, group: "Expenses & suppliers" },
   { href: "/payables", label: "Payables", icon: HandCoins, group: "Expenses & suppliers" },
   { href: "/staff", label: "Staff", icon: UsersRound, group: "People" },
@@ -116,20 +135,65 @@ export const appRoutes: AppRoute[] = [
     icon: Users,
     group: "Settings",
   },
-  // New menu shortcuts (navigate to relevant list pages)
-  { href: "/expenses", label: "New: Manual expense", keywords: "new expense", icon: Wallet, group: "New" },
-  { href: "/sales", label: "New: Daily sales (manual)", keywords: "pos manual", icon: ShoppingBag, group: "New" },
-  { href: "/close-day", label: "New: Close day", keywords: "close-out sales expenses", icon: ShoppingBag, group: "New" },
-  { href: "/sales", label: "New: POS summary (photo)", keywords: "upload z", icon: ShoppingBag, group: "New" },
-  { href: "/delivery/reports", label: "New: Delivery report", icon: Truck, group: "New" },
-  { href: "/expenses", label: "New: Expense receipt (photo)", icon: Receipt, group: "New" },
-  { href: "/suppliers", label: "New: Supplier", icon: Users, group: "New" },
+  {
+    href: "/expenses",
+    label: "New: Manual expense",
+    keywords: "new expense",
+    icon: Wallet,
+    group: "New",
+    quickAction: "expense",
+  },
+  {
+    href: "/sales",
+    label: "New: Daily sales (manual)",
+    keywords: "pos manual",
+    icon: ShoppingBag,
+    group: "New",
+    quickAction: "sales",
+  },
+  {
+    href: "/close-day",
+    label: "New: Close day",
+    keywords: "close-out sales expenses",
+    icon: ShoppingBag,
+    group: "New",
+  },
+  {
+    href: "/sales",
+    label: "New: POS summary (photo)",
+    keywords: "upload z",
+    icon: ShoppingBag,
+    group: "New",
+    quickAction: "posPhoto",
+  },
+  {
+    href: "/delivery/reports",
+    label: "New: Delivery report",
+    icon: Truck,
+    group: "New",
+    quickAction: "deliveryReport",
+  },
+  {
+    href: "/expenses",
+    label: "New: Expense receipt (photo)",
+    icon: Receipt,
+    group: "New",
+    quickAction: "receipt",
+  },
+  {
+    href: "/suppliers",
+    label: "New: Supplier",
+    icon: Users,
+    group: "New",
+    quickAction: "supplier",
+  },
   {
     href: "/suppliers",
     label: "New: Supplier invoice (e-Fatura)",
     keywords: "efatura upload",
     icon: FileText,
     group: "New",
+    quickAction: "efatura",
   },
 ];
 
@@ -162,15 +226,15 @@ export function filterNavItemsByEntitySettings(
   return items.filter((item) => item.href !== "/delivery");
 }
 
-const SIDEBAR_GROUP_LABELS = [
-  "Overview",
-  "Sales",
-  "Expenses & suppliers",
-  "People",
-  "Customers",
-  "Cash & bank",
-  "Reports",
-  "Settings",
+const SIDEBAR_GROUP_DEFS = [
+  { label: "Overview", icon: LayoutDashboard },
+  { label: "Sales", icon: ShoppingBag },
+  { label: "Expenses & suppliers", icon: Wallet },
+  { label: "People", icon: UsersRound },
+  { label: "Customers", icon: UserCircle },
+  { label: "Cash & bank", icon: Building2 },
+  { label: "Reports", icon: BarChart3 },
+  { label: "Settings", icon: Settings },
 ] as const;
 
 function primarySidebarItems(groupLabel: string): AppRoute[] {
@@ -179,37 +243,34 @@ function primarySidebarItems(groupLabel: string): AppRoute[] {
       route.group === groupLabel &&
       !route.label.startsWith("New:") &&
       !route.nestedUnder &&
-      (groupLabel !== "Settings" || route.href !== "/settings"),
+      !SIDEBAR_HIDDEN_HREFS.has(route.href),
   );
 }
 
-export const navGroups = SIDEBAR_GROUP_LABELS.map((label) => ({
+export const navGroups: NavGroup[] = SIDEBAR_GROUP_DEFS.map(({ label, icon }) => ({
   label,
+  icon,
   items: primarySidebarItems(label),
 }));
 
-/** Sidebar nested links — reports children; delivery uses in-page tabs. */
+/** No nested sidebar children — tabs and report cards instead. */
 export function sidebarChildrenForNavItem(
-  itemHref: string,
+  _itemHref: string,
   _settings: EntityNavSettings,
 ): AppRoute[] {
-  if (itemHref === "/delivery") return [];
-  return sidebarChildren(itemHref);
-}
-
-function routeActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+  void _itemHref;
+  void _settings;
+  return [];
 }
 
 export function isNavItemActive(pathname: string, item: AppRoute): boolean {
-  const children = sidebarChildren(item.href);
-  if (children.length > 0) {
-    return pathname === item.href || pathname.startsWith(`${item.href}/`);
-  }
-  return routeActive(pathname, item.href);
+  return sidebarHrefActiveForPathname(item.href, pathname);
 }
 
 export function isNavChildActive(pathname: string, child: AppRoute): boolean {
-  return routeActive(pathname, child.href);
+  return pathname === child.href || pathname.startsWith(`${child.href}/`);
+}
+
+export function navGroupIcon(label: string): NavGroupIcon | undefined {
+  return SIDEBAR_GROUP_DEFS.find((group) => group.label === label)?.icon;
 }

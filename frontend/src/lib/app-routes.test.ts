@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { appRoutes, navGroups, sidebarChildrenForNavItem } from "@/lib/app-routes";
+import {
+  appRoutes,
+  filterNavItemsByEntitySettings,
+  filterRoutesByEntitySettings,
+  isNavItemActive,
+  navGroups,
+  sidebarChildrenForNavItem,
+} from "@/lib/app-routes";
+import { NEW_COMMAND_QUICK_ACTIONS } from "@/lib/nav-sections";
 
 const EXPECTED_SIDEBAR_GROUPS = [
   "Overview",
@@ -21,27 +29,45 @@ describe("navGroups", () => {
     expect(navGroups.some((group) => group.label === "Books")).toBe(false);
   });
 
-  it("lists Settings sub-pages in the sidebar, not the hub link", () => {
+  it("assigns an icon to every sidebar group", () => {
+    for (const group of navGroups) {
+      expect(group.icon).toBeDefined();
+    }
+  });
+
+  it("shows a single Settings hub row instead of sub-page rows", () => {
     const settings = navGroups.find((group) => group.label === "Settings");
-    expect(settings?.items.map((item) => item.href)).toEqual([
-      "/settings/entity",
-      "/settings/opening-balances",
-      "/settings/members",
-    ]);
+    expect(settings?.items.map((item) => item.href)).toEqual(["/settings"]);
   });
 
-  it("assigns Sales routes to the Sales group", () => {
+  it("consolidates Sales to sidebar entry points only (tabs for sub-pages)", () => {
     const sales = navGroups.find((group) => group.label === "Sales");
-    expect(sales?.items.map((item) => item.href)).toEqual([
-      "/sales",
-      "/close-day",
-      "/cards",
-      "/delivery",
-    ]);
+    expect(sales?.items.map((item) => item.href)).toEqual(["/sales", "/delivery"]);
   });
 
-  it("assigns Cards under Sales per ROADMAP", () => {
-    const cards = appRoutes.find((route) => route.href === "/cards" && !route.label.startsWith("New:"));
+  it("renames Uploads to Documents in the sidebar", () => {
+    const expenses = navGroups.find((group) => group.label === "Expenses & suppliers");
+    const documents = expenses?.items.find((item) => item.href === "/uploads");
+    expect(documents?.label).toBe("Documents");
+  });
+
+  it("hides tab-only and report-card routes from sidebar rows", () => {
+    const sidebarHrefs = navGroups.flatMap((group) => group.items.map((item) => item.href));
+    expect(sidebarHrefs).not.toContain("/cards");
+    expect(sidebarHrefs).not.toContain("/close-day");
+    expect(sidebarHrefs).not.toContain("/payables");
+    expect(sidebarHrefs).not.toContain("/receivables");
+    expect(sidebarHrefs).not.toContain("/banking/transfers");
+    expect(sidebarHrefs).not.toContain("/banking/cash");
+    expect(sidebarHrefs).not.toContain("/reports/ledger");
+    expect(sidebarHrefs).not.toContain("/accounting/manual-journals");
+    expect(sidebarHrefs).not.toContain("/settings/entity");
+  });
+
+  it("assigns Cards under Sales in appRoutes (palette indexing)", () => {
+    const cards = appRoutes.find(
+      (route) => route.href === "/cards" && !route.label.startsWith("New:"),
+    );
     expect(cards?.group).toBe("Sales");
   });
 
@@ -88,6 +114,13 @@ describe("New menu command palette routes", () => {
     const labels = newRoutes.map((route) => route.label);
     expect(labels).not.toContain("New: Cash tip");
     expect(labels).not.toContain("New: Card sales batch");
+  });
+
+  it("uses quickAction for modal New: entries (matching the New menu)", () => {
+    for (const [label, key] of Object.entries(NEW_COMMAND_QUICK_ACTIONS)) {
+      const route = newRoutes.find((entry) => entry.label === label);
+      expect(route?.quickAction).toBe(key);
+    }
   });
 });
 
@@ -148,6 +181,7 @@ describe("app shell header", () => {
     expect(nav).toContain("aria-expanded");
     expect(nav).toContain("rotate-180");
     expect(nav).toContain('item.href === "/"');
+    expect(nav).toMatch(/group\.icon/);
   });
 });
 
@@ -223,15 +257,64 @@ describe("entry dialogs recording context", () => {
 });
 
 describe("sidebarChildrenForNavItem", () => {
-  it("does not nest delivery children in the sidebar (in-page tabs instead)", () => {
+  it("returns no nested sidebar children (tabs and report cards instead)", () => {
     expect(sidebarChildrenForNavItem("/delivery", { deliveryEnabled: true })).toEqual([]);
+    expect(sidebarChildrenForNavItem("/reports", { deliveryEnabled: false })).toEqual([]);
+    expect(sidebarChildrenForNavItem("/settings", { deliveryEnabled: true })).toEqual([]);
+  });
+});
+
+describe("tab routes expand sidebar parent groups", () => {
+  it("opens Sales when on /cards", () => {
+    const sales = navGroups
+      .find((group) => group.label === "Sales")
+      ?.items.find((item) => item.href === "/sales");
+    expect(sales).toBeDefined();
+    expect(isNavItemActive("/cards", sales!)).toBe(true);
   });
 
-  it("nests report children regardless of delivery setting", () => {
-    const children = sidebarChildrenForNavItem("/reports", { deliveryEnabled: false });
-    expect(children.map((child) => child.href)).toEqual([
-      "/reports/ledger",
-      "/accounting/manual-journals",
-    ]);
+  it("opens Cash & bank when on /banking/transfers", () => {
+    const banking = navGroups
+      .find((group) => group.label === "Cash & bank")
+      ?.items.find((item) => item.href === "/banking");
+    expect(banking).toBeDefined();
+    expect(isNavItemActive("/banking/transfers", banking!)).toBe(true);
+  });
+});
+
+describe("delivery gating", () => {
+  it("hides delivery sidebar row when module is off", () => {
+    const sales = navGroups.find((group) => group.label === "Sales");
+    const items = filterNavItemsByEntitySettings(sales!.items, { deliveryEnabled: false });
+    expect(items.map((item) => item.href)).toEqual(["/sales"]);
+  });
+
+  it("removes delivery palette routes when module is off", () => {
+    const routes = filterRoutesByEntitySettings(appRoutes, { deliveryEnabled: false });
+    expect(routes.some((route) => route.href.startsWith("/delivery"))).toBe(false);
+  });
+
+  it("settings hub has no delivery platforms card", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../app/settings/page.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).not.toContain("/delivery/platforms");
+    expect(source).not.toContain("Delivery platforms");
+  });
+});
+
+describe("command palette quick actions", () => {
+  it("opens modals for quickAction routes instead of navigating", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("route.quickAction");
+    expect(source).toContain("openQuickAction(route.quickAction)");
   });
 });

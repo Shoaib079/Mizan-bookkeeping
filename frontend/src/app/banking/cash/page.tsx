@@ -9,7 +9,6 @@ import { useCallback, useEffect, useState } from "react";
 import { CashDrawerCloseDayForm } from "@/components/forms/cash-drawer-close-day-form";
 import { CashDrawerCloseForm } from "@/components/forms/cash-drawer-close-form";
 import { CashMovementForm } from "@/components/forms/cash-movement-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -140,7 +139,7 @@ export default function CashDrawerPage() {
   }
 
   return (
-    <AppShell title="Cash drawer">
+    <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <Link href="/banking" className="text-sm text-primary hover:underline">
           ← Banking
@@ -358,6 +357,6 @@ export default function CashDrawerPage() {
           </Button>
         </form>
       </Dialog>
-    </AppShell>
+    </>
   );
 }

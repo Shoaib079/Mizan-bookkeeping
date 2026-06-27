@@ -17,7 +17,6 @@ import {
 } from "@/components/forms/correct-fx-ledger-form";
 import { FxExpenseSpendForm } from "@/components/forms/fx-expense-spend-form";
 import { FxPurchaseForm } from "@/components/forms/fx-purchase-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -105,16 +104,16 @@ export default function FxWalletPage() {
 
   if (!entityId) {
     return (
-      <AppShell title="FX wallet">
+      <>
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar.
         </p>
-      </AppShell>
+      </>
     );
   }
 
   return (
-    <AppShell title={account?.name ?? "FX wallet"}>
+    <>
       <div className="mb-4">
         <Link href="/banking" className="text-sm text-primary hover:underline">
           ← Banking
@@ -277,6 +276,6 @@ export default function FxWalletPage() {
         onClose={() => setCorrectSpend(null)}
         onSaved={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

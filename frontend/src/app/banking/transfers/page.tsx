@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { TransferForm } from "@/components/forms/transfer-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -53,7 +52,7 @@ export default function TransfersPage() {
   }
 
   return (
-    <AppShell title="Transfers">
+    <>
       <div className="mb-4 flex items-center justify-between">
         <Link href="/banking" className="text-sm text-primary hover:underline">
           ← Banking
@@ -121,6 +120,6 @@ export default function TransfersPage() {
         onClose={() => setTransferOpen(false)}
         onTransferred={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

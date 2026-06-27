@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { SectionTabs } from "@/components/layout/section-tabs";
 import { pageTitleForPathname } from "@/lib/nav-sections";
 
-export default function DeliveryLayout({
+export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -14,7 +14,7 @@ export default function DeliveryLayout({
   const pathname = usePathname();
   return (
     <AppShell title={pageTitleForPathname(pathname)}>
-      <SectionTabs sectionId="delivery" ariaLabel="Delivery sections" />
+      <SectionTabs sectionId="settings" ariaLabel="Settings sections" />
       {children}
     </AppShell>
   );

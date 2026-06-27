@@ -7,7 +7,6 @@ import { useCallback, useEffect, useState } from "react";
 import { CardSalesForm } from "@/components/forms/card-sales-form";
 import { ClearCommissionForm } from "@/components/forms/clear-commission-form";
 import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import {
@@ -85,7 +84,7 @@ export default function CardsPage() {
   }, [reload]);
 
   return (
-    <AppShell title="Card sales">
+    <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           Card clearing, bank settlements, commission clearance
@@ -237,6 +236,6 @@ export default function CardsPage() {
         onClose={() => setClearFormOpen(false)}
         onCleared={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

@@ -7,7 +7,6 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { StatementLineClassify } from "@/components/statement-line-classify";
-import { AppShell } from "@/components/layout/app-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import type { BankStatementRead } from "@/lib/banking-types";
@@ -53,11 +52,11 @@ export default function StatementDetailPage() {
 
   if (!entityId) {
     return (
-      <AppShell title="Statement">
+      <>
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar.
         </p>
-      </AppShell>
+      </>
     );
   }
 
@@ -80,7 +79,7 @@ export default function StatementDetailPage() {
     ) ?? [];
 
   return (
-    <AppShell title="Statement review">
+    <>
       <div className="mb-4">
         <Link
           href={
@@ -169,6 +168,6 @@ export default function StatementDetailPage() {
           )}
         </>
       )}
-    </AppShell>
+    </>
   );
 }

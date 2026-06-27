@@ -79,7 +79,7 @@ export default function UploadsPage() {
   const [active, setActive] = useState<UploadKey>(null);
 
   return (
-    <AppShell title="Uploads">
+    <AppShell title="Documents">
       {!entityId && (
         <p className="mb-6 text-sm text-muted-foreground">
           Select a restaurant in the sidebar to upload documents.

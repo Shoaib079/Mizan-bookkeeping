@@ -5,7 +5,6 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { DateInput } from "@/components/ui/date-input";
@@ -507,7 +506,7 @@ export default function OpeningBalancesPage() {
   }
 
   return (
-    <AppShell title="Opening balances">
+    <>
       <p className="mb-4 text-sm text-muted-foreground">
         <Link href="/settings" className="text-primary hover:underline">
           ← Settings
@@ -711,6 +710,6 @@ export default function OpeningBalancesPage() {
           )}
         </div>
       )}
-    </AppShell>
+    </>
   );
 }

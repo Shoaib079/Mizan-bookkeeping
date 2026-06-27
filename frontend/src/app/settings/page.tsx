@@ -1,17 +1,15 @@
 "use client";
 
-/** Settings hub — Phase 9 Slice 9. */
+/** Settings hub — Phase 9 Slice 9; v0.71.9 tab layout. */
 
 import {
   Archive,
   Building2,
   Scale,
-  Truck,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { useEntity } from "@/lib/entity-context";
 
 type SettingsCard = {
@@ -27,7 +25,7 @@ const settingsCards: SettingsCard[] = [
     href: "/settings/entity",
     title: "Restaurant & toggles",
     description:
-      "Create a new restaurant, switch entity in the sidebar, and manage feature flags.",
+      "Create a new restaurant, switch entity in the account menu, and manage feature flags.",
     icon: Building2,
   },
   {
@@ -46,13 +44,6 @@ const settingsCards: SettingsCard[] = [
     requiresEntity: true,
   },
   {
-    href: "/delivery/platforms",
-    title: "Delivery platforms",
-    description: "Manage Getir, Yemeksepeti, and other delivery partners.",
-    icon: Truck,
-    requiresEntity: true,
-  },
-  {
     href: "/settings#backups",
     title: "Backups",
     description: "Scheduled backup status and retention (informational).",
@@ -64,7 +55,7 @@ export default function SettingsPage() {
   const { entityId } = useEntity();
 
   return (
-    <AppShell title="Settings">
+    <>
       {!entityId && (
         <p className="mb-4 text-sm text-muted-foreground">
           Select a restaurant in the sidebar for entity-specific settings, or
@@ -127,6 +118,6 @@ export default function SettingsPage() {
           <li>Restore: operator workflow only — no restore UI in v1</li>
         </ul>
       </section>
-    </AppShell>
+    </>
   );
 }

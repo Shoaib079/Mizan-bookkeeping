@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -30,7 +29,7 @@ export default function CustomersPage() {
   const [formOpen, setFormOpen] = useState(false);
 
   return (
-    <AppShell title="Customers">
+    <>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {entityId
@@ -96,6 +95,6 @@ export default function CustomersPage() {
         onClose={() => setFormOpen(false)}
         onSaved={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

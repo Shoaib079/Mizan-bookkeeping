@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { MemberForm } from "@/components/forms/member-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,7 +65,7 @@ export default function MembersPage() {
   }
 
   return (
-    <AppShell title="Members & roles">
+    <>
       <p className="mb-4 text-sm text-muted-foreground">
         <Link href="/settings" className="text-primary hover:underline">
           ← Settings
@@ -163,6 +162,6 @@ export default function MembersPage() {
         onClose={() => setFormOpen(false)}
         onSaved={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

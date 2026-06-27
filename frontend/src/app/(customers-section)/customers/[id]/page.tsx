@@ -15,7 +15,6 @@ import {
 } from "@/components/forms/correct-credit-sale-form";
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -105,16 +104,16 @@ export default function CustomerDetailPage() {
 
   if (!entityId) {
     return (
-      <AppShell title="Customer">
+      <>
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar.
         </p>
-      </AppShell>
+      </>
     );
   }
 
   return (
-    <AppShell title={customer?.name ?? "Customer"}>
+    <>
       <div className="mb-4">
         <Link href="/customers" className="text-sm text-primary hover:underline">
           ← Customers
@@ -273,6 +272,6 @@ export default function CustomerDetailPage() {
           />
         </>
       )}
-    </AppShell>
+    </>
   );
 }

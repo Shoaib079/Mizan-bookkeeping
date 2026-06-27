@@ -1,10 +1,11 @@
 "use client";
 
+/** Payables summary — Phase 9 Slice 3. */
+
 import Link from "next/link";
-import { Banknote } from "lucide-react";
+import { HandCoins } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import {
@@ -19,22 +20,22 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 
-type ReceivableRow = {
-  customer_id: string;
-  customer_name: string;
-  identifier: string | null;
+type PayableRow = {
+  supplier_id: string;
+  supplier_name: string;
+  vkn: string;
   balance_kurus: number;
 };
 
-type ReceivablesSummary = {
-  total_receivables_kurus: number;
-  customers: ReceivableRow[];
+type PayablesSummary = {
+  total_payables_kurus: number;
+  suppliers: PayableRow[];
   total: number;
 };
 
-export default function ReceivablesPage() {
+export default function PayablesPage() {
   const { entityId } = useEntity();
-  const [summary, setSummary] = useState<ReceivablesSummary | null>(null);
+  const [summary, setSummary] = useState<PayablesSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,8 +47,8 @@ export default function ReceivablesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch<ReceivablesSummary>(
-        `/entities/${entityId}/receivables?limit=100`,
+      const res = await apiFetch<PayablesSummary>(
+        `/entities/${entityId}/payables?limit=100`,
       );
       setSummary(res);
     } catch (err) {
@@ -63,14 +64,14 @@ export default function ReceivablesPage() {
   }, [reload]);
 
   const rows =
-    summary?.customers.filter((c) => c.balance_kurus !== 0) ?? [];
+    summary?.suppliers.filter((s) => s.balance_kurus !== 0) ?? [];
 
   return (
-    <AppShell title="Receivables">
+    <>
       <div className="mb-4">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? "Outstanding customer balances"
+            ? "Outstanding supplier balances"
             : "Select a restaurant in the sidebar"}
         </p>
       </div>
@@ -80,22 +81,22 @@ export default function ReceivablesPage() {
 
       {summary && !loading && (
         <div className="mb-6 rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Total receivables</p>
+          <p className="text-sm text-muted-foreground">Total payables</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
-            {formatTry(summary.total_receivables_kurus)}
+            {formatTry(summary.total_payables_kurus)}
           </p>
         </div>
       )}
 
       {!loading && entityId && rows.length === 0 && (
         <EmptyState
-          icon={Banknote}
-          title="No outstanding receivables"
+          icon={HandCoins}
+          title="No outstanding payables"
           hint={
             <>
-              Record credit sales from{" "}
-              <Link href="/customers" className="text-primary hover:underline">
-                Customers
+              Post supplier invoices from{" "}
+              <Link href="/suppliers" className="text-primary hover:underline">
+                Suppliers
               </Link>
               .
             </>
@@ -107,23 +108,23 @@ export default function ReceivablesPage() {
         <DataTable>
           <DataTableHead>
             <tr>
-              <DataTableHeaderCell>Customer</DataTableHeaderCell>
-              <DataTableHeaderCell>Identifier</DataTableHeaderCell>
+              <DataTableHeaderCell>Supplier</DataTableHeaderCell>
+              <DataTableHeaderCell>VKN</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
             {rows.map((row) => (
-              <DataTableRow key={row.customer_id}>
+              <DataTableRow key={row.supplier_id}>
                 <DataTableCell>
                   <Link
-                    href={`/customers/${row.customer_id}`}
+                    href={`/suppliers/${row.supplier_id}`}
                     className="text-primary hover:underline"
                   >
-                    {row.customer_name}
+                    {row.supplier_name}
                   </Link>
                 </DataTableCell>
-                <DataTableCell>{row.identifier ?? "—"}</DataTableCell>
+                <DataTableCell>{row.vkn}</DataTableCell>
                 <DataTableCell align="right">
                   {formatTry(row.balance_kurus)}
                 </DataTableCell>
@@ -132,6 +133,6 @@ export default function ReceivablesPage() {
           </DataTableBody>
         </DataTable>
       )}
-    </AppShell>
+    </>
   );
 }

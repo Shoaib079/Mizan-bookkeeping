@@ -18,7 +18,6 @@ import {
 import { SupplierForm, type SupplierRow } from "@/components/forms/supplier-form";
 import { SupplierPaymentForm } from "@/components/forms/supplier-payment-form";
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -135,16 +134,16 @@ export default function SupplierDetailPage() {
 
   if (!entityId) {
     return (
-      <AppShell title="Supplier">
+      <>
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar.
         </p>
-      </AppShell>
+      </>
     );
   }
 
   return (
-    <AppShell title={supplier?.name ?? "Supplier"}>
+    <>
       <div className="mb-4">
         <Link
           href="/suppliers"
@@ -363,6 +362,6 @@ export default function SupplierDetailPage() {
         onClose={() => setCorrectInvoice(null)}
         onSaved={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

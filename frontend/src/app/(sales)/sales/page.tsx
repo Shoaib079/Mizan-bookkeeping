@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
 import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -36,7 +35,7 @@ export default function SalesPage() {
   );
 
   return (
-    <AppShell title="Daily sales">
+    <>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {entityId
@@ -139,6 +138,6 @@ export default function SalesPage() {
         onClose={() => setCorrectSummary(null)}
         onSaved={() => void reload()}
       />
-    </AppShell>
+    </>
   );
 }

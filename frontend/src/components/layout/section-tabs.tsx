@@ -3,37 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import type { NavSectionId } from "@/lib/nav-sections";
+import { navSectionById } from "@/lib/nav-sections";
 import { cn } from "@/lib/utils";
 
-const DELIVERY_TABS = [
-  { href: "/delivery", label: "Overview", match: (path: string) => path === "/delivery" },
-  {
-    href: "/delivery/platforms",
-    label: "Platforms",
-    match: (path: string) => path === "/delivery/platforms",
-  },
-  {
-    href: "/delivery/reports",
-    label: "Reports",
-    match: (path: string) => path.startsWith("/delivery/reports"),
-  },
-  {
-    href: "/delivery/settlements",
-    label: "Settlements",
-    match: (path: string) => path === "/delivery/settlements",
-  },
-] as const;
+type SectionTabsProps = {
+  sectionId: NavSectionId;
+  ariaLabel: string;
+};
 
-export function DeliveryTabs() {
+export function SectionTabs({ sectionId, ariaLabel }: SectionTabsProps) {
   const pathname = usePathname();
+  const section = navSectionById(sectionId);
 
   return (
     <div
       className="mb-4 flex flex-wrap gap-1 border-b border-border"
       role="tablist"
-      aria-label="Delivery sections"
+      aria-label={ariaLabel}
     >
-      {DELIVERY_TABS.map((tab) => {
+      {section.tabs.map((tab) => {
         const active = tab.match(pathname);
         return (
           <Link
