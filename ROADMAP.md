@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.6** — owner onboarding & smoke test |
-| **Last completed slice** | Collapsible sidebar sections (`v0.71.7-collapsible-sidebar`) |
-| **Last commit/tag** | `v0.71.7-collapsible-sidebar` |
-| **Next up** | Phase 12 Slice 12.6 — owner onboarding & smoke test |
+| **Active slice** | — (Phase 12 complete pending owner sign-off) |
+| **Last completed slice** | Owner onboarding & smoke test (`v0.71.8-owner-onboarding-smoke`) |
+| **Last commit/tag** | `v0.71.8-owner-onboarding-smoke` |
+| **Next up** | Phase 12 owner sign-off — record first real entity data on production |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1579,7 +1579,26 @@ Take the tested app to a real, secure production environment and put real data i
 - [x] `POST …/chart-of-accounts/seed` kept (idempotent) with no user-facing trigger
 - [x] Tests: auto-provision on create, OB validate immediately, atomic rollback, expense categories; 615 pytest
 
-**Out of scope (12.6+):** owner onboarding walkthrough (12.6).
+**Out of scope (12.6+):** owner onboarding walkthrough (12.6 — done).
+
+---
+
+### Slice 12.6 — Owner onboarding & smoke test
+
+| | |
+|---|---|
+| **Status** | **done** (`v0.71.8-owner-onboarding-smoke`) |
+| **Suggested tag** | `v0.71.8-owner-onboarding-smoke` |
+
+**Purpose:** Owner cold-start path works end-to-end with zero dead-ends; automated smoke + owner runbook.
+
+**Acceptance:**
+
+- [x] `scripts/smoke_onboarding.sh` + `backend/scripts/smoke_onboarding.py` — entity → chart+drawer → OB validate/post → member by email → expense → P&L 200
+- [x] `app/smoke/onboarding.py` shared logic; `test_onboarding_smoke.py` (dev + auth-enforced paths)
+- [x] `DEPLOY.md` §15 owner first-restaurant walkthrough; §9 links automated smoke
+- [x] Dashboard CTA when no restaurant; post-create wizard redirects to checklist
+- [x] Full pytest green
 
 ---
 
@@ -1589,7 +1608,7 @@ Take the tested app to a real, secure production environment and put real data i
 - **Real backup→restore drill on managed Postgres.** The 2 skipped backup tests are skipped because `pg_dump`/`pg_restore` aren't in the local PATH — so restore-verify has **never actually run end-to-end**. Before trusting backups, do one real backup → restore into a scratch DB → assert the books tie, on the actual managed Postgres. (**Slice 12.3 done** — owner runs `run_backup_drill.sh` on staging per `DEPLOY.md` §11.)
 - **Error monitoring live BEFORE go-live** (Sentry-or-equiv), so the first real bug is visible. (**Slice 12.4 done** — owner sets `SENTRY_DSN` on Render per `DEPLOY.md` §12.)
 - **Data protection (KVKK) note.** The app stores financial + personal data (staff names, supplier/customer VKN). At minimum: encryption at rest, restricted backup-store access (separate account/region), and a known data-deletion path. Conscious decision required before storing real people's data. (**Slice 12.5 done** — owner sign-off checklist in `DEPLOY.md` §14.)
-- **Cold-start onboarding walkthrough as the owner.** Sign up → create restaurant → opening balances → invite staff → record a day → run a report. Do it as a first-time non-coder and fix any dead-end. (Slice 12.6.)
+- **Cold-start onboarding walkthrough as the owner.** Sign up → create restaurant → opening balances → invite staff → record a day → run a report. (**Slice 12.6 done** — `DEPLOY.md` §15 + `scripts/smoke_onboarding.sh`.)
 - **Indexes: OK** — entity_id is indexed across tables and journal entries have date/source indexes; no action needed now. Revisit composite report indexes only if a report slows with real volume.
 
 **Phase 12 complete when:** app is live, backed up, monitored, and the owner has recorded real data successfully.
@@ -1627,6 +1646,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-27 | Owner onboarding & smoke test | `v0.71.8-owner-onboarding-smoke` | Onboarding API smoke script, DEPLOY §15 walkthrough, dashboard CTA, wizard → checklist |
 | 2026-06-21 | Sidebar accordion fix | `v0.71.7.1-sidebar-accordion` | True single-open accordion; route replace not merge |
 | 2026-06-21 | Collapsible sidebar sections | `v0.71.7-collapsible-sidebar` | Collapsible nav groups + localStorage; Dashboard pinned; delivery sub-pages → tabs on /delivery |
 | 2026-06-21 | Auto-seed chart on restaurant create | `v0.71.6-auto-seed-chart` | Atomic chart+drawer on create; expense categories 5210–5270; seed UI removed; onboarding → OB → staff → first day; 615 pytest |

@@ -154,9 +154,17 @@ function DashboardBody() {
       </div>
 
       {!entityId && (
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-sm text-muted-foreground">
+            Create your first restaurant to start bookkeeping.
+          </p>
+          <Link
+            href="/settings/entity"
+            className="mt-3 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Create restaurant
+          </Link>
+        </div>
       )}
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}

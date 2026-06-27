@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.6** — owner onboarding & smoke test |
-| **Last completed slice** | Collapsible sidebar sections (`v0.71.7-collapsible-sidebar`) |
+| **Active slice** | — (Phase 12 complete pending owner sign-off) |
+| **Last completed slice** | Owner onboarding & smoke test (`v0.71.8-owner-onboarding-smoke`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.7-collapsible-sidebar` |
+| **Last tag** | `v0.71.8-owner-onboarding-smoke` |
 
 ## Owner blockers (12.5)
 
@@ -46,21 +46,22 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
+**Phase 12 Slice 12.6 complete** — owner onboarding & smoke test (`v0.71.8-owner-onboarding-smoke`):
+- `scripts/smoke_onboarding.sh` — entity → OB → member → expense → P&L
+- `DEPLOY.md` §15 owner walkthrough; dashboard create-restaurant CTA
+- **Next:** Owner sign-off — run §15 on staging/production with real Clerk; record first real entity data.
+
 **Phase 12 Slice 12.5 complete** — pre-launch security pass (`v0.71.4-prelaunch-security`):
 - `security_dependency_scan.sh` (pip-audit prod deps), `security_secrets_audit.sh`, `security_production_pytest.sh`
 - CI: dependency scan + secrets audit + production guard pytest before full pytest
 - `DEPLOY.md` §14 — secrets checklist, KVKK conscious decision, pre-go-live gate
 - **611 pytest green**
 
-**Next:** Phase 12 Slice 12.6 — owner onboarding & smoke test.
-
 **Phase 12 Slice 12.4 complete** — observability (`v0.71.3-observability`):
 - Optional Sentry (`SENTRY_DSN`), JSON production logs, request logging middleware
 - In-memory rate limit 60/min per IP (production); health/docs exempt
 - `DEPLOY.md` §12 — Sentry, uptime, Render alerts owner runbook
 - **611 pytest green**
-
-**Next:** Phase 12 Slice 12.6 — owner onboarding & smoke test.
 
 **Phase 12 Slice 12.3 complete** — backup restore drill (`v0.71.2-backup-restore-drill`):
 - `backend/scripts/verify_backup_restore.sh`, `run_backup_drill.sh`

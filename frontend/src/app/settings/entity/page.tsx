@@ -3,6 +3,7 @@
 /** Restaurant create + entity settings — Phase 9 Slice 9; Phase 11.2 editable toggles. */
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ function defaultWizardDraft(): WizardDraft {
 }
 
 export default function EntitySettingsPage() {
+  const router = useRouter();
   const { entityId, setEntityId, refreshEntities } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -183,6 +185,7 @@ export default function EntitySettingsPage() {
       setWizardEntityId(null);
       await reloadSettings();
       toast("Feature toggles saved");
+      router.push("/");
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : "Save failed");
     } finally {

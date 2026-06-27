@@ -230,7 +230,25 @@ Checks:
 | Readiness (DB) | `GET /health/ready` → `200` + `"db":"up"` |
 | CORS | OPTIONS preflight from `FRONTEND_ORIGIN` |
 
-Then walk through: sign up → create restaurant → seed chart → one expense → one report.
+Then walk through the owner checklist (§15): sign up → create restaurant → opening balances → invite staff → record a day → run a report.
+
+Automated API smoke (no Clerk UI):
+
+```bash
+export API_URL='https://your-staging-api.onrender.com'
+# Staging with AUTH_ENFORCEMENT=true and CLERK_TEST_MODE=true:
+export SMOKE_AUTH=enforced
+./scripts/smoke_onboarding.sh
+```
+
+Local dev (API running with `AUTH_ENFORCEMENT=false`):
+
+```bash
+export API_URL='http://127.0.0.1:8000'
+./scripts/smoke_onboarding.sh
+```
+
+See §15 for the full owner walkthrough and auth options.
 
 ---
 
@@ -358,6 +376,51 @@ This is an **owner sign-off item**, not fully automatable in CI.
 
 ---
 
+## 15. Owner first-restaurant walkthrough (Slice 12.6)
+
+Use this on **staging first**, then repeat on production after cutover. Chart + Main Drawer are created automatically when you add a restaurant (no manual seed step).
+
+### Before you sign in
+
+| Step | Action |
+|------|--------|
+| API smoke | `./scripts/smoke_staging.sh` green; optional `./scripts/smoke_onboarding.sh` with `SMOKE_AUTH=enforced` on staging |
+| Clerk JWT | Session token includes `email` + `email_verified` (§6) |
+| Your user | Invite-only: your email must exist in Mizan **before** first Clerk sign-in (owner adds you under Members on an existing restaurant, or operator runs `POST /users`) |
+
+### Walkthrough (first restaurant)
+
+1. **Sign in** — open the Netlify URL in a private window; complete Clerk sign-up or sign-in. If API returns 403 “invited”, ask the operator to provision your email first.
+2. **Create restaurant** — Settings → Restaurant & toggles → enter name → Create restaurant. Confirm chart count appears (auto-seeded). Save feature toggles → you land on the Dashboard setup checklist.
+3. **Opening balances** — Dashboard checklist → Post opening balances (or Settings → Opening balances). Enter go-live date and at least one cash/bank line + balancing equity/AP line → Validate → Post.
+4. **Invite staff** — Settings → Members → add by email (cashier or partner). They must be provisioned before they can sign in with Clerk.
+5. **Record first day** — Sales → manual daily sales (cash + card) or record an expense via New menu. Checklist marks “first day” when a daily summary exists.
+6. **Run a report** — Reports → Profit & Loss (or Balance Sheet) for the go-live month; confirm numbers load without 403.
+
+### Automated onboarding smoke
+
+Exercises the same API path without the Clerk UI:
+
+```bash
+export API_URL='http://127.0.0.1:8000'          # local API
+./scripts/smoke_onboarding.sh
+```
+
+| Env var | Purpose |
+|---------|---------|
+| `API_URL` | Required — API base URL |
+| `SMOKE_AUTH=enforced` | Provision test user + `test:…` bearer (staging with `CLERK_TEST_MODE=true`) |
+| `SMOKE_BEARER_TOKEN` | Real Clerk session JWT (production-like staging) |
+| `SMOKE_OWNER_EMAIL` | Owner email when using `SMOKE_AUTH=enforced` (default: random `@example.com`) |
+| `SMOKE_MEMBER_EMAIL` | Staff invite target (default: `smoke-staff@example.com`) |
+| `SMOKE_ENTITY_NAME` | Restaurant name (default: `Mizan Smoke Test Cafe`) |
+
+Steps verified: `POST /entities` (chart + cash drawer) → opening balances validate/post → `POST …/members` by email → `POST …/expenses` → `GET …/reports/profit-and-loss` → exit 0.
+
+**Note:** Smoke creates real rows on the target database — run against staging or a throwaway local DB, not production with live books.
+
+---
+
 ## Files in this phase
 
 | File | Purpose |
@@ -374,6 +437,8 @@ This is an **owner sign-off item**, not fully automatable in CI.
 | `backend/scripts/security_secrets_audit.sh` | Tracked-source secret pattern scan (Slice 12.5) |
 | `backend/scripts/security_production_pytest.sh` | Guard tests under production-like auth env (Slice 12.5) |
 | `scripts/smoke_staging.sh` | Post-deploy health + CORS smoke |
+| `scripts/smoke_onboarding.sh` | Owner cold-start API smoke (Slice 12.6) |
+| `backend/scripts/smoke_onboarding.py` | Onboarding smoke implementation |
 | `backend/app/db/provisioning.py` | `run_production_migrations()`, `verify_production_database()` |
 | `backend/app/launch.py` | Production auth/CORS/key guards |
 | `backend/app/core/observability/` | Sentry init, JSON logging, request log + rate limit middleware |
