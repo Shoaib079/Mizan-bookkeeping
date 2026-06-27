@@ -6,15 +6,12 @@ import mimetypes
 
 from app.adapters.bank_parsers.csv_simple import parse_csv_simple
 from app.adapters.bank_parsers.types import BankParseError, ParsedStatement
+from app.adapters.bank_parsers.xls_simple import parse_xls_simple
 from app.adapters.bank_parsers.xlsx_simple import parse_xlsx_simple
 
-XLSX_EXTENSIONS = frozenset({".xlsx", ".xls"})
-XLSX_CONTENT_TYPES = frozenset(
-    {
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel",
-    }
-)
+XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+XLS_CONTENT_TYPE = "application/vnd.ms-excel"
+CSV_CONTENT_TYPE = "text/csv"
 
 
 def _extension_from_filename(filename: str | None) -> str:
@@ -38,9 +35,13 @@ def resolve_statement_format(
     ext = _extension_from_filename(original_filename)
     if content_type:
         normalized = content_type.split(";", 1)[0].strip().lower()
-        if normalized in XLSX_CONTENT_TYPES:
+        if normalized == XLSX_CONTENT_TYPE:
             return ".xlsx"
-        if normalized == "text/csv":
+        if normalized == XLS_CONTENT_TYPE:
+            if ext == ".xlsx":
+                return ".xlsx"
+            return ".xls"
+        if normalized == CSV_CONTENT_TYPE:
             return ".csv"
     return ext
 
@@ -55,6 +56,8 @@ def parse_bank_statement(
         original_filename=original_filename,
         content_type=content_type,
     )
-    if fmt in XLSX_EXTENSIONS:
+    if fmt == ".xls":
+        return parse_xls_simple(content)
+    if fmt == ".xlsx":
         return parse_xlsx_simple(content)
     return parse_csv_simple(content)

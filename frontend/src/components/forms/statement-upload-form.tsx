@@ -22,7 +22,7 @@ type Props = {
 };
 
 const ACCEPT =
-  ".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  ".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel";
 
 export function StatementUploadForm({
   open,

@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import io
+from datetime import date
 from pathlib import Path
 
 import pytest
-from openpyxl import Workbook
 
 from app.adapters.bank_parsers.amount_lira import parse_lira_to_kurus
 from app.adapters.bank_parsers.csv_simple import parse_csv_simple
+from app.adapters.bank_parsers.dispatch import parse_bank_statement, resolve_statement_format
+from app.adapters.bank_parsers.row_parse import coerce_transaction_date
 from app.adapters.bank_parsers.types import BankParseError
+from app.adapters.bank_parsers.xls_simple import parse_xls_simple
 from app.adapters.bank_parsers.xlsx_simple import parse_xlsx_simple
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.features.banking import service as banking_service
@@ -18,8 +21,18 @@ from app.features.banking import statements as statement_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures"
-SAMPLE_CSV = FIXTURES / "bank_statements" / "sample.csv"
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "bank_statements"
+SAMPLE_CSV = FIXTURES / "sample.csv"
+SAMPLE_XLS = FIXTURES / "sample.xls"
+SAMPLE_TYPED_XLSX = FIXTURES / "sample_typed_dates.xlsx"
+SAMPLE_BAD_XLS = FIXTURES / "sample_bad_amount.xls"
+
+
+def _line_tuples(parsed):
+    return [
+        (line.transaction_date, line.amount_kurus, line.description, line.reference)
+        for line in parsed.lines
+    ]
 
 
 @pytest.mark.parametrize(
@@ -54,35 +67,50 @@ def test_parse_lira_to_kurus_rejects_invalid(raw: str, message_part: str) -> Non
     assert message_part in str(exc.value)
 
 
+def test_coerce_transaction_date_from_datetime_and_iso_string() -> None:
+    assert coerce_transaction_date(date(2026, 2, 1), row_num=2) == date(2026, 2, 1)
+    assert coerce_transaction_date("2026-02-01", row_num=2) == date(2026, 2, 1)
+
+
+def test_resolve_statement_format_routes_xls_mime_to_xls() -> None:
+    assert (
+        resolve_statement_format(
+            original_filename="statement.xls",
+            content_type="application/vnd.ms-excel",
+        )
+        == ".xls"
+    )
+    assert (
+        resolve_statement_format(
+            original_filename="statement.xlsx",
+            content_type="application/vnd.ms-excel",
+        )
+        == ".xlsx"
+    )
+
+
 def _csv_bytes(*rows: str) -> bytes:
     header = "transaction_date,amount,description,reference"
     body = "\n".join([header, *rows])
     return body.encode()
 
 
-def _xlsx_bytes(*rows: tuple[str, str, str, str | None]) -> bytes:
-    wb = Workbook()
-    ws = wb.active
-    ws.append(["transaction_date", "amount", "description", "reference"])
-    for row in rows:
-        ws.append(list(row))
-    buf = io.BytesIO()
-    wb.save(buf)
-    return buf.getvalue()
-
-
-def test_xlsx_parses_same_as_csv() -> None:
+def test_xls_fixture_matches_csv() -> None:
     csv = parse_csv_simple(SAMPLE_CSV.read_bytes())
-    xlsx = parse_xlsx_simple(
-        _xlsx_bytes(
-            ("2026-02-01", "-50.000,00", "Payment to Metro Gida", "EFT-001"),
-            ("2026-02-03", "-250,00", "Bank service fee", "FEE-FEB"),
-            ("2026-02-05", "10.000,00", "Customer refund reversal", "REF-99"),
-        )
-    )
-    assert [(line.transaction_date, line.amount_kurus, line.description) for line in csv.lines] == [
-        (line.transaction_date, line.amount_kurus, line.description) for line in xlsx.lines
-    ]
+    xls = parse_xls_simple(SAMPLE_XLS.read_bytes())
+    assert _line_tuples(xls) == _line_tuples(csv)
+
+
+def test_xlsx_typed_dates_fixture_matches_csv() -> None:
+    csv = parse_csv_simple(SAMPLE_CSV.read_bytes())
+    xlsx = parse_xlsx_simple(SAMPLE_TYPED_XLSX.read_bytes())
+    assert _line_tuples(xlsx) == _line_tuples(csv)
+
+
+def test_xls_bad_amount_rejected_with_row_number() -> None:
+    with pytest.raises(BankParseError) as exc:
+        parse_xls_simple(SAMPLE_BAD_XLS.read_bytes())
+    assert "row 2" in str(exc.value)
 
 
 def test_csv_rejects_three_decimal_places_with_row_number() -> None:
@@ -106,15 +134,15 @@ def bank_account(db_session, restaurant_a):
     )
 
 
-def test_xlsx_import_duplicate_fingerprint_rejected(db_session, restaurant_a, bank_account) -> None:
-    content = _xlsx_bytes(("2026-02-01", "-100,00", "Fee", "X-1"))
+def test_xls_import_duplicate_fingerprint_rejected(db_session, restaurant_a, bank_account) -> None:
+    content = SAMPLE_XLS.read_bytes()
     statement_service.import_bank_statement(
         db_session,
         restaurant_a.id,
         bank_account.id,
         content,
-        original_filename="feb.xlsx",
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        original_filename="feb.xls",
+        content_type="application/vnd.ms-excel",
     )
     with pytest.raises(statement_service.DuplicateStatementError):
         statement_service.import_bank_statement(
@@ -122,25 +150,55 @@ def test_xlsx_import_duplicate_fingerprint_rejected(db_session, restaurant_a, ba
             restaurant_a.id,
             bank_account.id,
             content,
-            original_filename="feb-copy.xlsx",
+            original_filename="feb-copy.xls",
+            content_type="application/vnd.ms-excel",
         )
 
 
-def test_period_overlap_still_enforced(db_session, restaurant_a, bank_account) -> None:
-    first = _csv_bytes('2026-03-01,"-100,00",First,REF-A')
-    second = _csv_bytes('2026-03-01,"-200,00",Second,REF-B')
+def test_xls_period_overlap_still_enforced(db_session, restaurant_a, bank_account) -> None:
+    import xlwt
+
+    def _single_row_xls(amount: str) -> bytes:
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet("Sheet1")
+        style = xlwt.XFStyle()
+        style.num_format_str = "YYYY-MM-DD"
+        ws.write(0, 0, "transaction_date")
+        ws.write(0, 1, "amount")
+        ws.write(0, 2, "description")
+        ws.write(0, 3, "reference")
+        ws.write(1, 0, date(2026, 3, 1), style)
+        ws.write(1, 1, amount)
+        ws.write(1, 2, "Row")
+        ws.write(1, 3, "REF")
+        buf = io.BytesIO()
+        wb.save(buf)
+        return buf.getvalue()
+
     statement_service.import_bank_statement(
         db_session,
         restaurant_a.id,
         bank_account.id,
-        first,
-        original_filename="mar-a.csv",
+        _single_row_xls("-100,00"),
+        original_filename="mar-a.xls",
+        content_type="application/vnd.ms-excel",
     )
     with pytest.raises(statement_service.OverlappingPeriodError):
         statement_service.import_bank_statement(
             db_session,
             restaurant_a.id,
             bank_account.id,
-            second,
-            original_filename="mar-b.csv",
+            _single_row_xls("-200,00"),
+            original_filename="mar-b.xls",
+            content_type="application/vnd.ms-excel",
         )
+
+
+def test_dispatch_routes_legacy_xls_not_openpyxl() -> None:
+    parsed = parse_bank_statement(
+        SAMPLE_XLS.read_bytes(),
+        original_filename="sample.xls",
+        content_type="application/vnd.ms-excel",
+    )
+    csv = parse_csv_simple(SAMPLE_CSV.read_bytes())
+    assert _line_tuples(parsed) == _line_tuples(csv)

@@ -1,10 +1,8 @@
-"""Simple Excel .xlsx bank statement parser — same columns as csv_simple."""
+"""Legacy Excel .xls bank statement parser (BIFF via xlrd)."""
 
 from __future__ import annotations
 
-import io
-
-from openpyxl import load_workbook
+import xlrd
 
 from app.adapters.bank_parsers.row_parse import (
     REQUIRED_COLUMNS,
@@ -15,29 +13,40 @@ from app.adapters.bank_parsers.row_parse import (
 from app.adapters.bank_parsers.types import BankParseError, ParsedStatement, ParsedStatementLine
 
 
-def parse_xlsx_simple(content: bytes) -> ParsedStatement:
+def _cell_value(sheet: xlrd.sheet.Sheet, row_idx: int, col_idx: int) -> object:
+    cell = sheet.cell(row_idx, col_idx)
+    if cell.ctype == xlrd.XL_CELL_DATE:
+        return cell.value
+    if cell.ctype == xlrd.XL_CELL_EMPTY:
+        return ""
+    if cell.ctype == xlrd.XL_CELL_BOOLEAN:
+        return ""
+    return cell.value
+
+
+def parse_xls_simple(content: bytes) -> ParsedStatement:
     """Parse first worksheet with transaction_date, amount (lira), description, optional reference."""
     if not content.strip():
         raise BankParseError("Excel file is empty")
 
     try:
-        workbook = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    except Exception as exc:
+        workbook = xlrd.open_workbook(file_contents=content)
+    except xlrd.XLRDError as exc:
         raise BankParseError(
-            "Excel .xlsx file could not be read — check the file is a valid spreadsheet"
+            "Excel .xls file could not be read — check the file is a valid legacy spreadsheet"
         ) from exc
 
     try:
-        sheet = workbook.active
-        if sheet is None:
-            raise BankParseError("Excel workbook has no worksheets")
-
-        rows = sheet.iter_rows(values_only=True)
-        header_row = next(rows, None)
-        if header_row is None:
+        sheet = workbook.sheet_by_index(0)
+        if sheet.nrows == 0:
             raise BankParseError("Excel header row is missing")
 
-        headers = [cell_to_str(cell).strip() for cell in header_row if cell_to_str(cell).strip()]
+        headers: list[str] = []
+        for col_idx in range(sheet.ncols):
+            label = cell_to_str(_cell_value(sheet, 0, col_idx)).strip()
+            if label:
+                headers.append(label)
+
         header_set = set(headers)
         missing = REQUIRED_COLUMNS - header_set
         if missing:
@@ -46,17 +55,22 @@ def parse_xlsx_simple(content: bytes) -> ParsedStatement:
             )
 
         col_index = {name: headers.index(name) for name in headers}
+        datemode = workbook.datemode
 
         lines: list[ParsedStatementLine] = []
-        for row_num, row in enumerate(rows, start=2):
-            if row is None or not any(cell_to_str(cell) for cell in row):
-                continue
+        for row_idx in range(1, sheet.nrows):
+            row_num = row_idx + 1
 
             def _cell(name: str) -> object:
                 idx = col_index.get(name)
-                if idx is None or idx >= len(row):
+                if idx is None:
                     return ""
-                return row[idx]
+                if idx >= sheet.ncols:
+                    return ""
+                return _cell_value(sheet, row_idx, idx)
+
+            if not any(cell_to_str(_cell(name)) for name in REQUIRED_COLUMNS):
+                continue
 
             reference_raw = _cell("reference")
             reference = cell_to_str(reference_raw) if cell_to_str(reference_raw) else None
@@ -67,9 +81,12 @@ def parse_xlsx_simple(content: bytes) -> ParsedStatement:
                     amount=_cell("amount"),
                     description=_cell("description"),
                     reference=reference,
+                    xlrd_datemode=datemode,
                 )
             )
 
         return build_parsed_statement(lines)
     finally:
-        workbook.close()
+        release = getattr(workbook, "release_resources", None)
+        if callable(release):
+            release()
