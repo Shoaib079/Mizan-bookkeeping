@@ -36,6 +36,12 @@ from app.features.banking.schema import (
     BankStatementLineRead,
     BankStatementRead,
     ClassifyStatementLineResult,
+    CreateSupplierFromLineResult,
+    NeedsReviewStatementLineRead,
+)
+from app.features.banking.classification_learning import (
+    learn_classification_rule,
+    suggest_classification,
 )
 from app.features.banking.statement_models import (
     BankStatement,
@@ -51,6 +57,8 @@ from app.features.delivery.models import DeliverySettlement
 from app.features.pos.models import PosSettlement
 from app.features.customers.models import Customer
 from app.features.suppliers.models import Supplier
+from app.features.suppliers.schema import SupplierCreate
+from app.features.suppliers.service import DuplicateSupplierError, create_supplier
 
 BANK_STATEMENT_LINE_REF = "bank_statement_line"
 
@@ -79,7 +87,14 @@ def file_fingerprint(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def _to_line_read(line: BankStatementLine) -> BankStatementLineRead:
+def _to_line_read(
+    line: BankStatementLine,
+    *,
+    session: Session | None = None,
+) -> BankStatementLineRead:
+    suggestion = None
+    if session is not None and line.status == StatementLineStatus.NEEDS_REVIEW:
+        suggestion = suggest_classification(session, line.description)
     return BankStatementLineRead(
         id=line.id,
         statement_id=line.statement_id,
@@ -102,11 +117,15 @@ def _to_line_read(line: BankStatementLine) -> BankStatementLineRead:
         candidate_supplier_ledger_entry_id=line.candidate_supplier_ledger_entry_id,
         candidate_account_transfer_id=line.candidate_account_transfer_id,
         expense_entry_id=line.expense_entry_id,
+        suggestion=suggestion,
     )
 
 
 def _to_statement_read(
-    statement: BankStatement, lines: list[BankStatementLine]
+    statement: BankStatement,
+    lines: list[BankStatementLine],
+    *,
+    session: Session | None = None,
 ) -> BankStatementRead:
     return BankStatementRead(
         id=statement.id,
@@ -118,7 +137,151 @@ def _to_statement_read(
         original_filename=statement.original_filename,
         line_count=statement.line_count,
         imported_at=statement.imported_at,
-        lines=[_to_line_read(line) for line in lines],
+        lines=[_to_line_read(line, session=session) for line in lines],
+    )
+
+
+def _line_read_by_id(
+    session: Session,
+    entity_id: uuid.UUID,
+    line_id: uuid.UUID,
+) -> BankStatementLineRead:
+    with entity_context(session, entity_id):
+        line = session.get(BankStatementLine, line_id)
+        if line is None:
+            raise LookupError("Statement line not found")
+        return _to_line_read(line, session=session)
+
+
+def _record_classification_learning(
+    session: Session,
+    entity_id: uuid.UUID,
+    line: BankStatementLine,
+    classification: StatementLineClassification,
+    *,
+    supplier_id: uuid.UUID | None = None,
+) -> None:
+    """Persist a learned rule after successful user classification (never auto-posts)."""
+    description = line.description
+    learned_supplier_id = (
+        supplier_id if supplier_id is not None else line.supplier_id
+    )
+    with entity_context(session, entity_id):
+        require_entity_context()
+        learn_classification_rule(
+            session,
+            description=description,
+            classification=classification,
+            supplier_id=learned_supplier_id,
+        )
+        session.commit()
+
+
+def _placeholder_supplier_vkn(session: Session) -> str:
+    for _ in range(20):
+        candidate = f"9{uuid.uuid4().int % 10**9:09d}"
+        exists = session.scalar(select(Supplier.id).where(Supplier.vkn == candidate))
+        if exists is None:
+            return candidate
+    raise InvalidClassificationError("Could not allocate placeholder supplier VKN")
+
+
+def list_needs_review_statement_lines(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    list_params=None,
+) -> tuple[list[NeedsReviewStatementLineRead], int]:
+    from app.core.listing import ListParams, fetch_paginated_rows
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    params = list_params or ListParams()
+    with entity_context(session, entity_id):
+        require_entity_context()
+        stmt = (
+            select(BankStatementLine, BankStatement)
+            .join(BankStatement, BankStatementLine.statement_id == BankStatement.id)
+            .where(BankStatementLine.status == StatementLineStatus.NEEDS_REVIEW)
+            .order_by(
+                BankStatementLine.transaction_date.desc(),
+                BankStatementLine.id.desc(),
+            )
+        )
+        rows, total = fetch_paginated_rows(session, stmt, params)
+        items: list[NeedsReviewStatementLineRead] = []
+        for line, statement in rows:
+            base = _to_line_read(line, session=session)
+            items.append(
+                NeedsReviewStatementLineRead(
+                    **base.model_dump(),
+                    money_account_id=statement.money_account_id,
+                    original_filename=statement.original_filename,
+                )
+            )
+        return items, total
+
+
+def create_supplier_from_statement_line(
+    session: Session,
+    entity_id: uuid.UUID,
+    statement_id: uuid.UUID,
+    line_id: uuid.UUID,
+    *,
+    name: str | None = None,
+    vkn: str | None = None,
+    match_token: str | None = None,
+) -> CreateSupplierFromLineResult:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        statement = session.get(BankStatement, statement_id)
+        if statement is None:
+            raise LookupError("Bank statement not found")
+        line = session.get(BankStatementLine, line_id)
+        if line is None or line.statement_id != statement_id:
+            raise LookupError("Statement line not found")
+        if line.status in (StatementLineStatus.POSTED, StatementLineStatus.LINKED):
+            raise LineAlreadyResolvedError(
+                "Cannot create supplier for a line that is already posted or linked"
+            )
+
+        supplier_name = (name or line.description).strip()
+        if not supplier_name:
+            raise InvalidClassificationError("Supplier name is required")
+        supplier_vkn = vkn or _placeholder_supplier_vkn(session)
+
+    supplier = create_supplier(
+        session,
+        entity_id,
+        SupplierCreate(name=supplier_name[:512], vkn=supplier_vkn),
+    )
+    supplier_id = supplier.id
+    supplier_display_name = supplier.name
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        line = session.get(BankStatementLine, line_id)
+        assert line is not None
+        line.supplier_id = supplier_id
+        learn_classification_rule(
+            session,
+            description=line.description,
+            classification=StatementLineClassification.SUPPLIER_PAYMENT,
+            supplier_id=supplier_id,
+            match_token=match_token,
+        )
+        session.commit()
+        session.refresh(line)
+        line_read = _to_line_read(line, session=session)
+
+    return CreateSupplierFromLineResult(
+        supplier_id=supplier_id,
+        supplier_name=supplier_display_name,
+        line=line_read,
     )
 
 
@@ -584,7 +747,7 @@ def _persist_parsed_statement(
     session.refresh(statement)
     for line in lines:
         session.refresh(line)
-    return _to_statement_read(statement, lines)
+    return _to_statement_read(statement, lines, session=session)
 
 
 def import_bank_statement(
@@ -676,7 +839,7 @@ def get_bank_statement(
                 )
             )
         )
-        return _to_statement_read(statement, lines)
+        return _to_statement_read(statement, lines, session=session)
 
 
 def list_bank_statements(
@@ -720,7 +883,7 @@ def list_bank_statements(
                     )
                 )
             )
-            results.append(_to_statement_read(statement, lines))
+            results.append(_to_statement_read(statement, lines, session=session))
         return results, total
 
 
@@ -762,6 +925,26 @@ def classify_statement_line(
 
         money_account = _get_bank_money_account(session, statement.money_account_id)
 
+        def classified_result(
+            current_line: BankStatementLine,
+            *,
+            learned_classification: StatementLineClassification | None = None,
+            learned_supplier_id: uuid.UUID | None = None,
+            **result_fields,
+        ) -> ClassifyStatementLineResult:
+            if learned_classification is not None:
+                _record_classification_learning(
+                    session,
+                    entity_id,
+                    current_line,
+                    learned_classification,
+                    supplier_id=learned_supplier_id,
+                )
+            return ClassifyStatementLineResult(
+                line=_line_read_by_id(session, entity_id, current_line.id),
+                **result_fields,
+            )
+
         if line.status == StatementLineStatus.NEEDS_REVIEW:
             if confirm_supplier_ledger_entry_id is not None:
                 payment_entry = session.get(
@@ -784,8 +967,10 @@ def classify_statement_line(
                 )
                 session.commit()
                 session.refresh(line)
-                return ClassifyStatementLineResult(
-                    line=_to_line_read(line),
+                return classified_result(
+                    line,
+                    learned_classification=StatementLineClassification.SUPPLIER_PAYMENT,
+                    learned_supplier_id=payment_entry.supplier_id,
                     linked_existing_payment=True,
                     linked_existing_transfer=False,
                     routed_to_needs_review=False,
@@ -806,8 +991,9 @@ def classify_statement_line(
                 _link_transfer_to_line(line, transfer=transfer, as_inflow=as_inflow)
                 session.commit()
                 session.refresh(line)
-                return ClassifyStatementLineResult(
-                    line=_to_line_read(line),
+                return classified_result(
+                    line,
+                    learned_classification=StatementLineClassification.TRANSFER,
                     linked_existing_payment=False,
                     linked_existing_transfer=True,
                     routed_to_needs_review=False,
@@ -847,8 +1033,10 @@ def classify_statement_line(
                 )
                 session.commit()
                 session.refresh(line)
-                return ClassifyStatementLineResult(
-                    line=_to_line_read(line),
+                return classified_result(
+                    line,
+                    learned_classification=StatementLineClassification.SUPPLIER_PAYMENT,
+                    learned_supplier_id=supplier_id,
                     linked_existing_payment=True,
                     linked_existing_transfer=False,
                     routed_to_needs_review=False,
@@ -927,8 +1115,9 @@ def classify_statement_line(
                     )
                     session.commit()
                     session.refresh(line)
-                    return ClassifyStatementLineResult(
-                        line=_to_line_read(line),
+                    return classified_result(
+                        line,
+                        learned_classification=StatementLineClassification.TRANSFER,
                         linked_existing_payment=False,
                         linked_existing_transfer=True,
                         routed_to_needs_review=False,
@@ -986,8 +1175,9 @@ def classify_statement_line(
                 _link_pos_settlement_to_line(line, settlement=existing_settlement)
                 session.commit()
                 session.refresh(line)
-                return ClassifyStatementLineResult(
-                    line=_to_line_read(line),
+                return classified_result(
+                    line,
+                    learned_classification=StatementLineClassification.POS_SETTLEMENT,
                     linked_existing_payment=False,
                     linked_existing_transfer=False,
                     linked_existing_settlement=True,
@@ -1030,8 +1220,9 @@ def classify_statement_line(
                 _link_delivery_settlement_to_line(line, settlement=existing_settlement)
                 session.commit()
                 session.refresh(line)
-                return ClassifyStatementLineResult(
-                    line=_to_line_read(line),
+                return classified_result(
+                    line,
+                    learned_classification=StatementLineClassification.DELIVERY_SETTLEMENT,
                     linked_existing_payment=False,
                     linked_existing_transfer=False,
                     linked_existing_settlement=True,
@@ -1096,8 +1287,9 @@ def classify_statement_line(
             line.status = StatementLineStatus.CLASSIFIED
             session.commit()
             session.refresh(line)
-            return ClassifyStatementLineResult(
-                line=_to_line_read(line),
+            return classified_result(
+                line,
+                learned_classification=StatementLineClassification.UNKNOWN,
                 linked_existing_payment=False,
                 linked_existing_transfer=False,
                 routed_to_needs_review=False,
@@ -1138,8 +1330,15 @@ def classify_statement_line(
             session.commit()
             session.refresh(line)
 
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.SUPPLIER_PAYMENT,
+            supplier_id=supplier_id,
+        )
         return ClassifyStatementLineResult(
-            line=_to_line_read(line),
+            line=_line_read_by_id(session, entity_id, line_id),
             linked_existing_payment=False,
             linked_existing_transfer=False,
             routed_to_needs_review=False,
@@ -1176,8 +1375,14 @@ def classify_statement_line(
             session.commit()
             session.refresh(line)
 
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.CUSTOMER_PAYMENT,
+        )
         return ClassifyStatementLineResult(
-            line=_to_line_read(line),
+            line=_line_read_by_id(session, entity_id, line_id),
             linked_existing_payment=False,
             linked_existing_transfer=False,
             routed_to_needs_review=False,
@@ -1212,8 +1417,14 @@ def classify_statement_line(
             session.commit()
             session.refresh(line)
 
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.POS_SETTLEMENT,
+        )
         return ClassifyStatementLineResult(
-            line=_to_line_read(line),
+            line=_line_read_by_id(session, entity_id, line_id),
             linked_existing_payment=False,
             linked_existing_transfer=False,
             linked_existing_settlement=False,
@@ -1251,8 +1462,14 @@ def classify_statement_line(
             session.commit()
             session.refresh(line)
 
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.DELIVERY_SETTLEMENT,
+        )
         return ClassifyStatementLineResult(
-            line=_to_line_read(line),
+            line=_line_read_by_id(session, entity_id, line_id),
             linked_existing_payment=False,
             linked_existing_transfer=False,
             routed_to_needs_review=False,
@@ -1282,8 +1499,14 @@ def classify_statement_line(
             session.commit()
             session.refresh(line)
 
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.BANK_FEE,
+        )
         return ClassifyStatementLineResult(
-            line=_to_line_read(line),
+            line=_line_read_by_id(session, entity_id, line_id),
             linked_existing_payment=False,
             linked_existing_transfer=False,
             routed_to_needs_review=False,
@@ -1318,8 +1541,14 @@ def classify_statement_line(
             session.commit()
             session.refresh(line)
 
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.CREDIT_CARD_PAYMENT,
+        )
         return ClassifyStatementLineResult(
-            line=_to_line_read(line),
+            line=_line_read_by_id(session, entity_id, line_id),
             linked_existing_payment=False,
             linked_existing_transfer=False,
             routed_to_needs_review=False,
@@ -1358,8 +1587,14 @@ def classify_statement_line(
             session.commit()
             session.refresh(line)
 
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.RENT_UTILITY,
+        )
         return ClassifyStatementLineResult(
-            line=_to_line_read(line),
+            line=_line_read_by_id(session, entity_id, line_id),
             linked_existing_payment=False,
             linked_existing_transfer=False,
             routed_to_needs_review=False,
@@ -1410,8 +1645,14 @@ def classify_statement_line(
         session.commit()
         session.refresh(line)
 
+    _record_classification_learning(
+        session,
+        entity_id,
+        line,
+        StatementLineClassification.TRANSFER,
+    )
     return ClassifyStatementLineResult(
-        line=_to_line_read(line),
+        line=_to_line_read(line, session=session),
         linked_existing_payment=False,
         linked_existing_transfer=False,
         routed_to_needs_review=False,

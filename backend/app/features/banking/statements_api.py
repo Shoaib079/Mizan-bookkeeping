@@ -20,6 +20,7 @@ from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.banking import import_profiles as import_profile_service
 from app.features.banking import statements as statement_service
+from app.features.suppliers.service import DuplicateSupplierError
 from app.features.banking.schema import (
     BankImportProfileRead,
     BankImportProfileUpsert,
@@ -27,6 +28,9 @@ from app.features.banking.schema import (
     BankStatementRead,
     ClassifyStatementLineRequest,
     ClassifyStatementLineResult,
+    CreateSupplierFromLineRequest,
+    CreateSupplierFromLineResult,
+    NeedsReviewStatementLineRead,
 )
 
 accounts_router = APIRouter(
@@ -202,6 +206,65 @@ def list_bank_statements(
         limit=list_params.limit,
         offset=list_params.offset,
     )
+
+
+@statements_router.get(
+    "/needs-review",
+    response_model=PaginatedListOut[NeedsReviewStatementLineRead],
+)
+def list_needs_review_statement_lines(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[NeedsReviewStatementLineRead]:
+    try:
+        items, total = statement_service.list_needs_review_statement_lines(
+            session,
+            entity_id,
+            list_params=list_params,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
+
+
+@statements_router.post(
+    "/{statement_id}/lines/{line_id}/create-supplier",
+    response_model=CreateSupplierFromLineResult,
+    status_code=201,
+)
+def create_supplier_from_statement_line(
+    entity_id: uuid.UUID,
+    statement_id: uuid.UUID,
+    line_id: uuid.UUID,
+    payload: CreateSupplierFromLineRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> CreateSupplierFromLineResult:
+    try:
+        return statement_service.create_supplier_from_statement_line(
+            session,
+            entity_id,
+            statement_id,
+            line_id,
+            name=payload.name,
+            vkn=payload.vkn,
+            match_token=payload.match_token,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except statement_service.LineAlreadyResolvedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except statement_service.InvalidClassificationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DuplicateSupplierError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @statements_router.get("/{statement_id}", response_model=BankStatementRead)

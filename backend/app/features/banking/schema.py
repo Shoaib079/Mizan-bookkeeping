@@ -97,6 +97,13 @@ class MoneyAccountTree(BaseModel):
     foreign_currency: ForeignCurrencyTree
 
 
+class ClassificationSuggestion(BaseModel):
+    classification: StatementLineClassification
+    supplier_id: uuid.UUID | None = None
+    reason: str
+    confidence: str
+
+
 class BankStatementLineRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -121,6 +128,37 @@ class BankStatementLineRead(BaseModel):
     candidate_supplier_ledger_entry_id: uuid.UUID | None = None
     candidate_account_transfer_id: uuid.UUID | None = None
     expense_entry_id: uuid.UUID | None = None
+    suggestion: ClassificationSuggestion | None = None
+
+
+class NeedsReviewStatementLineRead(BankStatementLineRead):
+    money_account_id: uuid.UUID
+    original_filename: str
+
+
+class CreateSupplierFromLineRequest(BaseModel):
+    name: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Supplier name — defaults to line description",
+    )
+    vkn: str | None = Field(
+        default=None,
+        min_length=10,
+        max_length=11,
+        description="Tax id — placeholder generated when omitted",
+    )
+    match_token: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Learned rule token — defaults to normalized description",
+    )
+
+
+class CreateSupplierFromLineResult(BaseModel):
+    supplier_id: uuid.UUID
+    supplier_name: str
+    line: BankStatementLineRead
 
 
 class BankStatementRead(BaseModel):
