@@ -5,15 +5,24 @@
 # production-like values. Database access stays on the pytest test DB:
 #   APP_ENV=test  → conftest provisions mizan_test via Alembic (not production DB).
 #
-# Requires: Postgres up, backend/.venv with dev deps, DATABASE_ADMIN_URL if non-default.
+# Provisions its own venv (CI has no pre-existing backend/.venv).
+# Requires: Postgres up, DATABASE_ADMIN_URL if non-default.
 set -euo pipefail
 
 BACKEND="$(cd "$(dirname "$0")/.." && pwd)"
-VENV="${BACKEND}/.venv"
-if [[ ! -x "$VENV/bin/pytest" ]]; then
-  echo "FAIL: $VENV/bin/pytest not found — run: cd backend && python3 -m venv .venv && pip install -e '.[dev]'" >&2
-  exit 1
-fi
+VENV="${PROD_PYTEST_VENV:-$BACKEND/.venv-prod-pytest}"
+
+cleanup() {
+  if [[ "${KEEP_PROD_PYTEST_VENV:-}" != "1" ]]; then
+    rm -rf "$VENV"
+  fi
+}
+trap cleanup EXIT
+
+echo "==> Production guard pytest venv at $VENV"
+python3 -m venv "$VENV"
+"$VENV/bin/pip" install -q -U pip setuptools wheel
+"$VENV/bin/pip" install -q -e "$BACKEND[dev]"
 
 cd "$BACKEND"
 
