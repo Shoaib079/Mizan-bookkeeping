@@ -138,6 +138,45 @@ class BankStatementRead(BaseModel):
     lines: list[BankStatementLineRead]
 
 
+class BankImportProfileRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    entity_id: uuid.UUID
+    money_account_id: uuid.UUID
+    header_row: int = Field(ge=1)
+    data_start_row: int = Field(ge=1)
+    date_col: int = Field(ge=0)
+    description_col: int = Field(ge=0)
+    reference_col: int | None = Field(default=None, ge=0)
+    amount_col: int | None = Field(default=None, ge=0)
+    debit_col: int | None = Field(default=None, ge=0)
+    credit_col: int | None = Field(default=None, ge=0)
+    date_format: str
+    decimal_format: str
+    debit_is_outflow: bool
+    updated_at: datetime
+
+
+class BankImportProfileUpsert(BaseModel):
+    header_row: int = Field(ge=1)
+    data_start_row: int = Field(ge=1)
+    date_col: int = Field(ge=0)
+    description_col: int = Field(ge=0)
+    reference_col: int | None = Field(default=None, ge=0)
+    amount_col: int | None = Field(default=None, ge=0)
+    debit_col: int | None = Field(default=None, ge=0)
+    credit_col: int | None = Field(default=None, ge=0)
+    date_format: str
+    decimal_format: str = "tr"
+    debit_is_outflow: bool = True
+
+
+class BankStatementPreview(BaseModel):
+    rows: list[list[str]]
+    total_rows: int
+
+
 class ClassifyStatementLineRequest(BaseModel):
     classification: StatementLineClassification
     supplier_id: uuid.UUID | None = None

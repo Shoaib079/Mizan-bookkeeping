@@ -91,6 +91,29 @@ export type BankStatementRead = {
   lines: BankStatementLine[];
 };
 
+export type BankStatementPreview = {
+  rows: string[][];
+  total_rows: number;
+};
+
+export type BankImportProfileRead = {
+  id: string;
+  entity_id: string;
+  money_account_id: string;
+  header_row: number;
+  data_start_row: number;
+  date_col: number;
+  description_col: number;
+  reference_col: number | null;
+  amount_col: number | null;
+  debit_col: number | null;
+  credit_col: number | null;
+  date_format: string;
+  decimal_format: string;
+  debit_is_outflow: boolean;
+  updated_at: string;
+};
+
 export type AccountTransferRead = {
   id: string;
   from_money_account_id: string;

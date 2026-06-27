@@ -11,7 +11,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.adapters.bank_parsers.dispatch import parse_bank_statement, resolve_statement_format
-from app.adapters.bank_parsers.types import BankParseError
+from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig, parse_with_profile
+from app.adapters.bank_parsers.types import BankParseError, ParsedStatement
 from app.adapters.storage.local import save_upload
 from app.core.banking import posting as banking_posting
 from app.core.banking import statement_posting
@@ -43,6 +44,8 @@ from app.features.banking.statement_models import (
     StatementLineStatus,
 )
 from app.features.entities import service as entity_service
+from app.features.banking.import_profiles import profile_to_config, upsert_import_profile
+from app.features.banking.import_profile_models import BankImportProfile
 from app.features.banking.transfer_models import AccountTransfer
 from app.features.delivery.models import DeliverySettlement
 from app.features.pos.models import PosSettlement
@@ -473,6 +476,117 @@ def _route_transfer_needs_review(
     line.candidate_supplier_ledger_entry_id = None
 
 
+def _parse_statement_content(
+    content: bytes,
+    *,
+    original_filename: str,
+    content_type: str | None,
+    profile_config: BankImportProfileConfig | None,
+    session: Session,
+    money_account_id: uuid.UUID,
+    entity_id: uuid.UUID,
+) -> ParsedStatement:
+    """Parse upload — explicit profile, saved profile, then canonical headers."""
+    if profile_config is not None:
+        try:
+            return parse_with_profile(
+                content,
+                profile_config,
+                original_filename=original_filename,
+                content_type=content_type,
+            )
+        except BankParseError as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        saved = session.scalar(
+            select(BankImportProfile).where(
+                BankImportProfile.money_account_id == money_account_id
+            )
+        )
+    if saved is not None:
+        try:
+            return parse_with_profile(
+                content,
+                profile_to_config(saved),
+                original_filename=original_filename,
+                content_type=content_type,
+            )
+        except BankParseError as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+
+    try:
+        return parse_bank_statement(
+            content,
+            original_filename=original_filename,
+            content_type=content_type,
+        )
+    except BankParseError as exc:
+        raise InvalidClassificationError(str(exc)) from exc
+
+
+def _persist_parsed_statement(
+    session: Session,
+    entity_id: uuid.UUID,
+    money_account_id: uuid.UUID,
+    content: bytes,
+    parsed: ParsedStatement,
+    *,
+    original_filename: str,
+    content_type: str | None,
+    fingerprint: str,
+) -> BankStatementRead:
+    """Store file + create statement rows (dedup/overlap checks run by caller)."""
+    storage_path = save_upload(
+        entity_id,
+        fingerprint,
+        content,
+        extension=resolve_statement_format(
+            original_filename=original_filename,
+            content_type=content_type,
+        ),
+    )
+
+    statement = BankStatement(
+        money_account_id=money_account_id,
+        file_fingerprint=fingerprint,
+        period_start=parsed.period_start,
+        period_end=parsed.period_end,
+        original_filename=original_filename,
+        storage_path=storage_path,
+        line_count=len(parsed.lines),
+    )
+    session.add(statement)
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        session.rollback()
+        raise DuplicateStatementError(
+            "This bank statement file was already imported for this entity"
+        ) from exc
+
+    lines: list[BankStatementLine] = []
+    for row in parsed.lines:
+        line = BankStatementLine(
+            statement_id=statement.id,
+            transaction_date=row.transaction_date,
+            amount_kurus=row.amount_kurus,
+            description=row.description,
+            reference=row.reference,
+            classification=StatementLineClassification.UNCLASSIFIED,
+            status=StatementLineStatus.IMPORTED,
+        )
+        session.add(line)
+        lines.append(line)
+
+    session.commit()
+    session.refresh(statement)
+    for line in lines:
+        session.refresh(line)
+    return _to_statement_read(statement, lines)
+
+
 def import_bank_statement(
     session: Session,
     entity_id: uuid.UUID,
@@ -481,20 +595,23 @@ def import_bank_statement(
     *,
     original_filename: str,
     content_type: str | None = None,
+    profile_config: BankImportProfileConfig | None = None,
+    save_profile: bool = False,
 ) -> BankStatementRead:
     """Parse CSV/Excel, store file, create statement + lines. Rejects duplicates and overlaps."""
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
     fingerprint = file_fingerprint(content)
-    try:
-        parsed = parse_bank_statement(
-            content,
-            original_filename=original_filename,
-            content_type=content_type,
-        )
-    except BankParseError as exc:
-        raise InvalidClassificationError(str(exc)) from exc
+    parsed = _parse_statement_content(
+        content,
+        original_filename=original_filename,
+        content_type=content_type,
+        profile_config=profile_config,
+        session=session,
+        money_account_id=money_account_id,
+        entity_id=entity_id,
+    )
 
     with entity_context(session, entity_id):
         require_entity_context()
@@ -518,53 +635,25 @@ def import_bank_statement(
                 "Statement period overlaps an existing import for this bank account"
             )
 
-        storage_path = save_upload(
+        result = _persist_parsed_statement(
+            session,
             entity_id,
-            fingerprint,
+            money_account_id,
             content,
-            extension=resolve_statement_format(
-                original_filename=original_filename,
-                content_type=content_type,
-            ),
-        )
-
-        statement = BankStatement(
-            money_account_id=money_account_id,
-            file_fingerprint=fingerprint,
-            period_start=parsed.period_start,
-            period_end=parsed.period_end,
+            parsed,
             original_filename=original_filename,
-            storage_path=storage_path,
-            line_count=len(parsed.lines),
+            content_type=content_type,
+            fingerprint=fingerprint,
         )
-        session.add(statement)
-        try:
-            session.flush()
-        except IntegrityError as exc:
-            session.rollback()
-            raise DuplicateStatementError(
-                "This bank statement file was already imported for this entity"
-            ) from exc
 
-        lines: list[BankStatementLine] = []
-        for row in parsed.lines:
-            line = BankStatementLine(
-                statement_id=statement.id,
-                transaction_date=row.transaction_date,
-                amount_kurus=row.amount_kurus,
-                description=row.description,
-                reference=row.reference,
-                classification=StatementLineClassification.UNCLASSIFIED,
-                status=StatementLineStatus.IMPORTED,
-            )
-            session.add(line)
-            lines.append(line)
-
-        session.commit()
-        session.refresh(statement)
-        for line in lines:
-            session.refresh(line)
-        return _to_statement_read(statement, lines)
+    if save_profile and profile_config is not None:
+        upsert_import_profile(
+            session,
+            entity_id,
+            money_account_id,
+            profile_config,
+        )
+    return result
 
 
 def get_bank_statement(

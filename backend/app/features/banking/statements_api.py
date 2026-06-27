@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig
 from app.adapters.bank_parsers.types import BankParseError
 from app.core.receivables.ledger import OverpaymentError
 from app.core.payables.ledger import OverpaymentError as SupplierOverpaymentError
@@ -15,8 +18,12 @@ from app.core.banking.posting import InvalidTransferError
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.features.banking import import_profiles as import_profile_service
 from app.features.banking import statements as statement_service
 from app.features.banking.schema import (
+    BankImportProfileRead,
+    BankImportProfileUpsert,
+    BankStatementPreview,
     BankStatementRead,
     ClassifyStatementLineRequest,
     ClassifyStatementLineResult,
@@ -33,6 +40,93 @@ statements_router = APIRouter(
 )
 
 
+def _parse_profile_form(profile: str | None) -> BankImportProfileConfig | None:
+    if not profile or not profile.strip():
+        return None
+    try:
+        payload = json.loads(profile)
+        return BankImportProfileConfig.model_validate(payload)
+    except (json.JSONDecodeError, ValidationError) as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid profile mapping: {exc}") from exc
+
+
+@accounts_router.post(
+    "/{money_account_id}/statements/preview",
+    response_model=BankStatementPreview,
+)
+async def preview_bank_statement(
+    entity_id: uuid.UUID,
+    money_account_id: uuid.UUID,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> BankStatementPreview:
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file")
+    try:
+        import_profile_service.get_import_profile(session, entity_id, money_account_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except statement_service.NotBankAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        return import_profile_service.preview_statement_upload(
+            content,
+            original_filename=file.filename,
+            content_type=file.content_type,
+        )
+    except BankParseError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@accounts_router.get(
+    "/{money_account_id}/import-profile",
+    response_model=BankImportProfileRead,
+)
+def get_bank_import_profile(
+    entity_id: uuid.UUID,
+    money_account_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> BankImportProfileRead:
+    try:
+        profile = import_profile_service.get_import_profile_read(
+            session, entity_id, money_account_id
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except statement_service.NotBankAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if profile is None:
+        raise HTTPException(status_code=404, detail="No saved import profile for this account")
+    return profile
+
+
+@accounts_router.put(
+    "/{money_account_id}/import-profile",
+    response_model=BankImportProfileRead,
+)
+def upsert_bank_import_profile(
+    entity_id: uuid.UUID,
+    money_account_id: uuid.UUID,
+    payload: BankImportProfileUpsert,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> BankImportProfileRead:
+    try:
+        config = BankImportProfileConfig.model_validate(payload.model_dump())
+        return import_profile_service.upsert_import_profile(
+            session, entity_id, money_account_id, config
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except statement_service.NotBankAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @accounts_router.post(
     "/{money_account_id}/statements",
     response_model=BankStatementRead,
@@ -42,12 +136,16 @@ async def import_bank_statement(
     entity_id: uuid.UUID,
     money_account_id: uuid.UUID,
     file: UploadFile = File(...),
+    profile: str | None = Form(default=None),
+    save_profile: bool = Form(default=False),
     session: Session = Depends(get_session),
     _: None = Depends(operations_write_guard),
 ) -> BankStatementRead:
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
+
+    profile_config = _parse_profile_form(profile)
 
     try:
         return statement_service.import_bank_statement(
@@ -57,6 +155,8 @@ async def import_bank_statement(
             content,
             original_filename=file.filename or "statement.csv",
             content_type=file.content_type,
+            profile_config=profile_config,
+            save_profile=save_profile,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
