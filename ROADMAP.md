@@ -757,7 +757,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 16 | **No "all entries" ledger view** | `GET .../ledger/entries` (paginated/searchable) exists; **no frontend page**, not in reports/nav. (Distinct from the deferred *audit-events* log in FUTURE_IDEAS.) | **11.16** |
 | 17 | Date field opens calendar **only via icon** | `date-input.tsx` input has no click/focus-to-open; only the trailing icon opens it. Owner wants click-the-field-to-open, app-wide (amends 10.1 "icon-only"). | **11.17** |
 | 18 | Frontend never had an adversarial audit | Backend got Phase 8.6; the UI is surfacing hand-found bugs (items 13–17). Reviewer/owner-led frontend audit. | **11.18** |
-| 19 | **Idempotency key not stable** | `useSubmitIdempotency()` + explicit keys on 39 surfaces; no auto-mint in `api.ts` | **Done** in 11.19 (owner sign-off pending) |
+| 19 | **Idempotency key not stable** | `useSubmitIdempotency()` + explicit keys on 39 surfaces; no auto-mint in `api.ts` | **Done** in 11.19 (owner sign-off **APPROVED 2026-06-27**) |
 | 20 | Entity-switch state bleed | `opening-balances/page.tsx` keeps `lines`/`goLiveDate` across entity change; 7 detail pages (`suppliers/[id]`, `partners/[id]`, `staff/[id]`, `customers/[id]`, `banking/accounts|fx|statements/[id]`) show prior-entity data until refetch. **RLS + account-entity validation backstop an actual leak** — this is stale-state hygiene, not an isolation breach. | **11.20** |
 | 21 | UI not role/setting-aware | Cashier dashboard shows **Net result** (contradicts "cashier can't see P&L"); `partner_view_only` sees full write chrome (backend still 403s — UI cleanliness); `delivery_enabled` off not reflected in nav/New menu. | **11.21** |
 | 22 | Small UI gaps | Expense-receipt review has no **reject** path (API exists); reports landing **swallows API errors** (blank cards); header **"This month"** button is dead. | **11.22** |
@@ -815,8 +815,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
   → 11.6 Partner share %
   → 11.7 Unified expense (partner-fronted)
   → 11.8 Dashboard FX native display
-  → 11.9 Correct posted daily sales          ← done (v0.69.0); owner sign-off PENDING
-  → 11.10 Expense correction API + UI      ← done (v0.69.1); owner sign-off PENDING
+  → 11.9 Correct posted daily sales          ← done (v0.69.0); owner sign-off **APPROVED (2026-06-27)**
+  → 11.10 Expense correction API + UI      ← done (v0.69.1); owner sign-off **APPROVED (2026-06-27)**
   → 11.11 Correction UI (existing APIs) + period_unlock_reason on mutations
   → 11.12 Remaining correction APIs (invoice, staff, partner, credit sale, FX conversion/spend)
   → 11.13 Cash-drawer session optional + owner-reopen   ← money-critical (lock model)
@@ -985,7 +985,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | | |
 |---|---|
 | **Status** | **done ✓** (`v0.68.6-expense-partner-mode`) |
-| **Money-critical** | Yes — uses `post_expense_fronted` |
+| **Money-critical** | Yes — uses `post_expense_fronted`; owner sign-off **APPROVED (2026-06-27)** |
 | **Suggested tag** | `v0.68.6-expense-partner-mode` |
 
 **Acceptance:**
@@ -1019,7 +1019,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | | |
 |---|---|
 | **Status** | done |
-| **Money-critical** | Yes — owner sign-off **PENDING** |
+| **Money-critical** | Yes — owner sign-off **APPROVED (2026-06-27)** |
 | **Tag** | `v0.69.0-correct-daily-sales` |
 
 **Problem:** Posted manual/photo daily sales hit GL (`CARD_SALES` + `CASH_MOVEMENT`); mistakes need manual journals today.
@@ -1040,7 +1040,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | | |
 |---|---|
 | **Status** | done |
-| **Money-critical** | Yes — owner sign-off **PENDING** |
+| **Money-critical** | Yes — owner sign-off **APPROVED (2026-06-27)** |
 | **Tag** | `v0.69.1-correct-expense` |
 
 **Problem:** Core helper exists; no HTTP route; raw ledger void desyncs `expense_entries`.
@@ -1207,7 +1207,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | **done** — owner sign-off **PENDING** (money-critical) |
+| **Status** | **done** — owner sign-off **APPROVED (2026-06-27)** (money-critical) |
 | **Money-critical** | Yes — can duplicate ledger entries |
 | **Tag** | `v0.69.10-stable-idempotency-key` |
 
@@ -1225,7 +1225,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 - [x] One **stable** Idempotency-Key per user submit *intent*; reuse on retry; regenerate after success / new entry.
 - [x] **Removed** per-call `randomUUID()` auto-gen in `api.ts`.
 - [x] Tests: retry same key → one record; new key → new record.
-- [ ] Owner sign-off (money-critical).
+- [x] Owner sign-off (money-critical) — **APPROVED (2026-06-27)**
 
 ---
 
@@ -1290,10 +1290,10 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.4 | Dialog focus stable while editing | **done** (`v0.68.3`) |
 | 11.5 | Creator is owner member; entity appears in list | **done** (`v0.68.4`) |
 | 11.6 | Partner share % on CRUD | **done** (`v0.68.5`) |
-| 11.7 | Partner-fronted expense from New → Expense |
+| 11.7 | Partner-fronted expense from New → Expense | **done** (`v0.68.6`) — sign-off **APPROVED (2026-06-27)** |
 | 11.8 | Dashboard FX shows native currency |
-| 11.9 | Correct posted daily sales E2E; owner sign-off |
-| 11.10 | Correct posted expense E2E; owner sign-off | **done** (`v0.69.1`) — sign-off PENDING |
+| 11.9 | Correct posted daily sales E2E; owner sign-off | **done** (`v0.69.0`) — sign-off **APPROVED (2026-06-27)** |
+| 11.10 | Correct posted expense E2E; owner sign-off | **done** (`v0.69.1`) — sign-off **APPROVED (2026-06-27)** |
 | 11.11 | Correction **UI** for existing Phase 8.5 APIs; period unlock works |
 | 11.12 | Remaining correction **HTTP** routes + integration tests green; owner sign-off |
 | 11.13 | Sales/cash post with no forced session; closed day owner-reopenable + audited; owner sign-off |
@@ -1302,7 +1302,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.16 | General-ledger "all entries" report page over existing API; linked + role-gated |
 | 11.17 | Date field opens on click/focus app-wide (icon still works) |
 | 11.18 | Frontend adversarial audit done; each finding fixed + tested; money-critical UI signed off |
-| 11.19 | Stable idempotency key per submit; double-submit/retry → one record (tested); owner sign-off | **done** (`v0.69.10`; sign-off pending) |
+| 11.19 | Stable idempotency key per submit; double-submit/retry → one record (tested); owner sign-off | **done** (`v0.69.10`; sign-off **APPROVED 2026-06-27**) |
 | 11.20 | Entity switch resets all entity-scoped state; no prior-entity data visible (tested) |
 | 11.21 | UI honors role + feature settings (cashier KPIs, view-only chrome, delivery toggle) |
 | 11.22 | Receipt reject UI; reports errors surfaced; dead "This month" button resolved |

@@ -20,7 +20,7 @@
 - Frontend: `correct-expense-form.tsx`; `/expenses` posted rows → **Correct** dialog (pre-filled, idempotency key)
 - Tests: `test_expense_correct.py` (4 tests — amount, account/date, non-posted 409, period lock)
 - **572 pytest green**; frontend build green
-- **Owner sign-off: PENDING** (money-critical)
+- **Owner sign-off: APPROVED (2026-06-27)** (money-critical)
 
 **Next:** Phase 11 Slice 11.11 — wire correction UI for existing Phase 8.5 APIs + period unlock retry.
 
@@ -30,9 +30,7 @@
 - Frontend: `correct-daily-sales-form.tsx`; `/sales` posted rows → **Correct** dialog (pre-filled, idempotency key)
 - Tests: `test_pos_daily_summary_correct.py` (5 tests — amounts, date, non-posted 409, duplicate date 422, period lock)
 - **568 pytest green**; frontend build green
-- **Owner sign-off: PENDING** (money-critical)
-
-**Next:** Phase 11 Slice 11.10 — expense correction HTTP + UI.
+- **Owner sign-off: APPROVED (2026-06-27)** (money-critical)
 
 **Phase 10 complete** — all slices 10.1–10.8 done (`v0.67.0`). **Slice 10.8 owner sign-off: APPROVED (2026-06-25).**
 
@@ -57,7 +55,7 @@
 - Removed `api.ts` per-call `randomUUID()` auto-gen; callers pass explicit `idempotencyKey`
 - Wired 39 mutation surfaces (all money forms + review confirms + statement classify + opening balances)
 - Vitest: `use-submit-idempotency.test.ts` (3 tests); backend: `test_client_retry_contract_reuses_one_key_not_two`
-- **Owner sign-off: PENDING** (money-critical)
+- **Owner sign-off: APPROVED (2026-06-27)** (money-critical)
 
 **Next:** Phase 11 Slice 11.20 — see `ROADMAP.md` Phase 11. Full plan in `ROADMAP.md` Phase 11 (slices 11.4–11.12, 11.20). Deployment is **Phase 12**.
 
@@ -133,6 +131,7 @@
 
 ## Recent
 
+- 2026-06-27 — Owner sign-off APPROVED: Phase 11.7, 11.9, 11.10, 11.19 (money-critical)
 - 2026-06-25 — Phase 11 Slice 11.1 — default cash drawer on chart seed (`v0.68.0-default-money-accounts`)
 - 2026-06-25 — Phase 10 Slice 10.8 owner sign-off APPROVED
 - 2026-06-25 — Phase 10 Slice 3 — shell feedback toasts (`v0.66.2-shell-feedback`)
