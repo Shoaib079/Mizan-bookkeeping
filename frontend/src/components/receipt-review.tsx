@@ -10,6 +10,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { filterExpenseAccounts, type ChartAccount } from "@/lib/expense-accounts";
 import { apiFetch, documentUrl } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
@@ -38,7 +39,7 @@ type ExpenseReceipt = {
   lines: ReceiptLine[];
 };
 
-type Account = { id: string; code: string; name: string };
+type Account = ChartAccount;
 
 type EditableLine = {
   id: string;
@@ -234,9 +235,7 @@ export function ReceiptReview({ intakeId }: Props) {
     return <p className="text-sm text-muted-foreground">Loading receipt…</p>;
   }
 
-  const expenseAccounts = accounts.filter((a) =>
-    ["5200", "5700"].includes(a.code),
-  );
+  const expenseAccounts = filterExpenseAccounts(accounts);
   const isTerminal = isReviewTerminalStatus(intake.status);
 
   return (

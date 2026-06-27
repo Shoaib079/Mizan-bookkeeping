@@ -5,7 +5,6 @@
 import Link from "next/link";
 import {
   ChevronDown,
-  CreditCard,
   FileText,
   Plus,
   Receipt,
@@ -41,7 +40,6 @@ const MENU_GROUPS: MenuGroup[] = [
     items: [
       { key: "sales", label: "Daily sales (manual)", icon: ShoppingBag },
       { key: "posPhoto", label: "POS summary (photo)", icon: ShoppingBag },
-      { key: "cardSales", label: "Card sales batch", icon: CreditCard },
       { key: "deliveryReport", label: "Delivery report", icon: Truck },
     ],
   },
@@ -49,7 +47,6 @@ const MENU_GROUPS: MenuGroup[] = [
     label: "Expenses",
     items: [
       { key: "expense", label: "Manual expense", icon: Wallet },
-      { key: "cashTip", label: "Cash tip (5700 expense)", icon: Wallet },
       { key: "receipt", label: "Expense receipt (photo)", icon: Receipt },
     ],
   },

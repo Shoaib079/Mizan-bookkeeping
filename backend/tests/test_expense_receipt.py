@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import func, select
 
 from app.adapters.ocr_ai.expense_receipt import register_expense_receipt_fixture
-from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE, TIPS_EXPENSE_CODE
+from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
@@ -74,7 +74,6 @@ def _gl_balance(db_session, entity_id, account_id, normal: AccountNormalBalance)
 def test_multi_line_receipt_creates_intake_with_lines(db_session, restaurant_a) -> None:
     drawer, accounts = _setup(db_session, restaurant_a)
     general_id = accounts[GENERAL_EXPENSE_CODE].id
-    tips_id = accounts[TIPS_EXPENSE_CODE].id
 
     intake = receipt_service.create_expense_receipt_from_upload(
         db_session,
@@ -95,20 +94,22 @@ def test_multi_line_receipt_creates_intake_with_lines(db_session, restaurant_a) 
     assert "peynir" in descriptions
     assert "sut" in descriptions
     tip_line = next(
-        line for line in intake.lines if line.expense_account_id == tips_id
+        line
+        for line in intake.lines
+        if (line.written_item_description or "").lower().startswith("bah")
     )
+    assert tip_line.expense_account_id == general_id
     assert tip_line.amount_kurus == 2_000
     grocery_lines = [
         line for line in intake.lines if line.expense_account_id == general_id
     ]
-    assert len(grocery_lines) == 2
+    assert len(grocery_lines) == 3
     assert intake.receipt_total_kurus == 25_000
 
 
 def test_confirm_posts_all_lines_dr_expense_cr_cash(db_session, restaurant_a) -> None:
     drawer, accounts = _setup(db_session, restaurant_a)
     general_id = accounts[GENERAL_EXPENSE_CODE].id
-    tips_id = accounts[TIPS_EXPENSE_CODE].id
     drawer_gl_id = drawer.gl_account_id
 
     intake = receipt_service.create_expense_receipt_from_upload(
@@ -129,8 +130,7 @@ def test_confirm_posts_all_lines_dr_expense_cr_cash(db_session, restaurant_a) ->
     assert posted.status == ExpenseReceiptIntakeStatus.POSTED
     assert all(line.expense_entry_id is not None for line in posted.lines)
 
-    assert _gl_balance(db_session, restaurant_a.id, general_id, AccountNormalBalance.DEBIT) == 23_000
-    assert _gl_balance(db_session, restaurant_a.id, tips_id, AccountNormalBalance.DEBIT) == 2_000
+    assert _gl_balance(db_session, restaurant_a.id, general_id, AccountNormalBalance.DEBIT) == 25_000
     assert (
         _gl_balance(db_session, restaurant_a.id, drawer_gl_id, AccountNormalBalance.DEBIT)
         == -25_000
@@ -138,9 +138,9 @@ def test_confirm_posts_all_lines_dr_expense_cr_cash(db_session, restaurant_a) ->
 
 
 def test_expense_tip_line_rolls_into_pl_and_balance_sheet(db_session, restaurant_a) -> None:
-    """Bahşiş on the expense paper hits P&L (5700) and reduces cash on the balance sheet."""
+    """Bahşiş on the expense paper hits P&L (general expense) and reduces cash."""
     drawer, accounts = _setup(db_session, restaurant_a)
-    tips_id = accounts[TIPS_EXPENSE_CODE].id
+    general_id = accounts[GENERAL_EXPENSE_CODE].id
 
     intake = receipt_service.create_expense_receipt_from_upload(
         db_session,
@@ -161,12 +161,12 @@ def test_expense_tip_line_rolls_into_pl_and_balance_sheet(db_session, restaurant
     pl = financial_statements.get_profit_and_loss(
         db_session, restaurant_a.id, period_from, period_to
     )
-    tips_line = next(
-        (row for row in pl.accounts if row.account_id == tips_id),
+    general_line = next(
+        (row for row in pl.accounts if row.account_id == general_id),
         None,
     )
-    assert tips_line is not None
-    assert tips_line.amount_kurus == 2_000
+    assert general_line is not None
+    assert general_line.amount_kurus == 25_000
 
     bs = financial_statements.get_balance_sheet(db_session, restaurant_a.id, period_to)
     cash_row = next(
@@ -225,7 +225,7 @@ def test_confirm_twice_does_not_double_post(db_session, restaurant_a) -> None:
             ConfirmExpenseReceiptRequest(actor_id=ACTOR_ID),
         )
 
-    assert _gl_balance(db_session, restaurant_a.id, general_id, AccountNormalBalance.DEBIT) == 23_000
+    assert _gl_balance(db_session, restaurant_a.id, general_id, AccountNormalBalance.DEBIT) == 25_000
 
 
 def test_registered_fixture_multi_line(db_session, restaurant_a) -> None:
@@ -439,4 +439,4 @@ def test_upload_and_confirm_via_api(client, db_session, restaurant_a) -> None:
     assert confirm.status_code == 200, confirm.text
     assert confirm.json()["status"] == "posted"
 
-    assert _gl_balance(db_session, entity_id, general_id, AccountNormalBalance.DEBIT) == 23_000
+    assert _gl_balance(db_session, entity_id, general_id, AccountNormalBalance.DEBIT) == 25_000

@@ -21,7 +21,7 @@ from app.adapters.ocr_ai.expense_receipt import (
     ExpenseReceiptExtractionError,
     ExpenseReceiptUnsupportedError,
 )
-from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE, TIPS_EXPENSE_CODE
+from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE
 from app.core.chart_of_accounts.seed import get_account_by_code
 from app.core.expenses.items import InvalidExpenseItemError, merge_expense_items, resolve_expense_item
 from app.core.ledger.correction import CorrectionNotFoundError, correct_expense_entry
@@ -79,24 +79,27 @@ ExpensePhotoUnsupportedError = ExpenseReceiptUnsupportedError
 ExpensePhotoExtractionError = ExpenseReceiptExtractionError
 
 
-def _pick_tip_line(intake: ExpenseReceiptRead, tips_account_id: uuid.UUID):
+def _pick_tip_line(intake: ExpenseReceiptRead):
+    if len(intake.lines) == 1:
+        return intake.lines[0]
     for line in intake.lines:
-        if line.expense_account_id == tips_account_id:
+        desc = (line.written_item_description or "").lower()
+        if any(k in desc for k in ("bahşiş", "bahsis", "tip", "servis")):
             return line
-    return intake.lines[0] if len(intake.lines) == 1 else None
+    return None
 
 
 def _intake_to_tip_expense_read(
     session: Session,
     entity_id: uuid.UUID,
     intake: ExpenseReceiptRead,
-    tips_account_id: uuid.UUID,
+    default_expense_account_id: uuid.UUID,
 ) -> ExpenseRead:
     """Map unified receipt intake → Slice C ExpenseRead (tip line) for legacy tip-photos API."""
-    tip_line = _pick_tip_line(intake, tips_account_id)
+    tip_line = _pick_tip_line(intake)
     amount_kurus = tip_line.amount_kurus if tip_line is not None else 0
     expense_account_id = (
-        tip_line.expense_account_id if tip_line is not None else tips_account_id
+        tip_line.expense_account_id if tip_line is not None else default_expense_account_id
     )
     written_item_description = (
         tip_line.written_item_description if tip_line is not None else "Bahşiş"
@@ -529,12 +532,12 @@ def create_tip_expense_from_photo(
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
-    tips_account = get_account_by_code(session, entity_id, TIPS_EXPENSE_CODE)
-    if tips_account is None:
+    general_account = get_account_by_code(session, entity_id, GENERAL_EXPENSE_CODE)
+    if general_account is None:
         raise ValueError(
-            f"Tips Expense account ({TIPS_EXPENSE_CODE}) not found — seed the chart of accounts"
+            f"General expense account ({GENERAL_EXPENSE_CODE}) not found — seed the chart of accounts"
         )
-    tips_account_id = tips_account.id
+    general_account_id = general_account.id
 
     try:
         intake = receipt_service.create_expense_receipt_from_upload(
@@ -549,10 +552,10 @@ def create_tip_expense_from_photo(
         )
     except receipt_service.DuplicateExpenseReceiptError as exc:
         raise DuplicateExpenseDocumentError(
-            _intake_to_tip_expense_read(session, entity_id, exc.existing, tips_account_id)
+            _intake_to_tip_expense_read(session, entity_id, exc.existing, general_account_id)
         ) from exc
 
-    return _intake_to_tip_expense_read(session, entity_id, intake, tips_account_id)
+    return _intake_to_tip_expense_read(session, entity_id, intake, general_account_id)
 
 
 def confirm_tip_expense(
@@ -565,10 +568,10 @@ def confirm_tip_expense(
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
-    tips_account = get_account_by_code(session, entity_id, TIPS_EXPENSE_CODE)
-    if tips_account is None:
-        raise ValueError("Tips Expense account not found")
-    tips_account_id = tips_account.id
+    general_account = get_account_by_code(session, entity_id, GENERAL_EXPENSE_CODE)
+    if general_account is None:
+        raise ValueError("General expense account not found")
+    general_account_id = general_account.id
 
     try:
         intake = receipt_service.get_expense_receipt(session, entity_id, expense_id)
@@ -579,7 +582,7 @@ def confirm_tip_expense(
                 raise NotATipPhotoError("expense did not come from a photo-tip upload") from None
         raise LookupError("Expense not found")
 
-    if _pick_tip_line(intake, tips_account_id) is None:
+    if _pick_tip_line(intake) is None:
         raise NotATipPhotoError("expense did not come from a photo-tip upload")
 
     if intake.status not in {
@@ -588,7 +591,7 @@ def confirm_tip_expense(
     }:
         raise ExpenseNotReviewableError("expense is not awaiting review")
 
-    tip_line = _pick_tip_line(intake, tips_account_id)
+    tip_line = _pick_tip_line(intake)
     assert tip_line is not None
     amount_kurus = (
         payload.amount_kurus if payload.amount_kurus is not None else tip_line.amount_kurus
@@ -616,4 +619,4 @@ def confirm_tip_expense(
             lines=line_overrides,
         ),
     )
-    return _intake_to_tip_expense_read(session, entity_id, confirmed, tips_account_id)
+    return _intake_to_tip_expense_read(session, entity_id, confirmed, general_account_id)

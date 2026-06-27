@@ -3,7 +3,7 @@
 /** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6). */
 
 import { UserButton } from "@clerk/nextjs";
-import { Search, ShoppingBag, Wallet } from "lucide-react";
+import { Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -22,8 +22,6 @@ import {
   filterNavItemsByEntitySettings,
 } from "@/lib/app-routes";
 import { useEntity } from "@/lib/entity-context";
-import { shouldShowWriteChrome } from "@/lib/entity-access";
-import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
@@ -51,9 +49,7 @@ function AppShellInner({
 }) {
   const pathname = usePathname();
   const { clerkEnabled: authOn } = useApiAuth();
-  const { openQuickAction, deliveryEnabled } = useQuickActions();
-  const { role } = useEntityAccess();
-  const showWriteChrome = shouldShowWriteChrome(role);
+  const { deliveryEnabled } = useQuickActions();
   const {
     entityId,
     setEntityId,
@@ -175,30 +171,6 @@ function AppShellInner({
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background px-6">
           <h1 className="text-sm font-semibold">{title}</h1>
           <div className="flex items-center gap-2">
-            {showWriteChrome && (
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="hidden gap-2 sm:inline-flex"
-                  disabled={!entityId}
-                  onClick={() => openQuickAction("sales")}
-                >
-                  <ShoppingBag className="size-4" />
-                  Daily sales
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="hidden gap-2 sm:inline-flex"
-                  disabled={!entityId}
-                  onClick={() => openQuickAction("expense")}
-                >
-                  <Wallet className="size-4" />
-                  Add expense
-                </Button>
-              </>
-            )}
             <Button
               type="button"
               variant="secondary"

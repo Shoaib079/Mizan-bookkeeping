@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.0** — pre-launch UX (sidebar regroup + onboarding nudge), then 12.1 hosting |
+| **Active slice** | **12.0b** — restaurant switcher → profile menu + switch safeguards, then 12.1 hosting |
 | **Last completed slice** | Phase 11 Slice 11.22 — small UI gaps (`v0.69.13-ui-gaps`) |
 | **Last commit/tag** | `v0.69.13-ui-gaps` |
-| **Next up** | Phase 12 Slice 0 — pre-launch UX (sidebar regroup + onboarding nudge) → 12.1 hosting |
+| **Next up** | Phase 12 Slice 0b — restaurant switcher → profile menu + switch safeguards → 12.1 hosting |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1351,6 +1351,9 @@ Take the tested app to a real, secure production environment and put real data i
 | Slice | Status | Notes |
 |-------|--------|-------|
 | 0. Pre-launch UX (sidebar regroup + onboarding nudge) | **done** (`v0.70.0-prelaunch-ux`) | Sidebar regrouped into Sales / Expenses & suppliers / People / Customers / Cash & bank / Reports / Settings; dashboard onboarding checklist |
+| 0a. UX refinements (top bar, New-menu trim, tips de-special-case) | **done** (`v0.70.1-ux-refinements`) | Remove Daily sales (+ Add expense) from top bar; remove Cash tip + Card sales batch from New menu; tips = any expense (drop forced 5700, full category picker). Migration `051`. |
+| 0b. Modern account menu + switch safeguards | planned | Top-right account menu (avatar, name+email, account/settings, **Clerk sign out**); restaurant switch moved here with always-visible per-restaurant colour badge, confirm-on-switch, unsaved-work warning, "Recording for: X" on entry forms. Reduces wrong-restaurant entry risk. |
+| 0c. Member management: add existing user to another restaurant by email | planned | `member-form.tsx` currently tries to *create* the user and fails for existing users ("look up user ID / use API") — breaks the multi-branch case (same partner/staffer in 2 branches). Fix: add a member by **email**, looking up an existing user and creating the membership; no user-ID/API workaround. |
 | 1. Hosting & infrastructure | planned | Provision managed Postgres + Redis + app host + object storage (uploads & backups); set all secrets/env vars; HTTPS/SSL + domain. |
 | 2. Production provisioning | planned | Stand up the DB via canonical `alembic upgrade head` (schema owner + `mizan_app` grants — `v0.67.2`); confirm RLS + immutability triggers; Clerk **production** keys; `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE` off. |
 | 3. Backups live | planned | Scheduled backups to off-site storage; restore-verify in production; alert on failure. |
@@ -1380,6 +1383,65 @@ Take the tested app to a real, secure production environment and put real data i
 - [x] **Onboarding nudge:** on first run / when the active entity has **no seeded chart** or **no posted opening balances**, show a non-blocking guided checklist (seed chart → opening balances → invite staff → record first day). Dismissable; reflects real state (not a static banner).
 - [x] Honor 11.21 role-aware chrome (don't show setup/admin steps to non-owners).
 - [x] Tests: nav renders the new groups; every route still reachable; onboarding checklist appears when chart unseeded / OB not posted and hides once done.
+
+---
+
+### Slice 12.0a — UX refinements (owner feedback 2026-06-27)
+
+| | |
+|---|---|
+| **Status** | **done** (`v0.70.1-ux-refinements`) |
+| **Suggested tag** | `v0.70.1-ux-refinements` |
+
+**Acceptance:**
+
+- [x] **Clear the top bar:** remove **all** quick-action buttons from the top bar (Add expense, Add transaction / Daily sales — whatever is there). Those flows live on the dashboard + the New menu only.
+- [x] **Trim the New menu:** remove **"Cash tip"** (just an expense — redundant) and **"Card sales batch"** (Daily sales already posts the card portion into clearing `1400` via an under-the-hood card batch — standalone is redundant + a double-count risk; confusing). Keep backend `post_card_sales_batch` (used internally by Daily sales); only the menu shortcut goes.
+- [x] **Tips = any other expense; remove `5700` entirely:** delete the `5700 Tips Expense` account from the default chart seed and from the expense category picker; the manual-expense picker offers the **full expense chart** (no `5200`/`5700` hardcode). A tip is recorded under a general expense category (e.g. `5200`), owner's choice — no dedicated tips account, no shortcut. Ledger unchanged (`Dr <chosen expense> / Cr cash`). Update/remove any `5700`-referencing tests. (Pre-launch — no real data posted to `5700`, so safe to drop.)
+- [x] Tests: top bar has no quick-action buttons; New menu omits Cash tip + Card sales batch; expense form lists the full expense-category set and `5700` is gone; recording a cash tip as a normal expense posts `Dr <chosen expense> / Cr cash`.
+
+---
+
+### Slice 12.0b — Restaurant switcher → profile menu + switch safeguards (owner feedback 2026-06-27)
+
+| | |
+|---|---|
+| **Status** | planned (frontend) |
+| **Suggested tag** | `v0.70.2-restaurant-switcher-safeguards` |
+
+**Why:** the active restaurant decides which books every entry posts to. RLS prevents any cross-entity *leak*, and entries are correctable — but an accidental switch could mis-file a day's data into the wrong restaurant. Make switching deliberate and the active restaurant unmistakable. Also: a proper **modern account menu** (the standard top-right pattern — identity, switch, account, sign out).
+
+**Acceptance — modern top-right account menu (think Stripe/Linear/Notion):**
+
+- [ ] **Trigger:** a top-right button showing an **avatar (user initials)** + the active-restaurant badge. Opens a clean dropdown; closes on outside-click + Esc (reuse the shared dismiss pattern from 11.14/combobox).
+- [ ] **Header — who's signed in:** avatar, **display name**, **email** at the top of the menu.
+- [ ] **Active restaurant + switch:** current restaurant shown with its **per-restaurant colour/initial**; "Switch restaurant" lists only the user's accessible restaurants, with a **confirm** ("Switch to [B]? You're in [A]") — deliberate, not a one-click flip.
+- [ ] **Always-visible active-restaurant badge** in the top bar (name + colour) so the current restaurant is obvious at a glance even with the menu closed.
+- [ ] **Account / settings links:** Restaurant settings, Members & roles, Opening balances (role-gated per 11.21 — non-owners don't see admin items).
+- [ ] **Sign out:** a clear sign-out action wired to **Clerk `signOut()`** → clears session → redirect to sign-in. (Standard, expected, bottom of the menu.)
+- [ ] *(Optional, if cheap)* appearance/theme toggle hook — only if the token system already supports it; otherwise skip.
+- [ ] **Unsaved-work guard:** if a form/entry has unsaved input, warn before switching restaurants or signing out (don't lose/misfile work); pairs with 11.20 entity-switch reset.
+- [ ] **"Recording for: [Restaurant]"** shown on the New-menu entry dialogs, so the active restaurant is visible at the moment of posting.
+- [ ] Optional: toast "Now working in [B]" after a switch.
+- [ ] Honor role-aware chrome (11.21). Tests: menu shows the signed-in user; switcher lists only accessible restaurants + requires confirm; sign out clears session and redirects; active-restaurant badge reflects state; unsaved-work warning fires; entry dialogs show the active restaurant.
+
+---
+
+### Slice 12.0c — Member management: add existing user to another restaurant by email (owner feedback 2026-06-27)
+
+| | |
+|---|---|
+| **Status** | planned (frontend + small backend/service) |
+| **Suggested tag** | `v0.70.3-member-add-by-email` |
+
+**Why:** the per-person login + per-restaurant membership model is correct and built — but the **add-member UX** breaks for the multi-branch case. `member-form.tsx` POSTs `create_user` first; if the email already exists (a partner/staffer already in another branch) it errors "User already exists or is already a member — look up the user ID and add via API." Owners can't reasonably do that. This is exactly the "same partner in two branches / grant an existing person another branch" scenario.
+
+**Acceptance:**
+
+- [ ] Add a member by **email**: if a user with that email exists, **reuse** them and create the membership; if not, create the user then the membership. No user-ID lookup, no API workaround.
+- [ ] Clear messages: "Added [email] as [role]" / "Already a member of this restaurant."
+- [ ] Owner-only (`require_owner_members` / admin permission); per-entity; invite-only linking unchanged (Clerk verified-email).
+- [ ] Tests: add a brand-new email → user + membership created; add an **existing** user's email to a second restaurant → membership created, no duplicate user, no error; adding to a restaurant they're already in → friendly 409.
 
 ---
 

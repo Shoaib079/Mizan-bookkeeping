@@ -22,10 +22,9 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useToast } from "@/lib/toast";
 
-type MoneyAccount = { id: string; name: string; account_kind?: string };
-type Account = { id: string; code: string; name: string };
+import { filterExpenseAccounts, type ChartAccount } from "@/lib/expense-accounts";
 
-const EXPENSE_ACCOUNT_CODES = ["5200", "5700"];
+type MoneyAccount = { id: string; name: string; account_kind?: string };
 
 type ExpenseRow = {
   key: string;
@@ -57,7 +56,7 @@ export function DayCloseoutForm() {
   const { submitWithPeriodUnlock, PeriodUnlockDialog } = usePeriodUnlockSubmit();
 
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
-  const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
   const [zReportEnabled, setZReportEnabled] = useState(false);
   const [moneyAccountId, setMoneyAccountId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -75,16 +74,14 @@ export function DayCloseoutForm() {
       apiFetch<{ items: MoneyAccount[] }>(
         `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
       ),
-      apiFetch<{ items: Account[] }>(
+      apiFetch<{ items: ChartAccount[] }>(
         `/entities/${entityId}/chart-of-accounts?limit=200`,
       ),
       isEntitySettingEnabled(entityId, "card_tips_z_report_enabled"),
     ]);
     setCashAccounts(accountsRes.items);
     setZReportEnabled(zEnabled);
-    const pickable = chartRes.items.filter((a) =>
-      EXPENSE_ACCOUNT_CODES.includes(a.code),
-    );
+    const pickable = filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(pickable);
     const defaultAccount =
       pickable.find((a) => a.code === "5200") ?? pickable[0];

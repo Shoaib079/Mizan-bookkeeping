@@ -24,7 +24,6 @@ BANK_CHARGES_CODE = "5300"
 CASH_OVER_SHORT_CODE = "5400"
 FX_GAIN_CODE = "4200"
 FX_LOSS_CODE = "5600"
-TIPS_EXPENSE_CODE = "5700"
 GENERAL_EXPENSE_CODE = "5200"
 DELIVERY_COMMISSION_EXPENSE_CODE = "5500"
 
@@ -116,7 +115,6 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
         False,
     ),
     DefaultAccount(FX_LOSS_CODE, "FX Loss", "Kur Zararı", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
-    DefaultAccount(TIPS_EXPENSE_CODE, "Tips Expense", "Bahşiş Gideri", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
 )
 
 

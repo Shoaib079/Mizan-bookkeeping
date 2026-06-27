@@ -8,11 +8,19 @@
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
 | **Active slice** | **12.1** — hosting & infrastructure (planned) |
-| **Last completed slice** | Phase 12 Slice 12.0 — pre-launch UX (`v0.70.0-prelaunch-ux`) |
+| **Last completed slice** | Phase 12 Slice 0a — UX refinements (`v0.70.1-ux-refinements`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.70.0-prelaunch-ux` |
+| **Last tag** | `v0.70.1-ux-refinements` |
 
 ## Resume point
+
+**Phase 12 Slice 0a complete** — UX refinements (`v0.70.1-ux-refinements`):
+- Top bar: removed Daily sales + Add expense quick-action buttons (Search/Cmd+K + UserButton only)
+- New menu: removed Cash tip + Card sales batch; command palette entries trimmed
+- Tips de-special-cased: dropped `5700` from default chart (migration `051`); expense pickers use full expense chart via `expense-accounts.ts`
+- Vitest: `app-routes.test.ts` (+2), `expense-accounts.test.ts` (4)
+
+**Next:** Phase 12 Slice 12.1 — hosting & infrastructure.
 
 **Phase 12 Slice 12.0 complete** — pre-launch UX (`v0.70.0-prelaunch-ux`):
 - Sidebar regrouped: Sales, Expenses & suppliers, People, Customers, Cash & bank, Reports (nested GL + manual journals), Settings (three sub-pages)

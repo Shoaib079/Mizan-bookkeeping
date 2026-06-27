@@ -401,6 +401,14 @@ The `card_sales_batch.gross_amount_kurus` is stored as the full **Z** total (the
 
 **Unchanged:** `post_fx_conversion()` may credit bank **or** cash when FX→TRY (owner-entered TRY received) — separate money movement from FX purchase.
 
+## 2026-06-27 — Tips are a normal expense (de-special-case 5700; owner revision)
+
+**Reaffirms the 2026-06-23 intent ("a tip is recorded on the expense list like any other line") — the build had drifted.** The implementation special-cased tips: a dedicated "Cash tip" New-menu shortcut, auto-forcing account `5700`, and a manual-expense category picker limited to `5200`/`5700`. Owner: treat a tip as **any other expense**.
+
+**Choice:** No "Cash tip" menu shortcut; **account `5700 Tips Expense` removed entirely** from the default chart and the picker (owner: "I don't need that"). The manual-expense category picker offers the **full expense chart**; a cash tip is recorded under a general expense category (e.g. `5200`), owner's choice — no dedicated tips account. Ledger mechanics unchanged — `Dr <chosen expense> / Cr cash`, no liability, gross sales unchanged. (Trade-off accepted: no separate "total tips paid" line on the P&L — tips sit within general expenses.) Also removes the standalone "Card sales batch" New-menu item (Daily sales already records the card portion into clearing `1400`; standalone = redundant + double-count confusion). Build: Phase 12 Slice 0a. **Pre-launch — no real data posted to `5700`, safe to drop.**
+
+---
+
 ## 2026-06-26 — Cash drawer: optional session + owner-reopen (Phase 11.13 revision)
 
 **Revises the 2026-06-21 Cash drawer decision below.** Owner workflow review found the session model forces a drawer open on every cash entry and **hard-blocks once a day is closed** ("drawer day is closed — no further movements allowed", `daily_summary_posting.py:91`, `cash/posting.py:196`) with **no reopen** — inconsistent with period locks, and a one-way trap.

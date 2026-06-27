@@ -1,8 +1,8 @@
 """Expense-photo OCR v1 — read a cash tip from a receipt photo (Decisions §9, §14, Slice C).
 
 The owner uploads an expense/receipt photo; this adapter reads the **tip** off it
-so the service can create a ``5700 Tips Expense`` draft in Needs Review (a tip is a
-cash expense — ``Dr 5700 / Cr cash`` — never auto-posted). Mirrors the POS
+so the service can create a general-expense draft in Needs Review (a tip is a
+cash expense — ``Dr <chosen expense> / Cr cash`` — never auto-posted). Mirrors the POS
 daily-summary adapter: a fixture registry for deterministic tests, then UTF-8 text
 heuristics; real binary images route to Needs Review until vision OCR lands.
 

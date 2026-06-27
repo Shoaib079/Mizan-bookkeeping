@@ -18,7 +18,7 @@ from app.adapters.ocr_ai.expense_receipt import (
     extraction_to_payload,
 )
 from app.adapters.storage.local import save_upload
-from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE, TIPS_EXPENSE_CODE
+from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE
 from app.core.chart_of_accounts.seed import get_account_by_code
 from app.core.expenses.items import InvalidExpenseItemError, resolve_expense_item
 from app.core.expenses.posting import InvalidExpensePostingError, _validate_money_account, post_expense_entry
@@ -185,11 +185,9 @@ def create_expense_receipt_from_upload(
             raise DuplicateExpenseReceiptError(_to_intake_read(existing, lines))
 
     general_account = get_account_by_code(session, entity_id, GENERAL_EXPENSE_CODE)
-    tips_account = get_account_by_code(session, entity_id, TIPS_EXPENSE_CODE)
-    if general_account is None or tips_account is None:
+    if general_account is None:
         raise ValueError("Expense accounts not found — seed the chart of accounts")
     general_id = general_account.id
-    tips_id = tips_account.id
 
     with entity_context(session, entity_id):
         require_entity_context()
@@ -235,7 +233,7 @@ def create_expense_receipt_from_upload(
     with entity_context(session, entity_id):
         require_entity_context()
         for order, item in enumerate(extraction.lines):
-            account_id = tips_id if item.is_tip else general_id
+            account_id = general_id
             line_review: str | None = None
             candidate_id: uuid.UUID | None = None
             if item.amount_kurus <= 0:

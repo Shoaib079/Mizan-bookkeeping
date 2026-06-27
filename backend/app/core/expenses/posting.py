@@ -8,7 +8,6 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.core.chart_of_accounts.default_chart import TIPS_EXPENSE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 from app.core.ledger.models import JournalEntry, JournalEntrySource
@@ -79,15 +78,6 @@ def _validate_money_account(
     return money_account
 
 
-def _validate_tips_expense_cash_only(
-    expense_account: Account, money_account: MoneyAccount
-) -> None:
-    if expense_account.code == TIPS_EXPENSE_CODE and money_account.account_kind != MoneyAccountKind.CASH:
-        raise InvalidExpensePostingError(
-            "tips expense must be paid from a cash account"
-        )
-
-
 def post_expense_entry(
     session: Session,
     entity_id: uuid.UUID,
@@ -119,7 +109,6 @@ def post_expense_entry(
 
         expense_gl = _validate_expense_account(session, entity_id, expense_account_id)
         money_account = _validate_money_account(session, entity_id, money_account_id)
-        _validate_tips_expense_cash_only(expense_gl, money_account)
 
         lines = build_expense_entry_lines(
             expense_account_id=expense_gl.id,

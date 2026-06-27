@@ -2,7 +2,7 @@
 
 When ``card_tips_z_report_enabled`` is on, the card-terminal Z total must equal the
 system card sale before posting. Tips are **not** derived or posted at POS — they
-belong on the expense list (``Dr 5700 / Cr cash`` via the expenses pipeline).
+belong on the expense list (``Dr <chosen expense> / Cr cash`` via the expenses pipeline).
 """
 
 from __future__ import annotations
@@ -15,8 +15,8 @@ from sqlalchemy import func, select
 
 from app.core.chart_of_accounts.default_chart import (
     CARD_SALES_CLEARING_CODE,
+    GENERAL_EXPENSE_CODE,
     SALES_REVENUE_CODE,
-    TIPS_EXPENSE_CODE,
 )
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
@@ -213,7 +213,7 @@ def test_z_match_posts_gross_card_no_tip_leg(client, db_session, setup) -> None:
     revenue_credit = -_gl_balance(db_session, entity_id, revenue_id)
     assert revenue_credit == 500_000
     assert _gl_balance(db_session, entity_id, clearing_id) == SYSTEM_CARD_KURUS
-    assert _gl_balance(db_session, entity_id, setup["accounts"][TIPS_EXPENSE_CODE]) == 0
+    assert _gl_balance(db_session, entity_id, setup["accounts"][GENERAL_EXPENSE_CODE]) == 0
 
     with entity_context(db_session, entity_id):
         tip_count = db_session.scalar(
@@ -314,7 +314,7 @@ def test_z_mismatch_tip_expense_reconfirm_deposit_clears_1400(
     """Mismatch → expense tip → cash/card reallocation → deposit + sweep zeros clearing."""
     _enable_z_report(db_session, entity_id := setup["entity_id"])
     clearing_id = setup["accounts"][CARD_SALES_CLEARING_CODE]
-    tips_id = setup["accounts"][TIPS_EXPENSE_CODE]
+    tips_id = setup["accounts"][GENERAL_EXPENSE_CODE]
     summary_id = _upload(client, entity_id)
 
     first = client.post(

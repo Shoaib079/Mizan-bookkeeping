@@ -15,6 +15,11 @@ import { type PartnerRow } from "@/components/forms/partner-form";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
+import {
+  filterExpenseAccounts,
+  findExpenseAccountByCode,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
 import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -22,9 +27,6 @@ import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
 
 type MoneyAccount = { id: string; name: string };
-type Account = { id: string; code: string; name: string };
-
-const MANUAL_EXPENSE_ACCOUNT_CODES = ["5200", "5700"];
 
 type PaymentMode = "cash" | "partner";
 
@@ -49,7 +51,7 @@ function isExpenseDraftEmpty(draft: ExpenseFormDraft): boolean {
 type Props = {
   open: boolean;
   onClose: () => void;
-  /** Pre-select expense account by chart code (e.g. `5700` for cash tips). */
+  /** Pre-select expense account by chart code (e.g. `5200`). */
   defaultExpenseAccountCode?: string;
 };
 
@@ -61,14 +63,13 @@ export function ManualExpenseForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
-  const cashTipsOnly = defaultExpenseAccountCode === "5700";
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [partners, setPartners] = useState<PartnerRow[]>([]);
-  const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [moneyAccountId, setMoneyAccountId] = useState("");
   const [partnerId, setPartnerId] = useState("");
@@ -81,17 +82,16 @@ export function ManualExpenseForm({
   const [optionsLoaded, setOptionsLoaded] = useState(false);
   const [baseline, setBaseline] = useState<ExpenseFormDraft | null>(null);
 
-  const draftFormKey =
-    defaultExpenseAccountCode === "5700"
-      ? "manual-expense:5700"
-      : "manual-expense";
+  const draftFormKey = defaultExpenseAccountCode
+    ? `manual-expense:${defaultExpenseAccountCode}`
+    : "manual-expense";
 
   const formDraft = useMemo<ExpenseFormDraft>(
     () => ({
       expenseAccountId,
       moneyAccountId,
       partnerId,
-      paymentMode: cashTipsOnly ? "cash" : paymentMode,
+      paymentMode,
       itemName,
       amountText,
       dateText,
@@ -101,7 +101,6 @@ export function ManualExpenseForm({
       moneyAccountId,
       partnerId,
       paymentMode,
-      cashTipsOnly,
       itemName,
       amountText,
       dateText,
@@ -130,26 +129,20 @@ export function ManualExpenseForm({
       apiFetch<{ items: MoneyAccount[] }>(
         `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
       ),
-      apiFetch<{ items: Account[] }>(
+      apiFetch<{ items: ChartAccount[] }>(
         `/entities/${entityId}/chart-of-accounts?limit=200`,
       ),
-      cashTipsOnly
-        ? Promise.resolve({ items: [] as PartnerRow[] })
-        : apiFetch<{ items: PartnerRow[] }>(
-            `/entities/${entityId}/partners?limit=50`,
-          ),
+      apiFetch<{ items: PartnerRow[] }>(
+        `/entities/${entityId}/partners?limit=50`,
+      ),
     ]);
     setCashAccounts(accountsRes.items);
-    setPartners(
-      partnersRes.items.filter((p) => p.is_active),
-    );
-    const pickable = chartRes.items.filter((a) =>
-      MANUAL_EXPENSE_ACCOUNT_CODES.includes(a.code),
-    );
+    setPartners(partnersRes.items.filter((p) => p.is_active));
+    const pickable = filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(pickable);
     const preferred = defaultExpenseAccountCode
-      ? pickable.find((a) => a.code === defaultExpenseAccountCode)
-      : pickable.find((a) => a.code === "5200");
+      ? findExpenseAccountByCode(chartRes.items, defaultExpenseAccountCode)
+      : findExpenseAccountByCode(chartRes.items, "5200");
     if (preferred) setExpenseAccountId(preferred.id);
     else if (pickable[0]) setExpenseAccountId(pickable[0].id);
     const drawerId = defaultMainDrawerId(
@@ -165,7 +158,7 @@ export function ManualExpenseForm({
     const activePartners = partnersRes.items.filter((p) => p.is_active);
     if (activePartners[0]) setPartnerId(activePartners[0].id);
     setOptionsLoaded(true);
-  }, [entityId, defaultExpenseAccountCode, cashTipsOnly]);
+  }, [entityId, defaultExpenseAccountCode]);
 
   useEffect(() => {
     if (!open) {
@@ -193,7 +186,7 @@ export function ManualExpenseForm({
     setExpenseAccountId(draft.expenseAccountId);
     setMoneyAccountId(draft.moneyAccountId);
     setPartnerId(draft.partnerId);
-    setPaymentMode(cashTipsOnly ? "cash" : draft.paymentMode);
+    setPaymentMode(draft.paymentMode);
     setItemName(draft.itemName);
     setAmountText(draft.amountText);
     setDateText(draft.dateText);
@@ -241,12 +234,11 @@ export function ManualExpenseForm({
       setError("Choose an expense account.");
       return;
     }
-    const effectiveMode = cashTipsOnly ? "cash" : paymentMode;
-    if (effectiveMode === "cash" && !moneyAccountId) {
+    if (paymentMode === "cash" && !moneyAccountId) {
       setError("Choose a cash drawer.");
       return;
     }
-    if (effectiveMode === "partner" && !partnerId) {
+    if (paymentMode === "partner" && !partnerId) {
       setError("Choose a partner.");
       return;
     }
@@ -255,7 +247,7 @@ export function ManualExpenseForm({
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
       const description = itemName || "Manual expense";
-      if (effectiveMode === "partner") {
+      if (paymentMode === "partner") {
         await apiFetch(
           `/entities/${entityId}/partners/${partnerId}/expenses-fronted`,
           {
@@ -293,11 +285,9 @@ export function ManualExpenseForm({
       setBaseline(null);
       onClose();
       toast(
-        cashTipsOnly
-          ? "Cash tip expense saved"
-          : effectiveMode === "partner"
-            ? "Partner expense recorded"
-            : "Expense saved",
+        paymentMode === "partner"
+          ? "Partner expense recorded"
+          : "Expense saved",
       );
       setItemName("");
       setAmountText("");
@@ -311,11 +301,7 @@ export function ManualExpenseForm({
   return (
     <Dialog
       open={open}
-      title={
-        defaultExpenseAccountCode === "5700"
-          ? "Cash tip expense"
-          : "Manual expense"
-      }
+      title="Manual expense"
       onClose={onClose}
       dirty={dirty}
       onDiscard={handleDiscard}
@@ -368,26 +354,21 @@ export function ManualExpenseForm({
               </option>
             ))}
           </Select>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Use 5700 Tips Expense for cash tips paid from the drawer.
-          </p>
         </div>
-        {!cashTipsOnly && (
-          <div>
-            <Label htmlFor="exp-payment">Payment</Label>
-            <Select
-              id="exp-payment"
-              value={paymentMode}
-              onChange={(e) =>
-                setPaymentMode(e.target.value as PaymentMode)
-              }
-            >
-              <option value="cash">Cash drawer</option>
-              <option value="partner">Partner paid (owe partner)</option>
-            </Select>
-          </div>
-        )}
-        {cashTipsOnly || paymentMode === "cash" ? (
+        <div>
+          <Label htmlFor="exp-payment">Payment</Label>
+          <Select
+            id="exp-payment"
+            value={paymentMode}
+            onChange={(e) =>
+              setPaymentMode(e.target.value as PaymentMode)
+            }
+          >
+            <option value="cash">Cash drawer</option>
+            <option value="partner">Partner paid (owe partner)</option>
+          </Select>
+        </div>
+        {paymentMode === "cash" ? (
           <div>
             <Label htmlFor="exp-cash">Cash drawer</Label>
             <Combobox

@@ -16,10 +16,12 @@ import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
-type MoneyAccount = { id: string; name: string };
-type Account = { id: string; code: string; name: string };
+import {
+  filterExpenseAccounts,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 
-const MANUAL_EXPENSE_ACCOUNT_CODES = ["5200", "5700"];
+type MoneyAccount = { id: string; name: string };
 
 export type CorrectableExpenseRow = {
   id: string;
@@ -55,7 +57,7 @@ export function CorrectExpenseForm({
   }, [open, submitIdempotency]);
 
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
-  const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [moneyAccountId, setMoneyAccountId] = useState("");
   const [itemName, setItemName] = useState("");
@@ -71,14 +73,12 @@ export function CorrectExpenseForm({
       apiFetch<{ items: MoneyAccount[] }>(
         `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
       ),
-      apiFetch<{ items: Account[] }>(
+      apiFetch<{ items: ChartAccount[] }>(
         `/entities/${entityId}/chart-of-accounts?limit=200`,
       ),
     ]);
     setCashAccounts(accountsRes.items);
-    setExpenseAccounts(
-      chartRes.items.filter((a) => MANUAL_EXPENSE_ACCOUNT_CODES.includes(a.code)),
-    );
+    setExpenseAccounts(filterExpenseAccounts(chartRes.items));
   }, [entityId]);
 
   useEffect(() => {

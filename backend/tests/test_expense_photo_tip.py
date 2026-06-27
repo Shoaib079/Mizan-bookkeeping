@@ -1,8 +1,8 @@
-"""Expense-photo OCR → 5700 cash-tip draft in Needs Review, then post (Slice C).
+"""Expense-photo OCR → general-expense cash-tip draft in Needs Review, then post (Slice C).
 
 Owner ask (2026-06-23): "when I upload an expense picture and the OCR reads a tip
 from there, it must record that tip as an expense from cash." A tip is a cash
-expense (``Dr 5700 Tips Expense / Cr cash``), and — review-first — nothing posts
+expense (``Dr <chosen expense> / Cr cash``), and — review-first — nothing posts
 until the owner confirms the read.
 """
 
@@ -15,7 +15,7 @@ import pytest
 from sqlalchemy import func, select
 
 from app.adapters.ocr_ai.expense_receipt import register_expense_receipt_fixture
-from app.core.chart_of_accounts.default_chart import TIPS_EXPENSE_CODE
+from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
@@ -66,9 +66,9 @@ _PHOTO_NO_TIP = b"FATURA\nTarih: 23.06.2026\nTutar: 250,00\nKDV: 25,00\n"
 _BINARY_PHOTO = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01"
 
 
-def test_photo_with_tip_creates_5700_needs_review_draft(db_session, restaurant_a) -> None:
+def test_photo_with_tip_creates_general_expense_needs_review_draft(db_session, restaurant_a) -> None:
     drawer, accounts = _setup(db_session, restaurant_a)
-    tips_id = accounts[TIPS_EXPENSE_CODE].id
+    expense_id = accounts[GENERAL_EXPENSE_CODE].id
 
     read = expenses_service.create_tip_expense_from_photo(
         db_session,
@@ -82,7 +82,7 @@ def test_photo_with_tip_creates_5700_needs_review_draft(db_session, restaurant_a
 
     assert read.status == ExpenseEntryStatus.NEEDS_REVIEW
     assert read.amount_kurus == 5_000
-    assert read.expense_account_id == tips_id
+    assert read.expense_account_id == expense_id
     assert read.has_source_document is True
     assert read.source_document_fingerprint is not None
     assert read.source_document_path is not None
@@ -90,9 +90,9 @@ def test_photo_with_tip_creates_5700_needs_review_draft(db_session, restaurant_a
     assert read.expense_date == date(2026, 6, 23)
 
 
-def test_confirm_photo_tip_posts_dr_5700_cr_cash(db_session, restaurant_a) -> None:
+def test_confirm_photo_tip_posts_dr_general_expense_cr_cash(db_session, restaurant_a) -> None:
     drawer, accounts = _setup(db_session, restaurant_a)
-    tips_id = accounts[TIPS_EXPENSE_CODE].id
+    expense_id = accounts[GENERAL_EXPENSE_CODE].id
     drawer_gl_id = drawer.gl_account_id
 
     draft = expenses_service.create_tip_expense_from_photo(
@@ -124,12 +124,12 @@ def test_confirm_photo_tip_posts_dr_5700_cr_cash(db_session, restaurant_a) -> No
         journal = db_session.get(JournalEntry, posted.journal_entry_id)
         assert journal.source == JournalEntrySource.EXPENSE_ENTRY
 
-    assert by_account[tips_id].side == AccountNormalBalance.DEBIT
-    assert by_account[tips_id].amount_kurus == 5_000
+    assert by_account[expense_id].side == AccountNormalBalance.DEBIT
+    assert by_account[expense_id].amount_kurus == 5_000
     assert by_account[drawer_gl_id].side == AccountNormalBalance.CREDIT
     assert by_account[drawer_gl_id].amount_kurus == 5_000
 
-    assert _gl_balance(db_session, restaurant_a.id, tips_id, AccountNormalBalance.DEBIT) == 5_000
+    assert _gl_balance(db_session, restaurant_a.id, expense_id, AccountNormalBalance.DEBIT) == 5_000
     assert (
         _gl_balance(db_session, restaurant_a.id, drawer_gl_id, AccountNormalBalance.DEBIT)
         == -5_000
@@ -138,7 +138,7 @@ def test_confirm_photo_tip_posts_dr_5700_cr_cash(db_session, restaurant_a) -> No
 
 def test_confirm_can_correct_the_read_amount(db_session, restaurant_a) -> None:
     drawer, accounts = _setup(db_session, restaurant_a)
-    tips_id = accounts[TIPS_EXPENSE_CODE].id
+    expense_id = accounts[GENERAL_EXPENSE_CODE].id
 
     draft = expenses_service.create_tip_expense_from_photo(
         db_session,
@@ -156,12 +156,12 @@ def test_confirm_can_correct_the_read_amount(db_session, restaurant_a) -> None:
     )
 
     assert posted.amount_kurus == 7_500
-    assert _gl_balance(db_session, restaurant_a.id, tips_id, AccountNormalBalance.DEBIT) == 7_500
+    assert _gl_balance(db_session, restaurant_a.id, expense_id, AccountNormalBalance.DEBIT) == 7_500
 
 
 def test_confirm_twice_does_not_double_post(db_session, restaurant_a) -> None:
     drawer, accounts = _setup(db_session, restaurant_a)
-    tips_id = accounts[TIPS_EXPENSE_CODE].id
+    expense_id = accounts[GENERAL_EXPENSE_CODE].id
 
     draft = expenses_service.create_tip_expense_from_photo(
         db_session,
@@ -179,7 +179,7 @@ def test_confirm_twice_does_not_double_post(db_session, restaurant_a) -> None:
             db_session, restaurant_a.id, draft.id, ConfirmTipPhotoRequest(actor_id=ACTOR_ID)
         )
 
-    assert _gl_balance(db_session, restaurant_a.id, tips_id, AccountNormalBalance.DEBIT) == 5_000
+    assert _gl_balance(db_session, restaurant_a.id, expense_id, AccountNormalBalance.DEBIT) == 5_000
 
 
 def test_duplicate_photo_rejected(db_session, restaurant_a) -> None:
@@ -340,7 +340,7 @@ def test_confirm_rejects_non_photo_expense(db_session, restaurant_a) -> None:
 
 def test_upload_and_confirm_via_api(client, db_session, restaurant_a) -> None:
     drawer, accounts = _setup(db_session, restaurant_a)
-    tips_id = accounts[TIPS_EXPENSE_CODE].id
+    general_id = accounts[GENERAL_EXPENSE_CODE].id
     entity_id = restaurant_a.id
 
     upload = client.post(
@@ -352,10 +352,10 @@ def test_upload_and_confirm_via_api(client, db_session, restaurant_a) -> None:
     body = upload.json()
     assert body["status"] == "needs_review"
     assert body["amount_kurus"] == 5_000
-    expense_id = body["id"]
+    entry_id = body["id"]
 
     confirm = client.post(
-        f"/entities/{entity_id}/expenses/tip-photos/{expense_id}/confirm",
+        f"/entities/{entity_id}/expenses/tip-photos/{entry_id}/confirm",
         json={"actor_id": str(ACTOR_ID)},
     )
     assert confirm.status_code == 200, confirm.text
@@ -369,4 +369,4 @@ def test_upload_and_confirm_via_api(client, db_session, restaurant_a) -> None:
     )
     assert dup.status_code == 409, dup.text
 
-    assert _gl_balance(db_session, entity_id, tips_id, AccountNormalBalance.DEBIT) == 5_000
+    assert _gl_balance(db_session, entity_id, general_id, AccountNormalBalance.DEBIT) == 5_000

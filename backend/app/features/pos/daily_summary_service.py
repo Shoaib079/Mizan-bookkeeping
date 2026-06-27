@@ -294,7 +294,7 @@ def _z_mismatch_review_reason(z_value: int, card_kurus: int) -> str:
         return (
             f"Z report ({z_value}) exceeds system card ({card_kurus}) by {gap}. "
             "On re-confirm: raise card and lower cash by that amount so card equals Z "
-            "(same daily total), record the tip on the expense paper (Dr 5700 / Cr cash), "
+            "(same daily total), record the tip on the expense paper (Dr expense / Cr cash), "
             "then confirm again."
         )
     return (

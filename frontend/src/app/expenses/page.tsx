@@ -7,7 +7,6 @@ import {
   CorrectExpenseForm,
   type CorrectableExpenseRow,
 } from "@/components/forms/correct-expense-form";
-import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +29,6 @@ export default function ExpensesPage() {
   const { entityId } = useEntity();
   const { items, total, loading, error, reload } =
     useEntityList<CorrectableExpenseRow>("/expenses", entityId);
-  const [tipFormOpen, setTipFormOpen] = useState(false);
   const [correctExpense, setCorrectExpense] =
     useState<CorrectableExpenseRow | null>(null);
 
@@ -42,14 +40,6 @@ export default function ExpensesPage() {
             ? `${total} expense${total === 1 ? "" : "s"}`
             : "Select a restaurant in the sidebar"}
         </p>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={!entityId}
-          onClick={() => setTipFormOpen(true)}
-        >
-          Record cash tip
-        </Button>
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
@@ -106,20 +96,15 @@ export default function ExpensesPage() {
       )}
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Tips are cash expenses (5700) — use <strong>Record cash tip</strong> or{" "}
-        <strong>New → Cash tip</strong>. After a Z mismatch on daily sales, record
-        the tip here then re-confirm on{" "}
+        Record tips and other cash outflows via <strong>New → Manual expense</strong>.
+        After a Z mismatch on daily sales, record the tip as a normal expense, then
+        re-confirm on{" "}
         <Link href="/sales" className="text-primary hover:underline">
           Sales
         </Link>
         .
       </p>
 
-      <ManualExpenseForm
-        open={tipFormOpen}
-        onClose={() => setTipFormOpen(false)}
-        defaultExpenseAccountCode="5700"
-      />
       <CorrectExpenseForm
         open={correctExpense !== null}
         expense={correctExpense}

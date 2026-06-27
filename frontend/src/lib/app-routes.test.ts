@@ -81,6 +81,31 @@ describe("navGroups", () => {
   });
 });
 
+describe("New menu command palette routes", () => {
+  const newRoutes = appRoutes.filter((route) => route.label.startsWith("New:"));
+
+  it("omits Cash tip and Card sales batch shortcuts", () => {
+    const labels = newRoutes.map((route) => route.label);
+    expect(labels).not.toContain("New: Cash tip");
+    expect(labels).not.toContain("New: Card sales batch");
+  });
+});
+
+describe("app shell header", () => {
+  it("does not export top-bar quick-action button labels", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/app-shell.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).not.toMatch(/Daily sales/);
+    expect(source).not.toMatch(/Add expense/);
+    expect(source).not.toMatch(/openQuickAction\("sales"\)/);
+    expect(source).not.toMatch(/openQuickAction\("expense"\)/);
+  });
+});
+
 describe("sidebarChildrenForNavItem", () => {
   it("nests delivery children when delivery is enabled", () => {
     const children = sidebarChildrenForNavItem("/delivery", { deliveryEnabled: true });

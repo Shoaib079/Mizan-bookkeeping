@@ -118,11 +118,9 @@ export const appRoutes: AppRoute[] = [
   },
   // New menu shortcuts (navigate to relevant list pages)
   { href: "/expenses", label: "New: Manual expense", keywords: "new expense", icon: Wallet, group: "New" },
-  { href: "/expenses", label: "New: Cash tip", keywords: "5700 tips", icon: Wallet, group: "New" },
   { href: "/sales", label: "New: Daily sales (manual)", keywords: "pos manual", icon: ShoppingBag, group: "New" },
   { href: "/close-day", label: "New: Close day", keywords: "close-out sales expenses", icon: ShoppingBag, group: "New" },
   { href: "/sales", label: "New: POS summary (photo)", keywords: "upload z", icon: ShoppingBag, group: "New" },
-  { href: "/cards", label: "New: Card sales batch", icon: CreditCard, group: "New" },
   { href: "/delivery/reports", label: "New: Delivery report", icon: Truck, group: "New" },
   { href: "/expenses", label: "New: Expense receipt (photo)", icon: Receipt, group: "New" },
   { href: "/suppliers", label: "New: Supplier", icon: Users, group: "New" },

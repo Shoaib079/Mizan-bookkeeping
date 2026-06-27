@@ -12,7 +12,6 @@ import {
 } from "react";
 
 import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
-import { CardSalesForm } from "@/components/forms/card-sales-form";
 import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { ExpenseReceiptUploadForm } from "@/components/forms/expense-receipt-upload-form";
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
@@ -25,10 +24,8 @@ import { useEntityAccess } from "@/lib/use-entity-access";
 
 export type QuickActionKey =
   | "expense"
-  | "cashTip"
   | "sales"
   | "posPhoto"
-  | "cardSales"
   | "deliveryReport"
   | "receipt"
   | "supplier"
@@ -86,14 +83,8 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
       {canWriteOperations && (
         <>
           <ManualExpenseForm open={active === "expense"} onClose={closeQuickAction} />
-          <ManualExpenseForm
-            open={active === "cashTip"}
-            onClose={closeQuickAction}
-            defaultExpenseAccountCode="5700"
-          />
           <ManualDailySalesForm open={active === "sales"} onClose={closeQuickAction} />
           <PosSummaryUploadForm open={active === "posPhoto"} onClose={closeQuickAction} />
-          <CardSalesForm open={active === "cardSales"} onClose={closeQuickAction} />
           <DeliveryReportForm
             open={active === "deliveryReport"}
             onClose={closeQuickAction}

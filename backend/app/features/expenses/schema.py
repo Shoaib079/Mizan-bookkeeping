@@ -62,7 +62,7 @@ class ExpenseConfirmItemRequest(BaseModel):
 
 
 class ConfirmTipPhotoRequest(BaseModel):
-    """Confirm a photo-tip draft → post Dr 5700 / Cr cash (Slice C).
+    """Confirm a photo-tip draft → post Dr expense / Cr cash (Slice C).
 
     The OCR-read tip is editable on review: the owner may correct the amount, the
     cash/bank account it was paid from, and the date before it posts.
