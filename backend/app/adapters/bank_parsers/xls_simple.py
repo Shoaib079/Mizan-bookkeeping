@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import xlrd
-
 from app.adapters.bank_parsers.row_parse import (
     REQUIRED_COLUMNS,
     build_parsed_statement,
@@ -13,21 +11,27 @@ from app.adapters.bank_parsers.row_parse import (
 from app.adapters.bank_parsers.types import BankParseError, ParsedStatement, ParsedStatementLine
 
 
-def _cell_value(sheet: xlrd.sheet.Sheet, row_idx: int, col_idx: int) -> object:
-    cell = sheet.cell(row_idx, col_idx)
-    if cell.ctype == xlrd.XL_CELL_DATE:
-        return cell.value
-    if cell.ctype == xlrd.XL_CELL_EMPTY:
-        return ""
-    if cell.ctype == xlrd.XL_CELL_BOOLEAN:
-        return ""
-    return cell.value
-
-
 def parse_xls_simple(content: bytes) -> ParsedStatement:
     """Parse first worksheet with transaction_date, amount (lira), description, optional reference."""
+    try:
+        import xlrd
+    except ImportError as exc:
+        raise BankParseError(
+            "Excel .xls support is unavailable — reinstall backend dependencies (xlrd)."
+        ) from exc
+
     if not content.strip():
         raise BankParseError("Excel file is empty")
+
+    def _cell_value(sheet: xlrd.sheet.Sheet, row_idx: int, col_idx: int) -> object:
+        cell = sheet.cell(row_idx, col_idx)
+        if cell.ctype == xlrd.XL_CELL_DATE:
+            return cell.value
+        if cell.ctype == xlrd.XL_CELL_EMPTY:
+            return ""
+        if cell.ctype == xlrd.XL_CELL_BOOLEAN:
+            return ""
+        return cell.value
 
     try:
         workbook = xlrd.open_workbook(file_contents=content)

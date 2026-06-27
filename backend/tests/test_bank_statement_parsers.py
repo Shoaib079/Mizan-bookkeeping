@@ -202,3 +202,58 @@ def test_dispatch_routes_legacy_xls_not_openpyxl() -> None:
     )
     csv = parse_csv_simple(SAMPLE_CSV.read_bytes())
     assert _line_tuples(parsed) == _line_tuples(csv)
+
+
+def test_boot_imports_without_xlrd(monkeypatch) -> None:
+    """App boot must not require xlrd — only .xls parse time does."""
+    import builtins
+    import importlib
+    import sys
+
+    real_import = builtins.__import__
+
+    def blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "xlrd" or name.startswith("xlrd."):
+            raise ImportError("No module named 'xlrd'")
+        return real_import(name, globals, locals, fromlist, level)
+
+    for mod in (
+        "xlrd",
+        "app.adapters.bank_parsers.xls_simple",
+        "app.adapters.bank_parsers.dispatch",
+        "app.features.banking.statements",
+        "app.features.banking.statements_api",
+        "app.features.banking.api",
+    ):
+        monkeypatch.delitem(sys.modules, mod, raising=False)
+
+    monkeypatch.setattr(builtins, "__import__", blocked_import)
+
+    dispatch = importlib.import_module("app.adapters.bank_parsers.dispatch")
+    banking_api = importlib.import_module("app.features.banking.api")
+    statements_api = importlib.import_module("app.features.banking.statements_api")
+
+    assert callable(dispatch.parse_bank_statement)
+    assert banking_api.router is not None
+    assert statements_api.accounts_router is not None
+
+
+def test_parse_xls_simple_reports_missing_xlrd(monkeypatch) -> None:
+    import builtins
+    import importlib
+    import sys
+
+    real_import = builtins.__import__
+
+    def blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "xlrd" or name.startswith("xlrd."):
+            raise ImportError("No module named 'xlrd'")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.delitem(sys.modules, "app.adapters.bank_parsers.xls_simple", raising=False)
+    monkeypatch.setattr(builtins, "__import__", blocked_import)
+
+    xls_simple = importlib.import_module("app.adapters.bank_parsers.xls_simple")
+    with pytest.raises(BankParseError, match="Excel .xls support is unavailable"):
+        xls_simple.parse_xls_simple(b"not-empty")
+
