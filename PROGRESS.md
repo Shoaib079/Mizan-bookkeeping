@@ -7,12 +7,22 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.13** — Cash drawer optional session |
-| **Last completed slice** | Phase 11 Slice 11.12 — remaining correction APIs (`v0.69.3-correction-apis`) |
+| **Active slice** | **11.14** — New menu UX |
+| **Last completed slice** | Phase 11 Slice 11.13 — cash drawer optional session (`v0.69.4-cash-drawer-optional-session`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.3-correction-apis` |
+| **Last tag** | `v0.69.4-cash-drawer-optional-session` |
 
 ## Resume point
+
+**Phase 11 Slice 11.13 complete** — cash drawer optional session + owner reopen (`v0.69.4-cash-drawer-optional-session`):
+- Migration `050`: nullable `cash_movements.session_id`; drawer reopen fields; `cash_drawer_audit_events`
+- Posting no longer auto-opens sessions; closed day uses period-lock pattern (`period_unlock_reason` / reopen endpoint)
+- API: `POST .../drawer-sessions/close-day`, `POST .../{id}/reopen`
+- Frontend: period unlock on cash movement; Reopen + Close drawer day on `/banking/cash`
+- **582 pytest green** (+3); frontend build green
+- **Owner sign-off: PENDING** (money-critical)
+
+**Next:** Phase 11.14 — new menu UX (quick actions, grouping, dismiss).
 
 **Phase 11 Slice 11.12 complete** — remaining dedicated correction HTTP APIs (`v0.69.3-correction-apis`):
 - POST routes: supplier invoice, credit sale, staff/partner ledger, FX conversion/spend (`/fx/ledger/{id}/correct`)

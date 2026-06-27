@@ -1099,19 +1099,21 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
+| **Status** | done — **owner sign-off PENDING** (money-critical) |
 | **Money-critical** | Yes — touches posting + lock model; owner sign-off |
 | **Decisions** | Amend §9 cash drawer (sessions are an **optional EOD reconciliation**, not an entry gate; closed day is owner-reopenable) |
-| **Suggested tag** | `v0.69.4-cash-drawer-optional-session` |
+| **Tag** | `v0.69.4-cash-drawer-optional-session` |
 
 **Problem:** Posting **daily sales** or a **cash movement** auto-opens that day's drawer session and **hard-rejects** when the day is CLOSED — *"drawer day is closed — no further movements allowed"* (`daily_summary_posting.py:91`, `cash/posting.py:196`) — with **no reopen path**. Manual *expenses* (`/expenses`) bypass sessions entirely, so the model is inconsistent, and an EOD close becomes a one-way trap that locks the owner out of fixing/adding to that day.
 
 **Acceptance:**
 
-- [ ] Daily sales + cash movements **post without requiring or force-opening** a drawer session; the session becomes an **optional** EOD count/reconcile tool, never a precondition for entry.
-- [ ] A **closed** drawer day is **owner-reopenable**, reusing the **exact period-lock owner-unlock + audit pattern** (cashier blocked; reopen records who/when/reason). Remove the dead-end "no further movements allowed" block — route to the unlock path.
-- [ ] One lock behaviour across the app — do **not** leave cash-drawer close and period locks as two different models.
-- [ ] Tests: post sales + cash movement with **no open session** succeeds; close a day → cashier post rejected, **owner reopen → post succeeds + audited**; over/short still books to `5400` on an explicit close.
+- [x] Daily sales + cash movements **post without requiring or force-opening** a drawer session; the session becomes an **optional** EOD count/reconcile tool, never a precondition for entry.
+- [x] A **closed** drawer day is **owner-reopenable**, reusing the **exact period-lock owner-unlock + audit pattern** (cashier blocked; reopen records who/when/reason). Remove the dead-end "no further movements allowed" block — route to the unlock path.
+- [x] One lock behaviour across the app — do **not** leave cash-drawer close and period locks as two different models.
+- [x] Tests: post sales + cash movement with **no open session** succeeds; close a day → cashier post rejected, **owner reopen → post succeeds + audited**; over/short still books to `5400` on an explicit close.
+
+**Done:** Migration `050` — nullable `cash_movements.session_id`; drawer reopen fields + `cash_drawer_audit_events`. Core `guards.py` (`DrawerDayClosedError`, `DrawerUnlockRequiredError`, `period_unlock_reason` unlock). API: `POST .../close-day`, `POST .../{id}/reopen`. Frontend: period unlock on cash movement form; Reopen + Close drawer day on `/banking/cash`. **582 pytest green** (+3); frontend build green. **Next:** Phase 11.14 new menu UX.
 
 ---
 

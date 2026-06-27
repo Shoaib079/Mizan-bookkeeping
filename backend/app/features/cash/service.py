@@ -8,7 +8,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.cash.posting import close_cash_drawer_session, post_cash_movement
+from app.core.cash.posting import close_cash_drawer_session, post_cash_movement, reopen_cash_drawer_session
 from app.core.listing import (
     ListParams,
     date_range_filters,
@@ -17,7 +17,9 @@ from app.core.listing import (
 from app.db.session import entity_context, require_entity_context
 from app.features.cash.models import CashDrawerSession, CashMovement
 from app.features.cash.schema import (
+    CashDrawerCloseDayRequest,
     CashDrawerCloseResponse,
+    CashDrawerReopenRequest,
     CashDrawerSessionDetail,
     CashDrawerSessionRead,
     CashMovementCreate,
@@ -56,6 +58,9 @@ def _to_session_read(drawer_session: CashDrawerSession) -> CashDrawerSessionRead
         closed_at=drawer_session.closed_at,
         closed_by=drawer_session.closed_by,
         close_journal_entry_id=drawer_session.close_journal_entry_id,
+        reopened_at=drawer_session.reopened_at,
+        reopened_by=drawer_session.reopened_by,
+        reopen_reason=drawer_session.reopen_reason,
         created_at=drawer_session.created_at,
     )
 
@@ -75,6 +80,7 @@ def create_cash_movement(
         offset_account_id=payload.offset_account_id,
         description=payload.description,
         actor_id=payload.actor_id,
+        period_unlock_reason=payload.period_unlock_reason,
     )
     return _to_movement_read(result.cash_movement)
 
@@ -166,3 +172,41 @@ def close_cash_drawer(
             result.close_journal_entry.id if result.close_journal_entry is not None else None
         ),
     )
+
+
+def close_cash_drawer_day(
+    session: Session,
+    entity_id: uuid.UUID,
+    payload: CashDrawerCloseDayRequest,
+) -> CashDrawerCloseResponse:
+    result = close_cash_drawer_session(
+        session,
+        entity_id,
+        money_account_id=payload.money_account_id,
+        session_date=payload.session_date,
+        counted_balance_kurus=payload.counted_balance_kurus,
+        actor_id=payload.actor_id,
+        description=payload.description,
+    )
+    return CashDrawerCloseResponse(
+        session=_to_session_read(result.session),
+        close_journal_entry_id=(
+            result.close_journal_entry.id if result.close_journal_entry is not None else None
+        ),
+    )
+
+
+def reopen_cash_drawer(
+    session: Session,
+    entity_id: uuid.UUID,
+    session_id: uuid.UUID,
+    payload: CashDrawerReopenRequest,
+) -> CashDrawerSessionRead:
+    drawer_session = reopen_cash_drawer_session(
+        session,
+        entity_id,
+        session_id,
+        actor_id=payload.actor_id,
+        reason=payload.reason,
+    )
+    return _to_session_read(drawer_session)

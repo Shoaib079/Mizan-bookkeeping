@@ -25,6 +25,7 @@ RLS_TABLES = (
     "credit_card_payments",
     "cash_drawer_sessions",
     "cash_movements",
+    "cash_drawer_audit_events",
     "fx_ledger_entries",
     "employees",
     "staff_ledger_entries",

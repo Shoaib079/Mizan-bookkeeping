@@ -1,4 +1,4 @@
-/** Detect soft period-lock 422 responses that can retry with period_unlock_reason. */
+/** Detect soft period-lock or closed-drawer 422 responses for owner unlock retry. */
 
 import { ApiError } from "@/lib/api";
 
@@ -6,6 +6,7 @@ export function isPeriodLockError(err: unknown): boolean {
   if (!(err instanceof ApiError) || err.status !== 422) return false;
   const msg = err.message.toLowerCase();
   if (msg.includes("period_unlock_reason")) return true;
+  if (msg.includes("owner unlock required")) return true;
   if (msg.includes("closed period") && !msg.includes("owner unlock required")) {
     return true;
   }

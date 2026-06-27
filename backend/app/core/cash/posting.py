@@ -9,6 +9,13 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.cash.guards import (
+    assert_drawer_day_writable,
+    ensure_open_drawer_session_for_close,
+    link_orphan_movements_to_session,
+    reopen_cash_drawer_session,
+    resolve_session_for_movement,
+)
 from app.core.chart_of_accounts.default_chart import CASH_OVER_SHORT_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
@@ -19,6 +26,8 @@ from app.db.session import entity_context, require_entity_context
 from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.cash.models import (
+    CashDrawerAuditAction,
+    CashDrawerAuditEvent,
     CashDrawerSession,
     CashDrawerSessionStatus,
     CashMovement,
@@ -35,7 +44,7 @@ class InvalidCashDrawerError(ValueError):
 class CashMovementPostResult:
     journal_entry: JournalEntry
     cash_movement: CashMovement
-    session: CashDrawerSession
+    session: CashDrawerSession | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,32 +188,21 @@ def _validate_offset_account(
     return account
 
 
-def _get_or_create_open_session(
+def _record_close_audit(
     session: Session,
+    drawer_session: CashDrawerSession,
     *,
-    money_account_id: uuid.UUID,
-    session_date: date,
-) -> CashDrawerSession:
-    drawer_session = session.scalar(
-        select(CashDrawerSession).where(
-            CashDrawerSession.money_account_id == money_account_id,
-            CashDrawerSession.session_date == session_date,
+    actor_id: uuid.UUID,
+    description: str,
+) -> None:
+    session.add(
+        CashDrawerAuditEvent(
+            cash_drawer_session_id=drawer_session.id,
+            action=CashDrawerAuditAction.CLOSE,
+            actor_id=actor_id,
+            detail=description,
         )
     )
-    if drawer_session is not None:
-        if drawer_session.status == CashDrawerSessionStatus.CLOSED:
-            raise InvalidCashDrawerError("drawer day is closed — no further movements allowed")
-        return drawer_session
-
-    drawer_session = CashDrawerSession(
-        money_account_id=money_account_id,
-        session_date=session_date,
-        status=CashDrawerSessionStatus.OPEN,
-    )
-    session.add(drawer_session)
-    session.flush()
-    session.refresh(drawer_session)
-    return drawer_session
 
 
 def post_cash_movement(
@@ -218,6 +216,7 @@ def post_cash_movement(
     offset_account_id: uuid.UUID,
     description: str,
     actor_id: uuid.UUID,
+    period_unlock_reason: str | None = None,
 ) -> CashMovementPostResult:
     """Post cash in/out to GL and persist movement in one transaction."""
     if entity_service.get_entity(session, entity_id) is None:
@@ -233,10 +232,16 @@ def post_cash_movement(
             offset_account_id,
             cash_gl_account_id=money_account.gl_account_id,
         )
-        drawer_session = _get_or_create_open_session(
+        session_id = resolve_session_for_movement(
             session,
+            entity_id,
             money_account_id=money_account_id,
             session_date=movement_date,
+            actor_id=actor_id,
+            unlock_reason=period_unlock_reason,
+        )
+        drawer_session = (
+            session.get(CashDrawerSession, session_id) if session_id is not None else None
         )
 
         if direction == CashMovementDirection.IN:
@@ -260,10 +265,11 @@ def post_cash_movement(
             lines,
             actor_id=actor_id,
             source=JournalEntrySource.CASH_MOVEMENT,
+            period_unlock_reason=period_unlock_reason,
         )
 
         movement = CashMovement(
-            session_id=drawer_session.id,
+            session_id=session_id,
             money_account_id=money_account_id,
             movement_date=movement_date,
             direction=direction,
@@ -277,7 +283,9 @@ def post_cash_movement(
         session.commit()
         session.refresh(journal_entry)
         session.refresh(movement)
-        session.refresh(drawer_session)
+        if drawer_session is not None:
+            session.refresh(drawer_session)
+
         _ = list(journal_entry.lines)
 
         return CashMovementPostResult(
@@ -291,7 +299,9 @@ def close_cash_drawer_session(
     session: Session,
     entity_id: uuid.UUID,
     *,
-    session_id: uuid.UUID,
+    session_id: uuid.UUID | None = None,
+    money_account_id: uuid.UUID | None = None,
+    session_date: date | None = None,
     counted_balance_kurus: int,
     actor_id: uuid.UUID,
     description: str = "Cash drawer EOD close",
@@ -299,6 +309,8 @@ def close_cash_drawer_session(
     """Close drawer day — post over/short if needed and lock the session."""
     if counted_balance_kurus < 0:
         raise ValueError("counted balance cannot be negative")
+    if session_id is None and (money_account_id is None or session_date is None):
+        raise ValueError("session_id or money_account_id + session_date required")
 
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -306,9 +318,20 @@ def close_cash_drawer_session(
     with entity_context(session, entity_id):
         require_entity_context()
 
-        drawer_session = session.get(CashDrawerSession, session_id)
-        if drawer_session is None:
-            raise LookupError("Cash drawer session not found")
+        if session_id is not None:
+            drawer_session = session.get(CashDrawerSession, session_id)
+            if drawer_session is None:
+                raise LookupError("Cash drawer session not found")
+            link_orphan_movements_to_session(session, drawer_session)
+        else:
+            assert money_account_id is not None and session_date is not None
+            _validate_cash_money_account(session, entity_id, money_account_id)
+            drawer_session = ensure_open_drawer_session_for_close(
+                session,
+                money_account_id=money_account_id,
+                session_date=session_date,
+            )
+
         if drawer_session.status == CashDrawerSessionStatus.CLOSED:
             raise InvalidCashDrawerError("drawer session is already closed")
 
@@ -360,6 +383,12 @@ def close_cash_drawer_session(
         drawer_session.close_journal_entry_id = (
             close_journal_entry.id if close_journal_entry is not None else None
         )
+        _record_close_audit(
+            session,
+            drawer_session,
+            actor_id=actor_id,
+            description=description,
+        )
 
         session.commit()
         session.refresh(drawer_session)
@@ -371,3 +400,19 @@ def close_cash_drawer_session(
             session=drawer_session,
             close_journal_entry=close_journal_entry,
         )
+
+
+__all__ = [
+    "InvalidCashDrawerError",
+    "CashMovementPostResult",
+    "CashDrawerCloseResult",
+    "assert_drawer_day_writable",
+    "reopen_cash_drawer_session",
+    "resolve_session_for_movement",
+    "post_cash_movement",
+    "close_cash_drawer_session",
+    "build_cash_in_posting_lines",
+    "build_cash_out_posting_lines",
+    "build_cash_over_posting_lines",
+    "build_cash_short_posting_lines",
+]

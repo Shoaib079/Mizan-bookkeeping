@@ -17,6 +17,8 @@ from app.core.fx import posting as fx_posting
 from app.core.fx.models import FxLedgerEntry
 from app.core.ledger.models import JournalEntryLine, JournalEntrySource
 from app.db.session import entity_context
+from app.features.auth import service as auth_service
+from app.features.auth.schema import UserCreate
 from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
@@ -323,6 +325,10 @@ def test_fx_purchase_cash_movement_visible_on_drawer_session(
     entity_id = fx_setup["entity_id"]
     drawer = fx_setup["drawer"]
     wallet = fx_setup["usd_wallet"]
+    actor = auth_service.create_user(
+        db_session,
+        UserCreate(email="fx-drawer@test.local", display_name="FX Actor"),
+    )
 
     purchase = client.post(
         f"/entities/{entity_id}/fx/purchases",
@@ -333,16 +339,28 @@ def test_fx_purchase_cash_movement_visible_on_drawer_session(
             "try_cost_kurus": 175000,
             "purchase_date": "2026-05-15",
             "description": "Drawer FX buy",
-            "actor_id": str(ACTOR_ID),
+            "actor_id": str(actor.id),
         },
     )
     assert purchase.status_code == 201
 
-    sessions = client.get(
+    sessions_before = client.get(
         f"/entities/{entity_id}/cash/drawer-sessions?money_account_id={drawer.id}"
     )
-    assert sessions.status_code == 200
-    session_id = sessions.json()["items"][0]["id"]
+    assert sessions_before.status_code == 200
+    assert sessions_before.json()["total"] == 0
+
+    close = client.post(
+        f"/entities/{entity_id}/cash/drawer-sessions/close-day",
+        json={
+            "money_account_id": str(drawer.id),
+            "session_date": "2026-05-15",
+            "counted_balance_kurus": 0,
+            "actor_id": str(actor.id),
+        },
+    )
+    assert close.status_code == 200
+    session_id = close.json()["session"]["id"]
 
     detail = client.get(f"/entities/{entity_id}/cash/drawer-sessions/{session_id}")
     assert detail.status_code == 200

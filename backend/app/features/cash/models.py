@@ -17,6 +17,12 @@ class CashDrawerSessionStatus(str, enum.Enum):
     CLOSED = "closed"
 
 
+class CashDrawerAuditAction(str, enum.Enum):
+    CLOSE = "close"
+    REOPEN = "reopen"
+    UNLOCK_WRITE = "unlock_write"
+
+
 class CashMovementDirection(str, enum.Enum):
     IN = "in"
     OUT = "out"
@@ -66,6 +72,42 @@ class CashDrawerSession(EntityScopedMixin, Base):
         nullable=True,
         index=True,
     )
+    reopened_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    reopened_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    reopen_reason: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class CashDrawerAuditEvent(EntityScopedMixin, Base):
+    __tablename__ = "cash_drawer_audit_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    cash_drawer_session_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("cash_drawer_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    action: Mapped[CashDrawerAuditAction] = mapped_column(
+        Enum(
+            CashDrawerAuditAction,
+            name="cash_drawer_audit_action",
+            native_enum=False,
+            length=16,
+        ),
+        nullable=False,
+    )
+    actor_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    reason: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    detail: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
@@ -76,10 +118,10 @@ class CashMovement(EntityScopedMixin, Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id: Mapped[uuid.UUID] = mapped_column(
+    session_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("cash_drawer_sessions.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     money_account_id: Mapped[uuid.UUID] = mapped_column(

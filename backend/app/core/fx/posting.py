@@ -8,7 +8,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.core.cash.posting import _get_or_create_open_session
+from app.core.cash.guards import resolve_session_for_movement
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.fx.ledger import record_fx_movement
@@ -111,6 +111,7 @@ def _validate_try_cash_money_account(
 
 def record_fx_purchase_cash_movement(
     session: Session,
+    entity_id: uuid.UUID,
     *,
     try_cash_account: MoneyAccount,
     fx_gl_account_id: uuid.UUID,
@@ -119,15 +120,19 @@ def record_fx_purchase_cash_movement(
     description: str,
     actor_id: uuid.UUID,
     journal_entry_id: uuid.UUID,
+    period_unlock_reason: str | None = None,
 ) -> CashMovement:
     """Persist drawer OUT movement tied to an FX purchase journal entry."""
-    drawer_session = _get_or_create_open_session(
+    session_id = resolve_session_for_movement(
         session,
+        entity_id,
         money_account_id=try_cash_account.id,
         session_date=movement_date,
+        actor_id=actor_id,
+        unlock_reason=period_unlock_reason,
     )
     movement = CashMovement(
-        session_id=drawer_session.id,
+        session_id=session_id,
         money_account_id=try_cash_account.id,
         movement_date=movement_date,
         direction=CashMovementDirection.OUT,
@@ -200,6 +205,7 @@ def post_fx_purchase(
 
         cash_movement = record_fx_purchase_cash_movement(
             session,
+            entity_id,
             try_cash_account=try_cash_account,
             fx_gl_account_id=fx_gl.id,
             try_cost_kurus=try_cost_kurus,

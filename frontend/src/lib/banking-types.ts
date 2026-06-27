@@ -110,6 +110,7 @@ export type CashDrawerSessionRead = {
   counted_balance_kurus: number | null;
   over_short_kurus: number | null;
   closed_at: string | null;
+  reopen_reason?: string | null;
 };
 
 export type CashMovementRead = {

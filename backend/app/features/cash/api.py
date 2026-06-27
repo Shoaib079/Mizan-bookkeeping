@@ -10,14 +10,19 @@ from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 
+from app.config import settings
+from app.core.cash.errors import DrawerDayClosedError, DrawerUnlockRequiredError
 from app.core.cash.posting import InvalidCashDrawerError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, require_owner_members
+from app.features.auth.models import User
 from app.features.cash import service as cash_service
 from app.features.cash.schema import (
+    CashDrawerCloseDayRequest,
     CashDrawerCloseRequest,
     CashDrawerCloseResponse,
+    CashDrawerReopenRequest,
     CashDrawerSessionDetail,
     CashDrawerSessionRead,
     CashMovementCreate,
@@ -39,7 +44,12 @@ def create_cash_movement(
         return cash_service.create_cash_movement(session, entity_id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except (InvalidCashDrawerError, InvalidAccountError) as exc:
+    except (
+        InvalidCashDrawerError,
+        InvalidAccountError,
+        DrawerDayClosedError,
+        DrawerUnlockRequiredError,
+    ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -89,6 +99,23 @@ def get_cash_drawer_session(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@sessions_router.post("/close-day", response_model=CashDrawerCloseResponse)
+def close_cash_drawer_day_route(
+    entity_id: uuid.UUID,
+    payload: CashDrawerCloseDayRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> CashDrawerCloseResponse:
+    try:
+        return cash_service.close_cash_drawer_day(session, entity_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (InvalidCashDrawerError, DrawerDayClosedError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @sessions_router.post("/{session_id}/close", response_model=CashDrawerCloseResponse)
 def close_cash_drawer_session_route(
     entity_id: uuid.UUID,
@@ -109,6 +136,38 @@ def close_cash_drawer_session_route(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InvalidCashDrawerError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@sessions_router.post("/{session_id}/reopen", response_model=CashDrawerSessionRead)
+def reopen_cash_drawer_session_route(
+    entity_id: uuid.UUID,
+    session_id: uuid.UUID,
+    payload: CashDrawerReopenRequest,
+    session: Session = Depends(get_session),
+    owner: User | None = Depends(require_owner_members),
+) -> CashDrawerSessionRead:
+    if settings.auth_enforcement:
+        if owner is None:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        actor_id = owner.id
+    else:
+        actor_id = payload.actor_id
+    try:
+        return cash_service.reopen_cash_drawer(
+            session,
+            entity_id,
+            session_id,
+            CashDrawerReopenRequest(
+                reason=payload.reason,
+                actor_id=actor_id,
+            ),
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (DrawerDayClosedError, DrawerUnlockRequiredError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

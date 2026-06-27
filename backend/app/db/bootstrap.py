@@ -19,7 +19,7 @@ from app.features.banking.credit_card_payment_models import CreditCardPayment  #
 from app.features.banking.statement_models import BankStatement, BankStatementLine  # noqa: F401
 from app.features.banking.transfer_models import AccountTransfer  # noqa: F401
 from app.core.fx.models import FxLedgerEntry  # noqa: F401
-from app.features.cash.models import CashDrawerSession, CashMovement  # noqa: F401
+from app.features.cash.models import CashDrawerSession, CashDrawerAuditEvent, CashMovement  # noqa: F401
 from app.features.staff.models import Employee  # noqa: F401
 from app.core.staff.models import StaffLedgerEntry  # noqa: F401
 from app.features.partners.models import Partner  # noqa: F401

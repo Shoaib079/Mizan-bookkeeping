@@ -44,7 +44,7 @@ from app.features.entities import service as entity_service
 from app.features.expenses.models import ExpenseEntry
 from app.features.invoices.models import InvoiceDraft
 from app.features.cash.models import CashMovement, CashMovementDirection
-from app.core.cash.posting import _get_or_create_open_session
+from app.core.cash.guards import resolve_session_for_movement
 
 
 class SubledgerBackedCorrectionError(ValueError):
@@ -397,11 +397,13 @@ def _get_cash_movement_for_journal(
 
 def _append_cash_movement_reversal(
     session: Session,
+    entity_id: uuid.UUID,
     original: CashMovement,
     reversal: JournalEntry,
     *,
     actor_id: uuid.UUID,
     void_date: date | None,
+    period_unlock_reason: str | None = None,
 ) -> CashMovement:
     reversal_direction = (
         CashMovementDirection.IN
@@ -409,13 +411,16 @@ def _append_cash_movement_reversal(
         else CashMovementDirection.OUT
     )
     reversal_date = _effective_void_date(void_date, reversal)
-    drawer_session = _get_or_create_open_session(
+    session_id = resolve_session_for_movement(
         session,
+        entity_id,
         money_account_id=original.money_account_id,
         session_date=reversal_date,
+        actor_id=actor_id,
+        unlock_reason=period_unlock_reason,
     )
     entry = CashMovement(
-        session_id=drawer_session.id,
+        session_id=session_id,
         money_account_id=original.money_account_id,
         movement_date=reversal_date,
         direction=reversal_direction,
@@ -662,7 +667,13 @@ def correct_fx_purchase(
         original_cash = _get_cash_movement_for_journal(sess, journal_entry_id)
         if original_cash is not None:
             _append_cash_movement_reversal(
-                sess, original_cash, reversal, actor_id=actor_id, void_date=void_date
+                sess,
+                entity_id,
+                original_cash,
+                reversal,
+                actor_id=actor_id,
+                void_date=void_date,
+                period_unlock_reason=period_unlock_reason,
             )
             try_cash_id = try_cash_money_account_id or original_cash.money_account_id
             try_cash = sess.get(MoneyAccount, try_cash_id)
@@ -673,6 +684,7 @@ def correct_fx_purchase(
                 raise LookupError("FX money account not found")
             record_fx_purchase_cash_movement(
                 sess,
+                entity_id,
                 try_cash_account=try_cash,
                 fx_gl_account_id=fx_money.gl_account_id,
                 try_cost_kurus=try_cost_kurus,
@@ -680,6 +692,7 @@ def correct_fx_purchase(
                 description=description,
                 actor_id=actor_id,
                 journal_entry_id=corrected.id,
+                period_unlock_reason=period_unlock_reason,
             )
 
     def build_lines(sess: Session) -> list[PostingLine]:
@@ -1313,10 +1326,12 @@ def correct_pos_daily_summary(
                     )
                     _append_cash_movement_reversal(
                         session,
+                        entity_id,
                         original_cash,
                         cash_reversal,
                         actor_id=actor_id,
                         void_date=void_date,
+                        period_unlock_reason=period_unlock_reason,
                     )
                     dirty_dates.extend(
                         [original_cash.movement_date, cash_reversal.entry_date]

@@ -9,10 +9,8 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.cash.posting import (
-    InvalidCashDrawerError,
-    build_cash_in_posting_lines,
-)
+from app.core.cash.guards import resolve_session_for_movement
+from app.core.cash.posting import build_cash_in_posting_lines
 from app.core.chart_of_accounts.default_chart import (
     CARD_SALES_CLEARING_CODE,
     SALES_REVENUE_CODE,
@@ -28,8 +26,6 @@ from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.cash.models import (
-    CashDrawerSession,
-    CashDrawerSessionStatus,
     CashMovement,
     CashMovementDirection,
 )
@@ -71,36 +67,6 @@ def _validate_cash_money_account(
             "POS daily summary cash portion requires a cash drawer account"
         )
     return money_account
-
-
-def _get_or_create_open_session(
-    session: Session,
-    *,
-    money_account_id: uuid.UUID,
-    session_date: date,
-) -> CashDrawerSession:
-    drawer_session = session.scalar(
-        select(CashDrawerSession).where(
-            CashDrawerSession.money_account_id == money_account_id,
-            CashDrawerSession.session_date == session_date,
-        )
-    )
-    if drawer_session is not None:
-        if drawer_session.status == CashDrawerSessionStatus.CLOSED:
-            raise InvalidCashDrawerError(
-                "drawer day is closed — no further movements allowed"
-            )
-        return drawer_session
-
-    drawer_session = CashDrawerSession(
-        money_account_id=money_account_id,
-        session_date=session_date,
-        status=CashDrawerSessionStatus.OPEN,
-    )
-    session.add(drawer_session)
-    session.flush()
-    session.refresh(drawer_session)
-    return drawer_session
 
 
 def confirm_pos_daily_summary(
@@ -186,10 +152,13 @@ def confirm_pos_daily_summary(
             )
 
         if cash_kurus > 0:
-            drawer_session = _get_or_create_open_session(
+            session_id = resolve_session_for_movement(
                 session,
+                entity_id,
                 money_account_id=money_account_id,
                 session_date=sales_date,
+                actor_id=actor_id,
+                unlock_reason=period_unlock_reason,
             )
             cash_lines = build_cash_in_posting_lines(
                 cash_gl_account_id=money_account.gl_account_id,
@@ -207,7 +176,7 @@ def confirm_pos_daily_summary(
                 period_unlock_reason=period_unlock_reason,
             )
             cash_movement = CashMovement(
-                session_id=drawer_session.id,
+                session_id=session_id,
                 money_account_id=money_account_id,
                 movement_date=sales_date,
                 direction=CashMovementDirection.IN,

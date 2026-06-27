@@ -10,6 +10,7 @@ IMMUTABLE_AUDIT_TABLES = frozenset(
         "ledger_audit_events",
         "auth_audit_events",
         "period_lock_audit_events",
+        "cash_drawer_audit_events",
     }
 )
 
