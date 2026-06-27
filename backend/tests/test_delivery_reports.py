@@ -338,8 +338,8 @@ def test_classify_statement_delivery_settlement(
     getir_id = str(delivery_setup["getir"].id)
 
     csv_content = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-03-15,225000,Getir payout,GETIR-001\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-03-15,\"2.250,00\",Getir payout,GETIR-001\n"
     ).encode()
 
     import_resp = client.post(

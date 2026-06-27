@@ -125,8 +125,8 @@ def test_classify_statement_inflow_pos_settlement_posts_gl(
     clearing_id = pos_setup["accounts"][CARD_SALES_CLEARING_CODE]
 
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-03-05,1200000,POS card deposit,POS-001\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-03-05,\"12.000,00\",POS card deposit,POS-001\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,
@@ -256,8 +256,8 @@ def test_classify_pos_settlement_rejects_outflow(
     bank = pos_setup["bank"]
 
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-03-05,-50000,Not a deposit,FEE-1\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-03-05,\"-500,00\",Not a deposit,FEE-1\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,

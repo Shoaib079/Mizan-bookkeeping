@@ -10,7 +10,8 @@ from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.adapters.bank_parsers.csv_simple import CsvParseError, parse_csv_simple
+from app.adapters.bank_parsers.dispatch import parse_bank_statement, resolve_statement_format
+from app.adapters.bank_parsers.types import BankParseError
 from app.adapters.storage.local import save_upload
 from app.core.banking import posting as banking_posting
 from app.core.banking import statement_posting
@@ -479,15 +480,20 @@ def import_bank_statement(
     content: bytes,
     *,
     original_filename: str,
+    content_type: str | None = None,
 ) -> BankStatementRead:
-    """Parse CSV, store file, create statement + lines. Rejects duplicates and overlaps."""
+    """Parse CSV/Excel, store file, create statement + lines. Rejects duplicates and overlaps."""
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
     fingerprint = file_fingerprint(content)
     try:
-        parsed = parse_csv_simple(content)
-    except CsvParseError as exc:
+        parsed = parse_bank_statement(
+            content,
+            original_filename=original_filename,
+            content_type=content_type,
+        )
+    except BankParseError as exc:
         raise InvalidClassificationError(str(exc)) from exc
 
     with entity_context(session, entity_id):
@@ -516,7 +522,10 @@ def import_bank_statement(
             entity_id,
             fingerprint,
             content,
-            extension=".csv",
+            extension=resolve_statement_format(
+                original_filename=original_filename,
+                content_type=content_type,
+            ),
         )
 
         statement = BankStatement(

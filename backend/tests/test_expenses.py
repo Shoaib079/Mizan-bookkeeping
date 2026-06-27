@@ -342,8 +342,8 @@ def test_rent_utility_classify_posts_dr_expense_cr_bank(
     rent_id = expense_setup["accounts"][RENT_EXPENSE_CODE]
 
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-06-07,-120000,Kira ödemesi,RENT-JUN\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-06-07,\"-1.200,00\",Kira ödemesi,RENT-JUN\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,
@@ -384,8 +384,8 @@ def test_rent_utility_rejects_inflow(db_session, expense_setup) -> None:
     bank = expense_setup["bank"]
     rent_id = expense_setup["accounts"][RENT_EXPENSE_CODE]
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-06-07,120000,Rent refund,RENT-REV\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-06-07,\"1.200,00\",Rent refund,RENT-REV\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,

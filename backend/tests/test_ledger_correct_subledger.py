@@ -474,8 +474,8 @@ def test_bank_fee_correctable_via_generic_endpoint(
     )
     charges_id = seeded_accounts[BANK_CHARGES_CODE]
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-03,-25000,Bank service fee,FEE-FEB\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-03,\"-250,00\",Bank service fee,FEE-FEB\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,

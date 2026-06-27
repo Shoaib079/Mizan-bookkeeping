@@ -159,8 +159,8 @@ def test_statement_outflow_classify_transfer_posts(
     bank_b = transfer_setup["bank_b"]
 
     csv = _transfer_csv(
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-15,-1500000,Transfer to Bank B,XFER-01\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-15,\"-15.000,00\",Transfer to Bank B,XFER-01\n"
     )
     statement = statement_service.import_bank_statement(
         db_session,
@@ -203,8 +203,8 @@ def test_statement_inflow_links_prior_outflow_single_journal(
     bank_b = transfer_setup["bank_b"]
 
     out_csv = _transfer_csv(
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-20,-800000,Transfer to Bank B,XFER-02\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-20,\"-8.000,00\",Transfer to Bank B,XFER-02\n"
     )
     out_statement = statement_service.import_bank_statement(
         db_session,
@@ -229,8 +229,8 @@ def test_statement_inflow_links_prior_outflow_single_journal(
         journal_before = db_session.scalar(select(func.count()).select_from(JournalEntry))
 
     in_csv = _transfer_csv(
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-20,800000,Transfer from Bank A,XFER-02\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-20,\"8.000,00\",Transfer from Bank A,XFER-02\n"
     )
     in_statement = statement_service.import_bank_statement(
         db_session,
@@ -270,8 +270,8 @@ def test_statement_inflow_without_prior_outflow_posts(
     bank_b = transfer_setup["bank_b"]
 
     in_csv = _transfer_csv(
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-25,500000,Transfer from Bank A,XFER-03\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-25,\"5.000,00\",Transfer from Bank A,XFER-03\n"
     )
     in_statement = statement_service.import_bank_statement(
         db_session,
@@ -339,8 +339,8 @@ def test_reclassify_posted_transfer_line_rejected(
 ) -> None:
     entity_id = transfer_setup["entity_id"]
     csv = _transfer_csv(
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-03-01,-100000,Transfer,XFER-04\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-03-01,\"-1.000,00\",Transfer,XFER-04\n"
     )
     statement = statement_service.import_bank_statement(
         db_session,

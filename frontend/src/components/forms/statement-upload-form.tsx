@@ -1,6 +1,6 @@
 "use client";
 
-/** Bank statement CSV upload — Phase 9 Slice 4. */
+/** Bank statement CSV/Excel upload — Phase 9 Slice 4. */
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
@@ -20,6 +20,9 @@ type Props = {
   moneyAccountId: string;
   onUploaded?: () => void;
 };
+
+const ACCEPT =
+  ".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export function StatementUploadForm({
   open,
@@ -46,7 +49,7 @@ export function StatementUploadForm({
       return;
     }
     if (!file) {
-      setError("Choose a CSV statement file.");
+      setError("Choose a CSV or Excel statement file.");
       return;
     }
     setSubmitting(true);
@@ -76,15 +79,16 @@ export function StatementUploadForm({
     <Dialog open={open} title="Upload bank statement" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          CSV with date, amount, and description columns. Lines that cannot be
-          auto-matched go to Needs Review.
+          CSV or Excel with columns: transaction_date (YYYY-MM-DD), amount in
+          lira (e.g. 12,50 or -1.234,56), description, optional reference.
+          Lines that cannot be auto-matched go to Needs Review.
         </p>
         <div>
-          <Label htmlFor="stmt-file">Statement CSV</Label>
+          <Label htmlFor="stmt-file">Statement file</Label>
           <input
             id="stmt-file"
             type="file"
-            accept=".csv,text/csv"
+            accept={ACCEPT}
             className="mt-1 block w-full text-sm"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />

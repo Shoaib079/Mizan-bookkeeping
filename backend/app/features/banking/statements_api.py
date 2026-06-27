@@ -8,7 +8,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
-from app.adapters.bank_parsers.csv_simple import CsvParseError
+from app.adapters.bank_parsers.types import BankParseError
 from app.core.receivables.ledger import OverpaymentError
 from app.core.payables.ledger import OverpaymentError as SupplierOverpaymentError
 from app.core.banking.posting import InvalidTransferError
@@ -56,6 +56,7 @@ async def import_bank_statement(
             money_account_id,
             content,
             original_filename=file.filename or "statement.csv",
+            content_type=file.content_type,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -65,7 +66,7 @@ async def import_bank_statement(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except statement_service.NotBankAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except (CsvParseError, statement_service.InvalidClassificationError) as exc:
+    except (BankParseError, statement_service.InvalidClassificationError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

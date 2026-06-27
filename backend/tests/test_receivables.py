@@ -325,8 +325,8 @@ def test_classify_customer_payment_bank_inflow(
     )
 
     csv_content = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-06-20,75000,Customer payment,REF-CP-1\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-06-20,\"750,00\",Customer payment,REF-CP-1\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,

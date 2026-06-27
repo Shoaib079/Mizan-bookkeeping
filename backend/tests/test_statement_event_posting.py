@@ -134,8 +134,8 @@ def test_bank_fee_classification_posts_gl(db_session, fee_setup) -> None:
     charges_id = fee_setup["accounts"][BANK_CHARGES_CODE]
 
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-03,-25000,Bank service fee,FEE-FEB\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-03,\"-250,00\",Bank service fee,FEE-FEB\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,
@@ -180,8 +180,8 @@ def test_bank_fee_rejects_inflow(db_session, fee_setup) -> None:
     entity_id = fee_setup["entity_id"]
     bank = fee_setup["bank"]
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-03,25000,Fee reversal,FEE-REV\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-03,\"250,00\",Fee reversal,FEE-REV\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,
@@ -225,8 +225,8 @@ def test_credit_card_payment_reduces_liability_not_expense(
     assert card_balance_before == 400_000
 
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-10,-150000,Card payment Garanti,CC-PAY-01\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-10,\"-1.500,00\",Card payment Garanti,CC-PAY-01\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,
@@ -289,8 +289,8 @@ def test_credit_card_payment_rejects_inflow(db_session, card_payment_setup) -> N
     bank = card_payment_setup["bank"]
     card = card_payment_setup["card"]
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-10,150000,Card refund,CC-REF\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-10,\"1.500,00\",Card refund,CC-REF\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,
@@ -316,8 +316,8 @@ def test_credit_card_payment_rejects_bank_account(db_session, card_payment_setup
     entity_id = card_payment_setup["entity_id"]
     bank = card_payment_setup["bank"]
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-10,-150000,Card payment,CC-PAY\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-10,\"-1.500,00\",Card payment,CC-PAY\n"
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,
@@ -390,8 +390,8 @@ def test_credit_card_payment_api_e2e(
     card = card_payment_setup["card"]
 
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-02-10,-100000,Card payment,CC-PAY\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-02-10,\"-1.000,00\",Card payment,CC-PAY\n"
     ).encode()
     import_resp = client.post(
         f"/entities/{entity_id}/banking/accounts/{bank.id}/statements",

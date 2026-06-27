@@ -117,8 +117,8 @@ def test_classify_pos_settlement_links_existing_manual_settlement(
         assert matched.id == manual_settlement_id
 
     csv = (
-        "transaction_date,amount_kurus,description,reference\n"
-        "2026-06-05,200000,POS deposit bank,POS-IDEM\n"
+        "transaction_date,amount,description,reference\n"
+        "2026-06-05,\"2.000,00\",POS deposit bank,POS-IDEM\n"
     ).encode()
     statement = stmt_service.import_bank_statement(
         db_session,

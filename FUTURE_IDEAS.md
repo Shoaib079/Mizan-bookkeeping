@@ -33,6 +33,7 @@
 
 ## Banking & automation
 - **Bank feeds** — auto-import transactions instead of uploading statements.
+- **PDF bank-statement extraction** — *deferred on purpose*. Statement import today is a **canonical template** (CSV/Excel: `transaction_date`, `amount` in lira TRY with Turkish formatting, `description`, `reference`), parsed to integer kuruş server-side — amounts are never guessed. A PDF statement is unstructured and varies per bank, so reliable extraction needs a real per-bank parsing/OCR pipeline. If built, it must route **every** extracted line through Needs Review with the user confirming each amount/date before it's used in reconciliation — never auto-trusted. Likely pairs with bank feeds.
 - **Transaction rules** — auto-classify recurring bank lines (rent, the same supplier, etc.).
 - **Recurring expense templates** — generate **drafts to confirm**, not auto-post (matches review-first philosophy).
 - **Smart match suggestions** for settlements and supplier payments.
