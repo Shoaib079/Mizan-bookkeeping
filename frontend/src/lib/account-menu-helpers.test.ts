@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   accountMenuAdminLinks,
+  devModeIdentityLabel,
   recordingForLabel,
   switchConfirmMessage,
   unsavedWorkWarningMessage,
@@ -47,5 +48,11 @@ describe("recordingForLabel", () => {
     expect(recordingForLabel("Bodrum Bistro")).toBe(
       "Recording for: Bodrum Bistro",
     );
+  });
+});
+
+describe("devModeIdentityLabel", () => {
+  it("states dev mode when Clerk auth is off", () => {
+    expect(devModeIdentityLabel()).toBe("Dev mode — not signed in");
   });
 });

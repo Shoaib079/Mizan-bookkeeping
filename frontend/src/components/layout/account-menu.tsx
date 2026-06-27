@@ -17,11 +17,14 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import { EntityBadge } from "@/components/layout/entity-badge";
 import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
 import {
   accountMenuAdminLinks,
+  devModeIdentityLabel,
   switchConfirmMessage,
   unsavedWorkWarningMessage,
 } from "@/lib/account-menu-helpers";
+import { useApiAuth } from "@/lib/api-auth";
 import { useEntity } from "@/lib/entity-context";
 import { entityAccentColor, userInitials } from "@/lib/entity-visual";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
@@ -41,15 +44,46 @@ type PendingAction =
   | { type: "sign-out" };
 
 export function AccountMenu() {
+  const { clerkEnabled } = useApiAuth();
+  if (clerkEnabled) {
+    return <AccountMenuWithClerk />;
+  }
+  return <AccountMenuDev />;
+}
+
+function AccountMenuWithClerk() {
   const router = useRouter();
   const { signOut } = useClerk();
+
+  const handleSignOut = useCallback(async () => {
+    await signOut({ redirectUrl: "/sign-in" });
+    router.push("/sign-in");
+  }, [router, signOut]);
+
+  return <AccountMenuPanel devMode={false} onSignOut={handleSignOut} />;
+}
+
+function AccountMenuDev() {
+  return <AccountMenuPanel devMode onSignOut={undefined} />;
+}
+
+function AccountMenuPanel({
+  devMode,
+  onSignOut,
+}: {
+  devMode: boolean;
+  onSignOut: (() => void | Promise<void>) | undefined;
+}) {
   const { toast } = useToast();
   const { hasUnsavedWork } = useUnsavedWork();
   const { role } = useEntityAccess();
   const {
     entityId,
     setEntityId,
+    actorId,
+    setActorId,
     entities,
+    entitiesLoading,
     userProfile,
   } = useEntity();
 
@@ -82,10 +116,14 @@ export function AccountMenu() {
 
   const adminLinks = useMemo(() => accountMenuAdminLinks(role), [role]);
 
-  const displayName = userProfile?.display_name?.trim() || "Signed in";
-  const email = userProfile?.email ?? "";
-  const initials = userInitials(displayName, email);
-  const avatarColor = entityAccentColor(userProfile?.id ?? "user");
+  const displayName = devMode
+    ? devModeIdentityLabel()
+    : userProfile?.display_name?.trim() || "Signed in";
+  const email = devMode ? "" : (userProfile?.email ?? "");
+  const initials = devMode ? "DV" : userInitials(displayName, email);
+  const avatarColor = entityAccentColor(
+    devMode ? "dev-user" : (userProfile?.id ?? "user"),
+  );
 
   const executeSwitch = useCallback(
     (targetId: string, targetName: string) => {
@@ -97,10 +135,10 @@ export function AccountMenu() {
   );
 
   const executeSignOut = useCallback(async () => {
+    if (!onSignOut) return;
     closeMenu();
-    await signOut({ redirectUrl: "/sign-in" });
-    router.push("/sign-in");
-  }, [closeMenu, router, signOut]);
+    await onSignOut();
+  }, [closeMenu, onSignOut]);
 
   const runPending = useCallback(
     (action: PendingAction) => {
@@ -110,7 +148,7 @@ export function AccountMenu() {
       }
       void executeSignOut();
     },
-    [executeSwitch, executeSignOut],
+    [executeSignOut, executeSwitch],
   );
 
   const requestAction = useCallback(
@@ -130,7 +168,7 @@ export function AccountMenu() {
   }
 
   function confirmSwitch() {
-    if (!switchTarget || !activeEntity) return;
+    if (!switchTarget) return;
     requestAction({
       type: "switch",
       entityId: switchTarget.id,
@@ -205,6 +243,11 @@ export function AccountMenu() {
                     {email}
                   </p>
                 )}
+                {devMode && (
+                  <p className="text-xs text-muted-foreground">
+                    Clerk auth is off — use Actor ID below for API calls.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -247,6 +290,33 @@ export function AccountMenu() {
             </div>
           )}
 
+          {devMode && entities.length === 0 && (
+            <div className="space-y-3 border-b border-border px-4 py-3">
+              <div>
+                <Label htmlFor="account-menu-entity-id">Restaurant ID</Label>
+                <Input
+                  id="account-menu-entity-id"
+                  className="mt-1 font-mono text-xs"
+                  placeholder={entitiesLoading ? "Loading…" : "uuid"}
+                  value={entityId}
+                  onChange={(e) => setEntityId(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {devMode && (
+            <div className="border-b border-border px-4 py-3">
+              <Label htmlFor="account-menu-actor-id">Actor ID (dev)</Label>
+              <Input
+                id="account-menu-actor-id"
+                className="mt-1 font-mono text-xs"
+                value={actorId}
+                onChange={(e) => setActorId(e.target.value)}
+              />
+            </div>
+          )}
+
           {adminLinks.length > 0 && (
             <div className="border-b border-border px-2 py-2">
               {adminLinks.map((link) => {
@@ -267,24 +337,30 @@ export function AccountMenu() {
             </div>
           )}
 
-          <div className="px-2 pt-1">
-            <button
-              type="button"
-              role="menuitem"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-destructive hover:bg-destructive/10"
-              onClick={onSignOutClick}
-            >
-              <LogOut className="size-4" />
-              Sign out
-            </button>
-          </div>
+          {onSignOut && (
+            <div className="px-2 pt-1">
+              <button
+                type="button"
+                role="menuitem"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-destructive hover:bg-destructive/10"
+                onClick={onSignOutClick}
+              >
+                <LogOut className="size-4" />
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {switchTarget && activeEntity && (
+      {switchTarget && (
         <ConfirmOverlay
           title="Switch restaurant?"
-          message={switchConfirmMessage(activeEntity.name, switchTarget.name)}
+          message={
+            activeEntity
+              ? switchConfirmMessage(activeEntity.name, switchTarget.name)
+              : `Switch to ${switchTarget.name}?`
+          }
           confirmLabel="Switch"
           onCancel={() => setSwitchTarget(null)}
           onConfirm={confirmSwitch}

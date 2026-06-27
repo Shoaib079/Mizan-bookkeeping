@@ -105,18 +105,19 @@ describe("app shell header", () => {
     expect(source).not.toMatch(/openQuickAction\("expense"\)/);
   });
 
-  it("uses AccountMenu instead of Clerk UserButton when auth is on", async () => {
+  it("always renders AccountMenu in the top bar (auth on and dev)", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/layout/app-shell.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("AccountMenu");
+    expect(source).toContain("<AccountMenu />");
     expect(source).not.toContain("UserButton");
+    expect(source).not.toMatch(/authOn && <AccountMenu/);
   });
 
-  it("moves restaurant switching out of the sidebar combobox for signed-in users", async () => {
+  it("shows sidebar restaurant badge only — no sidebar switcher in any mode", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/layout/app-shell.tsx", import.meta.url),
@@ -124,7 +125,10 @@ describe("app shell header", () => {
       ),
     );
     expect(source).toContain("Use the account menu to switch");
-    expect(source).toMatch(/authOn \? \(/);
+    expect(source).toContain("EntityBadge");
+    expect(source).not.toContain("Combobox");
+    expect(source).not.toContain("entity-select");
+    expect(source).not.toContain("actor-id");
   });
 });
 
@@ -160,6 +164,19 @@ describe("account menu", () => {
     );
     expect(source).toContain("signOut");
     expect(source).toContain("/sign-in");
+  });
+
+  it("shows dev mode identity and hides sign-out when Clerk is off", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/account-menu.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("devModeIdentityLabel");
+    expect(source).toContain("AccountMenuDev");
+    expect(source).toContain("Actor ID (dev)");
+    expect(source).toMatch(/\{onSignOut &&/);
   });
 
   it("warns before switch or sign-out when unsaved work is registered", async () => {

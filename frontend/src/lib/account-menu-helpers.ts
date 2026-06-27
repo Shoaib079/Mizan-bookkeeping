@@ -37,3 +37,7 @@ export function accountMenuAdminLinks(role: EntityRole): AccountMenuLink[] {
 export function recordingForLabel(restaurantName: string): string {
   return `Recording for: ${restaurantName}`;
 }
+
+export function devModeIdentityLabel(): string {
+  return "Dev mode — not signed in";
+}

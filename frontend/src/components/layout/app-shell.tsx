@@ -12,9 +12,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { NewMenu } from "@/components/new-menu";
 import { QuickActionsProvider, useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
-import { Input, Label } from "@/components/ui/input";
-import { useApiAuth } from "@/lib/api-auth";
+import { Label } from "@/components/ui/input";
 import {
   navGroups,
   isNavChildActive,
@@ -47,16 +45,8 @@ function AppShellInner({
   title: string;
 }) {
   const pathname = usePathname();
-  const { clerkEnabled: authOn } = useApiAuth();
   const { deliveryEnabled } = useQuickActions();
-  const {
-    entityId,
-    setEntityId,
-    actorId,
-    setActorId,
-    entities,
-    entitiesLoading,
-  } = useEntity();
+  const { entityId, entities, entitiesLoading } = useEntity();
 
   const navSettings = { deliveryEnabled };
   const activeEntity = entities.find((entity) => entity.id === entityId);
@@ -70,58 +60,20 @@ function AppShellInner({
         </div>
         <NewMenu />
         <div className="border-b border-border px-3 py-3">
-          <Label htmlFor="entity-select">Restaurant</Label>
-          {authOn ? (
-            <div className="mt-1">
-              {activeEntity ? (
-                <EntityBadge
-                  entityId={activeEntity.id}
-                  name={activeEntity.name}
-                  className="w-full"
-                />
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  {entitiesLoading ? "Loading…" : "Use the account menu to switch"}
-                </p>
-              )}
-            </div>
-          ) : entities.length > 0 ? (
-            <Combobox
-              id="entity-select"
-              className="mt-1"
-              value={entityId}
-              onValueChange={setEntityId}
-              options={[
-                { value: "", label: "Select…" },
-                ...entities.map((entity) => ({
-                  value: entity.id,
-                  label: entity.name,
-                })),
-              ]}
-              placeholder="Select…"
-            />
-          ) : (
-            <Input
-              id="entity-select"
-              className="mt-1 font-mono text-xs"
-              placeholder={entitiesLoading ? "Loading…" : "uuid"}
-              value={entityId}
-              onChange={(e) => setEntityId(e.target.value)}
-            />
-          )}
-          {!authOn && (
-            <>
-              <Label htmlFor="actor-id" className="mt-2">
-                Actor ID (dev)
-              </Label>
-              <Input
-                id="actor-id"
-                className="mt-1 font-mono text-xs"
-                value={actorId}
-                onChange={(e) => setActorId(e.target.value)}
+          <Label htmlFor="sidebar-active-restaurant">Restaurant</Label>
+          <div className="mt-1" id="sidebar-active-restaurant">
+            {activeEntity ? (
+              <EntityBadge
+                entityId={activeEntity.id}
+                name={activeEntity.name}
+                className="w-full"
               />
-            </>
-          )}
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {entitiesLoading ? "Loading…" : "Use the account menu to switch"}
+              </p>
+            )}
+          </div>
         </div>
         <nav className="flex-1 space-y-4 p-3">
           {navGroups.map((group) => {
@@ -199,7 +151,7 @@ function AppShellInner({
                 ⌘K
               </kbd>
             </Button>
-            {authOn && <AccountMenu />}
+            <AccountMenu />
           </div>
         </header>
         <main className="flex-1 p-6">{children}</main>
