@@ -56,10 +56,21 @@ pg_restore --no-owner --no-acl --dbname="postgresql://mizan:PASSWORD@host:5432/$
 **Option B — restore to scratch first (recommended sanity check)**
 
 ```bash
-python -m app.features.backups.cli verify
+cd backend
+./scripts/verify_backup_restore.sh
+# or: python -m app.features.backups.cli verify
 ```
 
 This restores the latest stored backup into a throwaway DB and runs ledger integrity checks.
+
+**Full staging drill (backup + verify):**
+
+```bash
+cd backend
+./scripts/run_backup_drill.sh
+```
+
+Run on staging managed Postgres before trusting production backups (`DEPLOY.md` §11).
 
 ## 4. Restore uploads
 
@@ -99,13 +110,17 @@ docker compose --profile workers up -d celery-worker celery-beat
 ## Scheduled backups
 
 - **Schedule:** Celery Beat daily at `BACKUP_SCHEDULE_HOUR:BACKUP_SCHEDULE_MINUTE` UTC (default 03:00)
+- **Pipeline:** backup → restore-verify (scratch DB) → retention prune
 - **Retention:** 14 daily + 8 weekly (configurable)
+- **Failure visibility:** worker logs `daily backup task failed` on ERROR; configure Render alert (see `DEPLOY.md` §11)
 - **Manual run:**
 
 ```bash
 cd backend
 python -m app.features.backups.cli run
+python -m app.features.backups.cli verify
 python -m app.features.backups.cli prune
+# or: ./scripts/run_backup_drill.sh
 ```
 
 ## Environment variables

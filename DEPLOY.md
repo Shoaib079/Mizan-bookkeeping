@@ -137,8 +137,62 @@ Without both, sign-in succeeds in Clerk but API calls fail with auth errors.
 
 1. Create a private bucket (R2 or S3).
 2. Create access keys with write-only scope to that bucket.
-3. Set `BACKUP_S3_*` vars on **api** and **celery-worker** (see `.env.production.example`).
-4. Scheduled backups run via Celery beat (default 03:00 UTC). Full restore drill is Slice 12.3.
+3. Set `BACKUP_S3_*` vars on **celery-worker** and **celery-beat** (see `.env.production.example`). The API service does not need S3 backup vars unless you run manual backups from the API shell.
+4. Scheduled backups run via Celery beat (default **03:00 UTC**): backup → restore-verify into scratch DB → retention prune.
+5. **Staging-first:** run the full drill on staging (§11) before trusting production backups.
+
+**Live checklist (Slice 12.3):**
+
+| Item | How |
+|------|-----|
+| Off-site storage | `BACKUP_S3_*` on worker + beat; artifacts in private bucket with SSE |
+| Verify after backup | Celery task calls `verify_latest_backup()` after each run; manual: `verify_backup_restore.sh` |
+| Alert on failure | Celery logs `daily backup task failed` on worker; configure Render log drain / alert on ERROR (§11) |
+| Owner drill | Staging: `run_backup_drill.sh` or wait for schedule + `verify_backup_restore.sh` |
+
+---
+
+## 11. Backup restore drill (Slice 12.3 — owner, staging first)
+
+Prove backups are restorable **before** production cutover. Run on **staging** managed Postgres first; repeat on production after staging passes.
+
+### Prerequisites
+
+- `DATABASE_URL` and `DATABASE_ADMIN_URL` point at the target stack (admin URL can create/drop databases).
+- `BACKUP_S3_*` configured on the Celery worker (same as scheduled backups).
+- PostgreSQL client tools on the shell host (`postgresql-client` — already in `backend/Dockerfile` for Render worker).
+
+### Option A — one-liner drill (recommended)
+
+On the Render **celery-worker** shell (or any host with env vars loaded):
+
+```bash
+cd backend
+./scripts/run_backup_drill.sh
+```
+
+This creates a fresh backup, uploads to S3/local storage, restores the latest artifact into a throwaway database, and runs ledger integrity checks (debits = credits, control accounts tie, upload paths resolve).
+
+### Option B — verify an existing scheduled backup
+
+After beat has run (or after `python -m app.features.backups.cli run`):
+
+```bash
+cd backend
+./scripts/verify_backup_restore.sh
+```
+
+Scripts load `backend/.env` when present; otherwise export vars in the shell. Exit code **0** prints `PASS`; non-zero prints `FAIL`.
+
+### Option C — manual restore from S3
+
+Download the latest `mizan-backup-*.tar.gz` from the bucket and follow `OPS_RESTORE.md` for a full cutover restore (maintenance window required).
+
+### Alert on backup failure
+
+1. **Render:** enable log streaming or an alert on the worker service when logs contain `daily backup task failed`.
+2. **Manual check:** after first deploy, confirm worker logs show `daily backup completed` the morning after beat runs.
+3. Do **not** promote a restore to production if `verify_backup_restore.sh` fails — see `IntegrityCheckError` details in `OPS_RESTORE.md`.
 
 ---
 
@@ -202,6 +256,8 @@ Then walk through: sign up → create restaurant → seed chart → one expense 
 | `.env.production.example` | Full env catalog |
 | `backend/scripts/migrate_production.sh` | `alembic upgrade head` (no drop) |
 | `backend/scripts/verify_production_db.sh` | RLS + trigger integrity check |
+| `backend/scripts/verify_backup_restore.sh` | Latest backup → scratch DB → integrity verify |
+| `backend/scripts/run_backup_drill.sh` | Backup + restore-verify one-liner (staging drill) |
 | `scripts/smoke_staging.sh` | Post-deploy health + CORS smoke |
 | `backend/app/db/provisioning.py` | `run_production_migrations()`, `verify_production_database()` |
 | `backend/app/launch.py` | Production auth/CORS/key guards |

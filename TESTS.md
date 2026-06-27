@@ -69,8 +69,9 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `frontend/src/lib/api-error-message.test.ts` | Reports landing — `apiErrorMessage()` prefers ApiError, falls back safely | pass |
 | `frontend/src/lib/review-status.test.ts` | Review screens — `isReviewTerminalStatus()` for posted/rejected guard | pass |
 | `backend/tests/test_idempotency.py` | Mutation idempotency — repeated key dedups, different keys both succeed, enforcement requires header, auth-scoped keys, client retry contract (Slice 11.19) | pass |
+| `backend/tests/test_backups.py` | Automated backups — bundle manifest/checksum, retention, `@requires_pg_tools` restore+integrity E2E (runs in CI with postgresql-client) | pass |
 
-**Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
+**Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed. Backup restore E2E tests skip locally when `pg_dump`/`pg_restore` absent; install via `brew install libpq` or rely on CI.
 
 **Count:** 605 pytest + 84 vitest (last run 2026-06-27).
 

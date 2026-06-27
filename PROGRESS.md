@@ -7,12 +7,12 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.3** — backup restore drill (planned) |
-| **Last completed slice** | Phase 12 Slice 12.2 — production provisioning (`v0.71.1-prod-provisioning`) |
+| **Active slice** | **12.4** — observability |
+| **Last completed slice** | Phase 12 Slice 12.3 — backup restore drill (`v0.71.2-backup-restore-drill`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.1-prod-provisioning` |
+| **Last tag** | `v0.71.2-backup-restore-drill` |
 
-## Owner blockers (12.2)
+## Owner blockers (12.3)
 
 Owner must run against their staging/prod hosts (not automatable in CI):
 
@@ -20,8 +20,18 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 - Run `backend/scripts/migrate_production.sh` and `verify_production_db.sh` with real `DATABASE_URL` / `DATABASE_ADMIN_URL`.
 - Run `scripts/smoke_staging.sh` against deployed staging API before production cutover.
 - Flip Clerk live keys on Render + Netlify for production — API guard blocks `sk_test_` / `pk_test_` when `APP_ENV=production`.
+- **Staging backup drill:** `backend/scripts/run_backup_drill.sh` (or verify after scheduled beat) per `DEPLOY.md` §11 before trusting prod backups.
 
 ## Resume point
+
+**Phase 12 Slice 12.3 complete** — backup restore drill (`v0.71.2-backup-restore-drill`):
+- `backend/scripts/verify_backup_restore.sh`, `run_backup_drill.sh`
+- CI `postgresql-client` so restore tests run in pipeline
+- Celery `run_daily_backup` failure/success logging
+- `DEPLOY.md` §11 + `OPS_RESTORE.md` owner drill runbook
+- **605 pytest green**
+
+**Next:** Phase 12 Slice 12.4 — observability (error monitoring before go-live).
 
 **Phase 12 Slice 12.2 complete** — production provisioning (`v0.71.1-prod-provisioning`):
 - `run_production_migrations()` + `verify_production_database()` in `provisioning.py`
@@ -30,8 +40,6 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 - Render `preDeployCommand`; launch guards (Clerk live keys, CORS)
 - `DEPLOY.md` Slice 12.2 runbook
 - **605 pytest green** (+9)
-
-**Next:** Phase 12 Slice 12.3 — backup restore drill (managed Postgres backup → restore → assert books tie).
 
 **Phase 12 Slice 12.1 complete** — hosting & infrastructure scaffolding (`v0.71.0-hosting-infrastructure`):
 - `netlify.toml` (frontend base, security headers, optional API proxy)

@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "verify":
         result = service.verify_latest_backup()
         print(result.message)
-        return 0
+        return 0 if result.checks_passed else 1
     if args.command == "prune":
         removed = service.prune_old_backups()
         print(f"pruned {len(removed)} backup(s)")

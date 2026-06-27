@@ -24,6 +24,16 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Alternatives considered:** Railway (equivalent to Render — documented in DEPLOY.md); Netlify Functions for API (rejected — FastAPI + Celery + pg_dump need a long-running host).
 
+## 2026-06-27 — Backup restore drill (Phase 12 Slice 12.3)
+
+**Choice:** Restore-verify is a **real drill**, not a code-only checkbox — shell scripts (`verify_backup_restore.sh`, `run_backup_drill.sh`) for owner staging/prod on managed Postgres; CI installs `postgresql-client` so pytest restore tests run in pipeline when pg tools are present.
+
+**Pipeline:** Celery beat runs backup → `verify_latest_backup()` (scratch DB + ledger integrity) → prune; failures log at ERROR on worker (`daily backup task failed`).
+
+**Owner runbook:** `DEPLOY.md` §11 + `OPS_RESTORE.md`; staging-first before production trust.
+
+**Alternatives considered:** New `/health/backup` endpoint (rejected — verify is heavy, owner-triggered); skip CI pg tools (rejected — restore path never exercised in CI).
+
 ## 2026-06-24 — Card-tip day ops guidance (Phase 8.8 H4)
 
 **Choice:** When Z ≠ system card, Needs Review `review_reason` explains the owner workflow instead of a generic mismatch line. If Z exceeds system card: on re-confirm, reallocate cash→card so card equals Z (same daily total), record the tip on the expense paper (`Dr 5700 / Cr cash`), then confirm again. Decisions §9 operator note documents the same steps.

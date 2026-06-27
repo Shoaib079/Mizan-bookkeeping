@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.3** — backup restore drill |
-| **Last completed slice** | Phase 12 Slice 12.2 — production provisioning (`v0.71.1-prod-provisioning`) |
-| **Last commit/tag** | `v0.71.1-prod-provisioning` |
-| **Next up** | Phase 12 Slice 12.3 — backup restore drill |
+| **Active slice** | **12.4** — observability |
+| **Last completed slice** | Phase 12 Slice 12.3 — backup restore drill (`v0.71.2-backup-restore-drill`) |
+| **Last commit/tag** | `v0.71.2-backup-restore-drill` |
+| **Next up** | Phase 12 Slice 12.4 — observability |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1355,8 +1355,8 @@ Take the tested app to a real, secure production environment and put real data i
 | 0b. Modern account menu + switch safeguards | **done** (`v0.70.2-restaurant-switcher-safeguards`) | Top-right account menu (avatar, name+email, account/settings, **Clerk sign out**); restaurant switch moved here with always-visible per-restaurant colour badge, confirm-on-switch, unsaved-work warning, "Recording for: X" on entry forms. Reduces wrong-restaurant entry risk. |
 | 0c. Member management: add existing user to another restaurant by email | **done** (`v0.70.3-member-add-by-email`) | `POST /entities/{id}/members` accepts email (+ optional display_name) — reuses existing user or creates one, then membership; friendly 409 when already a member. `member-form.tsx` single POST. |
 | 1. Hosting & infrastructure | **done** (`v0.71.0-hosting-infrastructure`) | Deployment scaffolding: `netlify.toml`, `backend/Dockerfile`, `render.yaml`, `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`. Owner provisions Postgres, Redis, backend, Netlify, S3. |
-| 2. Production provisioning | planned | Stand up the DB via canonical `alembic upgrade head` (schema owner + `mizan_app` grants — `v0.67.2`); confirm RLS + immutability triggers; Clerk **production** keys; `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE` off. |
-| 3. Backups live | planned | Scheduled backups to off-site storage; restore-verify in production; alert on failure. |
+| 2. Production provisioning | **done** (`v0.71.1-prod-provisioning`) | Migrate/verify scripts, `/health/ready`, smoke script, Render preDeploy, launch guards |
+| 3. Backups live | **done** (`v0.71.2-backup-restore-drill`) | Restore drill scripts, CI pg tools, Celery failure logging, owner runbook |
 | 4. Observability | planned | Error tracking, structured logging, uptime/health checks, basic rate limiting. |
 | 5. Pre-launch security pass | planned | Dependency scan; secrets audit; full suite under production settings; final guard-test run. |
 | 6. Owner onboarding & smoke test | planned | Real restaurant(s), chart, opening balances, users/roles; end-to-end smoke in production; **go live.** |
@@ -1489,14 +1489,37 @@ Take the tested app to a real, secure production environment and put real data i
 - [x] `DEPLOY.md` — full Slice 12.2 staging-first runbook
 - [x] Tests: `test_db_provisioning.py`, `test_health.py`, `test_launch_settings.py`; full pytest green
 
-**Out of scope (12.3+):** backup restore drill (12.3), observability (12.4), owner walkthrough (12.6).
+**Out of scope (12.4+):** observability (12.4), owner walkthrough (12.6).
+
+---
+
+### Slice 12.3 — Backup restore drill
+
+| | |
+|---|---|
+| **Status** | **done** (`v0.71.2-backup-restore-drill`) |
+| **Suggested tag** | `v0.71.2-backup-restore-drill` |
+
+**Purpose:** Make backup→restore a real drill, not a checkbox — owner runbook + scripts for managed Postgres staging/prod, CI path so restore-verify runs when pg tools are available, and backups-live checklist (scheduled off-site, verify after backup, alert on failure).
+
+**Acceptance:**
+
+- [x] `backend/scripts/verify_backup_restore.sh` — loads `backend/.env` or env vars; checks `pg_tools_available()`; runs `python -m app.features.backups.cli verify`; non-zero exit + plain PASS/FAIL echo
+- [x] `backend/scripts/run_backup_drill.sh` — backup then verify one-liner for staging drill
+- [x] CI installs `postgresql-client` before pytest so `@requires_pg_tools` backup restore tests run in pipeline
+- [x] Celery `run_daily_backup` logs clearly on failure (`logger.exception`) and success summary
+- [x] `DEPLOY.md` §11 + §7 — staging-first drill, S3 checklist, Render alert guidance
+- [x] `OPS_RESTORE.md` — drill scripts + scheduled pipeline (backup → verify → prune)
+- [x] Tests: `test_backups.py` restore tests run when pg tools in PATH (CI); full pytest green
+
+**Out of scope (12.4+):** observability (12.4), owner walkthrough (12.6).
 
 ---
 
 **Senior-dev pre-deploy must-dos (fold into the slices above — flagged 2026-06-27):**
 
 - **Staging dry-run first.** Deploy to a prod-like **staging** env and run the full smoke test there before touching production. Don't let prod be the first real deploy.
-- **Real backup→restore drill on managed Postgres.** The 2 skipped backup tests are skipped because `pg_dump`/`pg_restore` aren't in the local PATH — so restore-verify has **never actually run end-to-end**. Before trusting backups, do one real backup → restore into a scratch DB → assert the books tie, on the actual managed Postgres. (Slice 12.3 — make it a real drill, not a checkbox.)
+- **Real backup→restore drill on managed Postgres.** The 2 skipped backup tests are skipped because `pg_dump`/`pg_restore` aren't in the local PATH — so restore-verify has **never actually run end-to-end**. Before trusting backups, do one real backup → restore into a scratch DB → assert the books tie, on the actual managed Postgres. (**Slice 12.3 done** — owner runs `run_backup_drill.sh` on staging per `DEPLOY.md` §11.)
 - **Error monitoring live BEFORE go-live** (Sentry-or-equiv), so the first real bug is visible. (Slice 12.4.)
 - **Data protection (KVKK) note.** The app stores financial + personal data (staff names, supplier/customer VKN). At minimum: encryption at rest, restricted backup-store access (separate account/region), and a known data-deletion path. Conscious decision required before storing real people's data. (Slice 12.5.)
 - **Cold-start onboarding walkthrough as the owner.** Sign up → create restaurant → seed chart → opening balances → invite staff → record a day → run a report. Do it as a first-time non-coder and fix any dead-end. (Slice 12.6.)
@@ -1537,6 +1560,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-27 | Phase 12 Slice 12.3 — backup restore drill | `v0.71.2-backup-restore-drill` | verify/drill scripts, CI postgresql-client, Celery failure logs, DEPLOY/OPS runbook; 605 pytest |
 | 2026-06-27 | Phase 12 Slice 12.2 — production provisioning | `v0.71.1-prod-provisioning` | migrate/verify scripts, `/health/ready`, smoke script, Render preDeploy, launch guards, DEPLOY runbook; 605 pytest |
 | 2026-06-27 | Phase 12 Slice 12.1 — hosting & infrastructure | `v0.71.0-hosting-infrastructure` | `netlify.toml`, `backend/Dockerfile`, `render.yaml`, `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`; 596 pytest |
 | 2026-06-27 | Phase 12 Slice 0c — member add-by-email | `v0.70.3-member-add-by-email` | Email-based member invite; reuse existing user across restaurants; 592 pytest |
