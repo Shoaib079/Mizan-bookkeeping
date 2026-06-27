@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.5** — pre-launch security pass |
-| **Last completed slice** | Phase 12 Slice 12.4 — observability (`v0.71.3-observability`) |
-| **Last commit/tag** | `v0.71.3-observability` |
-| **Next up** | Phase 12 Slice 12.5 — pre-launch security pass |
+| **Active slice** | **12.6** — owner onboarding & smoke test |
+| **Last completed slice** | Phase 12 Slice 12.5 — pre-launch security pass (`v0.71.4-prelaunch-security`) |
+| **Last commit/tag** | `v0.71.4-prelaunch-security` |
+| **Next up** | Phase 12 Slice 12.6 — owner onboarding & smoke test |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1537,12 +1537,36 @@ Take the tested app to a real, secure production environment and put real data i
 
 ---
 
+### Slice 12.5 — Pre-launch security pass
+
+| | |
+|---|---|
+| **Status** | **done** (`v0.71.4-prelaunch-security`) |
+| **Suggested tag** | `v0.71.4-prelaunch-security` |
+
+**Purpose:** Dependency CVE scan, secrets audit, production-settings guard pytest, and documented KVKK/data-protection conscious decision before storing real people's data.
+
+**Acceptance:**
+
+- [x] `backend/scripts/security_dependency_scan.sh` — `pip-audit` on production deps; fails on known CVEs
+- [x] `pip-audit` in `pyproject.toml` dev deps; CI step before full pytest
+- [x] `backend/scripts/security_secrets_audit.sh` — tracked-source scan (Clerk/AWS/PEM patterns); excludes `.env`, `node_modules`, `.venv`; non-zero on hits
+- [x] `backend/scripts/security_production_pytest.sh` — `test_launch_settings.py` + `test_security_invariants.py` with production-like auth/CORS; `APP_ENV=test` for DB
+- [x] CI: dependency scan + secrets audit + production guard pytest wired in `.github/workflows/ci.yml`
+- [x] `DEPLOY.md` §14 — security scripts, owner secrets checklist, KVKK conscious decision, pre-go-live gate
+- [x] `test_security_invariants.py` run sequentially as slice verification; recorded in `TESTS.md` as pre-go-live gate
+- [x] Full pytest green
+
+**Out of scope (12.6+):** owner onboarding walkthrough (12.6).
+
+---
+
 **Senior-dev pre-deploy must-dos (fold into the slices above — flagged 2026-06-27):**
 
 - **Staging dry-run first.** Deploy to a prod-like **staging** env and run the full smoke test there before touching production. Don't let prod be the first real deploy.
 - **Real backup→restore drill on managed Postgres.** The 2 skipped backup tests are skipped because `pg_dump`/`pg_restore` aren't in the local PATH — so restore-verify has **never actually run end-to-end**. Before trusting backups, do one real backup → restore into a scratch DB → assert the books tie, on the actual managed Postgres. (**Slice 12.3 done** — owner runs `run_backup_drill.sh` on staging per `DEPLOY.md` §11.)
 - **Error monitoring live BEFORE go-live** (Sentry-or-equiv), so the first real bug is visible. (**Slice 12.4 done** — owner sets `SENTRY_DSN` on Render per `DEPLOY.md` §12.)
-- **Data protection (KVKK) note.** The app stores financial + personal data (staff names, supplier/customer VKN). At minimum: encryption at rest, restricted backup-store access (separate account/region), and a known data-deletion path. Conscious decision required before storing real people's data. (Slice 12.5.)
+- **Data protection (KVKK) note.** The app stores financial + personal data (staff names, supplier/customer VKN). At minimum: encryption at rest, restricted backup-store access (separate account/region), and a known data-deletion path. Conscious decision required before storing real people's data. (**Slice 12.5 done** — owner sign-off checklist in `DEPLOY.md` §14.)
 - **Cold-start onboarding walkthrough as the owner.** Sign up → create restaurant → seed chart → opening balances → invite staff → record a day → run a report. Do it as a first-time non-coder and fix any dead-end. (Slice 12.6.)
 - **Indexes: OK** — entity_id is indexed across tables and journal entries have date/source indexes; no action needed now. Revisit composite report indexes only if a report slows with real volume.
 
@@ -1581,6 +1605,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-27 | Phase 12 Slice 12.5 — pre-launch security pass | `v0.71.4-prelaunch-security` | pip-audit deps, secrets audit, production guard pytest, DEPLOY §14 KVKK; CI wired; 611 pytest |
 | 2026-06-27 | Phase 12 Slice 12.4 — observability | `v0.71.3-observability` | Sentry optional DSN, JSON logs, request logging, rate limit middleware, DEPLOY §12; 611 pytest |
 | 2026-06-27 | Phase 12 Slice 12.3 — backup restore drill | `v0.71.2-backup-restore-drill` | verify/drill scripts, CI postgresql-client, Celery failure logs, DEPLOY/OPS runbook; 605 pytest |
 | 2026-06-27 | Phase 12 Slice 12.2 — production provisioning | `v0.71.1-prod-provisioning` | migrate/verify scripts, `/health/ready`, smoke script, Render preDeploy, launch guards, DEPLOY runbook; 605 pytest |

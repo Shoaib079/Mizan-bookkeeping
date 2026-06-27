@@ -41,5 +41,23 @@ jobs:
       - name: Install PostgreSQL client tools (backup restore tests)
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
+      - name: Dependency security scan (pip-audit)
+        run: bash backend/scripts/security_dependency_scan.sh
+
+      - name: Secrets audit (tracked source)
+        run: bash backend/scripts/security_secrets_audit.sh
+
+      - name: Production guard pytest
+        env:
+          AUTH_ENFORCEMENT: "true"
+          CLERK_TEST_MODE: "false"
+          CORS_ORIGINS: https://app.example.com
+          CLERK_JWKS_URL: https://example.clerk.accounts.dev/.well-known/jwks.json
+          CLERK_ISSUER: https://example.clerk.accounts.dev
+          CLERK_AUDIENCE: pk_live_ci_placeholder
+          CLERK_SECRET_KEY: sk_live_ci_placeholder
+          CLERK_PUBLISHABLE_KEY: pk_live_ci_placeholder
+        run: bash backend/scripts/security_production_pytest.sh
+
       - name: Fresh-install verify (clean venv, boot, full pytest)
         run: bash backend/scripts/verify_fresh_install.sh

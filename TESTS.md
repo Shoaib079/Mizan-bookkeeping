@@ -7,6 +7,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_health.py` | API liveness (`/health`) + readiness (`/health/ready` DB ping, 503 when down) | pass |
 | `backend/tests/test_observability.py` | Sentry optional init, production JSON logging, rate limit 429 + health exempt (Slice 12.4) | pass |
 | `backend/tests/test_launch_settings.py` | Production boot guards — CORS, Clerk live keys (Slice 12.2) | pass |
+| `backend/tests/test_security_invariants.py` | **Pre-go-live gate** — route auth guards, single posting boundary, RLS registry parity, immutability registry, PDF/font packaging guards; run via `security_production_pytest.sh` (Slice 12.5) | pass |
 | `backend/tests/test_cors_config.py` | `CORS_ORIGINS` parse + localhost preflight (Slice 12.1) | pass |
 | `backend/tests/test_money.py` | Integer kuruş, Turkish format, loose parse (Decisions §5) | pass |
 | `frontend/src/lib/money.test.ts` | Strict TRY parse — garbage rejection, Turkish comma/dot rules (CURSOR_RULES §1 rule 15) | pass |
@@ -73,6 +74,8 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_backups.py` | Automated backups — bundle manifest/checksum, retention, `@requires_pg_tools` restore+integrity E2E (runs in CI with postgresql-client) | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed. Backup restore E2E tests skip locally when `pg_dump`/`pg_restore` absent; install via `brew install libpq` or rely on CI.
+
+**Pre-go-live security gate (Slice 12.5):** After full pytest, run `bash backend/scripts/security_production_pytest.sh` (or CI production-guard job). Must include `test_security_invariants.py` green under production-like auth env. Also run `security_dependency_scan.sh` and `security_secrets_audit.sh` — see `DEPLOY.md` §14.
 
 **Count:** 611 pytest + 84 vitest (last run 2026-06-27).
 

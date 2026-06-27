@@ -276,15 +276,85 @@ The API applies an in-memory **60 requests/minute per IP** limit in production (
 
 ---
 
+## 14. Pre-launch security pass (Slice 12.5)
+
+Run these **before storing real people's data** (staff, suppliers, customers). CI runs the same scripts on every push to `main`.
+
+### Dependency CVE scan
+
+```bash
+cd backend
+bash scripts/security_dependency_scan.sh
+```
+
+Uses `pip-audit` on **production** dependencies only (dev/test packages excluded). Fails on known CVEs. Wired in `.github/workflows/ci.yml`.
+
+### Secrets audit
+
+```bash
+bash backend/scripts/security_secrets_audit.sh
+```
+
+Scans **git-tracked** files for likely hardcoded secrets (long Clerk keys, AWS `AKIA…`, PEM private keys). Skips `.env`, `node_modules`, `.venv`. Exits non-zero on hits.
+
+**Owner checklist — secrets:**
+
+| Check | Action |
+|-------|--------|
+| No secrets in git | Real keys only in Render / Netlify secret stores — never commit `.env` |
+| Rotate if leaked | If a key ever appeared in git history, rotate in Clerk/AWS and update host env |
+| Templates only in repo | `.env.example` / `.env.production.example` use placeholders only |
+| Backup keys separate | S3/R2 backup credentials in worker env only — not in frontend |
+
+### Production-settings guard pytest
+
+```bash
+cd backend
+bash scripts/security_production_pytest.sh
+```
+
+Runs `test_launch_settings.py` + `test_security_invariants.py` with production-like auth/CORS env (`AUTH_ENFORCEMENT=true`, live Clerk placeholders, non-localhost `CORS_ORIGINS`). **Database stays on the test DB** — script sets `APP_ENV=test` so conftest provisions `mizan_test` (never point this at production Postgres).
+
+Manual equivalent:
+
+```bash
+cd backend
+APP_ENV=test AUTH_ENFORCEMENT=true CLERK_TEST_MODE=false \
+  CORS_ORIGINS=https://app.example.com \
+  CLERK_JWKS_URL=https://example.clerk.accounts.dev/.well-known/jwks.json \
+  CLERK_ISSUER=https://example.clerk.accounts.dev \
+  CLERK_AUDIENCE=pk_live_example \
+  .venv/bin/pytest -q tests/test_launch_settings.py tests/test_security_invariants.py
+```
+
+**Pre-go-live gate:** full `pytest` green **and** `test_security_invariants.py` green under production-like env (above script or CI job).
+
+### Data protection (KVKK) — conscious decision
+
+Mizan stores **financial and personal data**: staff names, supplier/customer VKN, bank movements, audit history. Before onboarding real restaurants and people, confirm:
+
+| Topic | Launch minimum |
+|-------|----------------|
+| **Encryption at rest** | Use a managed Postgres provider (Neon, Supabase, Render Postgres) with **encryption at rest enabled** on the cluster. TLS in transit via `sslmode=require` on `DATABASE_URL`. |
+| **Backup bucket access** | Private S3/R2 bucket; SSE enabled; credentials on Celery worker only; **separate** cloud account or restricted IAM — not the same keys as public-facing services. |
+| **Data deletion** | Per-entity data is partitioned by `entity_id` + RLS. **Owner process today:** contact operator to delete an entity and backups per retention policy; no self-service “delete my restaurant” UI in v1. Document who can request erasure and expected timeline before go-live. |
+| **Conscious go/no-go** | Do **not** store real people's data until encryption, backup access, and deletion path above are acceptable to you as data controller under KVKK. |
+
+This is an **owner sign-off item**, not fully automatable in CI.
+
+---
+
 ## 13. Production cutover checklist
 
 1. Staging smoke green (migrate, verify, `/health/ready`, CORS, Clerk JWT template).
-2. Production Postgres: `migrate_production.sh` + `verify_production_db.sh`.
-3. Flip Clerk to **live** keys on production API + Netlify.
-4. Set production `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL`.
-5. Deploy API (pre-deploy migrate runs automatically on Render).
-6. Run `./scripts/smoke_staging.sh` against production URLs.
-7. Record first real entity data; confirm Celery worker + beat logs show Redis connected.
+2. **Security pass (§14):** `security_dependency_scan.sh`, `security_secrets_audit.sh`, `security_production_pytest.sh` all green.
+3. **KVKK sign-off (§14):** encryption at rest, backup bucket access, data-deletion path accepted before real people's data.
+4. Production Postgres: `migrate_production.sh` + `verify_production_db.sh`.
+5. Flip Clerk to **live** keys on production API + Netlify.
+6. Set production `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL`.
+7. Deploy API (pre-deploy migrate runs automatically on Render).
+8. Run `./scripts/smoke_staging.sh` against production URLs.
+9. Record first real entity data; confirm Celery worker + beat logs show Redis connected.
 
 ---
 
@@ -300,6 +370,9 @@ The API applies an in-memory **60 requests/minute per IP** limit in production (
 | `backend/scripts/verify_production_db.sh` | RLS + trigger integrity check |
 | `backend/scripts/verify_backup_restore.sh` | Latest backup → scratch DB → integrity verify |
 | `backend/scripts/run_backup_drill.sh` | Backup + restore-verify one-liner (staging drill) |
+| `backend/scripts/security_dependency_scan.sh` | pip-audit CVE scan on production deps (Slice 12.5) |
+| `backend/scripts/security_secrets_audit.sh` | Tracked-source secret pattern scan (Slice 12.5) |
+| `backend/scripts/security_production_pytest.sh` | Guard tests under production-like auth env (Slice 12.5) |
 | `scripts/smoke_staging.sh` | Post-deploy health + CORS smoke |
 | `backend/app/db/provisioning.py` | `run_production_migrations()`, `verify_production_database()` |
 | `backend/app/launch.py` | Production auth/CORS/key guards |

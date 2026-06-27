@@ -24,6 +24,14 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Alternatives considered:** Railway (equivalent to Render — documented in DEPLOY.md); Netlify Functions for API (rejected — FastAPI + Celery + pg_dump need a long-running host).
 
+## 2026-06-27 — Pre-launch security pass (Phase 12 Slice 12.5)
+
+**Choice:** Automated pre-go-live gate in CI + owner scripts — `pip-audit` on **production** dependencies only (`security_dependency_scan.sh`); tracked-source secret pattern scan (`security_secrets_audit.sh`); production-like auth/CORS env pytest for `test_launch_settings.py` + `test_security_invariants.py` with `APP_ENV=test` for DB (`security_production_pytest.sh`).
+
+**KVKK / data protection:** Documented owner conscious decision in `DEPLOY.md` §14 — encryption at rest (managed Postgres), restricted backup-bucket credentials, known entity-deletion path (operator process in v1; no self-service delete UI). Owner sign-off required before real people's data.
+
+**Not in slice:** Self-service GDPR/KVKK erasure UI; automated KVKK compliance certification.
+
 ## 2026-06-27 — Observability (Phase 12 Slice 12.4)
 
 **Choice:** Optional **Sentry** via `SENTRY_DSN` — `sentry-sdk[fastapi]` init at boot when set; no DSN = no error tracking (dev/test unchanged). Production **JSON logs** on stderr + request logging middleware (method, path, status, duration; no bodies/secrets).

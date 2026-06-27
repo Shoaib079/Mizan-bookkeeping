@@ -7,10 +7,17 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.5** — pre-launch security pass |
-| **Last completed slice** | Phase 12 Slice 12.4 — observability (`v0.71.3-observability`) |
+| **Active slice** | **12.6** — owner onboarding & smoke test |
+| **Last completed slice** | Phase 12 Slice 12.5 — pre-launch security pass (`v0.71.4-prelaunch-security`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.3-observability` |
+| **Last tag** | `v0.71.4-prelaunch-security` |
+
+## Owner blockers (12.5)
+
+Owner must confirm before storing real people's data (not automatable in CI):
+
+- Review `DEPLOY.md` §14 **KVKK conscious decision** — encryption at rest, backup bucket access, data-deletion path.
+- Run `security_dependency_scan.sh`, `security_secrets_audit.sh`, `security_production_pytest.sh` locally if not relying on CI alone.
 
 ## Owner blockers (12.4)
 
@@ -32,13 +39,21 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
+**Phase 12 Slice 12.5 complete** — pre-launch security pass (`v0.71.4-prelaunch-security`):
+- `security_dependency_scan.sh` (pip-audit prod deps), `security_secrets_audit.sh`, `security_production_pytest.sh`
+- CI: dependency scan + secrets audit + production guard pytest before full pytest
+- `DEPLOY.md` §14 — secrets checklist, KVKK conscious decision, pre-go-live gate
+- **611 pytest green**
+
+**Next:** Phase 12 Slice 12.6 — owner onboarding & smoke test.
+
 **Phase 12 Slice 12.4 complete** — observability (`v0.71.3-observability`):
 - Optional Sentry (`SENTRY_DSN`), JSON production logs, request logging middleware
 - In-memory rate limit 60/min per IP (production); health/docs exempt
 - `DEPLOY.md` §12 — Sentry, uptime, Render alerts owner runbook
 - **611 pytest green**
 
-**Next:** Phase 12 Slice 12.5 — pre-launch security pass.
+**Next:** Phase 12 Slice 12.6 — owner onboarding & smoke test.
 
 **Phase 12 Slice 12.3 complete** — backup restore drill (`v0.71.2-backup-restore-drill`):
 - `backend/scripts/verify_backup_restore.sh`, `run_backup_drill.sh`
