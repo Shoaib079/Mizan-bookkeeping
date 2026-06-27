@@ -8,20 +8,19 @@
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
 | **Active slice** | **12.1** — hosting & infrastructure (planned) |
-| **Last completed slice** | Phase 11 Slice 11.22 — small UI gaps (`v0.69.13-ui-gaps`) |
+| **Last completed slice** | Phase 12 Slice 12.0 — pre-launch UX (`v0.70.0-prelaunch-ux`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.13-ui-gaps` |
+| **Last tag** | `v0.70.0-prelaunch-ux` |
 
 ## Resume point
 
-**Phase 11 complete** — all slices through 11.22 shipped (`v0.69.13-ui-gaps`):
-- Expense receipt review: reject action + StatusBadge + terminal guard
-- Reports landing: surfaces `ApiError` on summary fetch failure
-- Removed dead header "This month" button
-- Vitest: `api-error-message.test.ts` (3), `review-status.test.ts` (2)
-- **591 pytest green**; frontend build green; **37 vitest**
+**Phase 12 Slice 12.0 complete** — pre-launch UX (`v0.70.0-prelaunch-ux`):
+- Sidebar regrouped: Sales, Expenses & suppliers, People, Customers, Cash & bank, Reports (nested GL + manual journals), Settings (three sub-pages)
+- Dashboard onboarding checklist — chart, OB, invite staff (admin), first day; dismissable; role-gated
+- Vitest: `app-routes.test.ts` (8), `onboarding.test.ts` (9)
+- **591 pytest green**; frontend build green; **54 vitest**
 
-**Next:** Phase 12 Slice 1 — hosting & infrastructure.
+**Next:** Phase 12 Slice 12.1 — hosting & infrastructure.
 
 - `DESIGN_SYSTEM.md` §5/§10 + ROADMAP 10.1 note updated (amends v0.66.0 icon-only)
 - **588 pytest green**; frontend build green; **16 vitest**

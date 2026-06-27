@@ -1349,7 +1349,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| 0. Pre-launch UX (sidebar regroup + onboarding nudge) | planned | App code, ship before deploy — see spec below. Non-coder owner's first impression: regroup the flat `Books` nav into plain-language sections; guide first-run setup. No backend change. |
+| 0. Pre-launch UX (sidebar regroup + onboarding nudge) | **done** (`v0.70.0-prelaunch-ux`) | Sidebar regrouped into Sales / Expenses & suppliers / People / Customers / Cash & bank / Reports / Settings; dashboard onboarding checklist |
 | 1. Hosting & infrastructure | planned | Provision managed Postgres + Redis + app host + object storage (uploads & backups); set all secrets/env vars; HTTPS/SSL + domain. |
 | 2. Production provisioning | planned | Stand up the DB via canonical `alembic upgrade head` (schema owner + `mizan_app` grants — `v0.67.2`); confirm RLS + immutability triggers; Clerk **production** keys; `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE` off. |
 | 3. Backups live | planned | Scheduled backups to off-site storage; restore-verify in production; alert on failure. |
@@ -1361,14 +1361,14 @@ Take the tested app to a real, secure production environment and put real data i
 
 | | |
 |---|---|
-| **Status** | planned (do before deploy; pure frontend) |
+| **Status** | **done** (`v0.70.0-prelaunch-ux`) |
 | **Suggested tag** | `v0.70.0-prelaunch-ux` |
 
 **Problem:** The `Books` nav group is a flat ~17-item wall (`app-routes.ts`) — overwhelming for a non-coder owner, with related items scattered. And first-run gives no guidance toward setup.
 
 **Acceptance:**
 
-- [ ] **Regroup the sidebar** (edit `group` labels in `app-routes.ts` + group rendering in `app-shell.tsx`; keep every route + the command palette intact — only the grouping changes):
+- [x] **Regroup the sidebar** (edit `group` labels in `app-routes.ts` + group rendering in `app-shell.tsx`; keep every route + the command palette intact — only the grouping changes):
   - **Sales** — Sales, Close day, Cards, Delivery (+ Platforms / Reports / Settlements children)
   - **Expenses & suppliers** — Expenses, Uploads, Suppliers, Payables
   - **People** — Staff, Partners
@@ -1376,9 +1376,9 @@ Take the tested app to a real, secure production environment and put real data i
   - **Cash & bank** — Banking, Bank transfers, Cash drawer
   - **Reports** — Reports, General ledger, Manual journals
   - **Settings** — Restaurant settings, Opening balances, Members & roles
-- [ ] **Onboarding nudge:** on first run / when the active entity has **no seeded chart** or **no posted opening balances**, show a non-blocking guided checklist (seed chart → opening balances → invite staff → record first day). Dismissable; reflects real state (not a static banner).
-- [ ] Honor 11.21 role-aware chrome (don't show setup/admin steps to non-owners).
-- [ ] Tests: nav renders the new groups; every route still reachable; onboarding checklist appears when chart unseeded / OB not posted and hides once done.
+- [x] **Onboarding nudge:** on first run / when the active entity has **no seeded chart** or **no posted opening balances**, show a non-blocking guided checklist (seed chart → opening balances → invite staff → record first day). Dismissable; reflects real state (not a static banner).
+- [x] Honor 11.21 role-aware chrome (don't show setup/admin steps to non-owners).
+- [x] Tests: nav renders the new groups; every route still reachable; onboarding checklist appears when chart unseeded / OB not posted and hides once done.
 
 ---
 

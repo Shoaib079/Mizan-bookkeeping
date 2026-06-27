@@ -76,7 +76,7 @@ Semantic colours are used mainly as small badges/pills, not large fills.
 
 ## 6. Layout structure (the app shell)
 
-- **Left sidebar (white):** brand/logo at top → **entity (restaurant) switcher** → grouped nav: **Overview**, **Books** (Uploads, Needs review, Sales, Expenses, Suppliers, Payables, Banks, Cards, KDV/Tax …), **Reports**, **Settings**. Collapsible. Active item = blue tint + blue text/icon.
+- **Left sidebar (white):** brand/logo at top → **entity (restaurant) switcher** → grouped nav: **Overview**, **Sales**, **Expenses & suppliers**, **People**, **Customers**, **Cash & bank**, **Reports** (hub + General ledger + Manual journals nested), **Settings** (Restaurant settings, Opening balances, Members & roles). Collapsible. Active item = blue tint + blue text/icon.
 - **Top bar:** page title / breadcrumb · global **search** · date-range / period · primary action (e.g. **Upload**) · notifications · user avatar.
 - **Content area:** white, rounded cards and tables with hairline borders, generous spacing.
 

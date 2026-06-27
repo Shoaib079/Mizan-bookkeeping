@@ -105,8 +105,8 @@ describe("delivery setting filters", () => {
   });
 
   it("hides delivery nav item when module is off", () => {
-    const books = appRoutes.filter((r) => r.group === "Books" && !r.nestedUnder);
-    const filtered = filterNavItemsByEntitySettings(books, { deliveryEnabled: false });
+    const sales = appRoutes.filter((r) => r.group === "Sales" && !r.nestedUnder);
+    const filtered = filterNavItemsByEntitySettings(sales, { deliveryEnabled: false });
     expect(filtered.some((r) => r.href === "/delivery")).toBe(false);
   });
 

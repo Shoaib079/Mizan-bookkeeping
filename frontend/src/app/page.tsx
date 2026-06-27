@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useQuickActions } from "@/components/quick-actions";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
@@ -112,6 +113,8 @@ function DashboardBody() {
 
   return (
     <>
+      <OnboardingChecklist />
+
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <ReportDateRange
           from={range.from}

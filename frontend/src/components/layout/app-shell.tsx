@@ -18,7 +18,7 @@ import {
   navGroups,
   isNavChildActive,
   isNavItemActive,
-  sidebarChildren,
+  sidebarChildrenForNavItem,
   filterNavItemsByEntitySettings,
 } from "@/lib/app-routes";
 import { useEntity } from "@/lib/entity-context";
@@ -125,9 +125,10 @@ function AppShellInner({
                 <ul className="space-y-0.5">
                   {items.map((item) => {
                     const active = isNavItemActive(pathname, item);
-                    const children = deliveryEnabled
-                      ? sidebarChildren(item.href)
-                      : [];
+                    const children = sidebarChildrenForNavItem(
+                      item.href,
+                      navSettings,
+                    );
                     return (
                       <li key={item.href}>
                         <Link

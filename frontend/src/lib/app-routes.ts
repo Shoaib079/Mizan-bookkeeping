@@ -34,21 +34,22 @@ export type AppRoute = {
 
 export const appRoutes: AppRoute[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
-  { href: "/sales", label: "Sales", icon: ShoppingBag, group: "Books" },
+  { href: "/sales", label: "Sales", icon: ShoppingBag, group: "Sales" },
   {
     href: "/close-day",
     label: "Close day",
     keywords: "day close-out sales expenses",
     icon: ShoppingBag,
-    group: "Books",
+    group: "Sales",
   },
-  { href: "/delivery", label: "Delivery", icon: Truck, group: "Books" },
+  { href: "/cards", label: "Cards", icon: CreditCard, group: "Sales" },
+  { href: "/delivery", label: "Delivery", icon: Truck, group: "Sales" },
   {
     href: "/delivery/platforms",
     label: "Platforms",
     keywords: "delivery platforms",
     icon: Truck,
-    group: "Books",
+    group: "Sales",
     nestedUnder: "/delivery",
   },
   {
@@ -56,7 +57,7 @@ export const appRoutes: AppRoute[] = [
     label: "Reports",
     keywords: "delivery reports",
     icon: Truck,
-    group: "Books",
+    group: "Sales",
     nestedUnder: "/delivery",
   },
   {
@@ -64,19 +65,20 @@ export const appRoutes: AppRoute[] = [
     label: "Settlements",
     keywords: "delivery settlements",
     icon: Truck,
-    group: "Books",
+    group: "Sales",
     nestedUnder: "/delivery",
   },
-  { href: "/expenses", label: "Expenses", icon: Wallet, group: "Books" },
-  { href: "/uploads", label: "Uploads", icon: Upload, group: "Books" },
-  { href: "/suppliers", label: "Suppliers", icon: Users, group: "Books" },
-  { href: "/payables", label: "Payables", icon: HandCoins, group: "Books" },
-  { href: "/staff", label: "Staff", icon: UsersRound, group: "Books" },
-  { href: "/partners", label: "Partners", icon: Handshake, group: "Books" },
-  { href: "/customers", label: "Customers", icon: UserCircle, group: "Books" },
-  { href: "/receivables", label: "Receivables", icon: Banknote, group: "Books" },
-  { href: "/banking", label: "Banking", icon: Building2, group: "Books" },
-  { href: "/cards", label: "Cards", icon: CreditCard, group: "Books" },
+  { href: "/expenses", label: "Expenses", icon: Wallet, group: "Expenses & suppliers" },
+  { href: "/uploads", label: "Uploads", icon: Upload, group: "Expenses & suppliers" },
+  { href: "/suppliers", label: "Suppliers", icon: Users, group: "Expenses & suppliers" },
+  { href: "/payables", label: "Payables", icon: HandCoins, group: "Expenses & suppliers" },
+  { href: "/staff", label: "Staff", icon: UsersRound, group: "People" },
+  { href: "/partners", label: "Partners", icon: Handshake, group: "People" },
+  { href: "/customers", label: "Customers", icon: UserCircle, group: "Customers" },
+  { href: "/receivables", label: "Receivables", icon: Banknote, group: "Customers" },
+  { href: "/banking", label: "Banking", icon: Building2, group: "Cash & bank" },
+  { href: "/banking/transfers", label: "Bank transfers", icon: Building2, group: "Cash & bank" },
+  { href: "/banking/cash", label: "Cash drawer", icon: Wallet, group: "Cash & bank" },
   { href: "/reports", label: "Reports", icon: BarChart3, group: "Reports" },
   {
     href: "/reports/ledger",
@@ -114,8 +116,6 @@ export const appRoutes: AppRoute[] = [
     icon: Users,
     group: "Settings",
   },
-  { href: "/banking/transfers", label: "Bank transfers", icon: Building2, group: "Books" },
-  { href: "/banking/cash", label: "Cash drawer", icon: Wallet, group: "Books" },
   // New menu shortcuts (navigate to relevant list pages)
   { href: "/expenses", label: "New: Manual expense", keywords: "new expense", icon: Wallet, group: "New" },
   { href: "/expenses", label: "New: Cash tip", keywords: "5700 tips", icon: Wallet, group: "New" },
@@ -164,25 +164,40 @@ export function filterNavItemsByEntitySettings(
   return items.filter((item) => item.href !== "/delivery");
 }
 
-export const navGroups = [
-  { label: "Overview", items: appRoutes.filter((route) => route.group === "Overview") },
-  {
-    label: "Books",
-    items: appRoutes.filter(
-      (route) =>
-        route.group === "Books" &&
-        !route.label.startsWith("New:") &&
-        !route.nestedUnder,
-    ),
-  },
-  { label: "Reports", items: appRoutes.filter((route) => route.group === "Reports") },
-  {
-    label: "Settings",
-    items: appRoutes.filter(
-      (route) => route.group === "Settings" && route.href === "/settings",
-    ),
-  },
+const SIDEBAR_GROUP_LABELS = [
+  "Overview",
+  "Sales",
+  "Expenses & suppliers",
+  "People",
+  "Customers",
+  "Cash & bank",
+  "Reports",
+  "Settings",
 ] as const;
+
+function primarySidebarItems(groupLabel: string): AppRoute[] {
+  return appRoutes.filter(
+    (route) =>
+      route.group === groupLabel &&
+      !route.label.startsWith("New:") &&
+      !route.nestedUnder &&
+      (groupLabel !== "Settings" || route.href !== "/settings"),
+  );
+}
+
+export const navGroups = SIDEBAR_GROUP_LABELS.map((label) => ({
+  label,
+  items: primarySidebarItems(label),
+}));
+
+/** Sidebar nested links — delivery children only when the module is on. */
+export function sidebarChildrenForNavItem(
+  itemHref: string,
+  settings: EntityNavSettings,
+): AppRoute[] {
+  if (itemHref === "/delivery" && !settings.deliveryEnabled) return [];
+  return sidebarChildren(itemHref);
+}
 
 function routeActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
