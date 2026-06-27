@@ -520,6 +520,51 @@ def create_manual_daily_sales(
     return confirm_pos_daily_summary_intake(session, entity_id, summary.id, confirm_payload)
 
 
+def assert_sales_date_available(
+    session: Session,
+    entity_id: uuid.UUID,
+    sales_date: date,
+) -> None:
+    """Raise if a posted daily summary already exists for this date."""
+    if _find_posted_summary_for_date(session, entity_id, sales_date) is not None:
+        raise PosDailySummaryConfirmError(_duplicate_date_review_reason(sales_date))
+
+
+def validate_z_report_before_post(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    sales_date: date,
+    cash_kurus: int,
+    card_kurus: int,
+    z_report_kurus: int | None,
+) -> int | None:
+    """Validate Z-report rules; raise PosDailySummaryConfirmError on mismatch."""
+    stub = PosDailySummary(
+        status=PosDailySummaryStatus.DRAFT,
+        file_fingerprint="z-check",
+        summary_date=sales_date,
+        cash_kurus=cash_kurus,
+        card_kurus=card_kurus,
+        total_kurus=cash_kurus + card_kurus,
+        z_report_kurus=z_report_kurus,
+    )
+    payload = ConfirmPosDailySummaryRequest(
+        money_account_id=uuid.UUID(int=0),
+        actor_id=uuid.UUID(int=0),
+        cash_kurus=cash_kurus,
+        card_kurus=card_kurus,
+        summary_date=sales_date,
+        z_report_kurus=z_report_kurus,
+    )
+    resolved_z, z_review = _resolve_z_report(
+        session, entity_id, stub, payload, card_kurus
+    )
+    if isinstance(z_review, _NeedsReview):
+        raise PosDailySummaryConfirmError(z_review.reason)
+    return resolved_z
+
+
 def correct_pos_daily_summary_intake(
     session: Session,
     entity_id: uuid.UUID,

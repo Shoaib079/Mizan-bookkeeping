@@ -111,6 +111,13 @@ function DashboardBody() {
               <Wallet className="size-4" />
               Add expense
             </Button>
+            <Link
+              href="/close-day"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted"
+            >
+              <ShoppingBag className="size-4" />
+              Close day
+            </Link>
           </div>
         )}
       </div>

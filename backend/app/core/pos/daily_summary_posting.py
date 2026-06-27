@@ -81,6 +81,7 @@ def confirm_pos_daily_summary(
     description: str,
     z_report_kurus: int | None = None,
     period_unlock_reason: str | None = None,
+    commit: bool = True,
 ) -> PosDailySummaryPostResult:
     """Post card sales batch + cash in for a confirmed daily summary — one transaction.
 
@@ -203,7 +204,10 @@ def confirm_pos_daily_summary(
         summary.cash_movement_id = cash_movement.id if cash_movement else None
         summary.review_reason = None
 
-        session.commit()
+        if commit:
+            session.commit()
+        else:
+            session.flush()
         session.refresh(summary)
         if card_batch is not None:
             session.refresh(card_batch)

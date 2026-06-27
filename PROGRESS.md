@@ -7,12 +7,22 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.15** — Day close-out screen (optional) |
-| **Last completed slice** | Phase 11 Slice 11.14 — new menu UX (`v0.69.5-new-menu-ux`) |
+| **Active slice** | **11.16** — General ledger report page (backend done) |
+| **Last completed slice** | Phase 11 Slice 11.15 — day close-out screen (`v0.69.6-day-closeout`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.5-new-menu-ux` |
+| **Last tag** | `v0.69.6-day-closeout` |
 
 ## Resume point
+
+**Phase 11 Slice 11.15 complete** — day close-out screen (`v0.69.6-day-closeout`):
+- `POST /entities/{id}/operations/day-closeout` — atomic manual sales + N expenses (single commit, idempotent)
+- Frontend `/close-day` — one date, sales (cash/card/Z/drawer), dynamic expense rows; period unlock + stable idempotency key
+- Nav: Books sidebar, New → Operations, dashboard **Close day**
+- Nested `entity_context` GUC restore fix; `confirm_pos_daily_summary(commit=False)`; expense `period_unlock_reason`
+- **588 pytest green** (+6); frontend build green; **16 vitest**
+- **Owner sign-off: PENDING** (money-critical)
+
+**Next:** Phase 11.16 — general ledger / all-entries report page (backend `GET .../ledger/entries` exists).
 
 **Phase 11 Slice 11.14 complete** — new menu UX (`v0.69.5-new-menu-ux`):
 - `QuickActionsProvider` — shared dialog state for New menu, top bar, dashboard

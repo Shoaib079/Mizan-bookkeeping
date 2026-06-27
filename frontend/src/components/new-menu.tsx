@@ -2,6 +2,7 @@
 
 /** New dropdown — grouped quick actions (Slice 11.14). */
 
+import Link from "next/link";
 import {
   ChevronDown,
   CreditCard,
@@ -21,7 +22,8 @@ import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { cn } from "@/lib/utils";
 
 type MenuItem = {
-  key: QuickActionKey;
+  key?: QuickActionKey;
+  href?: string;
   label: string;
   icon: typeof Wallet;
 };
@@ -73,17 +75,24 @@ export function NewMenu() {
 
   useDismissOnOutsideClick(menuRef, open, () => setOpen(false));
 
-  function pick(key: QuickActionKey) {
+  function pickItem(item: MenuItem) {
+    if (!item.key) return;
     setOpen(false);
-    openQuickAction(key);
+    openQuickAction(item.key);
   }
 
-  const groups = MENU_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter(
-      (item) => item.key !== "deliveryReport" || deliveryEnabled,
-    ),
-  })).filter((group) => group.items.length > 0);
+  const groups: MenuGroup[] = [
+    {
+      label: "Operations",
+      items: [{ href: "/close-day", label: "Close day", icon: ShoppingBag }],
+    },
+    ...MENU_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => item.key !== "deliveryReport" || deliveryEnabled,
+      ),
+    })),
+  ].filter((group) => group.items.length > 0);
 
   return (
     <div ref={menuRef} className="relative px-3 pb-3">
@@ -111,18 +120,31 @@ export function NewMenu() {
                 <div className="mx-3 my-1 border-t border-border" aria-hidden />
               )}
               <MenuSectionHeader label={group.label} />
-              {group.items.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  role="menuitem"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-                  onClick={() => pick(item.key)}
-                >
-                  <item.icon className="size-4 text-primary" />
-                  {item.label}
-                </button>
-              ))}
+              {group.items.map((item) =>
+                item.href ? (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+                    onClick={() => setOpen(false)}
+                  >
+                    <item.icon className="size-4 text-primary" />
+                    {item.label}
+                  </Link>
+                ) : (
+                  <button
+                    key={item.label}
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+                    onClick={() => pickItem(item)}
+                  >
+                    <item.icon className="size-4 text-primary" />
+                    {item.label}
+                  </button>
+                ),
+              )}
             </div>
           ))}
         </div>

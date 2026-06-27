@@ -69,10 +69,10 @@ def entity_context(session: Session, entity_id: uuid.UUID):
     finally:
         _current_entity_id.reset(token)
         try:
-            _apply_entity_guc(session, None)
+            _apply_entity_guc(session, get_current_entity_id())
         except Exception:
             session.rollback()
-            _apply_entity_guc(session, None)
+            _apply_entity_guc(session, get_current_entity_id())
 
 
 @contextmanager

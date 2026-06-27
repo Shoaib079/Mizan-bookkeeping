@@ -104,6 +104,7 @@ def post_expense_entry(
     notes: str | None = None,
     bank_statement_line_id: uuid.UUID | None = None,
     existing_expense_entry: ExpenseEntry | None = None,
+    period_unlock_reason: str | None = None,
     commit: bool = True,
 ) -> ExpenseEntryPostResult:
     """Post daily expense — Dr expense / Cr bank or cash GL."""
@@ -134,6 +135,7 @@ def post_expense_entry(
             lines,
             actor_id=actor_id,
             source=JournalEntrySource.EXPENSE_ENTRY,
+            period_unlock_reason=period_unlock_reason,
         )
 
         if existing_expense_entry is not None:

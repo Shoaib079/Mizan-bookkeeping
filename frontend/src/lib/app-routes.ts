@@ -35,6 +35,13 @@ export type AppRoute = {
 export const appRoutes: AppRoute[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
   { href: "/sales", label: "Sales", icon: ShoppingBag, group: "Books" },
+  {
+    href: "/close-day",
+    label: "Close day",
+    keywords: "day close-out sales expenses",
+    icon: ShoppingBag,
+    group: "Books",
+  },
   { href: "/delivery", label: "Delivery", icon: Truck, group: "Books" },
   {
     href: "/delivery/platforms",
@@ -113,6 +120,7 @@ export const appRoutes: AppRoute[] = [
   { href: "/expenses", label: "New: Manual expense", keywords: "new expense", icon: Wallet, group: "New" },
   { href: "/expenses", label: "New: Cash tip", keywords: "5700 tips", icon: Wallet, group: "New" },
   { href: "/sales", label: "New: Daily sales (manual)", keywords: "pos manual", icon: ShoppingBag, group: "New" },
+  { href: "/close-day", label: "New: Close day", keywords: "close-out sales expenses", icon: ShoppingBag, group: "New" },
   { href: "/sales", label: "New: POS summary (photo)", keywords: "upload z", icon: ShoppingBag, group: "New" },
   { href: "/cards", label: "New: Card sales batch", icon: CreditCard, group: "New" },
   { href: "/delivery/reports", label: "New: Delivery report", icon: Truck, group: "New" },

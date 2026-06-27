@@ -1134,13 +1134,13 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 - [x] `settings/entity` toggles get a clear label + one-line help each; **verify** `delivery_enabled` hides delivery entry and `card_tips_z_report_enabled` shows/hides the Z field.
 - [x] **Do not** rebuild the forms — wire to what exists.
 
-**Done:** `QuickActionsProvider` + grouped `NewMenu`; top bar + dashboard quick actions; shared `useDismissOnOutsideClick` (New menu, command palette panel, Combobox refactor); `filterRoutesByEntitySettings` hides delivery nav/palette when off; manual daily sales uses `defaultMainDrawerId()`. **582 pytest green**; frontend build green. **Next:** Phase 11.15 day close-out (optional).
+**Done:** `QuickActionsProvider` + grouped `NewMenu`; top bar + dashboard quick actions; shared `useDismissOnOutsideClick` (New menu, command palette panel, Combobox refactor); `filterRoutesByEntitySettings` hides delivery nav/palette when off; manual daily sales uses `defaultMainDrawerId()`. **582 pytest green**; frontend build green. Tag `v0.69.5-new-menu-ux`. **Next:** ~~Phase 11.15~~ → done (`v0.69.6-day-closeout`).
 
 ### Slice 11.15 — Day close-out screen (optional, larger)
 
 | | |
 |---|---|
-| **Status** | planned — **optional**; owner confirms scope before build |
+| **Status** | done — **owner sign-off PENDING** (money-critical) |
 | **Money-critical** | Yes (posts sales + expenses) — owner sign-off |
 | **Suggested tag** | `v0.69.6-day-closeout` |
 
@@ -1148,9 +1148,11 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 **Acceptance:**
 
-- [ ] Single screen: pick **date once** → cash + card sales → add **N quick expense rows** (item, amount, account) → **post all atomically** (idempotent), reusing existing endpoints.
-- [ ] Honors 11.13 (no forced session), Turkish money inputs (11.3), and period locks.
-- [ ] Tests: combined post creates the daily-sales entry + each expense; partial-failure rolls back; idempotent re-submit.
+- [x] Single screen: pick **date once** → cash + card sales → add **N quick expense rows** (item, amount, account) → **post all atomically** (idempotent), via `POST .../operations/day-closeout`.
+- [x] Honors 11.13 (no forced session), Turkish money inputs (11.3), and period locks + `period_unlock_reason`.
+- [x] Tests: combined post creates the daily-sales entry + each expense; partial-failure rolls back; idempotent re-submit.
+
+**Done:** Backend `DayCloseoutRequest` + `post_day_closeout()` — one transaction (manual sales confirm + N `post_expense_entry`, single commit); nested `entity_context` GUC fix. Frontend `/close-day` page (`DayCloseoutForm`); nav + New menu Operations + dashboard link; `useSubmitIdempotency` + `usePeriodUnlockSubmit`. **588 pytest green** (+6); frontend build green; **16 vitest**. **Next:** Phase 11.16 general ledger report page.
 
 ---
 
