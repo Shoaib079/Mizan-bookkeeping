@@ -7,12 +7,31 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.2** — production provisioning (planned) |
-| **Last completed slice** | Phase 12 Slice 12.1 — hosting & infrastructure (`v0.71.0-hosting-infrastructure`) |
+| **Active slice** | **12.3** — backup restore drill (planned) |
+| **Last completed slice** | Phase 12 Slice 12.2 — production provisioning (`v0.71.1-prod-provisioning`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.0-hosting-infrastructure` |
+| **Last tag** | `v0.71.1-prod-provisioning` |
+
+## Owner blockers (12.2)
+
+Owner must run against their staging/prod hosts (not automatable in CI):
+
+- Provision Postgres/Redis/Render/Netlify (Slice 12.1 scaffolding).
+- Run `backend/scripts/migrate_production.sh` and `verify_production_db.sh` with real `DATABASE_URL` / `DATABASE_ADMIN_URL`.
+- Run `scripts/smoke_staging.sh` against deployed staging API before production cutover.
+- Flip Clerk live keys on Render + Netlify for production — API guard blocks `sk_test_` / `pk_test_` when `APP_ENV=production`.
 
 ## Resume point
+
+**Phase 12 Slice 12.2 complete** — production provisioning (`v0.71.1-prod-provisioning`):
+- `run_production_migrations()` + `verify_production_database()` in `provisioning.py`
+- `backend/scripts/migrate_production.sh`, `verify_production_db.sh`
+- `GET /health/ready`; `scripts/smoke_staging.sh`
+- Render `preDeployCommand`; launch guards (Clerk live keys, CORS)
+- `DEPLOY.md` Slice 12.2 runbook
+- **605 pytest green** (+9)
+
+**Next:** Phase 12 Slice 12.3 — backup restore drill (managed Postgres backup → restore → assert books tie).
 
 **Phase 12 Slice 12.1 complete** — hosting & infrastructure scaffolding (`v0.71.0-hosting-infrastructure`):
 - `netlify.toml` (frontend base, security headers, optional API proxy)

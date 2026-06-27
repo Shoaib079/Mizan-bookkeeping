@@ -2,6 +2,8 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.features.entities.api import router as entities_router
 from app.features.chart_of_accounts.api import router as chart_of_accounts_router
@@ -47,6 +49,7 @@ from app.features.auth.api import members_router as auth_members_router
 from app.features.auth.api import users_router as auth_users_router
 from app.config import settings
 from app.core.idempotency.middleware import IdempotencyMiddleware
+from app.db.session import engine
 from app.launch import validate_launch_settings
 
 validate_launch_settings()
@@ -108,6 +111,20 @@ app.include_router(auth_members_router)
 def health() -> dict[str, str]:
     """Liveness check for dev and deploy."""
     return {"status": "ok", "service": "mizan-api"}
+
+
+@app.get("/health/ready", response_model=None)
+def health_ready() -> JSONResponse | dict[str, str]:
+    """Readiness check — DB must respond; 503 when unreachable."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unavailable", "service": "mizan-api", "db": "down"},
+        )
+    return {"status": "ok", "service": "mizan-api", "db": "up"}
 
 
 @app.get("/")

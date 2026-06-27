@@ -19,6 +19,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Connection, Engine
 
@@ -139,6 +140,133 @@ def provision_database_via_alembic(
     command.upgrade(alembic_config(migrate_url), "head")
     finalize_migration_grants(migrate_url)
     engine.dispose()
+
+
+class ProductionDatabaseVerificationError(RuntimeError):
+    """Raised when a production database fails post-migrate integrity checks."""
+
+
+def expected_alembic_head() -> str:
+    """Current Alembic head revision id (must match ``alembic_version.version_num``)."""
+    cfg = alembic_config(settings.database_migration_url)
+    script = ScriptDirectory.from_config(cfg)
+    head = script.get_current_head()
+    if head is None:
+        raise RuntimeError("Alembic has no head revision")
+    return head
+
+
+def run_production_migrations() -> None:
+    """Apply ``alembic upgrade head`` on the app database — no schema drop.
+
+    ``finalize_migration_grants()`` runs automatically via ``alembic/env.py`` after migrate.
+    """
+    migrate_url = settings.database_migration_url
+    command.upgrade(alembic_config(migrate_url), "head")
+
+
+def _entity_scoped_table_names() -> frozenset[str]:
+    from app.db.rls import RLS_TABLES
+
+    return frozenset(RLS_TABLES)
+
+
+def _required_named_rls_policies() -> frozenset[tuple[str, str]]:
+    """(table, policy_name) pairs beyond the default entity_isolation policy."""
+    return frozenset(
+        {
+            ("accounts", "accounts_posting_lookup"),
+            ("entity_memberships", "entity_memberships_user_lookup"),
+        }
+    )
+
+
+def verify_production_database(database_url: str | None = None) -> None:
+    """Assert Alembic head, RLS policies, and immutability triggers are present."""
+    url = database_url or settings.database_url
+    engine = create_engine(url, pool_pre_ping=True)
+    failures: list[str] = []
+    try:
+        with engine.connect() as conn:
+            version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+            expected_head = expected_alembic_head()
+            if version != expected_head:
+                failures.append(
+                    f"alembic_version={version!r} (expected head {expected_head!r})"
+                )
+
+            tables = sorted(_entity_scoped_table_names())
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT c.relname AS table_name,
+                           c.relrowsecurity AS rls_enabled,
+                           COUNT(p.policyname)::int AS policy_count
+                    FROM pg_class c
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    LEFT JOIN pg_policies p
+                      ON p.tablename = c.relname AND p.schemaname = n.nspname
+                    WHERE n.nspname = 'public'
+                      AND c.relkind = 'r'
+                      AND c.relname = ANY(:tables)
+                    GROUP BY c.relname, c.relrowsecurity
+                    """
+                ),
+                {"tables": tables},
+            ).all()
+            by_name = {row.table_name: row for row in rows}
+            for table in tables:
+                row = by_name.get(table)
+                if row is None:
+                    failures.append(f"{table}: table not found")
+                    continue
+                if not row.rls_enabled:
+                    failures.append(f"{table}: RLS not enabled")
+                if row.policy_count < 1:
+                    failures.append(f"{table}: no RLS policy")
+
+            for table, policy_name in _required_named_rls_policies():
+                exists = conn.execute(
+                    text(
+                        """
+                        SELECT 1 FROM pg_policies
+                        WHERE schemaname = 'public'
+                          AND tablename = :table
+                          AND policyname = :policy
+                        """
+                    ),
+                    {"table": table, "policy": policy_name},
+                ).scalar()
+                if not exists:
+                    failures.append(f"{table}: missing policy {policy_name!r}")
+
+            ledger_present = frozenset(ledger_immutability_triggers_present(conn))
+            missing_ledger = LEDGER_IMMUTABILITY_TRIGGERS - ledger_present
+            if missing_ledger:
+                failures.append(
+                    f"missing ledger immutability triggers: {sorted(missing_ledger)}"
+                )
+
+            audit_present = frozenset(audit_immutability_triggers_present(conn))
+            missing_audit = AUDIT_IMMUTABILITY_TRIGGERS - audit_present
+            if missing_audit:
+                failures.append(
+                    f"missing audit immutability triggers: {sorted(missing_audit)}"
+                )
+
+            period_present = frozenset(period_locks_immutability_triggers_present(conn))
+            missing_period = PERIOD_LOCKS_IMMUTABILITY_TRIGGERS - period_present
+            if missing_period:
+                failures.append(
+                    f"missing period lock immutability triggers: {sorted(missing_period)}"
+                )
+    finally:
+        engine.dispose()
+
+    if failures:
+        raise ProductionDatabaseVerificationError(
+            "Production database verification failed:\n" + "\n".join(failures)
+        )
 
 
 def ledger_immutability_triggers_present(connection: Connection) -> list[str]:

@@ -158,3 +158,23 @@ def test_alembic_provisioning_installs_period_lock_immutability_triggers(
 
     missing = PERIOD_LOCKS_IMMUTABILITY_TRIGGERS - present
     assert not missing, f"Missing period lock immutability triggers: {sorted(missing)}"
+
+
+def test_verify_production_database_passes_after_alembic(alembic_provisioned_url: str) -> None:
+    from app.db.provisioning import verify_production_database
+
+    verify_production_database(alembic_provisioned_url)
+
+
+def test_run_production_migrations_is_idempotent_on_provisioned_db(
+    alembic_provisioned_url: str,
+) -> None:
+    from app.db.provisioning import run_production_migrations, verify_production_database
+
+    original_migration_url = settings.database_url
+    try:
+        settings.database_url = alembic_provisioned_url
+        run_production_migrations()
+        verify_production_database(alembic_provisioned_url)
+    finally:
+        settings.database_url = original_migration_url

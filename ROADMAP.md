@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.2** — production provisioning |
-| **Last completed slice** | Phase 12 Slice 12.1 — hosting & infrastructure (`v0.71.0-hosting-infrastructure`) |
-| **Last commit/tag** | `v0.71.0-hosting-infrastructure` |
-| **Next up** | Phase 12 Slice 12.2 — production provisioning |
+| **Active slice** | **12.3** — backup restore drill |
+| **Last completed slice** | Phase 12 Slice 12.2 — production provisioning (`v0.71.1-prod-provisioning`) |
+| **Last commit/tag** | `v0.71.1-prod-provisioning` |
+| **Next up** | Phase 12 Slice 12.3 — backup restore drill |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1468,6 +1468,31 @@ Take the tested app to a real, secure production environment and put real data i
 
 ---
 
+### Slice 12.2 — Production provisioning
+
+| | |
+|---|---|
+| **Status** | **done** (`v0.71.1-prod-provisioning`) |
+| **Suggested tag** | `v0.71.1-prod-provisioning` |
+
+**Purpose:** Production migrate tooling, DB readiness checks, staging runbook, and smoke scripts so the owner can provision staging/prod safely — `alembic upgrade head` without schema drop, RLS/trigger verify, Clerk live-key guard, `/health/ready`.
+
+**Acceptance:**
+
+- [x] `run_production_migrations()` in `provisioning.py` — `alembic upgrade head` via `database_migration_url`; grants via `alembic/env.py`; no schema drop
+- [x] `backend/scripts/migrate_production.sh` + `verify_production_db.sh` — load env, migrate/verify; non-zero exit on failure
+- [x] `verify_production_database()` — RLS on all `RLS_TABLES` + ledger/audit/period-lock immutability triggers
+- [x] `GET /health/ready` — DB ping; 503 when unreachable; `/health` liveness unchanged
+- [x] `scripts/smoke_staging.sh` — curl `/health`, `/health/ready`; manual Clerk checklist
+- [x] `render.yaml` — `preDeployCommand` migrate + verify on API deploy
+- [x] `validate_launch_settings()` — rejects `sk_test_` / `pk_test_` Clerk keys and localhost CORS when `APP_ENV=production`
+- [x] `DEPLOY.md` — full Slice 12.2 staging-first runbook
+- [x] Tests: `test_db_provisioning.py`, `test_health.py`, `test_launch_settings.py`; full pytest green
+
+**Out of scope (12.3+):** backup restore drill (12.3), observability (12.4), owner walkthrough (12.6).
+
+---
+
 **Senior-dev pre-deploy must-dos (fold into the slices above — flagged 2026-06-27):**
 
 - **Staging dry-run first.** Deploy to a prod-like **staging** env and run the full smoke test there before touching production. Don't let prod be the first real deploy.
@@ -1512,6 +1537,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-27 | Phase 12 Slice 12.2 — production provisioning | `v0.71.1-prod-provisioning` | migrate/verify scripts, `/health/ready`, smoke script, Render preDeploy, launch guards, DEPLOY runbook; 605 pytest |
 | 2026-06-27 | Phase 12 Slice 12.1 — hosting & infrastructure | `v0.71.0-hosting-infrastructure` | `netlify.toml`, `backend/Dockerfile`, `render.yaml`, `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`; 596 pytest |
 | 2026-06-27 | Phase 12 Slice 0c — member add-by-email | `v0.70.3-member-add-by-email` | Email-based member invite; reuse existing user across restaurants; 592 pytest |
 | 2026-06-25 | Alembic migration grants fix | `v0.67.2-alembic-migration-grants` | `alembic upgrade head` uses schema owner; auto-grant `mizan_app`; 547 pytest |

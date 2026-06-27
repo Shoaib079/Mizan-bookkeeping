@@ -10,6 +10,18 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Out of scope this slice:** Production `alembic upgrade head`, Clerk live keys, live deploy — owner steps in `DEPLOY.md`; execution in Slice 12.2.
 
+## 2026-06-27 — Production provisioning (Phase 12 Slice 12.2)
+
+**Choice:** Canonical production schema = **`alembic upgrade head` only** (no `init_database` / schema drop). `run_production_migrations()` runs migrate + `mizan_app` grants; `verify_production_database()` asserts Alembic head, RLS on every `RLS_TABLES` entry, named lookup policies, and immutability triggers.
+
+**Readiness:** `GET /health/ready` pings Postgres (503 if unreachable); Render health check and pre-deploy migrate/verify on API deploy.
+
+**Boot guards:** `APP_ENV=production` rejects localhost CORS default, Clerk test keys (`sk_test_`/`pk_test_`), disabled auth enforcement, and missing JWT verification env.
+
+**Owner runbook:** `DEPLOY.md` + `scripts/smoke_staging.sh`; Clerk JWT template must include `email` + `email_verified`.
+
+**Alternatives considered:** `create_all` bootstrap for prod (rejected — drift from Alembic chain); init_database on boot (rejected — non-idempotent, bypasses migration history).
+
 **Alternatives considered:** Railway (equivalent to Render — documented in DEPLOY.md); Netlify Functions for API (rejected — FastAPI + Celery + pg_dump need a long-running host).
 
 ## 2026-06-24 — Card-tip day ops guidance (Phase 8.8 H4)

@@ -18,7 +18,7 @@ from app.core.idempotency.models import IdempotencyRecord
 ANONYMOUS_SCOPE = "__anonymous__"
 MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 SKIP_PATH_PREFIXES = ("/docs", "/redoc", "/openapi.json")
-SKIP_EXACT_PATHS = frozenset({"/", "/health"})
+SKIP_EXACT_PATHS = frozenset({"/", "/health", "/health/ready"})
 
 
 def is_mutation_method(method: str) -> bool:

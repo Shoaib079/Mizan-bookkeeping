@@ -167,6 +167,12 @@ def test_health_skips_idempotency(client: TestClient, monkeypatch) -> None:
     assert response.status_code == 200
 
 
+def test_health_ready_skips_idempotency(client: TestClient, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "idempotency_enforcement", True)
+    response = client.get("/health/ready")
+    assert response.status_code == 200
+
+
 def test_optional_key_dedup_when_enforcement_off(
     db_session,
     client: TestClient,

@@ -1,6 +1,6 @@
 # Deploy Mizan — owner guide
 
-Plain-English steps to provision hosting for Mizan. This slice (**12.1**) delivers scaffolding and config only — **do not** run production migrations, flip Clerk to live keys, or go live until **Slice 12.2** (staging first).
+Plain-English steps to provision and go live with Mizan. **Staging first** — run the full migrate + verify + smoke path on staging before production.
 
 **Recommended stack**
 
@@ -17,9 +17,9 @@ Plain-English steps to provision hosting for Mizan. This slice (**12.1**) delive
 
 ## Before you start
 
-1. **Staging dry-run first.** Deploy a prod-like **staging** environment and run the full smoke test there before touching production (ROADMAP senior-dev must-do).
-2. Copy `.env.production.example` into your host secret stores — never commit real secrets.
-3. You need accounts on: Netlify, Render (or Railway), a Postgres host, Redis host, S3-compatible storage, and Clerk (production keys wait until 12.2).
+1. **Staging dry-run first.** Deploy a prod-like **staging** environment and run migrate + verify + smoke there before touching production.
+2. Copy `.env.production.example` into your host secret stores — **never commit real secrets**.
+3. Accounts needed: Netlify, Render (or Railway), managed Postgres, Redis, S3-compatible storage, Clerk.
 
 ---
 
@@ -27,18 +27,41 @@ Plain-English steps to provision hosting for Mizan. This slice (**12.1**) delive
 
 1. Create a Postgres cluster (Neon/Supabase recommended).
 2. Create two roles:
-   - **Schema owner** (`mizan`) — runs Alembic migrations (Slice 12.2).
-   - **App role** (`mizan_app`) — runtime queries with RLS (grants applied by migrations).
+   - **Schema owner** (`mizan`) — runs Alembic migrations only.
+   - **App role** (`mizan_app`) — runtime queries with RLS (grants applied automatically after migrate).
 3. Create database `mizan`.
 4. Set connection strings (SSL required in production):
    - `DATABASE_URL` → `postgresql+psycopg://mizan_app:…@host:5432/mizan?sslmode=require`
    - `DATABASE_ADMIN_URL` → `postgresql+psycopg://mizan:…@host:5432/postgres?sslmode=require`
 
-**Do not run `alembic upgrade head` yet** — that is Slice 12.2.
+---
+
+## 2. Run migrations (Slice 12.2 — canonical path)
+
+**Production schema is built only with Alembic — never `init_database` / `create_all`.**
+
+From a machine or one-off shell with env vars loaded (or on Render pre-deploy):
+
+```bash
+cd backend
+export DATABASE_URL='postgresql+psycopg://mizan_app:…@host:5432/mizan?sslmode=require'
+export DATABASE_ADMIN_URL='postgresql+psycopg://mizan:…@host:5432/postgres?sslmode=require'
+bash scripts/migrate_production.sh
+bash scripts/verify_production_db.sh
+```
+
+What this does:
+
+- `migrate_production.sh` → `alembic upgrade head` (no schema drop) + grant `mizan_app` DML on all objects.
+- `verify_production_db.sh` → confirms Alembic head, RLS policy on every entity-scoped table, and ledger/audit/period-lock immutability triggers.
+
+**Staging:** run the same two scripts against your staging database before pointing production traffic.
+
+Render: `render.yaml` runs both scripts as `preDeployCommand` on the API service when env vars are set.
 
 ---
 
-## 2. Redis
+## 3. Redis
 
 1. Create a Redis instance (Upstash free tier works for staging).
 2. Set:
@@ -50,26 +73,33 @@ Use `rediss://` if your provider requires TLS.
 
 ---
 
-## 3. Backend (Render)
+## 4. Backend (Render)
 
 1. Connect this GitHub repo to Render.
 2. Apply the blueprint from `render.yaml` (or create three services manually from `backend/Dockerfile`):
-   - **mizan-api** — web service, health check `/health`
+   - **mizan-api** — web service; health check `/health`; readiness `/health/ready`
    - **mizan-celery-worker** — `celery -A app.workers.celery_app worker --loglevel=info`
    - **mizan-celery-beat** — `celery -A app.workers.celery_app beat --loglevel=info`
 3. Attach a **persistent disk** (10 GB+) mounted at `/app/data` on **api** and **worker** (uploads + local backup cache).
 4. Paste env vars from `.env.production.example`. Mark secrets as **sync: false** in Render.
-5. Set `CORS_ORIGINS` to your Netlify URL(s), comma-separated, e.g.  
+5. Set `CORS_ORIGINS` to your Netlify URL(s), comma-separated — **not** the localhost default, e.g.  
    `https://app.example.com,https://staging--mizan.netlify.app`
-6. Deploy staging first; note the public API URL (e.g. `https://mizan-api.onrender.com`).
+6. Deploy **staging** first; note the public API URL (e.g. `https://mizan-api.onrender.com`).
 
-**Uploads:** Files stay on the API host disk (`UPLOAD_DIR=/app/data/uploads`). If the disk is lost, uploads are lost — off-site backups (below) cover DB + upload archive bundles.
+**Production boot guards (fail fast):**
+
+- `APP_ENV=production` requires `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE=false`
+- Clerk **live** keys only (`sk_live_` / `pk_live_`) — test keys rejected
+- `CLERK_JWKS_URL`, `CLERK_ISSUER`, `CLERK_AUDIENCE` required when auth is on
+- `CORS_ORIGINS` must not be the localhost default
+
+**Uploads:** Files stay on the API host disk (`UPLOAD_DIR=/app/data/uploads`). Off-site backups (below) cover DB + upload archive bundles.
 
 **Railway alternative:** Same Dockerfile; run three processes (web, worker, beat) with a volume on `/app/data`.
 
 ---
 
-## 4. Frontend (Netlify)
+## 5. Frontend (Netlify)
 
 1. Import the repo in Netlify.
 2. Build settings are in `netlify.toml`:
@@ -78,14 +108,32 @@ Use `rediss://` if your provider requires TLS.
    - Publish: `.next` (Netlify Next.js runtime handles SSR)
 3. Set environment variables:
    - `NEXT_PUBLIC_API_URL` → your Render API URL (HTTPS)
-   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` → Clerk publishable key (test for staging, live in 12.2)
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` → Clerk publishable key (**live** for production)
 4. Deploy staging; confirm HTTPS on the `*.netlify.app` URL.
 
 **Optional same-origin API proxy:** Uncomment the `[[redirects]]` block in `netlify.toml` and set `BACKEND_URL` in Netlify if you prefer `/api/*` on the frontend domain. Default is direct `NEXT_PUBLIC_API_URL` calls (requires correct `CORS_ORIGINS` on the API).
 
 ---
 
-## 5. S3-compatible backup bucket
+## 6. Clerk (staging vs production)
+
+### JWT template (required)
+
+Mizan rejects tokens missing verified email claims. In Clerk Dashboard → **JWT templates** (session token or custom API template used by the frontend):
+
+- Include claim **`email`** (user's primary email)
+- Include claim **`email_verified`** set to `true` when verified
+
+Without both, sign-in succeeds in Clerk but API calls fail with auth errors.
+
+### Keys
+
+- **Staging:** Clerk **test** keys are OK on a staging stack if `APP_ENV` is not `production`.
+- **Production:** use Clerk **live** keys (`sk_live_` / `pk_live_`); set `CLERK_JWKS_URL`, `CLERK_ISSUER`, `CLERK_AUDIENCE` (audience = your live publishable key).
+
+---
+
+## 7. S3-compatible backup bucket
 
 1. Create a private bucket (R2 or S3).
 2. Create access keys with write-only scope to that bucket.
@@ -94,7 +142,7 @@ Use `rediss://` if your provider requires TLS.
 
 ---
 
-## 6. Custom domain + HTTPS
+## 8. Custom domain + HTTPS
 
 **Netlify (frontend)**
 
@@ -110,43 +158,52 @@ Update `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL` to the final HTTPS URLs before p
 
 ---
 
-## 7. Clerk (staging vs production)
+## 9. Staging smoke test
 
-- **Staging:** use Clerk **test** keys; set `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE=false`, and JWT vars (`CLERK_JWKS_URL`, `CLERK_ISSUER`, `CLERK_AUDIENCE`).
-- **Production keys:** Slice **12.2** only — after DB migrate + RLS verify on staging.
+After migrate + verify + deploy:
 
----
+```bash
+export API_URL='https://your-staging-api.onrender.com'
+export FRONTEND_ORIGIN='https://your-staging.netlify.app'
+./scripts/smoke_staging.sh
+```
 
-## 8. Verify scaffolding (no live data yet)
+Checks:
 
-| Check | How |
-|-------|-----|
-| API health | `curl https://your-api.onrender.com/health` → `{"status":"ok","service":"mizan-api"}` |
-| CORS | Browser devtools: frontend origin allowed in preflight |
-| Frontend build | Netlify deploy log green |
-| Workers | Render logs show Celery worker + beat connected to Redis |
+| Check | Endpoint / script |
+|-------|-------------------|
+| Liveness | `GET /health` → `{"status":"ok"…}` |
+| Readiness (DB) | `GET /health/ready` → `200` + `"db":"up"` |
+| CORS | OPTIONS preflight from `FRONTEND_ORIGIN` |
 
-Local dev unchanged: `docker compose up -d` (Postgres + Redis only), backend on `:8000`, frontend on `:3000`.
-
----
-
-## 9. What comes next (Slice 12.2 — do not skip)
-
-1. Staging: `alembic upgrade head` with `DATABASE_ADMIN_URL`
-2. Confirm RLS + immutability triggers
-3. Clerk production keys
-4. End-to-end smoke on staging, then production
+Then walk through: sign up → create restaurant → seed chart → one expense → one report.
 
 ---
 
-## Files in this slice
+## 10. Production cutover checklist
+
+1. Staging smoke green (migrate, verify, `/health/ready`, CORS, Clerk JWT template).
+2. Production Postgres: `migrate_production.sh` + `verify_production_db.sh`.
+3. Flip Clerk to **live** keys on production API + Netlify.
+4. Set production `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL`.
+5. Deploy API (pre-deploy migrate runs automatically on Render).
+6. Run `./scripts/smoke_staging.sh` against production URLs.
+7. Record first real entity data; confirm Celery worker + beat logs show Redis connected.
+
+---
+
+## Files in this phase
 
 | File | Purpose |
 |------|---------|
 | `netlify.toml` | Next.js build, security headers, optional API proxy |
-| `backend/Dockerfile` | Production uvicorn image (+ `postgresql-client` for backups) |
-| `render.yaml` | Web + Celery worker + beat blueprint |
+| `backend/Dockerfile` | Production uvicorn image; non-root `app` user; `postgresql-client` |
+| `render.yaml` | Web + Celery worker + beat; pre-deploy migrate + verify |
 | `.env.production.example` | Full env catalog |
-| `backend/app/config.py` | `CORS_ORIGINS` env (comma-separated) |
+| `backend/scripts/migrate_production.sh` | `alembic upgrade head` (no drop) |
+| `backend/scripts/verify_production_db.sh` | RLS + trigger integrity check |
+| `scripts/smoke_staging.sh` | Post-deploy health + CORS smoke |
+| `backend/app/db/provisioning.py` | `run_production_migrations()`, `verify_production_database()` |
+| `backend/app/launch.py` | Production auth/CORS/key guards |
 
-Questions or blockers: note them in `PROGRESS.md` before starting 12.2.
+Questions or blockers: note them in `PROGRESS.md`.

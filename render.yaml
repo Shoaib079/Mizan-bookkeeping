@@ -9,7 +9,8 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: starter
-    healthCheckPath: /health
+    healthCheckPath: /health/ready
+    preDeployCommand: bash scripts/migrate_production.sh && bash scripts/verify_production_db.sh
     autoDeploy: false
     disk:
       name: mizan-data

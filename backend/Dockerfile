@@ -29,13 +29,19 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY app app/
 COPY alembic alembic/
 COPY alembic.ini .
+COPY scripts scripts/
 
-RUN mkdir -p data/uploads data/backups
+RUN mkdir -p data/uploads data/backups \
+    && groupadd --system app \
+    && useradd --system --gid app --home /app app \
+    && chown -R app:app /app
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
 EXPOSE 8000
+
+USER app
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')" || exit 1
