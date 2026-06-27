@@ -52,3 +52,10 @@ class MembershipRead(BaseModel):
     user: UserRead
 
     model_config = {"from_attributes": True}
+
+
+class MyMembershipRead(BaseModel):
+    """Caller role + resolved permissions for UI gating (Slice 11.21)."""
+
+    role: EntityRole
+    permissions: list[str]

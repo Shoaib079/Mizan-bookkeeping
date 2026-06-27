@@ -7,21 +7,32 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.21** — role/setting-aware UI |
-| **Last completed slice** | Phase 11 Slice 11.20 — entity-switch state reset (`v0.69.11-entity-switch-reset`) |
+| **Active slice** | **11.22** — small UI gaps |
+| **Last completed slice** | Phase 11 Slice 11.21 — role/setting-aware UI (`v0.69.12-role-aware-ui`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.11-entity-switch-reset` |
+| **Last tag** | `v0.69.12-role-aware-ui` |
 
 ## Resume point
+
+**Phase 11 Slice 11.21 complete** — role/setting-aware UI (`v0.69.12-role-aware-ui`):
+- `GET /entities/{id}/members/me` → role + permissions; dev `X-User-Id` lookup
+- `entity-access.ts` + `useEntityAccess()` — mirror backend `ROLE_PERMISSIONS`
+- Cashier: hide net result / payables / receivables / TRY KPIs + financial report cards
+- `partner_view_only`: hide New menu + write chrome; view-only banner
+- Delivery gating on nav, New menu, command palette, dashboard delivery section, reports card
+- Vitest: `entity-access.test.ts` (12 tests). Backend: +3 tests on `/members/me`
+- **591 pytest green**; frontend build green; **32 vitest**
+
+**Next:** Phase 11.22 — small UI gaps.
 
 **Phase 11 Slice 11.20 complete** — entity-switch state reset (`v0.69.11-entity-switch-reset`):
 - `useEntitySwitchReset()` / `useEntityResetKey()` — clear entity-scoped state before paint on entity change
 - `useEntityList` clears items immediately when entityId changes
 - Wired opening balances + 7 detail pages + cards + cash drawer
 - Vitest: `use-entity-reset.test.ts` (4 tests)
-- **588 pytest green**; frontend build green
+- **591 pytest green**; frontend build green
 
-**Next:** Phase 11.21 — role/setting-aware UI.
+**Next:** Phase 11.21 — role/setting-aware UI (now done → 11.22).
 
 **Phase 11 Slice 11.18 complete** — frontend adversarial audit (owner-led, docs-only closure; findings tracked in slices 11.17–11.22).
 

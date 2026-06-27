@@ -8,8 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.auth.permissions import ROLE_PERMISSIONS
+from app.core.auth.types import EntityRole
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.db.session import entity_context
+from app.features.auth.schema import MyMembershipRead
 from app.features.auth.audit import AuthAuditAction, record_auth_event
 from app.features.auth.models import EntityMembership, User
 from app.features.auth.schema import MembershipCreate, MembershipUpdate, UserCreate
@@ -87,6 +90,37 @@ def create_user(session: Session, payload: UserCreate) -> User:
 
 def get_user(session: Session, user_id: uuid.UUID) -> User | None:
     return session.get(User, user_id)
+
+
+def permissions_for_role(role: EntityRole, *, is_active: bool = True) -> list[str]:
+    if not is_active:
+        return []
+    perms = ROLE_PERMISSIONS.get(role, frozenset())
+    return sorted(p.value for p in perms)
+
+
+def get_user_membership(
+    session: Session, entity_id: uuid.UUID, user_id: uuid.UUID
+) -> EntityMembership | None:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+    with entity_context(session, entity_id):
+        return session.scalar(
+            select(EntityMembership)
+            .options(joinedload(EntityMembership.user))
+            .where(
+                EntityMembership.entity_id == entity_id,
+                EntityMembership.user_id == user_id,
+            )
+        )
+
+
+def build_my_membership_read(membership: EntityMembership) -> MyMembershipRead:
+    role = membership.entity_role
+    return MyMembershipRead(
+        role=role,
+        permissions=permissions_for_role(role, is_active=membership.user.is_active),
+    )
 
 
 def list_entity_members(

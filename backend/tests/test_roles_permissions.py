@@ -232,6 +232,68 @@ def test_membership_crud_api(
     assert deactivate_resp.json()["user"]["is_active"] is False
 
 
+def test_get_my_membership_when_auth_enforced(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    cashier = _create_user(db_session, "me-cashier@example.com", "Cashier")
+    _add_member(db_session, setup["entity_id"], cashier.id, EntityRole.CASHIER)
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/members/me",
+        headers=auth_headers(cashier),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["role"] == "cashier"
+    assert "operations:write" in body["permissions"]
+    assert "financial_reports:read" not in body["permissions"]
+
+
+def test_get_my_membership_dev_mode_defaults_owner(
+    client: TestClient,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    assert settings.auth_enforcement is False
+
+    response = client.get(f"/entities/{setup['entity_id']}/members/me")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["role"] == "owner"
+    assert "operations:write" in body["permissions"]
+    assert "financial_reports:read" in body["permissions"]
+
+
+def test_get_my_membership_dev_mode_x_user_id_lookup(
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    view_only = _create_user(db_session, "viewonly@example.com", "View Only")
+    _add_member(
+        db_session,
+        setup["entity_id"],
+        view_only.id,
+        EntityRole.PARTNER_VIEW_ONLY,
+    )
+    assert settings.auth_enforcement is False
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/members/me",
+        headers={"X-User-Id": str(view_only.id)},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["role"] == "partner_view_only"
+    assert "operations:write" not in body["permissions"]
+    assert "financial_reports:read" in body["permissions"]
+
+
 def test_cashier_can_access_dashboard_when_enforced(
     auth_enforced,
     client: TestClient,

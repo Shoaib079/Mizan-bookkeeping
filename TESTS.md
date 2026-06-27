@@ -55,12 +55,13 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_kdv_input_report.py` | Per-rate KDV input report — posted supplier + delivery commission `vat_breakdown` aggregation, date range + unposted exclusion, multi-rate invoice count, `from>to` → 422, API E2E, cross-entity RLS | pass |
 | `backend/tests/test_period_comparison.py` | Period comparison — auto prior same length, metrics differ by period, change_kurus/change_percent, explicit prior override, partial prior → 422, `from>to` → 422, API E2E, cross-entity RLS | pass |
 | `backend/tests/test_excel_export.py` | Excel export — P&L/balance sheet/KDV/period comparison xlsx 200 + content-type, valid openpyxl load, expected headers, P&L row count vs JSON, `from>to` → 422 | pass |
-| `backend/tests/test_roles_permissions.py` | Roles & permissions — `ROLE_PERMISSIONS` map, inactive user denied, owner/P&L 200, cashier P&L 403, partner_view_only P&L 200, missing header 401, non-member 403, enforcement off passes without header, membership CRUD API, cashier dashboard OK, cashier balance-sheet export 403 | pass |
+| `backend/tests/test_roles_permissions.py` | Roles & permissions — `ROLE_PERMISSIONS` map, inactive user denied, owner/P&L 200, cashier P&L 403, partner_view_only P&L 200, missing header 401, non-member 403, enforcement off passes without header, membership CRUD API, **`GET .../members/me`** (auth enforced + dev default + X-User-Id), cashier dashboard OK, cashier balance-sheet export 403 | pass |
+| `frontend/src/lib/entity-access.test.ts` | Role/setting-aware UI — permission matrix, dashboard KPI filter, write chrome, delivery route/card filters | pass |
 | `backend/tests/test_idempotency.py` | Mutation idempotency — repeated key dedups, different keys both succeed, enforcement requires header, auth-scoped keys, client retry contract (Slice 11.19) | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed.
 
-**Count:** 558 pytest + 10 vitest (last run 2026-06-27).
+**Count:** 591 pytest + 32 vitest (last run 2026-06-27).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 Run frontend: `cd frontend && npm test && npm run build`

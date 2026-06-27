@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-import { apiFetch } from "@/lib/api";
+import { apiFetch, setAuthHeaderProvider } from "@/lib/api";
 import { useApiAuth } from "@/lib/api-auth";
 
 type Entity = { id: string; name: string };
@@ -35,6 +35,14 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
   const [actorId, setActorIdState] = useState(DEFAULT_ACTOR);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [entitiesLoading, setEntitiesLoading] = useState(false);
+
+  useEffect(() => {
+    if (clerkEnabled) return;
+    setAuthHeaderProvider(async (): Promise<Record<string, string>> =>
+      actorId ? { "X-User-Id": actorId } : {},
+    );
+    return () => setAuthHeaderProvider(null);
+  }, [clerkEnabled, actorId]);
 
   useEffect(() => {
     setEntityIdState(localStorage.getItem("mizan.entityId") ?? "");

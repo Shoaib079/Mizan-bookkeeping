@@ -19,6 +19,8 @@ import { useRef, useState } from "react";
 import { useQuickActions, type QuickActionKey } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
+import { shouldShowNewMenu } from "@/lib/entity-access";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 type MenuItem = {
@@ -72,8 +74,19 @@ export function NewMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const { openQuickAction, deliveryEnabled } = useQuickActions();
+  const { role } = useEntityAccess();
 
   useDismissOnOutsideClick(menuRef, open, () => setOpen(false));
+
+  if (!shouldShowNewMenu(role)) {
+    return (
+      <div className="px-3 pb-3">
+        <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          View only — use Reports to review figures.
+        </p>
+      </div>
+    );
+  }
 
   function pickItem(item: MenuItem) {
     if (!item.key) return;

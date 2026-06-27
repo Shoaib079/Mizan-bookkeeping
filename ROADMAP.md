@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.18** — frontend adversarial audit |
-| **Last completed slice** | Phase 11 Slice 11.17 — DateInput click-to-open (`v0.69.8-dateinput-click-open`) |
-| **Last commit/tag** | `v0.69.8-dateinput-click-open` |
-| **Next up** | **11.18** → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.22** — small UI gaps |
+| **Last completed slice** | Phase 11 Slice 11.21 — role/setting-aware UI (`v0.69.12-role-aware-ui`) |
+| **Last commit/tag** | `v0.69.12-role-aware-ui` |
+| **Next up** | **11.22** → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -759,7 +759,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 18 | Frontend never had an adversarial audit | Backend got Phase 8.6; the UI is surfacing hand-found bugs (items 13–17). Reviewer/owner-led frontend audit. | **11.18** |
 | 19 | **Idempotency key not stable** | `useSubmitIdempotency()` + explicit keys on 39 surfaces; no auto-mint in `api.ts` | **Done** in 11.19 (owner sign-off **APPROVED 2026-06-27**) |
 | 20 | Entity-switch state bleed | `opening-balances/page.tsx` keeps `lines`/`goLiveDate` across entity change; 7 detail pages (`suppliers/[id]`, `partners/[id]`, `staff/[id]`, `customers/[id]`, `banking/accounts|fx|statements/[id]`) show prior-entity data until refetch. **RLS + account-entity validation backstop an actual leak** — this is stale-state hygiene, not an isolation breach. | **11.20** |
-| 21 | UI not role/setting-aware | Cashier dashboard shows **Net result** (contradicts "cashier can't see P&L"); `partner_view_only` sees full write chrome (backend still 403s — UI cleanliness); `delivery_enabled` off not reflected in nav/New menu. | **11.21** |
+| 21 | UI not role/setting-aware | ~~Cashier dashboard shows **Net result**~~ → role/setting-aware UI (`members/me`, `entity-access.ts`, gated chrome) | **11.21** ✓ |
 | 22 | Small UI gaps | Expense-receipt review has no **reject** path (API exists); reports landing **swallows API errors** (blank cards); header **"This month"** button is dead. | **11.22** |
 
 ### Correction API inventory (verified in repo, 2026-06-25)
@@ -1269,17 +1269,24 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned |
-| **Suggested tag** | `v0.69.12-role-aware-ui` |
+| **Status** | done |
+| **Tag** | `v0.69.12-role-aware-ui` |
 
 **Problem:** The UI ignores role and feature settings: the cashier dashboard shows **Net result** (contradicts the "cashier can't see P&L" decision); `partner_view_only` sees the full New menu + write forms (backend 403s the writes, so this is cleanliness not a breach); `delivery_enabled=off` isn't reflected in nav/New menu/command palette.
 
 **Acceptance:**
 
-- [ ] Load the caller's role per entity; **hide/disable** the New menu + mutation forms for `partner_view_only`.
-- [ ] Cashier: hide net-result/financial KPIs on the dashboard (or gate behind `FINANCIAL_REPORTS_READ`), matching the report-page rule.
-- [ ] Gate delivery nav / New-menu item / command-palette entries on `delivery_enabled`.
-- [ ] Tests: each role/setting renders the right chrome.
+- [x] Load the caller's role per entity; **hide/disable** the New menu + mutation forms for `partner_view_only`.
+- [x] Cashier: hide net-result/financial KPIs on the dashboard (or gate behind `FINANCIAL_REPORTS_READ`), matching the report-page rule.
+- [x] Gate delivery nav / New-menu item / command-palette entries on `delivery_enabled`.
+- [x] Tests: each role/setting renders the right chrome.
+
+**Done:**
+
+- `GET /entities/{id}/members/me` → `{ role, permissions[] }`; dev mode accepts `X-User-Id` or defaults owner.
+- `entity-access.ts` mirrors backend `ROLE_PERMISSIONS`; `useEntityAccess()` hook resets on entity switch.
+- Dashboard KPI filter; reports card + net summary filter; New menu / header / dashboard write chrome hidden for `partner_view_only`; quick-action dialogs guarded.
+- Vitest: `entity-access.test.ts` (12 tests). Backend: 3 tests on `/members/me`. **591 pytest green**; **32 vitest**.
 
 ---
 
@@ -1323,7 +1330,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.18 | Frontend adversarial audit done; each finding fixed + tested; money-critical UI signed off |
 | 11.19 | Stable idempotency key per submit; double-submit/retry → one record (tested); owner sign-off | **done** (`v0.69.10`; sign-off **APPROVED 2026-06-27**) |
 | 11.20 | Entity switch resets all entity-scoped state; no prior-entity data visible (tested) |
-| 11.21 | UI honors role + feature settings (cashier KPIs, view-only chrome, delivery toggle) |
+| 11.21 | UI honors role + feature settings (cashier KPIs, view-only chrome, delivery toggle) | **done** (`v0.69.12-role-aware-ui`) |
 | 11.22 | Receipt reject UI; reports errors surfaced; dead "This month" button resolved |
 
 Then proceed to **Phase 12 — Deployment & go-live**.

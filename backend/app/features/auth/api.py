@@ -9,13 +9,19 @@ from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.config import settings
-from app.core.auth.deps import require_admin_members, resolve_current_user
+from app.core.auth.deps import (
+    require_admin_members,
+    require_entity_membership,
+    resolve_current_user,
+)
+from app.core.auth.types import EntityRole
 from app.db.session import get_session
 from app.features.auth import service
 from app.features.auth.schema import (
     MembershipCreate,
     MembershipRead,
     MembershipUpdate,
+    MyMembershipRead,
     UserCreate,
     UserRead,
 )
@@ -55,6 +61,37 @@ def get_user(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return UserRead.model_validate(user)
+
+
+@members_router.get("/me", response_model=MyMembershipRead)
+def get_my_membership(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    authorization: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-Id"),
+) -> MyMembershipRead:
+    """Return the caller's role and permissions for UI gating."""
+    if not settings.auth_enforcement:
+        # Dev mode: optional X-User-Id lookup; default owner when unset/no membership.
+        if x_user_id:
+            try:
+                user_id = uuid.UUID(x_user_id)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="Invalid X-User-Id") from exc
+            try:
+                membership = service.get_user_membership(session, entity_id, user_id)
+            except LookupError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+            if membership is not None:
+                return service.build_my_membership_read(membership)
+        return MyMembershipRead(
+            role=EntityRole.OWNER,
+            permissions=service.permissions_for_role(EntityRole.OWNER),
+        )
+
+    user = resolve_current_user(session, authorization)
+    membership = require_entity_membership(session, entity_id, user)
+    return service.build_my_membership_read(membership)
 
 
 @members_router.get("", response_model=PaginatedListOut[MembershipRead])

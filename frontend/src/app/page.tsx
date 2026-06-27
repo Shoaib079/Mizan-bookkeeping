@@ -12,10 +12,16 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
+import {
+  filterDashboardKpis,
+  shouldShowWriteChrome,
+  type DashboardKpi,
+} from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead } from "@/lib/report-types";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
@@ -28,7 +34,9 @@ export default function HomePage() {
 
 function DashboardBody() {
   const { entityId } = useEntity();
-  const { openQuickAction } = useQuickActions();
+  const { openQuickAction, deliveryEnabled } = useQuickActions();
+  const { role, canReadFinancialReports } = useEntityAccess();
+  const showWriteChrome = shouldShowWriteChrome(role);
   const [range, setRange] = useState(currentMonthRange);
   const [data, setData] = useState<DashboardRead | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,23 +66,43 @@ function DashboardBody() {
     void reload();
   }, [reload]);
 
-  const kpis = data
-    ? [
-        { label: "Sales", value: formatTry(data.sales.total_sales_kurus) },
-        { label: "Expenses", value: formatTry(data.total_expenses_kurus) },
-        { label: "Net result", value: formatTry(data.net_result_kurus) },
-        { label: "Payables", value: formatTry(data.total_payables_kurus) },
-        { label: "Receivables", value: formatTry(data.total_receivables_kurus) },
-        {
-          label: "TRY position",
-          value: formatTry(data.total_try_position_kurus),
-        },
-        {
-          label: "Needs review",
-          value: String(data.needs_review.total),
-          href: undefined,
-        },
-      ]
+  const kpis: DashboardKpi[] = data
+    ? filterDashboardKpis(
+        [
+          { key: "sales", label: "Sales", value: formatTry(data.sales.total_sales_kurus) },
+          {
+            key: "expenses",
+            label: "Expenses",
+            value: formatTry(data.total_expenses_kurus),
+          },
+          {
+            key: "net_result",
+            label: "Net result",
+            value: formatTry(data.net_result_kurus),
+          },
+          {
+            key: "payables",
+            label: "Payables",
+            value: formatTry(data.total_payables_kurus),
+          },
+          {
+            key: "receivables",
+            label: "Receivables",
+            value: formatTry(data.total_receivables_kurus),
+          },
+          {
+            key: "try_position",
+            label: "TRY position",
+            value: formatTry(data.total_try_position_kurus),
+          },
+          {
+            key: "needs_review",
+            label: "Needs review",
+            value: String(data.needs_review.total),
+          },
+        ],
+        role,
+      )
     : [];
 
   const inTransitTotal = data?.delivery_in_transit.reduce(
@@ -91,7 +119,7 @@ function DashboardBody() {
           disabled={!entityId || loading}
           onChange={(from, to) => setRange({ from, to })}
         />
-        {entityId && (
+        {entityId && showWriteChrome && (
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
@@ -136,7 +164,7 @@ function DashboardBody() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {kpis.map((kpi) => (
               <div
-                key={kpi.label}
+                key={kpi.key}
                 className="rounded-lg border border-border bg-card p-4"
               >
                 <p className="text-sm text-muted-foreground">{kpi.label}</p>
@@ -227,7 +255,7 @@ function DashboardBody() {
             </section>
           )}
 
-          {data.delivery_in_transit.length > 0 && (
+          {data.delivery_in_transit.length > 0 && deliveryEnabled && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <h2 className="text-sm font-semibold">Delivery in transit</h2>
@@ -259,7 +287,7 @@ function DashboardBody() {
             </section>
           )}
 
-          {data.payables_preview.length > 0 && (
+          {data.payables_preview.length > 0 && canReadFinancialReports && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold">Top payables</h2>

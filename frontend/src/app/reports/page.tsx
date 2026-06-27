@@ -19,10 +19,17 @@ import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
 import { apiFetch } from "@/lib/api";
 import { buildRangeQuery, currentMonthRange } from "@/lib/date-range";
+import {
+  filterDeliveryReportCards,
+  filterFinancialReportCards,
+  shouldShowNetResultSummary,
+} from "@/lib/entity-access";
+import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead } from "@/lib/report-types";
-import { useCallback, useEffect, useState } from "react";
+import { useEntityAccess } from "@/lib/use-entity-access";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type ReportCard = {
   href: string;
@@ -103,10 +110,39 @@ const reportCards: ReportCard[] = [
 ];
 
 export default function ReportsPage() {
+  return (
+    <AppShell title="Reports">
+      <ReportsBody />
+    </AppShell>
+  );
+}
+
+function ReportsBody() {
   const { entityId } = useEntity();
+  const { role } = useEntityAccess();
+  const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [range, setRange] = useState(currentMonthRange);
   const [summary, setSummary] = useState<DashboardRead | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!entityId) {
+      setDeliveryEnabled(false);
+      return;
+    }
+    void isEntitySettingEnabled(entityId, "delivery_enabled")
+      .then(setDeliveryEnabled)
+      .catch(() => setDeliveryEnabled(false));
+  }, [entityId]);
+
+  const visibleCards = useMemo(
+    () =>
+      filterDeliveryReportCards(
+        filterFinancialReportCards(reportCards, role),
+        deliveryEnabled,
+      ),
+    [role, deliveryEnabled],
+  );
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -133,7 +169,7 @@ export default function ReportsPage() {
   const qs = buildRangeQuery(range.from, range.to);
 
   return (
-    <AppShell title="Reports">
+    <>
       <div className="mb-6 space-y-4">
         <ReportDateRange
           from={range.from}
@@ -155,12 +191,14 @@ export default function ReportsPage() {
                 {formatTry(summary.total_expenses_kurus)}
               </span>
             </div>
-            <div>
-              <span className="text-muted-foreground">Net · </span>
-              <span className="font-medium tabular-nums">
-                {formatTry(summary.net_result_kurus)}
-              </span>
-            </div>
+            {shouldShowNetResultSummary(role) && (
+              <div>
+                <span className="text-muted-foreground">Net · </span>
+                <span className="font-medium tabular-nums">
+                  {formatTry(summary.net_result_kurus)}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -172,7 +210,7 @@ export default function ReportsPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {reportCards.map((card) => {
+        {visibleCards.map((card) => {
           const href = card.asOf
             ? `${card.href}?as_of=${range.to}`
             : `${card.href}?${qs}`;
@@ -209,6 +247,6 @@ export default function ReportsPage() {
         Financial statements require owner or accountant access when auth is
         enforced.
       </p>
-    </AppShell>
+    </>
   );
 }

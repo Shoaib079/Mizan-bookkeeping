@@ -21,6 +21,7 @@ import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form
 import { SupplierForm } from "@/components/forms/supplier-form";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
+import { useEntityAccess } from "@/lib/use-entity-access";
 
 export type QuickActionKey =
   | "expense"
@@ -44,6 +45,7 @@ const QuickActionsContext = createContext<QuickActionsContextValue | null>(null)
 
 export function QuickActionsProvider({ children }: { children: React.ReactNode }) {
   const { entityId } = useEntity();
+  const { canWriteOperations } = useEntityAccess();
   const [active, setActive] = useState<QuickActionKey | null>(null);
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
 
@@ -57,9 +59,14 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
       .catch(() => setDeliveryEnabled(false));
   }, [entityId]);
 
-  const openQuickAction = useCallback((key: QuickActionKey) => {
-    setActive(key);
-  }, []);
+  const openQuickAction = useCallback(
+    (key: QuickActionKey) => {
+      if (!canWriteOperations) return;
+      if (key === "deliveryReport" && !deliveryEnabled) return;
+      setActive(key);
+    },
+    [canWriteOperations, deliveryEnabled],
+  );
 
   const closeQuickAction = useCallback(() => setActive(null), []);
 
@@ -76,22 +83,29 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   return (
     <QuickActionsContext.Provider value={value}>
       {children}
-      <ManualExpenseForm open={active === "expense"} onClose={closeQuickAction} />
-      <ManualExpenseForm
-        open={active === "cashTip"}
-        onClose={closeQuickAction}
-        defaultExpenseAccountCode="5700"
-      />
-      <ManualDailySalesForm open={active === "sales"} onClose={closeQuickAction} />
-      <PosSummaryUploadForm open={active === "posPhoto"} onClose={closeQuickAction} />
-      <CardSalesForm open={active === "cardSales"} onClose={closeQuickAction} />
-      <DeliveryReportForm
-        open={active === "deliveryReport"}
-        onClose={closeQuickAction}
-      />
-      <ExpenseReceiptUploadForm open={active === "receipt"} onClose={closeQuickAction} />
-      <SupplierForm open={active === "supplier"} onClose={closeQuickAction} />
-      <EfaturaUploadForm open={active === "efatura"} onClose={closeQuickAction} />
+      {canWriteOperations && (
+        <>
+          <ManualExpenseForm open={active === "expense"} onClose={closeQuickAction} />
+          <ManualExpenseForm
+            open={active === "cashTip"}
+            onClose={closeQuickAction}
+            defaultExpenseAccountCode="5700"
+          />
+          <ManualDailySalesForm open={active === "sales"} onClose={closeQuickAction} />
+          <PosSummaryUploadForm open={active === "posPhoto"} onClose={closeQuickAction} />
+          <CardSalesForm open={active === "cardSales"} onClose={closeQuickAction} />
+          <DeliveryReportForm
+            open={active === "deliveryReport"}
+            onClose={closeQuickAction}
+          />
+          <ExpenseReceiptUploadForm
+            open={active === "receipt"}
+            onClose={closeQuickAction}
+          />
+          <SupplierForm open={active === "supplier"} onClose={closeQuickAction} />
+          <EfaturaUploadForm open={active === "efatura"} onClose={closeQuickAction} />
+        </>
+      )}
     </QuickActionsContext.Provider>
   );
 }
