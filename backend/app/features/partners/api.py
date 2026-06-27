@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, list_params_dependency
+from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.partners.ledger import OverpaymentError, ZeroMovementError
 from app.core.partners.posting import InvalidPartnerPostingError
@@ -24,6 +25,8 @@ from app.features.partners.schema import (
     PartnerUpdate,
     ReimbursementPaidCreate,
     ReimbursementPaidResponse,
+    PartnerJournalEntryCorrect,
+    PartnerJournalEntryCorrectOut,
 )
 
 router = APIRouter(prefix="/entities/{entity_id}/partners", tags=["partners"])
@@ -157,6 +160,34 @@ def post_reimbursement_paid(
     except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{partner_id}/ledger/{journal_entry_id}/correct",
+    response_model=PartnerJournalEntryCorrectOut,
+)
+def correct_partner_journal_entry(
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: PartnerJournalEntryCorrect,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> PartnerJournalEntryCorrectOut:
+    try:
+        return service.correct_partner_journal_entry_http(
+            session, entity_id, partner_id, journal_entry_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

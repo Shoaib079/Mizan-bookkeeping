@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
+from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.staff.ledger import OverpaymentError, ZeroMovementError
 from app.core.staff.posting import InvalidStaffPostingError
@@ -25,6 +26,8 @@ from app.features.staff.schema import (
     StaffLedgerRead,
     StaffPaymentCreate,
     StaffPaymentResponse,
+    StaffJournalEntryCorrect,
+    StaffJournalEntryCorrectOut,
 )
 
 router = APIRouter(prefix="/entities/{entity_id}/staff", tags=["staff"])
@@ -180,6 +183,34 @@ def post_staff_payment(
     except (ZeroMovementError, ValueError, InvalidStaffPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/employees/{employee_id}/ledger/{journal_entry_id}/correct",
+    response_model=StaffJournalEntryCorrectOut,
+)
+def correct_staff_journal_entry(
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: StaffJournalEntryCorrect,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> StaffJournalEntryCorrectOut:
+    try:
+        return service.correct_staff_journal_entry_http(
+            session, entity_id, employee_id, journal_entry_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError, InvalidStaffPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

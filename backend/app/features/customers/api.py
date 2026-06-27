@@ -26,6 +26,8 @@ from app.features.customers.schema import (
     CustomerPaymentResponse,
     CustomerRead,
     CustomerUpdate,
+    CreditSaleCorrect,
+    CreditSaleCorrectOut,
 )
 
 router = APIRouter(prefix="/entities/{entity_id}/customers", tags=["customers"])
@@ -202,6 +204,50 @@ def correct_customer_payment(
 
     assert new_row is not None
     return CustomerPaymentCorrectOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+        corrected_journal_entry_id=result.corrected.id,
+        customer_ledger_entry=CustomerLedgerEntryRead.model_validate(new_row),
+        balance_kurus=balance,
+    )
+
+
+@router.post(
+    "/{customer_id}/credit-sales/{journal_entry_id}/correct",
+    response_model=CreditSaleCorrectOut,
+)
+def correct_credit_sale(
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: CreditSaleCorrect,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> CreditSaleCorrectOut:
+    try:
+        result, balance, new_row = service.correct_credit_sale_entry(
+            session,
+            entity_id,
+            customer_id,
+            journal_entry_id,
+            payload,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    assert new_row is not None
+    return CreditSaleCorrectOut(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
         corrected_journal_entry_id=result.corrected.id,

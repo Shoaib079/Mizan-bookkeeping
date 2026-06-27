@@ -11,6 +11,10 @@ import {
   CorrectSupplierPaymentForm,
   type CorrectableSupplierPaymentRow,
 } from "@/components/forms/correct-supplier-payment-form";
+import {
+  CorrectSupplierInvoiceForm,
+  type CorrectableSupplierInvoiceRow,
+} from "@/components/forms/correct-supplier-invoice-form";
 import { SupplierForm, type SupplierRow } from "@/components/forms/supplier-form";
 import { SupplierPaymentForm } from "@/components/forms/supplier-payment-form";
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
@@ -75,6 +79,8 @@ export default function SupplierDetailPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableSupplierPaymentRow | null>(null);
+  const [correctInvoice, setCorrectInvoice] =
+    useState<CorrectableSupplierInvoiceRow | null>(null);
   const [expandedDraftId, setExpandedDraftId] = useState<string | null>(
     highlightDraftId,
   );
@@ -215,6 +221,24 @@ export default function SupplierDetailPage() {
                         {formatTry(row.amount_kurus)}
                       </DataTableCell>
                       <DataTableCell align="right">
+                        {row.movement_type === "invoice" &&
+                          row.journal_entry_id && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-8 px-2"
+                              onClick={() =>
+                                setCorrectInvoice({
+                                  journal_entry_id: row.journal_entry_id!,
+                                  movement_date: row.movement_date,
+                                  amount_kurus: row.amount_kurus,
+                                  description: row.description,
+                                })
+                              }
+                            >
+                              Correct
+                            </Button>
+                          )}
                         {row.movement_type === "payment" &&
                           row.journal_entry_id && (
                             <Button
@@ -313,6 +337,13 @@ export default function SupplierDetailPage() {
         supplierId={supplierId}
         payment={correctPayment}
         onClose={() => setCorrectPayment(null)}
+        onSaved={() => void reload()}
+      />
+      <CorrectSupplierInvoiceForm
+        open={correctInvoice !== null}
+        supplierId={supplierId}
+        invoice={correctInvoice}
+        onClose={() => setCorrectInvoice(null)}
         onSaved={() => void reload()}
       />
     </AppShell>

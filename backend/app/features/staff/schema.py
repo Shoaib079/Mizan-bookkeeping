@@ -100,3 +100,24 @@ class StaffPaymentResponse(BaseModel):
     staff_ledger_entry: StaffLedgerEntryRead
     balance_minor: int
     fx_ledger_entry_id: uuid.UUID | None = None
+
+
+class StaffJournalEntryCorrect(BaseModel):
+    entry_date: date
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID
+    amount_minor: int | None = Field(default=None, gt=0)
+    try_cost_kurus: int | None = Field(default=None, gt=0)
+    payment_account_id: uuid.UUID | None = None
+    fx_money_account_id: uuid.UUID | None = None
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
+class StaffJournalEntryCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
+    staff_ledger_entry: StaffLedgerEntryRead
+    balance_minor: int

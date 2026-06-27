@@ -9,6 +9,10 @@ import {
   CorrectCustomerPaymentForm,
   type CorrectableCustomerPaymentRow,
 } from "@/components/forms/correct-customer-payment-form";
+import {
+  CorrectCreditSaleForm,
+  type CorrectableCreditSaleRow,
+} from "@/components/forms/correct-credit-sale-form";
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { AppShell } from "@/components/layout/app-shell";
@@ -55,6 +59,7 @@ export default function CustomerDetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableCustomerPaymentRow | null>(null);
+  const [correctSale, setCorrectSale] = useState<CorrectableCreditSaleRow | null>(null);
 
   const reload = useCallback(async () => {
     if (!entityId || !customerId) return;
@@ -171,6 +176,24 @@ export default function CustomerDetailPage() {
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell align="right">
+                      {entry.movement_type === "credit_sale" &&
+                        entry.journal_entry_id && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-8 px-2"
+                            onClick={() =>
+                              setCorrectSale({
+                                journal_entry_id: entry.journal_entry_id!,
+                                movement_date: entry.movement_date,
+                                amount_kurus: entry.amount_kurus,
+                                description: entry.description,
+                              })
+                            }
+                          >
+                            Correct
+                          </Button>
+                        )}
                       {entry.movement_type === "payment" &&
                         entry.journal_entry_id && (
                           <Button
@@ -224,6 +247,13 @@ export default function CustomerDetailPage() {
             customerId={customerId}
             payment={correctPayment}
             onClose={() => setCorrectPayment(null)}
+            onSaved={() => void reload()}
+          />
+          <CorrectCreditSaleForm
+            open={correctSale !== null}
+            customerId={customerId}
+            sale={correctSale}
+            onClose={() => setCorrectSale(null)}
             onSaved={() => void reload()}
           />
         </>

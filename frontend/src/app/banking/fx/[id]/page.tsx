@@ -11,6 +11,10 @@ import {
   CorrectFxPurchaseForm,
   type CorrectableFxPurchaseRow,
 } from "@/components/forms/correct-fx-purchase-form";
+import {
+  CorrectFxLedgerForm,
+  type CorrectableFxSpendRow,
+} from "@/components/forms/correct-fx-ledger-form";
 import { FxExpenseSpendForm } from "@/components/forms/fx-expense-spend-form";
 import { FxPurchaseForm } from "@/components/forms/fx-purchase-form";
 import { AppShell } from "@/components/layout/app-shell";
@@ -47,6 +51,7 @@ export default function FxWalletPage() {
   const [spendOpen, setSpendOpen] = useState(false);
   const [correctPurchase, setCorrectPurchase] =
     useState<CorrectableFxPurchaseRow | null>(null);
+  const [correctSpend, setCorrectSpend] = useState<CorrectableFxSpendRow | null>(null);
 
   const reload = useCallback(async () => {
     if (!entityId || !accountId) return;
@@ -76,6 +81,7 @@ export default function FxWalletPage() {
 
   useEffect(() => {
     setCorrectPurchase(null);
+    setCorrectSpend(null);
     void reload();
   }, [reload]);
 
@@ -166,6 +172,30 @@ export default function FxWalletPage() {
                         {formatTry(row.try_cost_kurus)}
                       </DataTableCell>
                       <DataTableCell align="right">
+                        {row.movement_type === "spend" &&
+                          row.journal_entry_id &&
+                          row.journal_source &&
+                          row.journal_source !== "fx_purchase" && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-8 px-2"
+                              onClick={() =>
+                                setCorrectSpend({
+                                  journal_entry_id: row.journal_entry_id,
+                                  movement_date: row.movement_date,
+                                  movement_type: row.movement_type,
+                                  native_quantity: row.native_quantity,
+                                  try_cost_kurus: row.try_cost_kurus,
+                                  description: row.description,
+                                  journal_source: row.journal_source,
+                                  fx_money_account_id: row.fx_money_account_id,
+                                })
+                              }
+                            >
+                              Correct
+                            </Button>
+                          )}
                         {row.movement_type === "purchase" &&
                           row.journal_entry_id && (
                             <Button
@@ -222,6 +252,13 @@ export default function FxWalletPage() {
         currency={currency}
         purchase={correctPurchase}
         onClose={() => setCorrectPurchase(null)}
+        onSaved={() => void reload()}
+      />
+      <CorrectFxLedgerForm
+        open={correctSpend !== null}
+        currency={currency}
+        entry={correctSpend}
+        onClose={() => setCorrectSpend(null)}
         onSaved={() => void reload()}
       />
     </AppShell>

@@ -134,11 +134,13 @@ export type FxBalanceRead = {
 
 export type FxLedgerEntryRead = {
   id: string;
+  fx_money_account_id: string;
   movement_date: string;
   movement_type: string;
   native_quantity: number;
   try_cost_kurus: number;
   description: string;
   journal_entry_id: string;
+  journal_source?: string | null;
   created_at: string;
 };

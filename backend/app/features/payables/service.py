@@ -9,7 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.core.payables import ledger as payables_ledger
 from app.core.payables import posting as payables_posting
-from app.core.ledger.correction import CorrectionNotFoundError, correct_supplier_payment
+from app.core.ledger.correction import (
+    CorrectionNotFoundError,
+    correct_supplier_invoice,
+    correct_supplier_payment,
+)
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
@@ -167,6 +171,59 @@ def correct_supplier_payment_entry(
         void_date=void_date,
         period_unlock_reason=period_unlock_reason,
         reference_type=reference,
+    )
+    balance = payables_ledger.current_balance_kurus(session, entity_id, supplier_id)
+    with entity_context(session, entity_id):
+        new_row = session.scalar(
+            select(SupplierLedgerEntry).where(
+                SupplierLedgerEntry.journal_entry_id == result.corrected.id
+            )
+        )
+    return result, balance, new_row
+
+
+def correct_supplier_invoice_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    invoice_date,
+    description: str,
+    actor_id: uuid.UUID,
+    expense_account_id: uuid.UUID,
+    net_kurus: int,
+    gross_kurus: int,
+    vat_breakdown: list,
+    reason: str | None = None,
+    void_date=None,
+    period_unlock_reason: str | None = None,
+):
+    with entity_context(session, entity_id):
+        row = session.scalar(
+            select(SupplierLedgerEntry).where(
+                SupplierLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if row is None or row.supplier_id != supplier_id:
+            raise CorrectionNotFoundError("supplier invoice not found")
+        if row.movement_type != SupplierMovementType.INVOICE:
+            raise CorrectionNotFoundError("journal entry is not a supplier invoice")
+
+    result = correct_supplier_invoice(
+        session,
+        entity_id,
+        journal_entry_id,
+        invoice_date=invoice_date,
+        description=description,
+        actor_id=actor_id,
+        expense_account_id=expense_account_id,
+        net_kurus=net_kurus,
+        gross_kurus=gross_kurus,
+        vat_breakdown=vat_breakdown,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
     )
     balance = payables_ledger.current_balance_kurus(session, entity_id, supplier_id)
     with entity_context(session, entity_id):

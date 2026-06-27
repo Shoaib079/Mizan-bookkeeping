@@ -10,6 +10,10 @@ from sqlalchemy.orm import Session
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.staff import posting as staff_posting
 from app.core.staff.ledger import current_balance_minor, list_ledger_entries
+from app.core.staff.models import StaffLedgerEntry
+from app.core.staff.types import PayCurrency, StaffMovementType
+from app.core.ledger.correction import CorrectionNotFoundError, correct_staff_journal_entry
+from app.core.ledger.posting import PostingLine
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.staff.models import Employee
@@ -24,6 +28,8 @@ from app.features.staff.schema import (
     StaffLedgerRead,
     StaffPaymentCreate,
     StaffPaymentResponse,
+    StaffJournalEntryCorrect,
+    StaffJournalEntryCorrectOut,
 )
 
 
@@ -195,4 +201,196 @@ def record_payment(
         fx_ledger_entry_id=(
             result.fx_ledger_entry.id if result.fx_ledger_entry else None
         ),
+    )
+
+
+def _staff_row_for_correction(
+    session: Session,
+    journal_entry_id: uuid.UUID,
+    employee_id: uuid.UUID,
+) -> StaffLedgerEntry:
+    rows = list(
+        session.scalars(
+            select(StaffLedgerEntry).where(
+                StaffLedgerEntry.journal_entry_id == journal_entry_id,
+                StaffLedgerEntry.employee_id == employee_id,
+                StaffLedgerEntry.movement_type != StaffMovementType.ADVANCE_APPLIED,
+            )
+        )
+    )
+    if not rows:
+        raise CorrectionNotFoundError("staff ledger entry not found for journal entry")
+    if len(rows) > 1:
+        raise CorrectionNotFoundError(
+            "journal entry has multiple correctable staff rows — use dedicated flow"
+        )
+    return rows[0]
+
+
+def _build_staff_correction_lines(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    staff_row: StaffLedgerEntry,
+    payload: StaffJournalEntryCorrect,
+) -> tuple[list[PostingLine], int, int | None]:
+    from app.core.chart_of_accounts.default_chart import (
+        EMPLOYEE_ADVANCES_CODE,
+        SALARIES_PAYABLE_CODE,
+        SALARY_EXPENSE_CODE,
+    )
+
+    employee = staff_posting._get_employee(session, entity_id, employee_id)
+    movement_type = staff_row.movement_type
+    amount_minor = (
+        payload.amount_minor if payload.amount_minor is not None else abs(staff_row.amount_minor)
+    )
+    try_cost = (
+        payload.try_cost_kurus
+        if payload.try_cost_kurus is not None
+        else staff_row.try_cost_kurus
+    )
+
+    if movement_type == StaffMovementType.SALARY_ACCRUED:
+        if employee.pay_currency != PayCurrency.TRY:
+            raise ValueError("FX salary accrual has no GL entry to correct")
+        salary_expense = staff_posting._chart_account(session, SALARY_EXPENSE_CODE)
+        salaries_payable = staff_posting._chart_account(session, SALARIES_PAYABLE_CODE)
+        lines = staff_posting.build_try_salary_accrual_lines(
+            salary_expense_id=salary_expense.id,
+            salaries_payable_id=salaries_payable.id,
+            amount_kurus=amount_minor,
+        )
+        return lines, amount_minor, None
+
+    if movement_type == StaffMovementType.ADVANCE_PAID:
+        advances = staff_posting._chart_account(session, EMPLOYEE_ADVANCES_CODE)
+        if employee.pay_currency == PayCurrency.TRY:
+            if payload.payment_account_id is None:
+                raise ValueError("payment_account_id required for TRY advance correction")
+            payment_gl = staff_posting._validate_try_payment_account(
+                session, entity_id, payload.payment_account_id
+            )
+            lines = staff_posting.build_try_advance_lines(
+                employee_advances_id=advances.id,
+                payment_account_id=payment_gl.id,
+                amount_kurus=amount_minor,
+            )
+            return lines, -amount_minor, None
+
+        if payload.fx_money_account_id is None or try_cost is None:
+            raise ValueError(
+                "fx_money_account_id and try_cost_kurus required for FX advance correction"
+            )
+        _, fx_gl = staff_posting._validate_fx_money_account(
+            session, entity_id, payload.fx_money_account_id, employee.pay_currency
+        )
+        lines = staff_posting.build_fx_advance_lines(
+            employee_advances_id=advances.id,
+            fx_gl_account_id=fx_gl.id,
+            try_cost_kurus=try_cost,
+        )
+        return lines, -amount_minor, try_cost
+
+    if movement_type == StaffMovementType.SALARY_PAYMENT:
+        sibling = session.scalar(
+            select(StaffLedgerEntry).where(
+                StaffLedgerEntry.journal_entry_id == staff_row.journal_entry_id,
+                StaffLedgerEntry.movement_type == StaffMovementType.ADVANCE_APPLIED,
+            )
+        )
+        if sibling is not None:
+            raise ValueError(
+                "salary payment with advance applied cannot be corrected via this endpoint yet"
+            )
+
+        if employee.pay_currency == PayCurrency.TRY:
+            if payload.payment_account_id is None:
+                raise ValueError("payment_account_id required for TRY payment correction")
+            payment_gl = staff_posting._validate_try_payment_account(
+                session, entity_id, payload.payment_account_id
+            )
+            salaries_payable = staff_posting._chart_account(session, SALARIES_PAYABLE_CODE)
+            advances = staff_posting._chart_account(session, EMPLOYEE_ADVANCES_CODE)
+            payable_cleared = amount_minor
+            lines = staff_posting.build_try_salary_payment_lines(
+                salaries_payable_id=salaries_payable.id,
+                employee_advances_id=advances.id,
+                payment_account_id=payment_gl.id,
+                payable_cleared_kurus=payable_cleared,
+                advance_applied_kurus=0,
+                cash_paid_kurus=amount_minor,
+            )
+            return lines, -payable_cleared, None
+
+        if payload.fx_money_account_id is None or try_cost is None:
+            raise ValueError(
+                "fx_money_account_id and try_cost_kurus required for FX payment correction"
+            )
+        salary_expense = staff_posting._chart_account(session, SALARY_EXPENSE_CODE)
+        advances = staff_posting._chart_account(session, EMPLOYEE_ADVANCES_CODE)
+        _, fx_gl = staff_posting._validate_fx_money_account(
+            session, entity_id, payload.fx_money_account_id, employee.pay_currency
+        )
+        lines = staff_posting.build_fx_salary_payment_lines(
+            salary_expense_id=salary_expense.id,
+            employee_advances_id=advances.id,
+            fx_gl_account_id=fx_gl.id,
+            expense_try_kurus=try_cost,
+            advance_applied_try_kurus=0,
+            fx_paid_try_kurus=try_cost,
+        )
+        return lines, -amount_minor, try_cost
+
+    raise CorrectionNotFoundError("staff movement type is not correctable")
+
+
+def correct_staff_journal_entry_http(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: StaffJournalEntryCorrect,
+) -> StaffJournalEntryCorrectOut:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        staff_row = _staff_row_for_correction(session, journal_entry_id, employee_id)
+        lines, amount_minor, try_cost = _build_staff_correction_lines(
+            session, entity_id, employee_id, staff_row, payload
+        )
+
+    result = correct_staff_journal_entry(
+        session,
+        entity_id,
+        journal_entry_id,
+        payload.entry_date,
+        payload.description,
+        lines,
+        actor_id=payload.actor_id,
+        amount_minor=amount_minor,
+        try_cost_kurus=try_cost,
+        reason=payload.reason,
+        void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
+    )
+    balance = current_balance_minor(session, entity_id, employee_id)
+    with entity_context(session, entity_id):
+        new_row = session.scalar(
+            select(StaffLedgerEntry).where(
+                StaffLedgerEntry.journal_entry_id == result.corrected.id,
+                StaffLedgerEntry.movement_type == staff_row.movement_type,
+            )
+        )
+    if new_row is None:
+        raise CorrectionNotFoundError("corrected staff ledger entry not found")
+
+    return StaffJournalEntryCorrectOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+        corrected_journal_entry_id=result.corrected.id,
+        staff_ledger_entry=StaffLedgerEntryRead.model_validate(new_row),
+        balance_minor=balance,
     )

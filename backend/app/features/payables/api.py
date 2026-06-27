@@ -29,6 +29,8 @@ from app.features.payables.schema import (
     SupplierPaymentRead,
     SupplierPayableBalanceRead,
     SupplierLedgerEntryRead,
+    SupplierInvoiceCorrect,
+    SupplierInvoiceCorrectOut,
 )
 
 router = APIRouter(prefix="/entities/{entity_id}", tags=["payables"])
@@ -207,6 +209,56 @@ def correct_supplier_payment(
 
     assert new_row is not None
     return SupplierPaymentCorrectOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+        corrected_journal_entry_id=result.corrected.id,
+        supplier_ledger_entry=SupplierLedgerEntryRead.model_validate(new_row),
+        payable_balance_kurus=balance,
+    )
+
+
+@router.post(
+    "/suppliers/{supplier_id}/invoices/{journal_entry_id}/correct",
+    response_model=SupplierInvoiceCorrectOut,
+)
+def correct_supplier_invoice(
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: SupplierInvoiceCorrect,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> SupplierInvoiceCorrectOut:
+    try:
+        result, balance, new_row = service.correct_supplier_invoice_entry(
+            session,
+            entity_id,
+            supplier_id,
+            journal_entry_id,
+            invoice_date=payload.invoice_date,
+            description=payload.description,
+            actor_id=payload.actor_id,
+            expense_account_id=payload.expense_account_id,
+            net_kurus=payload.net_kurus,
+            gross_kurus=payload.gross_kurus,
+            vat_breakdown=[line.model_dump() for line in payload.vat_breakdown],
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    assert new_row is not None
+    return SupplierInvoiceCorrectOut(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
         corrected_journal_entry_id=result.corrected.id,

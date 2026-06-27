@@ -11,6 +11,11 @@ from sqlalchemy.orm import Session
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.partners import posting as partner_posting
 from app.core.partners.ledger import current_balance_kurus, list_ledger_entries
+from app.core.partners.models import PartnerLedgerEntry
+from app.core.partners.types import PartnerMovementType
+from app.core.ledger.correction import CorrectionNotFoundError, correct_partner_journal_entry
+from app.core.ledger.posting import PostingLine
+from app.core.chart_of_accounts.default_chart import PARTNER_REIMBURSEMENT_PAYABLE_CODE
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.partners.models import Partner
@@ -24,6 +29,8 @@ from app.features.partners.schema import (
     PartnerUpdate,
     ReimbursementPaidCreate,
     ReimbursementPaidResponse,
+    PartnerJournalEntryCorrect,
+    PartnerJournalEntryCorrectOut,
 )
 
 HUNDRED = Decimal("100")
@@ -201,4 +208,102 @@ def record_reimbursement_paid(
             result.partner_ledger_entry
         ),
         balance_kurus=result.balance_kurus,
+    )
+
+
+def _build_partner_correction_lines(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_row: PartnerLedgerEntry,
+    payload: PartnerJournalEntryCorrect,
+) -> tuple[list[PostingLine], int]:
+    amount_kurus = (
+        payload.amount_kurus if payload.amount_kurus is not None else partner_row.amount_kurus
+    )
+    movement_type = partner_row.movement_type
+
+    if movement_type == PartnerMovementType.EXPENSE_FRONTED:
+        if payload.expense_account_id is None:
+            raise ValueError("expense_account_id required for expense fronted correction")
+        expense = partner_posting._validate_expense_account(
+            session, entity_id, payload.expense_account_id
+        )
+        payable = partner_posting._chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
+        lines = partner_posting.build_expense_fronted_lines(
+            expense_account_id=expense.id,
+            partner_payable_id=payable.id,
+            amount_kurus=amount_kurus,
+        )
+        return lines, amount_kurus
+
+    if movement_type == PartnerMovementType.REIMBURSEMENT_PAID:
+        if payload.payment_account_id is None:
+            raise ValueError("payment_account_id required for reimbursement correction")
+        payment = partner_posting._validate_payment_account(
+            session, entity_id, payload.payment_account_id
+        )
+        payable = partner_posting._chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
+        lines = partner_posting.build_reimbursement_paid_lines(
+            partner_payable_id=payable.id,
+            payment_account_id=payment.id,
+            amount_kurus=amount_kurus,
+        )
+        return lines, amount_kurus
+
+    raise CorrectionNotFoundError("partner movement type is not correctable")
+
+
+def correct_partner_journal_entry_http(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: PartnerJournalEntryCorrect,
+) -> PartnerJournalEntryCorrectOut:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        partner_row = session.scalar(
+            select(PartnerLedgerEntry).where(
+                PartnerLedgerEntry.journal_entry_id == journal_entry_id,
+                PartnerLedgerEntry.partner_id == partner_id,
+            )
+        )
+        if partner_row is None:
+            raise CorrectionNotFoundError("partner ledger entry not found for journal entry")
+        lines, amount_kurus = _build_partner_correction_lines(
+            session, entity_id, partner_row, payload
+        )
+
+    result = correct_partner_journal_entry(
+        session,
+        entity_id,
+        journal_entry_id,
+        payload.entry_date,
+        payload.description,
+        lines,
+        actor_id=payload.actor_id,
+        amount_kurus=amount_kurus,
+        reason=payload.reason,
+        void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
+    )
+    balance = current_balance_kurus(session, entity_id, partner_id)
+    with entity_context(session, entity_id):
+        new_row = session.scalar(
+            select(PartnerLedgerEntry).where(
+                PartnerLedgerEntry.journal_entry_id == result.corrected.id
+            )
+        )
+    if new_row is None:
+        raise CorrectionNotFoundError("corrected partner ledger entry not found")
+
+    return PartnerJournalEntryCorrectOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+        corrected_journal_entry_id=result.corrected.id,
+        partner_ledger_entry=PartnerLedgerEntryRead.model_validate(new_row),
+        balance_kurus=balance,
     )

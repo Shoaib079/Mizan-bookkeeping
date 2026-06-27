@@ -1079,17 +1079,19 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned (**core done** for all five helpers; **HTTP routes + integration tests not built**) |
-| **Money-critical** | Yes — owner sign-off |
-| **Suggested tag** | `v0.69.3-correction-apis` |
+| **Status** | done |
+| **Money-critical** | Yes — **owner sign-off PENDING** |
+| **Tag** | `v0.69.3-correction-apis` |
 
 **Problem:** Core helpers exist in `correction.py`; no feature HTTP routes yet (unlike payment/FX correct from Phase 8.5).
 
 **Acceptance:**
 
-- [ ] HTTP routes + **HTTP** tests for: `correct_supplier_invoice`, `correct_credit_sale`, `correct_staff_journal_entry`, `correct_partner_journal_entry`, `correct_fx_conversion_or_spend`.
-- [ ] Minimal UI entry points on respective detail/list pages (or document API-only if UI deferred by owner).
-- [ ] Void-and-reenter types (`TRANSFER`, `OPENING_BALANCE`, `POS_SETTLEMENT`, etc.) remain **out of scope** — document void + re-enter playbook only.
+- [x] HTTP routes + **HTTP** tests for: `correct_supplier_invoice`, `correct_credit_sale`, `correct_staff_journal_entry`, `correct_partner_journal_entry`, `correct_fx_conversion_or_spend`.
+- [x] Minimal UI entry points on respective detail pages (Correct dialogs + `usePeriodUnlockSubmit`).
+- [x] Void-and-reenter types (`TRANSFER`, `OPENING_BALANCE`, `POS_SETTLEMENT`, etc.) remain **out of scope**.
+
+**Done:** Five POST correct routes (payables invoice, customer credit sale, staff/partner ledger, unified FX conversion/spend). Service layer rebuilds GL lines from create-shaped payloads. Tests: `test_correction_apis_phase11.py` (7 tests — happy path ×5, wrong-type 404, period lock). Frontend: Correct on supplier invoice, customer credit sale, staff accrual/advance/payment, partner expense/reimbursement, FX spend/conversion rows. **579 pytest green** (+7); frontend build green. **Known gap:** staff salary payment with `advance_applied` sibling row returns 422 — dedicated flow deferred. **Next:** Phase 11.13 cash drawer optional session.
 
 ---
 

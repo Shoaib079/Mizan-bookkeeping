@@ -7,12 +7,22 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.12** — Remaining dedicated correction APIs |
-| **Last completed slice** | Phase 11 Slice 11.11 — correction UI + period unlock (`v0.69.2-correction-ui`) |
+| **Active slice** | **11.13** — Cash drawer optional session |
+| **Last completed slice** | Phase 11 Slice 11.12 — remaining correction APIs (`v0.69.3-correction-apis`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.2-correction-ui` |
+| **Last tag** | `v0.69.3-correction-apis` |
 
 ## Resume point
+
+**Phase 11 Slice 11.12 complete** — remaining dedicated correction HTTP APIs (`v0.69.3-correction-apis`):
+- POST routes: supplier invoice, credit sale, staff/partner ledger, FX conversion/spend (`/fx/ledger/{id}/correct`)
+- Tests: `test_correction_apis_phase11.py` (7 tests)
+- Frontend Correct dialogs on supplier/customer/staff/partner/FX detail ledgers; period unlock via shared hook
+- **579 pytest green** (+7); frontend build green
+- **Owner sign-off: PENDING** (money-critical)
+- **Known gap:** staff payment with advance applied → 422 (needs dedicated flow)
+
+**Next:** Phase 11.13 — cash drawer optional session + owner reopen.
 
 **Phase 11 Slice 11.11 complete** — correction UI + period unlock retry (`v0.69.2-correction-ui`):
 - Shared `period-unlock.ts` + `usePeriodUnlockSubmit()` — 422 period lock → owner unlock dialog → retry with `period_unlock_reason`

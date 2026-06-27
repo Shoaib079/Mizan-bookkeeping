@@ -8,7 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
-from app.core.ledger.correction import CorrectionNotFoundError, correct_customer_payment
+from app.core.ledger.correction import (
+    CorrectionNotFoundError,
+    correct_credit_sale,
+    correct_customer_payment,
+)
 from app.core.receivables import ledger as receivables_ledger
 from app.core.receivables.models import CustomerLedgerEntry
 from app.core.receivables import posting as receivables_posting
@@ -203,6 +207,65 @@ def correct_customer_payment_entry(
         description=payload.description,
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    balance = receivables_ledger.current_balance_kurus(session, entity_id, customer_id)
+    with entity_context(session, entity_id):
+        new_row = session.scalar(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.journal_entry_id == result.corrected.id
+            )
+        )
+    return result, balance, new_row
+
+
+def correct_credit_sale_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: CreditSaleCreate,
+    *,
+    reason: str | None = None,
+    void_date=None,
+    period_unlock_reason: str | None = None,
+):
+    from app.core.receivables.models import CustomerLedgerEntry
+    from app.core.receivables.types import CustomerMovementType
+
+    with entity_context(session, entity_id):
+        row = session.scalar(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if row is None or row.customer_id != customer_id:
+            raise CorrectionNotFoundError("credit sale not found")
+        if row.movement_type != CustomerMovementType.CREDIT_SALE:
+            raise CorrectionNotFoundError("journal entry is not a credit sale")
+
+    revenue_account_id = payload.revenue_account_id
+    if revenue_account_id is None:
+        from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
+        from app.core.chart_of_accounts.models import Account
+
+        with entity_context(session, entity_id):
+            revenue = session.scalar(select(Account).where(Account.code == SALES_REVENUE_CODE))
+            if revenue is None:
+                raise LookupError("default revenue account not found")
+            revenue_account_id = revenue.id
+
+    result = correct_credit_sale(
+        session,
+        entity_id,
+        journal_entry_id,
+        sale_date=payload.sale_date,
+        amount_kurus=payload.amount_kurus,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        revenue_account_id=revenue_account_id,
         reason=reason,
         void_date=void_date,
         period_unlock_reason=period_unlock_reason,

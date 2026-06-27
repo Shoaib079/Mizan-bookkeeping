@@ -7,6 +7,10 @@ import { useCallback, useEffect, useState } from "react";
 import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form";
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
 import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
+import {
+  CorrectStaffLedgerForm,
+  type CorrectableStaffLedgerRow,
+} from "@/components/forms/correct-staff-ledger-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +33,14 @@ type LedgerEntry = {
   movement_type: string;
   amount_minor: number;
   description: string;
+  journal_entry_id: string | null;
 };
+
+const correctableStaffTypes = new Set([
+  "salary_accrued",
+  "advance_paid",
+  "salary_payment",
+]);
 
 type LedgerResponse = {
   balance_minor: number;
@@ -49,6 +60,7 @@ export default function StaffDetailPage() {
   const [accrualOpen, setAccrualOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [correctEntry, setCorrectEntry] = useState<CorrectableStaffLedgerRow | null>(null);
 
   const reload = useCallback(async () => {
     if (!entityId || !employeeId) return;
@@ -154,6 +166,7 @@ export default function StaffDetailPage() {
                   <DataTableHeaderCell>Type</DataTableHeaderCell>
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  <DataTableHeaderCell>Actions</DataTableHeaderCell>
                 </tr>
               </DataTableHead>
               <DataTableBody>
@@ -171,6 +184,27 @@ export default function StaffDetailPage() {
                       {employee.pay_currency === "TRY"
                         ? formatTry(entry.amount_minor)
                         : `${(entry.amount_minor / 100).toFixed(2)} ${employee.pay_currency}`}
+                    </DataTableCell>
+                    <DataTableCell align="right">
+                      {correctableStaffTypes.has(entry.movement_type) &&
+                        entry.journal_entry_id && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-8 px-2"
+                            onClick={() =>
+                              setCorrectEntry({
+                                journal_entry_id: entry.journal_entry_id!,
+                                movement_date: entry.movement_date,
+                                movement_type: entry.movement_type,
+                                amount_minor: entry.amount_minor,
+                                description: entry.description,
+                              })
+                            }
+                          >
+                            Correct
+                          </Button>
+                        )}
                     </DataTableCell>
                   </DataTableRow>
                 ))}
@@ -209,6 +243,13 @@ export default function StaffDetailPage() {
             employeeId={employeeId}
             payCurrency={employee.pay_currency}
             onClose={() => setPaymentOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <CorrectStaffLedgerForm
+            open={correctEntry !== null}
+            employeeId={employeeId}
+            entry={correctEntry}
+            onClose={() => setCorrectEntry(null)}
             onSaved={() => void reload()}
           />
         </>

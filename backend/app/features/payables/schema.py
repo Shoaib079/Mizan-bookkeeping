@@ -91,6 +91,33 @@ class SupplierPaymentCorrectOut(BaseModel):
     payable_balance_kurus: int
 
 
+class VatBreakdownIn(BaseModel):
+    rate_percent: float
+    base_kurus: int
+    vat_kurus: int
+
+
+class SupplierInvoiceCorrect(BaseModel):
+    invoice_date: date
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID
+    expense_account_id: uuid.UUID
+    net_kurus: int = Field(gt=0)
+    gross_kurus: int = Field(gt=0)
+    vat_breakdown: list[VatBreakdownIn] = Field(min_length=1)
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
+class SupplierInvoiceCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
+    supplier_ledger_entry: SupplierLedgerEntryRead
+    payable_balance_kurus: int
+
+
 class PayablesSummaryRead(BaseModel):
     total_payables_kurus: int
     suppliers: list[SupplierPayableBalanceRead]

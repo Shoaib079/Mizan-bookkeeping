@@ -5,6 +5,10 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { PartnerExpenseFrontedForm } from "@/components/forms/partner-expense-fronted-form";
+import {
+  CorrectPartnerLedgerForm,
+  type CorrectablePartnerLedgerRow,
+} from "@/components/forms/correct-partner-ledger-form";
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
 import { PartnerReimbursementForm } from "@/components/forms/partner-reimbursement-form";
 import { AppShell } from "@/components/layout/app-shell";
@@ -29,7 +33,10 @@ type LedgerEntry = {
   movement_type: string;
   amount_kurus: number;
   description: string;
+  journal_entry_id: string | null;
 };
+
+const correctablePartnerTypes = new Set(["expense_fronted", "reimbursement_paid"]);
 
 type LedgerResponse = {
   balance_kurus: number;
@@ -48,6 +55,7 @@ export default function PartnerDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [reimburseOpen, setReimburseOpen] = useState(false);
+  const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
 
   const reload = useCallback(async () => {
     if (!entityId || !partnerId) return;
@@ -143,6 +151,7 @@ export default function PartnerDetailPage() {
                   <DataTableHeaderCell>Type</DataTableHeaderCell>
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  <DataTableHeaderCell>Actions</DataTableHeaderCell>
                 </tr>
               </DataTableHead>
               <DataTableBody>
@@ -158,6 +167,27 @@ export default function PartnerDetailPage() {
                     <DataTableCell>{entry.description}</DataTableCell>
                     <DataTableCell align="right">
                       {formatTry(entry.amount_kurus)}
+                    </DataTableCell>
+                    <DataTableCell align="right">
+                      {correctablePartnerTypes.has(entry.movement_type) &&
+                        entry.journal_entry_id && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-8 px-2"
+                            onClick={() =>
+                              setCorrectEntry({
+                                journal_entry_id: entry.journal_entry_id!,
+                                movement_date: entry.movement_date,
+                                movement_type: entry.movement_type,
+                                amount_kurus: entry.amount_kurus,
+                                description: entry.description,
+                              })
+                            }
+                          >
+                            Correct
+                          </Button>
+                        )}
                     </DataTableCell>
                   </DataTableRow>
                 ))}
@@ -186,6 +216,13 @@ export default function PartnerDetailPage() {
             partnerId={partnerId}
             balanceKurus={ledger?.balance_kurus}
             onClose={() => setReimburseOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <CorrectPartnerLedgerForm
+            open={correctEntry !== null}
+            partnerId={partnerId}
+            entry={correctEntry}
+            onClose={() => setCorrectEntry(null)}
             onSaved={() => void reload()}
           />
         </>

@@ -95,3 +95,17 @@ class CustomerPaymentCorrectOut(BaseModel):
     corrected_journal_entry_id: uuid.UUID
     customer_ledger_entry: CustomerLedgerEntryRead
     balance_kurus: int
+
+
+class CreditSaleCorrect(CreditSaleCreate):
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
+class CreditSaleCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
+    customer_ledger_entry: CustomerLedgerEntryRead
+    balance_kurus: int

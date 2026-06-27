@@ -98,3 +98,23 @@ class ReimbursementPaidResponse(BaseModel):
     journal_entry_id: uuid.UUID
     partner_ledger_entry: PartnerLedgerEntryRead
     balance_kurus: int
+
+
+class PartnerJournalEntryCorrect(BaseModel):
+    entry_date: date
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID
+    amount_kurus: int | None = Field(default=None, gt=0)
+    expense_account_id: uuid.UUID | None = None
+    payment_account_id: uuid.UUID | None = None
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
+class PartnerJournalEntryCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
+    partner_ledger_entry: PartnerLedgerEntryRead
+    balance_kurus: int
