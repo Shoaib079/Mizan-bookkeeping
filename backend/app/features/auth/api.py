@@ -124,7 +124,17 @@ def add_member(
     _: object = Depends(require_admin_members),
 ) -> MembershipRead:
     try:
-        membership = service.add_entity_member(session, entity_id, payload)
+        if payload.user_id is not None:
+            membership = service.add_entity_member(session, entity_id, payload)
+        else:
+            assert payload.email is not None
+            membership = service.invite_member_by_email(
+                session,
+                entity_id,
+                email=payload.email,
+                role=payload.role,
+                display_name=payload.display_name,
+            )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.DuplicateMembershipError as exc:

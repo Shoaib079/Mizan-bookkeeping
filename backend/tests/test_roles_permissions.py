@@ -232,6 +232,91 @@ def test_membership_crud_api(
     assert deactivate_resp.json()["user"]["is_active"] is False
 
 
+def test_add_member_by_email_creates_user_and_membership(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    restaurant_a,
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    owner = _create_user(db_session, "owner-new-email@example.com", "Owner")
+    _add_member(db_session, restaurant_a.id, owner.id, EntityRole.OWNER)
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/members",
+        json={
+            "email": "brand-new@example.com",
+            "display_name": "Brand New",
+            "role": "cashier",
+        },
+        headers=auth_headers(owner),
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["role"] == "cashier"
+    assert body["user"]["email"] == "brand-new@example.com"
+    assert body["user"]["display_name"] == "Brand New"
+
+    user_count = db_session.scalar(
+        select(User).where(User.email == "brand-new@example.com")
+    )
+    assert user_count is not None
+
+
+def test_add_member_by_email_existing_user_second_restaurant(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    restaurant_a,
+    restaurant_b,
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    seed_default_chart(db_session, restaurant_b.id)
+    owner_a = _create_user(db_session, "owner-a-multi@example.com", "Owner A")
+    owner_b = _create_user(db_session, "owner-b-multi@example.com", "Owner B")
+    partner = _create_user(db_session, "partner-multi@example.com", "Partner")
+    _add_member(db_session, restaurant_a.id, owner_a.id, EntityRole.OWNER)
+    _add_member(db_session, restaurant_b.id, owner_b.id, EntityRole.OWNER)
+    _add_member(db_session, restaurant_a.id, partner.id, EntityRole.PARTNER)
+
+    before_count = len(db_session.scalars(select(User)).all())
+
+    response = client.post(
+        f"/entities/{restaurant_b.id}/members",
+        json={"email": "partner-multi@example.com", "role": "partner"},
+        headers=auth_headers(owner_b),
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["user_id"] == str(partner.id)
+    assert body["entity_id"] == str(restaurant_b.id)
+    assert body["role"] == "partner"
+
+    after_count = len(db_session.scalars(select(User)).all())
+    assert after_count == before_count
+
+
+def test_add_member_by_email_already_member_returns_409(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    restaurant_a,
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    owner = _create_user(db_session, "owner-dup@example.com", "Owner")
+    member = _create_user(db_session, "dup-member@example.com", "Member")
+    _add_member(db_session, restaurant_a.id, owner.id, EntityRole.OWNER)
+    _add_member(db_session, restaurant_a.id, member.id, EntityRole.CASHIER)
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/members",
+        json={"email": "dup-member@example.com", "role": "partner"},
+        headers=auth_headers(owner),
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Already a member of this restaurant."
+
+
 def test_get_my_membership_when_auth_enforced(
     auth_enforced,
     client: TestClient,

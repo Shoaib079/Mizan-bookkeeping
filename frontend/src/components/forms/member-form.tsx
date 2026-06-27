@@ -1,6 +1,6 @@
 "use client";
 
-/** Add entity member — Phase 9 Slice 9. */
+/** Add entity member — Phase 9 Slice 9; Phase 12 Slice 0c add-by-email. */
 
 import { FormEvent, useEffect, useState } from "react";
 
@@ -18,6 +18,10 @@ type Props = {
   onClose: () => void;
   onSaved?: () => void;
 };
+
+function roleLabel(role: EntityRole): string {
+  return ENTITY_ROLES.find((r) => r.value === role)?.label ?? role;
+}
 
 export function MemberForm({ open, onClose, onSaved }: Props) {
   const { entityId } = useEntity();
@@ -47,35 +51,31 @@ export function MemberForm({ open, onClose, onSaved }: Props) {
       setError("Select a restaurant first.");
       return;
     }
+    const trimmedEmail = email.trim();
     setSubmitting(true);
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      const user = await apiFetch<{ id: string }>("/users", {
-        method: "POST",
-        idempotencyKey,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          display_name: displayName.trim() || email.trim(),
-        }),
-      });
-      submitIdempotency.completeSubmit();
+      const body: { email: string; role: EntityRole; display_name?: string } = {
+        email: trimmedEmail,
+        role,
+      };
+      const trimmedName = displayName.trim();
+      if (trimmedName) body.display_name = trimmedName;
+
       await apiFetch(`/entities/${entityId}/members`, {
         method: "POST",
         idempotencyKey,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: user.id, role }),
+        body: JSON.stringify(body),
       });
       submitIdempotency.completeSubmit();
       onSaved?.();
       onClose();
-      toast("Member added");
+      toast(`Added ${trimmedEmail} as ${roleLabel(role)}`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setError(
-          "User already exists or is already a member. Look up their user ID and add via API if needed.",
-        );
+        setError("Already a member of this restaurant.");
       } else {
         setError(err instanceof Error ? err.message : "Failed to add member");
       }
@@ -103,7 +103,7 @@ export function MemberForm({ open, onClose, onSaved }: Props) {
             id="member-name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Optional"
+            placeholder="Optional for new users"
           />
         </div>
         <div>

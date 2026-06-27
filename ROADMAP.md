@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.0c** — member add-by-email, then 12.1 hosting |
-| **Last completed slice** | Phase 12 Slice 0b — account menu + restaurant switch safeguards (`v0.70.2-restaurant-switcher-safeguards`) |
-| **Last commit/tag** | `v0.70.2-restaurant-switcher-safeguards` |
-| **Next up** | Phase 12 Slice 0c — member add-by-email → 12.1 hosting |
+| **Active slice** | **12.1** — hosting & infrastructure |
+| **Last completed slice** | Phase 12 Slice 0c — member add-by-email (`v0.70.3-member-add-by-email`) |
+| **Last commit/tag** | `v0.70.3-member-add-by-email` |
+| **Next up** | Phase 12 Slice 12.1 — hosting & infrastructure |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1352,8 +1352,8 @@ Take the tested app to a real, secure production environment and put real data i
 |-------|--------|-------|
 | 0. Pre-launch UX (sidebar regroup + onboarding nudge) | **done** (`v0.70.0-prelaunch-ux`) | Sidebar regrouped into Sales / Expenses & suppliers / People / Customers / Cash & bank / Reports / Settings; dashboard onboarding checklist |
 | 0a. UX refinements (top bar, New-menu trim, tips de-special-case) | **done** (`v0.70.1-ux-refinements`) | Remove Daily sales (+ Add expense) from top bar; remove Cash tip + Card sales batch from New menu; tips = any expense (drop forced 5700, full category picker). Migration `051`. |
-| 0b. Modern account menu + switch safeguards | planned | Top-right account menu (avatar, name+email, account/settings, **Clerk sign out**); restaurant switch moved here with always-visible per-restaurant colour badge, confirm-on-switch, unsaved-work warning, "Recording for: X" on entry forms. Reduces wrong-restaurant entry risk. |
-| 0c. Member management: add existing user to another restaurant by email | planned | `member-form.tsx` currently tries to *create* the user and fails for existing users ("look up user ID / use API") — breaks the multi-branch case (same partner/staffer in 2 branches). Fix: add a member by **email**, looking up an existing user and creating the membership; no user-ID/API workaround. |
+| 0b. Modern account menu + switch safeguards | **done** (`v0.70.2-restaurant-switcher-safeguards`) | Top-right account menu (avatar, name+email, account/settings, **Clerk sign out**); restaurant switch moved here with always-visible per-restaurant colour badge, confirm-on-switch, unsaved-work warning, "Recording for: X" on entry forms. Reduces wrong-restaurant entry risk. |
+| 0c. Member management: add existing user to another restaurant by email | **done** (`v0.70.3-member-add-by-email`) | `POST /entities/{id}/members` accepts email (+ optional display_name) — reuses existing user or creates one, then membership; friendly 409 when already a member. `member-form.tsx` single POST. |
 | 1. Hosting & infrastructure | planned | Provision managed Postgres + Redis + app host + object storage (uploads & backups); set all secrets/env vars; HTTPS/SSL + domain. |
 | 2. Production provisioning | planned | Stand up the DB via canonical `alembic upgrade head` (schema owner + `mizan_app` grants — `v0.67.2`); confirm RLS + immutability triggers; Clerk **production** keys; `AUTH_ENFORCEMENT=true`, `CLERK_TEST_MODE` off. |
 | 3. Backups live | planned | Scheduled backups to off-site storage; restore-verify in production; alert on failure. |
@@ -1431,17 +1431,17 @@ Take the tested app to a real, secure production environment and put real data i
 
 | | |
 |---|---|
-| **Status** | planned (frontend + small backend/service) |
+| **Status** | **done** (`v0.70.3-member-add-by-email`) |
 | **Suggested tag** | `v0.70.3-member-add-by-email` |
 
 **Why:** the per-person login + per-restaurant membership model is correct and built — but the **add-member UX** breaks for the multi-branch case. `member-form.tsx` POSTs `create_user` first; if the email already exists (a partner/staffer already in another branch) it errors "User already exists or is already a member — look up the user ID and add via API." Owners can't reasonably do that. This is exactly the "same partner in two branches / grant an existing person another branch" scenario.
 
 **Acceptance:**
 
-- [ ] Add a member by **email**: if a user with that email exists, **reuse** them and create the membership; if not, create the user then the membership. No user-ID lookup, no API workaround.
-- [ ] Clear messages: "Added [email] as [role]" / "Already a member of this restaurant."
-- [ ] Owner-only (`require_owner_members` / admin permission); per-entity; invite-only linking unchanged (Clerk verified-email).
-- [ ] Tests: add a brand-new email → user + membership created; add an **existing** user's email to a second restaurant → membership created, no duplicate user, no error; adding to a restaurant they're already in → friendly 409.
+- [x] Add a member by **email**: if a user with that email exists, **reuse** them and create the membership; if not, create the user then the membership. No user-ID lookup, no API workaround.
+- [x] Clear messages: "Added [email] as [role]" / "Already a member of this restaurant."
+- [x] Owner-only (`require_admin_members`); per-entity; invite-only linking unchanged (Clerk verified-email).
+- [x] Tests: add a brand-new email → user + membership created; add an **existing** user's email to a second restaurant → membership created, no duplicate user, no error; adding to a restaurant they're already in → friendly 409.
 
 ---
 

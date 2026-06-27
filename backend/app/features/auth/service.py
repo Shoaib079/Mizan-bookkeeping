@@ -26,6 +26,9 @@ class DuplicateUserError(Exception):
 class DuplicateMembershipError(Exception):
     """Raised when user is already a member of the entity."""
 
+    def __init__(self, message: str = "Already a member of this restaurant.") -> None:
+        super().__init__(message)
+
 
 class UserNotProvisionedError(Exception):
     """Clerk identity has no matching invited local user."""
@@ -171,9 +174,7 @@ def add_entity_member(
             session.commit()
         except IntegrityError as exc:
             session.rollback()
-            raise DuplicateMembershipError(
-                "User is already a member of this entity"
-            ) from exc
+            raise DuplicateMembershipError() from exc
         membership = session.scalar(
             select(EntityMembership)
             .options(joinedload(EntityMembership.user))
@@ -181,6 +182,27 @@ def add_entity_member(
         )
         assert membership is not None
         return membership
+
+
+def invite_member_by_email(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    email: str,
+    role: EntityRole,
+    display_name: str | None = None,
+) -> EntityMembership:
+    """Look up user by email (create if missing), then add entity membership."""
+    normalized_email = email.strip().lower()
+    user = session.scalar(select(User).where(User.email == normalized_email))
+    if user is None:
+        name = (display_name or "").strip() or normalized_email
+        user = create_user(
+            session, UserCreate(email=normalized_email, display_name=name)
+        )
+    return add_entity_member(
+        session, entity_id, MembershipCreate(user_id=user.id, role=role)
+    )
 
 
 def update_entity_member(

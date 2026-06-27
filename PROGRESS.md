@@ -7,12 +7,20 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | **12.0c** — member add-by-email (planned) |
-| **Last completed slice** | Phase 12 Slice 0b — account menu + restaurant switch safeguards (`v0.70.2-restaurant-switcher-safeguards`) |
+| **Active slice** | **12.1** — hosting & infrastructure (planned) |
+| **Last completed slice** | Phase 12 Slice 0c — member add-by-email (`v0.70.3-member-add-by-email`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.70.2-restaurant-switcher-safeguards` |
+| **Last tag** | `v0.70.3-member-add-by-email` |
 
 ## Resume point
+
+**Phase 12 Slice 0c complete** — member add-by-email (`v0.70.3-member-add-by-email`):
+- `POST /entities/{id}/members` accepts `email` (+ optional `display_name`) or legacy `user_id`; `invite_member_by_email` reuses existing user or creates one, then membership
+- Friendly 409: "Already a member of this restaurant."
+- `member-form.tsx`: single POST; toast "Added [email] as [role]"
+- Tests: `test_add_member_by_email_*` (3) in `test_roles_permissions.py`
+
+**Next:** Phase 12 Slice 12.1 — hosting & infrastructure.
 
 **Phase 12 Slice 0b complete** — account menu + restaurant switch safeguards (`v0.70.2-restaurant-switcher-safeguards`):
 - Top-right `AccountMenu` (avatar + active-restaurant badge trigger): display name + email from `/users/me`, role-gated settings links, Clerk sign-out
@@ -20,7 +28,7 @@
 - `RecordingForBanner` on New-menu entry dialogs; toast after switch
 - Vitest: `entity-visual.test.ts` (5), `account-menu-helpers.test.ts` (6), `unsaved-work.test.ts` (3), `app-routes.test.ts` (+6)
 
-**Next:** Phase 12 Slice 12.0c — member add-by-email.
+**Next:** Phase 12 Slice 12.1 — hosting & infrastructure.
 
 **Phase 12 Slice 0a complete** — UX refinements (`v0.70.1-ux-refinements`):
 - Top bar: removed Daily sales + Add expense quick-action buttons (Search/Cmd+K + UserButton only)
@@ -28,7 +36,7 @@
 - Tips de-special-cased: dropped `5700` from default chart (migration `051`); expense pickers use full expense chart via `expense-accounts.ts`
 - Vitest: `app-routes.test.ts` (+2), `expense-accounts.test.ts` (4)
 
-**Next:** Phase 12 Slice 12.0c — member add-by-email.
+**Next:** Phase 12 Slice 12.1 — hosting & infrastructure.
 
 **Phase 12 Slice 12.0 complete** — pre-launch UX (`v0.70.0-prelaunch-ux`):
 - Sidebar regrouped: Sales, Expenses & suppliers, People, Customers, Cash & bank, Reports (nested GL + manual journals), Settings (three sub-pages)
