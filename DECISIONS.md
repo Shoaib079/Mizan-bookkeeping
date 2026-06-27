@@ -2,6 +2,22 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-27 — Statement classification learning & rule auto-apply (Phase 12.5; `v0.71.14`–`v0.71.15`)
+
+**Per-entity rules only:** Learned `StatementClassificationRule` rows are **entity-scoped with RLS** (`statement_classification_rules` registered in `RLS_TABLES`). Rules learned in entity A are never visible or applied in entity B. No global/shared rule store across users or restaurants.
+
+**Suggestions vs auto-post:** `suggest_classification()` is read-only — it never posts GL or changes line status. Suggestions appear on `needs_review` lines; conflicting rules for the same description → **no suggestion** (owner must decide manually).
+
+**Auto-post scope (`v0.71.15`):** On import, a **single non-conflicting HIGH-confidence** rule may auto-classify and post **only** `bank_fee` (via `post_bank_fee`) or `supplier_payment` (via existing payable posting / exact amount+date link guard). Never auto-link supplier payment unless `_find_matching_payment` agrees. Below HIGH confidence or any conflict → `needs_review` + suggestion, **no posting**. Other classifications (transfer, POS settlement, etc.) always require manual review.
+
+**HIGH confidence:** `confirmation_count >= 3` **and** `confirmations_since_correction >= 3` with no recent correction degrading the streak. If the owner confirms a **different** classification for the same token, `confirmation_count` **resets to 1** (flip-flopping token must not auto-apply).
+
+**Corrections:** `correct_statement_line` reverses POSTED lines through the existing **`void_journal_entry`** path (books stay tied; audit immutable). LINKED lines unlink without voiding the underlying payment journal. Correction increments `correction_count`, zeros `confirmations_since_correction`, and **learns the corrected mapping** so the next identical line uses the fix — not the old rule. Auto-posted lines flagged `classification_source=rule_auto` / journal `source=RULE_AUTO` for audit/filter.
+
+**Token trim:** `create-supplier-from-line` accepts optional `match_token` (e.g. `MIGROS`) so learned rules generalize across varied descriptions; classify learn-on-confirm uses normalized description when no explicit token.
+
+**Alternatives considered:** Global rule pool across entities (rejected — privacy + unlike-for-unlike restaurants); auto-post all classification types at HIGH (rejected — money-critical types need extra params); hard-delete rules on correction (rejected — downgrade + relearn preserves audit trail).
+
 ## 2026-06-27 — Production hosting stack (Phase 12 Slice 12.1)
 
 **Choice:** Split hosting by layer — **Netlify** for Next.js frontend (`netlify.toml`, monorepo `base=frontend`); **Render** for FastAPI web + Celery worker + Celery beat (`render.yaml`, `backend/Dockerfile`). Managed **Postgres** (Neon/Supabase) and **Upstash Redis** via env URLs. **S3-compatible** storage (R2/S3) for off-site backup bundles only; **uploads stay on persistent disk** mounted at `/app/data/uploads` on the API host (no cheap Netlify Blobs adapter for runtime uploads).

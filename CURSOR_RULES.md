@@ -41,6 +41,9 @@ This file governs HOW the app is built. WHAT the app must do lives in `Restauran
     - **Disable on submit** + clear/read-back on success.
     Each of these needs a test (double-submit → one record; garbage input rejected). (Lesson: 11.18 audit found the UI minting a new idempotency key per call — a real double-record hole on every money form.)
 16. **Entity-switch hygiene.** Every entity-scoped page/form MUST reset its state the moment the active entity changes — clear data, show a skeleton, refetch. Never display or carry one restaurant's data into another's screen, even transiently. (Backend RLS is the backstop, not an excuse for stale UI.)
+17. **One agent, one slice, one repo at a time.** Never run two agents — or a parent agent plus sub-agents — against the same repository/working tree at once. Concurrent agents cause uncommitted collisions, half-applied edits, a stuck `.git/index.lock`, and phantom tags the docs claim but git doesn't have. One builder takes one slice through to commit+tag; only then does the next agent start. If recovering from a collision, remove `.git/index.lock` ONLY after confirming every agent has stopped. (Lesson: two then three sub-agents on one chat corrupted the working tree and needed manual recovery.)
+18. **One `pytest` run at a time.** The suite shares one test database (`mizan_test`); two concurrent runs cross-contaminate and give flaky/false results. Never start a second pytest while one is running. Keep the Postgres container up between runs instead of re-spinning it.
+19. **Don't rebuild what's already shipped.** Before scoping or building, check `ROADMAP.md` — the **"Do not rebuild"** table and the slice log. If the work already exists, extend or reuse it; never duplicate. Only build genuinely new or explicitly modified work.
 
 If a task would require breaking any of these, STOP and ask.
 
@@ -341,6 +344,10 @@ Maintain these files and update them as part of every slice — they are how wor
 - Mark a slice complete without updating `ROADMAP.md`.
 - Commit failing tests or a partial slice (unless owner agreed to a WIP branch).
 - Leave large uncommitted work, or skip pushing to the remote after a completed commit.
+- Run two agents (or a parent agent plus sub-agents) against the same repo at once, or start a new slice while another is still uncommitted (Section 1 #17).
+- Run two `pytest` runs at the same time against the shared test DB (Section 1 #18).
+- Delete `.git/index.lock` while another agent may still be running — remove it only after confirming all agents have stopped (Section 1 #17).
+- Rebuild or re-scope work already shipped per the `ROADMAP.md` "Do not rebuild" table / slice log (Section 1 #19).
 
 ---
 

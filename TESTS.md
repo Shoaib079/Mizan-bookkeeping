@@ -31,6 +31,12 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_banking_accounts.py` | Bank/cash account tree — GL sub-accounts, codes, balances, rollup, RLS isolation, API CRUD + tree (incl. credit_cards branch), supplier payment to sub-account | pass |
 | `backend/tests/test_credit_card_accounts.py` | Credit card clearing accounts — GL sub-accounts under 2100, LIABILITY/CREDIT, tree branch + balance rollup, OB credit side, reject aggregate 2100, cross-entity isolation, API E2E | pass |
 | `backend/tests/test_bank_statement_import.py` | Bank statement CSV import + classify — lines stored, duplicate fingerprint 409, supplier payment GL post, link existing payment (no double journal), near-match → needs_review, confirm link, re-classify rejected, unknown no GL, cross-entity isolation, API E2E | pass |
+| `backend/tests/test_bank_import_profiles.py` | Bank import column mapping — TR-style fixture (header row 8, Borç/Alacak), profile validate/preview/apply, save per-account profile (RLS), reuses dedup/overlap/amount parsing (`v0.71.13`) | pass |
+| `backend/tests/test_bank_import_csv_options.py` | Turkish CSV options — cp1254/latin-1 decode, `;`/`,`/tab delimiter sniff, profile `csv_encoding`/`csv_delimiter`, `DD.MM.YYYY`+time parse, import round-trip (`v0.71.13.1`) | pass |
+| `backend/tests/test_statement_classification_learning.py` | Classification learning — Turkish token match, upsert confirmation count, entity A rule invisible in entity B, suggestions never auto-post, learn-on-confirm, create-supplier-from-line, conflicting rules → no suggestion (`v0.71.14`) | pass |
+| `backend/tests/test_statement_rule_auto_apply.py` | Rule auto-apply — HIGH threshold only, mapping flip resets confidence, correction voids + raises correction_count + blocks re-auto-apply, conflicts never auto-post, `RULE_AUTO` flags, entity A→B isolation, books tie after auto-post **and** reversal (`v0.71.15`) | pass |
+| `frontend/src/lib/statement-review.test.ts` | Review hub tab filters — needs_review / rule_auto / posted / linked mapping; token trim helper | pass |
+| `frontend/src/lib/statement-review-actions.test.ts` | Review hub API wiring — classify confirm, correct with reason, create-supplier with match_token (`v0.71.16`) | pass |
 | `backend/tests/test_statement_event_posting.py` | Bank fee GL Dr 5300 / Cr bank; credit card payment Dr CC payable / Cr bank (reduces liability, no expense lines); statement classify + manual post; inflow/wrong account rejected; control balances tie; API E2E | pass |
 | `backend/tests/test_banking_near_match.py` | Near-match date window helpers (±3 days, excludes exact date) | pass |
 | `backend/tests/test_account_transfers.py` | Own-account transfers — manual GL Dr/Cr asset only, statement outflow post, inflow link-or-post (single journal), same-from/to rejected, cross-entity rejected, re-classify rejected, RLS isolation, API E2E | pass |
@@ -77,7 +83,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **Pre-go-live security gate (Slice 12.5):** After full pytest, run `bash backend/scripts/security_production_pytest.sh` (or CI production-guard job). Must include `test_security_invariants.py` green under production-like auth env. Also run `security_dependency_scan.sh` and `security_secrets_audit.sh` — see `DEPLOY.md` §14.
 
-**Count:** 611 pytest + 84 vitest (last run 2026-06-27).
+**Count:** 671 pytest + 144 vitest (last run 2026-06-21).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 Run frontend: `cd frontend && npm test && npm run build`

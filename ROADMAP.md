@@ -12,11 +12,20 @@
 
 | Field | Value |
 |-------|-------|
-| **Active phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | — (Phase 12 complete pending owner sign-off) |
-| **Last completed slice** | Owner onboarding & smoke test (`v0.71.8-owner-onboarding-smoke`) |
-| **Last commit/tag** | `v0.71.8-owner-onboarding-smoke` |
-| **Next up** | Phase 12 owner sign-off — record first real entity data on production |
+| **Active phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
+| **Active slice** | — (`v0.71.16` review hub committed; awaiting next) |
+| **Last completed slice** | Unified statement review hub — 2b (`v0.71.16`) |
+| **Last commit/tag** | `v0.71.16` |
+| **Next up** | **Clearance auto-pick** (POS/delivery settlement); then Phase 12 owner sign-off on production |
+
+### Next plan (pre-launch, owner-driven)
+
+1. **Clearance auto-pick (backend, small).** Extend auto-apply to `pos_settlement` / `delivery_settlement` — reuse the EXISTING settlement match + commission posting; auto-clear ONLY when a real settlement record matches, else Needs Review. (Today only bank-fee + supplier-payment auto-post.)
+2. **Run pending migrations before go-live:** `alembic upgrade head` applies `052`–`055` (import profiles, CSV options, classification rules, rule auto-apply). Ensure `xlrd` installed.
+3. **Phase 12 owner sign-off** — record first real restaurant on production (provision Postgres, secrets, backup-restore drill, walk a day).
+4. *Optional later:* generic global "starter phrasebook" of non-private TR type-patterns for day-one defaults (personal rules always override).
+
+**2b — Unified statement review hub (frontend) — DONE (`v0.71.16`).** `/banking/review`: status tabs (needs review · auto-posted · posted · linked), inline confirm/classify/correct/create-supplier, suggestion display, token trim, `rule_auto` highlighting.
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -32,6 +41,15 @@
 | **Z match-or-review** (Z == system card; tips expense-only) | `v0.57.0-pos-z-match-or-review`, `a6dd4e6` | done | Re-derive `tip = Z − card` at POS or book `5700` on confirm |
 | Phase 9 New menu + receipt review | `v0.55.0-phase9-new-menu` | done | Re-scaffold shell / New dropdown |
 | Phase 9 read-back + Clerk | `v0.56.0-phase9-readback-clerk` | done | Re-wire auth from scratch |
+| Nav consolidation (section tabs, reports cards, settings hub) | `v0.71.9` | done | Re-flatten to per-page sidebar rows or re-add duplicate report/settings entries |
+| Single-item sidebar groups → direct links | `v0.71.10` | done | Re-wrap single-destination groups in accordions |
+| Excel statement import (.xlsx openpyxl, .xls xlrd) + lira amount column | `v0.71.11`, `v0.71.12` | done | Route `.xls` to openpyxl; revert amount column to kuruş |
+| Bank import column mapping + saved per-account profiles | `v0.71.13` | done | Re-add fixed-header-only import; mapping handles Borç/Alacak + start row |
+| Turkish CSV reading (cp1254/latin-1, `;` sniff) | `v0.71.13.1` | done | Re-add UTF-8/comma-only CSV reader |
+| Statement classification learning (per-entity rules, suggest + learn on confirm) | `v0.71.14` | done | Build a **global/shared** rule store — rules are per-entity (RLS), never cross-user |
+| Statement rule auto-apply (high-confidence, correction-reset, reversible) | `v0.71.15` | done | Auto-post outside BANK_FEE/SUPPLIER_PAYMENT, or without the void/relearn correction path |
+| Unified statement review hub (frontend) | `v0.71.16` | done | Re-build per-statement-only review; `/banking/review` is the canonical hub |
+| **POS/delivery settlement clearing + commission split (net vs gross)** | `v0.18.0` + `core/pos`/`core/delivery` posting | done | **Re-build deposit clearing or commission net/gross logic — it already exists** |
 
 **Owner sign-off ✓ (2026-06-21)** on money-critical rows above — tips A/B2/C, Phase 8.7 D1–D3, Phase 9 core (`v0.52.0`–`v0.56.0`), Z match-or-review (`v0.57.0`). Original Slice B1 (`v0.49.0`) was superseded before sign-off. Tag `v0.57.1-owner-sign-off`.
 
@@ -1648,6 +1666,15 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-21 | Unified statement review hub (2b) | `v0.71.16` | `/banking/review` — status tabs, inline confirm/classify/correct/create-supplier, suggestions, token trim, `rule_auto` badge; dashboard link |
+| 2026-06-27 | Statement rule auto-apply | `v0.71.15` | High-confidence auto-post (bank fee + supplier payment only) flagged `RULE_AUTO`; confidence resets on mapping change; correction = void + relearn; books tie after post **and** reversal; entity-isolated |
+| 2026-06-27 | Statement classification learning | `v0.71.14` | Per-entity learned rules (RLS, registered); suggestions on needs-review; learn-on-confirm; create-supplier-from-line; conflict → no suggestion |
+| 2026-06-27 | Turkish CSV encoding + delimiter | `v0.71.13.1` | cp1254→latin-1 fallback; `;`/`,`/tab sniff; persisted on profile; tolerant `DD.MM.YYYY`+time |
+| 2026-06-27 | Bank import column mapping + profiles | `v0.71.13` | Per-account `BankImportProfile` (RLS); preview grid; Borç/Alacak or signed amount; TR date/decimal; reuses dedup/overlap/classification |
+| 2026-06-27 | Legacy .xls + robust Excel dates | `v0.71.12` | `xlrd` for `.xls`; real date-typed cells handled; lazy-import hardening |
+| 2026-06-27 | Excel import + lira amount column | `v0.71.11` | `.xlsx` via openpyxl; amount entered in lira → exact kuruş (Decimal); template column change |
+| 2026-06-27 | Sidebar single-item groups → direct links | `v0.71.10` | Groups with one visible item render as one-click links; Sales flattens when delivery off |
+| 2026-06-27 | Nav consolidation (tabs + cards + hub) | `v0.71.9` | Sub-pages → section tabs (Sales/Banking/Suppliers/Customers/Settings); reports card-only; reachability guard test |
 | 2026-06-27 | Owner onboarding & smoke test | `v0.71.8-owner-onboarding-smoke` | Onboarding API smoke script, DEPLOY §15 walkthrough, dashboard CTA, wizard → checklist |
 | 2026-06-21 | Sidebar accordion fix | `v0.71.7.1-sidebar-accordion` | True single-open accordion; route replace not merge |
 | 2026-06-21 | Collapsible sidebar sections | `v0.71.7-collapsible-sidebar` | Collapsible nav groups + localStorage; Dashboard pinned; delivery sub-pages → tabs on /delivery |

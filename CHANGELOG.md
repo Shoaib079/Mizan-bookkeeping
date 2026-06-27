@@ -4,6 +4,22 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-06-27
 
+**Phase 12.5 — Statement rule auto-apply (`v0.71.15`):** HIGH-confidence learned rules auto-post on import for **bank_fee** and **supplier_payment** only (exact amount+date guard for supplier link); below HIGH or conflicting rules → `needs_review` + suggestion, no posting. Auto-posted lines/journals flagged `rule_auto` / `RULE_AUTO`. Confidence resets when confirmed mapping changes; corrections void via existing ledger path + downgrade rule + relearn corrected mapping. Migration `055`. Tests: `test_statement_rule_auto_apply.py` (6 — threshold, flip-flop reset, correction+reversal, conflicts, entity A→B isolation, books tie after auto-post and reversal). **671 pytest green** (+6); tag `v0.71.15`. **Next:** 2b unified statement review hub (UI).
+
+**Phase 12.5 — Statement classification learning (`v0.71.14`):** Per-entity `StatementClassificationRule` (RLS-registered); read-only suggestions on needs-review lines; learn-on-confirm after successful classify; `POST .../create-supplier-from-line` with optional `match_token`; conflicting rules → no suggestion. Migration `054`. Tests: `test_statement_classification_learning.py` (7). **665 pytest green** (+7); tag `v0.71.14`. **Next:** rule auto-apply at HIGH confidence.
+
+**Phase 12.5 — Turkish CSV encoding + delimiter (`v0.71.13.1`):** Bank import reads cp1254 → latin-1 fallback; delimiter sniff (`;`, `,`, tab); profile fields `csv_encoding`/`csv_delimiter`; tolerant `DD.MM.YYYY` with trailing time. Migration `053`. Tests: `test_bank_import_csv_options.py`. Tag `v0.71.13.1`. **Next:** classification learning.
+
+**Phase 12.5 — Bank import column mapping + saved profiles (`v0.71.13`):** Per-account `BankImportProfile` (RLS); preview grid + map columns (date, description, Borç/Alacak or signed amount, TR date/decimal); save profile on import; reuses existing dedup, overlap, amount parsing, classification. Migration `052`. Frontend multi-step upload in `statement-upload-form.tsx`. Tests: `test_bank_import_profiles.py`. Tag `v0.71.13`. **Next:** Turkish CSV options.
+
+**Phase 12.5 — Legacy `.xls` + robust Excel dates (`v0.71.12`, `v0.71.12.1`):** `.xls` via `xlrd`; real Excel date-typed cells; lazy-import so missing xlrd cannot break app boot. Tag `v0.71.12`, `v0.71.12.1`. **Next:** column mapping profiles.
+
+**Phase 12.5 — Excel import + lira amount column (`v0.71.11`):** Bank statements accept `.xlsx` (openpyxl); amount column entered in lira → exact kuruş via existing `parse_lira_to_kurus`; template/sample CSV column change. Tag `v0.71.11`. **Next:** `.xls` support.
+
+**Phase 12.5 — Sidebar single-item groups → direct links (`v0.71.10`):** Sidebar groups with only one visible destination render as a single clickable link (no accordion); Sales group flattens when delivery module off. Tag `v0.71.10`. **Next:** Excel import.
+
+**Phase 12.5 — Nav consolidation (`v0.71.9`):** Sub-pages folded into section tabs (Sales, Banking, Suppliers, Customers, Settings); reports/settings as card hubs only; reachability guard test (`REGISTERED_PAGE_ROUTES`). Tag `v0.71.9`. **Next:** single-item sidebar links.
+
 **Phase 12 Slice 12.5 — Pre-launch security pass:** `security_dependency_scan.sh` (`pip-audit` on production deps, fails on CVEs); `security_secrets_audit.sh` (tracked-source Clerk/AWS/PEM pattern scan); `security_production_pytest.sh` (`test_launch_settings.py` + `test_security_invariants.py` under production-like auth/CORS, `APP_ENV=test` for DB). CI steps before full pytest. `DEPLOY.md` §14 — secrets owner checklist, KVKK conscious decision, pre-go-live gate. `pip-audit` in dev deps. **611 pytest green**; tag `v0.71.4-prelaunch-security`. **Next:** Phase 12.6 owner onboarding & smoke test.
 
 **Phase 12 Slice 12.4 — Observability:** Optional Sentry (`SENTRY_DSN` + `sentry-sdk[fastapi]` init when set; app boots without DSN). Production JSON structured logging + request logging middleware (method, path, status, duration; no bodies/secrets). In-memory rate limit — 60 req/min per IP in production; skip health/docs; 429 with clear message; multi-instance limitation documented. `DEPLOY.md` §12 owner steps (Sentry project, Render alerts, external uptime on `/health/ready`). `render.yaml` + `.env.production.example` updated. Tests: `test_observability.py` (6). **611 pytest green**; tag `v0.71.3-observability`. **Next:** Phase 12.5 pre-launch security pass.

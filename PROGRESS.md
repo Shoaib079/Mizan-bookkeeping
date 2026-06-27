@@ -6,11 +6,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 12 — Deployment & go-live |
-| **Active slice** | — (Phase 12 complete pending owner sign-off) |
-| **Last completed slice** | Owner onboarding & smoke test (`v0.71.8-owner-onboarding-smoke`) |
+| **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
+| **Active slice** | — (`v0.71.16` review hub committed; awaiting next) |
+| **Last completed slice** | Unified statement review hub — 2b (`v0.71.16`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.8-owner-onboarding-smoke` |
+| **Last tag** | `v0.71.16` |
 
 ## Owner blockers (12.5)
 
@@ -45,6 +45,16 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 - **Staging backup drill:** `backend/scripts/run_backup_drill.sh` (or verify after scheduled beat) per `DEPLOY.md` §11 before trusting prod backups.
 
 ## Resume point
+
+**`v0.71.15` committed** — statement rule auto-apply (HIGH-confidence bank_fee + supplier_payment, void+relearn corrections, `RULE_AUTO` audit flags). **`v0.71.16` committed** — **2b unified statement review hub** (`/banking/review`: status tabs, inline confirm/correct/create-supplier, token trim, rule_auto highlighting). **671 pytest green**; **144 vitest**. **Next:** clearance auto-pick (POS/delivery settlement auto-apply when exact settlement match); then Phase 12 owner sign-off on production.
+
+**Phase 12.5 bank import + learning arc (`v0.71.9`–`v0.71.15`):**
+- `v0.71.9` — nav consolidation (section tabs, reports/settings card hubs)
+- `v0.71.10` — single-item sidebar groups → direct links
+- `v0.71.11`–`v0.71.12.1` — Excel/.xls import, lira amount column, Turkish CSV encoding/delimiter
+- `v0.71.13` — column-mapping profiles per bank account
+- `v0.71.14` — per-entity classification learning (suggest + learn-on-confirm)
+- `v0.71.15` — rule auto-apply at HIGH confidence (reversible, entity-isolated)
 
 **Phase 12 Slice 12.6 complete** — owner onboarding & smoke test (`v0.71.8-owner-onboarding-smoke`):
 - `scripts/smoke_onboarding.sh` — entity → OB → member → expense → P&L
