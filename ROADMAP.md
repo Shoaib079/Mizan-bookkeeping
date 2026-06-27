@@ -777,19 +777,19 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | `POST` | `.../expenses/{id}/correct` | `correct_expense_entry` | yes |
 | `POST` | `.../manual-journals/{id}/void` | void manual | yes |
 
-**Core only — HTTP still planned (Phase 11.12):**
+**HTTP done ✓ (Phase 11.12 — shipped, with HTTP tests in `test_correction_apis_phase11.py`):**
 
-| Helper in `correction.py` | Planned HTTP slice |
-|---------------------------|-------------------|
-| `correct_supplier_invoice` | **11.12** |
-| `correct_credit_sale` | **11.12** |
-| `correct_staff_journal_entry` | **11.12** |
-| `correct_partner_journal_entry` | **11.12** |
-| `correct_fx_conversion_or_spend` | **11.12** |
+| Method | Path | Core helper | HTTP tests |
+|--------|------|-------------|------------|
+| `POST` | `.../suppliers/{id}/invoices/{je_id}/correct` | `correct_supplier_invoice` | yes (+ wrong-type 404) |
+| `POST` | `.../customers/{id}/credit-sales/{je_id}/correct` | `correct_credit_sale` | yes (+ period lock) |
+| `POST` | `.../staff/employees/{id}/ledger/{je_id}/correct` | `correct_staff_journal_entry` | yes |
+| `POST` | `.../partners/{id}/ledger/{je_id}/correct` | `correct_partner_journal_entry` | yes |
+| `POST` | `.../fx/ledger/{je_id}/correct` | `correct_fx_conversion_or_spend` | yes |
 
 **Dedicated POS daily summary correction (11.9 ✓):** `correct_pos_daily_summary()` voids linked `CARD_SALES` + `CASH_MOVEMENT` JEs (with cash movement reversal) and reposts atomically. Standalone card/cash JEs not linked to a posted summary remain **void-and-reenter** only.
 
-**Not started (no core, no HTTP):**
+**Correction coverage: COMPLETE** — every posted money type now has a dedicated, tie-preserving, period-lock-aware correction HTTP route + tests (Phase 8.5 + 11.10 + 11.12). Void-and-reenter types (`TRANSFER`, `OPENING_BALANCE`, `POS_SETTLEMENT`, etc.) intentionally have no correct route (documented playbook only).
 
 **Other Phase 11 APIs (not correction):**
 
@@ -872,18 +872,17 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned — **after 11.2** (other agent owns 11.2; do not touch) |
-| **Suggested tag** | `v0.68.1a-default-cash-followups` |
+| **Status** | **CLOSED — functional gap (C) done; A/B/D deferred to Phase 13 (cosmetic/moot for launch)** |
+| **Tag** | C shipped within 11.14/11.15 (`defaultMainDrawerId` in forms) |
 
 **Purpose:** Close gaps left by 11.1 without re-doing `ensure_default_cash_drawer()` on seed.
 
-**Acceptance:**
+**Resolution (2026-06-27 owner decision):** The one functional gap is done; the rest don't earn their keep before go-live, so they move to Phase 13. Phase 11 closes clean.
 
-- [ ] **A — Legacy backfill:** Idempotent `ensure_default_cash_drawer()` (or equivalent) when entity has seeded chart but **zero** CASH accounts — e.g. on `GET .../banking/accounts?account_kind=cash` or dedicated setup check (not on re-seed; chart stays one-time).
-- [ ] **B — Seed API honesty:** `POST .../chart-of-accounts/seed` response includes drawer GL (`1001`) in `accounts` and `accounts_created` matches list `total`.
-- [ ] **C — Form defaults:** Use shared `defaultMainDrawerId()` in manual expense, manual daily sales, FX purchase, POS/receipt review, cash movement (not `items[0]`).
-- [ ] **D — Empty-cash UX:** Short hint on New-menu cash pickers when list is empty (match Banking copy).
-- [ ] Tests: legacy entity (chart only, no cash) → backfill creates drawer; seed response count; form default selects `"Main Drawer"` when present.
+- [x] **C — Form defaults: DONE.** `defaultMainDrawerId()` used in manual expense, manual daily sales, day close-out, and opening balances (shipped via 11.14/11.15). Forms auto-select "Main Drawer".
+- [ ] **A — Legacy backfill → DEFERRED (Phase 13).** Only `ensure_default_cash_drawer` on chart seed today; no list/setup backfill. **Moot for go-live** — fresh production entities seed post-`v0.68.0` and auto-get the drawer; only pre-`v0.68.0` dev/test entities lack it.
+- [ ] **B — Seed API count → DEFERRED (Phase 13).** `accounts_created` omits the drawer GL (`1001`). Cosmetic; no functional impact.
+- [ ] **D — Empty-cash hint → DEFERRED (Phase 13).** Minor UX; the empty case is now rare because forms auto-default to Main Drawer.
 
 **Do not redo:** 11.1 seed hook, `DEFAULT_CASH_DRAWER_NAME`, or 11.2 entity-settings work.
 
@@ -1368,6 +1367,7 @@ Take the tested app to a real, secure production environment and put real data i
 - **§10 interaction UX (dates, combobox, validation, drafts, toasts, focus)** — **→ Phase 10** (pre-launch; slices 10.1–10.7).
 - **Delivery sidebar nesting** — **→ Phase 10.2** (owner confirmed).
 - **FX purchase cash drawer + movement** — **→ Phase 10.8** (pre-launch; **cash only**, not bank).
+- **11.1a leftovers (deferred from Phase 11 — cosmetic/moot for launch):** (A) legacy cash-drawer backfill for entities seeded before `v0.68.0` (moot for fresh prod — they auto-get a drawer on seed); (B) seed-API `accounts_created` count to include the drawer GL `1001` (cosmetic); (D) empty-cash hint on New-menu pickers (rare now that forms auto-default to Main Drawer). Functional gap (C, form defaults) already shipped in 11.14/11.15.
 - **Document searchable archive** (Decisions §7) — unified list/filter by type, supplier, date; files already stored per intake.
 - **Manual journal composer UI** — backend API exists; accountant adjustments from app.
 - **Period locks admin UI** — close/reopen/unlock from settings.
