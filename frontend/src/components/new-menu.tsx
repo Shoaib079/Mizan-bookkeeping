@@ -1,5 +1,7 @@
 "use client";
 
+/** New dropdown — grouped quick actions (Slice 11.14). */
+
 import {
   ChevronDown,
   CreditCard,
@@ -11,46 +13,86 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
-import { CardSalesForm } from "@/components/forms/card-sales-form";
-import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
-import { ExpenseReceiptUploadForm } from "@/components/forms/expense-receipt-upload-form";
-import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
-import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
-import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
-import { SupplierForm } from "@/components/forms/supplier-form";
+import { useQuickActions, type QuickActionKey } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
+import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { cn } from "@/lib/utils";
 
-type MenuKey =
-  | "expense"
-  | "cashTip"
-  | "sales"
-  | "posPhoto"
-  | "cardSales"
-  | "deliveryReport"
-  | "receipt"
-  | "supplier"
-  | "efatura"
-  | null;
+type MenuItem = {
+  key: QuickActionKey;
+  label: string;
+  icon: typeof Wallet;
+};
+
+type MenuGroup = {
+  label: string;
+  items: MenuItem[];
+};
+
+const MENU_GROUPS: MenuGroup[] = [
+  {
+    label: "Sales",
+    items: [
+      { key: "sales", label: "Daily sales (manual)", icon: ShoppingBag },
+      { key: "posPhoto", label: "POS summary (photo)", icon: ShoppingBag },
+      { key: "cardSales", label: "Card sales batch", icon: CreditCard },
+      { key: "deliveryReport", label: "Delivery report", icon: Truck },
+    ],
+  },
+  {
+    label: "Expenses",
+    items: [
+      { key: "expense", label: "Manual expense", icon: Wallet },
+      { key: "cashTip", label: "Cash tip (5700 expense)", icon: Wallet },
+      { key: "receipt", label: "Expense receipt (photo)", icon: Receipt },
+    ],
+  },
+  {
+    label: "Suppliers",
+    items: [
+      { key: "supplier", label: "Supplier", icon: Users },
+      { key: "efatura", label: "Supplier invoice (e-Fatura)", icon: FileText },
+    ],
+  },
+];
+
+function MenuSectionHeader({ label }: { label: string }) {
+  return (
+    <p className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground first:pt-1">
+      {label}
+    </p>
+  );
+}
 
 export function NewMenu() {
+  const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState<MenuKey>(null);
+  const { openQuickAction, deliveryEnabled } = useQuickActions();
 
-  function openForm(key: MenuKey) {
+  useDismissOnOutsideClick(menuRef, open, () => setOpen(false));
+
+  function pick(key: QuickActionKey) {
     setOpen(false);
-    setActive(key);
+    openQuickAction(key);
   }
 
+  const groups = MENU_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (item) => item.key !== "deliveryReport" || deliveryEnabled,
+    ),
+  })).filter((group) => group.items.length > 0);
+
   return (
-    <div className="relative px-3 pb-3">
+    <div ref={menuRef} className="relative px-3 pb-3">
       <Button
         className="w-full justify-between"
         onClick={() => setOpen((v) => !v)}
         type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
         <span className="inline-flex items-center gap-2">
           <Plus className="size-4" />
@@ -59,98 +101,32 @@ export function NewMenu() {
         <ChevronDown className={cn("size-4 transition", open && "rotate-180")} />
       </Button>
       {open && (
-        <div className="absolute left-3 right-3 top-full z-20 mt-1 rounded-md border border-border bg-card py-1 shadow-md">
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-            onClick={() => openForm("expense")}
-          >
-            <Wallet className="size-4 text-primary" />
-            Manual expense
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-            onClick={() => openForm("cashTip")}
-          >
-            <Wallet className="size-4 text-primary" />
-            Cash tip (5700 expense)
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-            onClick={() => openForm("sales")}
-          >
-            <ShoppingBag className="size-4 text-primary" />
-            Daily sales (manual)
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-            onClick={() => openForm("posPhoto")}
-          >
-            <ShoppingBag className="size-4 text-primary" />
-            POS summary (photo)
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-            onClick={() => openForm("cardSales")}
-          >
-            <CreditCard className="size-4 text-primary" />
-            Card sales batch
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-            onClick={() => openForm("deliveryReport")}
-          >
-            <Truck className="size-4 text-primary" />
-            Delivery report
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-            onClick={() => openForm("receipt")}
-          >
-            <Receipt className="size-4 text-primary" />
-            Expense receipt (photo)
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-            onClick={() => openForm("supplier")}
-          >
-            <Users className="size-4 text-primary" />
-            Supplier
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
-            onClick={() => openForm("efatura")}
-          >
-            <FileText className="size-4 text-primary" />
-            Supplier invoice (e-Fatura)
-          </button>
+        <div
+          className="absolute left-3 right-3 top-full z-20 mt-1 max-h-[min(24rem,70vh)] overflow-y-auto rounded-md border border-border bg-card py-1 shadow-md"
+          role="menu"
+        >
+          {groups.map((group, groupIndex) => (
+            <div key={group.label}>
+              {groupIndex > 0 && (
+                <div className="mx-3 my-1 border-t border-border" aria-hidden />
+              )}
+              <MenuSectionHeader label={group.label} />
+              {group.items.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+                  onClick={() => pick(item.key)}
+                >
+                  <item.icon className="size-4 text-primary" />
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          ))}
         </div>
       )}
-
-      <ManualExpenseForm open={active === "expense"} onClose={() => setActive(null)} />
-      <ManualExpenseForm
-        open={active === "cashTip"}
-        onClose={() => setActive(null)}
-        defaultExpenseAccountCode="5700"
-      />
-      <ManualDailySalesForm open={active === "sales"} onClose={() => setActive(null)} />
-      <PosSummaryUploadForm open={active === "posPhoto"} onClose={() => setActive(null)} />
-      <CardSalesForm open={active === "cardSales"} onClose={() => setActive(null)} />
-      <DeliveryReportForm open={active === "deliveryReport"} onClose={() => setActive(null)} />
-      <ExpenseReceiptUploadForm
-        open={active === "receipt"}
-        onClose={() => setActive(null)}
-      />
-      <SupplierForm open={active === "supplier"} onClose={() => setActive(null)} />
-      <EfaturaUploadForm open={active === "efatura"} onClose={() => setActive(null)} />
     </div>
   );
 }

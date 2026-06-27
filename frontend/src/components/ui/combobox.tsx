@@ -13,6 +13,7 @@ import {
   type KeyboardEvent,
 } from "react";
 
+import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { cn } from "@/lib/utils";
 
 export type ComboboxOption = {
@@ -87,16 +88,7 @@ export function Combobox({
     }, 0);
   }, [disabled]);
 
-  useEffect(() => {
-    if (!open) return;
-    function onDocumentMouseDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        close();
-      }
-    }
-    document.addEventListener("mousedown", onDocumentMouseDown);
-    return () => document.removeEventListener("mousedown", onDocumentMouseDown);
-  }, [close, open]);
+  useDismissOnOutsideClick(rootRef, open, close, { escape: false });
 
   useEffect(() => {
     setActiveIndex(0);

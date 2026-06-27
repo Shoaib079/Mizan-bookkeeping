@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.14** — New menu UX |
-| **Last completed slice** | Phase 11 Slice 11.13 — cash drawer optional session (`v0.69.4-cash-drawer-optional-session`) |
-| **Last commit/tag** | `v0.69.4-cash-drawer-optional-session` |
-| **Next up** | **11.14** → 11.15–11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.15** — Day close-out screen (optional) |
+| **Last completed slice** | Phase 11 Slice 11.14 — new menu UX (`v0.69.5-new-menu-ux`) |
+| **Last commit/tag** | `v0.69.5-new-menu-ux` |
+| **Next up** | **11.15** (optional) → 11.16–11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -1113,7 +1113,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 - [x] One lock behaviour across the app — do **not** leave cash-drawer close and period locks as two different models.
 - [x] Tests: post sales + cash movement with **no open session** succeeds; close a day → cashier post rejected, **owner reopen → post succeeds + audited**; over/short still books to `5400` on an explicit close.
 
-**Done:** Migration `050` — nullable `cash_movements.session_id`; drawer reopen fields + `cash_drawer_audit_events`. Core `guards.py` (`DrawerDayClosedError`, `DrawerUnlockRequiredError`, `period_unlock_reason` unlock). API: `POST .../close-day`, `POST .../{id}/reopen`. Frontend: period unlock on cash movement form; Reopen + Close drawer day on `/banking/cash`. **582 pytest green** (+3); frontend build green. **Next:** Phase 11.14 new menu UX.
+**Done:** Migration `050` — nullable `cash_movements.session_id`; drawer reopen fields + `cash_drawer_audit_events`. Core `guards.py` (`DrawerDayClosedError`, `DrawerUnlockRequiredError`, `period_unlock_reason` unlock). API: `POST .../close-day`, `POST .../{id}/reopen`. Frontend: period unlock on cash movement form; Reopen + Close drawer day on `/banking/cash`. **582 pytest green** (+3); frontend build green. **Next:** Phase 11.15 day close-out (optional).
 
 ---
 
@@ -1121,20 +1121,20 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned (forms **already built** — `manual-daily-sales-form.tsx`, `manual-expense-form.tsx`) |
+| **Status** | done |
 | **Suggested tag** | `v0.69.5-new-menu-ux` |
 
 **Problem:** The cash+card "Daily sales (manual)" and "Manual expense" dialogs exist but live only inside a **flat 9-item** **New** dropdown (New → scan → click). The dropdown also **does not close on outside click** (`new-menu.tsx` has no document-mousedown handler — `combobox.tsx`/`date-input.tsx` already do) — same gap in `command-palette.tsx` and the entity switcher. Toggles were made editable (11.2) but have no labels/help and aren't verified to gate the right forms.
 
 **Acceptance:**
 
-- [ ] **Quick actions** (top bar and/or dashboard): "Daily sales" and "Add expense" open the existing dialogs in one click (keep them in New too). Reuse `defaultMainDrawerId()` (11.1a).
-- [ ] **Group** the New dropdown by area — **Sales** (Daily sales, POS summary photo, Card sales batch, Delivery report) · **Expenses** (Manual expense, Cash tip, Expense receipt photo) · **Suppliers** (Supplier, Supplier invoice). Headers/dividers; same items, just organised.
-- [ ] **Dismiss on outside click + Escape:** New menu, command palette, and entity switcher close when clicking elsewhere or pressing Esc — reuse the document-mousedown pattern already in `combobox.tsx`/`date-input.tsx` (one shared hook ideally).
-- [ ] `settings/entity` toggles get a clear label + one-line help each; **verify** `delivery_enabled` hides delivery entry and `card_tips_z_report_enabled` shows/hides the Z field.
-- [ ] **Do not** rebuild the forms — wire to what exists.
+- [x] **Quick actions** (top bar and/or dashboard): "Daily sales" and "Add expense" open the existing dialogs in one click (keep them in New too). Reuse `defaultMainDrawerId()` (11.1a).
+- [x] **Group** the New dropdown by area — **Sales** (Daily sales, POS summary photo, Card sales batch, Delivery report) · **Expenses** (Manual expense, Cash tip, Expense receipt photo) · **Suppliers** (Supplier, Supplier invoice). Headers/dividers; same items, just organised.
+- [x] **Dismiss on outside click + Escape:** New menu, command palette, and entity switcher close when clicking elsewhere or pressing Esc — reuse the document-mousedown pattern already in `combobox.tsx`/`date-input.tsx` (one shared hook ideally).
+- [x] `settings/entity` toggles get a clear label + one-line help each; **verify** `delivery_enabled` hides delivery entry and `card_tips_z_report_enabled` shows/hides the Z field.
+- [x] **Do not** rebuild the forms — wire to what exists.
 
----
+**Done:** `QuickActionsProvider` + grouped `NewMenu`; top bar + dashboard quick actions; shared `useDismissOnOutsideClick` (New menu, command palette panel, Combobox refactor); `filterRoutesByEntitySettings` hides delivery nav/palette when off; manual daily sales uses `defaultMainDrawerId()`. **582 pytest green**; frontend build green. **Next:** Phase 11.15 day close-out (optional).
 
 ### Slice 11.15 — Day close-out screen (optional, larger)
 

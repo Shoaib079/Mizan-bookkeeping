@@ -3,8 +3,10 @@
 /** Dashboard — live KPIs from GET .../dashboard (Phase 9 Slice 8). */
 
 import Link from "next/link";
+import { ShoppingBag, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useQuickActions } from "@/components/quick-actions";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -14,9 +16,19 @@ import { useEntity } from "@/lib/entity-context";
 import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead } from "@/lib/report-types";
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
+  return (
+    <AppShell title="Dashboard">
+      <DashboardBody />
+    </AppShell>
+  );
+}
+
+function DashboardBody() {
   const { entityId } = useEntity();
+  const { openQuickAction } = useQuickActions();
   const [range, setRange] = useState(currentMonthRange);
   const [data, setData] = useState<DashboardRead | null>(null);
   const [loading, setLoading] = useState(false);
@@ -71,14 +83,36 @@ export default function HomePage() {
   );
 
   return (
-    <AppShell title="Dashboard">
-      <div className="mb-6">
+    <>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <ReportDateRange
           from={range.from}
           to={range.to}
           disabled={!entityId || loading}
           onChange={(from, to) => setRange({ from, to })}
         />
+        {entityId && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-2"
+              onClick={() => openQuickAction("sales")}
+            >
+              <ShoppingBag className="size-4" />
+              Daily sales
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-2"
+              onClick={() => openQuickAction("expense")}
+            >
+              <Wallet className="size-4" />
+              Add expense
+            </Button>
+          </div>
+        )}
       </div>
 
       {!entityId && (
@@ -277,6 +311,6 @@ export default function HomePage() {
           )}
         </>
       )}
-    </AppShell>
+    </>
   );
 }

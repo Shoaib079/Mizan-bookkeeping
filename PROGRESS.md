@@ -7,12 +7,23 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.14** — New menu UX |
-| **Last completed slice** | Phase 11 Slice 11.13 — cash drawer optional session (`v0.69.4-cash-drawer-optional-session`) |
+| **Active slice** | **11.15** — Day close-out screen (optional) |
+| **Last completed slice** | Phase 11 Slice 11.14 — new menu UX (`v0.69.5-new-menu-ux`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.4-cash-drawer-optional-session` |
+| **Last tag** | `v0.69.5-new-menu-ux` |
 
 ## Resume point
+
+**Phase 11 Slice 11.14 complete** — new menu UX (`v0.69.5-new-menu-ux`):
+- `QuickActionsProvider` — shared dialog state for New menu, top bar, dashboard
+- Grouped New dropdown (Sales / Expenses / Suppliers); dismiss on outside click + Escape
+- Top bar + dashboard **Daily sales** / **Add expense** one-click buttons
+- Shared `useDismissOnOutsideClick`; command palette + Combobox refactored
+- `delivery_enabled` gates delivery nav, command palette, and New menu item
+- Manual daily sales uses `defaultMainDrawerId()`; entity toggles verified on settings page
+- **582 pytest green**; frontend build green
+
+**Next:** Phase 11.15 — day close-out screen (optional; owner confirms scope).
 
 **Phase 11 Slice 11.13 complete** — cash drawer optional session + owner reopen (`v0.69.4-cash-drawer-optional-session`):
 - Migration `050`: nullable `cash_movements.session_id`; drawer reopen fields; `cash_drawer_audit_events`
@@ -21,8 +32,6 @@
 - Frontend: period unlock on cash movement; Reopen + Close drawer day on `/banking/cash`
 - **582 pytest green** (+3); frontend build green
 - **Owner sign-off: APPROVED (2026-06-27)** (money-critical)
-
-**Next:** Phase 11.14 — new menu UX (quick actions, grouping, dismiss).
 
 **Phase 11 Slice 11.12 complete** — remaining dedicated correction HTTP APIs (`v0.69.3-correction-apis`):
 - POST routes: supplier invoice, credit sale, staff/partner ledger, FX conversion/spend (`/fx/ledger/{id}/correct`)

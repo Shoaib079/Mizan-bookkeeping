@@ -13,12 +13,13 @@ import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
+import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
 
-type MoneyAccount = { id: string; name: string };
+type MoneyAccount = { id: string; name: string; account_kind?: string };
 
 type ManualDailySalesResponse = {
   status: string;
@@ -59,7 +60,16 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
     ]);
     setCashAccounts(accountsRes.items);
     setZReportEnabled(zEnabled);
-    if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
+    const drawerId = defaultMainDrawerId(
+      accountsRes.items.map((a) => ({
+        id: a.id,
+        gl_account_id: "",
+        name: a.name,
+        account_kind: a.account_kind ?? "cash",
+      })),
+    );
+    if (drawerId) setMoneyAccountId(drawerId);
+    else if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
   }, [entityId]);
 
   useEffect(() => {

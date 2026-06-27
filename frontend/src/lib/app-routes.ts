@@ -131,6 +131,31 @@ export function sidebarChildren(parentHref: string): AppRoute[] {
   return appRoutes.filter((route) => route.nestedUnder === parentHref);
 }
 
+export type EntityNavSettings = {
+  deliveryEnabled: boolean;
+};
+
+function isDeliveryRoute(route: AppRoute): boolean {
+  return route.href.startsWith("/delivery") || route.label === "New: Delivery report";
+}
+
+/** Hide delivery pages and New-menu shortcuts when the module is off. */
+export function filterRoutesByEntitySettings(
+  routes: AppRoute[],
+  settings: EntityNavSettings,
+): AppRoute[] {
+  if (settings.deliveryEnabled) return routes;
+  return routes.filter((route) => !isDeliveryRoute(route));
+}
+
+export function filterNavItemsByEntitySettings(
+  items: AppRoute[],
+  settings: EntityNavSettings,
+): AppRoute[] {
+  if (settings.deliveryEnabled) return items;
+  return items.filter((item) => item.href !== "/delivery");
+}
+
 export const navGroups = [
   { label: "Overview", items: appRoutes.filter((route) => route.group === "Overview") },
   {

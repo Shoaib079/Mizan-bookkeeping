@@ -1,19 +1,26 @@
-/** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6). */
-
 "use client";
 
+/** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6). */
+
 import { UserButton } from "@clerk/nextjs";
-import { Search } from "lucide-react";
+import { Search, ShoppingBag, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { CommandPalette } from "@/components/command-palette";
 import { NewMenu } from "@/components/new-menu";
+import { QuickActionsProvider, useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { useApiAuth } from "@/lib/api-auth";
-import { navGroups, isNavChildActive, isNavItemActive, sidebarChildren } from "@/lib/app-routes";
+import {
+  navGroups,
+  isNavChildActive,
+  isNavItemActive,
+  sidebarChildren,
+  filterNavItemsByEntitySettings,
+} from "@/lib/app-routes";
 import { useEntity } from "@/lib/entity-context";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +33,23 @@ export function AppShell({
   children: React.ReactNode;
   title?: string;
 }) {
+  return (
+    <QuickActionsProvider>
+      <AppShellInner title={title}>{children}</AppShellInner>
+    </QuickActionsProvider>
+  );
+}
+
+function AppShellInner({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title: string;
+}) {
   const pathname = usePathname();
   const { clerkEnabled: authOn } = useApiAuth();
+  const { openQuickAction, deliveryEnabled } = useQuickActions();
   const {
     entityId,
     setEntityId,
@@ -36,6 +58,8 @@ export function AppShell({
     entities,
     entitiesLoading,
   } = useEntity();
+
+  const navSettings = { deliveryEnabled };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -86,60 +110,86 @@ export function AppShell({
           )}
         </div>
         <nav className="flex-1 space-y-4 p-3">
-          {navGroups.map((group) => (
-            <div key={group.label}>
-              <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">
-                {group.label}
-              </p>
-              <ul className="space-y-0.5">
-                {group.items.map((item) => {
-                  const active = isNavItemActive(pathname, item);
-                  const children = sidebarChildren(item.href);
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent",
-                          active && "bg-sidebar-accent font-medium text-primary",
+          {navGroups.map((group) => {
+            const items = filterNavItemsByEntitySettings(group.items, navSettings);
+            if (items.length === 0) return null;
+            return (
+              <div key={group.label}>
+                <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">
+                  {group.label}
+                </p>
+                <ul className="space-y-0.5">
+                  {items.map((item) => {
+                    const active = isNavItemActive(pathname, item);
+                    const children = deliveryEnabled
+                      ? sidebarChildren(item.href)
+                      : [];
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent",
+                            active && "bg-sidebar-accent font-medium text-primary",
+                          )}
+                        >
+                          <item.icon className="size-4" />
+                          {item.label}
+                        </Link>
+                        {children.length > 0 && (
+                          <ul className="mt-0.5 space-y-0.5 border-l border-border pl-3 ml-4">
+                            {children.map((child) => {
+                              const childActive = isNavChildActive(pathname, child);
+                              return (
+                                <li key={child.href}>
+                                  <Link
+                                    href={child.href}
+                                    className={cn(
+                                      "block rounded-md px-2 py-1 text-sm hover:bg-sidebar-accent",
+                                      childActive &&
+                                        "bg-sidebar-accent font-medium text-primary",
+                                    )}
+                                  >
+                                    {child.label}
+                                  </Link>
+                                </li>
+                              );
+                            })}
+                          </ul>
                         )}
-                      >
-                        <item.icon className="size-4" />
-                        {item.label}
-                      </Link>
-                      {children.length > 0 && (
-                        <ul className="mt-0.5 space-y-0.5 border-l border-border pl-3 ml-4">
-                          {children.map((child) => {
-                            const childActive = isNavChildActive(pathname, child);
-                            return (
-                              <li key={child.href}>
-                                <Link
-                                  href={child.href}
-                                  className={cn(
-                                    "block rounded-md px-2 py-1 text-sm hover:bg-sidebar-accent",
-                                    childActive &&
-                                      "bg-sidebar-accent font-medium text-primary",
-                                  )}
-                                >
-                                  {child.label}
-                                </Link>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background px-6">
           <h1 className="text-sm font-semibold">{title}</h1>
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="hidden gap-2 sm:inline-flex"
+              disabled={!entityId}
+              onClick={() => openQuickAction("sales")}
+            >
+              <ShoppingBag className="size-4" />
+              Daily sales
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="hidden gap-2 sm:inline-flex"
+              disabled={!entityId}
+              onClick={() => openQuickAction("expense")}
+            >
+              <Wallet className="size-4" />
+              Add expense
+            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -160,7 +210,7 @@ export function AppShell({
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>
-      <CommandPalette />
+      <CommandPalette deliveryEnabled={deliveryEnabled} />
     </div>
   );
 }

@@ -7,34 +7,47 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
-import { appRoutes } from "@/lib/app-routes";
+import { appRoutes, filterRoutesByEntitySettings } from "@/lib/app-routes";
+import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { cn } from "@/lib/utils";
 
-export function CommandPalette() {
+type Props = {
+  deliveryEnabled: boolean;
+};
+
+export function CommandPalette({ deliveryEnabled }: Props) {
   const router = useRouter();
+  const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const routes = useMemo(
+    () => filterRoutesByEntitySettings(appRoutes, { deliveryEnabled }),
+    [deliveryEnabled],
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return appRoutes;
-    return appRoutes.filter(
+    if (!q) return routes;
+    return routes.filter(
       (route) =>
         route.label.toLowerCase().includes(q) ||
         route.href.toLowerCase().includes(q) ||
         route.keywords?.toLowerCase().includes(q) ||
         route.group.toLowerCase().includes(q),
     );
-  }, [query]);
+  }, [query, routes]);
 
   const close = useCallback(() => {
     setOpen(false);
     setQuery("");
     setActiveIndex(0);
   }, []);
+
+  useDismissOnOutsideClick(panelRef, open, close, { escape: false });
 
   const select = useCallback(
     (href: string) => {
@@ -103,13 +116,9 @@ export function CommandPalette() {
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 p-4 pt-[15vh]"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) close();
-      }}
-    >
+    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 p-4 pt-[15vh]">
       <div
+        ref={panelRef}
         className="w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-xl"
         role="dialog"
         aria-modal
