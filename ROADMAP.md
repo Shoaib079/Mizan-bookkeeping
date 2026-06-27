@@ -13,9 +13,9 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (`v0.71.16` review hub committed; awaiting next) |
-| **Last completed slice** | Unified statement review hub — 2b (`v0.71.16`) |
-| **Last commit/tag** | `v0.71.16` |
+| **Active slice** | — (`v0.71.17` committed; awaiting clearance auto-pick) |
+| **Last completed slice** | Learned-token trim on classify/correct + gitignore tsbuildinfo (`v0.71.17`) |
+| **Last commit/tag** | `v0.71.17` |
 | **Next up** | **Clearance auto-pick** (POS/delivery settlement); then Phase 12 owner sign-off on production |
 
 ### Next plan (pre-launch, owner-driven)
@@ -49,6 +49,7 @@
 | Statement classification learning (per-entity rules, suggest + learn on confirm) | `v0.71.14` | done | Build a **global/shared** rule store — rules are per-entity (RLS), never cross-user |
 | Statement rule auto-apply (high-confidence, correction-reset, reversible) | `v0.71.15` | done | Auto-post outside BANK_FEE/SUPPLIER_PAYMENT, or without the void/relearn correction path |
 | Unified statement review hub (frontend) | `v0.71.16` | done | Re-build per-statement-only review; `/banking/review` is the canonical hub |
+| Learned-token trim on classify/correct (`match_token`) | `v0.71.17` | done | Re-wire token trim only on create-supplier; blank token must keep full-description learn behavior |
 | **POS/delivery settlement clearing + commission split (net vs gross)** | `v0.18.0` + `core/pos`/`core/delivery` posting | done | **Re-build deposit clearing or commission net/gross logic — it already exists** |
 
 **Owner sign-off ✓ (2026-06-21)** on money-critical rows above — tips A/B2/C, Phase 8.7 D1–D3, Phase 9 core (`v0.52.0`–`v0.56.0`), Z match-or-review (`v0.57.0`). Original Slice B1 (`v0.49.0`) was superseded before sign-off. Tag `v0.57.1-owner-sign-off`.
@@ -1666,7 +1667,8 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| 2026-06-21 | Unified statement review hub (2b) | `v0.71.16` | `/banking/review` — status tabs, inline confirm/classify/correct/create-supplier, suggestions, token trim, `rule_auto` badge; dashboard link |
+| 2026-06-27 | Learned-token trim on classify/correct | `v0.71.17` | Optional `match_token` on classify/correct API + shared **Learn as** field in review hub; blank = full description; `*.tsbuildinfo` gitignored |
+| 2026-06-27 | Unified statement review hub (2b) | `v0.71.16` | `/banking/review` — status tabs, inline confirm/classify/correct/create-supplier, suggestions, token trim (create-supplier), `rule_auto` badge; dashboard link |
 | 2026-06-27 | Statement rule auto-apply | `v0.71.15` | High-confidence auto-post (bank fee + supplier payment only) flagged `RULE_AUTO`; confidence resets on mapping change; correction = void + relearn; books tie after post **and** reversal; entity-isolated |
 | 2026-06-27 | Statement classification learning | `v0.71.14` | Per-entity learned rules (RLS, registered); suggestions on needs-review; learn-on-confirm; create-supplier-from-line; conflict → no suggestion |
 | 2026-06-27 | Turkish CSV encoding + delimiter | `v0.71.13.1` | cp1254→latin-1 fallback; `;`/`,`/tab sniff; persisted on profile; tolerant `DD.MM.YYYY`+time |

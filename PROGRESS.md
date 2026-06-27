@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (`v0.71.16` review hub committed; awaiting next) |
-| **Last completed slice** | Unified statement review hub — 2b (`v0.71.16`) |
+| **Active slice** | — (`v0.71.17` committed; awaiting clearance auto-pick) |
+| **Last completed slice** | Learned-token trim on classify/correct + gitignore tsbuildinfo (`v0.71.17`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.16` |
+| **Last tag** | `v0.71.17` |
 
 ## Owner blockers (12.5)
 
@@ -46,15 +46,17 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**`v0.71.15` committed** — statement rule auto-apply (HIGH-confidence bank_fee + supplier_payment, void+relearn corrections, `RULE_AUTO` audit flags). **`v0.71.16` committed** — **2b unified statement review hub** (`/banking/review`: status tabs, inline confirm/correct/create-supplier, token trim, rule_auto highlighting). **671 pytest green**; **144 vitest**. **Next:** clearance auto-pick (POS/delivery settlement auto-apply when exact settlement match); then Phase 12 owner sign-off on production.
+**`v0.71.17` committed & pushed** — optional `match_token` on classify/correct (shared **Learn as** field in review hub; blank = full description); `*.tsbuildinfo` gitignored. **`v0.71.16` committed** — **2b unified statement review hub** (`/banking/review`: status tabs, inline confirm/classify/correct/create-supplier, suggestions, `rule_auto` highlighting). **673 pytest green**; **144 vitest**. **Next:** clearance auto-pick (POS/delivery settlement auto-apply when exact settlement match); then Phase 12 owner sign-off on production.
 
-**Phase 12.5 bank import + learning arc (`v0.71.9`–`v0.71.15`):**
+**Phase 12.5 bank import + learning arc (`v0.71.9`–`v0.71.17`):**
 - `v0.71.9` — nav consolidation (section tabs, reports/settings card hubs)
 - `v0.71.10` — single-item sidebar groups → direct links
 - `v0.71.11`–`v0.71.12.1` — Excel/.xls import, lira amount column, Turkish CSV encoding/delimiter
 - `v0.71.13` — column-mapping profiles per bank account
 - `v0.71.14` — per-entity classification learning (suggest + learn-on-confirm)
 - `v0.71.15` — rule auto-apply at HIGH confidence (reversible, entity-isolated)
+- `v0.71.16` — unified statement review hub (`/banking/review`)
+- `v0.71.17` — `match_token` trim on classify/correct + gitignore `*.tsbuildinfo`
 
 **Phase 12 Slice 12.6 complete** — owner onboarding & smoke test (`v0.71.8-owner-onboarding-smoke`):
 - `scripts/smoke_onboarding.sh` — entity → OB → member → expense → P&L
