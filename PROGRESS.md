@@ -7,12 +7,22 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.16** — General ledger report page (backend done) |
-| **Last completed slice** | Phase 11 Slice 11.15 — day close-out screen (`v0.69.6-day-closeout`) |
+| **Active slice** | **11.17** — DateInput click-to-open |
+| **Last completed slice** | Phase 11 Slice 11.16 — general ledger report (`v0.69.7-ledger-report`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.69.6-day-closeout` |
+| **Last tag** | `v0.69.7-ledger-report` |
 
 ## Resume point
+
+**Phase 11 Slice 11.16 complete** — general ledger report (`v0.69.7-ledger-report`):
+- Expanded `/reports/ledger` — date range, description search, source/status filters, pagination (50/page)
+- Expandable row detail: GL lines with chart account labels, amend/void chain links, Correct for manual/bank_fee
+- Reports landing card + sidebar: "General ledger (all entries)"; `ForbiddenMessage` on 403
+- Distinct copy from deferred audit-events log; link to Manual journals for void
+- **588 pytest green**; frontend build green; **16 vitest**
+- Frontend-only — no backend changes
+
+**Next:** Phase 11.17 — DateInput opens on field click/focus (app-wide).
 
 **Phase 11 Slice 11.15 complete** — day close-out screen (`v0.69.6-day-closeout`):
 - `POST /entities/{id}/operations/day-closeout` — atomic manual sales + N expenses (single commit, idempotent)

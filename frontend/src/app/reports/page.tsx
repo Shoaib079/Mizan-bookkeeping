@@ -86,11 +86,11 @@ const reportCards: ReportCard[] = [
   },
   {
     href: "/reports/ledger",
-    title: "Ledger entries",
-    description: "Correct manual journals and bank fees.",
+    title: "General ledger (all entries)",
+    description: "Every journal entry — search, filter, and drill into lines.",
     icon: BookOpen,
-    category: "Accounting",
-    financial: false,
+    category: "Financial statements",
+    financial: true,
   },
   {
     href: "/accounting/manual-journals",

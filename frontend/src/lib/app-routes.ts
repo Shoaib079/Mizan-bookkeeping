@@ -80,8 +80,8 @@ export const appRoutes: AppRoute[] = [
   { href: "/reports", label: "Reports", icon: BarChart3, group: "Reports" },
   {
     href: "/reports/ledger",
-    label: "Ledger entries",
-    keywords: "journal correct manual bank fee",
+    label: "General ledger",
+    keywords: "journal entries ledger all entries correct manual bank fee",
     icon: BookOpen,
     group: "Reports",
     nestedUnder: "/reports",

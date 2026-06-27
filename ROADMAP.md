@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 11 — Pre-go-live product fixes |
-| **Active slice** | **11.16** — General ledger report page |
-| **Last completed slice** | Phase 11 Slice 11.15 — day close-out screen (`v0.69.6-day-closeout`) |
-| **Last commit/tag** | `v0.69.6-day-closeout` |
-| **Next up** | **11.16** → 11.17–11.18 → 11.20–11.22 → Phase 12 |
+| **Active slice** | **11.17** — DateInput click-to-open |
+| **Last completed slice** | Phase 11 Slice 11.16 — general ledger report (`v0.69.7-ledger-report`) |
+| **Last commit/tag** | `v0.69.7-ledger-report` |
+| **Next up** | **11.17** → 11.18 → 11.20–11.22 → Phase 12 |
 
 **The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **before go-live**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
@@ -753,8 +753,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 12 | Other posted types stuck | Invoice, credit sale, staff, partner, FX conversion/spend — **core helpers only**; no HTTP routes or tests | **11.12** |
 | 13 | **Cash-drawer session trap** | Daily sales + cash movements auto-open a drawer session and **hard-block** when the day is CLOSED (`daily_summary_posting.py:91`, `cash/posting.py:196`) — **no reopen**; inconsistent with period-lock owner-unlock. Expenses bypass sessions. | **11.13** |
 | 14 | Daily drivers buried / New menu flat + sticky / toggles unclear | "Daily sales (manual)" (cash+card, **already built**) + "Manual expense" live only inside the **flat 9-item** New dropdown; the dropdown **does not close on outside click** (`new-menu.tsx` has no mousedown handler — unlike `combobox.tsx`/`date-input.tsx` which do); same gap in `command-palette.tsx` + entity switcher; toggles editable + **labelled** (`settings-types.ts:35-47`, confirmed by 11.18 audit) — 11.14 only verifies each gates the right form | **11.14** |
-| 15 | No single end-of-day entry | One day = many separate modals (sales, then each expense) | **11.15** |
-| 16 | **No "all entries" ledger view** | `GET .../ledger/entries` (paginated/searchable) exists; **no frontend page**, not in reports/nav. (Distinct from the deferred *audit-events* log in FUTURE_IDEAS.) | **11.16** |
+| 15 | No single end-of-day entry | One day = many separate modals (sales, then each expense) | **11.15** ✓ |
+| 16 | **No "all entries" ledger view** | ~~`GET .../ledger/entries` exists; no frontend page~~ → `/reports/ledger` full GL report | **11.16** ✓ |
 | 17 | Date field opens calendar **only via icon** | `date-input.tsx` input has no click/focus-to-open; only the trailing icon opens it. Owner wants click-the-field-to-open, app-wide (amends 10.1 "icon-only"). | **11.17** |
 | 18 | Frontend never had an adversarial audit | Backend got Phase 8.6; the UI is surfacing hand-found bugs (items 13–17). Reviewer/owner-led frontend audit. | **11.18** |
 | 19 | **Idempotency key not stable** | `useSubmitIdempotency()` + explicit keys on 39 surfaces; no auto-mint in `api.ts` | **Done** in 11.19 (owner sign-off **APPROVED 2026-06-27**) |
@@ -1152,7 +1152,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 - [x] Honors 11.13 (no forced session), Turkish money inputs (11.3), and period locks + `period_unlock_reason`.
 - [x] Tests: combined post creates the daily-sales entry + each expense; partial-failure rolls back; idempotent re-submit.
 
-**Done:** Backend `DayCloseoutRequest` + `post_day_closeout()` — one transaction (manual sales confirm + N `post_expense_entry`, single commit); nested `entity_context` GUC fix. Frontend `/close-day` page (`DayCloseoutForm`); nav + New menu Operations + dashboard link; `useSubmitIdempotency` + `usePeriodUnlockSubmit`. **588 pytest green** (+6); frontend build green; **16 vitest**. **Next:** Phase 11.16 general ledger report page.
+**Done:** Backend `DayCloseoutRequest` + `post_day_closeout()` — one transaction (manual sales confirm + N `post_expense_entry`, single commit); nested `entity_context` GUC fix. Frontend `/close-day` page (`DayCloseoutForm`); nav + New menu Operations + dashboard link; `useSubmitIdempotency` + `usePeriodUnlockSubmit`. **588 pytest green** (+6); frontend build green; **16 vitest**. **Next:** Phase 11.17 DateInput click-to-open.
 
 ---
 
@@ -1160,18 +1160,20 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 | | |
 |---|---|
-| **Status** | planned (**backend done** — `GET .../ledger/entries`, paginated + `q`/date/amount/status filters, Phase 8.5; **no frontend page**) |
-| **Decisions** | DESIGN_SYSTEM §7 reports list — add "General ledger (all entries)" card |
+| **Status** | **done** (`v0.69.7-ledger-report`) — frontend-only; wired existing `GET .../ledger/entries` |
+| **Decisions** | DESIGN_SYSTEM §7 reports list — "General ledger (all entries)" card |
 | **Suggested tag** | `v0.69.7-ledger-report` |
 
 **Problem:** Owner wants to see **every entry made** in one place. The list API exists; there is no UI and it's not in reports/nav.
 
 **Acceptance:**
 
-- [ ] Reports page (`/reports/ledger` or similar) listing journal entries via the existing `GET .../ledger/entries` — date range, search (`q`), source/status filters, pagination; row → entry detail (lines, source, links to void/correct/amend chain).
-- [ ] Linked from the Reports landing + sidebar; role-gated like other financial reports.
-- [ ] **Distinct** from the deferred *audit-events* log (FUTURE_IDEAS) — this is the general ledger of posted/voided journal entries, not the raw audit trail.
-- [ ] **Do not** add a new backend endpoint — wire the existing one.
+- [x] Reports page (`/reports/ledger`) listing journal entries via the existing `GET .../ledger/entries` — date range, search (`q`), source/status filters, pagination; row → entry detail (lines, source, links to void/correct/amend chain).
+- [x] Linked from the Reports landing + sidebar; role-gated like other financial reports (`ForbiddenMessage` / 403).
+- [x] **Distinct** from the deferred *audit-events* log (FUTURE_IDEAS) — this is the general ledger of posted/voided journal entries, not the raw audit trail.
+- [x] **Do not** add a new backend endpoint — wire the existing one.
+
+**Done:** Expanded `/reports/ledger` from narrow correct-only list into full GL report: `ReportDateRange` + description search + source/status filters + pagination (50/page); expandable row detail with chart account labels, amend/void chain navigation, Correct for posted manual/bank_fee; link to Manual journals for void. Reports card + sidebar relabelled "General ledger (all entries)" (`financial: true`). **588 pytest green**; frontend build green; **16 vitest**. **Next:** Phase 11.17 DateInput click-to-open.
 
 ---
 
@@ -1306,8 +1308,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 | 11.12 | Remaining correction **HTTP** routes + integration tests green; owner sign-off | **done** (`v0.69.3`) — sign-off **APPROVED (2026-06-27)** |
 | 11.13 | Sales/cash post with no forced session; closed day owner-reopenable + audited; owner sign-off | **done** (`v0.69.4`) — sign-off **APPROVED (2026-06-27)** |
 | 11.14 | Daily sales + Add expense one-click; New menu grouped + closes on outside-click/Esc; toggles labelled + verified gating |
-| 11.15 | (optional) Day close-out posts sales + expenses atomically; owner sign-off |
-| 11.16 | General-ledger "all entries" report page over existing API; linked + role-gated |
+| 11.15 | Day close-out posts sales + expenses atomically; owner sign-off | **done** (`v0.69.6`) — sign-off **APPROVED (2026-06-27)** |
+| 11.16 | General-ledger "all entries" report page over existing API; linked + role-gated | **done** (`v0.69.7-ledger-report`) |
 | 11.17 | Date field opens on click/focus app-wide (icon still works) |
 | 11.18 | Frontend adversarial audit done; each finding fixed + tested; money-critical UI signed off |
 | 11.19 | Stable idempotency key per submit; double-submit/retry → one record (tested); owner sign-off | **done** (`v0.69.10`; sign-off **APPROVED 2026-06-27**) |
