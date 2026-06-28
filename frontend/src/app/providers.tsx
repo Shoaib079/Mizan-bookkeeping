@@ -2,8 +2,9 @@
 
 import { ClerkProvider } from "@clerk/nextjs";
 
-import { ApiAuthProvider } from "@/lib/api-auth";
+import { AuthReadyGate } from "@/components/auth-ready-gate";
 import { FirstRunOnboardingModal } from "@/components/first-run-onboarding-modal";
+import { ApiAuthProvider } from "@/lib/api-auth";
 import { EntityProvider } from "@/lib/entity-context";
 import { ToastProvider } from "@/lib/toast";
 import { UnsavedWorkProvider } from "@/lib/unsaved-work";
@@ -17,7 +18,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <UnsavedWorkProvider>
           <ToastProvider>
             <FirstRunOnboardingModal />
-            {children}
+            <AuthReadyGate>{children}</AuthReadyGate>
           </ToastProvider>
         </UnsavedWorkProvider>
       </EntityProvider>

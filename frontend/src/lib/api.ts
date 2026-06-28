@@ -16,8 +16,16 @@ type AuthHeaderProvider = () => Promise<Record<string, string>>;
 
 let authHeaderProvider: AuthHeaderProvider | null = null;
 
+/** Retries when Clerk token is not yet available on cold load. */
+export const AUTH_401_MAX_ATTEMPTS = 3;
+export const AUTH_401_RETRY_DELAY_MS = 500;
+
 export function setAuthHeaderProvider(provider: AuthHeaderProvider | null) {
   authHeaderProvider = provider;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -69,20 +77,37 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const { idempotencyKey: _key, ...fetchInit } = init ?? {};
   void _key;
-  const authHeaders = authHeaderProvider ? await authHeaderProvider() : {};
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...fetchInit,
-    headers: {
-      ...authHeaders,
-      ...resolveIdempotencyKey(init),
-      ...(fetchInit.headers ?? {}),
-    },
-  });
-  if (!response.ok) {
+  const maxAttempts = authHeaderProvider ? AUTH_401_MAX_ATTEMPTS : 1;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const authHeaders = authHeaderProvider ? await authHeaderProvider() : {};
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...fetchInit,
+      headers: {
+        ...authHeaders,
+        ...resolveIdempotencyKey(init),
+        ...(fetchInit.headers ?? {}),
+      },
+    });
+
+    if (response.ok) {
+      if (response.status === 204) return undefined as T;
+      return (await response.json()) as T;
+    }
+
+    if (
+      response.status === 401 &&
+      authHeaderProvider &&
+      attempt < maxAttempts
+    ) {
+      await sleep(AUTH_401_RETRY_DELAY_MS);
+      continue;
+    }
+
     throw new ApiError(await parseError(response), response.status);
   }
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+
+  throw new Error("apiFetch exhausted retry attempts");
 }
 
 export function documentUrl(entityId: string, intakeId: string): string {
@@ -103,17 +128,34 @@ function parseContentDispositionFilename(
 export async function apiDownload(
   path: string,
 ): Promise<{ blob: Blob; filename: string }> {
-  const authHeaders = authHeaderProvider ? await authHeaderProvider() : {};
-  const response = await fetch(`${API_BASE}${path}`, { headers: authHeaders });
-  if (!response.ok) {
+  const maxAttempts = authHeaderProvider ? AUTH_401_MAX_ATTEMPTS : 1;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const authHeaders = authHeaderProvider ? await authHeaderProvider() : {};
+    const response = await fetch(`${API_BASE}${path}`, { headers: authHeaders });
+
+    if (response.ok) {
+      const blob = await response.blob();
+      const filename =
+        parseContentDispositionFilename(
+          response.headers.get("Content-Disposition"),
+        ) ?? "download";
+      return { blob, filename };
+    }
+
+    if (
+      response.status === 401 &&
+      authHeaderProvider &&
+      attempt < maxAttempts
+    ) {
+      await sleep(AUTH_401_RETRY_DELAY_MS);
+      continue;
+    }
+
     throw new ApiError(await parseError(response), response.status);
   }
-  const blob = await response.blob();
-  const filename =
-    parseContentDispositionFilename(
-      response.headers.get("Content-Disposition"),
-    ) ?? "download";
-  return { blob, filename };
+
+  throw new Error("apiDownload exhausted retry attempts");
 }
 
 export function triggerBlobDownload(blob: Blob, filename: string): void {
