@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (`v0.72.0` clearance auto-pick committed; awaiting Phase 12 owner sign-off) |
-| **Last completed slice** | Clearance auto-pick — POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) |
+| **Active slice** | — (Phase 12.5 arc complete; **owner sign-off ✓** on `v0.72.0-clearance-auto-pick`) |
+| **Last completed slice** | Clearance auto-pick — POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) ✓ signed off |
 | **Branch** | `main` |
 | **Last tag** | `v0.72.0-clearance-auto-pick` |
 
@@ -46,7 +46,9 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**`v0.72.0-clearance-auto-pick` committed** — HIGH-confidence rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches amount+date; zero or multiple → Needs Review; delivery platform resolved by unique match across entity platforms; `classification_source=rule_auto`. **677 pytest green** (+6); **144 vitest**. **Next:** Phase 12 owner sign-off on production (migrations `052`–`055`, first real restaurant walkthrough).
+**Owner sign-off ✓ (2026-06-28)** — clearance auto-pick (`v0.72.0-clearance-auto-pick`). **677 pytest green** at sign-off. **Next:** Phase 12 production go-live (migrations `052`–`055`, provision hosts, backup-restore drill, first real restaurant walkthrough).
+
+**`v0.72.0-clearance-auto-pick` committed** — HIGH-confidence rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches amount+date; zero or multiple → Needs Review; delivery platform resolved by unique match across entity platforms; `classification_source=rule_auto`. **677 pytest green** (+6); **144 vitest**.
 
 **Phase 12.5 bank import + learning arc (`v0.71.9`–`v0.72.0`):**
 - `v0.71.9` — nav consolidation (section tabs, reports/settings card hubs)

@@ -2,9 +2,13 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-28
+
+**Owner sign-off — Phase 12.5 clearance auto-pick:** Owner approved POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) — HIGH-confidence rule + unique existing-settlement match; never auto-creates settlements. **677 pytest green** at sign-off. Phase 12.5 statement-learning arc closed. **Next:** Phase 12 production go-live (migrations, hosts, first restaurant walkthrough).
+
 ## 2026-06-27
 
-**Phase 12.5 — Clearance auto-pick (`v0.72.0-clearance-auto-pick`):** HIGH-confidence learned rules auto-**link** (never create) `pos_settlement` and `delivery_settlement` bank inflows when exactly one unused settlement record matches amount+date; zero or multiple matches → `needs_review`. Delivery platform inferred by unique match across entity platforms. Reuses `_find_matching_*` / `_link_*` from `statements.py`; `classification_source=rule_auto`. Tests: `test_statement_rule_auto_apply.py` (+6 — POS link/no-match/outflow, delivery link/multiple/no-match, row-count invariant). **677 pytest green** (+6); tag `v0.72.0-clearance-auto-pick`. **Next:** Phase 12 owner sign-off on production.
+**Phase 12.5 — Clearance auto-pick (`v0.72.0-clearance-auto-pick`):** HIGH-confidence learned rules auto-**link** (never create) `pos_settlement` and `delivery_settlement` bank inflows when exactly one unused settlement record matches amount+date; zero or multiple matches → `needs_review`. Delivery platform inferred by unique match across entity platforms. Reuses `_find_matching_*` / `_link_*` from `statements.py`; `classification_source=rule_auto`. Tests: `test_statement_rule_auto_apply.py` (+6 — POS link/no-match/outflow, delivery link/multiple/no-match, row-count invariant). **677 pytest green** (+6); tag `v0.72.0-clearance-auto-pick`. **Owner sign-off APPROVED (2026-06-28).** **Next:** Phase 12 production go-live.
 
 **Phase 12.5 — Learned-token trim on classify/correct (`v0.71.17`):** Optional `match_token` on `ClassifyStatementLineRequest` and `CorrectStatementLineRequest`; threaded through learn-on-classify and `record_rule_correction` (blank → full description, unchanged). Review hub **Learn as** field defaults to line description; sends trimmed token on confirm/classify/correct/create-supplier when shortened. `*.tsbuildinfo` added to `.gitignore`. Tests: `test_statement_classification_learning.py` (+2 — classify keys rule on trimmed token; correct relearns on trimmed token); `statement-review-actions.test.ts` updated for classify/correct `match_token`. **673 pytest green** (+2); **144 vitest**; tag `v0.71.17`. **Next:** clearance auto-pick (POS/delivery settlement).
 

@@ -13,8 +13,8 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (`v0.72.0` clearance auto-pick committed; awaiting Phase 12 owner sign-off) |
-| **Last completed slice** | Clearance auto-pick — POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) |
+| **Active slice** | — (Phase 12.5 arc complete; **owner sign-off ✓** on `v0.72.0-clearance-auto-pick`) |
+| **Last completed slice** | Clearance auto-pick — POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) ✓ signed off |
 | **Last commit/tag** | `v0.72.0-clearance-auto-pick` |
 | **Next up** | **Phase 12 owner sign-off** on production (migrations `052`–`055`, first real restaurant walkthrough) |
 
@@ -53,7 +53,9 @@
 | Clearance auto-pick (POS/delivery settlement link-only) | `v0.72.0-clearance-auto-pick` | done | Re-auto-create settlements on import; auto-link without HIGH rule + unique match; delivery without platform disambiguation |
 | **POS/delivery settlement clearing + commission split (net vs gross)** | `v0.18.0` + `core/pos`/`core/delivery` posting | done | **Re-build deposit clearing or commission net/gross logic — it already exists** |
 
-**Owner sign-off ✓ (2026-06-21)** on money-critical rows above — tips A/B2/C, Phase 8.7 D1–D3, Phase 9 core (`v0.52.0`–`v0.56.0`), Z match-or-review (`v0.57.0`). Original Slice B1 (`v0.49.0`) was superseded before sign-off. Tag `v0.57.1-owner-sign-off`.
+**Owner sign-off ✓ (2026-06-28)** on Phase 12.5 statement-learning arc through clearance auto-pick (`v0.72.0-clearance-auto-pick`) — rule auto-post (bank fee + supplier payment), review hub, match_token trim, POS/delivery link-only auto-clear.
+
+**Owner sign-off ✓ (2026-06-21)** on money-critical rows below — tips A/B2/C, Phase 8.7 D1–D3, Phase 9 core (`v0.52.0`–`v0.56.0`), Z match-or-review (`v0.57.0`). Original Slice B1 (`v0.49.0`) was superseded before sign-off. Tag `v0.57.1-owner-sign-off`.
 
 **Detailed plan:** `.cursor/plans/expense_ocr_+_add_menu_a4ddb775.plan.md` (owner confirmed: one expense per receipt line, cash-only payment).
 

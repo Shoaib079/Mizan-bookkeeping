@@ -14,6 +14,8 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Alternatives considered:** Auto-post new settlement when no match (rejected — creates ledger without human confirmation); auto-link without learned rule (rejected — amount+date collisions too risky); require platform on learned rule (rejected — owner learns from description token only).
 
+**Owner sign-off APPROVED (2026-06-28).** **677 pytest green** at sign-off.
+
 ## 2026-06-27 — Statement classification learning & rule auto-apply (Phase 12.5; `v0.71.14`–`v0.71.15`)
 
 **Per-entity rules only:** Learned `StatementClassificationRule` rows are **entity-scoped with RLS** (`statement_classification_rules` registered in `RLS_TABLES`). Rules learned in entity A are never visible or applied in entity B. No global/shared rule store across users or restaurants.
