@@ -54,12 +54,66 @@ def test_valid_token_resolves_invited_user(
     assert resolved.external_auth_id == "user_clerk_1"
 
 
-def test_unprovisioned_clerk_login_denied(
+def test_self_signup_auto_provisions_unknown_verified_email(
     auth_enforced,
+    db_session: Session,
+) -> None:
+    resolved = auth_service.resolve_user_from_clerk(
+        db_session,
+        clerk_user_id="user_self_signup_1",
+        email="new.user@example.com",
+        email_verified=True,
+    )
+    assert resolved.email == "new.user@example.com"
+    assert resolved.display_name == "new.user"
+    assert resolved.external_auth_id == "user_self_signup_1"
+    assert resolved.is_active is True
+
+    events = list(
+        db_session.scalars(
+            select(AuthAuditEvent).where(AuthAuditEvent.user_id == resolved.id)
+        )
+    )
+    assert any(
+        e.action == "login_success"
+        and e.detail == "Self-signup: new account auto-provisioned"
+        for e in events
+    )
+
+
+def test_self_signup_unknown_email_can_authenticate(
+    auth_enforced,
+    client: TestClient,
+) -> None:
+    token = "test:user_new_signup:brand.new@example.com"
+    response = client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    assert response.json()["email"] == "brand.new@example.com"
+
+
+def test_self_signup_disabled_denies_unknown_email(
+    auth_enforced,
+    monkeypatch,
+    db_session: Session,
+) -> None:
+    monkeypatch.setattr(settings, "self_signup_enabled", False)
+    with pytest.raises(auth_service.UserNotProvisionedError, match="invited"):
+        auth_service.resolve_user_from_clerk(
+            db_session,
+            clerk_user_id="user_invite_only",
+            email="nobody@example.com",
+            email_verified=True,
+        )
+
+
+def test_invite_only_denies_unknown_email_via_api(
+    auth_enforced,
+    monkeypatch,
     client: TestClient,
     roles_entity_setup,
 ) -> None:
     setup = roles_entity_setup
+    monkeypatch.setattr(settings, "self_signup_enabled", False)
     token = "test:random_clerk:nobody@example.com"
     response = client.get(
         f"/entities/{setup['entity_id']}/expenses",
@@ -67,6 +121,19 @@ def test_unprovisioned_clerk_login_denied(
     )
     assert response.status_code == 403
     assert "invited" in response.json()["detail"].lower()
+
+
+def test_unverified_email_rejected_on_resolve(
+    auth_enforced,
+    db_session: Session,
+) -> None:
+    with pytest.raises(auth_service.UserNotProvisionedError, match="not verified"):
+        auth_service.resolve_user_from_clerk(
+            db_session,
+            clerk_user_id="user_unverified",
+            email="unverified@example.com",
+            email_verified=False,
+        )
 
 
 def test_invalid_token_returns_401(

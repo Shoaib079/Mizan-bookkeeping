@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app.config import settings
 from app.core.auth.permissions import ROLE_PERMISSIONS
 from app.core.auth.types import EntityRole
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
@@ -31,7 +32,7 @@ class DuplicateMembershipError(Exception):
 
 
 class UserNotProvisionedError(Exception):
-    """Clerk identity has no matching invited local user."""
+    """Clerk identity has no matching local user and self-signup is disabled."""
 
 
 class AuthIdentityConflictError(Exception):
@@ -41,7 +42,7 @@ class AuthIdentityConflictError(Exception):
 def resolve_user_from_clerk(
     session: Session, *, clerk_user_id: str, email: str, email_verified: bool
 ) -> User:
-    """Invite-only: link Clerk id to pre-provisioned local user by verified email."""
+    """Resolve Clerk identity to a local user — link invited accounts or auto-provision."""
     if not email_verified:
         raise UserNotProvisionedError("Email address is not verified")
 
@@ -56,9 +57,42 @@ def resolve_user_from_clerk(
 
     by_email = session.scalar(select(User).where(User.email == normalized_email))
     if by_email is None:
-        raise UserNotProvisionedError(
-            "No invited account for this email. Contact your administrator."
+        if not settings.self_signup_enabled:
+            raise UserNotProvisionedError(
+                "No invited account for this email. Contact your administrator."
+            )
+
+        local_part = normalized_email.split("@", 1)[0]
+        display_name = local_part or normalized_email
+        new_user = User(
+            email=normalized_email,
+            display_name=display_name,
+            external_auth_id=clerk_user_id,
+            is_active=True,
         )
+        session.add(new_user)
+        try:
+            session.commit()
+            session.refresh(new_user)
+        except IntegrityError:
+            session.rollback()
+            by_email = session.scalar(select(User).where(User.email == normalized_email))
+            if by_email is None:
+                by_email = session.scalar(
+                    select(User).where(User.external_auth_id == clerk_user_id)
+                )
+            if by_email is None:
+                raise
+        else:
+            record_auth_event(
+                session,
+                AuthAuditAction.LOGIN_SUCCESS,
+                user_id=new_user.id,
+                clerk_user_id=clerk_user_id,
+                email=normalized_email,
+                detail="Self-signup: new account auto-provisioned",
+            )
+            return new_user
 
     if by_email.external_auth_id and by_email.external_auth_id != clerk_user_id:
         raise AuthIdentityConflictError("Email already linked to a different sign-in identity")
