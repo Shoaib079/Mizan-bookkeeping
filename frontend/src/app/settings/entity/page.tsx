@@ -130,7 +130,9 @@ export default function EntitySettingsPage() {
       setWizardDraft(defaultWizardDraft());
       toast("Restaurant created");
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
+      if (err instanceof ApiError && err.status === 409) {
+        setCreateError(err.message);
+      } else if (err instanceof ApiError && err.status === 401) {
         setCreateError("Sign in is required to create a restaurant.");
       } else {
         setCreateError(err instanceof Error ? err.message : "Create failed");

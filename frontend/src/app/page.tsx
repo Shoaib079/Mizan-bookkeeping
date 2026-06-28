@@ -19,6 +19,7 @@ import {
   type DashboardKpi,
 } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
+import { shouldShowCreateRestaurantPrompt } from "@/lib/entity-context-helpers";
 import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead } from "@/lib/report-types";
@@ -34,7 +35,14 @@ export default function HomePage() {
 }
 
 function DashboardBody() {
-  const { entityId } = useEntity();
+  const {
+    entityId,
+    entities,
+    entitiesLoading,
+    entitiesLoaded,
+    entitiesError,
+    refreshEntities,
+  } = useEntity();
   const { openQuickAction, deliveryEnabled } = useQuickActions();
   const { role, canReadFinancialReports } = useEntityAccess();
   const showWriteChrome = shouldShowWriteChrome(role);
@@ -153,7 +161,34 @@ function DashboardBody() {
         )}
       </div>
 
-      {!entityId && (
+      {(entitiesLoading || (!entitiesLoaded && !entitiesError)) && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-sm text-muted-foreground">Loading restaurants…</p>
+        </div>
+      )}
+
+      {entitiesError && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-sm text-destructive">
+            Could not load your restaurants. Check your connection and try again.
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-3"
+            onClick={() => void refreshEntities()}
+          >
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {shouldShowCreateRestaurantPrompt({
+        entitiesLoading,
+        entitiesLoaded,
+        entitiesError,
+        entityCount: entities.length,
+      }) && (
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-sm text-muted-foreground">
             Create your first restaurant to start bookkeeping.
@@ -164,6 +199,17 @@ function DashboardBody() {
           >
             Create restaurant
           </Link>
+        </div>
+      )}
+
+      {!entityId &&
+        entitiesLoaded &&
+        !entitiesError &&
+        entities.length > 0 && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-sm text-muted-foreground">
+            Select a restaurant from the account menu to view the dashboard.
+          </p>
         </div>
       )}
 

@@ -36,11 +36,14 @@ def create_entity(
     session: Session = Depends(get_session),
     user: User | None = Depends(require_authenticated_user),
 ) -> EntityRead:
-    return service.create_entity(
-        session,
-        payload,
-        creator_user_id=user.id if user is not None else None,
-    )
+    try:
+        return service.create_entity(
+            session,
+            payload,
+            creator_user_id=user.id if user is not None else None,
+        )
+    except service.DuplicateEntityNameError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("", response_model=PaginatedListOut[EntityRead])

@@ -84,6 +84,8 @@ function AccountMenuPanel({
     setActorId,
     entities,
     entitiesLoading,
+    entitiesLoaded,
+    entitiesError,
     userProfile,
   } = useEntity();
 
@@ -127,7 +129,7 @@ function AccountMenuPanel({
 
   const executeSwitch = useCallback(
     (targetId: string, targetName: string) => {
-      setEntityId(targetId);
+      setEntityId(targetId, { redirectToDashboard: true });
       closeMenu();
       toast(`Now working in ${targetName}`);
     },
@@ -290,7 +292,7 @@ function AccountMenuPanel({
             </div>
           )}
 
-          {devMode && entities.length === 0 && (
+          {devMode && entitiesLoaded && entities.length === 0 && !entitiesError && (
             <div className="space-y-3 border-b border-border px-4 py-3">
               <div>
                 <Label htmlFor="account-menu-entity-id">Restaurant ID</Label>

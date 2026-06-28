@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.auth.types import EntityRole
-from app.db.session import entity_context, require_entity_context, user_membership_lookup
+from app.db.session import entity_context, require_entity_context, user_membership_lookup, user_membership_lookup
 from app.features.auth.models import EntityMembership
 from app.features.chart_of_accounts import service as chart_service
 from app.features.entities.models import Entity, EntitySetting
@@ -21,6 +21,29 @@ class DuplicateEntitySettingError(ValueError):
     """Setting key already exists for this entity."""
 
 
+class DuplicateEntityNameError(Exception):
+    """User already owns a company with this name (case-insensitive)."""
+
+
+def _user_owns_entity_named(
+    session: Session, user_id: uuid.UUID, name: str
+) -> bool:
+    trimmed = name.strip()
+    if not trimmed:
+        return False
+    with user_membership_lookup(session, user_id):
+        existing_id = session.scalar(
+            select(Entity.id)
+            .join(EntityMembership, EntityMembership.entity_id == Entity.id)
+            .where(
+                EntityMembership.user_id == user_id,
+                func.lower(Entity.name) == trimmed.lower(),
+            )
+            .limit(1)
+        )
+    return existing_id is not None
+
+
 def create_entity(
     session: Session,
     payload: EntityCreate,
@@ -28,6 +51,13 @@ def create_entity(
     creator_user_id: uuid.UUID | None = None,
 ) -> Entity:
     """Create entity; when creator_user_id is set, add owner membership atomically."""
+    if creator_user_id is not None and _user_owns_entity_named(
+        session, creator_user_id, payload.name
+    ):
+        raise DuplicateEntityNameError(
+            "You already have a company with this name."
+        )
+
     entity = Entity(name=payload.name)
     session.add(entity)
     session.flush()

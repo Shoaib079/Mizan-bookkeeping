@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (Phase 12.5 arc complete; **owner sign-off ✓** on `v0.72.0-clearance-auto-pick`) |
-| **Last completed slice** | Clearance auto-pick — POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) ✓ signed off |
+| **Active slice** | — (post-launch entity fixes committed) |
+| **Last completed slice** | Post-launch entity fixes — reliable load, duplicate names, dashboard on switch |
 | **Branch** | `main` |
 | **Last tag** | `v0.72.0-clearance-auto-pick` |
 
@@ -46,9 +46,9 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**Owner sign-off ✓ (2026-06-28)** — clearance auto-pick (`v0.72.0-clearance-auto-pick`). **677 pytest green** at sign-off. **Next:** Phase 12 production go-live (migrations `052`–`055`, provision hosts, backup-restore drill, first real restaurant walkthrough).
+**Post-launch entity fixes committed** — entity list fetch retries (3×, 600ms) with `entitiesLoaded`/`entitiesError` (failed load no longer masquerades as empty); duplicate company name blocked per user (409, case-insensitive); company switch redirects to dashboard (`/`). **681 pytest green** (+3); **154 vitest** (+6). **Next:** Phase 12 production go-live.
 
-**`v0.72.0-clearance-auto-pick` committed** — HIGH-confidence rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches amount+date; zero or multiple → Needs Review; delivery platform resolved by unique match across entity platforms; `classification_source=rule_auto`. **677 pytest green** (+6); **144 vitest**.
+**Owner sign-off ✓ (2026-06-28)** — clearance auto-pick (`v0.72.0-clearance-auto-pick`). **677 pytest green** at sign-off. Phase 12.5 statement-learning arc closed.
 
 **Phase 12.5 bank import + learning arc (`v0.71.9`–`v0.72.0`):**
 - `v0.71.9` — nav consolidation (section tabs, reports/settings card hubs)

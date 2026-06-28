@@ -627,3 +627,69 @@ def test_create_entity_dev_mode_does_not_add_membership(
         select(EntityMembership).where(EntityMembership.entity_id == entity_id)
     )
     assert count is None
+
+
+def test_create_entity_duplicate_name_same_user_returns_409(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    creator = _create_user(db_session, "dup-name@example.com")
+
+    first = client.post(
+        "/entities",
+        json={"name": "Kadikoy Branch"},
+        headers=auth_headers(creator),
+    )
+    assert first.status_code == 201
+
+    second = client.post(
+        "/entities",
+        json={"name": "kadikoy branch"},
+        headers=auth_headers(creator),
+    )
+    assert second.status_code == 409
+    assert second.json()["detail"] == "You already have a company with this name."
+
+
+def test_create_entity_same_name_different_users_allowed(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    user_a = _create_user(db_session, "owner-a@example.com")
+    user_b = _create_user(db_session, "owner-b@example.com")
+
+    create_a = client.post(
+        "/entities",
+        json={"name": "Shared Name Cafe"},
+        headers=auth_headers(user_a),
+    )
+    create_b = client.post(
+        "/entities",
+        json={"name": "Shared Name Cafe"},
+        headers=auth_headers(user_b),
+    )
+    assert create_a.status_code == 201
+    assert create_b.status_code == 201
+
+
+def test_create_entity_different_names_same_user_allowed(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    creator = _create_user(db_session, "multi-branch@example.com")
+
+    first = client.post(
+        "/entities",
+        json={"name": "Branch A"},
+        headers=auth_headers(creator),
+    )
+    second = client.post(
+        "/entities",
+        json={"name": "Branch B"},
+        headers=auth_headers(creator),
+    )
+    assert first.status_code == 201
+    assert second.status_code == 201

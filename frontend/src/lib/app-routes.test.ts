@@ -197,6 +197,9 @@ describe("account menu", () => {
     );
     expect(source).toContain("/users/me");
     expect(source).toContain("userProfile");
+    expect(source).toContain("entitiesLoaded");
+    expect(source).toContain("entitiesError");
+    expect(source).toContain("fetchEntitiesWithRetry");
   });
 
   it("requires confirm before switching restaurants", async () => {
@@ -208,6 +211,7 @@ describe("account menu", () => {
     );
     expect(source).toContain("switchConfirmMessage");
     expect(source).toContain("Switch restaurant?");
+    expect(source).toContain("redirectToDashboard: true");
   });
 
   it("signs out via Clerk and redirects to sign-in", async () => {

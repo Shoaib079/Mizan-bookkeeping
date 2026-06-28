@@ -13,10 +13,10 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (Phase 12.5 arc complete; **owner sign-off ✓** on `v0.72.0-clearance-auto-pick`) |
-| **Last completed slice** | Clearance auto-pick — POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) ✓ signed off |
-| **Last commit/tag** | `v0.72.0-clearance-auto-pick` |
-| **Next up** | **Phase 12 owner sign-off** on production (migrations `052`–`055`, first real restaurant walkthrough) |
+| **Active slice** | — (post-launch entity fixes committed) |
+| **Last completed slice** | Post-launch entity fixes — reliable load, duplicate names, dashboard on switch |
+| **Last commit/tag** | post-launch entity fixes (pending tag) |
+| **Next up** | **Phase 12 production go-live** (migrations `052`–`055`, first real restaurant walkthrough) |
 
 ### Next plan (pre-launch, owner-driven)
 
@@ -1670,6 +1670,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-28 | Post-launch entity fixes | — | Entity list load retry + error state (no false empty); block duplicate company names per user (409); redirect to dashboard on company switch |
 | 2026-06-27 | Clearance auto-pick | `v0.72.0-clearance-auto-pick` | HIGH-confidence rules auto-**link** POS/delivery settlement inflows when exactly one unused settlement matches; link-only (never creates settlements); delivery platform resolved by unique cross-platform match; `rule_auto` flag |
 | 2026-06-27 | Unified statement review hub (2b) | `v0.71.16` | `/banking/review` — status tabs, inline confirm/classify/correct/create-supplier, suggestions, token trim (create-supplier), `rule_auto` badge; dashboard link |
 | 2026-06-27 | Statement rule auto-apply | `v0.71.15` | High-confidence auto-post (bank fee + supplier payment only) flagged `RULE_AUTO`; confidence resets on mapping change; correction = void + relearn; books tie after post **and** reversal; entity-isolated |
