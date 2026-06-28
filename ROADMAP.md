@@ -13,15 +13,15 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (post-launch entity fixes committed) |
-| **Last completed slice** | Post-launch entity fixes — reliable load, duplicate names, dashboard on switch |
-| **Last commit/tag** | post-launch entity fixes (pending tag) |
-| **Next up** | **Phase 12 production go-live** (migrations `052`–`055`, first real restaurant walkthrough) |
+| **Active slice** | — (Fix D + Feature E committed) |
+| **Last completed slice** | Fix D — dismissible dashboard checklist; Feature E — first-run onboarding popup (name, business, legal name) |
+| **Last commit/tag** | feat(onboarding): first-run setup popup; dismissible dashboard checklist |
+| **Next up** | **Phase 12 production go-live** (migrations `052`–`056`, first real restaurant walkthrough) |
 
 ### Next plan (pre-launch, owner-driven)
 
 1. ~~**Clearance auto-pick (backend, small).**~~ **DONE (`v0.72.0-clearance-auto-pick`).** HIGH-confidence learned rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches; zero or multiple matches → Needs Review. Delivery resolves platform by unique match across entity platforms.
-2. **Run pending migrations before go-live:** `alembic upgrade head` applies `052`–`055` (import profiles, CSV options, classification rules, rule auto-apply). Ensure `xlrd` installed.
+2. **Run pending migrations before go-live:** `alembic upgrade head` applies `052`–`056` (import profiles, CSV options, classification rules, rule auto-apply, entity `legal_name`). Ensure `xlrd` installed.
 3. **Phase 12 owner sign-off** — record first real restaurant on production (provision Postgres, secrets, backup-restore drill, walk a day).
 4. *Optional later:* generic global "starter phrasebook" of non-private TR type-patterns for day-one defaults (personal rules always override).
 
@@ -1670,6 +1670,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
+| 2026-06-29 | Fix D + Feature E — first-run onboarding | — | Dismissible dashboard checklist (per-entity localStorage, auto-hide when complete); first-run modal (full name, business name, optional legal name); migration `056_entity_legal_name`; `PATCH /users/me` display_name; 685 pytest (+3 new); 164 vitest (+10) |
 | 2026-06-28 | Post-launch entity fixes | — | Entity list load retry + error state (no false empty); block duplicate company names per user (409); redirect to dashboard on company switch |
 | 2026-06-27 | Clearance auto-pick | `v0.72.0-clearance-auto-pick` | HIGH-confidence rules auto-**link** POS/delivery settlement inflows when exactly one unused settlement matches; link-only (never creates settlements); delivery platform resolved by unique cross-platform match; `rule_auto` flag |
 | 2026-06-27 | Unified statement review hub (2b) | `v0.71.16` | `/banking/review` — status tabs, inline confirm/classify/correct/create-supplier, suggestions, token trim (create-supplier), `rule_auto` badge; dashboard link |

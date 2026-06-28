@@ -16,7 +16,7 @@ from app.db.session import entity_context
 from app.features.auth.schema import MyMembershipRead
 from app.features.auth.audit import AuthAuditAction, record_auth_event
 from app.features.auth.models import EntityMembership, User
-from app.features.auth.schema import MembershipCreate, MembershipUpdate, UserCreate
+from app.features.auth.schema import MembershipCreate, MembershipUpdate, UserCreate, UserUpdate
 from app.features.entities import service as entity_service
 
 
@@ -127,6 +127,15 @@ def create_user(session: Session, payload: UserCreate) -> User:
 
 def get_user(session: Session, user_id: uuid.UUID) -> User | None:
     return session.get(User, user_id)
+
+
+def update_user_profile(
+    session: Session, user: User, payload: UserUpdate
+) -> User:
+    user.display_name = payload.display_name.strip()
+    session.commit()
+    session.refresh(user)
+    return user
 
 
 def permissions_for_role(role: EntityRole, *, is_active: bool = True) -> list[str]:

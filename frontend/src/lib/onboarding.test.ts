@@ -6,6 +6,7 @@ import {
   isOnboardingComplete,
   onboardingDismissStorageKey,
   shouldShowOnboardingChecklist,
+  shouldShowOnboardingChecklistPanel,
 } from "@/lib/onboarding";
 
 describe("shouldShowOnboardingChecklist", () => {
@@ -119,5 +120,60 @@ describe("isOnboardingComplete", () => {
 describe("onboardingDismissStorageKey", () => {
   it("scopes dismiss state per entity", () => {
     expect(onboardingDismissStorageKey("abc")).toBe("mizan.onboarding.dismissed.abc");
+  });
+});
+
+describe("shouldShowOnboardingChecklistPanel", () => {
+  const freshSteps = buildOnboardingSteps(
+    {
+      openingBalancesPosted: false,
+      staffInvited: false,
+      firstDayRecorded: false,
+    },
+    "owner",
+  );
+
+  it("hides when dismissed for the entity", () => {
+    expect(
+      shouldShowOnboardingChecklistPanel({
+        entityId: "e1",
+        role: "owner",
+        loading: false,
+        steps: freshSteps,
+        dismissed: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("auto-hides when every step is complete", () => {
+    const doneSteps = buildOnboardingSteps(
+      {
+        openingBalancesPosted: true,
+        staffInvited: true,
+        firstDayRecorded: true,
+      },
+      "owner",
+    );
+    expect(
+      shouldShowOnboardingChecklistPanel({
+        entityId: "e1",
+        role: "owner",
+        loading: false,
+        steps: doneSteps,
+        dismissed: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("shows for owner with incomplete steps and not dismissed", () => {
+    expect(
+      shouldShowOnboardingChecklistPanel({
+        entityId: "e1",
+        role: "owner",
+        loading: false,
+        steps: freshSteps,
+        dismissed: false,
+      }),
+    ).toBe(true);
   });
 });

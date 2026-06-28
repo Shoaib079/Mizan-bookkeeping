@@ -62,6 +62,23 @@ export function isOnboardingComplete(steps: OnboardingStep[]): boolean {
   return steps.length > 0 && steps.every((step) => step.done);
 }
 
+export function shouldShowOnboardingChecklistPanel(params: {
+  entityId: string;
+  role: EntityRole;
+  loading: boolean;
+  steps: OnboardingStep[];
+  dismissed: boolean;
+}): boolean {
+  return (
+    Boolean(params.entityId) &&
+    shouldShowOnboardingChecklist(params.role) &&
+    !params.loading &&
+    params.steps.length > 0 &&
+    !isOnboardingComplete(params.steps) &&
+    !params.dismissed
+  );
+}
+
 export function onboardingDismissStorageKey(entityId: string): string {
   return `mizan.onboarding.dismissed.${entityId}`;
 }

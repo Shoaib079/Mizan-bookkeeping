@@ -19,7 +19,6 @@ import {
   type DashboardKpi,
 } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
-import { shouldShowCreateRestaurantPrompt } from "@/lib/entity-context-helpers";
 import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead } from "@/lib/report-types";
@@ -180,25 +179,6 @@ function DashboardBody() {
           >
             Retry
           </Button>
-        </div>
-      )}
-
-      {shouldShowCreateRestaurantPrompt({
-        entitiesLoading,
-        entitiesLoaded,
-        entitiesError,
-        entityCount: entities.length,
-      }) && (
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">
-            Create your first restaurant to start bookkeeping.
-          </p>
-          <Link
-            href="/settings/entity"
-            className="mt-3 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Create restaurant
-          </Link>
         </div>
       )}
 

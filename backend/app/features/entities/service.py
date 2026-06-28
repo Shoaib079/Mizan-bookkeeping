@@ -58,7 +58,8 @@ def create_entity(
             "You already have a company with this name."
         )
 
-    entity = Entity(name=payload.name)
+    legal_name = (payload.legal_name or "").strip() or None
+    entity = Entity(name=payload.name, legal_name=legal_name)
     session.add(entity)
     session.flush()
 

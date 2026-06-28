@@ -10,11 +10,13 @@ from pydantic import BaseModel, Field
 
 class EntityCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
+    legal_name: str | None = Field(default=None, max_length=255)
 
 
 class EntityRead(BaseModel):
     id: uuid.UUID
     name: str
+    legal_name: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -33,6 +33,7 @@ type EntityContextValue = {
   entitiesError: boolean;
   refreshEntities: () => Promise<void>;
   userProfile: UserProfile | null;
+  refreshUserProfile: () => Promise<void>;
 };
 
 const EntityContext = createContext<EntityContextValue | null>(null);
@@ -102,22 +103,25 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
     }
   }, [setEntityId]);
 
+  const refreshUserProfile = useCallback(async () => {
+    if (!clerkEnabled || !isAuthReady) return;
+    try {
+      const user = await apiFetch<UserProfile>("/users/me");
+      setUserProfile(user);
+      setActorId(user.id);
+    } catch {
+      setUserProfile(null);
+    }
+  }, [clerkEnabled, isAuthReady, setActorId]);
+
   useEffect(() => {
     if (clerkEnabled && !isAuthReady) return;
     void refreshEntities();
   }, [clerkEnabled, isAuthReady, refreshEntities]);
 
   useEffect(() => {
-    if (!clerkEnabled || !isAuthReady) return;
-    void apiFetch<UserProfile>("/users/me")
-      .then((user) => {
-        setUserProfile(user);
-        setActorId(user.id);
-      })
-      .catch(() => {
-        setUserProfile(null);
-      });
-  }, [clerkEnabled, isAuthReady, setActorId]);
+    void refreshUserProfile();
+  }, [refreshUserProfile]);
 
   const value = useMemo(
     () => ({
@@ -131,6 +135,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
       entitiesError,
       refreshEntities,
       userProfile,
+      refreshUserProfile,
     }),
     [
       entityId,
@@ -143,6 +148,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
       entitiesError,
       refreshEntities,
       userProfile,
+      refreshUserProfile,
     ],
   );
 

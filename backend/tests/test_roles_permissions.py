@@ -693,3 +693,48 @@ def test_create_entity_different_names_same_user_allowed(
     )
     assert first.status_code == 201
     assert second.status_code == 201
+
+
+def test_create_entity_stores_legal_name(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    creator = _create_user(db_session, "legal-name@example.com")
+
+    response = client.post(
+        "/entities",
+        json={
+            "name": "Display Cafe",
+            "legal_name": "Display Cafe Anonim Şirketi",
+        },
+        headers=auth_headers(creator),
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["name"] == "Display Cafe"
+    assert body["legal_name"] == "Display Cafe Anonim Şirketi"
+
+
+def test_patch_users_me_updates_display_name(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    user = _create_user(db_session, "patch-me@example.com", "Old Name")
+
+    response = client.patch(
+        "/users/me",
+        json={"display_name": "Updated Name"},
+        headers=auth_headers(user),
+    )
+    assert response.status_code == 200
+    assert response.json()["display_name"] == "Updated Name"
+
+
+def test_patch_users_me_requires_authenticated_user(
+    auth_enforced,
+    client: TestClient,
+) -> None:
+    response = client.patch("/users/me", json={"display_name": "Nobody"})
+    assert response.status_code == 401

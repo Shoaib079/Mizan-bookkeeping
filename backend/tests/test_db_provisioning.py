@@ -80,6 +80,14 @@ def test_alembic_upgrade_head_on_empty_database(alembic_provisioned_url: str) ->
         cfg = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
         expected_head = ScriptDirectory.from_config(cfg).get_current_head()
         assert version == expected_head
+        legal_name_col = conn.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'entities' "
+                "AND column_name = 'legal_name'"
+            )
+        ).scalar()
+        assert legal_name_col == "legal_name"
         table_count = conn.execute(
             text(
                 "SELECT count(*) FROM information_schema.tables "

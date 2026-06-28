@@ -3,6 +3,7 @@
 import { ClerkProvider } from "@clerk/nextjs";
 
 import { ApiAuthProvider } from "@/lib/api-auth";
+import { FirstRunOnboardingModal } from "@/components/first-run-onboarding-modal";
 import { EntityProvider } from "@/lib/entity-context";
 import { ToastProvider } from "@/lib/toast";
 import { UnsavedWorkProvider } from "@/lib/unsaved-work";
@@ -14,7 +15,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ApiAuthProvider clerkEnabled={Boolean(clerkPubKey)}>
       <EntityProvider>
         <UnsavedWorkProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <FirstRunOnboardingModal />
+            {children}
+          </ToastProvider>
         </UnsavedWorkProvider>
       </EntityProvider>
     </ApiAuthProvider>

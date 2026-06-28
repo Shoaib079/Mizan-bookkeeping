@@ -2,7 +2,7 @@
 
 /** Dashboard first-run setup checklist — Phase 12 Slice 12.0. */
 
-import { Check, Circle, X } from "lucide-react";
+import { Check, Circle } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -11,9 +11,8 @@ import { apiFetch } from "@/lib/api";
 import {
   buildOnboardingSteps,
   deriveOnboardingState,
-  isOnboardingComplete,
   readOnboardingDismissed,
-  shouldShowOnboardingChecklist,
+  shouldShowOnboardingChecklistPanel,
   writeOnboardingDismissed,
   type PaginatedTotal,
 } from "@/lib/onboarding";
@@ -71,14 +70,13 @@ export function OnboardingChecklist() {
     return buildOnboardingSteps(state, role);
   }, [state, role]);
 
-  const complete = isOnboardingComplete(steps);
-  const visible =
-    Boolean(entityId) &&
-    shouldShowOnboardingChecklist(role) &&
-    !loading &&
-    state !== null &&
-    !complete &&
-    !dismissed;
+  const visible = shouldShowOnboardingChecklistPanel({
+    entityId: entityId ?? "",
+    role,
+    loading,
+    steps,
+    dismissed,
+  });
 
   if (!visible) return null;
 
@@ -100,7 +98,7 @@ export function OnboardingChecklist() {
         <Button
           type="button"
           variant="ghost"
-          className="size-8 shrink-0 p-0 text-muted-foreground"
+          className="shrink-0 text-sm text-muted-foreground"
           aria-label="Dismiss setup checklist"
           onClick={() => {
             if (!entityId) return;
@@ -108,7 +106,7 @@ export function OnboardingChecklist() {
             setDismissed(true);
           }}
         >
-          <X className="size-4" />
+          Hide
         </Button>
       </div>
       <ol className="mt-4 space-y-2">

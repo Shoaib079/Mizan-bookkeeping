@@ -24,6 +24,7 @@ from app.features.auth.schema import (
     MyMembershipRead,
     UserCreate,
     UserRead,
+    UserUpdate,
 )
 
 users_router = APIRouter(prefix="/users", tags=["auth"])
@@ -51,6 +52,20 @@ def get_current_user_profile(
         raise HTTPException(status_code=404, detail="Auth enforcement is disabled")
     user = resolve_current_user(session, authorization)
     return UserRead.model_validate(user)
+
+
+@users_router.patch("/me", response_model=UserRead)
+def update_current_user_profile(
+    payload: UserUpdate,
+    session: Session = Depends(get_session),
+    authorization: str | None = Header(None),
+) -> UserRead:
+    """Update the authenticated user's profile."""
+    if not settings.auth_enforcement:
+        raise HTTPException(status_code=404, detail="Auth enforcement is disabled")
+    user = resolve_current_user(session, authorization)
+    updated = service.update_user_profile(session, user, payload)
+    return UserRead.model_validate(updated)
 
 
 @users_router.get("/{user_id}", response_model=UserRead)
