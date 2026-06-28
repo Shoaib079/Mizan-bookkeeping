@@ -161,15 +161,15 @@ def test_production_refuses_boot_with_clerk_test_mode(monkeypatch) -> None:
         validate_launch_settings()
 
 
-def test_launch_requires_clerk_audience_when_enforced(monkeypatch) -> None:
+def test_launch_boots_without_clerk_audience_when_enforced(monkeypatch) -> None:
+    """Clerk session tokens have no aud claim — CLERK_AUDIENCE is optional at boot."""
     monkeypatch.setattr(settings, "app_env", "development")
     monkeypatch.setattr(settings, "auth_enforcement", True)
     monkeypatch.setattr(settings, "clerk_test_mode", False)
     monkeypatch.setattr(settings, "clerk_jwks_url", "https://example.test/jwks.json")
     monkeypatch.setattr(settings, "clerk_issuer", "https://example.test")
     monkeypatch.setattr(settings, "clerk_audience", None)
-    with pytest.raises(RuntimeError, match="CLERK_AUDIENCE"):
-        validate_launch_settings()
+    validate_launch_settings()
 
 
 def test_verify_clerk_token_rejects_unverified_email_claim(monkeypatch) -> None:

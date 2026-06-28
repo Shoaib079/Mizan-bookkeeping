@@ -61,3 +61,28 @@ def test_production_accepts_valid_launch_config(monkeypatch) -> None:
     monkeypatch.setattr(settings, "clerk_issuer", "https://example.test")
     monkeypatch.setattr(settings, "clerk_audience", "pk_live_example")
     validate_launch_settings()
+
+
+def test_auth_enforced_boots_without_clerk_audience(monkeypatch) -> None:
+    """Clerk session tokens have no aud claim — audience is optional at launch."""
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "auth_enforcement", True)
+    monkeypatch.setattr(settings, "clerk_test_mode", False)
+    monkeypatch.setattr(settings, "cors_origins", "https://app.example.com")
+    monkeypatch.setattr(settings, "clerk_secret_key", "sk_live_secret")
+    monkeypatch.setattr(settings, "clerk_publishable_key", "pk_live_public")
+    monkeypatch.setattr(settings, "clerk_jwks_url", "https://example.test/jwks.json")
+    monkeypatch.setattr(settings, "clerk_issuer", "https://example.test")
+    monkeypatch.setattr(settings, "clerk_audience", None)
+    validate_launch_settings()
+
+
+def test_auth_enforced_requires_clerk_jwks_and_issuer(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "development")
+    monkeypatch.setattr(settings, "auth_enforcement", True)
+    monkeypatch.setattr(settings, "clerk_test_mode", False)
+    monkeypatch.setattr(settings, "clerk_jwks_url", None)
+    monkeypatch.setattr(settings, "clerk_issuer", None)
+    monkeypatch.setattr(settings, "clerk_audience", None)
+    with pytest.raises(RuntimeError, match="CLERK_JWKS_URL.*CLERK_ISSUER"):
+        validate_launch_settings()
