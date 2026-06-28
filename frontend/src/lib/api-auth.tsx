@@ -3,12 +3,13 @@
 import { useAuth } from "@clerk/nextjs";
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
 } from "react";
 
+import { resolveClerkAuthHeaders } from "@/lib/api-auth-helpers";
 import { setAuthHeaderProvider } from "@/lib/api";
 
 type ApiAuthContextValue = {
@@ -22,18 +23,17 @@ const ApiAuthContext = createContext<ApiAuthContextValue>({
 });
 
 function ClerkApiAuthBridge({ children }: { children: React.ReactNode }) {
-  const { isLoaded, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
 
-  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
-    if (!isLoaded) return {};
-    const token = await getToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }, [getToken, isLoaded]);
+  const authStateRef = useRef({ isLoaded, isSignedIn, getToken });
+  authStateRef.current = { isLoaded, isSignedIn, getToken };
 
   useEffect(() => {
-    setAuthHeaderProvider(getAuthHeaders);
+    setAuthHeaderProvider(async () =>
+      resolveClerkAuthHeaders(() => authStateRef.current),
+    );
     return () => setAuthHeaderProvider(null);
-  }, [getAuthHeaders]);
+  }, []);
 
   const value = useMemo(
     () => ({ clerkEnabled: true, isAuthReady: isLoaded }),
