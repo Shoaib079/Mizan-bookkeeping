@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (`v0.71.17` committed; awaiting clearance auto-pick) |
-| **Last completed slice** | Learned-token trim on classify/correct + gitignore tsbuildinfo (`v0.71.17`) |
+| **Active slice** | — (`v0.72.0` clearance auto-pick committed; awaiting Phase 12 owner sign-off) |
+| **Last completed slice** | Clearance auto-pick — POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) |
 | **Branch** | `main` |
-| **Last tag** | `v0.71.17` |
+| **Last tag** | `v0.72.0-clearance-auto-pick` |
 
 ## Owner blockers (12.5)
 
@@ -46,9 +46,9 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**`v0.71.17` committed & pushed** — optional `match_token` on classify/correct (shared **Learn as** field in review hub; blank = full description); `*.tsbuildinfo` gitignored. **`v0.71.16` committed** — **2b unified statement review hub** (`/banking/review`: status tabs, inline confirm/classify/correct/create-supplier, suggestions, `rule_auto` highlighting). **673 pytest green**; **144 vitest**. **Next:** clearance auto-pick (POS/delivery settlement auto-apply when exact settlement match); then Phase 12 owner sign-off on production.
+**`v0.72.0-clearance-auto-pick` committed** — HIGH-confidence rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches amount+date; zero or multiple → Needs Review; delivery platform resolved by unique match across entity platforms; `classification_source=rule_auto`. **677 pytest green** (+6); **144 vitest**. **Next:** Phase 12 owner sign-off on production (migrations `052`–`055`, first real restaurant walkthrough).
 
-**Phase 12.5 bank import + learning arc (`v0.71.9`–`v0.71.17`):**
+**Phase 12.5 bank import + learning arc (`v0.71.9`–`v0.72.0`):**
 - `v0.71.9` — nav consolidation (section tabs, reports/settings card hubs)
 - `v0.71.10` — single-item sidebar groups → direct links
 - `v0.71.11`–`v0.71.12.1` — Excel/.xls import, lira amount column, Turkish CSV encoding/delimiter
@@ -57,6 +57,7 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 - `v0.71.15` — rule auto-apply at HIGH confidence (reversible, entity-isolated)
 - `v0.71.16` — unified statement review hub (`/banking/review`)
 - `v0.71.17` — `match_token` trim on classify/correct + gitignore `*.tsbuildinfo`
+- `v0.72.0` — clearance auto-pick (POS/delivery settlement link-only, rule+unique-match gating)
 
 **Phase 12 Slice 12.6 complete** — owner onboarding & smoke test (`v0.71.8-owner-onboarding-smoke`):
 - `scripts/smoke_onboarding.sh` — entity → OB → member → expense → P&L

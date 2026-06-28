@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,6 +21,9 @@ from app.features.banking.statement_models import (
     StatementLineClassificationSource,
     StatementLineStatus,
 )
+from app.features.delivery import platform_service
+from app.features.delivery.settings import DeliveryNotEnabledError, require_delivery_enabled
+from app.features.pos.models import PosSettlement
 
 BANK_STATEMENT_LINE_REF = "bank_statement_line"
 RULE_AUTO_ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
@@ -30,6 +34,142 @@ _AUTO_POST_CLASSIFICATIONS = frozenset(
         StatementLineClassification.SUPPLIER_PAYMENT,
     }
 )
+
+_AUTO_LINK_CLASSIFICATIONS = frozenset(
+    {
+        StatementLineClassification.POS_SETTLEMENT,
+        StatementLineClassification.DELIVERY_SETTLEMENT,
+    }
+)
+
+
+def _list_matching_pos_settlements(
+    session: Session,
+    *,
+    money_account_id: uuid.UUID,
+    amount_kurus: int,
+    settlement_date: date,
+    exclude_line_id: uuid.UUID | None = None,
+) -> list[PosSettlement]:
+    from app.features.banking.statements import _used_pos_settlement_ids
+
+    used_ids = _used_pos_settlement_ids(session, exclude_line_id=exclude_line_id)
+    filters = [
+        PosSettlement.money_account_id == money_account_id,
+        PosSettlement.settlement_date == settlement_date,
+        PosSettlement.amount_kurus == amount_kurus,
+    ]
+    if used_ids:
+        filters.append(PosSettlement.id.not_in(used_ids))
+    return list(
+        session.scalars(
+            select(PosSettlement).where(*filters).order_by(PosSettlement.created_at)
+        ).all()
+    )
+
+
+def _auto_link_settlement(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    statement: BankStatement,
+    line: BankStatementLine,
+    classification: StatementLineClassification,
+) -> bool:
+    """Link an inflow line to an existing settlement record. Never creates settlements."""
+    from app.features.banking.statements import (
+        _find_matching_delivery_settlement,
+        _find_matching_pos_settlement,
+        _link_delivery_settlement_to_line,
+        _link_pos_settlement_to_line,
+    )
+
+    if line.amount_kurus <= 0:
+        _route_rule_needs_review(
+            line,
+            classification=classification,
+            supplier_id=None,
+            review_reason="settlement requires an inflow",
+        )
+        return False
+
+    if classification == StatementLineClassification.POS_SETTLEMENT:
+        matches = _list_matching_pos_settlements(
+            session,
+            money_account_id=statement.money_account_id,
+            amount_kurus=line.amount_kurus,
+            settlement_date=line.transaction_date,
+            exclude_line_id=line.id,
+        )
+        if len(matches) == 1:
+            settlement = _find_matching_pos_settlement(
+                session,
+                money_account_id=statement.money_account_id,
+                amount_kurus=line.amount_kurus,
+                settlement_date=line.transaction_date,
+                exclude_line_id=line.id,
+            )
+            assert settlement is not None
+            _link_pos_settlement_to_line(line, settlement=settlement)
+            line.classification_source = StatementLineClassificationSource.RULE_AUTO.value
+            return True
+        reason = (
+            "no matching POS settlement on file"
+            if not matches
+            else "multiple POS settlements match — confirm manually"
+        )
+        _route_rule_needs_review(
+            line,
+            classification=classification,
+            supplier_id=None,
+            review_reason=reason,
+        )
+        return False
+
+    if classification == StatementLineClassification.DELIVERY_SETTLEMENT:
+        try:
+            require_delivery_enabled(session, entity_id)
+        except DeliveryNotEnabledError:
+            _route_rule_needs_review(
+                line,
+                classification=classification,
+                supplier_id=None,
+                review_reason="delivery module is not enabled",
+            )
+            return False
+
+        platforms, _ = platform_service.list_delivery_platforms(session, entity_id)
+        matches = []
+        for platform in platforms:
+            settlement = _find_matching_delivery_settlement(
+                session,
+                delivery_platform_id=platform.id,
+                money_account_id=statement.money_account_id,
+                amount_kurus=line.amount_kurus,
+                settlement_date=line.transaction_date,
+                exclude_line_id=line.id,
+            )
+            if settlement is not None:
+                matches.append(settlement)
+
+        if len(matches) == 1:
+            _link_delivery_settlement_to_line(line, settlement=matches[0])
+            line.classification_source = StatementLineClassificationSource.RULE_AUTO.value
+            return True
+        reason = (
+            "no matching delivery settlement on file"
+            if not matches
+            else "multiple delivery settlements match — confirm manually"
+        )
+        _route_rule_needs_review(
+            line,
+            classification=classification,
+            supplier_id=None,
+            review_reason=reason,
+        )
+        return False
+
+    return False
 
 
 def _route_rule_needs_review(
@@ -196,6 +336,15 @@ def try_auto_apply_line(
             review_reason=reason,
         )
         return False
+
+    if rule.classification in _AUTO_LINK_CLASSIFICATIONS:
+        return _auto_link_settlement(
+            session,
+            entity_id,
+            statement=statement,
+            line=line,
+            classification=rule.classification,
+        )
 
     if rule.classification not in _AUTO_POST_CLASSIFICATIONS:
         _route_rule_needs_review(

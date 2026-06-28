@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.chart_of_accounts.seed import seed_default_chart
+from app.core.delivery import posting as delivery_posting
 from app.core.ledger.models import JournalEntry, JournalEntrySource, JournalEntryStatus
+from app.core.pos import posting as pos_posting
 from app.core.subledger.control_account_tie import assert_entity_control_accounts_tied
 from app.db.session import entity_context
 from app.features.banking import service as banking_service
@@ -26,9 +29,14 @@ from app.features.banking.statement_models import (
     StatementLineClassificationSource,
     StatementLineStatus,
 )
+from app.features.delivery.models import DeliverySettlement
+from app.features.pos.models import PosSettlement
+from tests.delivery_helpers import delivery_setup as build_delivery_setup
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 FEE_TOKEN = "bank service fee"
+POS_TOKEN = "POS DEPOSIT"
+DELIVERY_TOKEN = "GETIR ODEME"
 
 
 def _fee_csv(*, tx_date: str = "2026-03-01", description: str = "Bank service fee") -> bytes:
@@ -69,6 +77,48 @@ def _learn_fee_rule(
                 match_token=token,
             )
         db_session.commit()
+
+
+def _learn_rule(
+    db_session,
+    entity_id: uuid.UUID,
+    *,
+    classification: StatementLineClassification,
+    times: int = HIGH_CONFIDENCE_THRESHOLD,
+    token: str,
+) -> None:
+    with entity_context(db_session, entity_id):
+        for _ in range(times):
+            learn_classification_rule(
+                db_session,
+                description=token,
+                classification=classification,
+                match_token=token,
+            )
+        db_session.commit()
+
+
+def _import_inflow_csv(
+    db_session,
+    entity_id: uuid.UUID,
+    bank_id: uuid.UUID,
+    *,
+    tx_date: str,
+    amount_lira: str,
+    description: str,
+    reference: str = "REF",
+):
+    csv = (
+        "transaction_date,amount,description,reference\n"
+        f'{tx_date},"{amount_lira}",{description},{reference}\n'
+    ).encode()
+    return statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank_id,
+        csv,
+        original_filename=f"inflow-{tx_date}.csv",
+    )
 
 
 def _import_fee(db_session, entity_id, bank_id, *, tx_date: str = "2026-03-01") -> uuid.UUID:
@@ -265,3 +315,257 @@ def test_books_tie_after_auto_post_and_reversal(db_session, bank_setup) -> None:
         assert original is not None
         assert original.status == JournalEntryStatus.VOIDED
         assert original.reversed_by_entry_id is not None
+
+
+def test_pos_settlement_auto_links_when_one_match(db_session, bank_setup) -> None:
+    entity_id = bank_setup["entity_id"]
+    bank_id = bank_setup["bank"].id
+
+    manual = pos_posting.post_pos_settlement(
+        db_session,
+        entity_id,
+        money_account_id=bank_id,
+        settlement_date=date(2026, 3, 10),
+        amount_kurus=200_000,
+        description="Manual POS settlement",
+        actor_id=ACTOR_ID,
+    )
+    settlement_id = manual.pos_settlement.id
+    journal_id = manual.journal_entry.id
+
+    with entity_context(db_session, entity_id):
+        pos_count_before = db_session.scalar(select(func.count()).select_from(PosSettlement)) or 0
+
+    _learn_rule(
+        db_session,
+        entity_id,
+        classification=StatementLineClassification.POS_SETTLEMENT,
+        token=POS_TOKEN,
+    )
+    statement = _import_inflow_csv(
+        db_session,
+        entity_id,
+        bank_id,
+        tx_date="2026-03-10",
+        amount_lira="2.000,00",
+        description=POS_TOKEN,
+        reference="POS-AUTO",
+    )
+    line_id = statement.lines[0].id
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, line_id)
+        assert line is not None
+        assert line.status == StatementLineStatus.LINKED
+        assert line.classification == StatementLineClassification.POS_SETTLEMENT
+        assert line.classification_source == StatementLineClassificationSource.RULE_AUTO.value
+        assert line.pos_settlement_id == settlement_id
+        assert line.journal_entry_id == journal_id
+        pos_count_after = db_session.scalar(select(func.count()).select_from(PosSettlement)) or 0
+        assert pos_count_after == pos_count_before
+
+
+def test_pos_settlement_auto_link_no_match_routes_to_needs_review(
+    db_session, bank_setup
+) -> None:
+    entity_id = bank_setup["entity_id"]
+    bank_id = bank_setup["bank"].id
+
+    _learn_rule(
+        db_session,
+        entity_id,
+        classification=StatementLineClassification.POS_SETTLEMENT,
+        token=POS_TOKEN,
+    )
+    statement = _import_inflow_csv(
+        db_session,
+        entity_id,
+        bank_id,
+        tx_date="2026-03-11",
+        amount_lira="2.000,00",
+        description=POS_TOKEN,
+        reference="POS-NOMATCH",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, statement.lines[0].id)
+        assert line is not None
+        assert line.status == StatementLineStatus.NEEDS_REVIEW
+        assert line.pos_settlement_id is None
+        assert line.review_reason == "no matching POS settlement on file"
+
+
+def test_pos_settlement_outflow_routes_to_needs_review(db_session, bank_setup) -> None:
+    entity_id = bank_setup["entity_id"]
+    bank_id = bank_setup["bank"].id
+
+    _learn_rule(
+        db_session,
+        entity_id,
+        classification=StatementLineClassification.POS_SETTLEMENT,
+        token=POS_TOKEN,
+    )
+    csv = (
+        "transaction_date,amount,description,reference\n"
+        f"2026-03-12,\"-2.000,00\",{POS_TOKEN},POS-OUT\n"
+    ).encode()
+    statement = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank_id,
+        csv,
+        original_filename="pos-outflow.csv",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, statement.lines[0].id)
+        assert line is not None
+        assert line.status == StatementLineStatus.NEEDS_REVIEW
+        assert line.review_reason == "settlement requires an inflow"
+        assert line.pos_settlement_id is None
+
+
+@pytest.fixture
+def delivery_bank_setup(db_session, restaurant_a):
+    setup = build_delivery_setup(db_session, restaurant_a.id)
+    setup["getir"] = setup["platforms"]["Getir"]
+    setup["yemek"] = setup["platforms"]["Yemeksepeti"]
+    return setup
+
+
+def test_delivery_settlement_auto_links_when_one_match_across_platforms(
+    db_session, delivery_bank_setup
+) -> None:
+    entity_id = delivery_bank_setup["entity_id"]
+    bank_id = delivery_bank_setup["bank"].id
+    getir = delivery_bank_setup["getir"]
+
+    manual = delivery_posting.post_delivery_settlement(
+        db_session,
+        entity_id,
+        delivery_platform_id=getir.id,
+        money_account_id=bank_id,
+        settlement_date=date(2026, 3, 15),
+        amount_kurus=360_000,
+        description="Getir payout",
+        actor_id=ACTOR_ID,
+    )
+    settlement_id = manual.delivery_settlement.id
+    journal_id = manual.journal_entry.id
+
+    with entity_context(db_session, entity_id):
+        delivery_count_before = (
+            db_session.scalar(select(func.count()).select_from(DeliverySettlement)) or 0
+        )
+
+    _learn_rule(
+        db_session,
+        entity_id,
+        classification=StatementLineClassification.DELIVERY_SETTLEMENT,
+        token=DELIVERY_TOKEN,
+    )
+    statement = _import_inflow_csv(
+        db_session,
+        entity_id,
+        bank_id,
+        tx_date="2026-03-15",
+        amount_lira="3.600,00",
+        description=DELIVERY_TOKEN,
+        reference="DLV-AUTO",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, statement.lines[0].id)
+        assert line is not None
+        assert line.status == StatementLineStatus.LINKED
+        assert line.classification == StatementLineClassification.DELIVERY_SETTLEMENT
+        assert line.classification_source == StatementLineClassificationSource.RULE_AUTO.value
+        assert line.delivery_settlement_id == settlement_id
+        assert line.journal_entry_id == journal_id
+        delivery_count_after = (
+            db_session.scalar(select(func.count()).select_from(DeliverySettlement)) or 0
+        )
+        assert delivery_count_after == delivery_count_before
+
+
+def test_delivery_settlement_multiple_matches_routes_to_needs_review(
+    db_session, delivery_bank_setup
+) -> None:
+    entity_id = delivery_bank_setup["entity_id"]
+    bank_id = delivery_bank_setup["bank"].id
+    getir = delivery_bank_setup["getir"]
+    yemek = delivery_bank_setup["yemek"]
+
+    delivery_posting.post_delivery_settlement(
+        db_session,
+        entity_id,
+        delivery_platform_id=getir.id,
+        money_account_id=bank_id,
+        settlement_date=date(2026, 3, 16),
+        amount_kurus=100_000,
+        description="Getir payout",
+        actor_id=ACTOR_ID,
+    )
+    delivery_posting.post_delivery_settlement(
+        db_session,
+        entity_id,
+        delivery_platform_id=yemek.id,
+        money_account_id=bank_id,
+        settlement_date=date(2026, 3, 16),
+        amount_kurus=100_000,
+        description="Yemek payout",
+        actor_id=ACTOR_ID,
+    )
+
+    _learn_rule(
+        db_session,
+        entity_id,
+        classification=StatementLineClassification.DELIVERY_SETTLEMENT,
+        token=DELIVERY_TOKEN,
+    )
+    statement = _import_inflow_csv(
+        db_session,
+        entity_id,
+        bank_id,
+        tx_date="2026-03-16",
+        amount_lira="1.000,00",
+        description=DELIVERY_TOKEN,
+        reference="DLV-MULTI",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, statement.lines[0].id)
+        assert line is not None
+        assert line.status == StatementLineStatus.NEEDS_REVIEW
+        assert line.delivery_settlement_id is None
+        assert line.review_reason == "multiple delivery settlements match — confirm manually"
+
+
+def test_delivery_settlement_no_match_routes_to_needs_review(
+    db_session, delivery_bank_setup
+) -> None:
+    entity_id = delivery_bank_setup["entity_id"]
+    bank_id = delivery_bank_setup["bank"].id
+
+    _learn_rule(
+        db_session,
+        entity_id,
+        classification=StatementLineClassification.DELIVERY_SETTLEMENT,
+        token=DELIVERY_TOKEN,
+    )
+    statement = _import_inflow_csv(
+        db_session,
+        entity_id,
+        bank_id,
+        tx_date="2026-03-17",
+        amount_lira="1.000,00",
+        description=DELIVERY_TOKEN,
+        reference="DLV-NOMATCH",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, statement.lines[0].id)
+        assert line is not None
+        assert line.status == StatementLineStatus.NEEDS_REVIEW
+        assert line.delivery_settlement_id is None
+        assert line.review_reason == "no matching delivery settlement on file"

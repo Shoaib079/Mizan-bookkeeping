@@ -2,13 +2,25 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-27 — Clearance auto-pick for POS/delivery settlements (Phase 12.5; `v0.72.0-clearance-auto-pick`)
+
+**Choice:** Extend post-import rule auto-apply so HIGH-confidence learned rules for **`pos_settlement`** and **`delivery_settlement`** auto-**link** bank inflows to **existing** settlement records — never auto-create settlements or post new GL from the auto path.
+
+**Gating:** Same HIGH-confidence + non-conflict checks as `v0.71.15`. Inflow only (`amount_kurus > 0`). **Exactly one** unused settlement must match amount + date (+ bank account). Zero matches → `needs_review` ("no matching … settlement on file"). Multiple matches → `needs_review` (delivery: "multiple delivery settlements match — confirm manually"; POS: same pattern). Linked lines flagged `classification_source=rule_auto`.
+
+**Delivery platform:** Learned rules carry no `platform_id`. Auto-link searches all active entity delivery platforms via `list_delivery_platforms` + `_find_matching_delivery_settlement`; platform is inferred only when **one** platform has a matching unused settlement.
+
+**Reuse:** `_find_matching_pos_settlement`, `_link_pos_settlement_to_line`, `_find_matching_delivery_settlement`, `_link_delivery_settlement_to_line` from `statements.py` — same link semantics as manual classify (status `LINKED`, journal from settlement row).
+
+**Alternatives considered:** Auto-post new settlement when no match (rejected — creates ledger without human confirmation); auto-link without learned rule (rejected — amount+date collisions too risky); require platform on learned rule (rejected — owner learns from description token only).
+
 ## 2026-06-27 — Statement classification learning & rule auto-apply (Phase 12.5; `v0.71.14`–`v0.71.15`)
 
 **Per-entity rules only:** Learned `StatementClassificationRule` rows are **entity-scoped with RLS** (`statement_classification_rules` registered in `RLS_TABLES`). Rules learned in entity A are never visible or applied in entity B. No global/shared rule store across users or restaurants.
 
 **Suggestions vs auto-post:** `suggest_classification()` is read-only — it never posts GL or changes line status. Suggestions appear on `needs_review` lines; conflicting rules for the same description → **no suggestion** (owner must decide manually).
 
-**Auto-post scope (`v0.71.15`):** On import, a **single non-conflicting HIGH-confidence** rule may auto-classify and post **only** `bank_fee` (via `post_bank_fee`) or `supplier_payment` (via existing payable posting / exact amount+date link guard). Never auto-link supplier payment unless `_find_matching_payment` agrees. Below HIGH confidence or any conflict → `needs_review` + suggestion, **no posting**. Other classifications (transfer, POS settlement, etc.) always require manual review.
+**Auto-post scope (`v0.71.15`, extended `v0.72.0`):** On import, a **single non-conflicting HIGH-confidence** rule may auto-classify and post **only** `bank_fee` (via `post_bank_fee`) or `supplier_payment` (via existing payable posting / exact amount+date link guard). **`pos_settlement` / `delivery_settlement`** auto-**link** to existing settlement records when exactly one unused match exists (`v0.72.0` — link-only, never creates settlements). Never auto-link supplier payment unless `_find_matching_payment` agrees. Below HIGH confidence or any conflict → `needs_review` + suggestion, **no posting/link**. Other classifications (transfer, etc.) always require manual review.
 
 **HIGH confidence:** `confirmation_count >= 3` **and** `confirmations_since_correction >= 3` with no recent correction degrading the streak. If the owner confirms a **different** classification for the same token, `confirmation_count` **resets to 1** (flip-flopping token must not auto-apply).
 

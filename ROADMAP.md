@@ -13,14 +13,14 @@
 | Field | Value |
 |-------|-------|
 | **Active phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (`v0.71.17` committed; awaiting clearance auto-pick) |
-| **Last completed slice** | Learned-token trim on classify/correct + gitignore tsbuildinfo (`v0.71.17`) |
-| **Last commit/tag** | `v0.71.17` |
-| **Next up** | **Clearance auto-pick** (POS/delivery settlement); then Phase 12 owner sign-off on production |
+| **Active slice** | — (`v0.72.0` clearance auto-pick committed; awaiting Phase 12 owner sign-off) |
+| **Last completed slice** | Clearance auto-pick — POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) |
+| **Last commit/tag** | `v0.72.0-clearance-auto-pick` |
+| **Next up** | **Phase 12 owner sign-off** on production (migrations `052`–`055`, first real restaurant walkthrough) |
 
 ### Next plan (pre-launch, owner-driven)
 
-1. **Clearance auto-pick (backend, small).** Extend auto-apply to `pos_settlement` / `delivery_settlement` — reuse the EXISTING settlement match + commission posting; auto-clear ONLY when a real settlement record matches, else Needs Review. (Today only bank-fee + supplier-payment auto-post.)
+1. ~~**Clearance auto-pick (backend, small).**~~ **DONE (`v0.72.0-clearance-auto-pick`).** HIGH-confidence learned rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches; zero or multiple matches → Needs Review. Delivery resolves platform by unique match across entity platforms.
 2. **Run pending migrations before go-live:** `alembic upgrade head` applies `052`–`055` (import profiles, CSV options, classification rules, rule auto-apply). Ensure `xlrd` installed.
 3. **Phase 12 owner sign-off** — record first real restaurant on production (provision Postgres, secrets, backup-restore drill, walk a day).
 4. *Optional later:* generic global "starter phrasebook" of non-private TR type-patterns for day-one defaults (personal rules always override).
@@ -50,6 +50,7 @@
 | Statement rule auto-apply (high-confidence, correction-reset, reversible) | `v0.71.15` | done | Auto-post outside BANK_FEE/SUPPLIER_PAYMENT, or without the void/relearn correction path |
 | Unified statement review hub (frontend) | `v0.71.16` | done | Re-build per-statement-only review; `/banking/review` is the canonical hub |
 | Learned-token trim on classify/correct (`match_token`) | `v0.71.17` | done | Re-wire token trim only on create-supplier; blank token must keep full-description learn behavior |
+| Clearance auto-pick (POS/delivery settlement link-only) | `v0.72.0-clearance-auto-pick` | done | Re-auto-create settlements on import; auto-link without HIGH rule + unique match; delivery without platform disambiguation |
 | **POS/delivery settlement clearing + commission split (net vs gross)** | `v0.18.0` + `core/pos`/`core/delivery` posting | done | **Re-build deposit clearing or commission net/gross logic — it already exists** |
 
 **Owner sign-off ✓ (2026-06-21)** on money-critical rows above — tips A/B2/C, Phase 8.7 D1–D3, Phase 9 core (`v0.52.0`–`v0.56.0`), Z match-or-review (`v0.57.0`). Original Slice B1 (`v0.49.0`) was superseded before sign-off. Tag `v0.57.1-owner-sign-off`.
@@ -1667,7 +1668,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date | Slice | Commit/tag | Summary |
 |------|-------|------------|---------|
-| 2026-06-27 | Learned-token trim on classify/correct | `v0.71.17` | Optional `match_token` on classify/correct API + shared **Learn as** field in review hub; blank = full description; `*.tsbuildinfo` gitignored |
+| 2026-06-27 | Clearance auto-pick | `v0.72.0-clearance-auto-pick` | HIGH-confidence rules auto-**link** POS/delivery settlement inflows when exactly one unused settlement matches; link-only (never creates settlements); delivery platform resolved by unique cross-platform match; `rule_auto` flag |
 | 2026-06-27 | Unified statement review hub (2b) | `v0.71.16` | `/banking/review` — status tabs, inline confirm/classify/correct/create-supplier, suggestions, token trim (create-supplier), `rule_auto` badge; dashboard link |
 | 2026-06-27 | Statement rule auto-apply | `v0.71.15` | High-confidence auto-post (bank fee + supplier payment only) flagged `RULE_AUTO`; confidence resets on mapping change; correction = void + relearn; books tie after post **and** reversal; entity-isolated |
 | 2026-06-27 | Statement classification learning | `v0.71.14` | Per-entity learned rules (RLS, registered); suggestions on needs-review; learn-on-confirm; create-supplier-from-line; conflict → no suggestion |
