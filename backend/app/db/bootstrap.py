@@ -47,12 +47,35 @@ def ensure_mizan_app_role(conn) -> None:
             DO $$ BEGIN
                 CREATE ROLE {APP_DB_ROLE} LOGIN PASSWORD '{APP_DB_PASSWORD}'
                     NOSUPERUSER NOBYPASSRLS;
-            EXCEPTION WHEN duplicate_object THEN NULL;
+            EXCEPTION
+                WHEN duplicate_object THEN NULL;
+                WHEN insufficient_privilege THEN NULL;
             END $$;
             """
         )
     )
-    conn.execute(text(f"ALTER ROLE {APP_DB_ROLE} NOSUPERUSER NOBYPASSRLS"))
+    conn.execute(
+        text(
+            f"""
+            DO $$ BEGIN
+                ALTER ROLE {APP_DB_ROLE} NOSUPERUSER NOBYPASSRLS;
+            EXCEPTION
+                WHEN insufficient_privilege THEN NULL;
+            END $$;
+            """
+        )
+    )
+    row = conn.execute(
+        text("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = :rolname"),
+        {"rolname": APP_DB_ROLE},
+    ).first()
+    if row is None:
+        raise RuntimeError(f"PostgreSQL role {APP_DB_ROLE!r} does not exist after bootstrap")
+    if row.rolsuper or row.rolbypassrls:
+        raise RuntimeError(
+            f"PostgreSQL role {APP_DB_ROLE!r} must not be superuser or BYPASSRLS "
+            f"(rolsuper={row.rolsuper}, rolbypassrls={row.rolbypassrls})"
+        )
 
 
 def ensure_mizan_role_and_databases() -> None:
