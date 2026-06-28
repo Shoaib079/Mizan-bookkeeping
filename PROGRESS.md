@@ -7,10 +7,12 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (Fix D + Feature E committed) |
-| **Last completed slice** | Fix D — dismissible dashboard checklist; Feature E — first-run onboarding popup |
+| **Active slice** | — (production LIVE in staging-mode; post-launch fixes shipped) |
+| **Last completed slice** | Production go-live (Neon + Railway + Netlify + Clerk) + open self-signup + cold-load auth hardening |
+| **Live URLs** | Frontend: `jovial-licorice-be572c.netlify.app` · API: `mizan-api-production-e574.up.railway.app` |
 | **Branch** | `main` |
 | **Last tag** | `v0.72.0-clearance-auto-pick` |
+| **Next up** | Automated backups (Redis worker/beat + bucket); then full production (custom domain + Clerk live keys + `APP_ENV=production`) |
 
 ## Owner blockers (12.5)
 
