@@ -6,12 +6,12 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir --retries 5 --timeout 120 --upgrade pip setuptools wheel
 
 COPY pyproject.toml .
 COPY app app/
 
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --retries 5 --timeout 120 .
 
 
 FROM python:3.12-slim AS runtime
