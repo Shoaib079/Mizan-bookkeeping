@@ -3,6 +3,16 @@
 # Fails the build if dependencies, packaging, or import wiring regresses.
 set -euo pipefail
 
+if [[ -z "${DATABASE_ADMIN_URL:-}" ]]; then
+  echo "ERROR: DATABASE_ADMIN_URL is not set." >&2
+  echo "  This script needs a Postgres superuser URL to bootstrap the test DB." >&2
+  echo "  Example (matches docker-compose / backend/.env):" >&2
+  echo "    export DATABASE_ADMIN_URL='postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres'" >&2
+  echo "  CI sets this in .github/workflows/ci.yml; locally export it before running." >&2
+  exit 1
+fi
+export DATABASE_ADMIN_URL
+
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BACKEND="$ROOT/backend"
 VENV="${FRESH_INSTALL_VENV:-$BACKEND/.venv-fresh-verify}"
@@ -25,7 +35,6 @@ echo "==> Boot check (import app.main)"
   export APP_ENV=test
   export AUTH_ENFORCEMENT=false
   export CLERK_TEST_MODE=true
-  export DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL:-postgresql+psycopg://postgres@localhost:5432/postgres}"
   "$VENV/bin/python" -c "import app.main; print('boot ok:', app.main.app.title)"
 )
 
@@ -35,7 +44,6 @@ echo "==> Full pytest"
   export APP_ENV=test
   export AUTH_ENFORCEMENT=false
   export CLERK_TEST_MODE=true
-  export DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL:-postgresql+psycopg://postgres@localhost:5432/postgres}"
   "$VENV/bin/pytest" -q
 )
 

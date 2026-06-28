@@ -90,7 +90,7 @@ cd backend && .venv/bin/pytest -v
 cd frontend && npm run build
 ```
 
-**Fresh-install guard** (clean venv → editable install → boot → full pytest):
+**Fresh-install guard** (clean venv → editable install → boot → full pytest). Export `DATABASE_ADMIN_URL` before running verify/bootstrap scripts (e.g. `export DATABASE_ADMIN_URL='postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres'`).
 
 ```bash
 bash backend/scripts/verify_fresh_install.sh
