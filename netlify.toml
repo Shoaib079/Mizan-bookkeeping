@@ -4,10 +4,12 @@
 [build]
   base = "frontend"
   command = "npm run build"
-  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 # ---------------------------------------------------------------------------
 # Optional API proxy (same-origin /api/* → backend)
