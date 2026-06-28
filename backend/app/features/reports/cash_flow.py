@@ -34,6 +34,7 @@ _OPERATING_SOURCES = frozenset(
         JournalEntrySource.PAYMENT,
         JournalEntrySource.EXPENSE_ENTRY,
         JournalEntrySource.BANK_FEE,
+        JournalEntrySource.RULE_AUTO,
         JournalEntrySource.STAFF_PAYMENT,
         JournalEntrySource.STAFF_ADVANCE,
         JournalEntrySource.PARTNER_REIMBURSEMENT_PAID,

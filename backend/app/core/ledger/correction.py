@@ -96,6 +96,7 @@ VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
         JournalEntrySource.CREDIT_CARD_PAYMENT,
         JournalEntrySource.CASH_MOVEMENT,
         JournalEntrySource.CASH_DRAWER_CLOSE,
+        JournalEntrySource.RULE_AUTO,
         JournalEntrySource.SYSTEM,
     }
 )

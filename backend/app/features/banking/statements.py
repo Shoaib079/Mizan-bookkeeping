@@ -1692,13 +1692,16 @@ def classify_statement_line(
         StatementLineClassification.TRANSFER,
         match_token=match_token,
     )
-    return ClassifyStatementLineResult(
-        line=_to_line_read(line, session=session),
-        linked_existing_payment=False,
-        linked_existing_transfer=False,
-        routed_to_needs_review=False,
-        journal_entry_id=journal_id,
-    )
+    with entity_context(session, entity_id):
+        line = session.get(BankStatementLine, line_id)
+        result = ClassifyStatementLineResult(
+            line=_to_line_read(line, session=session),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+    return result
 
 
 def _reset_line_for_correction(line: BankStatementLine) -> None:

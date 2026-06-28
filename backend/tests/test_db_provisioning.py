@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -73,7 +77,9 @@ def test_alembic_upgrade_head_on_empty_database(alembic_provisioned_url: str) ->
     engine = create_engine(alembic_provisioned_url, pool_pre_ping=True)
     with engine.connect() as conn:
         version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "051_drop_tips_expense_5700"
+        cfg = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+        expected_head = ScriptDirectory.from_config(cfg).get_current_head()
+        assert version == expected_head
         table_count = conn.execute(
             text(
                 "SELECT count(*) FROM information_schema.tables "
