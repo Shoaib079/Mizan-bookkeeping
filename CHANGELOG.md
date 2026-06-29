@@ -2,6 +2,12 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-24
+
+**UX1 — Record hub (`v0.73.0-ux1-record-hub`):** `/record` card grid; single action registry for New menu, ⌘K, and Record hub; person-picker wrappers. **228 vitest**; no backend/posting changes.
+
+**UX2 — Balances hub:** `/balances` tabs — Suppliers, Customers, Staff, Partners, Cash & bank. Redirects `/payables` and `/receivables`. **234 vitest**; no backend/posting changes.
+
 ## 2026-06-28
 
 **Owner sign-off — Phase 12.5 clearance auto-pick:** Owner approved POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) — HIGH-confidence rule + unique existing-settlement match; never auto-creates settlements. **677 pytest green** at sign-off. Phase 12.5 statement-learning arc closed. **Next:** Phase 12 production go-live (migrations, hosts, first restaurant walkthrough).

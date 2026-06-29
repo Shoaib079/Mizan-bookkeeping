@@ -92,7 +92,7 @@ export default function SuppliersPage() {
 
       <p className="mt-4 text-xs text-muted-foreground">
         Outstanding balances across all suppliers are on{" "}
-        <Link href="/payables" className="text-primary hover:underline">
+        <Link href="/balances/suppliers" className="text-primary hover:underline">
           Payables
         </Link>
         .

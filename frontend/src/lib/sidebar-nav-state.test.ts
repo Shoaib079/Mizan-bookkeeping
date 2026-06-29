@@ -120,10 +120,10 @@ describe("navGroupContainsPathname", () => {
   it("matches tab routes under their parent sidebar group", () => {
     expect(navGroupContainsPathname("Sales", "/cards", SETTINGS)).toBe(true);
     expect(navGroupContainsPathname("Cash & bank", "/banking/cash", SETTINGS)).toBe(true);
-    expect(navGroupContainsPathname("Expenses & suppliers", "/payables", SETTINGS)).toBe(
+    expect(navGroupContainsPathname("Overview", "/balances/suppliers", SETTINGS)).toBe(
       true,
     );
-    expect(navGroupContainsPathname("Customers", "/receivables", SETTINGS)).toBe(true);
+    expect(navGroupContainsPathname("Overview", "/payables", SETTINGS)).toBe(true);
     expect(navGroupContainsPathname("Settings", "/settings/members", SETTINGS)).toBe(
       true,
     );

@@ -7,12 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (P2 expense auto-categorize shipped) |
-| **Last completed slice** | P2 — AI + learning expense account suggestion |
-| **Live URLs** | Frontend: `jovial-licorice-be572c.netlify.app` · API: `mizan-api-production-e574.up.railway.app` |
-| **Branch** | `main` |
-| **Last tag** | `v0.72.0-clearance-auto-pick` |
-| **Next up** | P3 uploads backup (`POST_LAUNCH_PLAN.md`) |
+| **Active slice** | UX3 — Review hub (next) |
+| **Last completed slice** | UX2 — Balances hub (`v0.73.1-ux2-balances-hub`) |
+| **Last tag** | `v0.73.1-ux2-balances-hub` |
+| **Next up** | UX3 Review hub → UX4 Reports trim |
 
 ## Owner blockers (12.5)
 

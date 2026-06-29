@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | — (P2 expense auto-categorize shipped)                                                                       |
-| **Last completed slice** | P2 — AI + learning expense account suggestion (suggest-and-confirm)                                            |
-| **Last commit/tag**      | feat(expenses): AI + learning auto-categorization (suggest-and-confirm)                                       |
-| **Next up**              | **UX Reorg** (see `POST_LAUNCH_PLAN.md` → UX1–UX6: Record · Review · Balances · Reports · Set up; merge/remove duplicate pages) + feature gaps FP/FS. Then P3/P5/P6. Audit: `UX_AUDIT_PROPOSAL.md` |
+| **Active slice**         | UX3 — Review hub (next)                                                                       |
+| **Last completed slice** | UX2 — Balances hub (`v0.73.1-ux2-balances-hub`)                                            |
+| **Last commit/tag**      | `v0.73.1-ux2-balances-hub` — feat(ux): Balances hub                                         |
+| **Next up**              | UX3 Review hub → UX4–UX6; feature gaps FP/FS; then P3/P5/P6. Plan: `POST_LAUNCH_PLAN.md` |
 
 
 ### Next plan (pre-launch, owner-driven)

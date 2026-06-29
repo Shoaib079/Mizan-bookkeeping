@@ -84,7 +84,7 @@ export default function CustomersPage() {
 
       <p className="mt-4 text-xs text-muted-foreground">
         Outstanding balances across all customers are on{" "}
-        <Link href="/receivables" className="text-primary hover:underline">
+        <Link href="/balances/customers" className="text-primary hover:underline">
           Receivables
         </Link>
         .

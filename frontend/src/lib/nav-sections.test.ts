@@ -7,7 +7,8 @@ import {
 } from "@/lib/app-routes";
 import type { EntityNavSettings } from "@/lib/app-routes";
 import {
-  NAV_SECTIONS,
+  LEGACY_BALANCE_REDIRECTS,
+    NAV_SECTIONS,
   NEW_COMMAND_QUICK_ACTIONS,
   REGISTERED_PAGE_ROUTES,
   REPORTS_CARD_HREFS,
@@ -37,6 +38,7 @@ function collectTabHrefs(settings: EntityNavSettings): Set<string> {
   const hrefs = new Set<string>();
   for (const section of sections) {
     for (const tab of section.tabs) {
+      if (tab.requiresDelivery && !settings.deliveryEnabled) continue;
       hrefs.add(tab.href);
     }
   }
@@ -65,7 +67,12 @@ const TAB_ONLY_HREFS = [
   "/close-day",
   "/payables",
   "/receivables",
-  "/banking/review",
+  "/review/bank",
+  "/review/sales",
+  "/review/receipts",
+  "/review/invoices",
+  "/review/delivery",
+  "/review/posted",
   "/banking/transfers",
   "/banking/cash",
   "/settings/entity",
@@ -78,8 +85,8 @@ const TAB_ONLY_HREFS = [
 ] as const;
 
 describe("REGISTERED_PAGE_ROUTES", () => {
-  it("lists exactly 48 app pages", () => {
-    expect(REGISTERED_PAGE_ROUTES).toHaveLength(48);
+  it("lists exactly 52 app pages", () => {
+    expect(REGISTERED_PAGE_ROUTES).toHaveLength(52);
   });
 
   it("assigns each route exactly one entry kind", () => {
@@ -98,6 +105,12 @@ describe("route reachability guard", () => {
     );
 
     for (const route of staticRoutes) {
+      if (route.kind === "redirect") {
+        expect(
+          LEGACY_BALANCE_REDIRECTS[route.pattern]
+        ).toBeDefined();
+        continue;
+      }
       if (route.kind === "drill-down") {
         expect(entryPointForStaticRoute(route.pattern, settingsOn)).toBeNull();
         continue;
@@ -188,6 +201,17 @@ describe("tab + sidebar highlighting", () => {
       "/settings/opening-balances",
     );
   });
+
+  it("highlights Balances sidebar row on the hub and on tab pages", () => {
+    expect(sidebarHrefActiveForPathname("/balances", "/balances")).toBe(true);
+    expect(sidebarHrefActiveForPathname("/balances", "/balances/partners")).toBe(
+      true,
+    );
+
+    const section = navSectionForPathname("/balances/staff");
+    expect(section?.id).toBe("balances");
+  });
+
 
   it("highlights Reports sidebar row for ledger and manual journals", () => {
     expect(sidebarHrefActiveForPathname("/reports", "/reports/ledger")).toBe(true);

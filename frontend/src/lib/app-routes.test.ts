@@ -42,7 +42,11 @@ describe("navGroups", () => {
 
   it("adds Record under Overview", () => {
     const overview = navGroups.find((group) => group.label === "Overview");
-    expect(overview?.items.map((item) => item.href)).toEqual(["/", "/record"]);
+    expect(overview?.items.map((item) => item.href)).toEqual([
+      "/",
+      "/record",
+      "/balances",
+    ]);
   });
 
   it("consolidates Sales to sidebar entry points only (tabs for sub-pages)", () => {
@@ -81,6 +85,7 @@ describe("navGroups", () => {
     const expected = [
       "/",
       "/record",
+      "/balances",
       "/sales",
       "/close-day",
       "/cards",
@@ -91,11 +96,11 @@ describe("navGroups", () => {
       "/expenses",
       "/uploads",
       "/suppliers",
-      "/payables",
+      "/balances/suppliers",
       "/staff",
       "/partners",
       "/customers",
-      "/receivables",
+      "/balances/customers",
       "/banking",
       "/banking/transfers",
       "/banking/cash",

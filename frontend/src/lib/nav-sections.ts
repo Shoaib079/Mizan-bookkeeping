@@ -8,6 +8,8 @@ export type NavTab = {
   href: string;
   label: string;
   match: (pathname: string) => boolean;
+  /** Hidden when delivery module is off for the entity. */
+  requiresDelivery?: boolean;
 };
 
 export type NavSectionId =
@@ -15,6 +17,7 @@ export type NavSectionId =
   | "banking"
   | "suppliers"
   | "customers"
+  | "balances"
   | "settings"
   | "delivery";
 
@@ -108,11 +111,6 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Directory",
         match: (path) => path === "/suppliers" || path.startsWith("/suppliers/"),
       },
-      {
-        href: "/payables",
-        label: "Payables",
-        match: (path) => path === "/payables",
-      },
     ],
   },
   {
@@ -124,10 +122,36 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Directory",
         match: (path) => path === "/customers" || path.startsWith("/customers/"),
       },
+    ],
+  },
+  {
+    id: "balances",
+    sidebarHref: "/balances",
+    tabs: [
       {
-        href: "/receivables",
-        label: "Receivables",
-        match: (path) => path === "/receivables",
+        href: "/balances/suppliers",
+        label: "Suppliers",
+        match: (path) => path === "/balances/suppliers" || path === "/payables",
+      },
+      {
+        href: "/balances/customers",
+        label: "Customers",
+        match: (path) => path === "/balances/customers" || path === "/receivables",
+      },
+      {
+        href: "/balances/staff",
+        label: "Staff",
+        match: (path) => path === "/balances/staff",
+      },
+      {
+        href: "/balances/partners",
+        label: "Partners",
+        match: (path) => path === "/balances/partners",
+      },
+      {
+        href: "/balances/cash",
+        label: "Cash & bank",
+        match: (path) => path === "/balances/cash",
       },
     ],
   },
@@ -165,6 +189,17 @@ export const SIDEBAR_HIDDEN_HREFS = new Set([
   "/cards",
   "/payables",
   "/receivables",
+  "/balances/suppliers",
+  "/balances/customers",
+  "/balances/staff",
+  "/balances/partners",
+  "/balances/cash",
+  "/review/bank",
+  "/review/sales",
+  "/review/receipts",
+  "/review/invoices",
+  "/review/delivery",
+  "/review/posted",
   "/banking/transfers",
   "/banking/cash",
   "/settings/entity",
@@ -189,12 +224,30 @@ export const REPORTS_CARD_HREFS = [
   "/accounting/manual-journals",
 ] as const;
 
-export type RouteEntryKind = "sidebar" | "tab" | "reports-card" | "drill-down" | "auth";
+export type RouteEntryKind =
+  | "sidebar"
+  | "tab"
+  | "reports-card"
+  | "drill-down"
+  | "auth"
+  | "redirect";
 
 /** Static page routes (45 app pages) — used by reachability guard test. */
+/** Old bookmark URLs that redirect into the Balances hub (UX2). */
+export const LEGACY_BALANCE_REDIRECTS: Record<string, string> = {
+  "/payables": "/balances/suppliers",
+  "/receivables": "/balances/customers",
+};
+
 export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[] = [
   { pattern: "/", kind: "sidebar" },
   { pattern: "/record", kind: "sidebar" },
+  { pattern: "/balances", kind: "sidebar" },
+  { pattern: "/balances/suppliers", kind: "tab" },
+  { pattern: "/balances/customers", kind: "tab" },
+  { pattern: "/balances/staff", kind: "tab" },
+  { pattern: "/balances/partners", kind: "tab" },
+  { pattern: "/balances/cash", kind: "tab" },
   { pattern: "/sales", kind: "tab" },
   { pattern: "/sales/[id]", kind: "drill-down" },
   { pattern: "/cards", kind: "tab" },
@@ -208,16 +261,15 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/uploads", kind: "sidebar" },
   { pattern: "/suppliers", kind: "tab" },
   { pattern: "/suppliers/[id]", kind: "drill-down" },
-  { pattern: "/payables", kind: "tab" },
+  { pattern: "/payables", kind: "redirect" },
   { pattern: "/staff", kind: "sidebar" },
   { pattern: "/staff/[id]", kind: "drill-down" },
   { pattern: "/partners", kind: "sidebar" },
   { pattern: "/partners/[id]", kind: "drill-down" },
   { pattern: "/customers", kind: "tab" },
   { pattern: "/customers/[id]", kind: "drill-down" },
-  { pattern: "/receivables", kind: "tab" },
+  { pattern: "/receivables", kind: "redirect" },
   { pattern: "/banking", kind: "tab" },
-  { pattern: "/banking/review", kind: "tab" },
   { pattern: "/banking/transfers", kind: "tab" },
   { pattern: "/banking/cash", kind: "tab" },
   { pattern: "/banking/accounts/[id]", kind: "drill-down" },
@@ -230,7 +282,6 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/reports/kdv-input", kind: "reports-card" },
   { pattern: "/reports/delivery-sales", kind: "reports-card" },
   { pattern: "/reports/period-comparison", kind: "reports-card" },
-  { pattern: "/reports/ledger", kind: "reports-card" },
   { pattern: "/accounting/manual-journals", kind: "reports-card" },
   { pattern: "/settings", kind: "sidebar" },
   { pattern: "/settings/entity", kind: "tab" },
@@ -266,6 +317,14 @@ export function sidebarHrefActiveForPathname(
   }
   if (sidebarHref === "/") return pathname === "/";
   if (sidebarHref === "/record") return pathname === "/record";
+  if (sidebarHref === "/balances") {
+    return (
+      pathname === "/balances" ||
+      pathname.startsWith("/balances/") ||
+      pathname === "/payables" ||
+      pathname === "/receivables"
+    );
+  }
   if (sidebarHref === "/reports") {
     return (
       pathname === "/reports" ||
@@ -287,6 +346,12 @@ export function pageTitleForPathname(pathname: string): string {
   const titles: Record<string, string> = {
     "/": "Dashboard",
     "/record": "Record",
+    "/balances": "Balances",
+    "/balances/suppliers": "Balances",
+    "/balances/customers": "Balances",
+    "/balances/staff": "Balances",
+    "/balances/partners": "Balances",
+    "/balances/cash": "Balances",
     "/expenses": "Expenses",
     "/uploads": "Documents",
     "/staff": "Staff",
