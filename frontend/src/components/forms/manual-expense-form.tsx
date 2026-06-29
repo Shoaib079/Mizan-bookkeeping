@@ -2,7 +2,7 @@
 
 /** Manual expense dialog — autosave draft + discard confirm (DESIGN_SYSTEM §10, Slice 10.7). */
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
@@ -27,7 +27,11 @@ import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
-import { useRegisterUnsaved } from "@/lib/unsaved-work";
+import {
+  isSuggestedAccountActive,
+  shouldApplyExpenseAccountSuggestion,
+  type ExpenseAccountSuggestion,
+} from "@/lib/expense-account-suggest";
 
 type MoneyAccount = { id: string; name: string };
 
@@ -84,6 +88,9 @@ export function ManualExpenseForm({
   const [submitting, setSubmitting] = useState(false);
   const [optionsLoaded, setOptionsLoaded] = useState(false);
   const [baseline, setBaseline] = useState<ExpenseFormDraft | null>(null);
+  const [suggestedAccountId, setSuggestedAccountId] = useState<string | null>(null);
+  const [suggestedSource, setSuggestedSource] = useState<string | null>(null);
+  const userPickedAccountRef = useRef(false);
 
   const draftFormKey = defaultExpenseAccountCode
     ? `manual-expense:${defaultExpenseAccountCode}`
@@ -177,8 +184,56 @@ export function ManualExpenseForm({
     setPaymentMode("cash");
     setPartnerId("");
     setError(null);
+    userPickedAccountRef.current = false;
+    setSuggestedAccountId(null);
+    setSuggestedSource(null);
     void loadOptions().catch(() => undefined);
   }, [open, loadOptions]);
+
+  useEffect(() => {
+    if (!open || !entityId || itemName.trim().length < 2) {
+      setSuggestedAccountId(null);
+      setSuggestedSource(null);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const suggestion = await apiFetch<ExpenseAccountSuggestion>(
+            `/entities/${entityId}/expenses/suggest-account?description=${encodeURIComponent(itemName.trim())}`,
+          );
+          const nextId = shouldApplyExpenseAccountSuggestion(
+            suggestion.account_id
+              ? {
+                  account_id: suggestion.account_id,
+                  source: (suggestion.source ?? "learned") as "learned" | "ai",
+                  confidence: suggestion.confidence ?? "medium",
+                }
+              : null,
+            expenseAccountId,
+            userPickedAccountRef.current,
+          );
+          if (nextId) {
+            setExpenseAccountId(nextId);
+            setSuggestedAccountId(nextId);
+            setSuggestedSource(suggestion.source ?? null);
+          } else if (suggestion.account_id) {
+            setSuggestedAccountId(suggestion.account_id);
+            setSuggestedSource(suggestion.source ?? null);
+          } else {
+            setSuggestedAccountId(null);
+            setSuggestedSource(null);
+          }
+        } catch {
+          setSuggestedAccountId(null);
+          setSuggestedSource(null);
+        }
+      })();
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [open, entityId, itemName, expenseAccountId]);
 
   useEffect(() => {
     if (!open || !optionsLoaded || baseline !== null || resumeDraft !== null) {
@@ -352,7 +407,12 @@ export function ManualExpenseForm({
           <Select
             id="exp-account"
             value={expenseAccountId}
-            onChange={(e) => setExpenseAccountId(e.target.value)}
+            onChange={(e) => {
+              userPickedAccountRef.current = true;
+              setExpenseAccountId(e.target.value);
+              setSuggestedAccountId(null);
+              setSuggestedSource(null);
+            }}
           >
             {expenseAccounts.map((a) => (
               <option key={a.id} value={a.id}>
@@ -360,6 +420,13 @@ export function ManualExpenseForm({
               </option>
             ))}
           </Select>
+          {isSuggestedAccountActive(expenseAccountId, suggestedAccountId) && (
+            <p className="text-xs text-muted-foreground">
+              Suggested account
+              {suggestedSource === "ai" ? " (AI)" : suggestedSource === "learned" ? " (learned)" : ""}
+              {" — you can change it before saving."}
+            </p>
+          )}
         </div>
         <div>
           <Label htmlFor="exp-payment">Payment</Label>

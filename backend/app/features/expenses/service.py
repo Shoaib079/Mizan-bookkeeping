@@ -23,6 +23,15 @@ from app.adapters.ocr_ai.expense_receipt import (
 )
 from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE
 from app.core.chart_of_accounts.seed import get_account_by_code
+from app.core.expenses.account_learning import (
+    record_expense_account_learning,
+    suggest_learned_expense_account,
+    list_expense_accounts_for_entity,
+)
+from app.adapters.ocr_ai.expense_account_suggest import (
+    ExpenseAccountSuggestError,
+    suggest_expense_account_via_ai,
+)
 from app.core.expenses.items import InvalidExpenseItemError, merge_expense_items, resolve_expense_item
 from app.core.ledger.correction import CorrectionNotFoundError, correct_expense_entry
 from app.core.expenses.posting import (
@@ -44,6 +53,7 @@ from app.features.expenses.schema import (
     ConfirmExpenseReceiptLineRequest,
     ConfirmExpenseReceiptRequest,
     ConfirmTipPhotoRequest,
+    ExpenseAccountSuggestResponse,
     ExpenseConfirmItemRequest,
     ExpenseCorrect,
     ExpenseCorrectOut,
@@ -330,7 +340,20 @@ def create_expense(
         has_source_document=payload.has_source_document,
         notes=payload.notes,
     )
-    return _to_expense_read(result.expense_entry)
+    entry_id = result.expense_entry.id
+    with entity_context(session, entity_id):
+        record_expense_account_learning(
+            session,
+            entity_id,
+            written_item_description=payload.written_item_description,
+            expense_account_id=payload.expense_account_id,
+            expense_item_id=resolution.expense_item_id,
+        )
+        session.commit()
+        entry = session.get(ExpenseEntry, entry_id)
+    if entry is None:
+        raise LookupError("Expense not found after posting")
+    return _to_expense_read(entry)
 
 
 def list_expenses(
@@ -515,7 +538,52 @@ def confirm_expense_item(
         notes=entry.notes,
         existing_expense_entry=entry,
     )
-    return _to_expense_read(result.expense_entry)
+    entry_id = result.expense_entry.id
+    with entity_context(session, entity_id):
+        record_expense_account_learning(
+            session,
+            entity_id,
+            written_item_description=entry.written_item_description,
+            expense_account_id=entry.expense_account_id,
+            expense_item_id=expense_item_id,
+        )
+        session.commit()
+        posted = session.get(ExpenseEntry, entry_id)
+    if posted is None:
+        raise LookupError("Expense not found after posting")
+    return _to_expense_read(posted)
+
+
+def suggest_expense_account(
+    session: Session,
+    entity_id: uuid.UUID,
+    description: str,
+) -> ExpenseAccountSuggestResponse:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        learned = suggest_learned_expense_account(session, entity_id, description)
+        if learned is not None:
+            return ExpenseAccountSuggestResponse(
+                account_id=learned.account_id,
+                source=learned.source,
+                confidence=learned.confidence,
+            )
+
+        accounts = list_expense_accounts_for_entity(session, entity_id)
+        try:
+            ai = suggest_expense_account_via_ai(description, accounts)
+        except ExpenseAccountSuggestError:
+            ai = None
+        if ai is not None:
+            return ExpenseAccountSuggestResponse(
+                account_id=ai.account_id,
+                source=ai.source,
+                confidence=ai.confidence,
+            )
+        return ExpenseAccountSuggestResponse()
 
 
 def create_tip_expense_from_photo(

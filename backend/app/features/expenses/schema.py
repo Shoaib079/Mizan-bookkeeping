@@ -30,6 +30,12 @@ class ExpenseItemMergeRequest(BaseModel):
     actor_id: uuid.UUID
 
 
+class ExpenseAccountSuggestResponse(BaseModel):
+    account_id: uuid.UUID | None = None
+    source: str | None = None
+    confidence: str | None = None
+
+
 class ExpenseCreate(BaseModel):
     expense_date: date
     amount_kurus: int = Field(gt=0)

@@ -59,6 +59,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_expense_receipt.py` | Multi-line expense receipt intake — OCR lines default to `5200`, confirm posts N GL entries + cash, line-sum mismatch blocked (H3), override fix posts, duplicate 409, idempotent confirm, cross-entity read/confirm + RLS isolation, fixture registry, API E2E | pass |
 | `backend/tests/test_manual_daily_sales.py` | Manual daily sales — typed cash+card without POS photo, reuses POS posting, zero/duplicate-date rejected, API E2E | pass |
 | `backend/tests/test_expenses.py` | Daily expenses — manual Dr expense/Cr bank (no AP); `has_source_document=false`; Turkish alias memory; fuzzy → needs_review (no GL); confirm posts + alias; merge items; `rent_utility` bank classify; cross-entity RLS | pass |
+| `backend/tests/test_expense_account_suggest.py` | Expense account suggestion — learned after post, variant spellings → one item, AI fallback (mocked), suggest never posts, `default_expense_account_id` stored | pass |
 | `backend/tests/test_delivery_sales_report.py` | Delivery sales report — gross per platform + total from posted reports only; date range filter; draft/needs_review/rejected excluded; inactive platform with history; zero rows for platforms without reports; `delivery_enabled` + `from>to` → 422; cross-entity RLS; API E2E | pass |
 | `backend/tests/test_dashboard.py` | Entity dashboard — period sales by source, expenses, net result, payables preview ordering + supplier filter, receivables, delivery in-transit clearing, needs-review counts, TRY position vs FX separate, optional expense/money account filters, `from>to` → 422, API E2E, cross-entity RLS | pass |
 | `backend/tests/test_financial_statements.py` | P&L & Balance Sheet — revenue/expense/net from card/cash/delivery/expense postings, date range exclusion, voided entry excluded, opening-balance as-of balances, unclosed net income balances accounting equation, `from>to` → 422, API E2E, cross-entity RLS | pass |
@@ -75,6 +76,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `frontend/src/lib/account-menu-helpers.test.ts` | Switch confirm copy; unsaved warning; role-gated admin links; recording-for label | pass |
 | `frontend/src/lib/unsaved-work.test.ts` | Dirty-source registry — set/clear/has unsaved work | pass |
 | `frontend/src/lib/expense-accounts.test.ts` | Expense chart filter + `formatExpenseAccountLabel` (Turkish name first, code in parens) | pass |
+| `frontend/src/lib/expense-account-suggest.test.ts` | Suggest-and-confirm gating — apply only when user has not manually overridden account | pass |
 | `frontend/src/lib/onboarding.test.ts` | Dashboard setup checklist — role gating, step completion from API totals, admin-only invite step, **dismiss + auto-hide when complete** | pass |
 | `frontend/src/lib/first-run-onboarding.test.ts` | First-run modal — no-company visibility gate; submit patches display name + creates entity + routes to dashboard | pass |
 | `frontend/src/lib/api-error-message.test.ts` | Reports landing — `apiErrorMessage()` prefers ApiError, falls back safely | pass |

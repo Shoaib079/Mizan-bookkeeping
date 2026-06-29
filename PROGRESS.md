@@ -7,12 +7,12 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | — (P1 expense picker labels shipped) |
-| **Last completed slice** | P1 — expense account pickers show Turkish names (not GL codes first) |
+| **Active slice** | — (P2 expense auto-categorize shipped) |
+| **Last completed slice** | P2 — AI + learning expense account suggestion |
 | **Live URLs** | Frontend: `jovial-licorice-be572c.netlify.app` · API: `mizan-api-production-e574.up.railway.app` |
 | **Branch** | `main` |
 | **Last tag** | `v0.72.0-clearance-auto-pick` |
-| **Next up** | P2 AI expense auto-categorize (`POST_LAUNCH_PLAN.md`) |
+| **Next up** | P3 uploads backup (`POST_LAUNCH_PLAN.md`) |
 
 ## Owner blockers (12.5)
 

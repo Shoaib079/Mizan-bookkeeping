@@ -25,6 +25,7 @@ from app.features.expenses import receipt_service
 from app.features.expenses.schema import (
     ConfirmExpenseReceiptRequest,
     ConfirmTipPhotoRequest,
+    ExpenseAccountSuggestResponse,
     ExpenseConfirmItemRequest,
     ExpenseCorrect,
     ExpenseCorrectOut,
@@ -105,6 +106,19 @@ def merge_expense_items(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InvalidExpenseItemError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/expenses/suggest-account", response_model=ExpenseAccountSuggestResponse)
+def suggest_expense_account_route(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+    description: str = Query(min_length=1, max_length=512),
+) -> ExpenseAccountSuggestResponse:
+    try:
+        return expenses_service.suggest_expense_account(session, entity_id, description)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/expenses", response_model=ExpenseRead, status_code=201)

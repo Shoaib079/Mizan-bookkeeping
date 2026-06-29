@@ -38,6 +38,12 @@ class ExpenseItem(EntityScopedMixin, Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     canonical_name: Mapped[str] = mapped_column(String(512), nullable=False)
     canonical_name_normalized: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
+    default_expense_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
