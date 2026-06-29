@@ -153,11 +153,13 @@ export function ManualExpenseForm({
     setPartners(partnersRes.items.filter((p) => p.is_active));
     const pickable = filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(pickable);
+    // No lazy default (e.g. 5200): the category stays empty until the user
+    // chooses or the AI/learned suggestion fills it — prevents everything
+    // silently landing in "General Expense". Only honor an explicit prop.
     const preferred = defaultExpenseAccountCode
       ? findExpenseAccountByCode(chartRes.items, defaultExpenseAccountCode)
-      : findExpenseAccountByCode(chartRes.items, "5200");
+      : undefined;
     if (preferred) setExpenseAccountId(preferred.id);
-    else if (pickable[0]) setExpenseAccountId(pickable[0].id);
     const drawerId = defaultMainDrawerId(
       accountsRes.items.map((a) => ({
         id: a.id,
@@ -415,6 +417,7 @@ export function ManualExpenseForm({
               setSuggestedSource(null);
             }}
           >
+            <option value="">Select category…</option>
             {expenseAccounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {formatExpenseAccountLabel(a)}
