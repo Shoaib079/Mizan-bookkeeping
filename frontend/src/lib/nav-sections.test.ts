@@ -8,7 +8,8 @@ import {
 import type { EntityNavSettings } from "@/lib/app-routes";
 import {
   LEGACY_BALANCE_REDIRECTS,
-    NAV_SECTIONS,
+  LEGACY_REVIEW_REDIRECTS,
+  NAV_SECTIONS,
   NEW_COMMAND_QUICK_ACTIONS,
   REGISTERED_PAGE_ROUTES,
   REPORTS_CARD_HREFS,
@@ -85,8 +86,8 @@ const TAB_ONLY_HREFS = [
 ] as const;
 
 describe("REGISTERED_PAGE_ROUTES", () => {
-  it("lists exactly 52 app pages", () => {
-    expect(REGISTERED_PAGE_ROUTES).toHaveLength(52);
+  it("lists exactly 61 app pages", () => {
+    expect(REGISTERED_PAGE_ROUTES).toHaveLength(61);
   });
 
   it("assigns each route exactly one entry kind", () => {
@@ -107,7 +108,8 @@ describe("route reachability guard", () => {
     for (const route of staticRoutes) {
       if (route.kind === "redirect") {
         expect(
-          LEGACY_BALANCE_REDIRECTS[route.pattern]
+          LEGACY_BALANCE_REDIRECTS[route.pattern] ??
+            LEGACY_REVIEW_REDIRECTS[route.pattern],
         ).toBeDefined();
         continue;
       }
@@ -212,9 +214,15 @@ describe("tab + sidebar highlighting", () => {
     expect(section?.id).toBe("balances");
   });
 
+  it("highlights Review sidebar row on the hub and on tab pages", () => {
+    expect(sidebarHrefActiveForPathname("/review", "/review")).toBe(true);
+    expect(sidebarHrefActiveForPathname("/review", "/review/sales")).toBe(true);
 
-  it("highlights Reports sidebar row for ledger and manual journals", () => {
-    expect(sidebarHrefActiveForPathname("/reports", "/reports/ledger")).toBe(true);
+    const section = navSectionForPathname("/review/bank");
+    expect(section?.id).toBe("review");
+  });
+
+  it("highlights Reports sidebar row for manual journals", () => {
     expect(sidebarHrefActiveForPathname("/reports", "/accounting/manual-journals")).toBe(
       true,
     );

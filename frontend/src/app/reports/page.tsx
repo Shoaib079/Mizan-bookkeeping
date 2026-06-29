@@ -93,7 +93,7 @@ const reportCards: ReportCard[] = [
     financial: true,
   },
   {
-    href: "/reports/ledger",
+    href: "/review/posted",
     title: "General ledger (all entries)",
     description: "Every journal entry — search, filter, and drill into lines.",
     icon: BookOpen,

@@ -440,3 +440,21 @@ def test_upload_and_confirm_via_api(client, db_session, restaurant_a) -> None:
     assert confirm.json()["status"] == "posted"
 
     assert _gl_balance(db_session, entity_id, general_id, AccountNormalBalance.DEBIT) == 25_000
+
+
+def test_list_expense_receipts_via_api(client, db_session, restaurant_a) -> None:
+    drawer, _accounts = _setup(db_session, restaurant_a)
+    entity_id = restaurant_a.id
+
+    upload = client.post(
+        f"/entities/{entity_id}/expense-receipts",
+        files={"file": ("receipt.txt", _MULTI_LINE_RECEIPT, "text/plain")},
+        data={"money_account_id": str(drawer.id), "actor_id": str(ACTOR_ID)},
+    )
+    assert upload.status_code == 201, upload.text
+
+    listing = client.get(f"/entities/{entity_id}/expense-receipts?limit=50")
+    assert listing.status_code == 200, listing.text
+    body = listing.json()
+    assert body["total"] >= 1
+    assert any(item["status"] in ("draft", "needs_review") for item in body["items"])

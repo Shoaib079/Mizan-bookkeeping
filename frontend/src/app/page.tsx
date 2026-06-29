@@ -24,6 +24,7 @@ import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead } from "@/lib/report-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
+import { reviewHrefForNeedsReviewKey } from "@/lib/review-routes";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
@@ -255,7 +256,12 @@ function DashboardBody() {
                   <div>
                     <dt className="text-muted-foreground">Invoice drafts</dt>
                     <dd className="tabular-nums">
-                      {data.needs_review.invoice_drafts}
+                      <Link
+                        href={reviewHrefForNeedsReviewKey("invoice_drafts")}
+                        className="text-primary hover:underline"
+                      >
+                        {data.needs_review.invoice_drafts}
+                      </Link>
                     </dd>
                   </div>
                 )}
@@ -264,7 +270,7 @@ function DashboardBody() {
                     <dt className="text-muted-foreground">Bank lines</dt>
                     <dd className="tabular-nums">
                       <Link
-                        href="/banking/review"
+                        href={reviewHrefForNeedsReviewKey("bank_statement_lines")}
                         className="text-primary hover:underline"
                       >
                         {data.needs_review.bank_statement_lines}
@@ -276,7 +282,12 @@ function DashboardBody() {
                   <div>
                     <dt className="text-muted-foreground">POS summaries</dt>
                     <dd className="tabular-nums">
-                      {data.needs_review.pos_daily_summaries}
+                      <Link
+                        href={reviewHrefForNeedsReviewKey("pos_daily_summaries")}
+                        className="text-primary hover:underline"
+                      >
+                        {data.needs_review.pos_daily_summaries}
+                      </Link>
                     </dd>
                   </div>
                 )}
@@ -284,7 +295,12 @@ function DashboardBody() {
                   <div>
                     <dt className="text-muted-foreground">Delivery reports</dt>
                     <dd className="tabular-nums">
-                      {data.needs_review.delivery_reports}
+                      <Link
+                        href={reviewHrefForNeedsReviewKey("delivery_reports")}
+                        className="text-primary hover:underline"
+                      >
+                        {data.needs_review.delivery_reports}
+                      </Link>
                     </dd>
                   </div>
                 )}
@@ -292,7 +308,12 @@ function DashboardBody() {
                   <div>
                     <dt className="text-muted-foreground">Expenses</dt>
                     <dd className="tabular-nums">
-                      {data.needs_review.expense_entries}
+                      <Link
+                        href={reviewHrefForNeedsReviewKey("expense_entries")}
+                        className="text-primary hover:underline"
+                      >
+                        {data.needs_review.expense_entries}
+                      </Link>
                     </dd>
                   </div>
                 )}
@@ -337,7 +358,7 @@ function DashboardBody() {
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold">Top payables</h2>
                 <Link
-                  href="/payables"
+                  href="/balances/suppliers"
                   className="text-xs text-primary hover:underline"
                 >
                   View all

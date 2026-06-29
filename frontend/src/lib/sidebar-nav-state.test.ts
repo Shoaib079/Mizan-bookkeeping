@@ -129,9 +129,9 @@ describe("navGroupContainsPathname", () => {
     );
   });
 
-  it("matches nested report routes under Reports", () => {
+  it("matches general ledger under Overview via Review hub", () => {
     expect(
-      navGroupContainsPathname("Reports", "/reports/ledger", SETTINGS),
+      navGroupContainsPathname("Overview", "/review/posted", SETTINGS),
     ).toBe(true);
   });
 });

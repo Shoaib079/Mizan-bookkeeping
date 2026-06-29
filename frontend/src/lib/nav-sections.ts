@@ -1,8 +1,9 @@
 /** Tab sections + route reachability registry (IA audit v0.71.9). */
 
 import { NEW_COMMAND_QUICK_ACTIONS } from "@/lib/record-actions";
+import { LEGACY_REVIEW_REDIRECTS } from "@/lib/review-routes";
 
-export { NEW_COMMAND_QUICK_ACTIONS };
+export { NEW_COMMAND_QUICK_ACTIONS, LEGACY_REVIEW_REDIRECTS };
 
 export type NavTab = {
   href: string;
@@ -18,6 +19,7 @@ export type NavSectionId =
   | "suppliers"
   | "customers"
   | "balances"
+  | "review"
   | "settings"
   | "delivery";
 
@@ -86,11 +88,6 @@ export const NAV_SECTIONS: NavSection[] = [
           path.startsWith("/banking/fx/"),
       },
       {
-        href: "/banking/review",
-        label: "Review",
-        match: (path) => path === "/banking/review",
-      },
-      {
         href: "/banking/transfers",
         label: "Transfers",
         match: (path) => path === "/banking/transfers",
@@ -152,6 +149,45 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/balances/cash",
         label: "Cash & bank",
         match: (path) => path === "/balances/cash",
+      },
+    ],
+  },
+  {
+    id: "review",
+    sidebarHref: "/review",
+    tabs: [
+      {
+        href: "/review/bank",
+        label: "Bank & card",
+        match: (path) => path === "/review/bank" || path === "/banking/review",
+      },
+      {
+        href: "/review/sales",
+        label: "Sales",
+        match: (path) => path === "/review/sales",
+      },
+      {
+        href: "/review/receipts",
+        label: "Receipts",
+        match: (path) =>
+          path === "/review/receipts" || path.startsWith("/review/receipts/"),
+      },
+      {
+        href: "/review/invoices",
+        label: "Invoices",
+        match: (path) =>
+          path === "/review/invoices" || path.startsWith("/review/invoices/"),
+      },
+      {
+        href: "/review/delivery",
+        label: "Delivery",
+        requiresDelivery: true,
+        match: (path) => path === "/review/delivery",
+      },
+      {
+        href: "/review/posted",
+        label: "All posted",
+        match: (path) => path === "/review/posted",
       },
     ],
   },
@@ -220,7 +256,6 @@ export const REPORTS_CARD_HREFS = [
   "/reports/kdv-input",
   "/reports/delivery-sales",
   "/reports/period-comparison",
-  "/reports/ledger",
   "/accounting/manual-journals",
 ] as const;
 
@@ -242,6 +277,13 @@ export const LEGACY_BALANCE_REDIRECTS: Record<string, string> = {
 export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[] = [
   { pattern: "/", kind: "sidebar" },
   { pattern: "/record", kind: "sidebar" },
+  { pattern: "/review", kind: "sidebar" },
+  { pattern: "/review/bank", kind: "tab" },
+  { pattern: "/review/sales", kind: "tab" },
+  { pattern: "/review/receipts", kind: "tab" },
+  { pattern: "/review/invoices", kind: "tab" },
+  { pattern: "/review/delivery", kind: "tab" },
+  { pattern: "/review/posted", kind: "tab" },
   { pattern: "/balances", kind: "sidebar" },
   { pattern: "/balances/suppliers", kind: "tab" },
   { pattern: "/balances/customers", kind: "tab" },
@@ -270,6 +312,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/customers/[id]", kind: "drill-down" },
   { pattern: "/receivables", kind: "redirect" },
   { pattern: "/banking", kind: "tab" },
+  { pattern: "/banking/review", kind: "redirect" },
   { pattern: "/banking/transfers", kind: "tab" },
   { pattern: "/banking/cash", kind: "tab" },
   { pattern: "/banking/accounts/[id]", kind: "drill-down" },
@@ -282,6 +325,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/reports/kdv-input", kind: "reports-card" },
   { pattern: "/reports/delivery-sales", kind: "reports-card" },
   { pattern: "/reports/period-comparison", kind: "reports-card" },
+  { pattern: "/reports/ledger", kind: "redirect" },
   { pattern: "/accounting/manual-journals", kind: "reports-card" },
   { pattern: "/settings", kind: "sidebar" },
   { pattern: "/settings/entity", kind: "tab" },
@@ -317,6 +361,13 @@ export function sidebarHrefActiveForPathname(
   }
   if (sidebarHref === "/") return pathname === "/";
   if (sidebarHref === "/record") return pathname === "/record";
+  if (sidebarHref === "/review") {
+    return (
+      pathname === "/review" ||
+      pathname.startsWith("/review/") ||
+      pathname === "/banking/review"
+    );
+  }
   if (sidebarHref === "/balances") {
     return (
       pathname === "/balances" ||
@@ -346,6 +397,13 @@ export function pageTitleForPathname(pathname: string): string {
   const titles: Record<string, string> = {
     "/": "Dashboard",
     "/record": "Record",
+    "/review": "Review",
+    "/review/bank": "Review",
+    "/review/sales": "Review",
+    "/review/receipts": "Review",
+    "/review/invoices": "Review",
+    "/review/delivery": "Review",
+    "/review/posted": "Review",
     "/balances": "Balances",
     "/balances/suppliers": "Balances",
     "/balances/customers": "Balances",

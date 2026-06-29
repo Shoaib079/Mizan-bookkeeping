@@ -53,22 +53,22 @@ const uploadActions = [
 
 const reviewLinks = [
   {
-    href: "/sales",
+    href: "/review/sales",
     label: "POS summaries",
     description: "Draft and needs-review daily sales",
   },
   {
-    href: "/suppliers",
+    href: "/review/invoices",
     label: "Supplier invoices",
     description: "e-Fatura drafts awaiting confirm",
   },
   {
-    href: "/banking",
+    href: "/review/bank",
     label: "Bank statements",
-    description: "Upload CSV on each bank account page",
+    description: "Statement lines awaiting confirm or classify",
   },
   {
-    href: "/delivery/reports",
+    href: "/review/delivery",
     label: "Delivery reports",
     description: "Platform reports awaiting confirm",
   },

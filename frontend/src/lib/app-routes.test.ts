@@ -46,6 +46,7 @@ describe("navGroups", () => {
       "/",
       "/record",
       "/balances",
+      "/review",
     ]);
   });
 
@@ -86,6 +87,7 @@ describe("navGroups", () => {
       "/",
       "/record",
       "/balances",
+      "/review",
       "/sales",
       "/close-day",
       "/cards",
@@ -105,7 +107,7 @@ describe("navGroups", () => {
       "/banking/transfers",
       "/banking/cash",
       "/reports",
-      "/reports/ledger",
+      "/review/posted",
       "/accounting/manual-journals",
       "/settings",
       "/settings/entity",

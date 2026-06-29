@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useQuickActions } from "@/components/quick-actions";
 import type { NavSectionId } from "@/lib/nav-sections";
 import { navSectionById } from "@/lib/nav-sections";
 import { cn } from "@/lib/utils";
@@ -14,7 +15,11 @@ type SectionTabsProps = {
 
 export function SectionTabs({ sectionId, ariaLabel }: SectionTabsProps) {
   const pathname = usePathname();
+  const { deliveryEnabled } = useQuickActions();
   const section = navSectionById(sectionId);
+  const tabs = section.tabs.filter(
+    (tab) => !tab.requiresDelivery || deliveryEnabled,
+  );
 
   return (
     <div
@@ -22,7 +27,7 @@ export function SectionTabs({ sectionId, ariaLabel }: SectionTabsProps) {
       role="tablist"
       aria-label={ariaLabel}
     >
-      {section.tabs.map((tab) => {
+      {tabs.map((tab) => {
         const active = tab.match(pathname);
         return (
           <Link

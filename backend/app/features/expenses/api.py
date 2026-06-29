@@ -20,7 +20,7 @@ from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.expenses import service as expenses_service
-from app.features.expenses.models import ExpenseEntryStatus
+from app.features.expenses.models import ExpenseEntryStatus, ExpenseReceiptIntakeStatus
 from app.features.expenses import receipt_service
 from app.features.expenses.schema import (
     ConfirmExpenseReceiptRequest,
@@ -253,6 +253,31 @@ async def upload_expense_receipt(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except (InvalidExpensePostingError, InvalidAccountError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/expense-receipts", response_model=PaginatedListOut[ExpenseReceiptRead])
+def list_expense_receipts(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+    status: ExpenseReceiptIntakeStatus | None = Query(default=None),
+    list_params: ListParams = Depends(list_params_dependency),
+) -> PaginatedListOut[ExpenseReceiptRead]:
+    try:
+        items, total = receipt_service.list_expense_receipts(
+            session,
+            entity_id,
+            status=status,
+            list_params=list_params,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return paginated_list(
+        items,
+        total=total,
+        limit=list_params.limit,
+        offset=list_params.offset,
+    )
 
 
 @router.get("/expense-receipts/{intake_id}", response_model=ExpenseReceiptRead)

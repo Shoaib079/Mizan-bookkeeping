@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | UX3 — Review hub (next)                                                                       |
-| **Last completed slice** | UX2 — Balances hub (`v0.73.1-ux2-balances-hub`)                                            |
-| **Last commit/tag**      | `v0.73.1-ux2-balances-hub` — feat(ux): Balances hub                                         |
-| **Next up**              | UX3 Review hub → UX4–UX6; feature gaps FP/FS; then P3/P5/P6. Plan: `POST_LAUNCH_PLAN.md` |
+| **Active slice**         | UX4 — Reports trim (next)                                                                       |
+| **Last completed slice** | UX3 — Review hub (`v0.73.2-ux3-review-hub`)                                            |
+| **Last commit/tag**      | `v0.73.2-ux3-review-hub` — feat(ux): unified Review hub                                         |
+| **Next up**              | UX4 Reports trim → UX5–UX6; feature gaps FP/FS; then P3/P5/P6. Plan: `POST_LAUNCH_PLAN.md` |
 
 
 ### Next plan (pre-launch, owner-driven)

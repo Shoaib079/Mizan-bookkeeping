@@ -1,0 +1,122 @@
+"use client";
+
+/** Bank & card statement line review — shared Review hub tab. */
+
+import { useCallback, useEffect, useState } from "react";
+
+import { StatementLineReviewRow } from "@/components/statement-line-review-row";
+import type { StatementLineReview } from "@/lib/banking-types";
+import { loadStatementReviewLines } from "@/lib/load-statement-review-lines";
+import {
+  countLinesByTab,
+  filterLinesByTab,
+  STATEMENT_REVIEW_TABS,
+  type StatementReviewTab,
+} from "@/lib/statement-review";
+import { useEntity } from "@/lib/entity-context";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
+import { cn } from "@/lib/utils";
+
+export function StatementReviewPanel() {
+  const { entityId } = useEntity();
+  const [lines, setLines] = useState<StatementLineReview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<StatementReviewTab>("needs_review");
+
+  const resetState = useCallback(() => {
+    setLines([]);
+    setLoading(true);
+    setError(null);
+    setActiveTab("needs_review");
+  }, []);
+
+  useEntitySwitchReset(entityId, resetState);
+
+  const reload = useCallback(async () => {
+    if (!entityId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const loaded = await loadStatementReviewLines(entityId);
+      setLines(loaded);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Load failed");
+      setLines([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [entityId]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  if (!entityId) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Select a restaurant in the sidebar.
+      </p>
+    );
+  }
+
+  const tabCounts = countLinesByTab(lines);
+  const visibleLines = filterLinesByTab(lines, activeTab);
+
+  return (
+    <>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Confirm suggestions, correct auto-posted lines, and manage suppliers inline.
+      </p>
+
+      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+
+      <div
+        className="mb-6 flex flex-wrap gap-2 border-b border-border pb-2"
+        role="tablist"
+        aria-label="Statement line status filters"
+      >
+        {STATEMENT_REVIEW_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              activeTab === tab.id
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+            <span className="ml-1.5 tabular-nums opacity-80">
+              ({tabCounts[tab.id]})
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {loading && (
+        <p className="text-sm text-muted-foreground">Loading statement lines…</p>
+      )}
+
+      {!loading && visibleLines.length === 0 && (
+        <p className="text-sm text-muted-foreground">No lines in this filter.</p>
+      )}
+
+      {!loading && visibleLines.length > 0 && (
+        <div className="space-y-3">
+          {visibleLines.map((line) => (
+            <StatementLineReviewRow
+              key={line.id}
+              line={line}
+              onUpdated={() => void reload()}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}

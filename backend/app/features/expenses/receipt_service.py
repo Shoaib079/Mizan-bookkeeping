@@ -20,7 +20,8 @@ from app.adapters.ocr_ai.expense_receipt import (
 from app.adapters.storage.local import save_upload
 from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE
 from app.core.chart_of_accounts.seed import get_account_by_code
-from app.core.expenses.items import InvalidExpenseItemError, resolve_expense_item
+from app.core.listing import ListParams, fetch_paginated
+from app.core.expenses.items import resolve_expense_item
 from app.core.expenses.posting import InvalidExpensePostingError, _validate_money_account, post_expense_entry
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccountKind
@@ -334,6 +335,37 @@ def get_expense_receipt(
         raise LookupError("Entity not found")
     intake, lines = _get_intake_row(session, entity_id, intake_id)
     return _to_intake_read(intake, lines)
+
+
+def list_expense_receipts(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    status: ExpenseReceiptIntakeStatus | None = None,
+    list_params: ListParams | None = None,
+) -> tuple[list[ExpenseReceiptRead], int]:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+    params = list_params or ListParams()
+    with entity_context(session, entity_id):
+        stmt = select(ExpenseReceiptIntake).where(
+            ExpenseReceiptIntake.entity_id == entity_id
+        )
+        if status is not None:
+            stmt = stmt.where(ExpenseReceiptIntake.status == status)
+        stmt = stmt.order_by(ExpenseReceiptIntake.created_at.desc())
+        intakes, total = fetch_paginated(session, stmt, params)
+        reads: list[ExpenseReceiptRead] = []
+        for intake in intakes:
+            line_rows = list(
+                session.scalars(
+                    select(ExpenseReceiptLine)
+                    .where(ExpenseReceiptLine.intake_id == intake.id)
+                    .order_by(ExpenseReceiptLine.line_order)
+                )
+            )
+            reads.append(_to_intake_read(intake, line_rows))
+        return reads, total
 
 
 def confirm_expense_receipt(
