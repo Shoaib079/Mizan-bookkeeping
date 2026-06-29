@@ -12,10 +12,14 @@ import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
+import {
+  filterExpenseAccounts,
+  formatExpenseAccountLabel,
+  findExpenseAccountByCode,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
-
-type Account = { id: string; code: string; name: string };
 
 type Props = {
   open: boolean;
@@ -37,7 +41,7 @@ export function PartnerExpenseFrontedForm({
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
-  const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
@@ -47,12 +51,12 @@ export function PartnerExpenseFrontedForm({
 
   const loadChart = useCallback(async () => {
     if (!entityId) return;
-    const chart = await apiFetch<{ items: Account[] }>(
+    const chart = await apiFetch<{ items: ChartAccount[] }>(
       `/entities/${entityId}/chart-of-accounts?limit=200`,
     );
-    const expenses = chart.items.filter((a) => a.code.startsWith("5"));
+    const expenses = filterExpenseAccounts(chart.items);
     setExpenseAccounts(expenses);
-    const general = expenses.find((a) => a.code === "5200");
+    const general = findExpenseAccountByCode(chart.items, "5200");
     if (general) setExpenseAccountId(general.id);
     else if (expenses[0]) setExpenseAccountId(expenses[0].id);
   }, [entityId]);
@@ -149,7 +153,7 @@ export function PartnerExpenseFrontedForm({
             onValueChange={setExpenseAccountId}
             options={expenseAccounts.map((a) => ({
               value: a.id,
-              label: `${a.code} — ${a.name}`,
+              label: formatExpenseAccountLabel(a),
             }))}
             placeholder="Expense account…"
           />

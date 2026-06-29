@@ -74,7 +74,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `frontend/src/lib/entity-visual.test.ts` | Deterministic entity accent colour + initials; user initials from display name/email | pass |
 | `frontend/src/lib/account-menu-helpers.test.ts` | Switch confirm copy; unsaved warning; role-gated admin links; recording-for label | pass |
 | `frontend/src/lib/unsaved-work.test.ts` | Dirty-source registry — set/clear/has unsaved work | pass |
-| `frontend/src/lib/expense-accounts.test.ts` | Expense chart filter — `account_type === expense` only; `5700` absent | pass |
+| `frontend/src/lib/expense-accounts.test.ts` | Expense chart filter + `formatExpenseAccountLabel` (Turkish name first, code in parens) | pass |
 | `frontend/src/lib/onboarding.test.ts` | Dashboard setup checklist — role gating, step completion from API totals, admin-only invite step, **dismiss + auto-hide when complete** | pass |
 | `frontend/src/lib/first-run-onboarding.test.ts` | First-run modal — no-company visibility gate; submit patches display name + creates entity + routes to dashboard | pass |
 | `frontend/src/lib/api-error-message.test.ts` | Reports landing — `apiErrorMessage()` prefers ApiError, falls back safely | pass |

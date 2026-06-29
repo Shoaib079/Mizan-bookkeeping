@@ -14,22 +14,13 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 - **Entity fixes** (`0411d54`) — reliable company-list load (no false "register" prompt); block duplicate company names per user (409); land on dashboard on company switch.
 - **First-run onboarding + Fix D** (`dc115a4`) — onboarding modal (full name, business name, optional legal name); migration `056_entity_legal_name`; `PATCH /users/me`; dismissible dashboard setup checklist.
 - **Automated DB backups** — nightly `pg_dump` → R2 via the `mizan-backup` Railway cron (`0 3 * * *`).
+- **P1 — Expense account picker labels** — Turkish name first, GL code in parentheses (`formatExpenseAccountLabel`); manual expense, correct expense, partner-fronted, FX spend, receipt review, day closeout.
 
 ---
 
 ## 🔨 Build queue (each = one slice)
 
-### P1 — Expense account picker: show names, not GL codes  *(small, ready)*
-**Why:** the manual-expense dropdown shows `5000 / 5200 / 5210…`; unreadable for non-accountants.
-
-**Cursor prompt:**
-```
-Make expense account pickers human-readable. Today frontend/src/components/forms/manual-expense-form.tsx renders options as `{a.code} — {a.name}` (code first). Change to lead with the account NAME, prefer the Turkish name, code in parentheses → e.g. "Kira Gideri (5000)".
-- Accounts have name_en and name_tr (backend app/core/chart_of_accounts). If the account listing the frontend uses returns a Turkish name, use it; if it only returns a single English `name`, add name_tr to the account read schema + the frontend ChartAccount type and use name_tr (fall back to name_en).
-- Apply the same name-first format to: correct-expense-form.tsx, expense-receipt-upload-form.tsx, partner-expense-fronted-form.tsx, fx-expense-spend-form.tsx.
-- Display-only: the submitted value (account id/code) is unchanged.
-- Add/adjust tests on label format. Commit: "feat(expenses): show account names (Turkish) instead of GL codes".
-```
+### ~~P1 — Expense account picker: show names, not GL codes~~ **DONE**
 
 ### P2 — Auto-categorize manual expenses (AI + learning)  *(larger; needs OpenAI key)*
 **Why:** owner types "rent" / "peynir" / "repair machinery" and the right expense account is chosen for them. Spelling variants/synonyms must resolve to ONE account.

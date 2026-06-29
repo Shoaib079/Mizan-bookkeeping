@@ -22,7 +22,7 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useToast } from "@/lib/toast";
 
-import { filterExpenseAccounts, type ChartAccount } from "@/lib/expense-accounts";
+import { filterExpenseAccounts, formatExpenseAccountLabel, type ChartAccount } from "@/lib/expense-accounts";
 
 type MoneyAccount = { id: string; name: string; account_kind?: string };
 
@@ -394,7 +394,7 @@ export function DayCloseoutForm() {
                 >
                   {expenseAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.code} — {a.name}
+                      {formatExpenseAccountLabel(a)}
                     </option>
                   ))}
                 </Select>

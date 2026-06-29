@@ -15,9 +15,12 @@ import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import { parseTrDate } from "@/lib/money";
+import {
+  filterExpenseAccounts,
+  formatExpenseAccountLabel,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 import { todayTrDate } from "@/lib/dates";
-
-type ChartAccount = { id: string; code: string; name_en: string };
 
 type Props = {
   open: boolean;
@@ -54,7 +57,7 @@ export function FxExpenseSpendForm({
     const res = await apiFetch<{ items: ChartAccount[] }>(
       `/entities/${entityId}/chart-of-accounts?limit=200`,
     );
-    const expenses = res.items.filter((a) => a.code.startsWith("5"));
+    const expenses = filterExpenseAccounts(res.items);
     setExpenseAccounts(expenses);
     if (expenses[0]) setExpenseAccountId(expenses[0].id);
   }, [entityId]);
@@ -132,7 +135,7 @@ export function FxExpenseSpendForm({
             onValueChange={setExpenseAccountId}
             options={expenseAccounts.map((a) => ({
               value: a.id,
-              label: `${a.code} — ${a.name_en}`,
+              label: formatExpenseAccountLabel(a),
             }))}
             placeholder="Expense account…"
           />

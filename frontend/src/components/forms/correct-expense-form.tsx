@@ -18,6 +18,7 @@ import { useToast } from "@/lib/toast";
 
 import {
   filterExpenseAccounts,
+  formatExpenseAccountLabel,
   type ChartAccount,
 } from "@/lib/expense-accounts";
 
@@ -212,7 +213,7 @@ export function CorrectExpenseForm({
           >
             {expenseAccounts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.code} — {a.name}
+                {formatExpenseAccountLabel(a)}
               </option>
             ))}
           </Select>

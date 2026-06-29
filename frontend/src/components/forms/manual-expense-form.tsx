@@ -19,6 +19,7 @@ import { useEntity } from "@/lib/entity-context";
 import {
   filterExpenseAccounts,
   findExpenseAccountByCode,
+  formatExpenseAccountLabel,
   type ChartAccount,
 } from "@/lib/expense-accounts";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
@@ -355,7 +356,7 @@ export function ManualExpenseForm({
           >
             {expenseAccounts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.code} — {a.name}
+                {formatExpenseAccountLabel(a)}
               </option>
             ))}
           </Select>

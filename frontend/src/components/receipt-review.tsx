@@ -10,7 +10,11 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { filterExpenseAccounts, type ChartAccount } from "@/lib/expense-accounts";
+import {
+  filterExpenseAccounts,
+  formatExpenseAccountLabel,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 import { apiFetch, documentUrl } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
@@ -313,7 +317,7 @@ export function ReceiptReview({ intakeId }: Props) {
                   >
                     {expenseAccounts.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.code} — {a.name}
+                        {formatExpenseAccountLabel(a)}
                       </option>
                     ))}
                   </Select>
