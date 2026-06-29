@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | — (Fix D + Feature E committed)                                                                              |
-| **Last completed slice** | Fix D — dismissible dashboard checklist; Feature E — first-run onboarding popup (name, business, legal name) |
-| **Last commit/tag**      | feat(onboarding): first-run setup popup; dismissible dashboard checklist                                     |
-| **Next up**              | **Phase 12 production go-live** (migrations `052`–`056`, first real restaurant walkthrough)                  |
+| **Active slice**         | — (production LIVE in staging-mode; post-launch fixes shipped)                                               |
+| **Last completed slice** | Production go-live (Neon + Railway + Netlify + Clerk) + open self-signup + nightly R2 backups + cold-load auth fix |
+| **Last commit/tag**      | `pg_dump 18` in image / nightly backups working                                                              |
+| **Next up**              | See **`POST_LAUNCH_PLAN.md`** — build queue (P1 expense names · P2 AI auto-categorize · P3 uploads backup · P5 delete-company · P6 full production)         |
 
 
 ### Next plan (pre-launch, owner-driven)
