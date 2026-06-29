@@ -47,6 +47,7 @@ from app.features.expenses.models import (
     ExpenseEntry,
     ExpenseEntryStatus,
     ExpenseItem,
+    ExpenseItemAlias,
     ExpenseReceiptIntakeStatus,
 )
 from app.features.expenses.schema import (
@@ -174,6 +175,7 @@ def _to_item_read(item: ExpenseItem) -> ExpenseItemRead:
         id=item.id,
         entity_id=item.entity_id,
         canonical_name=item.canonical_name,
+        default_expense_account_id=item.default_expense_account_id,
         is_active=item.is_active,
         created_at=item.created_at,
     )
@@ -258,11 +260,24 @@ def list_expense_items(
         filters = []
         if not include_inactive:
             filters.append(ExpenseItem.is_active.is_(True))
-        search = normalized_text_search_filter(q, ExpenseItem.canonical_name_normalized)
-        if search is None and q:
-            search = text_search_filter(q, ExpenseItem.canonical_name)
-        if search is not None:
-            filters.append(search)
+        if q and q.strip():
+            normalized = normalize_expense_item_text(q)
+            search_clauses = []
+            canonical_search = normalized_text_search_filter(
+                q, ExpenseItem.canonical_name_normalized
+            )
+            if canonical_search is not None:
+                search_clauses.append(canonical_search)
+            text_search = text_search_filter(q, ExpenseItem.canonical_name)
+            if text_search is not None:
+                search_clauses.append(text_search)
+            if normalized:
+                alias_match = select(ExpenseItemAlias.expense_item_id).where(
+                    ExpenseItemAlias.alias_normalized.contains(normalized)
+                )
+                search_clauses.append(ExpenseItem.id.in_(alias_match))
+            if search_clauses:
+                filters.append(or_(*search_clauses))
         stmt = select(ExpenseItem).where(*filters).order_by(ExpenseItem.canonical_name)
         items, total = fetch_paginated(session, stmt, params)
         return [_to_item_read(item) for item in items], total

@@ -18,6 +18,7 @@ class ExpenseItemRead(BaseModel):
     id: uuid.UUID
     entity_id: uuid.UUID
     canonical_name: str
+    default_expense_account_id: uuid.UUID | None = None
     is_active: bool
     created_at: datetime
 

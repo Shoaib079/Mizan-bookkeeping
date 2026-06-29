@@ -445,3 +445,90 @@ def test_cross_entity_rls_isolation(
     list_b = client.get(f"/entities/{restaurant_b.id}/expenses")
     assert list_b.status_code == 200
     assert list_b.json()["items"] == [] and list_b.json()["total"] == 0
+
+
+def test_list_expense_items_matches_alias_spelling(
+    client: TestClient, expense_setup
+) -> None:
+    entity_id = expense_setup["entity_id"]
+    rent_id = expense_setup["accounts"][RENT_EXPENSE_CODE]
+    base_payload = {
+        "expense_date": "2026-06-02",
+        "amount_kurus": 10_000,
+        "expense_account_id": str(rent_id),
+        "money_account_id": str(expense_setup["drawer"].id),
+        "has_source_document": False,
+        "description": "Gıda",
+        "actor_id": str(ACTOR_ID),
+    }
+
+    first = client.post(
+        f"/entities/{entity_id}/expenses",
+        json={**base_payload, "written_item_description": "peynir"},
+    )
+    assert first.status_code == 201
+    first_item_id = first.json()["expense_item_id"]
+
+    linked = client.post(
+        f"/entities/{entity_id}/expenses",
+        json={
+            **base_payload,
+            "written_item_description": "peyir",
+            "confirm_expense_item_id": first_item_id,
+        },
+    )
+    assert linked.status_code == 201
+
+    found = client.get(
+        f"/entities/{entity_id}/expense-items",
+        params={"q": "peyir", "limit": 8},
+    )
+    assert found.status_code == 200
+    ids = {item["id"] for item in found.json()["items"]}
+    assert str(first_item_id) in ids
+
+
+def test_confirm_expense_item_id_reuses_item_without_duplicate(
+    db_session, client: TestClient, expense_setup
+) -> None:
+    entity_id = expense_setup["entity_id"]
+    rent_id = expense_setup["accounts"][RENT_EXPENSE_CODE]
+    base_payload = {
+        "expense_date": "2026-06-02",
+        "amount_kurus": 10_000,
+        "expense_account_id": str(rent_id),
+        "money_account_id": str(expense_setup["drawer"].id),
+        "has_source_document": False,
+        "description": "Gıda",
+        "actor_id": str(ACTOR_ID),
+    }
+
+    first = client.post(
+        f"/entities/{entity_id}/expenses",
+        json={**base_payload, "written_item_description": "peynir"},
+    )
+    first_item_id = first.json()["expense_item_id"]
+
+    second = client.post(
+        f"/entities/{entity_id}/expenses",
+        json={
+            **base_payload,
+            "written_item_description": "peynir",
+            "confirm_expense_item_id": first_item_id,
+        },
+    )
+    assert second.status_code == 201
+    assert second.json()["expense_item_id"] == first_item_id
+
+    third = client.post(
+        f"/entities/{entity_id}/expenses",
+        json={**base_payload, "written_item_description": "yeni ürün"},
+    )
+    assert third.status_code == 201
+    assert third.json()["expense_item_id"] != first_item_id
+
+    with entity_context(db_session, entity_id):
+        active_items = db_session.scalars(
+            select(ExpenseItem).where(ExpenseItem.is_active.is_(True))
+        ).all()
+        assert len(active_items) == 2

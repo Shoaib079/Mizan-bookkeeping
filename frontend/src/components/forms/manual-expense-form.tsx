@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
+import { ExpenseItemTypeahead } from "@/components/forms/expense-item-typeahead";
 import { type PartnerRow } from "@/components/forms/partner-form";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
@@ -28,6 +29,10 @@ import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
 import { useRegisterUnsaved } from "@/lib/unsaved-work";
+import {
+  clearConfirmItemOnTextEdit,
+  type ExpenseItemSearchResult,
+} from "@/lib/expense-item-search";
 import {
   isSuggestedAccountActive,
   shouldApplyExpenseAccountSuggestion,
@@ -83,6 +88,10 @@ export function ManualExpenseForm({
   const [partnerId, setPartnerId] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("cash");
   const [itemName, setItemName] = useState("");
+  const [confirmExpenseItemId, setConfirmExpenseItemId] = useState<string | null>(
+    null,
+  );
+  const pickedItemCanonicalRef = useRef<string | null>(null);
   const [amountText, setAmountText] = useState("");
   const [dateText, setDateText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -183,6 +192,8 @@ export function ManualExpenseForm({
     }
     setDateText(todayTrDate());
     setItemName("");
+    setConfirmExpenseItemId(null);
+    pickedItemCanonicalRef.current = null;
     setAmountText("");
     setPaymentMode("cash");
     setPartnerId("");
@@ -245,6 +256,31 @@ export function ManualExpenseForm({
     setBaseline(formDraft);
   }, [open, optionsLoaded, baseline, resumeDraft, formDraft]);
 
+  function handleItemNameChange(next: string) {
+    if (
+      clearConfirmItemOnTextEdit(
+        confirmExpenseItemId,
+        pickedItemCanonicalRef.current,
+        next,
+      )
+    ) {
+      setConfirmExpenseItemId(null);
+      pickedItemCanonicalRef.current = null;
+    }
+    setItemName(next);
+  }
+
+  function handlePickExpenseItem(item: ExpenseItemSearchResult) {
+    setItemName(item.canonical_name);
+    setConfirmExpenseItemId(item.id);
+    pickedItemCanonicalRef.current = item.canonical_name;
+    if (item.default_expense_account_id) {
+      setExpenseAccountId(item.default_expense_account_id);
+      setSuggestedAccountId(null);
+      setSuggestedSource(null);
+    }
+  }
+
   function applyDraft(draft: ExpenseFormDraft) {
     setExpenseAccountId(draft.expenseAccountId);
     setMoneyAccountId(draft.moneyAccountId);
@@ -270,6 +306,8 @@ export function ManualExpenseForm({
   function handleDiscard() {
     clearDraft();
     setItemName("");
+    setConfirmExpenseItemId(null);
+    pickedItemCanonicalRef.current = null;
     setAmountText("");
     setDateText(todayTrDate());
     setPaymentMode("cash");
@@ -340,6 +378,7 @@ export function ManualExpenseForm({
             has_source_document: false,
             description,
             actor_id: actorId,
+            confirm_expense_item_id: confirmExpenseItemId,
           }),
         });
       }
@@ -353,6 +392,8 @@ export function ManualExpenseForm({
           : "Expense saved",
       );
       setItemName("");
+      setConfirmExpenseItemId(null);
+      pickedItemCanonicalRef.current = null;
       setAmountText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -386,15 +427,13 @@ export function ManualExpenseForm({
             required
           />
         </div>
-        <div>
-          <Label htmlFor="exp-item">Item name</Label>
-          <Input
-            id="exp-item"
-            placeholder="peynir"
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-          />
-        </div>
+        <ExpenseItemTypeahead
+          entityId={entityId}
+          value={itemName}
+          onValueChange={handleItemNameChange}
+          onPickItem={handlePickExpenseItem}
+          disabled={submitting}
+        />
         <div>
           <Label htmlFor="exp-amount">Amount (TRY)</Label>
           <MoneyInput
