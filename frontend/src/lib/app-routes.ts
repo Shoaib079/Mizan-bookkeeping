@@ -59,17 +59,17 @@ export const appRoutes: AppRoute[] = [
     group: "Overview",
   },
   {
-    href: "/balances",
-    label: "Balances",
-    keywords: "payables receivables staff partners cash bank",
-    icon: Scale,
-    group: "Overview",
-  },
-  {
     href: "/review",
     label: "Review",
     keywords: "needs review bank statements receipts invoices sales delivery ledger",
     icon: ScanSearch,
+    group: "Overview",
+  },
+  {
+    href: "/balances",
+    label: "Balances",
+    keywords: "payables receivables staff partners cash bank",
+    icon: Scale,
     group: "Overview",
   },
   { href: "/sales", label: "Sales", icon: ShoppingBag, group: "Sales" },
@@ -281,11 +281,6 @@ export function filterNavItemsByEntitySettings(
 
 const SIDEBAR_GROUP_DEFS = [
   { label: "Overview", icon: LayoutDashboard },
-  { label: "Sales", icon: ShoppingBag },
-  { label: "Expenses & suppliers", icon: Wallet },
-  { label: "People", icon: UsersRound },
-  { label: "Customers", icon: UserCircle },
-  { label: "Cash & bank", icon: Building2 },
   { label: "Reports", icon: BarChart3 },
   { label: "Set up", icon: Settings },
 ] as const;

@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | UX6 — Collapse sidebar (next)                                                                       |
-| **Last completed slice** | UX5 — Set up hub (`v0.73.4-ux5-setup-hub`)                                            |
-| **Last commit/tag**      | `v0.73.4-ux5-setup-hub` — feat(ux): Set up hub              |
-| **Next up**              | UX6 collapse sidebar; feature gaps FP/FS; then P3/P5/P6                    |
+| **Active slice**         | UX reorg complete — feature gaps FP/FS next                                                                       |
+| **Last completed slice** | UX6 — Collapse sidebar (`v0.73.5-ux6-collapse-sidebar`)                                            |
+| **Last commit/tag**      | `v0.73.5-ux6-collapse-sidebar` — feat(ux): collapse sidebar to intents              |
+| **Next up**              | Feature gaps FP/FS; then P3/P5/P6                    |
 
 
 ### Next plan (pre-launch, owner-driven)

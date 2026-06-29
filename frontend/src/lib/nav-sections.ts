@@ -1,10 +1,22 @@
 /** Tab sections + route reachability registry (IA audit v0.71.9). */
 
 import { NEW_COMMAND_QUICK_ACTIONS } from "@/lib/record-actions";
+import {
+  LEGACY_UPLOADS_REDIRECT,
+  LEGACY_UPLOADS_REDIRECTS,
+  pathnameMatchesBalancesIntent,
+  pathnameMatchesRecordIntent,
+} from "@/lib/intent-nav";
 import { LEGACY_REVIEW_REDIRECTS } from "@/lib/review-routes";
 import { LEGACY_SETUP_REDIRECTS } from "@/lib/setup-routes";
 
-export { NEW_COMMAND_QUICK_ACTIONS, LEGACY_REVIEW_REDIRECTS, LEGACY_SETUP_REDIRECTS };
+export {
+  NEW_COMMAND_QUICK_ACTIONS,
+  LEGACY_REVIEW_REDIRECTS,
+  LEGACY_SETUP_REDIRECTS,
+  LEGACY_UPLOADS_REDIRECT,
+  LEGACY_UPLOADS_REDIRECTS,
+};
 
 export type NavTab = {
   href: string;
@@ -241,6 +253,15 @@ export const NAV_SECTIONS: NavSection[] = [
 
 /** Routes registered in appRoutes but hidden from sidebar (reachable via tabs/cards). */
 export const SIDEBAR_HIDDEN_HREFS = new Set([
+  "/sales",
+  "/delivery",
+  "/expenses",
+  "/uploads",
+  "/suppliers",
+  "/staff",
+  "/partners",
+  "/customers",
+  "/banking",
   "/close-day",
   "/cards",
   "/payables",
@@ -295,7 +316,8 @@ export type RouteEntryKind =
   | "reports-card"
   | "drill-down"
   | "auth"
-  | "redirect";
+  | "redirect"
+  | "page";
 
 /** Static page routes (45 app pages) — used by reachability guard test. */
 /** Old bookmark URLs that redirect into the Balances hub (UX2). */
@@ -329,14 +351,14 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/delivery/reports", kind: "tab" },
   { pattern: "/delivery/reports/[id]", kind: "drill-down" },
   { pattern: "/delivery/settlements", kind: "tab" },
-  { pattern: "/expenses", kind: "sidebar" },
-  { pattern: "/uploads", kind: "sidebar" },
+  { pattern: "/expenses", kind: "page" },
+  { pattern: "/uploads", kind: "redirect" },
   { pattern: "/suppliers", kind: "tab" },
   { pattern: "/suppliers/[id]", kind: "drill-down" },
   { pattern: "/payables", kind: "redirect" },
-  { pattern: "/staff", kind: "sidebar" },
+  { pattern: "/staff", kind: "page" },
   { pattern: "/staff/[id]", kind: "drill-down" },
-  { pattern: "/partners", kind: "sidebar" },
+  { pattern: "/partners", kind: "page" },
   { pattern: "/partners/[id]", kind: "drill-down" },
   { pattern: "/customers", kind: "tab" },
   { pattern: "/customers/[id]", kind: "drill-down" },
@@ -405,10 +427,16 @@ export function sidebarHrefActiveForPathname(
         pathname.startsWith("/accounting/")
       );
     }
+    if (section.id === "balances") {
+      return (
+        section.tabs.some((tab) => tab.match(pathname)) ||
+        pathnameMatchesBalancesIntent(pathname)
+      );
+    }
     return section.tabs.some((tab) => tab.match(pathname));
   }
   if (sidebarHref === "/") return pathname === "/";
-  if (sidebarHref === "/record") return pathname === "/record";
+  if (sidebarHref === "/record") return pathnameMatchesRecordIntent(pathname);
   if (sidebarHref === "/review") {
     return (
       pathname === "/review" ||
@@ -417,12 +445,7 @@ export function sidebarHrefActiveForPathname(
     );
   }
   if (sidebarHref === "/balances") {
-    return (
-      pathname === "/balances" ||
-      pathname.startsWith("/balances/") ||
-      pathname === "/payables" ||
-      pathname === "/receivables"
-    );
+    return pathnameMatchesBalancesIntent(pathname);
   }
   if (sidebarHref === "/setup") {
     return (

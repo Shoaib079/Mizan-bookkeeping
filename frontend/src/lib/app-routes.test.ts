@@ -10,22 +10,14 @@ import {
 } from "@/lib/app-routes";
 import { NEW_COMMAND_QUICK_ACTIONS } from "@/lib/nav-sections";
 
-const EXPECTED_SIDEBAR_GROUPS = [
-  "Overview",
-  "Sales",
-  "Expenses & suppliers",
-  "People",
-  "Customers",
-  "Cash & bank",
-  "Reports",
-  "Set up",
-] as const;
+const EXPECTED_SIDEBAR_GROUPS = ["Overview", "Reports", "Set up"] as const;
 
 const NON_NEW_ROUTES = appRoutes.filter((route) => !route.label.startsWith("New:"));
 
 describe("navGroups", () => {
-  it("uses plain-language sidebar sections instead of Books", () => {
+  it("uses six-intent sidebar sections only", () => {
     expect(navGroups.map((group) => group.label)).toEqual([...EXPECTED_SIDEBAR_GROUPS]);
+    expect(navGroups.some((group) => group.label === "Sales")).toBe(false);
     expect(navGroups.some((group) => group.label === "Books")).toBe(false);
   });
 
@@ -40,48 +32,29 @@ describe("navGroups", () => {
     expect(setup?.items.map((item) => item.href)).toEqual(["/setup"]);
   });
 
-  it("adds Record under Overview", () => {
+  it("keeps hub intents under Overview in sidebar order", () => {
     const overview = navGroups.find((group) => group.label === "Overview");
     expect(overview?.items.map((item) => item.href)).toEqual([
       "/",
       "/record",
-      "/balances",
       "/review",
+      "/balances",
     ]);
   });
 
-  it("consolidates Sales to sidebar entry points only (tabs for sub-pages)", () => {
-    const sales = navGroups.find((group) => group.label === "Sales");
-    expect(sales?.items.map((item) => item.href)).toEqual(["/sales", "/delivery"]);
-  });
-
-  it("renames Uploads to Documents in the sidebar", () => {
-    const expenses = navGroups.find((group) => group.label === "Expenses & suppliers");
-    const documents = expenses?.items.find((item) => item.href === "/uploads");
-    expect(documents?.label).toBe("Documents");
-  });
-
-  it("hides tab-only and report-card routes from sidebar rows", () => {
+  it("hides collapsed domain routes from sidebar rows", () => {
     const sidebarHrefs = navGroups.flatMap((group) => group.items.map((item) => item.href));
-    expect(sidebarHrefs).not.toContain("/cards");
-    expect(sidebarHrefs).not.toContain("/close-day");
-    expect(sidebarHrefs).not.toContain("/payables");
-    expect(sidebarHrefs).not.toContain("/receivables");
-    expect(sidebarHrefs).not.toContain("/banking/transfers");
-    expect(sidebarHrefs).not.toContain("/banking/cash");
-    expect(sidebarHrefs).not.toContain("/reports/ledger");
-    expect(sidebarHrefs).not.toContain("/accounting/manual-journals");
+    expect(sidebarHrefs).not.toContain("/sales");
+    expect(sidebarHrefs).not.toContain("/expenses");
+    expect(sidebarHrefs).not.toContain("/uploads");
+    expect(sidebarHrefs).not.toContain("/suppliers");
+    expect(sidebarHrefs).not.toContain("/staff");
+    expect(sidebarHrefs).not.toContain("/banking");
+    expect(sidebarHrefs).not.toContain("/delivery");
     expect(sidebarHrefs).not.toContain("/setup/restaurant");
   });
 
-  it("assigns Cards under Sales in appRoutes (palette indexing)", () => {
-    const cards = appRoutes.find(
-      (route) => route.href === "/cards" && !route.label.startsWith("New:"),
-    );
-    expect(cards?.group).toBe("Sales");
-  });
-
-  it("keeps every non-New route in appRoutes", () => {
+  it("keeps every non-New route in appRoutes for palette indexing", () => {
     const hrefs = new Set(NON_NEW_ROUTES.map((route) => `${route.href}::${route.label}`));
     const expected = [
       "/",
@@ -178,26 +151,16 @@ describe("app shell header", () => {
     expect(source).not.toContain("actor-id");
   });
 
-  it("uses collapsible sidebar sections with pinned dashboard", async () => {
-    const shell = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/app-shell.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("renders six sidebar intents as direct links", async () => {
     const nav = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/layout/sidebar-nav.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(shell).toContain("<SidebarNav");
-    expect(nav).toContain("aria-expanded");
-    expect(nav).toContain("rotate-180");
-    expect(nav).toContain('item.href === "/"');
-    expect(nav).toMatch(/group\.icon/);
-    expect(nav).toContain("items.length === 1");
+    expect(nav).toContain('item.href !== "/"');
     expect(nav).toContain("NavRowLink");
+    expect(nav).not.toContain("aria-expanded");
   });
 });
 
@@ -278,35 +241,33 @@ describe("entry dialogs recording context", () => {
 
 describe("sidebarChildrenForNavItem", () => {
   it("returns no nested sidebar children (tabs and report cards instead)", () => {
-    expect(sidebarChildrenForNavItem("/delivery", { deliveryEnabled: true })).toEqual([]);
-    expect(sidebarChildrenForNavItem("/reports", { deliveryEnabled: false })).toEqual([]);
     expect(sidebarChildrenForNavItem("/setup", { deliveryEnabled: true })).toEqual([]);
+    expect(sidebarChildrenForNavItem("/reports", { deliveryEnabled: false })).toEqual([]);
   });
 });
 
-describe("tab routes expand sidebar parent groups", () => {
-  it("opens Sales when on /cards", () => {
-    const sales = navGroups
-      .find((group) => group.label === "Sales")
-      ?.items.find((item) => item.href === "/sales");
-    expect(sales).toBeDefined();
-    expect(isNavItemActive("/cards", sales!)).toBe(true);
+describe("intent sidebar highlighting", () => {
+  it("highlights Record when on legacy sales routes", () => {
+    const record = navGroups
+      .find((group) => group.label === "Overview")
+      ?.items.find((item) => item.href === "/record");
+    expect(record).toBeDefined();
+    expect(isNavItemActive("/sales", record!)).toBe(true);
   });
 
-  it("opens Cash & bank when on /banking/transfers", () => {
-    const banking = navGroups
-      .find((group) => group.label === "Cash & bank")
-      ?.items.find((item) => item.href === "/banking");
-    expect(banking).toBeDefined();
-    expect(isNavItemActive("/banking/transfers", banking!)).toBe(true);
+  it("highlights Balances when on legacy banking routes", () => {
+    const balances = navGroups
+      .find((group) => group.label === "Overview")
+      ?.items.find((item) => item.href === "/balances");
+    expect(balances).toBeDefined();
+    expect(isNavItemActive("/banking/transfers", balances!)).toBe(true);
   });
 });
 
 describe("delivery gating", () => {
-  it("hides delivery sidebar row when module is off", () => {
-    const sales = navGroups.find((group) => group.label === "Sales");
-    const items = filterNavItemsByEntitySettings(sales!.items, { deliveryEnabled: false });
-    expect(items.map((item) => item.href)).toEqual(["/sales"]);
+  it("still indexes delivery palette routes when module is on", () => {
+    const routes = filterRoutesByEntitySettings(appRoutes, { deliveryEnabled: true });
+    expect(routes.some((route) => route.href.startsWith("/delivery"))).toBe(true);
   });
 
   it("removes delivery palette routes when module is off", () => {
@@ -314,14 +275,22 @@ describe("delivery gating", () => {
     expect(routes.some((route) => route.href.startsWith("/delivery"))).toBe(false);
   });
 
-  it("legacy settings index redirects to setup restaurant tab", async () => {
+  it("legacy uploads page redirects to Record", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(new URL("../app/uploads/page.tsx", import.meta.url), "utf8"),
+    );
+    expect(source).toContain('redirect("/record")');
+  });
+
+  it("sales list links uploads to Record instead of inline modal", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
-        new URL("../app/settings/page.tsx", import.meta.url),
+        new URL("../app/(sales)/sales/page.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain('redirect("/setup/restaurant")');
+    expect(source).toContain('href="/record"');
+    expect(source).not.toContain("PosSummaryUploadForm");
   });
 });
 

@@ -10,6 +10,7 @@ import {
   LEGACY_BALANCE_REDIRECTS,
   LEGACY_REVIEW_REDIRECTS,
   LEGACY_SETUP_REDIRECTS,
+  LEGACY_UPLOADS_REDIRECTS,
   NAV_SECTIONS,
   NEW_COMMAND_QUICK_ACTIONS,
   REGISTERED_PAGE_ROUTES,
@@ -114,12 +115,16 @@ describe("route reachability guard", () => {
         expect(
           LEGACY_BALANCE_REDIRECTS[route.pattern] ??
             LEGACY_REVIEW_REDIRECTS[route.pattern] ??
-            LEGACY_SETUP_REDIRECTS[route.pattern],
+            LEGACY_SETUP_REDIRECTS[route.pattern] ??
+            LEGACY_UPLOADS_REDIRECTS[route.pattern],
         ).toBeDefined();
         continue;
       }
       if (route.kind === "drill-down") {
         expect(entryPointForStaticRoute(route.pattern, settingsOn)).toBeNull();
+        continue;
+      }
+      if (route.kind === "page") {
         continue;
       }
       if (route.kind === "sidebar") {
@@ -145,20 +150,18 @@ describe("route reachability guard", () => {
     for (const href of TAB_ONLY_HREFS) {
       expect(sidebar.has(href)).toBe(false);
     }
-    expect(sidebar.has("/sales")).toBe(true);
+    expect(sidebar.has("/sales")).toBe(false);
     expect(collectTabHrefs(settingsOn).has("/sales")).toBe(true);
   });
 
-  it("hides delivery entry points when the module is off", () => {
-    const sidebar = collectSidebarEntryHrefs(settingsOff);
+  it("hides delivery tabs when the module is off", () => {
     const tabs = collectTabHrefs(settingsOff);
-    expect(sidebar.has("/delivery")).toBe(false);
     expect([...tabs].some((href) => href.startsWith("/delivery"))).toBe(false);
   });
 
-  it("keeps delivery routes reachable when the module is on", () => {
+  it("keeps delivery tab routes reachable when the module is on", () => {
     expect(collectTabHrefs(settingsOn).has("/delivery")).toBe(true);
-    expect(collectSidebarEntryHrefs(settingsOn).has("/delivery")).toBe(true);
+    expect(collectSidebarEntryHrefs(settingsOn).has("/delivery")).toBe(false);
   });
 
   it("marks drill-down routes separately from tabs and sidebar rows", () => {
@@ -181,21 +184,17 @@ describe("SIDEBAR_HIDDEN_HREFS", () => {
 });
 
 describe("tab + sidebar highlighting", () => {
-  it("highlights Sales sidebar row and the Card clearing tab on /cards", () => {
-    const sales = navGroups
-      .find((group) => group.label === "Sales")
-      ?.items.find((item) => item.href === "/sales");
-    expect(sales).toBeDefined();
-    expect(isNavItemActive("/cards", sales!)).toBe(true);
-    expect(sidebarHrefActiveForPathname("/sales", "/cards")).toBe(true);
+  it("highlights Record sidebar row and the Card clearing tab on /cards", () => {
+    const record = navGroups
+      .find((group) => group.label === "Overview")
+      ?.items.find((item) => item.href === "/record");
+    expect(record).toBeDefined();
+    expect(isNavItemActive("/cards", record!)).toBe(true);
+    expect(sidebarHrefActiveForPathname("/record", "/cards")).toBe(true);
 
     const section = navSectionForPathname("/cards");
     expect(section?.id).toBe("sales");
-    const activeTab = section?.tabs.find((tab) => tab.match("/cards"));
-    expect(activeTab?.href).toBe("/cards");
-    expect(section?.tabs.find((tab) => tab.href === "/sales")?.match("/cards")).toBe(
-      false,
-    );
+    expect(section?.tabs.find((tab) => tab.match("/cards"))?.href).toBe("/cards");
   });
 
   it("highlights Set up sidebar row on the hub and on tab pages", () => {

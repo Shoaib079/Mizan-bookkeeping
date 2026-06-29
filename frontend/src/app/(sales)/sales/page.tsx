@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
-import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -29,7 +28,6 @@ export default function SalesPage() {
     "/pos/daily-summaries",
     entityId,
   );
-  const [uploadOpen, setUploadOpen] = useState(false);
   const [correctSummary, setCorrectSummary] = useState<PosDailySummary | null>(
     null,
   );
@@ -42,13 +40,14 @@ export default function SalesPage() {
             ? `${total} daily summar${total === 1 ? "y" : "ies"}`
             : "Select a restaurant in the sidebar"}
         </p>
-        <Button
-          type="button"
-          disabled={!entityId}
-          onClick={() => setUploadOpen(true)}
+        <Link
+          href="/record"
+          className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+          aria-disabled={!entityId}
+          tabIndex={entityId ? 0 : -1}
         >
-          Upload POS photo
-        </Button>
+          Upload via Record
+        </Link>
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
@@ -128,10 +127,6 @@ export default function SalesPage() {
         </DataTable>
       )}
 
-      <PosSummaryUploadForm
-        open={uploadOpen}
-        onClose={() => setUploadOpen(false)}
-      />
       <CorrectDailySalesForm
         open={correctSummary !== null}
         summary={correctSummary}

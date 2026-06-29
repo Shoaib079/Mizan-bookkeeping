@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
 import {
   CorrectSupplierPaymentForm,
   type CorrectableSupplierPaymentRow,
@@ -76,7 +75,6 @@ export default function SupplierDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [uploadOpen, setUploadOpen] = useState(false);
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableSupplierPaymentRow | null>(null);
   const [correctInvoice, setCorrectInvoice] =
@@ -93,7 +91,6 @@ export default function SupplierDetailPage() {
     setError(null);
     setEditOpen(false);
     setPaymentOpen(false);
-    setUploadOpen(false);
     setCorrectPayment(null);
     setCorrectInvoice(null);
     setExpandedDraftId(null);
@@ -179,9 +176,12 @@ export default function SupplierDetailPage() {
               <Button variant="secondary" onClick={() => setEditOpen(true)}>
                 Edit
               </Button>
-              <Button variant="secondary" onClick={() => setUploadOpen(true)}>
-                Upload e-Fatura
-              </Button>
+              <Link
+                href="/record"
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted"
+              >
+                Upload via Record
+              </Link>
               <Button onClick={() => setPaymentOpen(true)}>
                 Record payment
               </Button>
@@ -342,11 +342,6 @@ export default function SupplierDetailPage() {
         balanceKurus={ledger?.balance_kurus}
         onClose={() => setPaymentOpen(false)}
         onPaid={() => void reload()}
-      />
-      <EfaturaUploadForm
-        open={uploadOpen}
-        supplierId={supplierId}
-        onClose={() => setUploadOpen(false)}
       />
       <CorrectSupplierPaymentForm
         open={correctPayment !== null}

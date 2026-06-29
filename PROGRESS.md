@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | UX6 — Collapse sidebar (next) |
-| **Last completed slice** | UX5 — Set up hub (`v0.73.4-ux5-setup-hub`) |
-| **Last tag** | `v0.73.4-ux5-setup-hub` |
-| **Next up** | UX6 collapse sidebar |
+| **Active slice** | Feature gaps FP/FS (next) |
+| **Last completed slice** | UX6 — Collapse sidebar (`v0.73.5-ux6-collapse-sidebar`) |
+| **Last tag** | `v0.73.5-ux6-collapse-sidebar` |
+| **Next up** | Partner advance (FP) / salary advance clear (FS) |
 
 ## Owner blockers (12.5)
 

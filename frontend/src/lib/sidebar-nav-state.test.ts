@@ -34,36 +34,15 @@ function stubBrowserStorage() {
 }
 
 describe("sidebarGroupStateForPathname", () => {
-  it("opens only the group containing the current route", () => {
-    expect(sidebarGroupStateForPathname("/sales", SETTINGS)).toEqual({ Sales: true });
-    expect(openSidebarGroupCount(sidebarGroupStateForPathname("/sales", SETTINGS))).toBe(
-      1,
-    );
-  });
-
-  it("returns empty on Dashboard (pinned outside groups)", () => {
-    expect(sidebarGroupStateForPathname("/", SETTINGS)).toEqual({});
-  });
-
-  it("returns empty for direct-link groups (single visible item)", () => {
-    expect(sidebarGroupStateForPathname("/banking", SETTINGS)).toEqual({});
-    expect(sidebarGroupStateForPathname("/customers", SETTINGS)).toEqual({});
+  it("returns empty for direct-link intents (UX6 collapsed sidebar)", () => {
+    expect(sidebarGroupStateForPathname("/sales", SETTINGS)).toEqual({});
+    expect(sidebarGroupStateForPathname("/record", SETTINGS)).toEqual({});
     expect(sidebarGroupStateForPathname("/reports", SETTINGS)).toEqual({});
     expect(sidebarGroupStateForPathname("/setup", SETTINGS)).toEqual({});
   });
 
-  it("returns empty for Sales when delivery is off (direct link)", () => {
-    expect(sidebarGroupStateForPathname("/sales", { deliveryEnabled: false })).toEqual({});
-  });
-
-  it("replaces entirely on route change — never merges prior groups", () => {
-    const sales = sidebarGroupStateForPathname("/sales", SETTINGS);
-    const expenses = sidebarGroupStateForPathname("/expenses", SETTINGS);
-    expect(sales).toEqual({ Sales: true });
-    expect(expenses).toEqual({ "Expenses & suppliers": true });
-    expect(openSidebarGroupCount({ ...sales, ...expenses })).toBe(2);
-    expect(openSidebarGroupCount(expenses)).toBe(1);
-    expect(expenses.Sales).toBeUndefined();
+  it("returns empty on Dashboard (pinned outside groups)", () => {
+    expect(sidebarGroupStateForPathname("/", SETTINGS)).toEqual({});
   });
 });
 
@@ -72,67 +51,29 @@ describe("resolveSidebarGroupState", () => {
     stubBrowserStorage();
   });
 
-  it("auto-expands only the group containing the current route", () => {
-    const state = resolveSidebarGroupState("/sales", SETTINGS, {});
-    expect(state).toEqual({ Sales: true });
-    expect(openSidebarGroupCount(state)).toBe(1);
-  });
-
-  it("on Dashboard restores at most one persisted accordion group", () => {
-    const state = resolveSidebarGroupState("/", SETTINGS, { People: true });
-    expect(state).toEqual({ People: true });
-    expect(openSidebarGroupCount(state)).toBe(1);
-  });
-
-  it("ignores persisted state for direct-link groups on Dashboard", () => {
+  it("returns empty when all sidebar groups are direct links", () => {
+    expect(resolveSidebarGroupState("/sales", SETTINGS, {})).toEqual({});
     expect(resolveSidebarGroupState("/", SETTINGS, { Reports: true })).toEqual({});
-    expect(resolveSidebarGroupState("/", SETTINGS, { Customers: true })).toEqual({});
   });
 });
 
 describe("toggleSidebarGroupState", () => {
-  it("opens only the clicked group and closes others", () => {
-    const next = toggleSidebarGroupState({ Sales: true }, "Cash & bank");
-    expect(next).toEqual({ "Cash & bank": true });
+  it("still enforces single open group for any future accordion", () => {
+    const next = toggleSidebarGroupState({ Reports: true }, "Set up");
+    expect(next).toEqual({ "Set up": true });
     expect(openSidebarGroupCount(next)).toBe(1);
-  });
-
-  it("closes the section when clicking its open header", () => {
-    expect(toggleSidebarGroupState({ Sales: true }, "Sales")).toEqual({});
-  });
-
-  it("never leaves two groups open", () => {
-    let state = toggleSidebarGroupState({}, "Sales");
-    state = toggleSidebarGroupState(state, "Cash & bank");
-    expect(state).toEqual({ "Cash & bank": true });
-    expect(state.Sales).toBeUndefined();
-    expect(openSidebarGroupCount(state)).toBe(1);
   });
 });
 
 describe("navGroupContainsPathname", () => {
-  it("matches delivery reports under Sales", () => {
-    expect(navGroupContainsPathname("Sales", "/delivery/reports", SETTINGS)).toBe(
+  it("matches legacy domain routes to collapsed intents", () => {
+    expect(navGroupContainsPathname("Overview", "/sales", SETTINGS)).toBe(true);
+    expect(navGroupContainsPathname("Overview", "/banking/cash", SETTINGS)).toBe(
       true,
     );
-  });
-
-  it("matches tab routes under their parent sidebar group", () => {
-    expect(navGroupContainsPathname("Sales", "/cards", SETTINGS)).toBe(true);
-    expect(navGroupContainsPathname("Cash & bank", "/banking/cash", SETTINGS)).toBe(true);
-    expect(navGroupContainsPathname("Overview", "/balances/suppliers", SETTINGS)).toBe(
-      true,
-    );
-    expect(navGroupContainsPathname("Overview", "/payables", SETTINGS)).toBe(true);
     expect(navGroupContainsPathname("Set up", "/setup/members", SETTINGS)).toBe(
       true,
     );
-  });
-
-  it("matches general ledger under Overview via Review hub", () => {
-    expect(
-      navGroupContainsPathname("Overview", "/review/posted", SETTINGS),
-    ).toBe(true);
   });
 });
 
@@ -142,29 +83,22 @@ describe("localStorage persistence", () => {
   });
 
   it("persists a single open group", () => {
-    writeSidebarGroupState({ Sales: true });
-    expect(readSidebarGroupState()).toEqual({ Sales: true });
-    expect(window.localStorage.getItem(SIDEBAR_NAV_STORAGE_KEY)).toContain("Sales");
-    expect(openSidebarGroupCount(readSidebarGroupState())).toBe(1);
-  });
-
-  it("survives reload via read after write", () => {
-    writeSidebarGroupState({ People: true });
-    expect(readSidebarGroupState()).toEqual({ People: true });
+    writeSidebarGroupState({ Reports: true });
+    expect(readSidebarGroupState()).toEqual({ Reports: true });
+    expect(window.localStorage.getItem(SIDEBAR_NAV_STORAGE_KEY)).toContain("Reports");
   });
 });
 
 describe("collapsible group labels", () => {
-  it("excludes Overview (dashboard is pinned separately)", () => {
+  it("excludes Overview (dashboard + hub intents are direct links)", () => {
     expect(COLLAPSIBLE_NAV_GROUP_LABELS).not.toContain("Overview");
-    expect(COLLAPSIBLE_NAV_GROUP_LABELS).toContain("Sales");
-    expect(COLLAPSIBLE_NAV_GROUP_LABELS).toContain("Set up");
+    expect(COLLAPSIBLE_NAV_GROUP_LABELS).toEqual(["Reports", "Set up"]);
   });
 });
 
 describe("sidebarGroupRenderMode", () => {
-  it("Customers, Banking, Reports, and Set up are always direct links", () => {
-    for (const label of ["Customers", "Cash & bank", "Reports", "Set up"] as const) {
+  it("Reports and Set up are always direct links", () => {
+    for (const label of ["Reports", "Set up"] as const) {
       expect(sidebarGroupRenderMode(label, { deliveryEnabled: true })).toBe("link");
       expect(sidebarGroupRenderMode(label, { deliveryEnabled: false })).toBe("link");
     }
