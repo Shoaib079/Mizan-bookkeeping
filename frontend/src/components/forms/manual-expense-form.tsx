@@ -194,6 +194,7 @@ export function ManualExpenseForm({
     setItemName("");
     setConfirmExpenseItemId(null);
     pickedItemCanonicalRef.current = null;
+    setExpenseAccountId("");
     setAmountText("");
     setPaymentMode("cash");
     setPartnerId("");
@@ -384,17 +385,31 @@ export function ManualExpenseForm({
       }
       submitIdempotency.completeSubmit();
       clearDraft();
-      setBaseline(null);
-      onClose();
       toast(
         paymentMode === "partner"
           ? "Partner expense recorded"
           : "Expense saved",
       );
+      // Keep the dialog open so the owner can add another expense; reset for a
+      // fresh entry and clear the category so it must be chosen again. The
+      // owner closes the dialog themselves.
       setItemName("");
       setConfirmExpenseItemId(null);
       pickedItemCanonicalRef.current = null;
       setAmountText("");
+      setExpenseAccountId("");
+      setSuggestedAccountId(null);
+      setSuggestedSource(null);
+      userPickedAccountRef.current = false;
+      setBaseline({
+        expenseAccountId: "",
+        moneyAccountId,
+        partnerId,
+        paymentMode,
+        itemName: "",
+        amountText: "",
+        dateText,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
