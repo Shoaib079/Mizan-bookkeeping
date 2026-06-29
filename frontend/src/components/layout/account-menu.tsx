@@ -35,10 +35,10 @@ import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 const LINK_ICONS: Record<string, typeof Settings> = {
-  "/settings/entity": Building2,
-  "/settings/opening-balances": Scale,
-  "/settings/members": Users,
-  "/settings/expense-items": Tags,
+  "/setup/restaurant": Building2,
+  "/setup/opening-balances": Scale,
+  "/setup/members": Users,
+  "/setup/expense-items": Tags,
 };
 
 type PendingAction =

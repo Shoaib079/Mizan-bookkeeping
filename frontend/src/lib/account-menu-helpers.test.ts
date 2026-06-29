@@ -28,10 +28,10 @@ describe("accountMenuAdminLinks", () => {
   it("shows all admin links for owners", () => {
     const links = accountMenuAdminLinks("owner");
     expect(links.map((link) => link.href)).toEqual([
-      "/settings/entity",
-      "/settings/opening-balances",
-      "/settings/members",
-      "/settings/expense-items",
+      "/setup/restaurant",
+      "/setup/opening-balances",
+      "/setup/members",
+      "/setup/expense-items",
     ]);
   });
 

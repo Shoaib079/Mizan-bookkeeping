@@ -2,8 +2,9 @@
 
 import { NEW_COMMAND_QUICK_ACTIONS } from "@/lib/record-actions";
 import { LEGACY_REVIEW_REDIRECTS } from "@/lib/review-routes";
+import { LEGACY_SETUP_REDIRECTS } from "@/lib/setup-routes";
 
-export { NEW_COMMAND_QUICK_ACTIONS, LEGACY_REVIEW_REDIRECTS };
+export { NEW_COMMAND_QUICK_ACTIONS, LEGACY_REVIEW_REDIRECTS, LEGACY_SETUP_REDIRECTS };
 
 export type NavTab = {
   href: string;
@@ -11,6 +12,8 @@ export type NavTab = {
   match: (pathname: string) => boolean;
   /** Hidden when delivery module is off for the entity. */
   requiresDelivery?: boolean;
+  /** Hidden when role lacks financial_reports:read. */
+  requiresFinancialReports?: boolean;
 };
 
 export type NavSectionId =
@@ -20,7 +23,7 @@ export type NavSectionId =
   | "customers"
   | "balances"
   | "review"
-  | "settings"
+  | "setup"
   | "delivery";
 
 export type NavSection = {
@@ -57,11 +60,6 @@ export const NAV_SECTIONS: NavSection[] = [
     sidebarHref: "/delivery",
     tabs: [
       { href: "/delivery", label: "Overview", match: (path) => path === "/delivery" },
-      {
-        href: "/delivery/platforms",
-        label: "Platforms",
-        match: (path) => path === "/delivery/platforms",
-      },
       {
         href: "/delivery/reports",
         label: "Reports",
@@ -192,28 +190,50 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: "settings",
-    sidebarHref: "/settings",
+    id: "setup",
+    sidebarHref: "/setup",
     tabs: [
       {
-        href: "/settings/entity",
+        href: "/setup/restaurant",
         label: "Restaurant & toggles",
-        match: (path) => path === "/settings/entity",
+        match: (path) => path === "/setup/restaurant",
       },
       {
-        href: "/settings/opening-balances",
+        href: "/setup/opening-balances",
         label: "Opening balances",
-        match: (path) => path === "/settings/opening-balances",
+        match: (path) => path === "/setup/opening-balances",
       },
       {
-        href: "/settings/members",
+        href: "/setup/members",
         label: "Members",
-        match: (path) => path === "/settings/members",
+        match: (path) => path === "/setup/members",
       },
       {
-        href: "/settings/expense-items",
+        href: "/setup/expense-items",
         label: "Expense items",
-        match: (path) => path === "/settings/expense-items",
+        match: (path) => path === "/setup/expense-items",
+      },
+      {
+        href: "/setup/delivery-platforms",
+        label: "Delivery platforms",
+        requiresDelivery: true,
+        match: (path) => path === "/setup/delivery-platforms",
+      },
+      {
+        href: "/setup/accounts",
+        label: "Bank & accounts",
+        match: (path) => path === "/setup/accounts",
+      },
+      {
+        href: "/setup/accountant",
+        label: "Accountant",
+        requiresFinancialReports: true,
+        match: (path) => path === "/setup/accountant",
+      },
+      {
+        href: "/setup/backups",
+        label: "Backups",
+        match: (path) => path === "/setup/backups",
       },
     ],
   },
@@ -236,15 +256,26 @@ export const SIDEBAR_HIDDEN_HREFS = new Set([
   "/review/invoices",
   "/review/delivery",
   "/review/posted",
+  "/setup/restaurant",
+  "/setup/opening-balances",
+  "/setup/members",
+  "/setup/expense-items",
+  "/setup/delivery-platforms",
+  "/setup/accounts",
+  "/setup/accountant",
+  "/setup/backups",
   "/banking/transfers",
   "/banking/cash",
-  "/settings/entity",
-  "/settings/opening-balances",
-  "/settings/members",
-  "/settings/expense-items",
+  "/setup/restaurant",
+  "/setup/opening-balances",
+  "/setup/members",
+  "/setup/expense-items",
+  "/setup/delivery-platforms",
+  "/setup/accounts",
+  "/setup/accountant",
+  "/setup/backups",
   "/reports/ledger",
   "/accounting/manual-journals",
-  "/delivery/platforms",
   "/delivery/reports",
   "/delivery/settlements",
 ]);
@@ -257,9 +288,6 @@ export const REPORTS_CARD_HREFS = [
   "/reports/delivery-sales",
   "/reports/period-comparison",
 ] as const;
-
-/** Registered report routes not shown on /reports landing (UX4); palette + deep links only until UX5. */
-export const REPORTS_PALETTE_ONLY_HREFS = ["/accounting/manual-journals"] as const;
 
 export type RouteEntryKind =
   | "sidebar"
@@ -297,7 +325,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/cards", kind: "tab" },
   { pattern: "/close-day", kind: "tab" },
   { pattern: "/delivery", kind: "tab" },
-  { pattern: "/delivery/platforms", kind: "tab" },
+  { pattern: "/delivery/platforms", kind: "redirect" },
   { pattern: "/delivery/reports", kind: "tab" },
   { pattern: "/delivery/reports/[id]", kind: "drill-down" },
   { pattern: "/delivery/settlements", kind: "tab" },
@@ -328,12 +356,21 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/reports/delivery-sales", kind: "reports-card" },
   { pattern: "/reports/period-comparison", kind: "reports-card" },
   { pattern: "/reports/ledger", kind: "redirect" },
-  { pattern: "/accounting/manual-journals", kind: "reports-card" },
-  { pattern: "/settings", kind: "sidebar" },
-  { pattern: "/settings/entity", kind: "tab" },
-  { pattern: "/settings/opening-balances", kind: "tab" },
-  { pattern: "/settings/members", kind: "tab" },
-  { pattern: "/settings/expense-items", kind: "tab" },
+  { pattern: "/accounting/manual-journals", kind: "redirect" },
+  { pattern: "/setup", kind: "sidebar" },
+  { pattern: "/setup/restaurant", kind: "tab" },
+  { pattern: "/setup/opening-balances", kind: "tab" },
+  { pattern: "/setup/members", kind: "tab" },
+  { pattern: "/setup/expense-items", kind: "tab" },
+  { pattern: "/setup/delivery-platforms", kind: "tab" },
+  { pattern: "/setup/accounts", kind: "tab" },
+  { pattern: "/setup/accountant", kind: "tab" },
+  { pattern: "/setup/backups", kind: "tab" },
+  { pattern: "/settings", kind: "redirect" },
+  { pattern: "/settings/entity", kind: "redirect" },
+  { pattern: "/settings/opening-balances", kind: "redirect" },
+  { pattern: "/settings/members", kind: "redirect" },
+  { pattern: "/settings/expense-items", kind: "redirect" },
   { pattern: "/review/receipts/[id]", kind: "drill-down" },
   { pattern: "/review/invoices/[id]", kind: "drill-down" },
   { pattern: "/sign-in/[[...sign-in]]", kind: "auth" },
@@ -359,6 +396,15 @@ export function sidebarHrefActiveForPathname(
   const section = NAV_SECTIONS.find((entry) => entry.sidebarHref === sidebarHref);
   if (section) {
     if (pathname === section.sidebarHref) return true;
+    if (section.id === "setup") {
+      return (
+        section.tabs.some((tab) => tab.match(pathname)) ||
+        pathname === "/settings" ||
+        pathname.startsWith("/settings/") ||
+        pathname === "/accounting/manual-journals" ||
+        pathname.startsWith("/accounting/")
+      );
+    }
     return section.tabs.some((tab) => tab.match(pathname));
   }
   if (sidebarHref === "/") return pathname === "/";
@@ -378,12 +424,18 @@ export function sidebarHrefActiveForPathname(
       pathname === "/receivables"
     );
   }
-  if (sidebarHref === "/reports") {
+  if (sidebarHref === "/setup") {
     return (
-      pathname === "/reports" ||
-      pathname.startsWith("/reports/") ||
+      pathname === "/setup" ||
+      pathname.startsWith("/setup/") ||
+      pathname === "/settings" ||
+      pathname.startsWith("/settings/") ||
+      pathname === "/accounting/manual-journals" ||
       pathname.startsWith("/accounting/")
     );
+  }
+  if (sidebarHref === "/reports") {
+    return pathname === "/reports" || pathname.startsWith("/reports/");
   }
   return pathname === sidebarHref || pathname.startsWith(`${sidebarHref}/`);
 }
@@ -393,7 +445,7 @@ export function pageTitleForPathname(pathname: string): string {
     return "Review delivery report";
   }
   const tab = NAV_SECTIONS.flatMap((s) => s.tabs).find((t) => t.match(pathname));
-  if (tab && tab.href !== "/settings" && tab.href !== "/delivery") {
+  if (tab && tab.href !== "/setup" && tab.href !== "/delivery") {
     return tab.label;
   }
   const titles: Record<string, string> = {
@@ -417,7 +469,15 @@ export function pageTitleForPathname(pathname: string): string {
     "/staff": "Staff",
     "/partners": "Partners",
     "/reports": "Reports",
-    "/settings": "Settings",
+    "/setup": "Set up",
+    "/setup/restaurant": "Set up",
+    "/setup/opening-balances": "Set up",
+    "/setup/members": "Set up",
+    "/setup/expense-items": "Set up",
+    "/setup/delivery-platforms": "Set up",
+    "/setup/accounts": "Set up",
+    "/setup/accountant": "Set up",
+    "/setup/backups": "Set up",
     "/delivery": "Delivery",
     "/sales": "Daily sales",
   };
@@ -433,6 +493,6 @@ export function pageTitleForPathname(pathname: string): string {
   if (pathname.startsWith("/review/receipts/")) return "Review expense receipt";
   if (pathname.startsWith("/review/invoices/")) return "Review supplier invoice";
   if (pathname.startsWith("/reports/")) return "Report";
-  if (pathname.startsWith("/accounting/")) return "Manual journals";
+  if (pathname.startsWith("/accounting/")) return "Accountant";
   return "Mizan";
 }

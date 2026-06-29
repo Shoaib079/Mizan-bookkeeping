@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function SettingsEntityRedirect() {
+export default function SetupIndexPage() {
   redirect("/setup/restaurant");
 }

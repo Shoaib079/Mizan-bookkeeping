@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useQuickActions } from "@/components/quick-actions";
 import type { NavSectionId } from "@/lib/nav-sections";
 import { navSectionById } from "@/lib/nav-sections";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 type SectionTabsProps = {
@@ -16,10 +17,13 @@ type SectionTabsProps = {
 export function SectionTabs({ sectionId, ariaLabel }: SectionTabsProps) {
   const pathname = usePathname();
   const { deliveryEnabled } = useQuickActions();
+  const { canReadFinancialReports } = useEntityAccess();
   const section = navSectionById(sectionId);
-  const tabs = section.tabs.filter(
-    (tab) => !tab.requiresDelivery || deliveryEnabled,
-  );
+  const tabs = section.tabs.filter((tab) => {
+    if (tab.requiresDelivery && !deliveryEnabled) return false;
+    if (tab.requiresFinancialReports && !canReadFinancialReports) return false;
+    return true;
+  });
 
   return (
     <div

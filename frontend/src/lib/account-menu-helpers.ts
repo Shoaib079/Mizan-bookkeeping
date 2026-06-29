@@ -22,17 +22,17 @@ export function accountMenuAdminLinks(role: EntityRole): AccountMenuLink[] {
 
   if (shouldShowOnboardingChecklist(role)) {
     links.push(
-      { href: "/settings/entity", label: "Restaurant settings" },
-      { href: "/settings/opening-balances", label: "Opening balances" },
+      { href: "/setup/restaurant", label: "Restaurant settings" },
+      { href: "/setup/opening-balances", label: "Opening balances" },
     );
   }
 
   if (hasPermission(role, "admin:manage_members")) {
-    links.push({ href: "/settings/members", label: "Members & roles" });
+    links.push({ href: "/setup/members", label: "Members & roles" });
   }
 
   if (role === "owner") {
-    links.push({ href: "/settings/expense-items", label: "Expense items" });
+    links.push({ href: "/setup/expense-items", label: "Expense items" });
   }
 
   return links;

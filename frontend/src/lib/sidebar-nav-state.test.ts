@@ -49,7 +49,7 @@ describe("sidebarGroupStateForPathname", () => {
     expect(sidebarGroupStateForPathname("/banking", SETTINGS)).toEqual({});
     expect(sidebarGroupStateForPathname("/customers", SETTINGS)).toEqual({});
     expect(sidebarGroupStateForPathname("/reports", SETTINGS)).toEqual({});
-    expect(sidebarGroupStateForPathname("/settings", SETTINGS)).toEqual({});
+    expect(sidebarGroupStateForPathname("/setup", SETTINGS)).toEqual({});
   });
 
   it("returns empty for Sales when delivery is off (direct link)", () => {
@@ -111,8 +111,8 @@ describe("toggleSidebarGroupState", () => {
 });
 
 describe("navGroupContainsPathname", () => {
-  it("matches delivery under Sales", () => {
-    expect(navGroupContainsPathname("Sales", "/delivery/platforms", SETTINGS)).toBe(
+  it("matches delivery reports under Sales", () => {
+    expect(navGroupContainsPathname("Sales", "/delivery/reports", SETTINGS)).toBe(
       true,
     );
   });
@@ -124,7 +124,7 @@ describe("navGroupContainsPathname", () => {
       true,
     );
     expect(navGroupContainsPathname("Overview", "/payables", SETTINGS)).toBe(true);
-    expect(navGroupContainsPathname("Settings", "/settings/members", SETTINGS)).toBe(
+    expect(navGroupContainsPathname("Set up", "/setup/members", SETTINGS)).toBe(
       true,
     );
   });
@@ -158,13 +158,13 @@ describe("collapsible group labels", () => {
   it("excludes Overview (dashboard is pinned separately)", () => {
     expect(COLLAPSIBLE_NAV_GROUP_LABELS).not.toContain("Overview");
     expect(COLLAPSIBLE_NAV_GROUP_LABELS).toContain("Sales");
-    expect(COLLAPSIBLE_NAV_GROUP_LABELS).toContain("Settings");
+    expect(COLLAPSIBLE_NAV_GROUP_LABELS).toContain("Set up");
   });
 });
 
 describe("sidebarGroupRenderMode", () => {
-  it("Customers, Banking, Reports, and Settings are always direct links", () => {
-    for (const label of ["Customers", "Cash & bank", "Reports", "Settings"] as const) {
+  it("Customers, Banking, Reports, and Set up are always direct links", () => {
+    for (const label of ["Customers", "Cash & bank", "Reports", "Set up"] as const) {
       expect(sidebarGroupRenderMode(label, { deliveryEnabled: true })).toBe("link");
       expect(sidebarGroupRenderMode(label, { deliveryEnabled: false })).toBe("link");
     }

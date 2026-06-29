@@ -18,7 +18,7 @@ const EXPECTED_SIDEBAR_GROUPS = [
   "Customers",
   "Cash & bank",
   "Reports",
-  "Settings",
+  "Set up",
 ] as const;
 
 const NON_NEW_ROUTES = appRoutes.filter((route) => !route.label.startsWith("New:"));
@@ -35,9 +35,9 @@ describe("navGroups", () => {
     }
   });
 
-  it("shows a single Settings hub row instead of sub-page rows", () => {
-    const settings = navGroups.find((group) => group.label === "Settings");
-    expect(settings?.items.map((item) => item.href)).toEqual(["/settings"]);
+  it("shows a single Set up hub row instead of sub-page rows", () => {
+    const setup = navGroups.find((group) => group.label === "Set up");
+    expect(setup?.items.map((item) => item.href)).toEqual(["/setup"]);
   });
 
   it("adds Record under Overview", () => {
@@ -71,7 +71,7 @@ describe("navGroups", () => {
     expect(sidebarHrefs).not.toContain("/banking/cash");
     expect(sidebarHrefs).not.toContain("/reports/ledger");
     expect(sidebarHrefs).not.toContain("/accounting/manual-journals");
-    expect(sidebarHrefs).not.toContain("/settings/entity");
+    expect(sidebarHrefs).not.toContain("/setup/restaurant");
   });
 
   it("assigns Cards under Sales in appRoutes (palette indexing)", () => {
@@ -108,12 +108,12 @@ describe("navGroups", () => {
       "/banking/cash",
       "/reports",
       "/review/posted",
-      "/accounting/manual-journals",
-      "/settings",
-      "/settings/entity",
-      "/settings/opening-balances",
-      "/settings/members",
-      "/settings/expense-items",
+      "/setup",
+      "/setup/restaurant",
+      "/setup/opening-balances",
+      "/setup/members",
+      "/setup/expense-items",
+      "/setup/accountant",
     ];
     for (const href of expected) {
       expect([...hrefs].some((key) => key.startsWith(`${href}::`))).toBe(true);
@@ -280,7 +280,7 @@ describe("sidebarChildrenForNavItem", () => {
   it("returns no nested sidebar children (tabs and report cards instead)", () => {
     expect(sidebarChildrenForNavItem("/delivery", { deliveryEnabled: true })).toEqual([]);
     expect(sidebarChildrenForNavItem("/reports", { deliveryEnabled: false })).toEqual([]);
-    expect(sidebarChildrenForNavItem("/settings", { deliveryEnabled: true })).toEqual([]);
+    expect(sidebarChildrenForNavItem("/setup", { deliveryEnabled: true })).toEqual([]);
   });
 });
 
@@ -314,15 +314,14 @@ describe("delivery gating", () => {
     expect(routes.some((route) => route.href.startsWith("/delivery"))).toBe(false);
   });
 
-  it("settings hub has no delivery platforms card", async () => {
+  it("legacy settings index redirects to setup restaurant tab", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../app/settings/page.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).not.toContain("/delivery/platforms");
-    expect(source).not.toContain("Delivery platforms");
+    expect(source).toContain('redirect("/setup/restaurant")');
   });
 });
 

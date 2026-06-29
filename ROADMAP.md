@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | UX5 — Set up hub (next)                                                                       |
-| **Last completed slice** | UX4 — Reports trim (`v0.73.3-ux4-reports-trim`)                                            |
-| **Last commit/tag**      | `v0.73.3-ux4-reports-trim` — feat(ux): Reports trimmed to financial statements              |
-| **Next up**              | UX5 Set up hub → UX6 collapse sidebar; feature gaps FP/FS; then P3/P5/P6                    |
+| **Active slice**         | UX6 — Collapse sidebar (next)                                                                       |
+| **Last completed slice** | UX5 — Set up hub (`v0.73.4-ux5-setup-hub`)                                            |
+| **Last commit/tag**      | `v0.73.4-ux5-setup-hub` — feat(ux): Set up hub              |
+| **Next up**              | UX6 collapse sidebar; feature gaps FP/FS; then P3/P5/P6                    |
 
 
 ### Next plan (pre-launch, owner-driven)

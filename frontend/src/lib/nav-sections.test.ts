@@ -9,11 +9,11 @@ import type { EntityNavSettings } from "@/lib/app-routes";
 import {
   LEGACY_BALANCE_REDIRECTS,
   LEGACY_REVIEW_REDIRECTS,
+  LEGACY_SETUP_REDIRECTS,
   NAV_SECTIONS,
   NEW_COMMAND_QUICK_ACTIONS,
   REGISTERED_PAGE_ROUTES,
   REPORTS_CARD_HREFS,
-  REPORTS_PALETTE_ONLY_HREFS,
   SIDEBAR_HIDDEN_HREFS,
   navSectionForPathname,
   sidebarHrefActiveForPathname,
@@ -75,20 +75,23 @@ const TAB_ONLY_HREFS = [
   "/review/invoices",
   "/review/delivery",
   "/review/posted",
+  "/setup/restaurant",
+  "/setup/opening-balances",
+  "/setup/members",
+  "/setup/expense-items",
+  "/setup/delivery-platforms",
+  "/setup/accounts",
+  "/setup/accountant",
+  "/setup/backups",
   "/banking/transfers",
   "/banking/cash",
-  "/settings/entity",
-  "/settings/opening-balances",
-  "/settings/members",
-  "/settings/expense-items",
-  "/delivery/platforms",
   "/delivery/reports",
   "/delivery/settlements",
 ] as const;
 
 describe("REGISTERED_PAGE_ROUTES", () => {
-  it("lists exactly 61 app pages", () => {
-    expect(REGISTERED_PAGE_ROUTES).toHaveLength(61);
+  it("lists exactly 70 app pages", () => {
+    expect(REGISTERED_PAGE_ROUTES).toHaveLength(70);
   });
 
   it("assigns each route exactly one entry kind", () => {
@@ -110,7 +113,8 @@ describe("route reachability guard", () => {
       if (route.kind === "redirect") {
         expect(
           LEGACY_BALANCE_REDIRECTS[route.pattern] ??
-            LEGACY_REVIEW_REDIRECTS[route.pattern],
+            LEGACY_REVIEW_REDIRECTS[route.pattern] ??
+            LEGACY_SETUP_REDIRECTS[route.pattern],
         ).toBeDefined();
         continue;
       }
@@ -127,9 +131,6 @@ describe("route reachability guard", () => {
         continue;
       }
       if (route.kind === "reports-card") {
-        if (REPORTS_PALETTE_ONLY_HREFS.includes(route.pattern as (typeof REPORTS_PALETTE_ONLY_HREFS)[number])) {
-          continue;
-        }
         expect(
           collectReportsCardHrefs().has(
             route.pattern as (typeof REPORTS_CARD_HREFS)[number],
@@ -197,14 +198,17 @@ describe("tab + sidebar highlighting", () => {
     );
   });
 
-  it("highlights Settings sidebar row on the hub and on tab pages", () => {
-    expect(sidebarHrefActiveForPathname("/settings", "/settings")).toBe(true);
-    expect(sidebarHrefActiveForPathname("/settings", "/settings/members")).toBe(true);
+  it("highlights Set up sidebar row on the hub and on tab pages", () => {
+    expect(sidebarHrefActiveForPathname("/setup", "/setup")).toBe(true);
+    expect(sidebarHrefActiveForPathname("/setup", "/setup/members")).toBe(true);
+    expect(sidebarHrefActiveForPathname("/setup", "/settings/members")).toBe(
+      true,
+    );
 
-    const section = navSectionForPathname("/settings/opening-balances");
-    expect(section?.id).toBe("settings");
-    expect(section?.tabs.find((tab) => tab.match("/settings/opening-balances"))?.href).toBe(
-      "/settings/opening-balances",
+    const section = navSectionForPathname("/setup/opening-balances");
+    expect(section?.id).toBe("setup");
+    expect(section?.tabs.find((tab) => tab.match("/setup/opening-balances"))?.href).toBe(
+      "/setup/opening-balances",
     );
   });
 
@@ -226,8 +230,8 @@ describe("tab + sidebar highlighting", () => {
     expect(section?.id).toBe("review");
   });
 
-  it("highlights Reports sidebar row for manual journals", () => {
-    expect(sidebarHrefActiveForPathname("/reports", "/accounting/manual-journals")).toBe(
+  it("highlights Set up sidebar row for manual journals (legacy URL)", () => {
+    expect(sidebarHrefActiveForPathname("/setup", "/accounting/manual-journals")).toBe(
       true,
     );
   });

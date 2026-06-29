@@ -13,7 +13,7 @@ describe("sidebarGroupRenderMode", () => {
     expect(sidebarGroupRenderMode("Customers", DELIVERY_ON)).toBe("link");
     expect(sidebarGroupRenderMode("Cash & bank", DELIVERY_ON)).toBe("link");
     expect(sidebarGroupRenderMode("Reports", DELIVERY_ON)).toBe("link");
-    expect(sidebarGroupRenderMode("Settings", DELIVERY_ON)).toBe("link");
+    expect(sidebarGroupRenderMode("Set up", DELIVERY_ON)).toBe("link");
   });
 
   it("renders Sales as a direct link when delivery is off", () => {
