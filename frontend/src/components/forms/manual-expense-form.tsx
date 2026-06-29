@@ -27,6 +27,7 @@ import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
+import { useRegisterUnsaved } from "@/lib/unsaved-work";
 import {
   isSuggestedAccountActive,
   shouldApplyExpenseAccountSuggestion,
