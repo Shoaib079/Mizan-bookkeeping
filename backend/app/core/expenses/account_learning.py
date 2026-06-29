@@ -105,24 +105,13 @@ def record_expense_account_learning(
     if expense_item_id is not None:
         resolved_item = _get_active_item(session, entity_id, expense_item_id)
 
-    items_with_account = list(
-        session.scalars(
-            select(ExpenseItem).where(
-                ExpenseItem.entity_id == entity_id,
-                ExpenseItem.is_active.is_(True),
-                ExpenseItem.default_expense_account_id == expense_account_id,
-            )
-        ).all()
+    # Only merge into an existing item when it is genuinely the SAME thing
+    # (name/alias similarity) — NOT merely because it shares the same account.
+    # Two distinct items that post to the same account (e.g. "peynir" and
+    # "yoğurt" both → groceries) must stay separate, never silently collapse.
+    target_item = _find_related_item_for_learning(
+        session, entity_id, normalized, expense_account_id
     )
-
-    target_item: ExpenseItem | None = None
-    if len(items_with_account) == 1:
-        target_item = items_with_account[0]
-    else:
-        target_item = _find_related_item_for_learning(
-            session, entity_id, normalized, expense_account_id
-        )
-
     if target_item is None:
         target_item = resolved_item
 
