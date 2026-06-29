@@ -31,6 +31,7 @@ describe("accountMenuAdminLinks", () => {
       "/settings/entity",
       "/settings/opening-balances",
       "/settings/members",
+      "/settings/expense-items",
     ]);
   });
 

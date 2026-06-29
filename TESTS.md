@@ -76,6 +76,9 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `frontend/src/lib/account-menu-helpers.test.ts` | Switch confirm copy; unsaved warning; role-gated admin links; recording-for label | pass |
 | `frontend/src/lib/unsaved-work.test.ts` | Dirty-source registry — set/clear/has unsaved work | pass |
 | `frontend/src/lib/expense-accounts.test.ts` | Expense chart filter + `formatExpenseAccountLabel` (Turkish name first, code in parens) | pass |
+| `frontend/src/lib/expense-item-search.test.ts` | Existing-item typeahead — search threshold, clear pick on edit, search URL | pass |
+| `frontend/src/lib/expense-item-merge.test.ts` | Expense item merge — owner gate, list URL, confirm copy, payload, confirm gating, API errors | pass |
+| `frontend/src/app/settings/expense-items/page.test.ts` | Manage expense items page — list + search, merge POST payload, confirm dialog, owner-only | pass |
 | `frontend/src/lib/expense-account-suggest.test.ts` | Suggest-and-confirm gating — apply only when user has not manually overridden account | pass |
 | `frontend/src/lib/onboarding.test.ts` | Dashboard setup checklist — role gating, step completion from API totals, admin-only invite step, **dismiss + auto-hide when complete** | pass |
 | `frontend/src/lib/first-run-onboarding.test.ts` | First-run modal — no-company visibility gate; submit patches display name + creates entity + routes to dashboard | pass |
@@ -88,7 +91,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **Pre-go-live security gate (Slice 12.5):** After full pytest, run `bash backend/scripts/security_production_pytest.sh` (or CI production-guard job). Must include `test_security_invariants.py` green under production-like auth env. Also run `security_dependency_scan.sh` and `security_secrets_audit.sh` — see `DEPLOY.md` §14.
 
-**Count:** 671 pytest + 144 vitest (last run 2026-06-21).
+**Count:** 671 pytest + 198 vitest (last run 2026-06-21).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 Run frontend: `cd frontend && npm test && npm run build`

@@ -31,6 +31,10 @@ export function accountMenuAdminLinks(role: EntityRole): AccountMenuLink[] {
     links.push({ href: "/settings/members", label: "Members & roles" });
   }
 
+  if (role === "owner") {
+    links.push({ href: "/settings/expense-items", label: "Expense items" });
+  }
+
   return links;
 }
 

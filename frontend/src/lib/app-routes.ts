@@ -14,6 +14,7 @@ import {
   Receipt,
   Settings,
   ShoppingBag,
+  Tags,
   Truck,
   Upload,
   UserCircle,
@@ -133,6 +134,13 @@ export const appRoutes: AppRoute[] = [
     href: "/settings/members",
     label: "Members & roles",
     icon: Users,
+    group: "Settings",
+  },
+  {
+    href: "/settings/expense-items",
+    label: "Expense items",
+    keywords: "merge duplicate items",
+    icon: Tags,
     group: "Settings",
   },
   {

@@ -9,6 +9,7 @@ import {
   LogOut,
   Scale,
   Settings,
+  Tags,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -37,6 +38,7 @@ const LINK_ICONS: Record<string, typeof Settings> = {
   "/settings/entity": Building2,
   "/settings/opening-balances": Scale,
   "/settings/members": Users,
+  "/settings/expense-items": Tags,
 };
 
 type PendingAction =

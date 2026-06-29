@@ -148,6 +148,11 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Members",
         match: (path) => path === "/settings/members",
       },
+      {
+        href: "/settings/expense-items",
+        label: "Expense items",
+        match: (path) => path === "/settings/expense-items",
+      },
     ],
   },
 ];
@@ -163,6 +168,7 @@ export const SIDEBAR_HIDDEN_HREFS = new Set([
   "/settings/entity",
   "/settings/opening-balances",
   "/settings/members",
+  "/settings/expense-items",
   "/reports/ledger",
   "/accounting/manual-journals",
   "/delivery/platforms",
@@ -227,6 +233,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/settings/entity", kind: "tab" },
   { pattern: "/settings/opening-balances", kind: "tab" },
   { pattern: "/settings/members", kind: "tab" },
+  { pattern: "/settings/expense-items", kind: "tab" },
   { pattern: "/review/receipts/[id]", kind: "drill-down" },
   { pattern: "/review/invoices/[id]", kind: "drill-down" },
   { pattern: "/sign-in/[[...sign-in]]", kind: "auth" },

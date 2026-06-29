@@ -100,6 +100,7 @@ describe("navGroups", () => {
       "/settings/entity",
       "/settings/opening-balances",
       "/settings/members",
+      "/settings/expense-items",
     ];
     for (const href of expected) {
       expect([...hrefs].some((key) => key.startsWith(`${href}::`))).toBe(true);

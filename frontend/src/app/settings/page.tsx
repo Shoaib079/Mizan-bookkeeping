@@ -6,6 +6,7 @@ import {
   Archive,
   Building2,
   Scale,
+  Tags,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -41,6 +42,14 @@ const settingsCards: SettingsCard[] = [
     title: "Members & roles",
     description: "Invite users and assign owner, partner, or cashier access.",
     icon: Users,
+    requiresEntity: true,
+  },
+  {
+    href: "/settings/expense-items",
+    title: "Expense items",
+    description:
+      "Search item names and merge duplicates into one canonical item (owner only).",
+    icon: Tags,
     requiresEntity: true,
   },
   {

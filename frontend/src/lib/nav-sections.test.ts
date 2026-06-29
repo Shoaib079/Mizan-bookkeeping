@@ -71,14 +71,15 @@ const TAB_ONLY_HREFS = [
   "/settings/entity",
   "/settings/opening-balances",
   "/settings/members",
+  "/settings/expense-items",
   "/delivery/platforms",
   "/delivery/reports",
   "/delivery/settlements",
 ] as const;
 
 describe("REGISTERED_PAGE_ROUTES", () => {
-  it("lists exactly 46 app pages", () => {
-    expect(REGISTERED_PAGE_ROUTES).toHaveLength(46);
+  it("lists exactly 47 app pages", () => {
+    expect(REGISTERED_PAGE_ROUTES).toHaveLength(47);
   });
 
   it("assigns each route exactly one entry kind", () => {
