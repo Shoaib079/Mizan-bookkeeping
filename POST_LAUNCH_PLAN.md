@@ -53,4 +53,91 @@ Remove ESLint "defined but never used" warnings across frontend/src (unused impo
 
 ---
 
-**How to use:** pick a slice → paste its Cursor prompt → Cursor builds + tests + commits → push → Railway/Netlify auto-deploy → test live. Tell me when you start P2/P3/P5/P6 and I'll expand the spec or walk the ops steps.
+## 🧭 UX Reorg — "one home for everything" (from `UX_AUDIT_PROPOSAL.md`)
+
+Goal: stop the back-and-forth and the "why is this page here?" confusion. Reorganize the app around what the owner does, give every action/page exactly **one home**, and remove/merge duplicate pages — **without changing any accounting behavior**.
+
+### Target structure (preview — what it becomes)
+
+Sidebar = 6 intents (old domain pages become drill-downs inside these, reachable via redirects):
+
+| Sidebar | Route | What's on it |
+|---|---|---|
+| **Dashboard** | `/` | KPIs, **Recent entries**, **Needs-review** count (→ Review), onboarding checklist |
+| **Record** | `/record` | ONE hub to post everything — card grid by workflow. Opens existing forms. People cards (staff/partner/customer) use a **person picker** so you never pre-navigate. New button + ⌘K open the same actions. |
+| **Review** | `/review` | ONE needs-review queue — tabs: Bank & card · Sales · Receipts · Invoices · Delivery · **All posted** (general ledger) |
+| **Balances** | `/balances` | Who owes whom — tabs: Suppliers (payables) · Customers (receivables) · Staff · Partners · Cash & bank. Detail pages still hold ledger history + record-payment. |
+| **Reports** | `/reports` | Financial statements only — P&L, Balance sheet, Cash flow, KDV, Period comparison |
+| **Set up** | `/setup` | Settings, Members, Opening balances, Delivery platforms, Bank/cash/FX/card accounts, Expense-item merge, Backups info, masters |
+
+**Record hub card groups:** Today (Close day · Daily sales · Manual expense) · Upload & extract (POS photo · Receipt · e-Fatura · Delivery report · Bank statement) · Cash & FX (Cash movement · Buy/Convert/Spend FX · Transfer) · Sales & cards *(Card batch · POS settlement · Clear commission — collapsible "Advanced")* · People (Staff accrual/advance/payment · Partner expense/reimbursement · Customer credit sale/payment — each via person picker) · Suppliers (New supplier · Record payment).
+
+### Pages that get MERGED / REMOVED (one home each — redirect old URLs)
+
+- `/uploads` ("Documents") → **removed**; upload actions live in **Record**, pending items in **Review**. Redirect → `/record`.
+- Duplicate **Upload** buttons on Sales / Delivery / Supplier headers → replaced by a link to **Record**.
+- Dashboard quick buttons → call the **same** Record actions (no duplicate logic).
+- `/cards` card-clearing recon → **Balances → Card clearing** tab (cross-link from Sales).
+- `/reports/ledger` (general ledger) → **Review → All posted**; manual journals → **Set up → Accountant**. Reports = statements only.
+- Top-level domain sidebar items (Sales, Expenses, Suppliers, Staff, Partners, Customers, Banking, Delivery) → reachable from the hubs; old routes redirect.
+
+### Decisions (baked in — build to these)
+
+Q1 daily path = **Close day + POS photo when Z-tracking on**. Q2 card batch/settlement = **Advanced collapsible** in Record. Q3 ledger → **Review → All posted**; manual journals → **Set up → Accountant**. Q4 people payments = **person picker in Record**. Q5 sidebar = **add hubs first, retire old domain nav in the LAST slice** (no big-bang). Q6 = **drop `/uploads`/"Documents"**. Q7 = **one Manual Expense with a payment-mode toggle** (cash vs partner-fronted).
+
+### GLOBAL RULES for every UX slice (Cursor must follow all — prevents rework & breakage)
+
+```
+- REUSE existing forms/components/APIs verbatim. Do NOT fork, rewrite, or duplicate any form — only add new hub SHELLS + person-picker WRAPPERS and move call sites. Every existing function/feature must stay wired to its form.
+- NO accounting/booking/posting changes. Behavior-preserving; GL posting tests must be unchanged.
+- For every route you move or remove, add a REDIRECT from the old path to the new one (keep ≥6 months). Nothing should 404 or lose a bookmark.
+- Keep ALL auth/role gates (shouldShowNewMenu, canWriteOperations, financial-report gating) and feature toggles (delivery_enabled, card-tips) applied on the new hubs/cards.
+- New menu, ⌘K command palette, and the Record hub must share ONE action source — do not duplicate handlers.
+- Update nav config (nav-sections.ts / app-routes.ts) AND their tests; add a reachability test for each new hub. Keep frontend build + pytest green.
+- ONE UX slice at a time, sequential. Do not run other nav-touching work in parallel. Commit + push after each slice.
+```
+
+### UX slices (build in this order)
+
+**UX1 — Record hub + people pickers** *(highest value; absorbs the old "S1")*
+```
+Create /record — a single hub page listing every posting action as a card grid grouped by workflow (Today; Upload & extract; Cash & FX; Sales & cards [Advanced collapsible]; People; Suppliers). Each card opens the EXISTING modal/form (or navigates to the existing full-page form) — reuse the same handlers the New menu uses (no new forms, no new APIs). For People cards (staff accrual/advance/payment, partner expense-fronted/reimbursement, customer credit-sale/payment) add a person-picker wrapper (reuse Combobox + the existing detail forms) so the owner picks the employee/partner/customer in the dialog instead of pre-navigating. Add "Record" to the sidebar. Keep the New menu + ⌘K working and pointed at the same actions. Apply all auth/role/toggle gates to the cards. Tests: each card opens, person picker drives the right form/entity_id, gated actions hidden for non-owners. Follow the GLOBAL RULES above. Commit: "feat(ux): Record hub with person pickers".
+```
+
+**UX2 — Balances hub**
+```
+Create /balances with tabs: Suppliers (move /payables table), Customers (move /receivables table), Staff (employee list + balance column), Partners (partner list + balance column), Cash & bank (entry card → existing /banking tree). Reuse existing tables/endpoints; for staff/partner balance columns use a lightweight read-only summary (or per-row fetch) — no posting changes. Detail pages (/suppliers/[id] etc.) stay for ledger history + record payment, linked from the tables. Redirect /payables and /receivables to /balances tabs. Add "Balances" to sidebar. Follow GLOBAL RULES. Commit: "feat(ux): Balances hub (payables, receivables, staff, partners)".
+```
+
+**UX3 — Review hub (unified needs-review)**
+```
+Rename/extend /banking/review → /review (redirect old path). Add tabs reusing existing list endpoints/pages: Bank & card (current), Sales (pos daily-summaries needs_review → /sales/[id]), Receipts (expense-receipts → /review/receipts/[id]), Invoices (invoice drafts → /review/invoices/[id]), Delivery (delivery reports → /delivery/reports/[id]), and "All posted" (general ledger from /reports/ledger). Lazy-load each tab. Dashboard "Needs review" → /review with the right tab. Add "Review" to sidebar. Follow GLOBAL RULES. Commit: "feat(ux): unified Review hub".
+```
+
+**UX4 — Reports = statements only**
+```
+Reduce /reports to financial statements (P&L, Balance Sheet, Cash flow, KDV, Period comparison, delivery sales). Move General ledger to Review→All posted (UX3) and Manual journals to Set up→Accountant (UX5) — redirect the old report cards/routes. Keep existing role gating. Follow GLOBAL RULES. Commit: "feat(ux): Reports trimmed to financial statements".
+```
+
+**UX5 — Set up hub**
+```
+Create /setup merging the Settings hub + master/config entry points: Restaurant & toggles, Opening balances, Members, Expense-item merge, Delivery platforms (move from under Delivery), Bank/cash/FX/card accounts (link to banking accounts), Manual journals (Accountant), Backups info. Rename sidebar "Settings" → "Set up"; redirect /settings and /delivery/platforms. Follow GLOBAL RULES. Commit: "feat(ux): Set up hub".
+```
+
+**UX6 — Collapse sidebar + remove duplicates (LAST)**
+```
+Now that the hubs exist, collapse the sidebar to the 6 intents (Dashboard, Record, Review, Balances, Reports, Set up). Remove the standalone domain sidebar items (Sales, Expenses, Suppliers, Staff, Partners, Customers, Banking, Delivery) — they remain reachable via the hubs + redirects. Remove the /uploads page content (redirect → /record) and the duplicate Upload buttons on Sales/Delivery/Supplier headers (replace with a link to Record). Update nav tests + add reachability tests for every old route's redirect. Follow GLOBAL RULES. Commit: "feat(ux): collapse sidebar to intents; remove duplicate pages".
+```
+
+---
+
+## 🧩 Feature gaps (separate from UX reorg — still needed)
+
+These add capability the reorg doesn't (the reorg only relocates). Build alongside/after UX1 since the People forms come front-and-centre there.
+
+- **FP — Partner advance / drawing (partner OWES the business).** Today the partner ledger only tracks "business owes partner" (expense fronted + reimbursement). Add advance/drawing movements so a partner can owe the business, and show the balance in either direction ("owes you" vs "you owe"). Backend movement + posting + ledger sign; partner page + Record card. *(Ask for full Cursor prompt when ready.)*
+- **FS — Salary period + auto-clear advance.** Add a salary **period/month** to the accrual; when paying salary, surface the employee's **outstanding advance** and auto-deduct it (the posting layer supports `advance_applied`; service currently passes 0 — wire it). *(Ask for full Cursor prompt when ready.)*
+
+---
+
+**How to use:** pick a slice → paste its Cursor prompt → Cursor builds + tests + commits → push → Railway/Netlify auto-deploy → test live. For the UX reorg, build **UX1 → UX6 in order**, one at a time. Tell me when you start any slice and I'll expand the spec or walk the ops steps.

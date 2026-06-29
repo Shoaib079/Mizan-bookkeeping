@@ -17,7 +17,7 @@
 | **Active slice**         | — (P2 expense auto-categorize shipped)                                                                       |
 | **Last completed slice** | P2 — AI + learning expense account suggestion (suggest-and-confirm)                                            |
 | **Last commit/tag**      | feat(expenses): AI + learning auto-categorization (suggest-and-confirm)                                       |
-| **Next up**              | See **`POST_LAUNCH_PLAN.md`** — P3 uploads backup · P5 delete-company · P6 full production                   |
+| **Next up**              | **UX Reorg** (see `POST_LAUNCH_PLAN.md` → UX1–UX6: Record · Review · Balances · Reports · Set up; merge/remove duplicate pages) + feature gaps FP/FS. Then P3/P5/P6. Audit: `UX_AUDIT_PROPOSAL.md` |
 
 
 ### Next plan (pre-launch, owner-driven)
