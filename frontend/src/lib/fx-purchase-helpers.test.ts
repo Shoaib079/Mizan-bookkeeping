@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  clearFxAmountFieldsOnCurrencySwitch,
   computeTryCostKurusFromRate,
   fxPurchaseDescriptionForApi,
+  fxWalletToggleLabel,
+  shouldClearFxAmountFields,
 } from "@/lib/fx-purchase-helpers";
 
 describe("computeTryCostKurusFromRate", () => {
@@ -25,5 +28,30 @@ describe("fxPurchaseDescriptionForApi", () => {
 
   it("trims non-empty descriptions", () => {
     expect(fxPurchaseDescriptionForApi("  Market buy  ")).toBe("Market buy");
+  });
+});
+
+describe("fxWalletToggleLabel", () => {
+  it("uppercases currency codes for toggle buttons", () => {
+    expect(fxWalletToggleLabel("usd")).toBe("USD");
+    expect(fxWalletToggleLabel("EUR")).toBe("EUR");
+  });
+});
+
+describe("shouldClearFxAmountFields", () => {
+  it("clears amount fields when the wallet changes", () => {
+    expect(shouldClearFxAmountFields("wallet-a", "wallet-b")).toBe(true);
+    expect(shouldClearFxAmountFields("wallet-a", "wallet-a")).toBe(false);
+  });
+});
+
+describe("clearFxAmountFieldsOnCurrencySwitch", () => {
+  it("returns empty amount, rate, and TRY fields", () => {
+    expect(clearFxAmountFieldsOnCurrencySwitch()).toEqual({
+      nativeText: "",
+      rateText: "",
+      tryCostText: "",
+      tryCostTouched: false,
+    });
   });
 });

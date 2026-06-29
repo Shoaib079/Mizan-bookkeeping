@@ -2,7 +2,7 @@
 
 /** FX purchase — Phase 9 Slice 4. */
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
@@ -17,34 +17,31 @@ import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import {
+  clearFxAmountFieldsOnCurrencySwitch,
   computeTryCostKurusFromRate,
   fxPurchaseDescriptionForApi,
 } from "@/lib/fx-purchase-helpers";
 import { formatKurus, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 
-type Props = {
-  open: boolean;
-  onClose: () => void;
+export type FxPurchaseFormFieldsProps = {
   fxAccountId: string;
   currency: string;
   onSaved?: () => void;
+  onClose?: () => void;
 };
 
-export function FxPurchaseForm({
-  open,
-  onClose,
+export function FxPurchaseFormFields({
   fxAccountId,
   currency,
   onSaved,
-}: Props) {
+  onClose,
+}: FxPurchaseFormFieldsProps) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const prevFxAccountId = useRef(fxAccountId);
 
-  useEffect(() => {
-    if (open) submitIdempotency.resetSubmit();
-  }, [open, submitIdempotency]);
   const [tryCashAccounts, setTryCashAccounts] = useState<MoneyAccountLeaf[]>(
     [],
   );
@@ -53,7 +50,7 @@ export function FxPurchaseForm({
   const [rateText, setRateText] = useState("");
   const [tryCostText, setTryCostText] = useState("");
   const [tryCostTouched, setTryCostTouched] = useState(false);
-  const [dateText, setDateText] = useState("");
+  const [dateText, setDateText] = useState(() => todayTrDate());
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -69,17 +66,19 @@ export function FxPurchaseForm({
   }, [entityId]);
 
   useEffect(() => {
-    if (open) {
-      setDateText(todayTrDate());
-      setNativeText("");
-      setRateText("");
-      setTryCostText("");
-      setTryCostTouched(false);
-      setDescription("");
-      setError(null);
-      void loadAccounts().catch(() => undefined);
-    }
-  }, [open, loadAccounts]);
+    submitIdempotency.resetSubmit();
+    void loadAccounts().catch(() => undefined);
+  }, [loadAccounts, submitIdempotency]);
+
+  useEffect(() => {
+    if (prevFxAccountId.current === fxAccountId) return;
+    prevFxAccountId.current = fxAccountId;
+    const cleared = clearFxAmountFieldsOnCurrencySwitch();
+    setNativeText(cleared.nativeText);
+    setRateText(cleared.rateText);
+    setTryCostText(cleared.tryCostText);
+    setTryCostTouched(cleared.tryCostTouched);
+  }, [fxAccountId]);
 
   useEffect(() => {
     if (tryCostTouched) return;
@@ -130,7 +129,7 @@ export function FxPurchaseForm({
       submitIdempotency.completeSubmit();
       onSaved?.();
       toast("FX purchase recorded");
-      onClose();
+      onClose?.();
       setNativeText("");
       setRateText("");
       setTryCostText("");
@@ -144,76 +143,104 @@ export function FxPurchaseForm({
   }
 
   return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <div>
+        <Label htmlFor="fx-buy-native">{currency} amount</Label>
+        <Input
+          id="fx-buy-native"
+          placeholder="100,00"
+          value={nativeText}
+          onChange={(e) => setNativeText(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="fx-buy-rate">Rate (TRY per 1 {currency})</Label>
+        <MoneyInput
+          id="fx-buy-rate"
+          placeholder="34,50"
+          value={rateText}
+          onChange={setRateText}
+        />
+      </div>
+      <div>
+        <Label htmlFor="fx-buy-try">TRY paid</Label>
+        <MoneyInput
+          id="fx-buy-try"
+          placeholder="3.450,00"
+          value={tryCostText}
+          onChange={(value) => {
+            setTryCostTouched(true);
+            setTryCostText(value);
+          }}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="fx-buy-from">Pay from cash drawer</Label>
+        <Combobox
+          id="fx-buy-from"
+          value={tryCashId}
+          onValueChange={setTryCashId}
+          options={tryCashAccounts.map((a) => ({
+            value: a.id,
+            label: a.name,
+          }))}
+          placeholder="Cash drawer…"
+        />
+      </div>
+      <div>
+        <Label htmlFor="fx-buy-date">Date (DD.MM.YYYY)</Label>
+        <DateInput
+          id="fx-buy-date"
+          value={dateText}
+          onChange={setDateText}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="fx-buy-desc">Description (optional)</Label>
+        <Input
+          id="fx-buy-desc"
+          placeholder={`Buy ${currency}`}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <Button type="submit" disabled={submitting}>
+        {submitting ? "Recording…" : "Record purchase"}
+      </Button>
+    </form>
+  );
+}
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  fxAccountId: string;
+  currency: string;
+  onSaved?: () => void;
+};
+
+export function FxPurchaseForm({
+  open,
+  onClose,
+  fxAccountId,
+  currency,
+  onSaved,
+}: Props) {
+  return (
     <Dialog open={open} title={`Buy ${currency}`} onClose={onClose}>
-      <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <Label htmlFor="fx-buy-native">{currency} amount</Label>
-          <Input
-            id="fx-buy-native"
-            placeholder="100,00"
-            value={nativeText}
-            onChange={(e) => setNativeText(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="fx-buy-rate">Rate (TRY per 1 {currency})</Label>
-          <MoneyInput
-            id="fx-buy-rate"
-            placeholder="34,50"
-            value={rateText}
-            onChange={setRateText}
-          />
-        </div>
-        <div>
-          <Label htmlFor="fx-buy-try">TRY paid</Label>
-          <MoneyInput
-            id="fx-buy-try"
-            placeholder="3.450,00"
-            value={tryCostText}
-            onChange={(value) => {
-              setTryCostTouched(true);
-              setTryCostText(value);
-            }}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="fx-buy-from">Pay from cash drawer</Label>
-          <Combobox
-            id="fx-buy-from"
-            value={tryCashId}
-            onValueChange={setTryCashId}
-            options={tryCashAccounts.map((a) => ({
-              value: a.id,
-              label: a.name,
-            }))}
-            placeholder="Cash drawer…"
-          />
-        </div>
-        <div>
-          <Label htmlFor="fx-buy-date">Date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="fx-buy-date"
-            value={dateText}
-            onChange={setDateText}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="fx-buy-desc">Description (optional)</Label>
-          <Input
-            id="fx-buy-desc"
-            placeholder={`Buy ${currency}`}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Recording…" : "Record purchase"}
-        </Button>
-      </form>
+      {open && (
+        <FxPurchaseFormFields
+          key={fxAccountId}
+          fxAccountId={fxAccountId}
+          currency={currency}
+          onSaved={onSaved}
+          onClose={onClose}
+        />
+      )}
     </Dialog>
   );
 }

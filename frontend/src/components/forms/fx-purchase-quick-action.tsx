@@ -1,20 +1,22 @@
 "use client";
 
-/** New-menu FX purchase — pick wallet, then open FxPurchaseForm. */
+/** New-menu FX purchase — currency toggles + purchase fields on one screen. */
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { FxPurchaseForm } from "@/components/forms/fx-purchase-form";
+import {
+  FxPurchaseFormFields,
+} from "@/components/forms/fx-purchase-form";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Combobox } from "@/components/ui/combobox";
-import { Label } from "@/components/ui/input";
 import {
   loadAllForeignCurrencyAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
+import { fxWalletToggleLabel } from "@/lib/fx-purchase-helpers";
 import { useEntity } from "@/lib/entity-context";
+import { cn } from "@/lib/utils";
 
 type Props = {
   open: boolean;
@@ -26,12 +28,12 @@ export function FxPurchaseQuickAction({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [pickedId, setPickedId] = useState("");
+  const [selectedId, setSelectedId] = useState("");
 
   const reset = useCallback(() => {
     setAccounts([]);
     setLoadError(null);
-    setPickedId("");
+    setSelectedId("");
     setLoading(false);
   }, []);
 
@@ -49,8 +51,8 @@ export function FxPurchaseQuickAction({ open, onClose }: Props) {
       .then((items) => {
         if (cancelled) return;
         setAccounts(items);
-        if (items.length === 1) {
-          setPickedId(items[0]!.id);
+        if (items[0]) {
+          setSelectedId(items[0].id);
         }
       })
       .catch((err) => {
@@ -72,20 +74,14 @@ export function FxPurchaseQuickAction({ open, onClose }: Props) {
     onClose();
   }
 
-  const picked =
-    accounts.find((account) => account.id === pickedId) ??
-    (accounts.length === 1 ? accounts[0] : null);
+  const selected = useMemo(
+    () => accounts.find((account) => account.id === selectedId) ?? null,
+    [accounts, selectedId],
+  );
 
-  if (picked?.currency) {
-    return (
-      <FxPurchaseForm
-        open={open}
-        onClose={handleClose}
-        fxAccountId={picked.id}
-        currency={picked.currency}
-      />
-    );
-  }
+  const selectedCurrency = selected?.currency
+    ? fxWalletToggleLabel(selected.currency)
+    : null;
 
   return (
     <Dialog open={open} title="Buy foreign currency" onClose={handleClose}>
@@ -118,21 +114,40 @@ export function FxPurchaseQuickAction({ open, onClose }: Props) {
         </div>
       )}
 
-      {entityId && !loading && !loadError && accounts.length > 1 && (
-        <div className="space-y-3">
-          <div>
-            <Label htmlFor="fx-buy-wallet">FX wallet</Label>
-            <Combobox
-              id="fx-buy-wallet"
-              value={pickedId}
-              onValueChange={setPickedId}
-              options={accounts.map((account) => ({
-                value: account.id,
-                label: `${account.name} (${account.currency ?? "?"})`,
-              }))}
-              placeholder="Select currency wallet…"
-            />
+      {entityId && !loading && !loadError && accounts.length > 0 && selected && selectedCurrency && (
+        <div className="space-y-4">
+          <div
+            className="flex flex-wrap gap-1 rounded-md border border-border bg-muted/40 p-1"
+            role="group"
+            aria-label="Currency"
+          >
+            {accounts.map((account) => {
+              const label = fxWalletToggleLabel(account.currency);
+              const active = account.id === selectedId;
+              return (
+                <button
+                  key={account.id}
+                  type="button"
+                  aria-pressed={active}
+                  className={cn(
+                    "inline-flex h-8 min-w-[3rem] flex-1 items-center justify-center rounded px-3 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                  )}
+                  onClick={() => setSelectedId(account.id)}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
+
+          <FxPurchaseFormFields
+            fxAccountId={selected.id}
+            currency={selectedCurrency}
+            onClose={handleClose}
+          />
         </div>
       )}
     </Dialog>

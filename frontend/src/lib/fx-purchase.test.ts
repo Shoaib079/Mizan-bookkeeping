@@ -21,12 +21,16 @@ describe("FX purchase New menu", () => {
     expect(newMenu).toContain("Cash & bank");
   });
 
-  it("loads FX wallets before opening FxPurchaseForm", async () => {
+  it("shows currency toggles and form on one screen", async () => {
     const quickAction = await readSource(
       "../components/forms/fx-purchase-quick-action.tsx",
     );
     expect(quickAction).toContain("loadAllForeignCurrencyAccounts");
-    expect(quickAction).toContain("FxPurchaseForm");
+    expect(quickAction).toContain("FxPurchaseFormFields");
+    expect(quickAction).toContain("fxWalletToggleLabel");
+    expect(quickAction).toContain("aria-pressed");
+    expect(quickAction).not.toContain("Combobox");
+    expect(quickAction).not.toMatch(/<FxPurchaseForm[\s/>]/);
     expect(quickAction).toContain("Foreign currency wallet");
   });
 });
@@ -44,5 +48,31 @@ describe("FX purchase form", () => {
     expect(form).toContain("fxPurchaseDescriptionForApi");
     expect(form).toContain("Description (optional)");
     expect(form).not.toMatch(/fx-buy-desc[\s\S]*required/);
+  });
+
+  it("clears amount fields when fxAccountId changes", async () => {
+    const form = await readSource("../components/forms/fx-purchase-form.tsx");
+    expect(form).toContain("clearFxAmountFieldsOnCurrencySwitch");
+    expect(form).toContain("fxAccountId");
+  });
+});
+
+describe("FX purchase currency toggles", () => {
+  it("renders one toggle per wallet and drives form props", async () => {
+    const quickAction = await readSource(
+      "../components/forms/fx-purchase-quick-action.tsx",
+    );
+    expect(quickAction).toContain("accounts.map");
+    expect(quickAction).toContain("fxAccountId={selected.id}");
+    expect(quickAction).toContain("currency={selectedCurrency}");
+    expect(quickAction).toContain("setSelectedId(account.id)");
+  });
+
+  it("keeps the zero-wallet Banking message", async () => {
+    const quickAction = await readSource(
+      "../components/forms/fx-purchase-quick-action.tsx",
+    );
+    expect(quickAction).toContain("accounts.length === 0");
+    expect(quickAction).toContain('href="/banking"');
   });
 });

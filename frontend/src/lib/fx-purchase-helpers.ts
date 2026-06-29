@@ -24,3 +24,30 @@ export function fxPurchaseDescriptionForApi(description: string): string | null 
   const trimmed = description.trim();
   return trimmed ? trimmed : null;
 }
+
+export function fxWalletToggleLabel(currency: string | null | undefined): string {
+  return (currency ?? "?").toUpperCase();
+}
+
+export type FxAmountFieldState = {
+  nativeText: string;
+  rateText: string;
+  tryCostText: string;
+  tryCostTouched: boolean;
+};
+
+export function clearFxAmountFieldsOnCurrencySwitch(): FxAmountFieldState {
+  return {
+    nativeText: "",
+    rateText: "",
+    tryCostText: "",
+    tryCostTouched: false,
+  };
+}
+
+export function shouldClearFxAmountFields(
+  previousWalletId: string,
+  nextWalletId: string,
+): boolean {
+  return previousWalletId !== nextWalletId;
+}

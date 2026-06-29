@@ -95,7 +95,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **Pre-go-live security gate (Slice 12.5):** After full pytest, run `bash backend/scripts/security_production_pytest.sh` (or CI production-guard job). Must include `test_security_invariants.py` green under production-like auth env. Also run `security_dependency_scan.sh` and `security_secrets_audit.sh` — see `DEPLOY.md` §14.
 
-**Count:** 673 pytest + 215 vitest (last run 2026-06-21).
+**Count:** 673 pytest + 221 vitest (last run 2026-06-21).
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 Run frontend: `cd frontend && npm test && npm run build`
