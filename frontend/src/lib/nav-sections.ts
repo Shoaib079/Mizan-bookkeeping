@@ -1,6 +1,8 @@
 /** Tab sections + route reachability registry (IA audit v0.71.9). */
 
-import type { QuickActionKey } from "@/components/quick-actions";
+import { NEW_COMMAND_QUICK_ACTIONS } from "@/lib/record-actions";
+
+export { NEW_COMMAND_QUICK_ACTIONS };
 
 export type NavTab = {
   href: string;
@@ -192,6 +194,7 @@ export type RouteEntryKind = "sidebar" | "tab" | "reports-card" | "drill-down" |
 /** Static page routes (45 app pages) — used by reachability guard test. */
 export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[] = [
   { pattern: "/", kind: "sidebar" },
+  { pattern: "/record", kind: "sidebar" },
   { pattern: "/sales", kind: "tab" },
   { pattern: "/sales/[id]", kind: "drill-down" },
   { pattern: "/cards", kind: "tab" },
@@ -240,17 +243,6 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/sign-up/[[...sign-up]]", kind: "auth" },
 ];
 
-export const NEW_COMMAND_QUICK_ACTIONS: Record<string, QuickActionKey> = {
-  "New: Manual expense": "expense",
-  "New: Daily sales (manual)": "sales",
-  "New: Buy foreign currency": "buyFx",
-  "New: POS summary (photo)": "posPhoto",
-  "New: Delivery report": "deliveryReport",
-  "New: Expense receipt (photo)": "receipt",
-  "New: Supplier": "supplier",
-  "New: Supplier invoice (e-Fatura)": "efatura",
-};
-
 export function navSectionForPathname(pathname: string): NavSection | undefined {
   return NAV_SECTIONS.find((section) =>
     section.tabs.some((tab) => tab.match(pathname)),
@@ -273,6 +265,7 @@ export function sidebarHrefActiveForPathname(
     return section.tabs.some((tab) => tab.match(pathname));
   }
   if (sidebarHref === "/") return pathname === "/";
+  if (sidebarHref === "/record") return pathname === "/record";
   if (sidebarHref === "/reports") {
     return (
       pathname === "/reports" ||
@@ -293,6 +286,7 @@ export function pageTitleForPathname(pathname: string): string {
   }
   const titles: Record<string, string> = {
     "/": "Dashboard",
+    "/record": "Record",
     "/expenses": "Expenses",
     "/uploads": "Documents",
     "/staff": "Staff",

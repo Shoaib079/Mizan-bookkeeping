@@ -6,6 +6,7 @@ import {
   Banknote,
   BookOpen,
   Building2,
+  ClipboardList,
   CreditCard,
   FileText,
   HandCoins,
@@ -23,7 +24,7 @@ import {
   Wallet,
 } from "lucide-react";
 
-import type { QuickActionKey } from "@/components/quick-actions";
+import type { RecordActionKey } from "@/lib/record-actions";
 import { SIDEBAR_HIDDEN_HREFS, sidebarHrefActiveForPathname } from "@/lib/nav-sections";
 
 export type AppRoute = {
@@ -35,7 +36,7 @@ export type AppRoute = {
   /** @deprecated nested sidebar removed — tabs/cards only; kept for palette indexing. */
   nestedUnder?: string;
   /** Command palette: open modal instead of navigating. */
-  quickAction?: QuickActionKey;
+  quickAction?: RecordActionKey;
 };
 
 export type NavGroupIcon = LucideIcon;
@@ -48,6 +49,13 @@ export type NavGroup = {
 
 export const appRoutes: AppRoute[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
+  {
+    href: "/record",
+    label: "Record",
+    keywords: "post new expense sales payment upload",
+    icon: ClipboardList,
+    group: "Overview",
+  },
   { href: "/sales", label: "Sales", icon: ShoppingBag, group: "Sales" },
   {
     href: "/close-day",
@@ -173,6 +181,7 @@ export const appRoutes: AppRoute[] = [
     keywords: "close-out sales expenses",
     icon: ShoppingBag,
     group: "New",
+    quickAction: "closeDay",
   },
   {
     href: "/sales",

@@ -18,7 +18,7 @@ type Props = {
 
 export function CommandPalette({ deliveryEnabled }: Props) {
   const router = useRouter();
-  const { openQuickAction } = useQuickActions();
+  const { openRecordAction } = useQuickActions();
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -57,12 +57,12 @@ export function CommandPalette({ deliveryEnabled }: Props) {
       if (!route) return;
       close();
       if (route.quickAction) {
-        openQuickAction(route.quickAction);
+        openRecordAction(route.quickAction);
         return;
       }
       router.push(route.href);
     },
-    [close, filtered, openQuickAction, router],
+    [close, filtered, openRecordAction, router],
   );
 
   useEffect(() => {

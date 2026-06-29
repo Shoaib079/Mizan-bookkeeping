@@ -40,6 +40,11 @@ describe("navGroups", () => {
     expect(settings?.items.map((item) => item.href)).toEqual(["/settings"]);
   });
 
+  it("adds Record under Overview", () => {
+    const overview = navGroups.find((group) => group.label === "Overview");
+    expect(overview?.items.map((item) => item.href)).toEqual(["/", "/record"]);
+  });
+
   it("consolidates Sales to sidebar entry points only (tabs for sub-pages)", () => {
     const sales = navGroups.find((group) => group.label === "Sales");
     expect(sales?.items.map((item) => item.href)).toEqual(["/sales", "/delivery"]);
@@ -75,6 +80,7 @@ describe("navGroups", () => {
     const hrefs = new Set(NON_NEW_ROUTES.map((route) => `${route.href}::${route.label}`));
     const expected = [
       "/",
+      "/record",
       "/sales",
       "/close-day",
       "/cards",
@@ -322,6 +328,6 @@ describe("command palette quick actions", () => {
       ),
     );
     expect(source).toContain("route.quickAction");
-    expect(source).toContain("openQuickAction(route.quickAction)");
+    expect(source).toContain("openRecordAction(route.quickAction)");
   });
 });

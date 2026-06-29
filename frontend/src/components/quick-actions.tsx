@@ -1,6 +1,6 @@
 "use client";
 
-/** Shared quick-action dialogs — New menu, top bar, dashboard (Slice 11.14). */
+/** Shared quick-action dialogs — New menu, command palette, Record hub (UX1). */
 
 import {
   createContext,
@@ -11,30 +11,21 @@ import {
   useState,
 } from "react";
 
-import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
-import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
-import { ExpenseReceiptUploadForm } from "@/components/forms/expense-receipt-upload-form";
-import { FxPurchaseQuickAction } from "@/components/forms/fx-purchase-quick-action";
-import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
-import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
-import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
-import { SupplierForm } from "@/components/forms/supplier-form";
+import { RecordActionModals } from "@/components/record-action-modals";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
+import {
+  type QuickActionKey,
+  type RecordActionKey,
+} from "@/lib/record-actions";
 import { useEntityAccess } from "@/lib/use-entity-access";
 
-export type QuickActionKey =
-  | "expense"
-  | "sales"
-  | "buyFx"
-  | "posPhoto"
-  | "deliveryReport"
-  | "receipt"
-  | "supplier"
-  | "efatura";
+export type { QuickActionKey, RecordActionKey } from "@/lib/record-actions";
+export { isQuickActionKey } from "@/lib/record-actions";
 
 type QuickActionsContextValue = {
-  active: QuickActionKey | null;
+  active: RecordActionKey | null;
+  openRecordAction: (key: RecordActionKey) => void;
   openQuickAction: (key: QuickActionKey) => void;
   closeQuickAction: () => void;
   deliveryEnabled: boolean;
@@ -45,7 +36,7 @@ const QuickActionsContext = createContext<QuickActionsContextValue | null>(null)
 export function QuickActionsProvider({ children }: { children: React.ReactNode }) {
   const { entityId } = useEntity();
   const { canWriteOperations } = useEntityAccess();
-  const [active, setActive] = useState<QuickActionKey | null>(null);
+  const [active, setActive] = useState<RecordActionKey | null>(null);
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
 
   useEffect(() => {
@@ -58,8 +49,8 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
       .catch(() => setDeliveryEnabled(false));
   }, [entityId]);
 
-  const openQuickAction = useCallback(
-    (key: QuickActionKey) => {
+  const openRecordAction = useCallback(
+    (key: RecordActionKey) => {
       if (!canWriteOperations) return;
       if (key === "deliveryReport" && !deliveryEnabled) return;
       setActive(key);
@@ -67,39 +58,30 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     [canWriteOperations, deliveryEnabled],
   );
 
+  const openQuickAction = useCallback(
+    (key: QuickActionKey) => {
+      openRecordAction(key);
+    },
+    [openRecordAction],
+  );
+
   const closeQuickAction = useCallback(() => setActive(null), []);
 
   const value = useMemo(
     () => ({
       active,
+      openRecordAction,
       openQuickAction,
-      closeQuickAction,
+      closeQuickAction: closeQuickAction,
       deliveryEnabled,
     }),
-    [active, openQuickAction, closeQuickAction, deliveryEnabled],
+    [active, openRecordAction, openQuickAction, closeQuickAction, deliveryEnabled],
   );
 
   return (
     <QuickActionsContext.Provider value={value}>
       {children}
-      {canWriteOperations && (
-        <>
-          <ManualExpenseForm open={active === "expense"} onClose={closeQuickAction} />
-          <ManualDailySalesForm open={active === "sales"} onClose={closeQuickAction} />
-          <FxPurchaseQuickAction open={active === "buyFx"} onClose={closeQuickAction} />
-          <PosSummaryUploadForm open={active === "posPhoto"} onClose={closeQuickAction} />
-          <DeliveryReportForm
-            open={active === "deliveryReport"}
-            onClose={closeQuickAction}
-          />
-          <ExpenseReceiptUploadForm
-            open={active === "receipt"}
-            onClose={closeQuickAction}
-          />
-          <SupplierForm open={active === "supplier"} onClose={closeQuickAction} />
-          <EfaturaUploadForm open={active === "efatura"} onClose={closeQuickAction} />
-        </>
-      )}
+      <RecordActionModals active={active} onClose={closeQuickAction} />
     </QuickActionsContext.Provider>
   );
 }
@@ -110,4 +92,12 @@ export function useQuickActions() {
     throw new Error("useQuickActions must be used within QuickActionsProvider");
   }
   return ctx;
+}
+
+export function useRecordActions() {
+  const ctx = useQuickActions();
+  return {
+    openRecordAction: ctx.openRecordAction,
+    deliveryEnabled: ctx.deliveryEnabled,
+  };
 }

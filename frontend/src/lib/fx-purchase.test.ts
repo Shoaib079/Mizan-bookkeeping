@@ -7,11 +7,12 @@ async function readSource(relativePath: string) {
 }
 
 describe("FX purchase New menu", () => {
-  it("registers buyFx in quick actions and opens FxPurchaseQuickAction", async () => {
-    const quickActions = await readSource("../components/quick-actions.tsx");
-    expect(quickActions).toContain('"buyFx"');
-    expect(quickActions).toContain("FxPurchaseQuickAction");
-    expect(quickActions).toContain('active === "buyFx"');
+  it("registers buyFx in record actions and opens FxPurchaseQuickAction", async () => {
+    const registry = await readSource("./record-actions.ts");
+    const modals = await readSource("../components/record-action-modals.tsx");
+    expect(registry).toContain('"buyFx"');
+    expect(modals).toContain("FxPurchaseQuickAction");
+    expect(modals).toContain('effectiveAction === "buyFx"');
   });
 
   it("lists Buy foreign currency in the New menu", async () => {
