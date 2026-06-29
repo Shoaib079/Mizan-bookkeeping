@@ -7,10 +7,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | UX4 — Reports trim (next) |
-| **Last completed slice** | UX3 — Review hub (`v0.73.2-ux3-review-hub`) |
-| **Last tag** | `v0.73.2-ux3-review-hub` |
-| **Next up** | UX4 Reports trim → UX5 Set up hub |
+| **Active slice** | UX5 — Set up hub (next) |
+| **Last completed slice** | UX4 — Reports trim (`v0.73.3-ux4-reports-trim`) |
+| **Last tag** | `v0.73.3-ux4-reports-trim` |
+| **Next up** | UX5 Set up hub → UX6 collapse sidebar |
 
 ## Owner blockers (12.5)
 

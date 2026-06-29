@@ -13,6 +13,7 @@ import {
   NEW_COMMAND_QUICK_ACTIONS,
   REGISTERED_PAGE_ROUTES,
   REPORTS_CARD_HREFS,
+  REPORTS_PALETTE_ONLY_HREFS,
   SIDEBAR_HIDDEN_HREFS,
   navSectionForPathname,
   sidebarHrefActiveForPathname,
@@ -126,6 +127,9 @@ describe("route reachability guard", () => {
         continue;
       }
       if (route.kind === "reports-card") {
+        if (REPORTS_PALETTE_ONLY_HREFS.includes(route.pattern as (typeof REPORTS_PALETTE_ONLY_HREFS)[number])) {
+          continue;
+        }
         expect(
           collectReportsCardHrefs().has(
             route.pattern as (typeof REPORTS_CARD_HREFS)[number],

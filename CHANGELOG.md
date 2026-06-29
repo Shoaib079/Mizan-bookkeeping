@@ -8,7 +8,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **UX2 — Balances hub (`v0.73.1-ux2-balances-hub`):** `/balances` tabs with legacy payables/receivables redirects. **234 vitest**; no backend/posting changes.
 
-**UX3 — Review hub:** `/review` tabs — Bank & card, Sales, Receipts, Invoices, Delivery, All posted (general ledger). Redirects `/banking/review` and `/reports/ledger`. Dashboard needs-review links; `GET .../expense-receipts` list API. **240 vitest** + **678 pytest** (+1); no posting changes.
+**UX3 — Review hub (`v0.73.2-ux3-review-hub`):** `/review` tabs — Bank & card, Sales, Receipts, Invoices, Delivery, All posted (general ledger). Redirects `/banking/review` and `/reports/ledger`. Dashboard needs-review links; `GET .../expense-receipts` list API. **240 vitest** + **678 pytest** (+1); no posting changes.
+
+**UX4 — Reports trim:** `/reports` landing shows financial statements only (P&L, balance sheet, cash flow, KDV, delivery sales, period comparison). General ledger and manual journals removed from report cards (ledger → Review; manual journals via palette/links until UX5). **241 vitest**; no backend/posting changes.
 
 ## 2026-06-28
 

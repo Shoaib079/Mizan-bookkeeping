@@ -256,8 +256,10 @@ export const REPORTS_CARD_HREFS = [
   "/reports/kdv-input",
   "/reports/delivery-sales",
   "/reports/period-comparison",
-  "/accounting/manual-journals",
 ] as const;
+
+/** Registered report routes not shown on /reports landing (UX4); palette + deep links only until UX5. */
+export const REPORTS_PALETTE_ONLY_HREFS = ["/accounting/manual-journals"] as const;
 
 export type RouteEntryKind =
   | "sidebar"
