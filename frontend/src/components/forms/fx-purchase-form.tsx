@@ -16,7 +16,11 @@ import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
-import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import {
+  computeTryCostKurusFromRate,
+  fxPurchaseDescriptionForApi,
+} from "@/lib/fx-purchase-helpers";
+import { formatKurus, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 
 type Props = {
@@ -46,9 +50,11 @@ export function FxPurchaseForm({
   );
   const [tryCashId, setTryCashId] = useState("");
   const [nativeText, setNativeText] = useState("");
+  const [rateText, setRateText] = useState("");
   const [tryCostText, setTryCostText] = useState("");
+  const [tryCostTouched, setTryCostTouched] = useState(false);
   const [dateText, setDateText] = useState("");
-  const [description, setDescription] = useState(`Buy ${currency}`);
+  const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,9 +71,22 @@ export function FxPurchaseForm({
   useEffect(() => {
     if (open) {
       setDateText(todayTrDate());
+      setNativeText("");
+      setRateText("");
+      setTryCostText("");
+      setTryCostTouched(false);
+      setDescription("");
+      setError(null);
       void loadAccounts().catch(() => undefined);
     }
   }, [open, loadAccounts]);
+
+  useEffect(() => {
+    if (tryCostTouched) return;
+    const computed = computeTryCostKurusFromRate(nativeText, rateText);
+    if (computed === null) return;
+    setTryCostText(formatKurus(computed));
+  }, [nativeText, rateText, tryCostTouched]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -104,7 +123,7 @@ export function FxPurchaseForm({
           native_quantity: nativeQuantity,
           try_cost_kurus: tryCostKurus,
           purchase_date: purchaseDate,
-          description,
+          description: fxPurchaseDescriptionForApi(description),
           actor_id: actorId,
         }),
       });
@@ -113,7 +132,10 @@ export function FxPurchaseForm({
       toast("FX purchase recorded");
       onClose();
       setNativeText("");
+      setRateText("");
       setTryCostText("");
+      setTryCostTouched(false);
+      setDescription("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Purchase failed");
     } finally {
@@ -135,12 +157,24 @@ export function FxPurchaseForm({
           />
         </div>
         <div>
+          <Label htmlFor="fx-buy-rate">Rate (TRY per 1 {currency})</Label>
+          <MoneyInput
+            id="fx-buy-rate"
+            placeholder="34,50"
+            value={rateText}
+            onChange={setRateText}
+          />
+        </div>
+        <div>
           <Label htmlFor="fx-buy-try">TRY paid</Label>
           <MoneyInput
             id="fx-buy-try"
             placeholder="3.450,00"
             value={tryCostText}
-            onChange={setTryCostText}
+            onChange={(value) => {
+              setTryCostTouched(true);
+              setTryCostText(value);
+            }}
             required
           />
         </div>
@@ -167,12 +201,12 @@ export function FxPurchaseForm({
           />
         </div>
         <div>
-          <Label htmlFor="fx-buy-desc">Description</Label>
+          <Label htmlFor="fx-buy-desc">Description (optional)</Label>
           <Input
             id="fx-buy-desc"
+            placeholder={`Buy ${currency}`}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

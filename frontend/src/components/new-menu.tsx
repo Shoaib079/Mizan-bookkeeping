@@ -4,6 +4,7 @@
 
 import Link from "next/link";
 import {
+  Banknote,
   ChevronDown,
   FileText,
   Plus,
@@ -49,6 +50,10 @@ const MENU_GROUPS: MenuGroup[] = [
       { key: "expense", label: "Manual expense", icon: Wallet },
       { key: "receipt", label: "Expense receipt (photo)", icon: Receipt },
     ],
+  },
+  {
+    label: "Cash & bank",
+    items: [{ key: "buyFx", label: "Buy foreign currency", icon: Banknote }],
   },
   {
     label: "Suppliers",

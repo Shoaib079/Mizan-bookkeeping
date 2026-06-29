@@ -202,6 +202,7 @@ describe("NEW_COMMAND_QUICK_ACTIONS", () => {
     expect(Object.keys(NEW_COMMAND_QUICK_ACTIONS)).toEqual([
       "New: Manual expense",
       "New: Daily sales (manual)",
+      "New: Buy foreign currency",
       "New: POS summary (photo)",
       "New: Delivery report",
       "New: Expense receipt (photo)",

@@ -17,7 +17,7 @@ class FxPurchaseCreate(BaseModel):
     native_quantity: int = Field(gt=0, description="Foreign currency amount in minor units")
     try_cost_kurus: int = Field(gt=0, description="TRY paid in kuruş")
     purchase_date: date
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: uuid.UUID
 
 

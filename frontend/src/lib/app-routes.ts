@@ -160,6 +160,14 @@ export const appRoutes: AppRoute[] = [
     quickAction: "sales",
   },
   {
+    href: "/banking",
+    label: "New: Buy foreign currency",
+    keywords: "fx forex usd eur gbp",
+    icon: Banknote,
+    group: "New",
+    quickAction: "buyFx",
+  },
+  {
     href: "/close-day",
     label: "New: Close day",
     keywords: "close-out sales expenses",

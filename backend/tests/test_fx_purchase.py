@@ -130,6 +130,29 @@ def test_fx_purchase_posts_dr_fx_cr_try_cash(db_session, fx_setup) -> None:
     assert linked.id == result.cash_movement.id
 
 
+def test_fx_purchase_blank_description_uses_currency_fallback(
+    db_session, fx_setup
+) -> None:
+    entity_id = fx_setup["entity_id"]
+    drawer = fx_setup["drawer"]
+    wallet = fx_setup["usd_wallet"]
+
+    result = fx_posting.post_fx_purchase(
+        db_session,
+        entity_id,
+        fx_money_account_id=wallet.id,
+        try_cash_money_account_id=drawer.id,
+        native_quantity=5_000,
+        try_cost_kurus=175_000,
+        purchase_date=date(2026, 5, 2),
+        description=None,
+        actor_id=ACTOR_ID,
+    )
+
+    assert result.fx_ledger_entry.description == "Buy USD"
+    assert result.journal_entry.description == "Buy USD"
+
+
 def test_control_account_try_cost_matches_gl(db_session, fx_setup) -> None:
     entity_id = fx_setup["entity_id"]
     drawer = fx_setup["drawer"]
@@ -457,6 +480,30 @@ def test_api_fx_purchase_ledger_and_balance(
     assert bal["native_quantity"] == 8000
     assert bal["try_cost_kurus"] == 280000
     assert bal["gl_balance_kurus"] == 280000
+
+
+def test_api_fx_purchase_optional_description(
+    client: TestClient, fx_setup
+) -> None:
+    entity_id = fx_setup["entity_id"]
+    drawer = fx_setup["drawer"]
+    wallet = fx_setup["usd_wallet"]
+    base = f"/entities/{entity_id}/fx"
+
+    purchase = client.post(
+        f"{base}/purchases",
+        json={
+            "fx_money_account_id": str(wallet.id),
+            "try_cash_money_account_id": str(drawer.id),
+            "native_quantity": 2000,
+            "try_cost_kurus": 70000,
+            "purchase_date": "2026-05-11",
+            "description": None,
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert purchase.status_code == 201
+    assert purchase.json()["fx_ledger_entry"]["description"] == "Buy USD"
 
 
 def test_rls_isolation_raw_sql(db_session, restaurant_a, restaurant_b, fx_setup) -> None:

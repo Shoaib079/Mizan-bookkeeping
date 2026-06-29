@@ -26,6 +26,14 @@ class FxLedgerError(ValueError):
     """Base FX ledger validation failure."""
 
 
+def resolve_fx_purchase_description(description: str | None, currency: str) -> str:
+    """Use owner text when provided; otherwise a readable ledger fallback."""
+    text = (description or "").strip()
+    if text:
+        return text
+    return f"Buy {currency}"
+
+
 class ZeroFxMovementError(FxLedgerError):
     """Movement quantities must be positive."""
 

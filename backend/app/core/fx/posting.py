@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.cash.guards import resolve_session_for_movement
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
-from app.core.fx.ledger import record_fx_movement
+from app.core.fx.ledger import record_fx_movement, resolve_fx_purchase_description
 from app.core.fx.models import FxLedgerEntry
 from app.core.fx.types import FxMovementType
 from app.core.ledger.models import JournalEntry, JournalEntrySource
@@ -157,7 +157,7 @@ def post_fx_purchase(
     native_quantity: int,
     try_cost_kurus: int,
     purchase_date: date,
-    description: str,
+    description: str | None,
     actor_id: uuid.UUID,
 ) -> FxPurchasePostResult:
     """Post FX purchase to GL and FX subledger in one transaction."""
@@ -175,6 +175,10 @@ def post_fx_purchase(
         if fx_account.id == try_cash_account.id:
             raise InvalidFxPurchaseError("FX wallet and TRY cash account must differ")
 
+        ledger_description = resolve_fx_purchase_description(
+            description, fx_account.currency
+        )
+
         lines = build_fx_purchase_posting_lines(
             fx_gl_account_id=fx_gl.id,
             try_cash_gl_account_id=try_cash_gl.id,
@@ -185,7 +189,7 @@ def post_fx_purchase(
             session,
             entity_id,
             purchase_date,
-            description,
+            ledger_description,
             lines,
             actor_id=actor_id,
             source=JournalEntrySource.FX_PURCHASE,
@@ -198,7 +202,7 @@ def post_fx_purchase(
             movement_type=FxMovementType.PURCHASE,
             native_quantity=native_quantity,
             try_cost_kurus=try_cost_kurus,
-            description=description,
+            description=ledger_description,
             actor_id=actor_id,
             journal_entry_id=journal_entry.id,
         )
@@ -210,7 +214,7 @@ def post_fx_purchase(
             fx_gl_account_id=fx_gl.id,
             try_cost_kurus=try_cost_kurus,
             movement_date=purchase_date,
-            description=description,
+            description=ledger_description,
             actor_id=actor_id,
             journal_entry_id=journal_entry.id,
         )

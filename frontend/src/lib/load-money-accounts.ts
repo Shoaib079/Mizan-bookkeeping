@@ -60,15 +60,19 @@ export async function loadForeignCurrencyAccounts(
   entityId: string,
   currency: string,
 ): Promise<MoneyAccountOption[]> {
+  const all = await loadAllForeignCurrencyAccounts(entityId);
+  const code = currency.toUpperCase();
+  return all.filter((row) => row.currency?.toUpperCase() === code);
+}
+
+/** All active FX wallet accounts for the entity. */
+export async function loadAllForeignCurrencyAccounts(
+  entityId: string,
+): Promise<MoneyAccountOption[]> {
   const res = await apiFetch<{ items: MoneyAccountApiRow[] }>(
     `/entities/${entityId}/banking/accounts?account_kind=foreign_currency&limit=50`,
   );
-  const code = currency.toUpperCase();
   return res.items
-    .filter(
-      (row) =>
-        row.is_active !== false &&
-        row.currency?.toUpperCase() === code,
-    )
+    .filter((row) => row.is_active !== false)
     .map(toOption);
 }
