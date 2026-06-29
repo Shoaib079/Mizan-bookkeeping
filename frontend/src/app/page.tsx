@@ -7,6 +7,7 @@ import { ShoppingBag, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { useQuickActions } from "@/components/quick-actions";
+import { RecentEntriesCard } from "@/components/dashboard/recent-entries-card";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingChecklist } from "@/components/onboarding-checklist";
@@ -211,6 +212,8 @@ function DashboardBody() {
               </div>
             ))}
           </div>
+
+          {entityId && <RecentEntriesCard entityId={entityId} className="mt-6" />}
 
           {data.sales.total_sales_kurus > 0 && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
