@@ -47,6 +47,7 @@ from app.features.reports.api import router as reports_router
 from app.features.dashboard.api import router as dashboard_router
 from app.features.auth.api import members_router as auth_members_router
 from app.features.auth.api import users_router as auth_users_router
+from app.adapters.storage.local import ensure_storage_roots
 from app.config import settings
 from app.core.idempotency.middleware import IdempotencyMiddleware
 from app.core.observability.logging_config import configure_logging
@@ -59,6 +60,7 @@ from app.launch import validate_launch_settings
 configure_logging(settings.app_env)
 init_sentry(settings.sentry_dsn, settings.app_env)
 validate_launch_settings()
+ensure_storage_roots()
 
 app = FastAPI(
     title="Mizan API",
