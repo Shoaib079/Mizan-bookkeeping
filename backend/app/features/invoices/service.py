@@ -36,7 +36,7 @@ from app.features.invoices.models import (
     InvoiceSourceType,
 )
 from app.core.delivery.commission_detect import (
-    is_delivery_commission_extraction,
+    classify_efatura_intake,
     match_delivery_platform,
 )
 from app.core.delivery.commission_posting import post_delivery_commission_draft
@@ -330,8 +330,17 @@ def _apply_commission_intake(
         return InvoiceKind.SUPPLIER.value, None, review_reason
 
     pdf_text = _commission_pdf_text(payload)
-    if not is_delivery_commission_extraction(extraction, pdf_text=pdf_text):
+    classification = classify_efatura_intake(extraction, pdf_text=pdf_text)
+
+    if classification.invoice_kind == InvoiceKind.SUPPLIER.value:
+        if classification.confidence in ("medium", "low"):
+            reason = classification.review_reason or review_reason
+            return InvoiceKind.SUPPLIER.value, None, reason
         return InvoiceKind.SUPPLIER.value, None, review_reason
+
+    if classification.confidence in ("medium", "low"):
+        reason = classification.review_reason or review_reason
+        return InvoiceKind.DELIVERY_COMMISSION.value, None, reason
 
     platform = match_delivery_platform(
         session,
@@ -583,10 +592,11 @@ def link_delivery_platform_to_draft(
         if not platform.is_active:
             raise DeliveryPlatformLinkError("Delivery platform is inactive")
 
-        draft.invoice_kind = InvoiceKind.DELIVERY_COMMISSION.value
         draft.delivery_platform_id = delivery_platform_id
-        draft.status = InvoiceDraftStatus.DRAFT.value
-        draft.review_reason = None
+        if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
+            draft.status = InvoiceDraftStatus.DRAFT.value
+        if draft.invoice_kind == InvoiceKind.DELIVERY_COMMISSION.value:
+            draft.review_reason = None
 
         session.commit()
         session.refresh(draft)

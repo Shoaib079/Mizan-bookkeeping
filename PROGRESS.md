@@ -9,10 +9,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Post-launch — e-Fatura intake & invoice routing |
-| **Active slice** | **IC-B** — Classification fixtures + post fixes (`POST_LAUNCH_PLAN.md` § IC-B) |
-| **Last completed slice** | IC-A — Invoice unconfirm / redo (`v0.73.20-invoice-unconfirm-redo`) |
-| **Last tag** | `v0.73.20-invoice-unconfirm-redo` |
-| **Next up** | IC-B → IC-C → FP → FS → P3/P5/P6 → IC-D (learning, deferred) → P8 design |
+| **Active slice** | **IC-C** — Review confidence UX (`POST_LAUNCH_PLAN.md` § IC-C) |
+| **Last completed slice** | IC-B — Classification fixtures + post fixes (`v0.73.21-invoice-classification-fixtures`) |
+| **Last tag** | `v0.73.21-invoice-classification-fixtures` |
+| **Next up** | IC-C → FP → FS → P3/P5/P6 → IC-D (learning, deferred) → P8 design |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 
@@ -21,7 +21,7 @@ Permanent fixture targets when building IC-B (copy to `backend/tests/fixtures/ef
 | File | Expected kind |
 |------|----------------|
 | `24.pdf` (Trendyol) | `delivery_commission` |
-| `54.pdf` (Yemeksepeti) | `delivery_commission` — **missed today** (no “komisyon” word) |
+| `54.pdf` (Yemeksepeti) | `delivery_commission` — fixed in IC-B (`v0.73.21`) |
 | `57.pdf` (Migros Yemek) | `delivery_commission` |
 | `58.pdf` (Getir) | `delivery_commission` |
 | Getir supply PDF | `supplier` — same VKN as commission; use document shape (Depo, product lines) |
@@ -62,11 +62,11 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**`v0.73.20-invoice-unconfirm-redo`** — unconfirm/redo confirmed drafts; discard; reclassify. Prior: **`v0.73.19`** supplier activity + preview.
+**`v0.73.21-invoice-classification-fixtures`** — YS Hizmet Bedeli; supply vs commission; Spice Corner fixtures. Prior: **`v0.73.20`** unconfirm/redo.
 
 **Deploy:** `alembic upgrade head` through **`059`** on Railway. Set entity VKN in Set up → Restaurant if legacy row.
 
-**Next build:** **`POST_LAUNCH_PLAN.md` § IC-B** (Yemeksepeti/Getir detection + Spice Corner fixtures), then IC-C (review UX). **FP/FS after IC-B–IC-C.**
+**Next build:** **`POST_LAUNCH_PLAN.md` § IC-C** (review confidence UX). **FP/FS after IC-C.**
 
 **Owner sign-off ✓ (2026-06-28)** — clearance auto-pick (`v0.72.0-clearance-auto-pick`). Phase 12.5 statement-learning arc closed.
 

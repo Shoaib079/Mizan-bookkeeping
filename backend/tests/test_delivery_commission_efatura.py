@@ -233,7 +233,9 @@ def test_commission_requires_platform_before_confirm(db_session, commission_setu
     entity_id = commission_setup["entity_id"]
     supplier_id = commission_setup["supplier_id"]
 
-    draft = _commission_draft(db_session, entity_id, supplier_id, None)
+    draft = _commission_draft(
+        db_session, entity_id, supplier_id, None, as_commission=True
+    )
     invoice_service.link_delivery_platform_to_draft(
         db_session,
         entity_id,
@@ -244,6 +246,19 @@ def test_commission_requires_platform_before_confirm(db_session, commission_setu
     linked = invoice_service.get_invoice_draft(db_session, entity_id, draft.id)
     assert linked.invoice_kind == InvoiceKind.DELIVERY_COMMISSION
     assert linked.delivery_platform_id == commission_setup["getir"].id
+
+    supplier_draft = _commission_draft(db_session, entity_id, supplier_id, None)
+    invoice_service.link_delivery_platform_to_draft(
+        db_session,
+        entity_id,
+        supplier_draft.id,
+        delivery_platform_id=commission_setup["getir"].id,
+    )
+    still_supplier = invoice_service.get_invoice_draft(
+        db_session, entity_id, supplier_draft.id
+    )
+    assert still_supplier.invoice_kind == InvoiceKind.SUPPLIER
+    assert still_supplier.delivery_platform_id == commission_setup["getir"].id
 
     unlinked = _commission_draft(
         db_session, entity_id, supplier_id, None, as_commission=True

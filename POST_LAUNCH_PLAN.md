@@ -28,7 +28,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 | Priority | ID | Slice | Status |
 |----------|-----|-------|--------|
-| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-A done** — IC-B next |
+| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-B done** — IC-C next |
 | 2 | FP | Partner advance / drawing | Queued |
 | 3 | FS | Salary period + auto-clear advance | Queued |
 | 4 | P3 | Off-site backup of uploads | Queued |
@@ -86,7 +86,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 ---
 
-#### IC-B — Deterministic classification + fixtures + post fixes
+#### IC-B — Deterministic classification + fixtures + post fixes ✅ `v0.73.21-invoice-classification-fixtures`
 
 **Spec:**
 
