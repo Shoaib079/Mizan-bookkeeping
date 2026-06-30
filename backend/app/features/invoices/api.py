@@ -16,6 +16,7 @@ from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.invoices import service
 from app.features.invoices.models import InvoiceDraftStatus
 from app.core.invoices.posting import DraftPostError
+from app.core.ledger.errors import PostingError
 from app.core.ledger.posting import InvalidAccountError
 from app.features.invoices.schema import (
     ConfirmDraftRequest,
@@ -316,5 +317,9 @@ def post_invoice_draft(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DraftPostError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DeliveryNotEnabledError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

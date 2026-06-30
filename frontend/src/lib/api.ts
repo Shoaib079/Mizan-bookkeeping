@@ -79,16 +79,26 @@ export async function apiFetch<T>(
   void _key;
   const maxAttempts = authHeaderProvider ? AUTH_401_MAX_ATTEMPTS : 1;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const authHeaders = authHeaderProvider ? await authHeaderProvider() : {};
-    const response = await fetch(`${API_BASE}${path}`, {
-      ...fetchInit,
-      headers: {
-        ...authHeaders,
-        ...resolveIdempotencyKey(init),
-        ...(fetchInit.headers ?? {}),
-      },
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE}${path}`, {
+        ...fetchInit,
+        headers: {
+          ...authHeaders,
+          ...resolveIdempotencyKey(init),
+          ...(fetchInit.headers ?? {}),
+        },
+      });
+    } catch (err) {
+      const hint =
+        err instanceof Error ? err.message : "Request failed before a response";
+      throw new ApiError(
+        `Could not reach the API (${API_BASE}). ${hint}. Check NEXT_PUBLIC_API_URL, Railway CORS_ORIGINS for this site, and the browser Network tab for the POST.`,
+        0,
+      );
+    }
 
     if (response.ok) {
       if (response.status === 204) return undefined as T;

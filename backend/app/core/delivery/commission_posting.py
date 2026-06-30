@@ -100,8 +100,6 @@ def post_delivery_commission_draft(
             raise DraftPostError(
                 f"Draft status {status.value!r} must be confirmed to post"
             )
-        if draft.supplier_id is None:
-            raise DraftPostError("Supplier must be linked before posting")
         if draft.delivery_platform_id is None:
             raise DraftPostError("Delivery platform must be linked before posting")
 

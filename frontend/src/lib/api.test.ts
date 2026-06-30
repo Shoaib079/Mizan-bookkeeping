@@ -97,4 +97,16 @@ describe("apiFetch 401 retry", () => {
     await expectation;
     expect(fetch).toHaveBeenCalledTimes(AUTH_401_MAX_ATTEMPTS);
   });
+
+  it("wraps fetch network failures in ApiError with status 0", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
+
+    await expect(apiFetch("/entities?limit=50")).rejects.toMatchObject({
+      status: 0,
+      message: expect.stringContaining("Could not reach the API"),
+    });
+  });
 });

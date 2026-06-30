@@ -318,6 +318,35 @@ def test_cross_entity_isolation(
     assert post_resp.status_code in (404, 422)
 
 
+def test_post_commission_without_supplier(db_session, commission_setup) -> None:
+    entity_id = commission_setup["entity_id"]
+    expense_id = commission_setup["accounts"][DELIVERY_COMMISSION_EXPENSE_CODE]
+    getir = commission_setup["getir"]
+
+    draft = _commission_draft(
+        db_session,
+        entity_id,
+        commission_setup["supplier_id"],
+        getir.id,
+        status=InvoiceDraftStatus.CONFIRMED,
+    )
+    draft_id = draft.id
+    with entity_context(db_session, entity_id):
+        row = db_session.get(InvoiceDraft, draft_id)
+        assert row is not None
+        row.supplier_id = None
+        db_session.commit()
+
+    result = post_delivery_commission_draft(
+        db_session,
+        entity_id,
+        draft_id,
+        expense_account_id=expense_id,
+        actor_id=ACTOR_ID,
+    )
+    assert result.journal_entry.source == JournalEntrySource.DELIVERY_COMMISSION
+
+
 def test_api_commission_e2e(client: TestClient, db_session, commission_setup) -> None:
     entity_id = commission_setup["entity_id"]
     bank = commission_setup["bank"]

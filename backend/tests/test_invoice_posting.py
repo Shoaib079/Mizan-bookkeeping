@@ -355,3 +355,46 @@ def test_api_post_unconfirmed_returns_422(
         },
     )
     assert post.status_code == 422
+
+
+def test_api_post_period_locked_returns_422(
+    client, restaurant_a, seeded_accounts, db_session
+) -> None:
+    from app.core.auth.types import EntityRole
+    from app.core.period_locks.models import PeriodLockKind
+    from app.core.period_locks.service import close_period
+    from app.features.auth import service as auth_service
+    from app.features.auth.schema import MembershipCreate, UserCreate
+
+    owner = auth_service.create_user(
+        db_session, UserCreate(email="owner-post-lock@test.com", display_name="Owner")
+    )
+    auth_service.add_entity_member(
+        db_session,
+        restaurant_a.id,
+        MembershipCreate(user_id=owner.id, role=EntityRole.OWNER),
+    )
+
+    draft_id = _linked_confirmed(client, restaurant_a.id)
+    draft = client.get(f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}")
+    assert draft.status_code == 200
+    invoice_date = date.fromisoformat(draft.json()["invoice_date"])
+
+    close_period(
+        db_session,
+        restaurant_a.id,
+        lock_kind=PeriodLockKind.DAY,
+        anchor_date=invoice_date,
+        actor_id=owner.id,
+        reason="Month-end close",
+    )
+
+    post = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/post",
+        json={
+            "actor_id": str(owner.id),
+            "expense_account_id": str(seeded_accounts["5200"]),
+        },
+    )
+    assert post.status_code == 422
+    assert "closed period" in post.json()["detail"].lower()
