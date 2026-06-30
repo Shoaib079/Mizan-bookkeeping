@@ -35,21 +35,15 @@ def _create_and_post(
     platform_id,
     report_date: date,
     gross_kurus: int,
-    *,
-    commission_kurus: int | None = None,
-    net_kurus: int | None = None,
 ):
-    commission = commission_kurus if commission_kurus is not None else gross_kurus // 10
-    net = net_kurus if net_kurus is not None else gross_kurus - commission
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=platform_id,
-            report_date=report_date,
+            period_year=report_date.year,
+            period_month=report_date.month,
             gross_kurus=gross_kurus,
-            commission_kurus=commission,
-            net_kurus=net,
             description=f"Report {report_date}",
             actor_id=ACTOR_ID,
         ),
@@ -68,7 +62,7 @@ def test_two_platforms_posted_reports_in_range(db_session, two_platform_setup) -
         db_session, entity_id, two_platform_setup["getir"].id, date(2026, 1, 5), 100_000
     )
     _create_and_post(
-        db_session, entity_id, two_platform_setup["getir"].id, date(2026, 1, 20), 50_000
+        db_session, entity_id, two_platform_setup["getir"].id, date(2026, 2, 20), 50_000
     )
     _create_and_post(
         db_session,
@@ -82,10 +76,10 @@ def test_two_platforms_posted_reports_in_range(db_session, two_platform_setup) -
         db_session, entity_id, date(2026, 1, 1), date(2026, 1, 31)
     )
 
-    assert report.total_gross_kurus == 350_000
+    assert report.total_gross_kurus == 300_000
     by_name = {row.platform_name: row for row in report.platforms}
-    assert by_name["Getir"].gross_kurus == 150_000
-    assert by_name["Getir"].report_count == 2
+    assert by_name["Getir"].gross_kurus == 100_000
+    assert by_name["Getir"].report_count == 1
     assert by_name["Yemeksepeti"].gross_kurus == 200_000
     assert by_name["Yemeksepeti"].report_count == 1
 
@@ -120,40 +114,23 @@ def test_non_posted_statuses_excluded(db_session, two_platform_setup) -> None:
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=getir_id,
-            report_date=date(2026, 1, 11),
+            period_year=2026,
+            period_month=2,
             gross_kurus=200_000,
-            commission_kurus=20_000,
-            net_kurus=180_000,
             description="Draft",
             actor_id=ACTOR_ID,
         ),
     )
     assert draft.status == "draft"
 
-    needs_review = delivery_service.create_delivery_report(
-        db_session,
-        entity_id,
-        DeliveryReportCreate(
-            delivery_platform_id=getir_id,
-            report_date=date(2026, 1, 12),
-            gross_kurus=300_000,
-            commission_kurus=30_000,
-            net_kurus=250_000,
-            description="Bad math",
-            actor_id=ACTOR_ID,
-        ),
-    )
-    assert needs_review.status == "needs_review"
-
     rejected_created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=getir_id,
-            report_date=date(2026, 1, 13),
+            period_year=2026,
+            period_month=3,
             gross_kurus=400_000,
-            commission_kurus=40_000,
-            net_kurus=360_000,
             description="To reject",
             actor_id=ACTOR_ID,
         ),

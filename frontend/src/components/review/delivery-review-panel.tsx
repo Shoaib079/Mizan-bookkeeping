@@ -16,7 +16,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Truck } from "lucide-react";
 import { useQuickActions } from "@/components/quick-actions";
 import { useEntity } from "@/lib/entity-context";
-import { formatTrDate, formatTry } from "@/lib/money";
+import { formatTry } from "@/lib/money";
 import type { DeliveryReport } from "@/lib/pos-delivery-types";
 import { isPendingReviewStatus } from "@/lib/review-status";
 import { useEntityList } from "@/lib/use-entity-list";
@@ -50,7 +50,7 @@ export function DeliveryReviewPanel() {
   return (
     <>
       <p className="mb-4 text-sm text-muted-foreground">
-        Confirm platform commission reports before posting.
+        Confirm monthly platform sales before posting.
       </p>
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <TableSkeleton columns={5} />}
@@ -58,17 +58,16 @@ export function DeliveryReviewPanel() {
         <EmptyState
           icon={Truck}
           title="Nothing to review"
-          hint="Delivery reports awaiting review will appear here."
+          hint="Monthly sales awaiting review will appear here."
         />
       )}
       {!loading && pending.length > 0 && (
         <DataTable>
           <DataTableHead>
             <tr>
-              <DataTableHeaderCell>Date</DataTableHeaderCell>
+              <DataTableHeaderCell>Period</DataTableHeaderCell>
               <DataTableHeaderCell>Platform</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Net</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
             </tr>
           </DataTableHead>
@@ -80,15 +79,12 @@ export function DeliveryReviewPanel() {
                     href={`/delivery/reports/${row.id}`}
                     className="text-primary hover:underline"
                   >
-                    {formatTrDate(row.report_date)}
+                    {row.period_month}/{row.period_year}
                   </Link>
                 </DataTableCell>
                 <DataTableCell>{row.platform_name}</DataTableCell>
                 <DataTableCell align="right">
                   {formatTry(row.gross_kurus)}
-                </DataTableCell>
-                <DataTableCell align="right">
-                  {formatTry(row.net_kurus)}
                 </DataTableCell>
                 <DataTableCell>
                   <StatusBadge status={row.status} />

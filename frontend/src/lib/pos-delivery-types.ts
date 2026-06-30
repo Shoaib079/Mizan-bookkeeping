@@ -54,13 +54,12 @@ export type DeliveryReport = {
   delivery_platform_id: string;
   platform_name: string;
   report_date: string;
+  period_year: number;
+  period_month: number;
   gross_kurus: number;
-  commission_kurus: number;
-  net_kurus: number;
   status: string;
   review_reason: string | null;
   description: string;
-  commission_journal_entry_id: string | null;
 };
 
 export type DeliverySettlement = {
@@ -83,8 +82,8 @@ export type PlatformClearingReconciliation = {
   total_reported_gross_kurus: number;
   total_settled_net_kurus: number;
   total_commission_posted_kurus: number;
-  in_transit_kurus: number;
-  report_count: number;
+  balance_left_kurus: number;
+  monthly_sales_count: number;
   settlement_count: number;
   commission_posted_count: number;
 };

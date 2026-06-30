@@ -18,9 +18,25 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Truck } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
-import { formatTrDate, formatTry } from "@/lib/money";
+import { formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
 import type { DeliveryReport } from "@/lib/pos-delivery-types";
+
+const MONTH_NAMES = [
+  "",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export default function DeliveryReportsPage() {
   const { entityId } = useEntity();
@@ -35,7 +51,7 @@ export default function DeliveryReportsPage() {
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? `${total} report${total === 1 ? "" : "s"}`
+            ? `${total} entr${total === 1 ? "y" : "ies"}`
             : "Select a restaurant in the sidebar"}
         </p>
         <Button
@@ -43,18 +59,18 @@ export default function DeliveryReportsPage() {
           disabled={!entityId}
           onClick={() => setFormOpen(true)}
         >
-          New report
+          Monthly sales
         </Button>
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={5} />}
+      {loading && <TableSkeleton columns={4} />}
 
       {!loading && entityId && items.length === 0 && (
         <EmptyState
           icon={Truck}
-          title="No delivery reports yet"
-          hint="Enter gross, commission, and net from the platform statement."
+          title="No monthly sales yet"
+          hint="Enter total platform sales (KDV dahil) for each month."
         />
       )}
 
@@ -62,10 +78,9 @@ export default function DeliveryReportsPage() {
         <DataTable>
           <DataTableHead>
             <tr>
-              <DataTableHeaderCell>Date</DataTableHeaderCell>
+              <DataTableHeaderCell>Period</DataTableHeaderCell>
               <DataTableHeaderCell>Platform</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Net</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
             </tr>
           </DataTableHead>
@@ -77,15 +92,13 @@ export default function DeliveryReportsPage() {
                     href={`/delivery/reports/${row.id}`}
                     className="text-primary hover:underline"
                   >
-                    {formatTrDate(row.report_date)}
+                    {MONTH_NAMES[row.period_month] ?? row.period_month}{" "}
+                    {row.period_year}
                   </Link>
                 </DataTableCell>
                 <DataTableCell>{row.platform_name}</DataTableCell>
                 <DataTableCell align="right">
                   {formatTry(row.gross_kurus)}
-                </DataTableCell>
-                <DataTableCell align="right">
-                  {formatTry(row.net_kurus)}
                 </DataTableCell>
                 <DataTableCell>
                   <StatusBadge status={row.status} />

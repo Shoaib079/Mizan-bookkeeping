@@ -59,9 +59,9 @@ class InvoiceDraft(EntityScopedMixin, Base):
         nullable=True,
         index=True,
     )
-    delivery_report_id: Mapped[uuid.UUID | None] = mapped_column(
+    delivery_platform_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("delivery_reports.id", ondelete="RESTRICT"),
+        ForeignKey("delivery_platforms.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )

@@ -2,6 +2,24 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-06-25 — Delivery monthly gross sales + platform-linked commission (Decisions §9; migration `059`)
+
+**Choice:** Simplify delivery intake to **one posted monthly gross sales entry per platform per calendar month** (KDV dahil). Same workflow for **all** platforms (Getir, Yemeksepeti, Trendyol, etc.) — owner enters gross only; no per-report commission/net split on the sales row.
+
+**Monthly sales posting:** `post_delivery_report()` posts **Dr** platform clearing / **Cr** `4000` for **gross** at **month-end date** (`period_year` + `period_month`). Partial unique index on `(entity_id, delivery_platform_id, period_year, period_month)` where posted — one entry per platform per month. Duplicate post → 409.
+
+**Commission e-Faturas:** Reuse `invoice_drafts` with `invoice_kind=delivery_commission`. Commission drafts link to **`delivery_platform_id`** (not `delivery_report_id`). On PDF upload, **Komisyon** layout auto-detects kind and matches platform by supplier name/VKN. Post: **Dr** `5500` + **Dr** `1500` / **Cr** platform clearing (gross). Removed report-linked commission API (`link-delivery-report`), `commission_kurus`/`net_kurus` on reports, and `commission_journal_entry_id`.
+
+**Reconciliation:** `balance_left_kurus` = posted gross sales − commission posted (e-Fatura gross) − bank settlements received. Clearing GL balance shown separately; dashboard exposes non-zero `delivery_balance_left` rows.
+
+**Deferred:** Full Turkey output-VAT split on delivery sales (KDV ayrıştırma) — gross-only revenue posting for now.
+
+**Migration:** Alembic `059` — `period_year`/`period_month` on `delivery_reports`; `delivery_platform_id` on `invoice_drafts`; drops report commission columns and invoice `delivery_report_id`.
+
+**API:** `POST .../delivery/reports` body uses `period_year`, `period_month`, `gross_kurus` only; `POST .../invoices/drafts/{id}/link-delivery-platform` / `unlink-delivery-platform`; removed `link-delivery-report`.
+
+**Supersedes (partially):** 2026-06-22 delivery platform reports slice (gross/commission/net per upload) and commission e-Fatura slice (report-linked commission + `in_transit_kurus` naming) — historical entries retained below with **superseded** notes where applicable.
+
 ## 2026-06-27 — Clearance auto-pick for POS/delivery settlements (Phase 12.5; `v0.72.0-clearance-auto-pick`)
 
 **Choice:** Extend post-import rule auto-apply so HIGH-confidence learned rules for **`pos_settlement`** and **`delivery_settlement`** auto-**link** bank inflows to **existing** settlement records — never auto-create settlements or post new GL from the auto path.
@@ -309,9 +327,13 @@ The `card_sales_batch.gross_amount_kurus` is stored as the full **Z** total (the
 
 **Prerequisite for:** commission e-Fatura clearing credit and Phase 7 delivery sales report (both keyed by managed platforms).
 
-## 2026-06-22 — Delivery commission e-Faturas (Phase 6 Slice 3)
+## 2026-06-22 — Delivery commission e-Faturas (Phase 6 Slice 3) — **superseded by 2026-06-25 monthly sales model**
 
-**Choice:** Reuse existing e-Fatura intake (`invoice_drafts` / UBL-TR pipeline) for platform commission invoices. Platform remains a **vendor for document intake** (VKN, e-Fatura metadata) but commission posting does **not** use the supplier payables path. On post: **Dr** commission expense `5500` (net) + **Dr** Input VAT `1500` (per `vat_breakdown`) / **Cr** linked platform's clearing GL sub-account for commission **gross** (net + VAT). **Do not** credit `2000` Accounts Payable — commission was already deducted from the bank payout (`post_delivery_settlement()` credits clearing by net).
+**Was:** Report-linked commission via `delivery_report_id`; gross mismatch vs report `commission_kurus`; `commission_journal_entry_id` on report; `link-delivery-report` API; `in_transit_kurus` on reconciliation.
+
+**Now:** Platform-linked commission via `delivery_platform_id`; auto-detect on upload; `balance_left_kurus` reconciliation. See **2026-06-25 — Delivery monthly gross sales** entry.
+
+**Choice (historical):** Reuse existing e-Fatura intake (`invoice_drafts` / UBL-TR pipeline) for platform commission invoices. Platform remains a **vendor for document intake** (VKN, e-Fatura metadata) but commission posting does **not** use the supplier payables path. On post: **Dr** commission expense `5500` (net) + **Dr** Input VAT `1500` (per `vat_breakdown`) / **Cr** linked platform's clearing GL sub-account for commission **gross** (net + VAT). **Do not** credit `2000` Accounts Payable — commission was already deducted from the bank payout (`post_delivery_settlement()` credits clearing by net).
 
 **Clearing lifecycle (per platform):** (1) report → Dr clearing / Cr `4000` gross; (2) settlement → Dr bank / Cr clearing net; (3) commission e-Fatura → Dr commission expense + Dr input VAT / Cr clearing commission gross → clearing balance **zero**.
 

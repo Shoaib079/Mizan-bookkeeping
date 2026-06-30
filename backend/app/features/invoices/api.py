@@ -20,7 +20,7 @@ from app.features.invoices.schema import (
     ConfirmDraftRequest,
     InvoiceDraftListOut,
     InvoiceDraftOut,
-    LinkDeliveryReportRequest,
+    LinkDeliveryPlatformRequest,
     LinkSupplierRequest,
     PostInvoiceDraftOut,
     PostInvoiceDraftRequest,
@@ -154,40 +154,40 @@ def unlink_supplier_from_draft(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/drafts/{draft_id}/link-delivery-report", response_model=InvoiceDraftOut)
-def link_delivery_report_to_draft(
+@router.post("/drafts/{draft_id}/link-delivery-platform", response_model=InvoiceDraftOut)
+def link_delivery_platform_to_draft(
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
-    payload: LinkDeliveryReportRequest,
+    payload: LinkDeliveryPlatformRequest,
     session: Session = Depends(get_session),
     _: None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
     try:
-        return service.link_delivery_report_to_draft(
+        return service.link_delivery_platform_to_draft(
             session,
             entity_id,
             draft_id,
-            delivery_report_id=payload.delivery_report_id,
+            delivery_platform_id=payload.delivery_platform_id,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DeliveryNotEnabledError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except service.DeliveryReportLinkError as exc:
+    except service.DeliveryPlatformLinkError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except service.DraftNotLinkableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/drafts/{draft_id}/unlink-delivery-report", response_model=InvoiceDraftOut)
-def unlink_delivery_report_from_draft(
+@router.post("/drafts/{draft_id}/unlink-delivery-platform", response_model=InvoiceDraftOut)
+def unlink_delivery_platform_from_draft(
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
     try:
-        return service.unlink_delivery_report_from_draft(session, entity_id, draft_id)
+        return service.unlink_delivery_platform_from_draft(session, entity_id, draft_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.DraftNotLinkableError as exc:

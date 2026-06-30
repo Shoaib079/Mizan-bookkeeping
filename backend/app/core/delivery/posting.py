@@ -1,10 +1,11 @@
-"""Delivery platform GL posting — reports and settlements (Decisions §9)."""
+"""Delivery platform GL posting — monthly sales and settlements (Decisions §9)."""
 
 from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from calendar import monthrange
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -41,8 +42,9 @@ class DeliverySettlementPostResult:
     delivery_settlement: DeliverySettlement
 
 
-def report_math_valid(*, gross_kurus: int, commission_kurus: int, net_kurus: int) -> bool:
-    return gross_kurus - commission_kurus == net_kurus
+def period_end_date(*, period_year: int, period_month: int) -> date:
+    last_day = monthrange(period_year, period_month)[1]
+    return date(period_year, period_month, last_day)
 
 
 def build_delivery_report_posting_lines(
@@ -51,7 +53,7 @@ def build_delivery_report_posting_lines(
     sales_revenue_account_id: uuid.UUID,
     gross_amount_kurus: int,
 ) -> list[PostingLine]:
-    """GL pattern: debit platform clearing, credit sales revenue (gross only)."""
+    """GL pattern: debit platform clearing, credit sales revenue (gross, KDV dahil)."""
     if gross_amount_kurus <= 0:
         raise ValueError("gross amount must be positive kuruş")
 
@@ -100,34 +102,28 @@ def _get_account_by_code(session: Session, code: str) -> Account:
     return account
 
 
-def _validate_bank_gl_account(
-    session: Session, entity_id: uuid.UUID, account_id: uuid.UUID
-) -> Account:
-    account = session.get(Account, account_id)
-    if account is None or account.entity_id != entity_id:
-        raise InvalidAccountError("GL account not found for this entity")
-    if not account.is_active:
-        raise InvalidAccountError(f"account {account.code} is not active")
-    if account.account_type != AccountType.ASSET:
-        raise InvalidAccountError(
-            f"account {account.code} is not an asset (bank/cash) account"
-        )
-    return account
-
-
 def _validate_bank_money_account(
     session: Session, entity_id: uuid.UUID, money_account_id: uuid.UUID
 ) -> MoneyAccount:
-    money_account = session.get(MoneyAccount, money_account_id)
-    if money_account is None or money_account.entity_id != entity_id:
-        raise InvalidDeliverySettlementError("Money account not found for this entity")
-    if not money_account.is_active:
-        raise InvalidDeliverySettlementError("Money account is not active")
-    if money_account.account_kind != MoneyAccountKind.BANK:
-        raise InvalidDeliverySettlementError(
-            "Delivery settlement requires a bank money account"
-        )
-    return money_account
+    account = session.get(MoneyAccount, money_account_id)
+    if account is None or account.entity_id != entity_id:
+        raise InvalidDeliverySettlementError("money account not found for this entity")
+    if account.account_kind != MoneyAccountKind.BANK:
+        raise InvalidDeliverySettlementError("delivery settlement requires a bank account")
+    if not account.is_active:
+        raise InvalidDeliverySettlementError("money account is not active")
+    return account
+
+
+def _validate_bank_gl_account(
+    session: Session, entity_id: uuid.UUID, gl_account_id: uuid.UUID
+) -> Account:
+    account = session.get(Account, gl_account_id)
+    if account is None or account.entity_id != entity_id:
+        raise InvalidAccountError("bank GL account not found for this entity")
+    if not account.is_active:
+        raise InvalidAccountError("bank GL account is not active")
+    return account
 
 
 def persist_delivery_settlement(
@@ -171,7 +167,7 @@ def post_delivery_report(
     report: DeliveryReport,
     actor_id: uuid.UUID,
 ) -> DeliveryReportPostResult:
-    """Post delivery report gross to GL and mark report posted."""
+    """Post monthly platform gross sales to GL and mark report posted."""
     if report.status not in (
         DeliveryReportStatus.DRAFT.value,
         DeliveryReportStatus.NEEDS_REVIEW.value,
@@ -182,16 +178,6 @@ def post_delivery_report(
 
     if report.gross_kurus <= 0:
         raise InvalidDeliveryReportError("gross_kurus must be positive")
-    if report.commission_kurus < 0 or report.net_kurus < 0:
-        raise InvalidDeliveryReportError("commission and net must be >= 0")
-    if not report_math_valid(
-        gross_kurus=report.gross_kurus,
-        commission_kurus=report.commission_kurus,
-        net_kurus=report.net_kurus,
-    ):
-        raise InvalidDeliveryReportError(
-            "gross_kurus - commission_kurus must equal net_kurus"
-        )
 
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -202,6 +188,20 @@ def post_delivery_report(
 
     with entity_context(session, entity_id):
         require_entity_context()
+
+        existing_posted = session.scalar(
+            select(DeliveryReport).where(
+                DeliveryReport.delivery_platform_id == report.delivery_platform_id,
+                DeliveryReport.period_year == report.period_year,
+                DeliveryReport.period_month == report.period_month,
+                DeliveryReport.status == DeliveryReportStatus.POSTED.value,
+                DeliveryReport.id != report.id,
+            )
+        )
+        if existing_posted is not None:
+            raise InvalidDeliveryReportError(
+                "A posted monthly sales entry already exists for this platform and period"
+            )
 
         clearing_account = session.get(Account, platform.gl_account_id)
         if clearing_account is None:

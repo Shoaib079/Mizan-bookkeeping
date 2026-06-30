@@ -23,8 +23,8 @@ class LinkSupplierRequest(BaseModel):
     supplier_id: uuid.UUID | None = None
 
 
-class LinkDeliveryReportRequest(BaseModel):
-    delivery_report_id: uuid.UUID
+class LinkDeliveryPlatformRequest(BaseModel):
+    delivery_platform_id: uuid.UUID
 
 
 class ConfirmDraftRequest(BaseModel):
@@ -48,7 +48,7 @@ class PostInvoiceDraftOut(BaseModel):
     journal_entry_source: JournalEntrySource
     supplier_ledger_entry_id: uuid.UUID | None = None
     payable_balance_kurus: int | None = None
-    delivery_report_id: uuid.UUID | None = None
+    delivery_platform_id: uuid.UUID | None = None
 
 
 class InvoiceDraftOut(BaseModel):
@@ -61,9 +61,10 @@ class InvoiceDraftOut(BaseModel):
     supplier_name: str | None
     supplier_vkn: str | None
     supplier_id: uuid.UUID | None = None
-    delivery_report_id: uuid.UUID | None = None
+    delivery_platform_id: uuid.UUID | None = None
     linked_supplier_name: str | None = None
     linked_supplier_vkn: str | None = None
+    linked_platform_name: str | None = None
     invoice_number: str
     invoice_date: date
     net_kurus: int

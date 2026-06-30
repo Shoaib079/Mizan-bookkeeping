@@ -519,7 +519,7 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
         gross_kurus=gross_kurus,
         vat_breakdown=vat_breakdown,
         currency="TRY",
-        raw={"source": "pdf_heuristics", "text_length": len(text)},
+        raw={"source": "pdf_heuristics", "text_length": len(text), "text_sample": text[:8000]},
     )
 
 

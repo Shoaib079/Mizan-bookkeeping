@@ -1,6 +1,6 @@
 "use client";
 
-/** Delivery hub — platforms, reports, settlements — Phase 9 Slice 5. */
+/** Delivery hub — platforms, monthly sales, settlements — Phase 9 Slice 5. */
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -64,7 +64,7 @@ export default function DeliveryPage() {
           disabled={!entityId}
           onClick={() => setReportFormOpen(true)}
         >
-          New report
+          Monthly sales
         </Button>
       </div>
 
@@ -82,7 +82,7 @@ export default function DeliveryPage() {
           <Link href="/delivery/platforms" className="text-primary underline">
             Add a platform
           </Link>{" "}
-          to track reports and settlements.
+          to track monthly sales and settlements.
         </p>
       )}
 
@@ -107,15 +107,9 @@ export default function DeliveryPage() {
               </div>
               <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <dt className="text-muted-foreground">Reported gross</dt>
+                  <dt className="text-muted-foreground">Gross sales</dt>
                   <dd className="tabular-nums">
                     {formatTry(p.total_reported_gross_kurus)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Settled net</dt>
-                  <dd className="tabular-nums">
-                    {formatTry(p.total_settled_net_kurus)}
                   </dd>
                 </div>
                 <div>
@@ -125,8 +119,16 @@ export default function DeliveryPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">In transit</dt>
-                  <dd className="tabular-nums">{formatTry(p.in_transit_kurus)}</dd>
+                  <dt className="text-muted-foreground">Bank received</dt>
+                  <dd className="tabular-nums">
+                    {formatTry(p.total_settled_net_kurus)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Balance left</dt>
+                  <dd className="tabular-nums">
+                    {formatTry(p.balance_left_kurus)}
+                  </dd>
                 </div>
               </dl>
             </section>
@@ -136,8 +138,10 @@ export default function DeliveryPage() {
 
       <p className="mt-4 text-xs text-muted-foreground">
         Commission e-Faturas: upload via{" "}
-        <strong>New → Supplier invoice (e-Fatura)</strong>, link the posted
-        delivery report on the review screen, then post commission to clearing.
+        <strong>New → Supplier invoice (e-Fatura)</strong>. Komisyon invoices
+        are auto-detected and linked to the platform; post to clearing (not
+        payables). Record bank payouts as they arrive — balances can carry
+        across months.
       </p>
 
       <DeliveryReportForm

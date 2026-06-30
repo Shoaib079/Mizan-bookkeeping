@@ -1,4 +1,4 @@
-"""Delivery platform reports — intake, posting, reconciliation (Decisions §9)."""
+"""Delivery platform monthly sales — intake, posting, reconciliation (Decisions §9)."""
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.delivery.posting import (
     InvalidDeliveryReportError,
+    period_end_date,
     post_delivery_report,
     post_delivery_settlement,
-    report_math_valid,
 )
 from app.db.session import entity_context, require_entity_context
 from app.core.listing import (
@@ -27,7 +27,6 @@ from app.core.listing import (
     text_search_filter,
 )
 from app.features.banking import service as banking_service
-from app.features.banking.models import MoneyAccountKind
 from app.features.delivery.models import (
     DeliveryReport,
     DeliveryReportStatus,
@@ -38,7 +37,6 @@ from app.features.delivery import platform_service
 from app.features.delivery.schema import (
     DeliveryClearingReconciliationRead,
     DeliveryReportCreate,
-    DeliveryReportListOut,
     DeliveryReportPostRequest,
     DeliveryReportRead,
     DeliverySettlementCreate,
@@ -47,29 +45,32 @@ from app.features.delivery.schema import (
 )
 from app.features.delivery.settings import require_delivery_enabled
 from app.features.entities import service as entity_service
+from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
 
 
 class DuplicateDeliveryReportError(Exception):
     def __init__(self, existing: DeliveryReport) -> None:
         self.existing = existing
-        super().__init__("Duplicate delivery report for this entity")
+        super().__init__("Duplicate delivery monthly sales for this entity")
 
 
 class DeliveryReportImmutableError(Exception):
     """Raised when a posted/rejected report is modified."""
 
 
+class MonthlySalesAlreadyPostedError(Exception):
+    """Raised when a posted entry already exists for platform+period."""
+
+
 def report_fingerprint(
     *,
     delivery_platform_id: uuid.UUID,
-    report_date: date,
+    period_year: int,
+    period_month: int,
     gross_kurus: int,
-    commission_kurus: int,
-    net_kurus: int,
 ) -> str:
     payload = (
-        f"{delivery_platform_id}|{report_date.isoformat()}|"
-        f"{gross_kurus}|{commission_kurus}|{net_kurus}"
+        f"{delivery_platform_id}|{period_year}|{period_month}|{gross_kurus}"
     )
     return hashlib.sha256(payload.encode()).hexdigest()
 
@@ -91,16 +92,15 @@ def _to_report_read(session: Session, report: DeliveryReport) -> DeliveryReportR
         delivery_platform_id=report.delivery_platform_id,
         platform_name=_platform_name(session, report.delivery_platform_id),
         report_date=report.report_date,
+        period_year=report.period_year,
+        period_month=report.period_month,
         gross_kurus=report.gross_kurus,
-        commission_kurus=report.commission_kurus,
-        net_kurus=report.net_kurus,
         status=report.status,
         file_fingerprint=report.file_fingerprint,
         review_reason=report.review_reason,
         description=report.description,
         actor_id=report.actor_id,
         journal_entry_id=report.journal_entry_id,
-        commission_journal_entry_id=report.commission_journal_entry_id,
         posted_at=report.posted_at,
         posted_by=report.posted_by,
         created_at=report.created_at,
@@ -139,6 +139,25 @@ def _get_report_row(
         return report
 
 
+def _posted_for_period_exists(
+    session: Session,
+    *,
+    delivery_platform_id: uuid.UUID,
+    period_year: int,
+    period_month: int,
+    exclude_report_id: uuid.UUID | None = None,
+) -> DeliveryReport | None:
+    filters = [
+        DeliveryReport.delivery_platform_id == delivery_platform_id,
+        DeliveryReport.period_year == period_year,
+        DeliveryReport.period_month == period_month,
+        DeliveryReport.status == DeliveryReportStatus.POSTED.value,
+    ]
+    if exclude_report_id is not None:
+        filters.append(DeliveryReport.id != exclude_report_id)
+    return session.scalar(select(DeliveryReport).where(*filters))
+
+
 def create_delivery_report(
     session: Session,
     entity_id: uuid.UUID,
@@ -151,44 +170,43 @@ def create_delivery_report(
 
     fingerprint = report_fingerprint(
         delivery_platform_id=payload.delivery_platform_id,
-        report_date=payload.report_date,
+        period_year=payload.period_year,
+        period_month=payload.period_month,
         gross_kurus=payload.gross_kurus,
-        commission_kurus=payload.commission_kurus,
-        net_kurus=payload.net_kurus,
     )
-
-    math_ok = report_math_valid(
-        gross_kurus=payload.gross_kurus,
-        commission_kurus=payload.commission_kurus,
-        net_kurus=payload.net_kurus,
-    )
-    if math_ok:
-        status = DeliveryReportStatus.DRAFT
-        review_reason = None
-    else:
-        status = DeliveryReportStatus.NEEDS_REVIEW
-        review_reason = (
-            f"gross ({payload.gross_kurus}) - commission ({payload.commission_kurus}) "
-            f"!= net ({payload.net_kurus})"
-        )
 
     with entity_context(session, entity_id):
         require_entity_context()
+
+        if _posted_for_period_exists(
+            session,
+            delivery_platform_id=payload.delivery_platform_id,
+            period_year=payload.period_year,
+            period_month=payload.period_month,
+        ) is not None:
+            raise MonthlySalesAlreadyPostedError(
+                "Monthly sales already posted for this platform and period"
+            )
+
         existing = session.scalar(
             select(DeliveryReport).where(DeliveryReport.file_fingerprint == fingerprint)
         )
         if existing is not None:
             raise DuplicateDeliveryReportError(existing)
 
+        report_date = period_end_date(
+            period_year=payload.period_year,
+            period_month=payload.period_month,
+        )
         report = DeliveryReport(
             delivery_platform_id=payload.delivery_platform_id,
-            report_date=payload.report_date,
+            report_date=report_date,
+            period_year=payload.period_year,
+            period_month=payload.period_month,
             gross_kurus=payload.gross_kurus,
-            commission_kurus=payload.commission_kurus,
-            net_kurus=payload.net_kurus,
-            status=status.value,
+            status=DeliveryReportStatus.DRAFT.value,
             file_fingerprint=fingerprint,
-            review_reason=review_reason,
+            review_reason=None,
             description=payload.description,
         )
         session.add(report)
@@ -234,21 +252,10 @@ def post_delivery_report_intake(
     with entity_context(session, entity_id):
         if payload.gross_kurus is not None:
             report.gross_kurus = payload.gross_kurus
-        if payload.commission_kurus is not None:
-            report.commission_kurus = payload.commission_kurus
-        if payload.net_kurus is not None:
-            report.net_kurus = payload.net_kurus
 
-        if not report_math_valid(
-            gross_kurus=report.gross_kurus,
-            commission_kurus=report.commission_kurus,
-            net_kurus=report.net_kurus,
-        ):
+        if report.gross_kurus <= 0:
             report.status = DeliveryReportStatus.NEEDS_REVIEW.value
-            report.review_reason = (
-                f"gross ({report.gross_kurus}) - commission ({report.commission_kurus}) "
-                f"!= net ({report.net_kurus})"
-            )
+            report.review_reason = "gross sales must be positive"
             session.commit()
             session.refresh(report)
             raise InvalidDeliveryReportError(report.review_reason)
@@ -309,7 +316,8 @@ def list_delivery_reports(
             select(DeliveryReport)
             .where(*filters)
             .order_by(
-                DeliveryReport.report_date.desc(),
+                DeliveryReport.period_year.desc(),
+                DeliveryReport.period_month.desc(),
                 DeliveryReport.created_at.desc(),
             )
         )
@@ -463,7 +471,7 @@ def get_delivery_clearing_reconciliation(
                 )
                 or 0
             )
-            report_count = int(
+            monthly_sales_count = int(
                 session.scalar(
                     select(func.count())
                     .select_from(DeliveryReport)
@@ -494,12 +502,10 @@ def get_delivery_clearing_reconciliation(
 
             total_commission_posted_kurus = int(
                 session.scalar(
-                    select(
-                        func.coalesce(func.sum(DeliveryReport.commission_kurus), 0)
-                    ).where(
-                        DeliveryReport.delivery_platform_id == platform.id,
-                        DeliveryReport.status == DeliveryReportStatus.POSTED.value,
-                        DeliveryReport.commission_journal_entry_id.is_not(None),
+                    select(func.coalesce(func.sum(InvoiceDraft.gross_kurus), 0)).where(
+                        InvoiceDraft.delivery_platform_id == platform.id,
+                        InvoiceDraft.invoice_kind == InvoiceKind.DELIVERY_COMMISSION.value,
+                        InvoiceDraft.status == InvoiceDraftStatus.POSTED.value,
                     )
                 )
                 or 0
@@ -507,17 +513,17 @@ def get_delivery_clearing_reconciliation(
             commission_posted_count = int(
                 session.scalar(
                     select(func.count())
-                    .select_from(DeliveryReport)
+                    .select_from(InvoiceDraft)
                     .where(
-                        DeliveryReport.delivery_platform_id == platform.id,
-                        DeliveryReport.status == DeliveryReportStatus.POSTED.value,
-                        DeliveryReport.commission_journal_entry_id.is_not(None),
+                        InvoiceDraft.delivery_platform_id == platform.id,
+                        InvoiceDraft.invoice_kind == InvoiceKind.DELIVERY_COMMISSION.value,
+                        InvoiceDraft.status == InvoiceDraftStatus.POSTED.value,
                     )
                 )
                 or 0
             )
 
-            in_transit_kurus = (
+            balance_left_kurus = (
                 total_reported_gross_kurus
                 - total_settled_net_kurus
                 - total_commission_posted_kurus
@@ -533,8 +539,8 @@ def get_delivery_clearing_reconciliation(
                     total_reported_gross_kurus=total_reported_gross_kurus,
                     total_settled_net_kurus=total_settled_net_kurus,
                     total_commission_posted_kurus=total_commission_posted_kurus,
-                    in_transit_kurus=in_transit_kurus,
-                    report_count=report_count,
+                    balance_left_kurus=balance_left_kurus,
+                    monthly_sales_count=monthly_sales_count,
                     settlement_count=settlement_count,
                     commission_posted_count=commission_posted_count,
                 )

@@ -115,8 +115,8 @@ function DashboardBody() {
       )
     : [];
 
-  const inTransitTotal = data?.delivery_in_transit.reduce(
-    (sum, row) => sum + row.clearing_balance_kurus,
+  const deliveryBalanceLeftTotal = data?.delivery_balance_left.reduce(
+    (sum, row) => sum + row.balance_left_kurus,
     0,
   );
 
@@ -310,7 +310,7 @@ function DashboardBody() {
                 )}
                 {data.needs_review.delivery_reports > 0 && (
                   <div>
-                    <dt className="text-muted-foreground">Delivery reports</dt>
+                    <dt className="text-muted-foreground">Monthly sales</dt>
                     <dd className="tabular-nums">
                       <Link
                         href={reviewHrefForNeedsReviewKey("delivery_reports")}
@@ -338,25 +338,25 @@ function DashboardBody() {
             </section>
           )}
 
-          {data.delivery_in_transit.length > 0 && deliveryEnabled && (
+          {data.delivery_balance_left.length > 0 && deliveryEnabled && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold">Delivery in transit</h2>
-                {inTransitTotal !== undefined && (
+                <h2 className="text-sm font-semibold">Delivery balance left</h2>
+                {deliveryBalanceLeftTotal !== undefined && (
                   <span className="text-sm font-medium tabular-nums">
-                    {formatTry(inTransitTotal)}
+                    {formatTry(deliveryBalanceLeftTotal)}
                   </span>
                 )}
               </div>
               <ul className="space-y-2 text-sm">
-                {data.delivery_in_transit.map((row) => (
+                {data.delivery_balance_left.map((row) => (
                   <li
                     key={row.delivery_platform_id}
                     className="flex justify-between gap-2"
                   >
                     <span>{row.platform_name}</span>
                     <span className="tabular-nums">
-                      {formatTry(row.clearing_balance_kurus)}
+                      {formatTry(row.balance_left_kurus)}
                     </span>
                   </li>
                 ))}

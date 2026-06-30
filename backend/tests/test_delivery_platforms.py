@@ -73,10 +73,9 @@ def test_rename_and_deactivate_platform(db_session, restaurant_a) -> None:
             restaurant_a.id,
             DeliveryReportCreate(
                 delivery_platform_id=platform_id,
-                report_date=date(2026, 4, 1),
+                period_year=2026,
+                period_month=4,
                 gross_kurus=100_000,
-                commission_kurus=10_000,
-                net_kurus=90_000,
                 description="Blocked",
                 actor_id=ACTOR_ID,
             ),

@@ -112,11 +112,10 @@ def _post_delivery_sale(db_session, setup, gross_kurus: int = 300_000) -> None:
         setup["entity_id"],
         DeliveryReportCreate(
             delivery_platform_id=setup["getir"].id,
-            report_date=date(2026, 1, 15),
+            period_year=2026,
+            period_month=1,
             gross_kurus=gross_kurus,
-            commission_kurus=gross_kurus // 10,
-            net_kurus=gross_kurus - gross_kurus // 10,
-            description="Delivery report",
+            description="Delivery monthly sales",
             actor_id=ACTOR_ID,
         ),
     )
@@ -309,7 +308,7 @@ def test_receivables_total(db_session, dashboard_setup) -> None:
     assert dash.total_receivables_kurus == 125_000
 
 
-def test_delivery_in_transit_clearing_balance(db_session, delivery_dashboard_setup) -> None:
+def test_delivery_balance_left(db_session, delivery_dashboard_setup) -> None:
     setup = delivery_dashboard_setup
     _post_delivery_sale(db_session, setup, gross_kurus=400_000)
 
@@ -317,9 +316,9 @@ def test_delivery_in_transit_clearing_balance(db_session, delivery_dashboard_set
         db_session, setup["entity_id"], date(2026, 1, 1), date(2026, 1, 31)
     )
 
-    assert len(dash.delivery_in_transit) == 1
-    assert dash.delivery_in_transit[0].platform_name == "Getir"
-    assert dash.delivery_in_transit[0].clearing_balance_kurus == 400_000
+    assert len(dash.delivery_balance_left) == 1
+    assert dash.delivery_balance_left[0].platform_name == "Getir"
+    assert dash.delivery_balance_left[0].balance_left_kurus == 400_000
     assert dash.delivery_platforms[0].gross_kurus == 400_000
 
 

@@ -148,10 +148,12 @@ def create_delivery_report(
         raise HTTPException(
             status_code=409,
             detail={
-                "message": "Duplicate delivery report for this entity",
+                "message": "Duplicate delivery monthly sales for this entity",
                 "existing_report_id": str(exc.existing.id),
             },
         ) from exc
+    except delivery_service.MonthlySalesAlreadyPostedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @reports_router.get("", response_model=DeliveryReportListOut)

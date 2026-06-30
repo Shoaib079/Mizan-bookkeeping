@@ -17,7 +17,6 @@ from app.core.ledger.posting import InvalidAccountError, PostingLine, prepare_jo
 from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
 from app.features.delivery import platform_service
-from app.features.delivery.models import DeliveryReport, DeliveryReportStatus
 from app.features.entities import service as entity_service
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
 from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
@@ -26,7 +25,7 @@ from app.features.invoices.validation import InvoiceTotalsError, validate_invoic
 @dataclass(frozen=True, slots=True)
 class DeliveryCommissionPostResult:
     journal_entry: JournalEntry
-    delivery_report: DeliveryReport
+    delivery_platform_id: uuid.UUID
 
 
 def build_delivery_commission_posting_lines(
@@ -72,13 +71,6 @@ def _validate_expense_account(
     return account
 
 
-def _commission_mismatch_reason(*, draft_gross_kurus: int, report_commission_kurus: int) -> str:
-    return (
-        f"invoice gross ({draft_gross_kurus}) does not match report commission "
-        f"({report_commission_kurus})"
-    )
-
-
 def post_delivery_commission_draft(
     session: Session,
     entity_id: uuid.UUID,
@@ -110,29 +102,13 @@ def post_delivery_commission_draft(
             )
         if draft.supplier_id is None:
             raise DraftPostError("Supplier must be linked before posting")
-        if draft.delivery_report_id is None:
-            raise DraftPostError("Delivery report must be linked before posting")
-
-        report = session.get(DeliveryReport, draft.delivery_report_id)
-        if report is None:
-            raise DraftPostError("Linked delivery report not found")
-        if report.status != DeliveryReportStatus.POSTED.value:
-            raise DraftPostError("Linked delivery report must be posted")
-        if report.commission_journal_entry_id is not None:
-            raise DraftPostError("Delivery report commission is already posted")
-
-        if draft.gross_kurus != report.commission_kurus:
-            raise DraftPostError(
-                _commission_mismatch_reason(
-                    draft_gross_kurus=draft.gross_kurus,
-                    report_commission_kurus=report.commission_kurus,
-                )
-            )
+        if draft.delivery_platform_id is None:
+            raise DraftPostError("Delivery platform must be linked before posting")
 
         _validate_expense_account(session, entity_id, expense_account_id)
 
         platform = platform_service.get_delivery_platform_row(
-            session, entity_id, report.delivery_platform_id
+            session, entity_id, draft.delivery_platform_id
         )
         clearing_account = session.get(Account, platform.gl_account_id)
         if clearing_account is None:
@@ -169,7 +145,6 @@ def post_delivery_commission_draft(
             source=JournalEntrySource.DELIVERY_COMMISSION,
         )
 
-        report.commission_journal_entry_id = journal_entry.id
         draft.status = InvoiceDraftStatus.POSTED
         draft.posted_at = utcnow()
         draft.posted_by = actor_id
@@ -177,11 +152,10 @@ def post_delivery_commission_draft(
 
         session.commit()
         session.refresh(journal_entry)
-        session.refresh(report)
         session.refresh(draft)
         _ = list(journal_entry.lines)
 
         return DeliveryCommissionPostResult(
             journal_entry=journal_entry,
-            delivery_report=report,
+            delivery_platform_id=platform.id,
         )

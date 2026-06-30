@@ -4,21 +4,33 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
-import { ValidationHint } from "@/components/ui/validation-hint";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useRegisterUnsaved } from "@/lib/unsaved-work";
 import { useEntity } from "@/lib/entity-context";
-import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
-import { todayTrDate } from "@/lib/dates";
+import { parseTryToKurus } from "@/lib/money";
 import type { DeliveryPlatform, DeliveryReport } from "@/lib/pos-delivery-types";
+
+const MONTHS = [
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
 
 type Props = {
   open: boolean;
@@ -31,25 +43,22 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const now = new Date();
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
+
   const [platforms, setPlatforms] = useState<DeliveryPlatform[]>([]);
   const [platformId, setPlatformId] = useState("");
-  const [dateText, setDateText] = useState("");
+  const [periodYear, setPeriodYear] = useState(String(now.getFullYear()));
+  const [periodMonth, setPeriodMonth] = useState(String(now.getMonth() + 1));
   const [grossText, setGrossText] = useState("");
-  const [commissionText, setCommissionText] = useState("");
-  const [netText, setNetText] = useState("");
-  const [description, setDescription] = useState("Delivery platform report");
+  const [description, setDescription] = useState("Delivery platform monthly sales");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const dirty =
-    open &&
-    (grossText.trim() !== "" ||
-      commissionText.trim() !== "" ||
-      netText.trim() !== "");
+  const dirty = open && grossText.trim() !== "";
 
   useRegisterUnsaved("delivery-report", dirty, open);
 
@@ -65,21 +74,12 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
 
   useEffect(() => {
     if (open) {
-      setDateText(todayTrDate());
       void loadPlatforms().catch(() => undefined);
     }
   }, [open, loadPlatforms]);
 
   const grossKurus = parseTryToKurus(grossText) ?? 0;
-  const commissionKurus = parseTryToKurus(commissionText) ?? 0;
-  const netKurus = parseTryToKurus(netText) ?? 0;
-  const mathOk =
-    grossKurus > 0 && grossKurus - commissionKurus === netKurus && netKurus >= 0;
-  const hasAmounts =
-    grossText.trim() !== "" ||
-    commissionText.trim() !== "" ||
-    netText.trim() !== "";
-  const submitBlocked = grossKurus <= 0 || (hasAmounts && grossKurus > 0 && !mathOk);
+  const submitBlocked = grossKurus <= 0;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -91,13 +91,18 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
       setError("Add a delivery platform first.");
       return;
     }
-    const reportDate = parseTrDate(dateText);
-    if (!reportDate) {
-      setError("Date must be DD.MM.YYYY.");
+    const year = Number.parseInt(periodYear, 10);
+    const month = Number.parseInt(periodMonth, 10);
+    if (!Number.isFinite(year) || year < 2020) {
+      setError("Enter a valid year.");
+      return;
+    }
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      setError("Select a valid month.");
       return;
     }
     if (grossKurus <= 0) {
-      setError("Enter gross sales.");
+      setError("Enter total monthly sales (KDV dahil).");
       return;
     }
     setSubmitting(true);
@@ -108,26 +113,23 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
         `/entities/${entityId}/delivery/reports`,
         {
           method: "POST",
-        idempotencyKey,
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             delivery_platform_id: platformId,
-            report_date: reportDate,
+            period_year: year,
+            period_month: month,
             gross_kurus: grossKurus,
-            commission_kurus: commissionKurus,
-            net_kurus: netKurus,
-            description: description.trim() || "Delivery platform report",
+            description: description.trim() || "Delivery platform monthly sales",
             actor_id: actorId,
           }),
         },
       );
       submitIdempotency.completeSubmit();
       onSaved?.();
-      toast("Delivery report saved");
+      toast("Monthly sales saved — confirm and post on review");
       onClose();
       setGrossText("");
-      setCommissionText("");
-      setNetText("");
       router.push(`/delivery/reports/${report.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -137,7 +139,7 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
   }
 
   return (
-    <Dialog open={open} title="Delivery platform report" onClose={onClose}>
+    <Dialog open={open} title="Monthly platform sales" onClose={onClose}>
       <RecordingForBanner />
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
@@ -158,62 +160,42 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
             disabled={platforms.length === 0}
           />
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label htmlFor="dr-month">Month</Label>
+            <Select
+              id="dr-month"
+              value={periodMonth}
+              onChange={(e) => setPeriodMonth(e.target.value)}
+            >
+              {MONTHS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="dr-year">Year</Label>
+            <Input
+              id="dr-year"
+              inputMode="numeric"
+              value={periodYear}
+              onChange={(e) => setPeriodYear(e.target.value)}
+              required
+            />
+          </div>
+        </div>
         <div>
-          <Label htmlFor="dr-date">Report date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="dr-date"
-            value={dateText}
-            onChange={setDateText}
-            required
+          <Label htmlFor="dr-gross">Total sales (KDV dahil)</Label>
+          <MoneyInput
+            id="dr-gross"
+            placeholder="0,00"
+            value={grossText}
+            onChange={setGrossText}
+            showPreview
           />
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <Label htmlFor="dr-gross">Gross</Label>
-            <MoneyInput
-              id="dr-gross"
-              placeholder="0,00"
-              value={grossText}
-              onChange={setGrossText}
-              showPreview={false}
-              showInvalidHint={false}
-            />
-          </div>
-          <div>
-            <Label htmlFor="dr-commission">Commission</Label>
-            <MoneyInput
-              id="dr-commission"
-              placeholder="0,00"
-              value={commissionText}
-              onChange={setCommissionText}
-              showPreview={false}
-              showInvalidHint={false}
-            />
-          </div>
-          <div>
-            <Label htmlFor="dr-net">Net</Label>
-            <MoneyInput
-              id="dr-net"
-              placeholder="0,00"
-              value={netText}
-              onChange={setNetText}
-              showPreview={false}
-              showInvalidHint={false}
-            />
-          </div>
-        </div>
-        {hasAmounts && grossKurus > 0 && !mathOk && (
-          <ValidationHint variant="error">
-            Gross − commission must equal net ({formatTry(grossKurus)} −{" "}
-            {formatTry(commissionKurus)} ≠ {formatTry(netKurus)}).
-          </ValidationHint>
-        )}
-        {grossKurus > 0 && mathOk && (
-          <ValidationHint variant="hint">
-            Net checks out: {formatTry(grossKurus)} − {formatTry(commissionKurus)} ={" "}
-            {formatTry(netKurus)}.
-          </ValidationHint>
-        )}
         <div>
           <Label htmlFor="dr-desc">Description</Label>
           <Input
@@ -224,7 +206,7 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting || submitBlocked}>
-          {submitting ? "Saving…" : "Create report & review"}
+          {submitting ? "Saving…" : "Save & review"}
         </Button>
       </form>
     </Dialog>

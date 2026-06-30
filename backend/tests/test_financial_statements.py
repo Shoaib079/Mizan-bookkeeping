@@ -130,11 +130,10 @@ def _post_delivery_sale(db_session, setup, gross_kurus: int = 300_000) -> None:
         setup["entity_id"],
         DeliveryReportCreate(
             delivery_platform_id=setup["getir"].id,
-            report_date=date(2026, 1, 15),
+            period_year=2026,
+            period_month=1,
             gross_kurus=gross_kurus,
-            commission_kurus=gross_kurus // 10,
-            net_kurus=gross_kurus - gross_kurus // 10,
-            description="Delivery report",
+            description="Delivery monthly sales",
             actor_id=ACTOR_ID,
         ),
     )

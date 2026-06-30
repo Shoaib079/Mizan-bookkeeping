@@ -1,4 +1,4 @@
-"""Delivery platform reports and settlements (Phase 6 Slice 2)."""
+"""Delivery platform monthly sales and settlements (Phase 6 Slice 2)."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from app.core.delivery import posting as delivery_posting
 from app.core.ledger.models import JournalEntryLine, JournalEntrySource
 from app.db.session import entity_context
 from app.features.banking import service as banking_service
-from app.features.delivery.models import DeliveryReportStatus
+from app.features.delivery.models import DeliveryReport, DeliveryReportStatus
 from app.features.delivery.schema import (
     DeliveryReportCreate,
     DeliveryReportPostRequest,
@@ -26,6 +26,24 @@ from app.features.delivery.schema import (
 from app.features.delivery import service as delivery_service
 from app.features.delivery.settings import DeliveryNotEnabledError
 from tests.delivery_helpers import ACTOR_ID, delivery_setup as build_delivery_setup
+
+
+def _monthly_sales(
+    platform_id: uuid.UUID,
+    *,
+    period_year: int = 2026,
+    period_month: int = 3,
+    gross_kurus: int = 500_000,
+    description: str = "Getir monthly sales",
+) -> DeliveryReportCreate:
+    return DeliveryReportCreate(
+        delivery_platform_id=platform_id,
+        period_year=period_year,
+        period_month=period_month,
+        gross_kurus=gross_kurus,
+        description=description,
+        actor_id=ACTOR_ID,
+    )
 
 
 @pytest.fixture
@@ -45,17 +63,12 @@ def test_delivery_report_posts_dr_clearing_cr_revenue(db_session, delivery_setup
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
-        DeliveryReportCreate(
-            delivery_platform_id=delivery_setup["getir"].id,
-            report_date=date(2026, 3, 1),
-            gross_kurus=500_000,
-            commission_kurus=75_000,
-            net_kurus=425_000,
-            description="Getir March 1 report",
-            actor_id=ACTOR_ID,
-        ),
+        _monthly_sales(delivery_setup["getir"].id, period_month=3),
     )
     assert created.status == DeliveryReportStatus.DRAFT.value
+    assert created.period_year == 2026
+    assert created.period_month == 3
+    assert created.report_date == date(2026, 3, 31)
 
     posted = delivery_service.post_delivery_report_intake(
         db_session,
@@ -80,24 +93,25 @@ def test_delivery_report_posts_dr_clearing_cr_revenue(db_session, delivery_setup
     assert by_account[revenue_id].side == AccountNormalBalance.CREDIT
 
 
-def test_math_mismatch_creates_needs_review(db_session, delivery_setup) -> None:
+def test_zero_gross_blocks_post(db_session, delivery_setup) -> None:
     entity_id = delivery_setup["entity_id"]
 
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
-        DeliveryReportCreate(
-            delivery_platform_id=delivery_setup["getir"].id,
-            report_date=date(2026, 3, 2),
-            gross_kurus=500_000,
-            commission_kurus=75_000,
-            net_kurus=400_000,
-            description="Bad math report",
-            actor_id=ACTOR_ID,
+        _monthly_sales(
+            delivery_setup["getir"].id,
+            period_month=4,
+            gross_kurus=100_000,
+            description="Adjustable gross",
         ),
     )
-    assert created.status == DeliveryReportStatus.NEEDS_REVIEW.value
-    assert created.review_reason is not None
+
+    with entity_context(db_session, entity_id):
+        report = db_session.get(DeliveryReport, created.id)
+        assert report is not None
+        report.gross_kurus = 0
+        db_session.commit()
 
     with pytest.raises(delivery_posting.InvalidDeliveryReportError):
         delivery_service.post_delivery_report_intake(
@@ -115,33 +129,46 @@ def test_delivery_not_enabled_rejected(db_session, restaurant_a) -> None:
         delivery_service.create_delivery_report(
             db_session,
             restaurant_a.id,
-            DeliveryReportCreate(
-                delivery_platform_id=uuid.uuid4(),
-                report_date=date(2026, 3, 1),
-                gross_kurus=100_000,
-                commission_kurus=10_000,
-                net_kurus=90_000,
-                description="No delivery module",
-                actor_id=ACTOR_ID,
-            ),
+            _monthly_sales(uuid.uuid4(), description="No delivery module"),
         )
 
 
 def test_duplicate_fingerprint_rejected(db_session, delivery_setup) -> None:
     entity_id = delivery_setup["entity_id"]
-    payload = DeliveryReportCreate(
-        delivery_platform_id=delivery_setup["getir"].id,
-        report_date=date(2026, 3, 3),
+    payload = _monthly_sales(
+        delivery_setup["getir"].id,
+        period_month=5,
         gross_kurus=200_000,
-        commission_kurus=20_000,
-        net_kurus=180_000,
         description="First",
-        actor_id=ACTOR_ID,
     )
     delivery_service.create_delivery_report(db_session, entity_id, payload)
 
     with pytest.raises(delivery_service.DuplicateDeliveryReportError):
         delivery_service.create_delivery_report(db_session, entity_id, payload)
+
+
+def test_duplicate_posted_period_rejected(db_session, delivery_setup) -> None:
+    entity_id = delivery_setup["entity_id"]
+    platform_id = delivery_setup["getir"].id
+
+    first = delivery_service.create_delivery_report(
+        db_session,
+        entity_id,
+        _monthly_sales(platform_id, period_month=6, gross_kurus=100_000),
+    )
+    delivery_service.post_delivery_report_intake(
+        db_session,
+        entity_id,
+        first.id,
+        DeliveryReportPostRequest(actor_id=ACTOR_ID),
+    )
+
+    with pytest.raises(delivery_service.MonthlySalesAlreadyPostedError):
+        delivery_service.create_delivery_report(
+            db_session,
+            entity_id,
+            _monthly_sales(platform_id, period_month=6, gross_kurus=120_000),
+        )
 
 
 def test_settlement_credits_clearing(db_session, delivery_setup) -> None:
@@ -152,15 +179,7 @@ def test_settlement_credits_clearing(db_session, delivery_setup) -> None:
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
-        DeliveryReportCreate(
-            delivery_platform_id=delivery_setup["getir"].id,
-            report_date=date(2026, 3, 4),
-            gross_kurus=300_000,
-            commission_kurus=30_000,
-            net_kurus=270_000,
-            description="Getir report",
-            actor_id=ACTOR_ID,
-        ),
+        _monthly_sales(delivery_setup["getir"].id, period_month=7, gross_kurus=300_000),
     )
     delivery_service.post_delivery_report_intake(
         db_session,
@@ -208,15 +227,7 @@ def test_clearing_reconciliation(db_session, delivery_setup) -> None:
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
-        DeliveryReportCreate(
-            delivery_platform_id=delivery_setup["getir"].id,
-            report_date=date(2026, 3, 5),
-            gross_kurus=400_000,
-            commission_kurus=40_000,
-            net_kurus=360_000,
-            description="Getir",
-            actor_id=ACTOR_ID,
-        ),
+        _monthly_sales(delivery_setup["getir"].id, period_month=8, gross_kurus=400_000),
     )
     delivery_service.post_delivery_report_intake(
         db_session,
@@ -244,7 +255,7 @@ def test_clearing_reconciliation(db_session, delivery_setup) -> None:
     )
     assert getir.total_reported_gross_kurus == 400_000
     assert getir.total_settled_net_kurus == 360_000
-    assert getir.in_transit_kurus == 40_000
+    assert getir.balance_left_kurus == 40_000
     assert getir.clearing_balance_kurus == 40_000
 
 
@@ -254,14 +265,11 @@ def test_cross_entity_isolation(db_session, restaurant_a, restaurant_b) -> None:
     created = delivery_service.create_delivery_report(
         db_session,
         restaurant_a.id,
-        DeliveryReportCreate(
-            delivery_platform_id=setup_a["platforms"]["Getir"].id,
-            report_date=date(2026, 3, 6),
+        _monthly_sales(
+            setup_a["platforms"]["Getir"].id,
+            period_month=9,
             gross_kurus=100_000,
-            commission_kurus=10_000,
-            net_kurus=90_000,
             description="A only",
-            actor_id=ACTOR_ID,
         ),
     )
 
@@ -278,11 +286,10 @@ def test_delivery_reports_api_e2e(client: TestClient, db_session, delivery_setup
         f"/entities/{entity_id}/delivery/reports",
         json={
             "delivery_platform_id": getir_id,
-            "report_date": "2026-03-07",
+            "period_year": 2026,
+            "period_month": 10,
             "gross_kurus": 250_000,
-            "commission_kurus": 25_000,
-            "net_kurus": 225_000,
-            "description": "API report",
+            "description": "API monthly sales",
             "actor_id": str(ACTOR_ID),
         },
     )
@@ -319,10 +326,9 @@ def test_delivery_reports_api_e2e(client: TestClient, db_session, delivery_setup
         f"/entities/{entity_id}/delivery/reports",
         json={
             "delivery_platform_id": getir_id,
-            "report_date": "2026-03-07",
+            "period_year": 2026,
+            "period_month": 10,
             "gross_kurus": 250_000,
-            "commission_kurus": 25_000,
-            "net_kurus": 225_000,
             "description": "Duplicate",
             "actor_id": str(ACTOR_ID),
         },

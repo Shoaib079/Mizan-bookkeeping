@@ -57,10 +57,11 @@ class DeliveryReport(EntityScopedMixin, Base):
             name="uq_delivery_reports_entity_fingerprint",
         ),
         Index(
-            "uq_delivery_reports_entity_platform_date_posted",
+            "uq_delivery_reports_entity_platform_period_posted",
             "entity_id",
             "delivery_platform_id",
-            "report_date",
+            "period_year",
+            "period_month",
             unique=True,
             postgresql_where=text("status = 'posted'"),
         ),
@@ -74,9 +75,9 @@ class DeliveryReport(EntityScopedMixin, Base):
         index=True,
     )
     report_date: Mapped[date] = mapped_column(Date, nullable=False)
+    period_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    period_month: Mapped[int] = mapped_column(Integer, nullable=False)
     gross_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
-    commission_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
-    net_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default=DeliveryReportStatus.DRAFT.value
     )
@@ -85,13 +86,6 @@ class DeliveryReport(EntityScopedMixin, Base):
     description: Mapped[str] = mapped_column(String(512), nullable=False)
     actor_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     journal_entry_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid(as_uuid=True),
-        ForeignKey("journal_entries.id", ondelete="RESTRICT"),
-        nullable=True,
-        unique=True,
-        index=True,
-    )
-    commission_journal_entry_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("journal_entries.id", ondelete="RESTRICT"),
         nullable=True,

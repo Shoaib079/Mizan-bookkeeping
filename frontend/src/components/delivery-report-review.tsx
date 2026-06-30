@@ -18,6 +18,22 @@ import {
 } from "@/lib/money";
 import type { DeliveryReport } from "@/lib/pos-delivery-types";
 
+const MONTH_NAMES = [
+  "",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 type Props = {
   reportId: string;
   onUpdated?: () => void;
@@ -29,8 +45,6 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
   const submitIdempotency = useSubmitIdempotency();
   const [report, setReport] = useState<DeliveryReport | null>(null);
   const [grossText, setGrossText] = useState("");
-  const [commissionText, setCommissionText] = useState("");
-  const [netText, setNetText] = useState("");
   const [rejectReason, setRejectReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
@@ -43,8 +57,6 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
     );
     setReport(res);
     setGrossText(formatKurus(res.gross_kurus));
-    setCommissionText(formatKurus(res.commission_kurus));
-    setNetText(formatKurus(res.net_kurus));
   }, [entityId, reportId]);
 
   useEffect(() => {
@@ -65,14 +77,8 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
     event.preventDefault();
     if (!entityId || !report) return;
     const grossKurus = parseTryToKurus(grossText);
-    const commissionKurus = parseTryToKurus(commissionText);
-    const netKurus = parseTryToKurus(netText);
-    if (
-      grossKurus === null ||
-      commissionKurus === null ||
-      netKurus === null
-    ) {
-      setError("Enter valid amounts.");
+    if (grossKurus === null || grossKurus <= 0) {
+      setError("Enter valid gross sales.");
       return;
     }
     setPosting(true);
@@ -83,20 +89,18 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
         `/entities/${entityId}/delivery/reports/${reportId}/post`,
         {
           method: "POST",
-        idempotencyKey,
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             actor_id: actorId,
             gross_kurus: grossKurus,
-            commission_kurus: commissionKurus,
-            net_kurus: netKurus,
           }),
         },
       );
       submitIdempotency.completeSubmit();
       setReport(updated);
       onUpdated?.();
-      toast("Delivery report posted");
+      toast("Monthly sales posted");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
     } finally {
@@ -117,7 +121,7 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
       submitIdempotency.completeSubmit();
       setReport(updated);
       onUpdated?.();
-      toast("Delivery report rejected");
+      toast("Monthly sales entry rejected");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {
@@ -128,39 +132,39 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
   if (!entityId) {
     return (
       <p className="text-sm text-muted-foreground">
-        Select a restaurant in the sidebar to review this report.
+        Select a restaurant in the sidebar to review this entry.
       </p>
     );
   }
 
   if (!report) {
-    return <p className="text-sm text-muted-foreground">Loading report…</p>;
+    return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
 
   const canPost =
     report.status === "draft" || report.status === "needs_review";
   const isTerminal =
     report.status === "posted" || report.status === "rejected";
+  const periodLabel = `${MONTH_NAMES[report.period_month] ?? report.period_month} ${report.period_year}`;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <StatusBadge status={report.status} />
         <span className="text-sm font-medium">{report.platform_name}</span>
-        <span className="text-sm text-muted-foreground">
-          {formatTrDate(report.report_date)}
+        <span className="text-sm text-muted-foreground">{periodLabel}</span>
+        <span className="text-xs text-muted-foreground">
+          Ledger date {formatTrDate(report.report_date)}
         </span>
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4">
         <h2 className="mb-2 text-sm font-semibold">{report.description}</h2>
+        <p className="text-xs text-muted-foreground">
+          Gross sales are KDV dahil — output VAT split is deferred.
+        </p>
         {report.review_reason && (
-          <p className="text-sm text-warning">{report.review_reason}</p>
-        )}
-        {report.commission_journal_entry_id && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Commission e-Fatura posted to ledger.
-          </p>
+          <p className="mt-2 text-sm text-warning">{report.review_reason}</p>
         )}
       </div>
 
@@ -170,37 +174,14 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
           className="rounded-lg border border-border bg-card p-4"
         >
           <h2 className="mb-3 text-sm font-semibold">Confirm & post</h2>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <Label htmlFor="rep-gross">Gross</Label>
-              <MoneyInput
-                id="rep-gross"
-                value={grossText}
-                onChange={setGrossText}
-                showPreview={false}
-                showInvalidHint={false}
-              />
-            </div>
-            <div>
-              <Label htmlFor="rep-commission">Commission</Label>
-              <MoneyInput
-                id="rep-commission"
-                value={commissionText}
-                onChange={setCommissionText}
-                showPreview={false}
-                showInvalidHint={false}
-              />
-            </div>
-            <div>
-              <Label htmlFor="rep-net">Net</Label>
-              <MoneyInput
-                id="rep-net"
-                value={netText}
-                onChange={setNetText}
-                showPreview={false}
-                showInvalidHint={false}
-              />
-            </div>
+          <div>
+            <Label htmlFor="rep-gross">Total sales (KDV dahil)</Label>
+            <MoneyInput
+              id="rep-gross"
+              value={grossText}
+              onChange={setGrossText}
+              showPreview
+            />
           </div>
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
           <div className="mt-4 flex flex-wrap gap-2">
@@ -233,19 +214,9 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
       {isTerminal && (
         <div className="rounded-lg border border-border bg-card p-4">
           <dl className="grid gap-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Gross</dt>
-              <dd className="tabular-nums">{formatTry(report.gross_kurus)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Commission</dt>
-              <dd className="tabular-nums">
-                {formatTry(report.commission_kurus)}
-              </dd>
-            </div>
             <div className="flex justify-between font-medium">
-              <dt>Net</dt>
-              <dd className="tabular-nums">{formatTry(report.net_kurus)}</dd>
+              <dt>Gross sales</dt>
+              <dd className="tabular-nums">{formatTry(report.gross_kurus)}</dd>
             </div>
           </dl>
         </div>

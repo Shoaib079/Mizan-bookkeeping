@@ -269,15 +269,14 @@ def test_delivery_commission_posted_invoice_included(
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=getir.id,
-            report_date=date(2026, 4, 1),
+            period_year=2026,
+            period_month=4,
             gross_kurus=500_000,
-            commission_kurus=75_000,
-            net_kurus=425_000,
-            description="April report",
+            description="April monthly sales",
             actor_id=ACTOR_ID,
         ),
     )
-    report = delivery_service.post_delivery_report_intake(
+    delivery_service.post_delivery_report_intake(
         db_session,
         entity_id,
         created.id,
@@ -287,12 +286,13 @@ def test_delivery_commission_posted_invoice_included(
     with entity_context(db_session, entity_id):
         draft = InvoiceDraft(
             status=InvoiceDraftStatus.DRAFT,
-            invoice_kind=InvoiceKind.SUPPLIER.value,
+            invoice_kind=InvoiceKind.DELIVERY_COMMISSION.value,
             source_type=InvoiceSourceType.EFATURA_XML,
             file_fingerprint="commission-kdv-fp",
             supplier_name="Getir Platform",
             supplier_vkn="9876543210",
             supplier_id=supplier_id,
+            delivery_platform_id=getir.id,
             invoice_number="GETIR-COM-75",
             invoice_date=date(2026, 4, 5),
             net_kurus=62_500,
@@ -307,16 +307,13 @@ def test_delivery_commission_posted_invoice_included(
         db_session.commit()
         db_session.refresh(draft)
 
-    linked = invoice_service.link_delivery_report_to_draft(
-        db_session, entity_id, draft.id, delivery_report_id=report.id
-    )
     invoice_service.confirm_invoice_draft(
-        db_session, entity_id, linked.id, actor_id=ACTOR_ID
+        db_session, entity_id, draft.id, actor_id=ACTOR_ID
     )
     post_delivery_commission_draft(
         db_session,
         entity_id,
-        linked.id,
+        draft.id,
         expense_account_id=expense_id,
         actor_id=ACTOR_ID,
     )

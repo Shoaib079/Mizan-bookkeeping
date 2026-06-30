@@ -1,4 +1,4 @@
-"""Delivery commission e-Fatura lifecycle (Phase 6 Slice 3)."""
+"""Delivery commission e-Fatura lifecycle — platform-linked (monthly sales model)."""
 
 from __future__ import annotations
 
@@ -50,25 +50,24 @@ def _platform_supplier(db_session, entity_id, *, vkn: str = "9876543210") -> uui
         return supplier.id
 
 
-def _posted_report(
+def _posted_monthly_sales(
     db_session,
     entity_id,
     platform_id: uuid.UUID,
     *,
     gross_kurus: int = 500_000,
-    commission_kurus: int = 75_000,
-    net_kurus: int = 425_000,
+    period_year: int = 2026,
+    period_month: int = 4,
 ):
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=platform_id,
-            report_date=date(2026, 4, 1),
+            period_year=period_year,
+            period_month=period_month,
             gross_kurus=gross_kurus,
-            commission_kurus=commission_kurus,
-            net_kurus=net_kurus,
-            description="Getir April report",
+            description="Getir monthly sales",
             actor_id=ACTOR_ID,
         ),
     )
@@ -84,24 +83,25 @@ def _commission_draft(
     db_session,
     entity_id,
     supplier_id: uuid.UUID,
+    platform_id: uuid.UUID | None,
     *,
     net_kurus: int = 62_500,
     gross_kurus: int = 75_000,
-    report_id: uuid.UUID | None = None,
     status: InvoiceDraftStatus = InvoiceDraftStatus.DRAFT,
+    as_commission: bool = False,
 ) -> InvoiceDraft:
     with entity_context(db_session, entity_id):
         draft = InvoiceDraft(
             status=status,
             invoice_kind=InvoiceKind.DELIVERY_COMMISSION.value
-            if report_id
+            if platform_id or as_commission
             else InvoiceKind.SUPPLIER.value,
             source_type=InvoiceSourceType.EFATURA_XML,
             file_fingerprint=f"commission-{gross_kurus}-{uuid.uuid4().hex[:8]}",
             supplier_name="Getir Platform",
             supplier_vkn="9876543210",
             supplier_id=supplier_id,
-            delivery_report_id=report_id,
+            delivery_platform_id=platform_id,
             invoice_number=f"GETIR-COM-{gross_kurus}",
             invoice_date=date(2026, 4, 5),
             net_kurus=net_kurus,
@@ -142,7 +142,7 @@ def test_full_lifecycle_clearing_zero(db_session, commission_setup) -> None:
     vat_id = accounts[INPUT_VAT_CODE]
     ap_id = accounts[ACCOUNTS_PAYABLE_CODE]
 
-    report = _posted_report(db_session, entity_id, getir.id)
+    _posted_monthly_sales(db_session, entity_id, getir.id)
     delivery_service.create_delivery_settlement(
         db_session,
         entity_id,
@@ -153,17 +153,10 @@ def test_full_lifecycle_clearing_zero(db_session, commission_setup) -> None:
             amount_kurus=425_000,
             description="Getir payout",
             actor_id=ACTOR_ID,
-            delivery_report_id=report.id,
         ),
     )
 
-    draft = _commission_draft(db_session, entity_id, supplier_id)
-    linked = invoice_service.link_delivery_report_to_draft(
-        db_session, entity_id, draft.id, delivery_report_id=report.id
-    )
-    assert linked.invoice_kind == InvoiceKind.DELIVERY_COMMISSION
-    assert linked.delivery_report_id == report.id
-
+    draft = _commission_draft(db_session, entity_id, supplier_id, getir.id)
     confirmed = invoice_service.confirm_invoice_draft(
         db_session, entity_id, draft.id, actor_id=ACTOR_ID
     )
@@ -177,7 +170,7 @@ def test_full_lifecycle_clearing_zero(db_session, commission_setup) -> None:
         actor_id=ACTOR_ID,
     )
     assert result.journal_entry.source == JournalEntrySource.DELIVERY_COMMISSION
-    assert result.delivery_report.commission_journal_entry_id == result.journal_entry.id
+    assert result.delivery_platform_id == getir.id
 
     with entity_context(db_session, entity_id):
         lines = list(
@@ -231,80 +224,57 @@ def test_full_lifecycle_clearing_zero(db_session, commission_setup) -> None:
     recon = delivery_service.get_delivery_clearing_reconciliation(db_session, entity_id)
     row = next(p for p in recon.platforms if p.delivery_platform_id == getir.id)
     assert row.clearing_balance_kurus == 0
-    assert row.in_transit_kurus == 0
+    assert row.balance_left_kurus == 0
     assert row.total_commission_posted_kurus == 75_000
     assert row.commission_posted_count == 1
 
 
-def test_mismatch_blocks_link_and_post(db_session, commission_setup) -> None:
+def test_commission_requires_platform_before_confirm(db_session, commission_setup) -> None:
+    entity_id = commission_setup["entity_id"]
+    supplier_id = commission_setup["supplier_id"]
+
+    draft = _commission_draft(db_session, entity_id, supplier_id, None)
+    invoice_service.link_delivery_platform_to_draft(
+        db_session,
+        entity_id,
+        draft.id,
+        delivery_platform_id=commission_setup["getir"].id,
+    )
+
+    linked = invoice_service.get_invoice_draft(db_session, entity_id, draft.id)
+    assert linked.invoice_kind == InvoiceKind.DELIVERY_COMMISSION
+    assert linked.delivery_platform_id == commission_setup["getir"].id
+
+    unlinked = _commission_draft(
+        db_session, entity_id, supplier_id, None, as_commission=True
+    )
+    with pytest.raises(invoice_service.DraftConfirmError, match="Delivery platform"):
+        invoice_service.confirm_invoice_draft(
+            db_session, entity_id, unlinked.id, actor_id=ACTOR_ID
+        )
+
+
+def test_post_without_platform_blocked(db_session, commission_setup) -> None:
     entity_id = commission_setup["entity_id"]
     supplier_id = commission_setup["supplier_id"]
     expense_id = commission_setup["accounts"][DELIVERY_COMMISSION_EXPENSE_CODE]
-    getir = commission_setup["getir"]
 
-    report = _posted_report(db_session, entity_id, getir.id)
     draft = _commission_draft(
         db_session,
         entity_id,
         supplier_id,
-        gross_kurus=80_000,
-        net_kurus=66_667,
+        None,
+        status=InvoiceDraftStatus.CONFIRMED,
+        as_commission=True,
     )
 
-    linked = invoice_service.link_delivery_report_to_draft(
-        db_session, entity_id, draft.id, delivery_report_id=report.id
-    )
-    assert linked.status == InvoiceDraftStatus.NEEDS_REVIEW.value
-    assert linked.review_reason is not None
-    draft_id = draft.id
-
-    with pytest.raises(invoice_service.DraftConfirmError):
-        invoice_service.confirm_invoice_draft(
-            db_session, entity_id, draft_id, actor_id=ACTOR_ID
-        )
-
-    with entity_context(db_session, entity_id):
-        row = db_session.get(InvoiceDraft, draft_id)
-        assert row is not None
-        row.status = InvoiceDraftStatus.CONFIRMED
-        db_session.commit()
-
-    with pytest.raises(DraftPostError, match="does not match report commission"):
+    with pytest.raises(DraftPostError, match="Delivery platform must be linked"):
         post_delivery_commission_draft(
             db_session,
             entity_id,
-            draft_id,
+            draft.id,
             expense_account_id=expense_id,
             actor_id=ACTOR_ID,
-        )
-
-
-def test_double_commission_post_blocked(db_session, commission_setup) -> None:
-    entity_id = commission_setup["entity_id"]
-    supplier_id = commission_setup["supplier_id"]
-    expense_id = commission_setup["accounts"][DELIVERY_COMMISSION_EXPENSE_CODE]
-    getir = commission_setup["getir"]
-
-    report = _posted_report(db_session, entity_id, getir.id)
-    draft = _commission_draft(db_session, entity_id, supplier_id)
-    invoice_service.link_delivery_report_to_draft(
-        db_session, entity_id, draft.id, delivery_report_id=report.id
-    )
-    invoice_service.confirm_invoice_draft(
-        db_session, entity_id, draft.id, actor_id=ACTOR_ID
-    )
-    post_delivery_commission_draft(
-        db_session,
-        entity_id,
-        draft.id,
-        expense_account_id=expense_id,
-        actor_id=ACTOR_ID,
-    )
-
-    draft2 = _commission_draft(db_session, entity_id, supplier_id)
-    with pytest.raises(invoice_service.DeliveryReportLinkError, match="already posted"):
-        invoice_service.link_delivery_report_to_draft(
-            db_session, entity_id, draft2.id, delivery_report_id=report.id
         )
 
 
@@ -324,17 +294,10 @@ def test_cross_entity_isolation(
             for account in db_session.scalars(select(Account))
         }
 
-    report = _posted_report(db_session, entity_id, getir.id)
-    draft = _commission_draft(db_session, entity_id, supplier_id)
-    invoice_service.link_delivery_report_to_draft(
-        db_session, entity_id, draft.id, delivery_report_id=report.id
-    )
+    draft = _commission_draft(db_session, entity_id, supplier_id, getir.id)
     invoice_service.confirm_invoice_draft(
         db_session, entity_id, draft.id, actor_id=ACTOR_ID
     )
-
-    with pytest.raises(LookupError):
-        delivery_service.get_delivery_report(db_session, restaurant_b.id, report.id)
 
     with pytest.raises(InvalidAccountError):
         post_delivery_commission_draft(
@@ -361,20 +324,14 @@ def test_api_commission_e2e(client: TestClient, db_session, commission_setup) ->
     accounts = commission_setup["accounts"]
     getir_id = str(commission_setup["getir"].id)
 
-    client.post(
-        f"/entities/{entity_id}/suppliers",
-        json={"name": "Getir Platform", "vkn": "9876543210"},
-    )
-
     report_resp = client.post(
         f"/entities/{entity_id}/delivery/reports",
         json={
             "delivery_platform_id": getir_id,
-            "report_date": "2026-04-15",
+            "period_year": 2026,
+            "period_month": 4,
             "gross_kurus": 300_000,
-            "commission_kurus": 30_000,
-            "net_kurus": 270_000,
-            "description": "API commission lifecycle",
+            "description": "API monthly sales",
             "actor_id": str(ACTOR_ID),
         },
     )
@@ -404,16 +361,10 @@ def test_api_commission_e2e(client: TestClient, db_session, commission_setup) ->
         db_session,
         entity_id,
         commission_setup["supplier_id"],
+        commission_setup["getir"].id,
         gross_kurus=30_000,
         net_kurus=25_000,
     )
-
-    link_resp = client.post(
-        f"/entities/{entity_id}/invoices/drafts/{draft.id}/link-delivery-report",
-        json={"delivery_report_id": str(report_id)},
-    )
-    assert link_resp.status_code == 200
-    assert link_resp.json()["invoice_kind"] == "delivery_commission"
 
     confirm_resp = client.post(
         f"/entities/{entity_id}/invoices/drafts/{draft.id}/confirm",
@@ -431,7 +382,7 @@ def test_api_commission_e2e(client: TestClient, db_session, commission_setup) ->
     assert post_resp.status_code == 200
     body = post_resp.json()
     assert body["journal_entry_source"] == "delivery_commission"
-    assert body["delivery_report_id"] == report_id
+    assert body["delivery_platform_id"] == getir_id
     assert body["supplier_ledger_entry_id"] is None
     assert body["payable_balance_kurus"] is None
 
@@ -443,7 +394,7 @@ def test_api_commission_e2e(client: TestClient, db_session, commission_setup) ->
         if p["delivery_platform_id"] == getir_id
     )
     assert getir["clearing_balance_kurus"] == 0
-    assert getir["in_transit_kurus"] == 0
+    assert getir["balance_left_kurus"] == 0
 
 
 def test_supplier_invoice_path_unchanged(

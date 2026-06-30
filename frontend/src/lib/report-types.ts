@@ -27,10 +27,10 @@ export type DashboardRead = {
     balance_kurus: number;
   }[];
   total_receivables_kurus: number;
-  delivery_in_transit: {
+  delivery_balance_left: {
     delivery_platform_id: string;
     platform_name: string;
-    clearing_balance_kurus: number;
+    balance_left_kurus: number;
   }[];
   total_try_position_kurus: number;
   fx_balances: {

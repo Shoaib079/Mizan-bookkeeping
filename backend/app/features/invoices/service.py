@@ -34,13 +34,18 @@ from app.features.invoices.models import (
     InvoiceKind,
     InvoiceSourceType,
 )
-from app.core.delivery.commission_posting import (
-    _commission_mismatch_reason,
-    post_delivery_commission_draft,
+from app.core.delivery.commission_detect import (
+    is_delivery_commission_extraction,
+    match_delivery_platform,
 )
+from app.core.delivery.commission_posting import post_delivery_commission_draft
 from app.core.invoices.posting import DraftPostError, post_confirmed_draft
-from app.features.delivery.models import DeliveryReport, DeliveryReportStatus
-from app.features.delivery.settings import require_delivery_enabled
+from app.features.delivery.models import OwnedDeliveryPlatform
+from app.features.delivery.settings import (
+    DeliveryNotEnabledError,
+    is_delivery_enabled,
+    require_delivery_enabled,
+)
 from app.features.invoices.schema import InvoiceDraftOut, PostInvoiceDraftOut
 from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
 from app.features.suppliers import service as supplier_service
@@ -65,8 +70,8 @@ class DraftConfirmError(Exception):
     """Raised when draft cannot be confirmed."""
 
 
-class DeliveryReportLinkError(Exception):
-    """Raised when delivery report link preconditions fail."""
+class DeliveryPlatformLinkError(Exception):
+    """Raised when delivery platform link preconditions fail."""
 
 
 class DraftImmutableError(Exception):
@@ -129,6 +134,7 @@ def _to_out(
     *,
     linked_name: str | None = None,
     linked_vkn: str | None = None,
+    linked_platform_name: str | None = None,
 ) -> InvoiceDraftOut:
     return InvoiceDraftOut(
         id=draft.id,
@@ -140,9 +146,10 @@ def _to_out(
         supplier_name=draft.supplier_name,
         supplier_vkn=draft.supplier_vkn,
         supplier_id=draft.supplier_id,
-        delivery_report_id=draft.delivery_report_id,
+        delivery_platform_id=draft.delivery_platform_id,
         linked_supplier_name=linked_name,
         linked_supplier_vkn=linked_vkn,
+        linked_platform_name=linked_platform_name,
         invoice_number=draft.invoice_number,
         invoice_date=draft.invoice_date,
         net_kurus=draft.net_kurus,
@@ -163,13 +170,23 @@ def _to_out(
 def _draft_out(session: Session, entity_id: uuid.UUID, draft: InvoiceDraft) -> InvoiceDraftOut:
     linked_name: str | None = None
     linked_vkn: str | None = None
-    if draft.supplier_id is not None:
-        with entity_context(session, entity_id):
+    linked_platform_name: str | None = None
+    with entity_context(session, entity_id):
+        if draft.supplier_id is not None:
             supplier = session.get(Supplier, draft.supplier_id)
             if supplier is not None:
                 linked_name = supplier.name
                 linked_vkn = supplier.vkn
-    return _to_out(draft, linked_name=linked_name, linked_vkn=linked_vkn)
+        if draft.delivery_platform_id is not None:
+            platform = session.get(OwnedDeliveryPlatform, draft.delivery_platform_id)
+            if platform is not None:
+                linked_platform_name = platform.name
+    return _to_out(
+        draft,
+        linked_name=linked_name,
+        linked_vkn=linked_vkn,
+        linked_platform_name=linked_platform_name,
+    )
 
 
 def _get_draft_row(
@@ -285,6 +302,43 @@ def _extract_and_store_efatura(
     return source_type, extraction, payload, linked_supplier
 
 
+def _commission_pdf_text(payload: dict) -> str | None:
+    sample = payload.get("text_sample")
+    return sample if isinstance(sample, str) else None
+
+
+def _apply_commission_intake(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    extraction: EInvoiceExtraction,
+    payload: dict,
+    review_reason: str | None,
+) -> tuple[str, uuid.UUID | None, str | None]:
+    """Auto-classify platform commission e-Faturas when delivery is enabled."""
+    if not is_delivery_enabled(session, entity_id):
+        return InvoiceKind.SUPPLIER.value, None, review_reason
+
+    pdf_text = _commission_pdf_text(payload)
+    if not is_delivery_commission_extraction(extraction, pdf_text=pdf_text):
+        return InvoiceKind.SUPPLIER.value, None, review_reason
+
+    platform = match_delivery_platform(
+        session,
+        entity_id,
+        supplier_name=extraction.supplier_name,
+        supplier_vkn=extraction.supplier_vkn,
+    )
+    if platform is None:
+        reason = (
+            review_reason
+            or "Platform commission invoice detected — link the delivery platform before confirm"
+        )
+        return InvoiceKind.DELIVERY_COMMISSION.value, None, reason
+
+    return InvoiceKind.DELIVERY_COMMISSION.value, platform.id, review_reason
+
+
 def _discard_invoice_draft(
     session: Session,
     draft: InvoiceDraft,
@@ -339,14 +393,24 @@ def create_efatura_draft_from_upload(
             "create or link a supplier before confirm"
         )
 
+    invoice_kind, delivery_platform_id, review_reason = _apply_commission_intake(
+        session,
+        entity_id,
+        extraction=extraction,
+        payload=payload,
+        review_reason=review_reason,
+    )
+
     with entity_context(session, entity_id):
         draft = InvoiceDraft(
             status=InvoiceDraftStatus.DRAFT,
+            invoice_kind=invoice_kind,
             source_type=source_type,
             file_fingerprint=fingerprint,
             supplier_name=extraction.supplier_name,
             supplier_vkn=extraction.supplier_vkn,
             supplier_id=linked_supplier.id if linked_supplier else None,
+            delivery_platform_id=delivery_platform_id,
             review_reason=review_reason,
             invoice_number=extraction.invoice_number,
             invoice_date=extraction.invoice_date,
@@ -459,12 +523,12 @@ def unlink_supplier_from_draft(
     return _draft_out(session, entity_id, draft)
 
 
-def link_delivery_report_to_draft(
+def link_delivery_platform_to_draft(
     session: Session,
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
     *,
-    delivery_report_id: uuid.UUID,
+    delivery_platform_id: uuid.UUID,
 ) -> InvoiceDraftOut:
     _require_entity(session, entity_id)
     require_delivery_enabled(session, entity_id)
@@ -473,26 +537,17 @@ def link_delivery_report_to_draft(
     _ensure_draft_linkable(draft)
 
     with entity_context(session, entity_id):
-        report = session.get(DeliveryReport, delivery_report_id)
-        if report is None:
-            raise LookupError("Delivery report not found")
-        if report.status != DeliveryReportStatus.POSTED.value:
-            raise DeliveryReportLinkError("Delivery report must be posted before linking")
-        if report.commission_journal_entry_id is not None:
-            raise DeliveryReportLinkError(
-                "Delivery report commission is already posted"
-            )
+        platform = session.get(OwnedDeliveryPlatform, delivery_platform_id)
+        if platform is None:
+            raise LookupError("Delivery platform not found")
+        if not platform.is_active:
+            raise DeliveryPlatformLinkError("Delivery platform is inactive")
 
         draft.invoice_kind = InvoiceKind.DELIVERY_COMMISSION.value
-        draft.delivery_report_id = delivery_report_id
-
-        if draft.gross_kurus != report.commission_kurus:
-            draft.status = InvoiceDraftStatus.NEEDS_REVIEW.value
-            draft.review_reason = _commission_mismatch_reason(
-                draft_gross_kurus=draft.gross_kurus,
-                report_commission_kurus=report.commission_kurus,
-            )
-        elif _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
+        draft.delivery_platform_id = delivery_platform_id
+        if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW and (
+            draft.review_reason or ""
+        ).startswith("Platform commission invoice detected"):
             draft.status = InvoiceDraftStatus.DRAFT.value
             draft.review_reason = None
 
@@ -502,7 +557,7 @@ def link_delivery_report_to_draft(
     return _draft_out(session, entity_id, draft)
 
 
-def unlink_delivery_report_from_draft(
+def unlink_delivery_platform_from_draft(
     session: Session,
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
@@ -514,7 +569,7 @@ def unlink_delivery_report_from_draft(
 
     with entity_context(session, entity_id):
         draft.invoice_kind = InvoiceKind.SUPPLIER.value
-        draft.delivery_report_id = None
+        draft.delivery_platform_id = None
         if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
             draft.status = InvoiceDraftStatus.DRAFT.value
             draft.review_reason = None
@@ -541,8 +596,8 @@ def confirm_invoice_draft(
     if draft.supplier_id is None:
         raise DraftConfirmError("Supplier must be linked before confirm")
     if InvoiceKind(draft.invoice_kind) == InvoiceKind.DELIVERY_COMMISSION:
-        if draft.delivery_report_id is None:
-            raise DraftConfirmError("Delivery report must be linked before confirm")
+        if draft.delivery_platform_id is None:
+            raise DraftConfirmError("Delivery platform must be linked before confirm")
         if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
             raise DraftConfirmError(
                 draft.review_reason or "Draft needs review before confirm"
@@ -612,7 +667,7 @@ def post_invoice_draft(
             journal_entry_date=result.journal_entry.entry_date,
             journal_entry_description=result.journal_entry.description,
             journal_entry_source=result.journal_entry.source,
-            delivery_report_id=result.delivery_report.id,
+            delivery_platform_id=result.delivery_platform_id,
         )
 
     result = post_confirmed_draft(

@@ -18,7 +18,7 @@ from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.banking import service as banking_service
 from app.features.dashboard.schema import (
     DashboardRead,
-    DeliveryInTransitRow,
+    DeliveryBalanceLeftRow,
     FxBalanceRow,
     NeedsReviewBreakdown,
     PayablePreviewRow,
@@ -328,7 +328,7 @@ def get_dashboard(
         fx_balances = _fx_balances(session)
 
     delivery_platforms: list = []
-    delivery_in_transit: list[DeliveryInTransitRow] = []
+    delivery_balance_left: list[DeliveryBalanceLeftRow] = []
     if delivery_enabled:
         delivery_report = reports_service.get_delivery_sales_report(
             session, entity_id, from_date, to_date
@@ -337,13 +337,14 @@ def get_dashboard(
         clearing = delivery_service.get_delivery_clearing_reconciliation(
             session, entity_id
         )
-        delivery_in_transit = [
-            DeliveryInTransitRow(
+        delivery_balance_left = [
+            DeliveryBalanceLeftRow(
                 delivery_platform_id=row.delivery_platform_id,
                 platform_name=row.platform_name,
-                clearing_balance_kurus=row.clearing_balance_kurus,
+                balance_left_kurus=row.balance_left_kurus,
             )
             for row in clearing.platforms
+            if row.balance_left_kurus != 0
         ]
 
     total_payables, payable_rows, _ = payables_service.list_payables(session, entity_id)
@@ -360,7 +361,7 @@ def get_dashboard(
         total_payables_kurus=total_payables,
         payables_preview=_payables_preview(payable_rows, supplier_id=supplier_id),
         total_receivables_kurus=total_receivables,
-        delivery_in_transit=delivery_in_transit,
+        delivery_balance_left=delivery_balance_left,
         total_try_position_kurus=total_try_position,
         fx_balances=fx_balances,
         tax_department_payments_kurus=None,

@@ -24,10 +24,10 @@ class PayablePreviewRow(BaseModel):
     balance_kurus: int
 
 
-class DeliveryInTransitRow(BaseModel):
+class DeliveryBalanceLeftRow(BaseModel):
     delivery_platform_id: uuid.UUID
     platform_name: str
-    clearing_balance_kurus: int
+    balance_left_kurus: int
 
 
 class FxBalanceRow(BaseModel):
@@ -64,9 +64,9 @@ class DashboardRead(BaseModel):
     total_payables_kurus: int
     payables_preview: list[PayablePreviewRow]
     total_receivables_kurus: int
-    delivery_in_transit: list[DeliveryInTransitRow] = Field(
+    delivery_balance_left: list[DeliveryBalanceLeftRow] = Field(
         default_factory=list,
-        description="Per-platform clearing GL balance; empty when delivery disabled",
+        description="Per-platform gross − commission posted − bank settled; empty when delivery disabled",
     )
     total_try_position_kurus: int
     fx_balances: list[FxBalanceRow] = Field(default_factory=list)
