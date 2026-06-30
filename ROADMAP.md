@@ -14,19 +14,19 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | **FS** — Salary period + advance UX (`POST_LAUNCH_PLAN.md` § FS) |
-| **Last completed slice** | Partner advance / drawing (`v0.73.23-partner-advance-drawing`) |
-| **Last commit/tag**      | `v0.73.23-partner-advance-drawing` — partner drawing + repayment; bidirectional balance UX |
-| **Next up**              | **FS** (salary period + payment UX); then **P3/P5/P6**; **IC-D** deferred |
+| **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
+| **Last completed slice** | Salary period + advance UX (`v0.73.24-salary-period-advance-ux`) |
+| **Last commit/tag**      | `v0.73.24-salary-period-advance-ux` — salary period on accrual; ledger advance fields; payment preview UX |
+| **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover); **IC-D** deferred |
 
 
 ### Next plan (pre-launch, owner-driven)
 
 1. ~~**Clearance auto-pick (backend, small).**~~ **DONE (`v0.72.0-clearance-auto-pick`).** HIGH-confidence learned rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches; zero or multiple matches → Needs Review. Delivery resolves platform by unique match across entity platforms.
-2. **Invoice classification (IC-A–IC-D)** — **NEXT.** Unconfirm/redo on confirmed drafts; fix Yemeksepeti + Getir supply vs commission detection; Spice Corner PDF fixture corpus; review UX; per-entity learning (IC-D deferred). Full spec: **`POST_LAUNCH_PLAN.md` § IC**. Blocks FP/FS until IC-A–IC-C ship.
-3. **Run pending migrations before go-live:** `alembic upgrade head` applies through **`059`** (`052`–`059`: import profiles, CSV options, classification rules, rule auto-apply, entity `legal_name`, expense item default account, entity **`vkn`**, delivery monthly sales). Ensure `xlrd` installed.
+2. ~~**Invoice classification (IC-A–IC-D)**~~ **IC-A–IC-C DONE** (`v0.73.20`–`v0.73.22`). **IC-D** (per-entity learning) deferred until stable in production. Full spec: **`POST_LAUNCH_PLAN.md` § IC**.
+3. **Run pending migrations before go-live:** `alembic upgrade head` applies through **`060`** (`052`–`060`: … entity **`vkn`**, delivery monthly sales, staff accrual period). Ensure `xlrd` installed.
 4. **Phase 12 owner sign-off** — record first real restaurant on production (provision Postgres, secrets, backup-restore drill, walk a day).
-5. **Feature gaps FP/FS** — partner advance; salary advance auto-clear (after IC-A–IC-C).
+5. ~~**Feature gaps FP/FS**~~ **DONE** — FP (`v0.73.23` partner drawing/repayment); FS (`v0.73.24` salary period + advance UX at pay time).
 6. **P3/P5/P6** — upload backup, delete company UI, production cutover (`POST_LAUNCH_PLAN.md`).
 7. **P8** — groceries / no-invoice card spend (design only until promoted).
 8. *Optional later:* generic global "starter phrasebook" of non-private TR type-patterns for day-one defaults (personal rules always override).
@@ -67,6 +67,8 @@
 | Invoice unconfirm / redo (IC-A)                                                | `v0.73.20-invoice-unconfirm-redo`                   | done           | Unconfirm confirmed→draft; reject/discard confirmed; set-kind reclassify; review UI |
 | Invoice classification fixtures + post fixes (IC-B)                            | `v0.73.21-invoice-classification-fixtures`          | done           | YS Hizmet Bedeli; supply Depo/SKU; Spice Corner PDF fixtures; intake confidence; platform link preserves kind |
 | Invoice review confidence UX (IC-C)                                            | `v0.73.22-invoice-review-confidence-ux`             | done           | Kind badge; HIGH → confirm only; MEDIUM/LOW → Accept suggestion or Change type |
+| Partner advance / drawing (FP)                                                 | `v0.73.23-partner-advance-drawing`                  | done           | Drawing + repayment movements; bidirectional partner balance UX |
+| Salary period + advance UX at pay (FS)                                         | `v0.73.24-salary-period-advance-ux`                  | done           | Re-add period on accrual only; re-wire auto-clear preview — posting already applied advance |
 | Per-entity invoice classification learning (IC-D)                              | *deferred* — see `POST_LAUNCH_PLAN.md` § IC-D       | planned        | Learn on override; suggest after N confirms |
 
 
@@ -1835,6 +1837,8 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-25 | Salary period + advance UX (FS)               | `v0.73.24-salary-period-advance-ux`                  | Migration `060` accrual period; ledger `outstanding_advance_minor` + `remaining_accrual_minor`; payment `advance_applied_minor`; staff pay form preview |
+| 2026-06-25 | Partner advance / drawing (FP)                | `v0.73.23-partner-advance-drawing`                   | Drawing + repayment posting; bidirectional partner balance; Record hub + partner page |
 | 2026-06-25 | Invoice review confidence UX (IC-C)           | `v0.73.22-invoice-review-confidence-ux`              | `classification_confidence` on draft API; kind badge; HIGH → one Confirm; MEDIUM/LOW → Accept suggestion / Change type |
 | 2026-06-25 | Invoice classification fixtures (IC-B)        | `v0.73.21-invoice-classification-fixtures`           | YS Hizmet Bedeli + supply Depo/SKU detection; `classify_efatura_intake` confidence; platform link no longer forces commission; Spice Corner 5-PDF pytest corpus |
 | 2026-06-30 | Invoice unconfirm / redo (IC-A)               | `v0.73.20-invoice-unconfirm-redo`                      | `POST …/unconfirm` + `POST …/set-kind`; reject discards confirmed; draft review UI: Send back to review, Discard, reclassify; review panel keeps expand open on unconfirm |

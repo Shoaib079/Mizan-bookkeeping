@@ -8,11 +8,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Post-launch — e-Fatura intake & invoice routing |
-| **Active slice** | **FP/FS** — feature gaps (after IC-C sign-off); **IC-D** deferred |
-| **Last completed slice** | IC-C — Review confidence UX (`v0.73.22-invoice-review-confidence-ux`) |
-| **Last tag** | `v0.73.22-invoice-review-confidence-ux` |
-| **Next up** | FP → FS → P3/P5/P6 → IC-D (learning, deferred) → P8 design |
+| **Phase** | Post-launch — ops queue (P3/P5/P6) |
+| **Active slice** | **P3** — off-site upload backup (`POST_LAUNCH_PLAN.md`) |
+| **Last completed slice** | FS — Salary period + advance UX (`v0.73.24-salary-period-advance-ux`) |
+| **Last tag** | `v0.73.24-salary-period-advance-ux` |
+| **Next up** | P3 → P5 → P6 → IC-D (deferred) → P8 design |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 
@@ -62,11 +62,11 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**`v0.73.22-invoice-review-confidence-ux`** — kind badge; HIGH → Confirm; MEDIUM/LOW → Accept/Change type. Prior: **`v0.73.21`** classification fixtures.
+**`v0.73.24-salary-period-advance-ux`** — salary period on accrual (migration `060`); ledger exposes outstanding advance; payment form previews auto-deduct; `advance_applied_minor` on payment API. Prior: **`v0.73.23`** partner drawing/repayment (FP).
 
-**Deploy:** `alembic upgrade head` through **`059`** on Railway. Set entity VKN in Set up → Restaurant if legacy row.
+**Deploy:** `alembic upgrade head` through **`060`** on Railway.
 
-**Next build:** **`POST_LAUNCH_PLAN.md` § FP/FS** after IC-C sign-off. **IC-D** deferred until stable.
+**Next build:** **`POST_LAUNCH_PLAN.md` § P3** (upload backup). **IC-D** deferred until stable.
 
 **Owner sign-off ✓ (2026-06-28)** — clearance auto-pick (`v0.72.0-clearance-auto-pick`). Phase 12.5 statement-learning arc closed.
 

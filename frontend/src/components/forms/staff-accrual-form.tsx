@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { FormDialogShell } from "@/components/ui/form-dialog-shell";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
@@ -14,6 +14,21 @@ import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
+
+const MONTHS = [
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
 
 type Props = {
   open: boolean;
@@ -35,20 +50,27 @@ export function StaffAccrualForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const now = new Date();
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
   const isTry = payCurrency === "TRY";
   const [dateText, setDateText] = useState("");
+  const [periodYear, setPeriodYear] = useState(String(now.getFullYear()));
+  const [periodMonth, setPeriodMonth] = useState(String(now.getMonth() + 1));
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("Salary accrual");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open) setDateText(todayTrDate());
-  }, [open]);
+    if (open) {
+      setDateText(todayTrDate());
+      setPeriodYear(String(now.getFullYear()));
+      setPeriodMonth(String(now.getMonth() + 1));
+    }
+  }, [open, now]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -60,12 +82,22 @@ export function StaffAccrualForm({
       ? parseTryToKurus(amountText)
       : parseFxNative(amountText);
     const accrualDate = parseTrDate(dateText);
+    const year = Number.parseInt(periodYear, 10);
+    const month = Number.parseInt(periodMonth, 10);
     if (amountMinor === null || amountMinor <= 0) {
       setError("Enter a valid amount.");
       return;
     }
     if (!accrualDate) {
       setError("Date must be DD.MM.YYYY.");
+      return;
+    }
+    if (!Number.isFinite(year) || year < 2000 || year > 2100) {
+      setError("Enter a valid salary year.");
+      return;
+    }
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      setError("Choose a salary month.");
       return;
     }
     setSubmitting(true);
@@ -76,13 +108,15 @@ export function StaffAccrualForm({
         `/entities/${entityId}/staff/employees/${employeeId}/accruals`,
         {
           method: "POST",
-        idempotencyKey,
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             accrual_date: accrualDate,
             amount_minor: amountMinor,
             description,
             actor_id: actorId,
+            period_year: year,
+            period_month: month,
           }),
         },
       );
@@ -109,6 +143,33 @@ export function StaffAccrualForm({
         <p className="text-xs text-muted-foreground">
           Accrues salary payable ({payCurrency}). No cash movement.
         </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="acc-period-year">Salary year</Label>
+            <Input
+              id="acc-period-year"
+              inputMode="numeric"
+              value={periodYear}
+              onChange={(e) => setPeriodYear(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="acc-period-month">Salary month</Label>
+            <Select
+              id="acc-period-month"
+              value={periodMonth}
+              onChange={(e) => setPeriodMonth(e.target.value)}
+              required
+            >
+              {MONTHS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
         <div>
           <Label htmlFor="acc-date">Accrual date (DD.MM.YYYY)</Label>
           <DateInput

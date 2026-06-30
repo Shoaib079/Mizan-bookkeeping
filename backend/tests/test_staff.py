@@ -105,6 +105,8 @@ def test_try_accrual_posts_dr_5100_cr_2250(db_session, staff_setup) -> None:
         amount_minor=500_000,
         description="June salary",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
 
     assert result.journal_entry is not None
@@ -155,6 +157,8 @@ def test_salary_payment_no_second_5100_with_advance_offset(db_session, staff_set
         amount_minor=500_000,
         description="June salary",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
     staff_posting.post_advance_paid(
         db_session,
@@ -179,6 +183,7 @@ def test_salary_payment_no_second_5100_with_advance_offset(db_session, staff_set
     )
 
     assert result.journal_entry.source == JournalEntrySource.STAFF_PAYMENT
+    assert result.advance_applied_minor == 200_000
     assert _salary_expense_total(db_session, entity_id, accounts[SALARY_EXPENSE_CODE]) == 500_000
     assert _gl_balance(
         db_session, entity_id, accounts[SALARIES_PAYABLE_CODE], AccountNormalBalance.CREDIT
@@ -217,6 +222,8 @@ def test_partial_salary_payment_applies_advance_only_once(db_session, staff_setu
         amount_minor=100_000_00,
         description="June salary",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
     staff_posting.post_advance_paid(
         db_session,
@@ -304,6 +311,8 @@ def test_fx_partial_salary_payment_applies_advance_only_once(db_session, staff_s
         amount_minor=100_000,
         description="USD salary",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
     staff_posting.post_advance_paid(
         db_session,
@@ -363,6 +372,8 @@ def test_salary_payment_without_advance(db_session, staff_setup) -> None:
         amount_minor=400_000,
         description="Salary",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
     staff_posting.post_salary_payment(
         db_session,
@@ -398,6 +409,8 @@ def test_fx_accrual_subledger_only_no_gl(db_session, staff_setup) -> None:
         amount_minor=50_000,
         description="USD salary accrual",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
 
     assert result.journal_entry is None
@@ -446,6 +459,8 @@ def test_fx_salary_payment_expense_and_wallet_spend(db_session, staff_setup) -> 
         amount_minor=50_000,
         description="USD salary",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
 
     result = staff_posting.post_salary_payment(
@@ -482,6 +497,8 @@ def test_cross_entity_isolation(db_session, restaurant_a, restaurant_b, staff_se
         amount_minor=100_000,
         description="Salary",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
 
     seed_default_chart(db_session, restaurant_b.id)
@@ -527,10 +544,14 @@ def test_api_staff_flow(client: TestClient, staff_setup, db_session) -> None:
             "amount_minor": 450000,
             "description": "June salary",
             "actor_id": str(ACTOR_ID),
+            "period_year": 2026,
+            "period_month": 6,
         },
     )
     assert accrual.status_code == 201
     assert accrual.json()["journal_entry_id"]
+    assert accrual.json()["staff_ledger_entry"]["period_year"] == 2026
+    assert accrual.json()["staff_ledger_entry"]["period_month"] == 6
 
     advance = client.post(
         f"{base}/employees/{employee_id}/advances",
@@ -556,10 +577,13 @@ def test_api_staff_flow(client: TestClient, staff_setup, db_session) -> None:
     )
     assert payment.status_code == 201
     assert payment.json()["balance_minor"] == 0
+    assert payment.json()["advance_applied_minor"] == 150000
 
     ledger = client.get(f"{base}/employees/{employee_id}/ledger")
     assert ledger.status_code == 200
     assert ledger.json()["balance_minor"] == 0
+    assert ledger.json()["remaining_accrual_minor"] == 0
+    assert ledger.json()["outstanding_advance_minor"] == 0
     assert len(ledger.json()["entries"]) == 4
     types = {e["movement_type"] for e in ledger.json()["entries"]}
     assert types == {
@@ -582,6 +606,8 @@ def test_rls_isolation_raw_sql(db_session, restaurant_a, restaurant_b, staff_set
         amount_minor=100_000,
         description="Salary",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
 
     db_session.execute(

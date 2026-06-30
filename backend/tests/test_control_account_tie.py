@@ -64,6 +64,8 @@ def test_staff_control_accounts_tie_after_partial_payments_with_advance(
         amount_minor=100_000_00,
         description="June salary",
         actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
     )
     staff_posting.post_advance_paid(
         db_session,

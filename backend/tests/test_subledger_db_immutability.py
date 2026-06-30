@@ -168,6 +168,8 @@ def _seed_entry(db_session, setup: dict, kind: str) -> uuid.UUID:
             amount_minor=20_000,
             description="June accrual",
             actor_id=ACTOR_ID,
+            period_year=2026,
+            period_month=6,
         )
         return result.staff_ledger_entry.id
 

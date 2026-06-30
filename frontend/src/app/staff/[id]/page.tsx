@@ -35,6 +35,31 @@ type LedgerEntry = {
   amount_minor: number;
   description: string;
   journal_entry_id: string | null;
+  period_year?: number | null;
+  period_month?: number | null;
+};
+
+const MONTH_NAMES = [
+  "",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+type LedgerResponse = {
+  balance_minor: number;
+  remaining_accrual_minor: number;
+  outstanding_advance_minor: number;
+  entries: LedgerEntry[];
 };
 
 const correctableStaffTypes = new Set([
@@ -43,10 +68,12 @@ const correctableStaffTypes = new Set([
   "salary_payment",
 ]);
 
-type LedgerResponse = {
-  balance_minor: number;
-  entries: LedgerEntry[];
-};
+function salaryPeriodLabel(entry: LedgerEntry): string | null {
+  if (entry.movement_type !== "salary_accrued") return null;
+  if (!entry.period_year || !entry.period_month) return null;
+  const month = MONTH_NAMES[entry.period_month] ?? String(entry.period_month);
+  return `${month} ${entry.period_year}`;
+}
 
 export default function StaffDetailPage() {
   const params = useParams<{ id: string }>();
@@ -152,6 +179,14 @@ export default function StaffDetailPage() {
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {balanceLabel}
               </p>
+              {ledger.outstanding_advance_minor > 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Outstanding advance:{" "}
+                  {employee.pay_currency === "TRY"
+                    ? formatTry(ledger.outstanding_advance_minor)
+                    : `${(ledger.outstanding_advance_minor / 100).toFixed(2)} ${employee.pay_currency}`}
+                </p>
+              )}
             </div>
           </div>
 
@@ -193,6 +228,11 @@ export default function StaffDetailPage() {
                     <DataTableCell>
                       {staffMovementLabels[entry.movement_type] ??
                         entry.movement_type}
+                      {salaryPeriodLabel(entry) && (
+                        <span className="ml-1 text-muted-foreground">
+                          ({salaryPeriodLabel(entry)})
+                        </span>
+                      )}
                     </DataTableCell>
                     <DataTableCell>{entry.description}</DataTableCell>
                     <DataTableCell align="right">
@@ -257,6 +297,8 @@ export default function StaffDetailPage() {
             kind="payment"
             employeeId={employeeId}
             payCurrency={employee.pay_currency}
+            outstandingAdvanceMinor={ledger?.outstanding_advance_minor ?? 0}
+            remainingAccrualMinor={ledger?.remaining_accrual_minor ?? 0}
             onClose={() => setPaymentOpen(false)}
             onSaved={() => void reload()}
           />

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.staff.types import PayCurrency, StaffMovementType
 
@@ -46,12 +46,16 @@ class StaffLedgerEntryRead(BaseModel):
     description: str
     actor_id: uuid.UUID
     journal_entry_id: uuid.UUID | None
+    period_year: int | None = None
+    period_month: int | None = None
     created_at: datetime
 
 
 class StaffLedgerRead(BaseModel):
     employee_id: uuid.UUID
     balance_minor: int
+    remaining_accrual_minor: int
+    outstanding_advance_minor: int
     entries: list[StaffLedgerEntryRead]
 
 
@@ -60,6 +64,15 @@ class StaffAccrualCreate(BaseModel):
     amount_minor: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
     actor_id: uuid.UUID
+    period_year: int = Field(ge=2000, le=2100)
+    period_month: int = Field(ge=1, le=12)
+
+    @field_validator("period_month")
+    @classmethod
+    def validate_period_month(cls, value: int) -> int:
+        if not 1 <= value <= 12:
+            raise ValueError("period_month must be 1–12")
+        return value
 
 
 class StaffAdvanceCreate(BaseModel):
@@ -99,6 +112,7 @@ class StaffPaymentResponse(BaseModel):
     journal_entry_id: uuid.UUID
     staff_ledger_entry: StaffLedgerEntryRead
     balance_minor: int
+    advance_applied_minor: int = 0
     fx_ledger_entry_id: uuid.UUID | None = None
 
 

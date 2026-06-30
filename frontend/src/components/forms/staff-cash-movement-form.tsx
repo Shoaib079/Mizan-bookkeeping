@@ -18,8 +18,12 @@ import {
   loadForeignCurrencyAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
-import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { parseTrDate, parseTryToKurus, formatTry } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
+import {
+  advanceAppliedPreview,
+  payableClearedPreview,
+} from "@/lib/staff-salary";
 
 type Props = {
   open: boolean;
@@ -27,6 +31,8 @@ type Props = {
   employeeId: string;
   kind: "advance" | "payment";
   payCurrency: string;
+  outstandingAdvanceMinor?: number;
+  remainingAccrualMinor?: number;
   embedded?: boolean;
   onSaved?: () => void;
 };
@@ -37,6 +43,8 @@ export function StaffCashMovementForm({
   employeeId,
   kind,
   payCurrency,
+  outstandingAdvanceMinor = 0,
+  remainingAccrualMinor = 0,
   embedded,
   onSaved,
 }: Props) {
@@ -169,6 +177,31 @@ export function StaffCashMovementForm({
 
   const title = kind === "advance" ? "Record advance" : "Record salary payment";
 
+  const cashMinorPreview = isTry
+    ? parseTryToKurus(amountText) ?? 0
+    : parseFxNative(amountText) ?? 0;
+  const advancePreview =
+    kind === "payment" && cashMinorPreview > 0
+      ? advanceAppliedPreview(
+          cashMinorPreview,
+          remainingAccrualMinor,
+          outstandingAdvanceMinor,
+        )
+      : 0;
+  const payablePreview =
+    kind === "payment" && cashMinorPreview > 0
+      ? payableClearedPreview(
+          cashMinorPreview,
+          remainingAccrualMinor,
+          outstandingAdvanceMinor,
+        )
+      : 0;
+
+  function formatPayMinor(minor: number): string {
+    if (isTry) return formatTry(minor);
+    return `${(minor / 100).toFixed(2)} ${payCurrency}`;
+  }
+
   return (
     <FormDialogShell embedded={embedded} open={open} title={title} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
@@ -259,6 +292,44 @@ export function StaffCashMovementForm({
               placeholder={`${payCurrency} wallet…`}
               disabled={fxAccounts.length === 0}
             />
+          </div>
+        )}
+        {kind === "payment" && outstandingAdvanceMinor > 0 && (
+          <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
+            <p>
+              Outstanding advance:{" "}
+              <span className="font-medium tabular-nums">
+                {formatPayMinor(outstandingAdvanceMinor)}
+              </span>
+            </p>
+            {remainingAccrualMinor > 0 && (
+              <p className="mt-1 text-muted-foreground">
+                Accrued salary not yet paid:{" "}
+                <span className="tabular-nums">
+                  {formatPayMinor(remainingAccrualMinor)}
+                </span>
+              </p>
+            )}
+            {advancePreview > 0 && (
+              <p className="mt-2 text-muted-foreground">
+                On save,{" "}
+                <span className="font-medium tabular-nums text-foreground">
+                  {formatPayMinor(advancePreview)}
+                </span>{" "}
+                advance will auto-clear against salary payable
+                {payablePreview > cashMinorPreview && (
+                  <>
+                    {" "}
+                    (total payable cleared:{" "}
+                    <span className="tabular-nums">
+                      {formatPayMinor(payablePreview)}
+                    </span>
+                    )
+                  </>
+                )}
+                .
+              </p>
+            )}
           </div>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}

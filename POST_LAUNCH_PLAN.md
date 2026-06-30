@@ -21,6 +21,8 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 - **e-Fatura auto-create suppliers** (`v0.73.7-company-profile-efatura-suppliers`) — `find_or_create_supplier_for_efatura` on upload; draft linked immediately; bank statement supplier create stays manual-only.
 - **Delivery monthly gross + platform commission** (`v0.73.18-delivery-monthly-sales`) — one posted gross per platform/month (KDV dahil); commission e-Fatura linked by platform; migration `059`; `balance_left_kurus` reconciliation.
 - **Supplier activity timeline + inline invoice preview** (`v0.73.19-supplier-activity-invoice-preview`) — chronological supplier Activity tab + Excel export; PDF preview on Review / supplier activity / draft review; document download API; partial commission confirm fix; duplicate discard (draft/duplicate only).
+- **Partner advance / drawing (FP)** (`v0.73.23-partner-advance-drawing`) — drawing + repayment movements; bidirectional partner balance; partner page + Record hub.
+- **Salary period + advance UX (FS)** (`v0.73.24-salary-period-advance-ux`) — accrual period fields (migration `060`); ledger advance totals; payment preview + `advance_applied_minor` on API response.
 
 ---
 
@@ -28,10 +30,10 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 | Priority | ID | Slice | Status |
 |----------|-----|-------|--------|
-| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-C done** — FP/FS next |
-| 2 | FP | Partner advance / drawing | Queued |
-| 3 | FS | Salary period + auto-clear advance | Queued |
-| 4 | P3 | Off-site backup of uploads | Queued |
+| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-C done** — IC-D deferred |
+| 2 | FP | Partner advance / drawing | **Done** (`v0.73.23`) |
+| 3 | FS | Salary period + auto-clear advance | **Done** (`v0.73.24`) |
+| 4 | P3 | Off-site backup of uploads | **Next** |
 | 5 | P5 | Delete company UI | Queued |
 | 6 | P6 | Production cutover (ops) | Owner |
 | 7 | P8 | Groceries / no-invoice card spend | Design TBD |
@@ -241,13 +243,13 @@ Now that the hubs exist, collapse the sidebar to the 6 intents (Dashboard, Recor
 
 ## 🧩 Feature gaps (separate from UX reorg — after IC-A–IC-C)
 
-These add capability the reorg doesn't (the reorg only relocates). **Build after invoice classification (IC) slices** — IC blocks daily e-Fatura workflow.
+**Done — do not rebuild:**
 
-- **FP — Partner advance / drawing (partner OWES the business).** Today the partner ledger only tracks "business owes partner" (expense fronted + reimbursement). Add advance/drawing movements so a partner can owe the business, and show the balance in either direction ("owes you" vs "you owe"). Backend movement + posting + ledger sign; partner page + Record card. *(Ask for full Cursor prompt when ready.)*
-- **FS — Salary period + auto-clear advance.** Add a salary **period/month** to the accrual; when paying salary, surface the employee's **outstanding advance** and auto-deduct it (the posting layer supports `advance_applied`; service currently passes 0 — wire it). *(Ask for full Cursor prompt when ready.)*
+- **FP — Partner advance / drawing** (`v0.73.23-partner-advance-drawing`) — drawing + repayment; bidirectional balance UX.
+- **FS — Salary period + advance UX** (`v0.73.24-salary-period-advance-ux`) — accrual period (migration `060`); ledger advance totals; payment preview; auto-clear was already in posting — correction path with `advance_applied` sibling still blocked (known since `v0.69.3`).
 
 ---
 
-**How to use:** pick a slice from the **Master build order** → build + test + commit/tag → push → deploy → test live. **Next:** **IC-A → IC-B → IC-C** (then FP/FS). UX reorg **UX1–UX7 done** — do not rebuild. Tell me when you start any slice and I'll expand the spec or walk the ops steps.
+**How to use:** pick a slice from the **Master build order** → build + test + commit/tag → push → deploy → test live. **Next:** **P3** (upload backup). UX reorg **UX1–UX7 done** — do not rebuild.
 
 **Session recovery:** read `ROADMAP.md` **Current status** + `PROGRESS.md` **Current** + this file **Master build order** — git tag wins over stale doc lines.

@@ -182,6 +182,8 @@ def test_staff_accrual_correct_http(client, db_session, correction_api_setup) ->
             "amount_minor": 400_000,
             "description": "June salary",
             "actor_id": str(ACTOR_ID),
+            "period_year": 2026,
+            "period_month": 6,
         },
     )
     assert accrual.status_code == 201

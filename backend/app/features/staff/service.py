@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.staff import posting as staff_posting
-from app.core.staff.ledger import current_balance_minor, list_ledger_entries
+from app.core.staff.ledger import (
+    current_balance_minor,
+    list_ledger_entries,
+    outstanding_advance_minor,
+    remaining_accrual_minor,
+)
 from app.core.staff.models import StaffLedgerEntry
 from app.core.staff.types import PayCurrency, StaffMovementType
 from app.core.ledger.correction import CorrectionNotFoundError, correct_staff_journal_entry
@@ -119,9 +124,15 @@ def get_staff_ledger(
 ) -> StaffLedgerRead:
     balance = current_balance_minor(session, entity_id, employee_id)
     entries = list_ledger_entries(session, entity_id, employee_id)
+    with entity_context(session, entity_id):
+        require_entity_context()
+        remaining = remaining_accrual_minor(session, employee_id)
+        advance = outstanding_advance_minor(session, employee_id)
     return StaffLedgerRead(
         employee_id=employee_id,
         balance_minor=balance,
+        remaining_accrual_minor=remaining,
+        outstanding_advance_minor=advance,
         entries=[StaffLedgerEntryRead.model_validate(e) for e in entries],
     )
 
@@ -140,6 +151,8 @@ def record_accrual(
         amount_minor=payload.amount_minor,
         description=payload.description,
         actor_id=payload.actor_id,
+        period_year=payload.period_year,
+        period_month=payload.period_month,
     )
     return StaffAccrualResponse(
         journal_entry_id=result.journal_entry.id if result.journal_entry else None,
@@ -198,6 +211,7 @@ def record_payment(
         journal_entry_id=result.journal_entry.id,
         staff_ledger_entry=StaffLedgerEntryRead.model_validate(result.staff_ledger_entry),
         balance_minor=result.balance_minor,
+        advance_applied_minor=result.advance_applied_minor,
         fx_ledger_entry_id=(
             result.fx_ledger_entry.id if result.fx_ledger_entry else None
         ),

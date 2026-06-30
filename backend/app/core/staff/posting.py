@@ -58,6 +58,7 @@ class StaffPaymentPostResult:
     journal_entry: JournalEntry
     staff_ledger_entry: StaffLedgerEntry
     balance_minor: int
+    advance_applied_minor: int = 0
     fx_ledger_entry: FxLedgerEntry | None = None
 
 
@@ -284,6 +285,8 @@ def post_salary_accrual(
     amount_minor: int,
     description: str,
     actor_id: uuid.UUID,
+    period_year: int,
+    period_month: int,
 ) -> StaffAccrualPostResult:
     """Accrue salary — TRY posts Dr 5100 / Cr 2250; FX subledger-only until payment."""
     if amount_minor <= 0:
@@ -324,6 +327,8 @@ def post_salary_accrual(
             description=description,
             actor_id=actor_id,
             journal_entry_id=journal_entry.id if journal_entry else None,
+            period_year=period_year,
+            period_month=period_month,
         )
 
         session.commit()
@@ -619,5 +624,6 @@ def post_salary_payment(
             journal_entry=journal_entry,
             staff_ledger_entry=staff_entry,
             balance_minor=int(balance or 0),
+            advance_applied_minor=advance_applied_minor,
             fx_ledger_entry=fx_entry,
         )

@@ -47,6 +47,8 @@ def persist_staff_ledger_entry(
     try_cost_kurus: int | None = None,
     reference_type: str | None = None,
     reference_id: uuid.UUID | None = None,
+    period_year: int | None = None,
+    period_month: int | None = None,
 ) -> StaffLedgerEntry:
     """Persist one staff subledger row — caller must hold entity_context."""
     if amount_minor == 0:
@@ -67,6 +69,8 @@ def persist_staff_ledger_entry(
         journal_entry_id=journal_entry_id,
         reference_type=reference_type,
         reference_id=reference_id,
+        period_year=period_year,
+        period_month=period_month,
     )
     session.add(entry)
     session.flush()
