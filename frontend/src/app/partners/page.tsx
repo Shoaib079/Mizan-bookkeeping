@@ -81,15 +81,25 @@ export default function PartnersPage() {
 
   return (
     <AppShell title="Partners">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
             ? `${total} partner${total === 1 ? "" : "s"}`
             : "Select a restaurant in the sidebar"}
         </p>
-        <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
-          New partner
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {entityId && (
+            <Link
+              href="/balances/partners"
+              className="text-sm text-primary hover:underline"
+            >
+              Partner balances →
+            </Link>
+          )}
+          <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
+            New partner
+          </Button>
+        </div>
       </div>
 
       {shareWarning && (

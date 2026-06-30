@@ -66,12 +66,20 @@ export function ReceivablesTable() {
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? "Outstanding customer balances"
+            ? "Outstanding amounts customers owe you — includes unpaid credit sales from any month."
             : "Select a restaurant in the sidebar"}
         </p>
+        {entityId && (
+          <Link
+            href="/customers"
+            className="text-sm text-primary hover:underline"
+          >
+            Customer directory →
+          </Link>
+        )}
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}

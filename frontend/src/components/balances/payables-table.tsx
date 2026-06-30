@@ -66,12 +66,20 @@ export function PayablesTable() {
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? "Outstanding supplier balances"
+            ? "Outstanding amounts you owe suppliers — includes unpaid posted invoices from any month."
             : "Select a restaurant in the sidebar"}
         </p>
+        {entityId && (
+          <Link
+            href="/suppliers"
+            className="text-sm text-primary hover:underline"
+          >
+            Supplier directory →
+          </Link>
+        )}
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}

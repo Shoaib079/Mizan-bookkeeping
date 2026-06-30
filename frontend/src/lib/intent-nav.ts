@@ -21,10 +21,5 @@ export function pathnameMatchesRecordIntent(pathname: string): boolean {
 export function pathnameMatchesBalancesIntent(pathname: string): boolean {
   if (pathname === "/balances" || pathname.startsWith("/balances/")) return true;
   if (pathname === "/payables" || pathname === "/receivables") return true;
-  if (pathname === "/suppliers" || pathname.startsWith("/suppliers/")) return true;
-  if (pathname === "/staff" || pathname.startsWith("/staff/")) return true;
-  if (pathname === "/partners" || pathname.startsWith("/partners/")) return true;
-  if (pathname === "/customers" || pathname.startsWith("/customers/")) return true;
-  if (pathname === "/banking" || pathname.startsWith("/banking/")) return true;
   return false;
 }

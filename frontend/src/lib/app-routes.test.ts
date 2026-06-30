@@ -39,6 +39,11 @@ describe("navGroups", () => {
       "/record",
       "/review",
       "/balances",
+      "/suppliers",
+      "/customers",
+      "/staff",
+      "/partners",
+      "/banking",
     ]);
   });
 
@@ -47,9 +52,11 @@ describe("navGroups", () => {
     expect(sidebarHrefs).not.toContain("/sales");
     expect(sidebarHrefs).not.toContain("/expenses");
     expect(sidebarHrefs).not.toContain("/uploads");
-    expect(sidebarHrefs).not.toContain("/suppliers");
-    expect(sidebarHrefs).not.toContain("/staff");
-    expect(sidebarHrefs).not.toContain("/banking");
+    expect(sidebarHrefs).toContain("/suppliers");
+    expect(sidebarHrefs).toContain("/customers");
+    expect(sidebarHrefs).toContain("/staff");
+    expect(sidebarHrefs).toContain("/partners");
+    expect(sidebarHrefs).toContain("/banking");
     expect(sidebarHrefs).not.toContain("/delivery");
     expect(sidebarHrefs).not.toContain("/setup/restaurant");
   });
@@ -255,12 +262,12 @@ describe("intent sidebar highlighting", () => {
     expect(isNavItemActive("/sales", record!)).toBe(true);
   });
 
-  it("highlights Balances when on legacy banking routes", () => {
-    const balances = navGroups
+  it("highlights Banking when on banking routes", () => {
+    const banking = navGroups
       .find((group) => group.label === "Overview")
-      ?.items.find((item) => item.href === "/balances");
-    expect(balances).toBeDefined();
-    expect(isNavItemActive("/banking/transfers", balances!)).toBe(true);
+      ?.items.find((item) => item.href === "/banking");
+    expect(banking).toBeDefined();
+    expect(isNavItemActive("/banking/transfers", banking!)).toBe(true);
   });
 });
 

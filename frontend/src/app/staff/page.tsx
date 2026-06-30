@@ -31,15 +31,25 @@ export default function StaffPage() {
 
   return (
     <AppShell title="Staff">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
             ? `${total} employee${total === 1 ? "" : "s"}`
             : "Select a restaurant in the sidebar"}
         </p>
-        <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
-          New employee
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {entityId && (
+            <Link
+              href="/balances/staff"
+              className="text-sm text-primary hover:underline"
+            >
+              Staff balances →
+            </Link>
+          )}
+          <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
+            New employee
+          </Button>
+        </div>
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}

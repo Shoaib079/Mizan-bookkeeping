@@ -33,6 +33,8 @@ export type NavSectionId =
   | "banking"
   | "suppliers"
   | "customers"
+  | "staff"
+  | "partners"
   | "balances"
   | "review"
   | "setup"
@@ -115,7 +117,7 @@ export const NAV_SECTIONS: NavSection[] = [
     tabs: [
       {
         href: "/suppliers",
-        label: "Directory",
+        label: "Suppliers",
         match: (path) => path === "/suppliers" || path.startsWith("/suppliers/"),
       },
     ],
@@ -126,8 +128,30 @@ export const NAV_SECTIONS: NavSection[] = [
     tabs: [
       {
         href: "/customers",
-        label: "Directory",
+        label: "Customers",
         match: (path) => path === "/customers" || path.startsWith("/customers/"),
+      },
+    ],
+  },
+  {
+    id: "staff",
+    sidebarHref: "/staff",
+    tabs: [
+      {
+        href: "/staff",
+        label: "Staff",
+        match: (path) => path === "/staff" || path.startsWith("/staff/"),
+      },
+    ],
+  },
+  {
+    id: "partners",
+    sidebarHref: "/partners",
+    tabs: [
+      {
+        href: "/partners",
+        label: "Partners",
+        match: (path) => path === "/partners" || path.startsWith("/partners/"),
       },
     ],
   },
@@ -137,22 +161,22 @@ export const NAV_SECTIONS: NavSection[] = [
     tabs: [
       {
         href: "/balances/suppliers",
-        label: "Suppliers",
+        label: "Payables",
         match: (path) => path === "/balances/suppliers" || path === "/payables",
       },
       {
         href: "/balances/customers",
-        label: "Customers",
+        label: "Receivables",
         match: (path) => path === "/balances/customers" || path === "/receivables",
       },
       {
         href: "/balances/staff",
-        label: "Staff",
+        label: "Staff balances",
         match: (path) => path === "/balances/staff",
       },
       {
         href: "/balances/partners",
-        label: "Partners",
+        label: "Partner balances",
         match: (path) => path === "/balances/partners",
       },
       {
@@ -257,11 +281,6 @@ export const SIDEBAR_HIDDEN_HREFS = new Set([
   "/delivery",
   "/expenses",
   "/uploads",
-  "/suppliers",
-  "/staff",
-  "/partners",
-  "/customers",
-  "/banking",
   "/close-day",
   "/cards",
   "/payables",
@@ -356,9 +375,9 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/suppliers", kind: "tab" },
   { pattern: "/suppliers/[id]", kind: "drill-down" },
   { pattern: "/payables", kind: "redirect" },
-  { pattern: "/staff", kind: "page" },
+  { pattern: "/staff", kind: "tab" },
   { pattern: "/staff/[id]", kind: "drill-down" },
-  { pattern: "/partners", kind: "page" },
+  { pattern: "/partners", kind: "tab" },
   { pattern: "/partners/[id]", kind: "drill-down" },
   { pattern: "/customers", kind: "tab" },
   { pattern: "/customers/[id]", kind: "drill-down" },
@@ -437,6 +456,9 @@ export function sidebarHrefActiveForPathname(
   }
   if (sidebarHref === "/") return pathname === "/";
   if (sidebarHref === "/record") return pathnameMatchesRecordIntent(pathname);
+  if (sidebarHref === "/suppliers") {
+    return pathname === "/suppliers" || pathname.startsWith("/suppliers/");
+  }
   if (sidebarHref === "/review") {
     return (
       pathname === "/review" ||
@@ -482,15 +504,18 @@ export function pageTitleForPathname(pathname: string): string {
     "/review/delivery": "Review",
     "/review/posted": "Review",
     "/balances": "Balances",
-    "/balances/suppliers": "Balances",
-    "/balances/customers": "Balances",
-    "/balances/staff": "Balances",
-    "/balances/partners": "Balances",
+    "/balances/suppliers": "Payables",
+    "/balances/customers": "Receivables",
+    "/balances/staff": "Staff balances",
+    "/balances/partners": "Partner balances",
     "/balances/cash": "Balances",
     "/expenses": "Expenses",
     "/uploads": "Documents",
+    "/suppliers": "Suppliers",
+    "/customers": "Customers",
     "/staff": "Staff",
     "/partners": "Partners",
+    "/banking": "Banking",
     "/reports": "Reports",
     "/setup": "Set up",
     "/setup/restaurant": "Set up",

@@ -93,12 +93,20 @@ export function StaffBalancesTable() {
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
             ? "Salary and advance balances per employee"
             : "Select a restaurant in the sidebar"}
         </p>
+        {entityId && (
+          <Link
+            href="/staff"
+            className="text-sm text-primary hover:underline"
+          >
+            Staff directory →
+          </Link>
+        )}
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}

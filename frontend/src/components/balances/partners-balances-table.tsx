@@ -107,12 +107,20 @@ export function PartnersBalancesTable() {
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
             ? "Amount the business owes each partner (fronted expenses)"
             : "Select a restaurant in the sidebar"}
         </p>
+        {entityId && (
+          <Link
+            href="/partners"
+            className="text-sm text-primary hover:underline"
+          >
+            Partner directory →
+          </Link>
+        )}
       </div>
 
       {shareWarning && (
