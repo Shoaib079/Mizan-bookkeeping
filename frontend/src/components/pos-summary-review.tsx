@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export function PosSummaryReview({ summaryId, onUpdated }: Props) {
+  const router = useRouter();
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -151,7 +153,7 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      const updated = await apiFetch<PosDailySummary>(
+      await apiFetch<void>(
         `/entities/${entityId}/pos/daily-summaries/${summaryId}/reject`,
         {
           method: "POST",
@@ -161,9 +163,9 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
         },
       );
       submitIdempotency.completeSubmit();
-      setSummary(updated);
       onUpdated?.();
       toast("Summary rejected");
+      router.push("/review/sales");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {

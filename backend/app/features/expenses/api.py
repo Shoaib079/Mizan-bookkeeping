@@ -313,16 +313,16 @@ def confirm_expense_receipt(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.post("/expense-receipts/{intake_id}/reject", response_model=ExpenseReceiptRead)
+@router.post("/expense-receipts/{intake_id}/reject", status_code=204)
 def reject_expense_receipt(
     entity_id: uuid.UUID,
     intake_id: uuid.UUID,
     payload: RejectExpenseReceiptRequest,
     session: Session = Depends(get_session),
     _: None = Depends(operations_write_guard),
-) -> ExpenseReceiptRead:
+) -> None:
     try:
-        return receipt_service.reject_expense_receipt(
+        receipt_service.reject_expense_receipt(
             session, entity_id, intake_id, payload
         )
     except LookupError as exc:

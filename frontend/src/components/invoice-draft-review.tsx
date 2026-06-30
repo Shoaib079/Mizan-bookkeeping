@@ -3,6 +3,7 @@
 /** Invoice draft review — link supplier, confirm, post — Phase 9 Slice 3. */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ type Props = {
 };
 
 export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
+  const router = useRouter();
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -237,7 +239,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      const updated = await apiFetch<InvoiceDraft>(
+      await apiFetch<void>(
         `/entities/${entityId}/invoices/drafts/${draftId}/reject`,
         {
           method: "POST",
@@ -247,9 +249,9 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
         },
       );
       submitIdempotency.completeSubmit();
-      setDraft(updated);
       onUpdated?.();
       toast("Invoice rejected");
+      router.push("/review/invoices");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {

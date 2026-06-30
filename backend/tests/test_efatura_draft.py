@@ -84,6 +84,28 @@ def test_duplicate_upload_returns_409(client, restaurant_a) -> None:
     assert second.json()["detail"]["existing_draft_id"] == existing_id
 
 
+def test_reupload_after_reject_creates_fresh_draft(client, restaurant_a) -> None:
+    content = SAMPLE_XML.read_bytes()
+    url = f"/entities/{restaurant_a.id}/invoices/efatura/draft"
+
+    first = client.post(url, files={"file": ("sample.xml", content, "application/xml")})
+    assert first.status_code == 201
+    draft_id = first.json()["id"]
+
+    reject = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/reject",
+        json={"reason": "Wrong period"},
+    )
+    assert reject.status_code == 204
+
+    second = client.post(url, files={"file": ("sample.xml", content, "application/xml")})
+    assert second.status_code == 201
+    body = second.json()
+    assert body["status"] == "draft"
+    assert body["review_reason"] is None
+    assert Path(body["extraction_payload"]["stored_path"]).exists()
+
+
 def test_list_and_get_draft(client, restaurant_a) -> None:
     content = SAMPLE_XML.read_bytes()
     create = client.post(

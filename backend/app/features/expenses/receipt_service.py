@@ -17,7 +17,7 @@ from app.adapters.ocr_ai.expense_receipt import (
     extract_expense_receipt,
     extraction_to_payload,
 )
-from app.adapters.storage.local import save_upload
+from app.adapters.storage.local import delete_stored_upload, save_upload
 from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE
 from app.core.chart_of_accounts.seed import get_account_by_code
 from app.core.listing import ListParams, fetch_paginated
@@ -484,21 +484,20 @@ def reject_expense_receipt(
     entity_id: uuid.UUID,
     intake_id: uuid.UUID,
     payload: RejectExpenseReceiptRequest,
-) -> ExpenseReceiptRead:
+) -> None:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
-    intake, lines = _get_intake_row(session, entity_id, intake_id)
-    if intake.status in {
-        ExpenseReceiptIntakeStatus.POSTED,
-        ExpenseReceiptIntakeStatus.REJECTED,
-    }:
+    intake, _lines = _get_intake_row(session, entity_id, intake_id)
+    if intake.status == ExpenseReceiptIntakeStatus.POSTED:
         raise ExpenseReceiptNotReviewableError("expense receipt cannot be rejected")
 
-    with entity_context(session, entity_id):
-        intake.status = ExpenseReceiptIntakeStatus.REJECTED
-        intake.review_reason = payload.reason
-        session.commit()
-        session.refresh(intake)
+    _ = payload.reason
+    delete_stored_upload(intake.source_document_path)
+    payload_stored = (intake.extraction_payload or {}).get("stored_path")
+    if isinstance(payload_stored, str):
+        delete_stored_upload(payload_stored)
 
-    return _to_intake_read(intake, lines)
+    with entity_context(session, entity_id):
+        session.delete(intake)
+        session.commit()

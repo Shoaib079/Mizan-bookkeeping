@@ -284,16 +284,16 @@ def confirm_pos_daily_summary(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@daily_summaries_router.post("/{summary_id}/reject", response_model=PosDailySummaryRead)
+@daily_summaries_router.post("/{summary_id}/reject", status_code=204)
 def reject_pos_daily_summary(
     entity_id: uuid.UUID,
     summary_id: uuid.UUID,
     payload: RejectPosDailySummaryRequest,
     session: Session = Depends(get_session),
     _: None = Depends(operations_write_guard),
-) -> PosDailySummaryRead:
+) -> None:
     try:
-        return daily_summary_service.reject_pos_daily_summary(
+        daily_summary_service.reject_pos_daily_summary(
             session, entity_id, summary_id, payload=payload
         )
     except LookupError as exc:

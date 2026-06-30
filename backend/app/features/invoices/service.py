@@ -17,7 +17,7 @@ from app.adapters.ocr_ai.efatura import (
     extract_efatura_xml,
     extraction_to_payload,
 )
-from app.adapters.storage.local import save_upload
+from app.adapters.storage.local import delete_stored_upload, save_upload
 from app.db.base import utcnow
 from app.db.session import entity_context
 from app.core.listing import (
@@ -205,12 +205,18 @@ def _draft_status(draft: InvoiceDraft) -> InvoiceDraftStatus:
 
 
 def _ensure_draft_linkable(draft: InvoiceDraft) -> None:
-    if _draft_status(draft) in {InvoiceDraftStatus.CONFIRMED, InvoiceDraftStatus.POSTED}:
+    if _draft_status(draft) in {
+        InvoiceDraftStatus.CONFIRMED,
+        InvoiceDraftStatus.POSTED,
+    }:
         raise DraftNotLinkableError("Confirmed or posted drafts cannot be modified")
 
 
 def _ensure_draft_mutable(draft: InvoiceDraft) -> None:
-    if _draft_status(draft) in {InvoiceDraftStatus.CONFIRMED, InvoiceDraftStatus.POSTED}:
+    if _draft_status(draft) in {
+        InvoiceDraftStatus.CONFIRMED,
+        InvoiceDraftStatus.POSTED,
+    }:
         raise DraftImmutableError("Confirmed or posted drafts are immutable")
 
 
@@ -223,23 +229,16 @@ def _find_by_fingerprint(
         )
 
 
-def create_efatura_draft_from_upload(
+def _extract_and_store_efatura(
     session: Session,
     entity_id: uuid.UUID,
+    entity,
     content: bytes,
+    fingerprint: str,
     *,
     filename: str | None = None,
     content_type: str | None = None,
-) -> InvoiceDraftOut:
-    _require_entity(session, entity_id)
-    entity = entity_service.get_entity(session, entity_id)
-    assert entity is not None
-
-    fingerprint = file_fingerprint(content)
-    existing = _find_by_fingerprint(session, entity_id, fingerprint)
-    if existing is not None:
-        raise DuplicateInvoiceDraftError(existing)
-
+) -> tuple[InvoiceSourceType, EInvoiceExtraction, dict, Supplier | None]:
     source_type = detect_source_type(content, filename=filename, content_type=content_type)
 
     try:
@@ -249,7 +248,6 @@ def create_efatura_draft_from_upload(
         validate_invoice_totals(
             extraction.net_kurus, extraction.gross_kurus, extraction.vat_breakdown
         )
-        status = InvoiceDraftStatus.DRAFT
     except EfaturaPdfUnsupportedError as exc:
         raise exc
     except (EfaturaExtractionError, InvoiceTotalsError) as exc:
@@ -275,9 +273,53 @@ def create_efatura_draft_from_upload(
             entity_vkn=entity.vkn,
         )
 
+    return source_type, extraction, payload, linked_supplier
+
+
+def _discard_invoice_draft(
+    session: Session,
+    draft: InvoiceDraft,
+) -> None:
+    stored = (draft.extraction_payload or {}).get("stored_path")
+    delete_stored_upload(stored if isinstance(stored, str) else None)
+    session.delete(draft)
+
+
+def create_efatura_draft_from_upload(
+    session: Session,
+    entity_id: uuid.UUID,
+    content: bytes,
+    *,
+    filename: str | None = None,
+    content_type: str | None = None,
+) -> InvoiceDraftOut:
+    _require_entity(session, entity_id)
+    entity = entity_service.get_entity(session, entity_id)
+    assert entity is not None
+
+    fingerprint = file_fingerprint(content)
+    existing = _find_by_fingerprint(session, entity_id, fingerprint)
+    if existing is not None:
+        if _draft_status(existing) == InvoiceDraftStatus.REJECTED:
+            with entity_context(session, entity_id):
+                _discard_invoice_draft(session, existing)
+                session.commit()
+        else:
+            raise DuplicateInvoiceDraftError(existing)
+
+    source_type, extraction, payload, linked_supplier = _extract_and_store_efatura(
+        session,
+        entity_id,
+        entity,
+        content,
+        fingerprint,
+        filename=filename,
+        content_type=content_type,
+    )
+
     with entity_context(session, entity_id):
         draft = InvoiceDraft(
-            status=status,
+            status=InvoiceDraftStatus.DRAFT,
             source_type=source_type,
             file_fingerprint=fingerprint,
             supplier_name=extraction.supplier_name,
@@ -500,21 +542,24 @@ def reject_invoice_draft(
     draft_id: uuid.UUID,
     *,
     reason: str | None = None,
-) -> InvoiceDraftOut:
+) -> None:
     _require_entity(session, entity_id)
 
     draft = _get_draft_row(session, entity_id, draft_id)
     _ensure_draft_mutable(draft)
-    if _draft_status(draft) == InvoiceDraftStatus.DUPLICATE:
-        raise DraftConfirmError("Duplicate drafts cannot be rejected for review")
+    status = _draft_status(draft)
+    if status == InvoiceDraftStatus.DUPLICATE:
+        raise DraftConfirmError("Duplicate drafts cannot be rejected")
+    if status not in {
+        InvoiceDraftStatus.DRAFT,
+        InvoiceDraftStatus.NEEDS_REVIEW,
+        InvoiceDraftStatus.REJECTED,
+    }:
+        raise DraftConfirmError(f"Draft status {status.value!r} cannot be rejected")
 
     with entity_context(session, entity_id):
-        draft.status = InvoiceDraftStatus.NEEDS_REVIEW
-        draft.review_reason = reason
+        _discard_invoice_draft(session, draft)
         session.commit()
-        session.refresh(draft)
-
-    return _draft_out(session, entity_id, draft)
 
 
 def post_invoice_draft(

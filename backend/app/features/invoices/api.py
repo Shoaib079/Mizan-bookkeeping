@@ -212,16 +212,16 @@ def confirm_invoice_draft(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.post("/drafts/{draft_id}/reject", response_model=InvoiceDraftOut)
+@router.post("/drafts/{draft_id}/reject", status_code=204)
 def reject_invoice_draft(
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
     payload: RejectDraftRequest,
     session: Session = Depends(get_session),
     _: None = Depends(operations_write_guard),
-) -> InvoiceDraftOut:
+) -> None:
     try:
-        return service.reject_invoice_draft(
+        service.reject_invoice_draft(
             session, entity_id, draft_id, reason=payload.reason
         )
     except LookupError as exc:

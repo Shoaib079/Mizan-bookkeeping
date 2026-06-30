@@ -19,6 +19,7 @@ class InvoiceDraftStatus(str, enum.Enum):
     NEEDS_REVIEW = "needs_review"
     CONFIRMED = "confirmed"
     POSTED = "posted"
+    REJECTED = "rejected"
 
 
 class InvoiceSourceType(str, enum.Enum):

@@ -17,7 +17,7 @@ from app.adapters.ocr_ai.pos_summary import (
     extraction_to_payload,
     math_valid,
 )
-from app.adapters.storage.local import save_upload
+from app.adapters.storage.local import delete_stored_upload, save_upload
 from app.core.pos.daily_summary_posting import (
     PosDailySummaryPostError,
     confirm_pos_daily_summary,
@@ -450,23 +450,23 @@ def reject_pos_daily_summary(
     summary_id: uuid.UUID,
     *,
     payload: RejectPosDailySummaryRequest,
-) -> PosDailySummaryRead:
+) -> None:
     _require_entity(session, entity_id)
     summary = _get_summary_row(session, entity_id, summary_id)
     status = PosDailySummaryStatus(summary.status)
 
-    if status in {PosDailySummaryStatus.POSTED, PosDailySummaryStatus.REJECTED}:
+    if status == PosDailySummaryStatus.POSTED:
         raise PosDailySummaryImmutableError(
             f"Summary status {status.value!r} cannot be rejected"
         )
 
-    with entity_context(session, entity_id):
-        summary.status = PosDailySummaryStatus.REJECTED
-        summary.review_reason = payload.reason
-        session.commit()
-        session.refresh(summary)
+    _ = payload.reason
+    stored = (summary.extraction_payload or {}).get("stored_path")
+    delete_stored_upload(stored if isinstance(stored, str) else None)
 
-    return _to_read(summary)
+    with entity_context(session, entity_id):
+        session.delete(summary)
+        session.commit()
 
 
 def create_manual_daily_sales(

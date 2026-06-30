@@ -355,12 +355,16 @@ def test_needs_review_counts(db_session, client: TestClient, dashboard_setup) ->
             files={"file": ("sample.xml", handle, "application/xml")},
         )
     assert upload.status_code == 201
-    reject = client.post(
-        f"/entities/{entity_id}/invoices/drafts/{upload.json()['id']}/reject",
-        json={"reason": "Check totals"},
-    )
-    assert reject.status_code == 200
-    assert reject.json()["status"] == "needs_review"
+    draft_id = upload.json()["id"]
+
+    from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus
+
+    with entity_context(db_session, entity_id):
+        row = db_session.get(InvoiceDraft, draft_id)
+        assert row is not None
+        row.status = InvoiceDraftStatus.NEEDS_REVIEW.value
+        row.review_reason = "Check totals"
+        db_session.commit()
 
     dash = dashboard_service.get_dashboard(
         db_session, entity_id, date(2026, 1, 1), date(2026, 12, 31)

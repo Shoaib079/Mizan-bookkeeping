@@ -89,29 +89,52 @@ def test_confirmed_draft_immutable(client, restaurant_a) -> None:
     assert reject.status_code == 409
 
 
-def test_reject_marks_needs_review(client, restaurant_a) -> None:
+def test_reject_discards_draft_and_file(client, restaurant_a) -> None:
     upload = _upload(client, restaurant_a.id)
     draft_id = upload.json()["id"]
+    stored_path = upload.json()["extraction_payload"]["stored_path"]
 
     reject = client.post(
         f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/reject",
         json={"reason": "Totals look wrong"},
     )
-    assert reject.status_code == 200
-    body = reject.json()
-    assert body["status"] == "needs_review"
-    assert body["review_reason"] == "Totals look wrong"
+    assert reject.status_code == 204
+    assert not Path(stored_path).exists()
+
+    gone = client.get(f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}")
+    assert gone.status_code == 404
 
 
-def test_confirm_from_needs_review(client, restaurant_a) -> None:
+def test_reject_twice_returns_not_found(client, restaurant_a) -> None:
+    upload = _upload(client, restaurant_a.id)
+    draft_id = upload.json()["id"]
+
+    first = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/reject",
+        json={"reason": "Wrong supplier"},
+    )
+    assert first.status_code == 204
+
+    second = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/reject",
+        json={"reason": "Again"},
+    )
+    assert second.status_code == 404
+
+
+def test_confirm_from_needs_review(client, restaurant_a, db_session) -> None:
     draft = _linked_draft(client, restaurant_a.id)
     draft_id = draft["id"]
 
-    reject = client.post(
-        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/reject",
-        json={"reason": "Check VAT"},
-    )
-    assert reject.status_code == 200
+    from app.db.session import entity_context
+    from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus
+
+    with entity_context(db_session, restaurant_a.id):
+        row = db_session.get(InvoiceDraft, draft_id)
+        assert row is not None
+        row.status = InvoiceDraftStatus.NEEDS_REVIEW.value
+        row.review_reason = "Check VAT"
+        db_session.commit()
 
     confirm = client.post(
         f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/confirm",

@@ -480,8 +480,7 @@ def test_reject_summary(client, restaurant_a, pos_summary_setup) -> None:
         f"/entities/{restaurant_a.id}/pos/daily-summaries/{summary_id}/reject",
         json={"reason": "Wrong day"},
     )
-    assert reject.status_code == 200
-    assert reject.json()["status"] == "rejected"
+    assert reject.status_code == 204
 
     confirm = client.post(
         f"/entities/{restaurant_a.id}/pos/daily-summaries/{summary_id}/confirm",
@@ -490,4 +489,4 @@ def test_reject_summary(client, restaurant_a, pos_summary_setup) -> None:
             "actor_id": str(ACTOR_ID),
         },
     )
-    assert confirm.status_code == 409
+    assert confirm.status_code == 404

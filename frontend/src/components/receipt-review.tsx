@@ -175,7 +175,7 @@ export function ReceiptReview({ intakeId }: Props) {
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      const updated = await apiFetch<ExpenseReceipt>(
+      await apiFetch<void>(
         `/entities/${entityId}/expense-receipts/${intakeId}/reject`,
         {
           method: "POST",
@@ -186,8 +186,8 @@ export function ReceiptReview({ intakeId }: Props) {
       );
       submitIdempotency.completeSubmit();
       clearDraft();
-      setIntake(updated);
       toast("Receipt rejected");
+      router.push("/review/receipts");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {

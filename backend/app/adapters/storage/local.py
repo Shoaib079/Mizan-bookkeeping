@@ -38,3 +38,27 @@ def save_upload(
     dest = dest_dir / f"{fingerprint}{ext}"
     dest.write_bytes(content)
     return str(dest.resolve())
+
+
+def delete_stored_upload(stored_path: str | None) -> None:
+    """Remove one upload file under the configured upload root (no-op if missing)."""
+    if not stored_path:
+        return
+    path = Path(stored_path).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    path = path.resolve()
+    upload_root = _resolve_storage_root(settings.upload_dir)
+    try:
+        path.relative_to(upload_root)
+    except ValueError:
+        return
+    if path.is_file():
+        path.unlink()
+    current = path.parent
+    while current != upload_root and upload_root in current.parents:
+        try:
+            current.rmdir()
+        except OSError:
+            break
+        current = current.parent
