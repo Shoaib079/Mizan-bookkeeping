@@ -31,6 +31,7 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { isInvoiceWorkbenchStatus, isReadyToPostInvoiceStatus } from "@/lib/review-status";
 
 type LedgerEntry = {
   id: string;
@@ -52,6 +53,8 @@ type DraftRow = {
   invoice_date: string;
   gross_kurus: number;
   status: string;
+  supplier_id: string | null;
+  supplier_vkn: string | null;
 };
 
 const movementLabels: Record<string, string> = {
@@ -111,12 +114,21 @@ export default function SupplierDetailPage() {
           `/entities/${entityId}/suppliers/${supplierId}/ledger`,
         ),
         apiFetch<{ items: DraftRow[] }>(
-          `/entities/${entityId}/invoices/drafts?supplier_id=${supplierId}&limit=50`,
+          `/entities/${entityId}/invoices/drafts?limit=200`,
         ),
       ]);
       setSupplier(sup);
       setLedger(led);
-      setDrafts(draftRes.items);
+      const forSupplier = draftRes.items
+        .filter((d) => isInvoiceWorkbenchStatus(d.status))
+        .filter(
+          (d) =>
+            d.supplier_id === supplierId ||
+            (!d.supplier_id &&
+              d.supplier_vkn &&
+              d.supplier_vkn === sup.vkn),
+        );
+      setDrafts(forSupplier);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Load failed");
     } finally {
@@ -159,7 +171,8 @@ export default function SupplierDetailPage() {
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-xl font-semibold">{supplier.name}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
                 VKN {supplier.vkn}
                 {supplier.iban && ` · ${supplier.iban}`}
               </p>
@@ -193,6 +206,20 @@ export default function SupplierDetailPage() {
             <p className="mt-1 text-2xl font-semibold tabular-nums">
               {formatTry(ledger.balance_kurus)}
             </p>
+            {ledger.balance_kurus === 0 &&
+              drafts.some((d) => isReadyToPostInvoiceStatus(d.status)) && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Confirmed invoices are not in payables until you post them to
+                  the ledger — see Invoice drafts below or{" "}
+                  <Link
+                    href="/review/invoices"
+                    className="text-primary hover:underline"
+                  >
+                    Review → Invoices
+                  </Link>
+                  .
+                </p>
+              )}
           </div>
 
           {highlightDraftId && (
@@ -282,7 +309,11 @@ export default function SupplierDetailPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-sm font-semibold">Invoice drafts</h2>
+            <h2 className="mb-1 text-sm font-semibold">Invoice drafts</h2>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Uploaded e-Faturas for this supplier — confirm, then post to
+              ledger to add to the balance above.
+            </p>
             {drafts.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No invoice drafts for this supplier.

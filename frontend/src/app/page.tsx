@@ -248,6 +248,23 @@ function DashboardBody() {
             </section>
           )}
 
+          {data.confirmed_invoice_drafts > 0 && (
+            <section className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <h2 className="text-sm font-semibold">Invoices ready to post</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {data.confirmed_invoice_drafts} confirmed supplier invoice
+                {data.confirmed_invoice_drafts === 1 ? "" : "s"} waiting for
+                post-to-ledger — balances update only after posting.
+              </p>
+              <Link
+                href="/review/invoices"
+                className="mt-2 inline-block text-sm text-primary hover:underline"
+              >
+                Open Review → Invoices
+              </Link>
+            </section>
+          )}
+
           {data.needs_review.total > 0 && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold">Needs review</h2>

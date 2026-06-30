@@ -72,3 +72,7 @@ class DashboardRead(BaseModel):
     fx_balances: list[FxBalanceRow] = Field(default_factory=list)
     tax_department_payments_kurus: int | None = None
     needs_review: NeedsReviewBreakdown
+    confirmed_invoice_drafts: int = Field(
+        default=0,
+        description="Confirmed e-Fatura drafts awaiting post-to-ledger",
+    )

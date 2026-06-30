@@ -283,6 +283,17 @@ def _needs_review_counts(
     )
 
 
+def _confirmed_invoice_draft_count(session: Session) -> int:
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(InvoiceDraft)
+            .where(InvoiceDraft.status == InvoiceDraftStatus.CONFIRMED.value)
+        )
+        or 0
+    )
+
+
 def get_dashboard(
     session: Session,
     entity_id: uuid.UUID,
@@ -310,6 +321,7 @@ def get_dashboard(
             expense_account_id=expense_account_id,
         )
         needs_review = _needs_review_counts(session, delivery_enabled=delivery_enabled)
+        confirmed_invoice_drafts = _confirmed_invoice_draft_count(session)
         total_try_position = _try_money_position_kurus(
             session, money_account_id=money_account_id
         )
@@ -353,4 +365,5 @@ def get_dashboard(
         fx_balances=fx_balances,
         tax_department_payments_kurus=None,
         needs_review=needs_review,
+        confirmed_invoice_drafts=confirmed_invoice_drafts,
     )

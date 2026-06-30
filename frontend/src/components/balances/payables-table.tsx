@@ -92,15 +92,16 @@ export function PayablesTable() {
           title="No outstanding payables"
           hint={
             <>
-              Post supplier invoices from{" "}
+              Balances appear after you post supplier invoices to the ledger.
+              Check{" "}
+              <Link href="/review/invoices" className="text-primary hover:underline">
+                Review → Invoices
+              </Link>{" "}
+              for confirmed uploads waiting to post, or{" "}
               <Link href="/suppliers" className="text-primary hover:underline">
                 Suppliers
               </Link>{" "}
-              or{" "}
-              <Link href="/record" className="text-primary hover:underline">
-                Record
-              </Link>
-              .
+              to open a supplier ledger.
             </>
           }
         />

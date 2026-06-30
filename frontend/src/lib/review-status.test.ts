@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isPendingReviewStatus, isReviewTerminalStatus } from "@/lib/review-status";
+import {
+  isInvoiceWorkbenchStatus,
+  isPendingReviewStatus,
+  isReadyToPostInvoiceStatus,
+  isReviewTerminalStatus,
+} from "@/lib/review-status";
 
 describe("isReviewTerminalStatus", () => {
   it("treats posted and rejected as terminal", () => {
@@ -19,6 +24,22 @@ describe("isPendingReviewStatus", () => {
     expect(isPendingReviewStatus("draft")).toBe(true);
     expect(isPendingReviewStatus("needs_review")).toBe(true);
     expect(isPendingReviewStatus("duplicate")).toBe(true);
+    expect(isPendingReviewStatus("confirmed")).toBe(false);
     expect(isPendingReviewStatus("posted")).toBe(false);
+  });
+});
+
+describe("isReadyToPostInvoiceStatus", () => {
+  it("includes confirmed only", () => {
+    expect(isReadyToPostInvoiceStatus("confirmed")).toBe(true);
+    expect(isReadyToPostInvoiceStatus("draft")).toBe(false);
+  });
+});
+
+describe("isInvoiceWorkbenchStatus", () => {
+  it("excludes posted and rejected", () => {
+    expect(isInvoiceWorkbenchStatus("confirmed")).toBe(true);
+    expect(isInvoiceWorkbenchStatus("posted")).toBe(false);
+    expect(isInvoiceWorkbenchStatus("rejected")).toBe(false);
   });
 });

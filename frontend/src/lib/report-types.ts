@@ -50,6 +50,7 @@ export type DashboardRead = {
     expense_entries: number;
     total: number;
   };
+  confirmed_invoice_drafts: number;
 };
 
 export type ProfitAndLossRead = {
