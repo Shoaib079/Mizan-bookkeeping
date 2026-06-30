@@ -1,7 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 
+import { InvoiceDraftReview } from "@/components/invoice-draft-review";
+import { InvoiceDocumentPreview } from "@/components/invoice-document-preview";
 import {
   DataTable,
   DataTableBody,
@@ -13,6 +15,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -26,59 +29,124 @@ import { useEntityList } from "@/lib/use-entity-list";
 type InvoiceDraftRow = {
   id: string;
   status: string;
+  invoice_kind: string;
   invoice_number: string;
   invoice_date: string;
   supplier_name: string | null;
+  linked_platform_name: string | null;
   gross_kurus: number;
   review_reason: string | null;
+  has_stored_document: boolean;
+  source_type: string;
 };
 
-function InvoiceDraftTable({ rows }: { rows: InvoiceDraftRow[] }) {
+function InvoiceDraftTable({
+  rows,
+  expandedDraftId,
+  onToggleExpand,
+  onUpdated,
+}: {
+  rows: InvoiceDraftRow[];
+  expandedDraftId: string | null;
+  onToggleExpand: (id: string) => void;
+  onUpdated: () => void;
+}) {
   return (
-    <DataTable>
-      <DataTableHead>
-        <tr>
-          <DataTableHeaderCell>Invoice</DataTableHeaderCell>
-          <DataTableHeaderCell>Date</DataTableHeaderCell>
-          <DataTableHeaderCell>Supplier</DataTableHeaderCell>
-          <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
-          <DataTableHeaderCell>Status</DataTableHeaderCell>
-        </tr>
-      </DataTableHead>
-      <DataTableBody>
-        {rows.map((row) => (
-          <DataTableRow key={row.id}>
-            <DataTableCell>
-              <Link
-                href={`/review/invoices/${row.id}`}
-                className="text-primary hover:underline"
-              >
-                {row.invoice_number}
-              </Link>
-            </DataTableCell>
-            <DataTableCell>{formatTrDate(row.invoice_date)}</DataTableCell>
-            <DataTableCell>{row.supplier_name ?? "—"}</DataTableCell>
-            <DataTableCell align="right">
-              {formatTry(row.gross_kurus)}
-            </DataTableCell>
-            <DataTableCell>
-              <StatusBadge status={row.status} />
-              {row.review_reason && (
-                <p className="mt-1 max-w-xs truncate text-xs text-warning">
-                  {row.review_reason}
-                </p>
-              )}
-            </DataTableCell>
-          </DataTableRow>
-        ))}
-      </DataTableBody>
-    </DataTable>
+    <div className="space-y-3">
+      <DataTable>
+        <DataTableHead>
+          <tr>
+            <DataTableHeaderCell>Invoice</DataTableHeaderCell>
+            <DataTableHeaderCell>Date</DataTableHeaderCell>
+            <DataTableHeaderCell>Counterparty</DataTableHeaderCell>
+            <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
+            <DataTableHeaderCell>Status</DataTableHeaderCell>
+            <DataTableHeaderCell>Doc</DataTableHeaderCell>
+            <DataTableHeaderCell>Review</DataTableHeaderCell>
+          </tr>
+        </DataTableHead>
+        <DataTableBody>
+          {rows.map((row) => {
+            const isCommission = row.invoice_kind === "delivery_commission";
+            const counterparty = isCommission
+              ? row.linked_platform_name ?? row.supplier_name ?? "—"
+              : row.supplier_name ?? "—";
+            const expanded = expandedDraftId === row.id;
+
+            return (
+              <DataTableRow key={row.id}>
+                <DataTableCell>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">{row.invoice_number}</span>
+                    {isCommission && (
+                      <span className="text-xs text-primary">
+                        Delivery commission
+                      </span>
+                    )}
+                  </div>
+                </DataTableCell>
+                <DataTableCell>{formatTrDate(row.invoice_date)}</DataTableCell>
+                <DataTableCell>{counterparty}</DataTableCell>
+                <DataTableCell align="right">
+                  {formatTry(row.gross_kurus)}
+                </DataTableCell>
+                <DataTableCell>
+                  <StatusBadge status={row.status} />
+                  {row.review_reason && (
+                    <p className="mt-1 max-w-xs truncate text-xs text-warning">
+                      {row.review_reason}
+                    </p>
+                  )}
+                </DataTableCell>
+                <DataTableCell>
+                  {row.has_stored_document ? (
+                    <InvoiceDocumentPreview
+                      draftId={row.id}
+                      sourceType={
+                        row.source_type === "efatura_xml"
+                          ? "efatura_xml"
+                          : "efatura_pdf"
+                      }
+                      compact
+                    />
+                  ) : (
+                    "—"
+                  )}
+                </DataTableCell>
+                <DataTableCell>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-8 px-2 text-xs"
+                    onClick={() => onToggleExpand(row.id)}
+                  >
+                    {expanded ? "Hide" : "Review"}
+                  </Button>
+                </DataTableCell>
+              </DataTableRow>
+            );
+          })}
+        </DataTableBody>
+      </DataTable>
+
+      {expandedDraftId && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <InvoiceDraftReview
+            key={expandedDraftId}
+            draftId={expandedDraftId}
+            embedded
+            onUpdated={onUpdated}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
 export function InvoicesReviewPanel() {
   const { entityId } = useEntity();
-  const { items, loading, error } = useEntityList<InvoiceDraftRow>(
+  const [expandedDraftId, setExpandedDraftId] = useState<string | null>(null);
+  const { items, loading, error, reload } = useEntityList<InvoiceDraftRow>(
     "/invoices/drafts",
     entityId,
   );
@@ -87,6 +155,15 @@ export function InvoicesReviewPanel() {
     isReadyToPostInvoiceStatus(row.status),
   );
   const pending = workbench.filter((row) => isPendingReviewStatus(row.status));
+
+  function toggleExpand(id: string) {
+    setExpandedDraftId((current) => (current === id ? null : id));
+  }
+
+  function onUpdated() {
+    void reload();
+    setExpandedDraftId(null);
+  }
 
   if (!entityId) {
     return (
@@ -101,9 +178,11 @@ export function InvoicesReviewPanel() {
       <p className="mb-4 text-sm text-muted-foreground">
         Uploaded supplier invoices stay here until posted to the ledger.
         Confirmed invoices must still be posted before they appear in payables.
+        Expand a row to review, preview the document, confirm, or post without
+        leaving this page.
       </p>
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={5} />}
+      {loading && <TableSkeleton columns={7} />}
       {!loading && workbench.length === 0 && (
         <EmptyState
           icon={FileText}
@@ -115,19 +194,30 @@ export function InvoicesReviewPanel() {
         <section className="mb-8">
           <h2 className="mb-1 text-sm font-semibold">Ready to post</h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            Confirmed — open the invoice and use Post to ledger. Balances update
+            Confirmed — expand the row and use Post to ledger. Balances update
             only after posting.
           </p>
-          <InvoiceDraftTable rows={readyToPost} />
+          <InvoiceDraftTable
+            rows={readyToPost}
+            expandedDraftId={expandedDraftId}
+            onToggleExpand={toggleExpand}
+            onUpdated={onUpdated}
+          />
         </section>
       )}
       {!loading && pending.length > 0 && (
         <section>
           <h2 className="mb-1 text-sm font-semibold">Needs review</h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            Link the supplier and confirm totals before posting.
+            Link the supplier or delivery platform and confirm totals before
+            posting.
           </p>
-          <InvoiceDraftTable rows={pending} />
+          <InvoiceDraftTable
+            rows={pending}
+            expandedDraftId={expandedDraftId}
+            onToggleExpand={toggleExpand}
+            onUpdated={onUpdated}
+          />
         </section>
       )}
     </>

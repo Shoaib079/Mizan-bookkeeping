@@ -124,3 +124,35 @@ class PayablesSummaryRead(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class SupplierActivityRow(BaseModel):
+    movement_date: date
+    movement_kind: str
+    movement_label: str
+    document_ref: str
+    detail: str
+    net_kurus: int | None = None
+    vat_kurus: int | None = None
+    amount_kurus: int | None = None
+    bank_name: str | None = None
+    dekont_ref: str | None = None
+    balance_kurus: int
+    affects_balance: bool = True
+    invoice_draft_id: uuid.UUID | None = None
+    journal_entry_id: uuid.UUID | None = None
+    has_document: bool = False
+
+
+class SupplierActivityRead(BaseModel):
+    supplier_id: uuid.UUID
+    supplier_name: str
+    supplier_vkn: str
+    from_date: date
+    to_date: date
+    opening_balance_kurus: int
+    closing_balance_kurus: int
+    total_invoices_gross_kurus: int
+    total_payments_kurus: int
+    total_vat_kurus: int
+    rows: list[SupplierActivityRow]

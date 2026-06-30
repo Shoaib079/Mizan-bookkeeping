@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | Feature gaps FP/FS next                                                                       |
-| **Last completed slice** | Delivery monthly gross sales + platform-linked commission (`v0.73.18-delivery-monthly-sales`) |
-| **Last commit/tag**      | `v0.73.18-delivery-monthly-sales` — one gross entry per platform/month; commission via platform link |
+| **Last completed slice** | Supplier activity timeline + inline invoice preview (`v0.73.19-supplier-activity-invoice-preview`) |
+| **Last commit/tag**      | `v0.73.19-supplier-activity-invoice-preview` — chronological supplier activity, inline PDF preview, commission draft fixes |
 | **Next up**              | Feature gaps FP/FS; then P3/P5/P6                    |
 
 
@@ -59,6 +59,7 @@
 | e-Fatura auto-create supplier on upload                                          | `v0.73.7-company-profile-efatura-suppliers`       | done           | Re-add `find_or_create_supplier_for_efatura`; bank lines stay manual-only                                                                    |
 | **POS/delivery settlement clearing + commission split (net vs gross)**           | `v0.18.0` + `core/pos`/`core/delivery` posting    | done           | **Re-build deposit clearing or commission net/gross logic — it already exists**                                            |
 | Delivery monthly gross sales + platform-linked commission                        | `v0.73.18-delivery-monthly-sales`                 | done           | Re-add per-report commission/net on sales rows, `link-delivery-report`, report-linked commission post                        |
+| Supplier activity timeline + inline invoice preview                              | `v0.73.19-supplier-activity-invoice-preview`        | done           | Re-build separate ledger/invoice tabs; commission confirm requiring supplier; block duplicate discard                        |
 
 
 **Owner sign-off ✓ (2026-06-28)** on Phase 12.5 statement-learning arc through clearance auto-pick (`v0.72.0-clearance-auto-pick`) — rule auto-post (bank fee + supplier payment), review hub, match_token trim, POS/delivery link-only auto-clear.
@@ -1826,7 +1827,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-06-30 | Master directories deactivate-only visibility   | `v0.73.17-master-deactivate-only`                      | Guard tests: no DELETE on suppliers/customers/partners/staff; directory UIs include inactive; receivables include inactive; edit forms clarify deactivate-not-delete |
+| 2026-06-30 | Supplier activity + inline invoice preview      | `v0.73.19-supplier-activity-invoice-preview`           | Chronological supplier timeline API + single-sheet Excel export; inline PDF preview on review hub, supplier activity, draft review; commission confirm without supplier when platform linked; duplicate discard; document download endpoint |
 | 2026-06-30 | Metro PDF supplier intake + payables visibility | `v0.73.16-metro-supplier-payables`                     | Metro bare-VKN + SAYIN-first portal PDF heuristics; supplier name; link-supplier auto-create; payables include inactive; suppliers list include_inactive + forbidden state; `metr-inverted.pdf` fixture; review_reason when VKN missing |
 | 2026-06-30 | Company profile + e-Fatura supplier intake      | `v0.73.7-company-profile-efatura-suppliers`            | Entity `vkn` (migration `058`, required on create, `PATCH` + Set up UI); PDF parse uses buyer VKN; auto-create/link supplier on e-Fatura upload; `test_entity_profile.py`, `test_efatura_pdf_heuristics.py`, supplier auto-create tests; vitest `vkn.test.ts` |
 | 2026-06-30 | Turkish e-Fatura PDF heuristics                 | `bad0de6`                                              | Metro/utility/delivery commission PDF labels; supplier VKN before SAYIN / inverted layouts; `test_efatura_pdf_heuristics.py`                                                                                                                                  |

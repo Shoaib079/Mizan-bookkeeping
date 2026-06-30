@@ -1,0 +1,331 @@
+"use client";
+
+/** Supplier chronological activity — one timeline + Excel export. */
+
+import { useCallback, useEffect, useState } from "react";
+
+import { InvoiceDraftReview } from "@/components/invoice-draft-review";
+import { InvoiceDocumentPreview } from "@/components/invoice-document-preview";
+import { ReportDateRange } from "@/components/reports/report-date-range";
+import { Button } from "@/components/ui/button";
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from "@/components/ui/data-table";
+import { PageSkeleton } from "@/components/ui/skeleton";
+import {
+  apiDownload,
+  apiFetch,
+  triggerBlobDownload,
+} from "@/lib/api";
+import { currentMonthRange } from "@/lib/date-range";
+import { useEntity } from "@/lib/entity-context";
+import { formatTrDate, formatTry } from "@/lib/money";
+
+export type SupplierActivityRow = {
+  movement_date: string;
+  movement_kind: string;
+  movement_label: string;
+  document_ref: string;
+  detail: string;
+  net_kurus: number | null;
+  vat_kurus: number | null;
+  amount_kurus: number | null;
+  bank_name: string | null;
+  dekont_ref: string | null;
+  balance_kurus: number;
+  affects_balance: boolean;
+  invoice_draft_id: string | null;
+  journal_entry_id: string | null;
+  has_document: boolean;
+};
+
+type SupplierActivity = {
+  supplier_id: string;
+  supplier_name: string;
+  supplier_vkn: string;
+  from_date: string;
+  to_date: string;
+  opening_balance_kurus: number;
+  closing_balance_kurus: number;
+  total_invoices_gross_kurus: number;
+  total_payments_kurus: number;
+  total_vat_kurus: number;
+  rows: SupplierActivityRow[];
+};
+
+type Props = {
+  supplierId: string;
+  onCorrectPayment?: (row: {
+    journal_entry_id: string;
+    movement_date: string;
+    amount_kurus: number;
+    description: string;
+  }) => void;
+  onCorrectInvoice?: (row: {
+    journal_entry_id: string;
+    movement_date: string;
+    amount_kurus: number;
+    description: string;
+  }) => void;
+};
+
+export function SupplierActivityPanel({
+  supplierId,
+  onCorrectPayment,
+  onCorrectInvoice,
+}: Props) {
+  const { entityId } = useEntity();
+  const [range, setRange] = useState(currentMonthRange);
+  const [data, setData] = useState<SupplierActivity | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [previewDraftId, setPreviewDraftId] = useState<string | null>(null);
+  const [reviewDraftId, setReviewDraftId] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    if (!entityId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch<SupplierActivity>(
+        `/entities/${entityId}/suppliers/${supplierId}/activity?from_date=${range.from}&to_date=${range.to}`,
+      );
+      setData(res);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Load failed");
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [entityId, supplierId, range.from, range.to]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  async function onExport() {
+    if (!entityId) return;
+    setExporting(true);
+    try {
+      const { blob, filename } = await apiDownload(
+        `/entities/${entityId}/suppliers/${supplierId}/activity/export?from_date=${range.from}&to_date=${range.to}`,
+      );
+      triggerBlobDownload(blob, filename);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <ReportDateRange
+          from={range.from}
+          to={range.to}
+          disabled={!entityId || loading}
+          onChange={(from, to) => setRange({ from, to })}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={!entityId || exporting || loading}
+          onClick={() => void onExport()}
+        >
+          {exporting ? "Exporting…" : "Export Excel"}
+        </Button>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {loading && <PageSkeleton />}
+
+      {data && (
+        <>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <dt className="text-muted-foreground">Opening</dt>
+              <dd className="tabular-nums font-medium">
+                {formatTry(data.opening_balance_kurus)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Invoices (gross)</dt>
+              <dd className="tabular-nums font-medium">
+                {formatTry(data.total_invoices_gross_kurus)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Payments</dt>
+              <dd className="tabular-nums font-medium">
+                {formatTry(data.total_payments_kurus)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Closing (posted)</dt>
+              <dd className="tabular-nums font-medium">
+                {formatTry(data.closing_balance_kurus)}
+              </dd>
+            </div>
+          </dl>
+
+          <DataTable>
+            <DataTableHead>
+              <tr>
+                <DataTableHeaderCell>Date</DataTableHeaderCell>
+                <DataTableHeaderCell>Type</DataTableHeaderCell>
+                <DataTableHeaderCell>Ref</DataTableHeaderCell>
+                <DataTableHeaderCell>Detail</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Net</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">KDV</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                <DataTableHeaderCell>Bank</DataTableHeaderCell>
+                <DataTableHeaderCell>Dekont</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
+                <DataTableHeaderCell>Doc</DataTableHeaderCell>
+                <DataTableHeaderCell>Actions</DataTableHeaderCell>
+              </tr>
+            </DataTableHead>
+            <DataTableBody>
+              {data.rows.map((row, index) => (
+                <DataTableRow key={`${row.movement_date}-${row.movement_kind}-${index}`}>
+                  <DataTableCell>{formatTrDate(row.movement_date)}</DataTableCell>
+                  <DataTableCell>{row.movement_label}</DataTableCell>
+                  <DataTableCell>{row.document_ref}</DataTableCell>
+                  <DataTableCell
+                    className={
+                      !row.affects_balance ? "italic text-muted-foreground" : undefined
+                    }
+                  >
+                    {row.detail}
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    {row.net_kurus != null ? formatTry(row.net_kurus) : "—"}
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    {row.vat_kurus != null ? formatTry(row.vat_kurus) : "—"}
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    {row.amount_kurus != null ? formatTry(row.amount_kurus) : "—"}
+                  </DataTableCell>
+                  <DataTableCell>{row.bank_name ?? "—"}</DataTableCell>
+                  <DataTableCell>{row.dekont_ref ?? "—"}</DataTableCell>
+                  <DataTableCell align="right">
+                    {formatTry(row.balance_kurus)}
+                  </DataTableCell>
+                  <DataTableCell>
+                    {row.has_document && row.invoice_draft_id ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="h-8 px-2 text-xs"
+                        onClick={() =>
+                          setPreviewDraftId(
+                            previewDraftId === row.invoice_draft_id
+                              ? null
+                              : row.invoice_draft_id,
+                          )
+                        }
+                      >
+                        {previewDraftId === row.invoice_draft_id
+                          ? "Hide"
+                          : "View"}
+                      </Button>
+                    ) : (
+                      "—"
+                    )}
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    {row.movement_kind === "payment" &&
+                      row.journal_entry_id &&
+                      onCorrectPayment && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-8 px-2"
+                          onClick={() =>
+                            onCorrectPayment({
+                              journal_entry_id: row.journal_entry_id!,
+                              movement_date: row.movement_date,
+                              amount_kurus: row.amount_kurus ?? 0,
+                              description: row.detail,
+                            })
+                          }
+                        >
+                          Correct
+                        </Button>
+                      )}
+                    {row.movement_kind === "invoice" &&
+                      row.journal_entry_id &&
+                      onCorrectInvoice && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-8 px-2"
+                          onClick={() =>
+                            onCorrectInvoice({
+                              journal_entry_id: row.journal_entry_id!,
+                              movement_date: row.movement_date,
+                              amount_kurus: row.amount_kurus ?? 0,
+                              description: row.detail,
+                            })
+                          }
+                        >
+                          Correct
+                        </Button>
+                      )}
+                    {row.invoice_draft_id &&
+                      row.movement_kind === "unposted_invoice" && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-8 px-2 text-xs"
+                          onClick={() =>
+                            setReviewDraftId(
+                              reviewDraftId === row.invoice_draft_id
+                                ? null
+                                : row.invoice_draft_id,
+                            )
+                          }
+                        >
+                          {reviewDraftId === row.invoice_draft_id
+                            ? "Hide"
+                            : "Review"}
+                        </Button>
+                      )}
+                  </DataTableCell>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+
+          {previewDraftId && (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <InvoiceDocumentPreview draftId={previewDraftId} />
+            </div>
+          )}
+
+          {reviewDraftId && (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <InvoiceDraftReview
+                key={reviewDraftId}
+                draftId={reviewDraftId}
+                embedded
+                onUpdated={() => {
+                  setReviewDraftId(null);
+                  void reload();
+                }}
+              />
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from datetime import date
+from pathlib import Path
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -129,6 +130,14 @@ def extract_document(
     return extract_efatura_pdf(content, buyer_vkn=buyer_vkn)
 
 
+def _stored_document_path(draft: InvoiceDraft) -> Path | None:
+    stored = (draft.extraction_payload or {}).get("stored_path")
+    if not isinstance(stored, str) or not stored.strip():
+        return None
+    path = Path(stored).expanduser()
+    return path if path.is_file() else None
+
+
 def _to_out(
     draft: InvoiceDraft,
     *,
@@ -164,6 +173,7 @@ def _to_out(
         posted_by=draft.posted_by,
         journal_entry_id=draft.journal_entry_id,
         created_at=draft.created_at,
+        has_stored_document=_stored_document_path(draft) is not None,
     )
 
 
@@ -401,9 +411,22 @@ def create_efatura_draft_from_upload(
         review_reason=review_reason,
     )
 
+    if invoice_kind == InvoiceKind.DELIVERY_COMMISSION.value:
+        if delivery_platform_id is not None:
+            review_reason = None
+        else:
+            review_reason = (
+                "Platform commission invoice detected — "
+                "link the delivery platform before confirm"
+            )
+
+    initial_status = (
+        InvoiceDraftStatus.NEEDS_REVIEW if review_reason else InvoiceDraftStatus.DRAFT
+    )
+
     with entity_context(session, entity_id):
         draft = InvoiceDraft(
-            status=InvoiceDraftStatus.DRAFT,
+            status=initial_status.value,
             invoice_kind=invoice_kind,
             source_type=source_type,
             file_fingerprint=fingerprint,
@@ -425,6 +448,23 @@ def create_efatura_draft_from_upload(
         session.refresh(draft)
 
     return _draft_out(session, entity_id, draft)
+
+
+def get_invoice_draft_document_path(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+) -> tuple[Path, str]:
+    draft = _get_draft_row(session, entity_id, draft_id)
+    path = _stored_document_path(draft)
+    if path is None:
+        raise LookupError("Invoice document not found")
+    media = (
+        "application/xml"
+        if draft.source_type == InvoiceSourceType.EFATURA_XML
+        else "application/pdf"
+    )
+    return path, media
 
 
 def list_invoice_drafts(
@@ -545,11 +585,8 @@ def link_delivery_platform_to_draft(
 
         draft.invoice_kind = InvoiceKind.DELIVERY_COMMISSION.value
         draft.delivery_platform_id = delivery_platform_id
-        if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW and (
-            draft.review_reason or ""
-        ).startswith("Platform commission invoice detected"):
-            draft.status = InvoiceDraftStatus.DRAFT.value
-            draft.review_reason = None
+        draft.status = InvoiceDraftStatus.DRAFT.value
+        draft.review_reason = None
 
         session.commit()
         session.refresh(draft)
@@ -593,15 +630,12 @@ def confirm_invoice_draft(
         raise DraftConfirmError(
             f"Draft status {_draft_status(draft).value!r} cannot be confirmed"
         )
-    if draft.supplier_id is None:
-        raise DraftConfirmError("Supplier must be linked before confirm")
     if InvoiceKind(draft.invoice_kind) == InvoiceKind.DELIVERY_COMMISSION:
         if draft.delivery_platform_id is None:
             raise DraftConfirmError("Delivery platform must be linked before confirm")
-        if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
-            raise DraftConfirmError(
-                draft.review_reason or "Draft needs review before confirm"
-            )
+    else:
+        if draft.supplier_id is None:
+            raise DraftConfirmError("Supplier must be linked before confirm")
 
     with entity_context(session, entity_id):
         draft.status = InvoiceDraftStatus.CONFIRMED
@@ -627,11 +661,13 @@ def reject_invoice_draft(
     _ensure_draft_mutable(draft)
     status = _draft_status(draft)
     if status == InvoiceDraftStatus.DUPLICATE:
-        raise DraftConfirmError("Duplicate drafts cannot be rejected")
+        with entity_context(session, entity_id):
+            _discard_invoice_draft(session, draft)
+            session.commit()
+        return
     if status not in {
         InvoiceDraftStatus.DRAFT,
         InvoiceDraftStatus.NEEDS_REVIEW,
-        InvoiceDraftStatus.REJECTED,
     }:
         raise DraftConfirmError(f"Draft status {status.value!r} cannot be rejected")
 

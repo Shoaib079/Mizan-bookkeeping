@@ -17,15 +17,8 @@ import {
 import { SupplierForm, type SupplierRow } from "@/components/forms/supplier-form";
 import { SupplierPaymentForm } from "@/components/forms/supplier-payment-form";
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
+import { SupplierActivityPanel } from "@/components/supplier-activity-panel";
 import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
@@ -55,13 +48,6 @@ type DraftRow = {
   status: string;
   supplier_id: string | null;
   supplier_vkn: string | null;
-};
-
-const movementLabels: Record<string, string> = {
-  opening_balance: "Opening balance",
-  invoice: "Invoice",
-  payment: "Payment",
-  adjustment: "Adjustment",
 };
 
 export default function SupplierDetailPage() {
@@ -227,85 +213,19 @@ export default function SupplierDetailPage() {
               <h2 className="mb-3 text-sm font-semibold">Review uploaded invoice</h2>
               <InvoiceDraftReview
                 draftId={highlightDraftId}
+                embedded
                 onUpdated={() => void reload()}
               />
             </div>
           )}
 
           <section className="mb-8">
-            <h2 className="mb-3 text-sm font-semibold">Ledger</h2>
-            {ledger.entries.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No movements yet.
-              </p>
-            ) : (
-              <DataTable>
-                <DataTableHead>
-                  <tr>
-                    <DataTableHeaderCell>Date</DataTableHeaderCell>
-                    <DataTableHeaderCell>Type</DataTableHeaderCell>
-                    <DataTableHeaderCell>Description</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                    <DataTableHeaderCell>Actions</DataTableHeaderCell>
-                  </tr>
-                </DataTableHead>
-                <DataTableBody>
-                  {ledger.entries.map((row) => (
-                    <DataTableRow key={row.id}>
-                      <DataTableCell>
-                        {formatTrDate(row.movement_date)}
-                      </DataTableCell>
-                      <DataTableCell>
-                        {movementLabels[row.movement_type] ??
-                          row.movement_type}
-                      </DataTableCell>
-                      <DataTableCell>{row.description}</DataTableCell>
-                      <DataTableCell align="right">
-                        {formatTry(row.amount_kurus)}
-                      </DataTableCell>
-                      <DataTableCell align="right">
-                        {row.movement_type === "invoice" &&
-                          row.journal_entry_id && (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-8 px-2"
-                              onClick={() =>
-                                setCorrectInvoice({
-                                  journal_entry_id: row.journal_entry_id!,
-                                  movement_date: row.movement_date,
-                                  amount_kurus: row.amount_kurus,
-                                  description: row.description,
-                                })
-                              }
-                            >
-                              Correct
-                            </Button>
-                          )}
-                        {row.movement_type === "payment" &&
-                          row.journal_entry_id && (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-8 px-2"
-                              onClick={() =>
-                                setCorrectPayment({
-                                  journal_entry_id: row.journal_entry_id!,
-                                  movement_date: row.movement_date,
-                                  amount_kurus: row.amount_kurus,
-                                  description: row.description,
-                                })
-                              }
-                            >
-                              Correct
-                            </Button>
-                          )}
-                      </DataTableCell>
-                    </DataTableRow>
-                  ))}
-                </DataTableBody>
-              </DataTable>
-            )}
+            <h2 className="mb-3 text-sm font-semibold">Activity</h2>
+            <SupplierActivityPanel
+              supplierId={supplierId}
+              onCorrectPayment={(row) => setCorrectPayment(row)}
+              onCorrectInvoice={(row) => setCorrectInvoice(row)}
+            />
           </section>
 
           <section>
@@ -349,6 +269,7 @@ export default function SupplierDetailPage() {
                       <div className="border-t border-border p-4">
                         <InvoiceDraftReview
                           draftId={draft.id}
+                          embedded
                           onUpdated={() => void reload()}
                         />
                       </div>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { InvoiceDocumentPreview } from "@/components/invoice-document-preview";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -46,6 +47,8 @@ type InvoiceDraft = {
   gross_kurus: number;
   vat_breakdown: VatLine[];
   review_reason: string | null;
+  has_stored_document: boolean;
+  source_type: string;
 };
 
 type SupplierOption = { id: string; name: string; vkn: string };
@@ -53,10 +56,11 @@ type Account = ChartAccount;
 
 type Props = {
   draftId: string;
+  embedded?: boolean;
   onUpdated?: () => void;
 };
 
-export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
+export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -249,7 +253,9 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
       submitIdempotency.completeSubmit();
       onUpdated?.();
       toast("Invoice rejected");
-      router.push("/review/invoices");
+      if (!embedded) {
+        router.push("/review/invoices");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {
@@ -274,9 +280,14 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
     draft.status === "draft" || draft.status === "needs_review";
   const canConfirm =
     (draft.status === "draft" || draft.status === "needs_review") &&
-    Boolean(draft.supplier_id) &&
-    (!isCommission || Boolean(draft.delivery_platform_id));
+    (isCommission
+      ? Boolean(draft.delivery_platform_id)
+      : Boolean(draft.supplier_id));
   const canPost = draft.status === "confirmed";
+  const canReject =
+    draft.status === "draft" ||
+    draft.status === "needs_review" ||
+    draft.status === "duplicate";
   const isTerminal =
     draft.status === "posted" || draft.status === "rejected";
 
@@ -323,6 +334,19 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
           <p className="mt-2 text-sm text-warning">{draft.review_reason}</p>
         )}
       </div>
+
+      {draft.has_stored_document && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <InvoiceDocumentPreview
+            draftId={draft.id}
+            sourceType={
+              draft.source_type === "efatura_xml"
+                ? "efatura_xml"
+                : "efatura_pdf"
+            }
+          />
+        </div>
+      )}
 
       {isCommission && (
         <div className="rounded-lg border border-border bg-card p-4">
@@ -399,7 +423,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
         </form>
       )}
 
-      {canLink && (
+      {canLink && !isCommission && (
         <form
           onSubmit={onLinkSupplier}
           className="rounded-lg border border-border bg-card p-4"
@@ -475,7 +499,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
               </Button>
             </form>
           )}
-          {(draft.status === "draft" || draft.status === "needs_review") && (
+          {canReject && (
             <form
               onSubmit={onReject}
               className="flex flex-1 flex-wrap items-end gap-2"
@@ -490,7 +514,11 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
                 />
               </div>
               <Button type="submit" variant="secondary" disabled={rejecting}>
-                {rejecting ? "Rejecting…" : "Reject"}
+                {rejecting
+                  ? "Rejecting…"
+                  : draft.status === "duplicate"
+                    ? "Remove duplicate"
+                    : "Reject"}
               </Button>
             </form>
           )}

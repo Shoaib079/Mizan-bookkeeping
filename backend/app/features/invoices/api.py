@@ -6,6 +6,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.adapters.ocr_ai.efatura import EfaturaPdfUnsupportedError
@@ -114,6 +115,22 @@ def get_invoice_draft(
         return service.get_invoice_draft(session, entity_id, draft_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/drafts/{draft_id}/document")
+def get_invoice_draft_document(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> FileResponse:
+    try:
+        path, media_type = service.get_invoice_draft_document_path(
+            session, entity_id, draft_id
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FileResponse(path, media_type=media_type)
 
 
 @router.post("/drafts/{draft_id}/link-supplier", response_model=InvoiceDraftOut)

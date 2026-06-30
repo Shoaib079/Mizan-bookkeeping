@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -18,9 +19,12 @@ from app.core.payables.ledger import (
 )
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.features.payables import activity_excel
+from app.features.payables import supplier_activity
 from app.features.payables import service
 from app.features.payables.schema import (
     PayablesSummaryRead,
+    SupplierActivityRead,
     SupplierLedgerRead,
     SupplierMovementCreate,
     SupplierPaymentCreate,
@@ -85,6 +89,66 @@ def get_supplier_ledger(
         balance_kurus=balance,
         entries=[SupplierLedgerEntryRead.model_validate(e) for e in entries],
     )
+
+
+@router.get(
+    "/suppliers/{supplier_id}/activity",
+    response_model=SupplierActivityRead,
+)
+def get_supplier_activity(
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> SupplierActivityRead:
+    try:
+        return supplier_activity.get_supplier_activity(
+            session,
+            entity_id,
+            supplier_id,
+            from_date=from_date,
+            to_date=to_date,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/suppliers/{supplier_id}/activity/export")
+def export_supplier_activity(
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+):
+    from app.features.reports.excel_export import export_filename, xlsx_response
+
+    try:
+        report = supplier_activity.get_supplier_activity(
+            session,
+            entity_id,
+            supplier_id,
+            from_date=from_date,
+            to_date=to_date,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    data = activity_excel.build_supplier_activity_xlsx(report)
+    safe_name = report.supplier_name.replace(" ", "_")[:40]
+    filename = export_filename(
+        f"supplier-activity-{safe_name}",
+        from_date=from_date,
+        to_date=to_date,
+    )
+    return xlsx_response(data, filename)
 
 
 @router.post(

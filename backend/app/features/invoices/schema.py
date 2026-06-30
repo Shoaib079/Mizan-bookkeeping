@@ -79,6 +79,7 @@ class InvoiceDraftOut(BaseModel):
     posted_by: uuid.UUID | None = None
     journal_entry_id: uuid.UUID | None = None
     created_at: datetime
+    has_stored_document: bool = False
 
 
 class InvoiceDraftListOut(PaginatedListOut[InvoiceDraftOut]):
