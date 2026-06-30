@@ -22,6 +22,10 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
+import {
+  canDiscardInvoiceDraft,
+  canUnconfirmInvoiceDraft,
+} from "@/lib/review-status";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
 
 type VatLine = {
@@ -57,7 +61,8 @@ type Account = ChartAccount;
 type Props = {
   draftId: string;
   embedded?: boolean;
-  onUpdated?: () => void;
+  /** `removed` when the draft leaves the workbench (reject/post); else keep panel open. */
+  onUpdated?: (outcome?: "removed" | "updated") => void;
 };
 
 export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Props) {
@@ -79,6 +84,8 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
   const [confirming, setConfirming] = useState(false);
   const [posting, setPosting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [unconfirming, setUnconfirming] = useState(false);
+  const [settingKind, setSettingKind] = useState(false);
 
   const load = useCallback(async () => {
     if (!entityId) return;
@@ -139,7 +146,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
       );
       submitIdempotency.completeSubmit();
       setDraft(updated);
-      onUpdated?.();
+      onUpdated?.("updated");
       toast("Delivery platform linked");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Link platform failed");
@@ -168,7 +175,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
       );
       submitIdempotency.completeSubmit();
       setDraft(updated);
-      onUpdated?.();
+      onUpdated?.("updated");
       toast("Supplier linked");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Link failed");
@@ -195,7 +202,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
       );
       submitIdempotency.completeSubmit();
       setDraft(updated);
-      onUpdated?.();
+      onUpdated?.("updated");
       toast("Invoice confirmed");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Confirm failed");
@@ -225,12 +232,72 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
       );
       submitIdempotency.completeSubmit();
       await load();
-      onUpdated?.();
+      onUpdated?.("removed");
       toast("Invoice posted");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
     } finally {
       setPosting(false);
+    }
+  }
+
+  async function onUnconfirm(event: FormEvent) {
+    event.preventDefault();
+    if (!entityId || !draft) return;
+    setUnconfirming(true);
+    setError(null);
+    try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
+      const updated = await apiFetch<InvoiceDraft>(
+        `/entities/${entityId}/invoices/drafts/${draftId}/unconfirm`,
+        {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actor_id: actorId,
+            reason: rejectReason || null,
+          }),
+        },
+      );
+      submitIdempotency.completeSubmit();
+      setDraft(updated);
+      onUpdated?.("updated");
+      toast("Invoice sent back to review");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unconfirm failed");
+    } finally {
+      setUnconfirming(false);
+    }
+  }
+
+  async function onSetKind(nextKind: "supplier" | "delivery_commission") {
+    if (!entityId || !draft || draft.invoice_kind === nextKind) return;
+    setSettingKind(true);
+    setError(null);
+    try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
+      const updated = await apiFetch<InvoiceDraft>(
+        `/entities/${entityId}/invoices/drafts/${draftId}/set-kind`,
+        {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ invoice_kind: nextKind }),
+        },
+      );
+      submitIdempotency.completeSubmit();
+      setDraft(updated);
+      onUpdated?.("updated");
+      toast(
+        nextKind === "delivery_commission"
+          ? "Classified as delivery commission"
+          : "Classified as supplier expense",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reclassify failed");
+    } finally {
+      setSettingKind(false);
     }
   }
 
@@ -251,7 +318,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         },
       );
       submitIdempotency.completeSubmit();
-      onUpdated?.();
+      onUpdated?.("removed");
       toast("Invoice rejected");
       if (!embedded) {
         router.push("/review/invoices");
@@ -284,10 +351,8 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
       ? Boolean(draft.delivery_platform_id)
       : Boolean(draft.supplier_id));
   const canPost = draft.status === "confirmed";
-  const canReject =
-    draft.status === "draft" ||
-    draft.status === "needs_review" ||
-    draft.status === "duplicate";
+  const canUnconfirm = canUnconfirmInvoiceDraft(draft.status);
+  const canReject = canDiscardInvoiceDraft(draft.status);
   const isTerminal =
     draft.status === "posted" || draft.status === "rejected";
 
@@ -384,6 +449,33 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
           </ul>
         )}
       </div>
+
+      {canLink && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-2 text-sm font-semibold">Invoice type</h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Change how this e-Fatura is classified before confirm.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant={!isCommission ? "primary" : "secondary"}
+              disabled={settingKind || !isCommission}
+              onClick={() => void onSetKind("supplier")}
+            >
+              Supplier expense
+            </Button>
+            <Button
+              type="button"
+              variant={isCommission ? "primary" : "secondary"}
+              disabled={settingKind || isCommission}
+              onClick={() => void onSetKind("delivery_commission")}
+            >
+              Delivery commission
+            </Button>
+          </div>
+        </div>
+      )}
 
       {canLink && isCommission && !draft.delivery_platform_id && (
         <form
@@ -492,6 +584,13 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
 
       {!isTerminal && (
         <div className="flex flex-wrap gap-2">
+          {canUnconfirm && (
+            <form onSubmit={onUnconfirm}>
+              <Button type="submit" variant="secondary" disabled={unconfirming}>
+                {unconfirming ? "Sending back…" : "Send back to review"}
+              </Button>
+            </form>
+          )}
           {canConfirm && (
             <form onSubmit={onConfirm}>
               <Button type="submit" disabled={confirming}>
@@ -518,7 +617,9 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
                   ? "Rejecting…"
                   : draft.status === "duplicate"
                     ? "Remove duplicate"
-                    : "Reject"}
+                    : draft.status === "confirmed"
+                      ? "Discard"
+                      : "Reject"}
               </Button>
             </form>
           )}

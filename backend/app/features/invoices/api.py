@@ -26,6 +26,8 @@ from app.features.invoices.schema import (
     PostInvoiceDraftOut,
     PostInvoiceDraftRequest,
     RejectDraftRequest,
+    SetInvoiceKindRequest,
+    UnconfirmDraftRequest,
 )
 from app.features.delivery.settings import DeliveryNotEnabledError
 
@@ -227,6 +229,51 @@ def confirm_invoice_draft(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.DraftConfirmError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/unconfirm", response_model=InvoiceDraftOut)
+def unconfirm_invoice_draft(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    payload: UnconfirmDraftRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> InvoiceDraftOut:
+    try:
+        return service.unconfirm_invoice_draft(
+            session,
+            entity_id,
+            draft_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.DraftConfirmError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/set-kind", response_model=InvoiceDraftOut)
+def set_invoice_draft_kind(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    payload: SetInvoiceKindRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> InvoiceDraftOut:
+    try:
+        return service.set_invoice_draft_kind(
+            session,
+            entity_id,
+            draft_id,
+            invoice_kind=payload.invoice_kind,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DeliveryNotEnabledError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except service.DraftNotLinkableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/drafts/{draft_id}/reject", status_code=204)

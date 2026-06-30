@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canDiscardInvoiceDraft,
+  canUnconfirmInvoiceDraft,
   isInvoiceWorkbenchStatus,
   isPendingReviewStatus,
   isReadyToPostInvoiceStatus,
@@ -41,5 +43,20 @@ describe("isInvoiceWorkbenchStatus", () => {
     expect(isInvoiceWorkbenchStatus("confirmed")).toBe(true);
     expect(isInvoiceWorkbenchStatus("posted")).toBe(false);
     expect(isInvoiceWorkbenchStatus("rejected")).toBe(false);
+  });
+});
+
+describe("canDiscardInvoiceDraft", () => {
+  it("allows discard through confirmed (IC-A)", () => {
+    expect(canDiscardInvoiceDraft("confirmed")).toBe(true);
+    expect(canDiscardInvoiceDraft("draft")).toBe(true);
+    expect(canDiscardInvoiceDraft("posted")).toBe(false);
+  });
+});
+
+describe("canUnconfirmInvoiceDraft", () => {
+  it("allows unconfirm only on confirmed", () => {
+    expect(canUnconfirmInvoiceDraft("confirmed")).toBe(true);
+    expect(canUnconfirmInvoiceDraft("draft")).toBe(false);
   });
 });

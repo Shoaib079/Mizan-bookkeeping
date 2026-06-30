@@ -648,6 +648,96 @@ def confirm_invoice_draft(
     return _draft_out(session, entity_id, draft)
 
 
+def unconfirm_invoice_draft(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+) -> InvoiceDraftOut:
+    _require_entity(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    status = _draft_status(draft)
+    if status != InvoiceDraftStatus.CONFIRMED:
+        raise DraftConfirmError(
+            f"Draft status {status.value!r} cannot be sent back to review"
+        )
+
+    kind = InvoiceKind(draft.invoice_kind)
+    review_reason = reason or "Sent back to review"
+    if kind == InvoiceKind.DELIVERY_COMMISSION and draft.delivery_platform_id is None:
+        next_status = InvoiceDraftStatus.NEEDS_REVIEW
+        review_reason = (
+            reason
+            or "Platform commission invoice — link the delivery platform before confirm"
+        )
+    elif kind == InvoiceKind.SUPPLIER and draft.supplier_id is None:
+        next_status = InvoiceDraftStatus.NEEDS_REVIEW
+        review_reason = reason or "Link a supplier before confirm"
+    else:
+        next_status = InvoiceDraftStatus.DRAFT
+        if reason:
+            review_reason = reason
+        else:
+            review_reason = None
+
+    with entity_context(session, entity_id):
+        draft.status = next_status.value
+        draft.confirmed_at = None
+        draft.confirmed_by = None
+        draft.review_reason = review_reason
+        session.commit()
+        session.refresh(draft)
+
+    return _draft_out(session, entity_id, draft)
+
+
+def set_invoice_draft_kind(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    *,
+    invoice_kind: InvoiceKind,
+) -> InvoiceDraftOut:
+    _require_entity(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    _ensure_draft_linkable(draft)
+
+    if invoice_kind == InvoiceKind.DELIVERY_COMMISSION:
+        require_delivery_enabled(session, entity_id)
+
+    with entity_context(session, entity_id):
+        if invoice_kind == InvoiceKind.SUPPLIER:
+            draft.invoice_kind = InvoiceKind.SUPPLIER.value
+            draft.delivery_platform_id = None
+            if draft.supplier_id is None:
+                draft.status = InvoiceDraftStatus.NEEDS_REVIEW.value
+                draft.review_reason = (
+                    draft.review_reason or "Link a supplier before confirm"
+                )
+            else:
+                draft.status = InvoiceDraftStatus.DRAFT.value
+                draft.review_reason = None
+        elif invoice_kind == InvoiceKind.DELIVERY_COMMISSION:
+            draft.invoice_kind = InvoiceKind.DELIVERY_COMMISSION.value
+            if draft.delivery_platform_id is None:
+                draft.status = InvoiceDraftStatus.NEEDS_REVIEW.value
+                draft.review_reason = (
+                    "Platform commission invoice — "
+                    "link the delivery platform before confirm"
+                )
+            else:
+                draft.status = InvoiceDraftStatus.DRAFT.value
+                draft.review_reason = None
+        session.commit()
+        session.refresh(draft)
+
+    return _draft_out(session, entity_id, draft)
+
+
 def reject_invoice_draft(
     session: Session,
     entity_id: uuid.UUID,
@@ -658,13 +748,18 @@ def reject_invoice_draft(
     _require_entity(session, entity_id)
 
     draft = _get_draft_row(session, entity_id, draft_id)
-    _ensure_draft_mutable(draft)
     status = _draft_status(draft)
     if status == InvoiceDraftStatus.DUPLICATE:
         with entity_context(session, entity_id):
             _discard_invoice_draft(session, draft)
             session.commit()
         return
+    if status == InvoiceDraftStatus.CONFIRMED:
+        with entity_context(session, entity_id):
+            _discard_invoice_draft(session, draft)
+            session.commit()
+        return
+    _ensure_draft_mutable(draft)
     if status not in {
         InvoiceDraftStatus.DRAFT,
         InvoiceDraftStatus.NEEDS_REVIEW,

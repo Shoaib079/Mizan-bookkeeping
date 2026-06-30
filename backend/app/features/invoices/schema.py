@@ -35,6 +35,15 @@ class RejectDraftRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=512)
 
 
+class UnconfirmDraftRequest(BaseModel):
+    actor_id: uuid.UUID
+    reason: str | None = Field(default=None, max_length=512)
+
+
+class SetInvoiceKindRequest(BaseModel):
+    invoice_kind: InvoiceKind
+
+
 class PostInvoiceDraftRequest(BaseModel):
     actor_id: uuid.UUID
     expense_account_id: uuid.UUID

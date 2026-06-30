@@ -317,9 +317,11 @@ export function SupplierActivityPanel({
                 key={reviewDraftId}
                 draftId={reviewDraftId}
                 embedded
-                onUpdated={() => {
-                  setReviewDraftId(null);
+                onUpdated={(outcome) => {
                   void reload();
+                  if (outcome === "removed") {
+                    setReviewDraftId(null);
+                  }
                 }}
               />
             </div>

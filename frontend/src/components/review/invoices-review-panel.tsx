@@ -49,7 +49,7 @@ function InvoiceDraftTable({
   rows: InvoiceDraftRow[];
   expandedDraftId: string | null;
   onToggleExpand: (id: string) => void;
-  onUpdated: () => void;
+  onUpdated: (outcome?: "removed" | "updated") => void;
 }) {
   return (
     <div className="space-y-3">
@@ -160,9 +160,11 @@ export function InvoicesReviewPanel() {
     setExpandedDraftId((current) => (current === id ? null : id));
   }
 
-  function onUpdated() {
+  function onDraftUpdated(outcome?: "removed" | "updated") {
     void reload();
-    setExpandedDraftId(null);
+    if (outcome === "removed") {
+      setExpandedDraftId(null);
+    }
   }
 
   if (!entityId) {
@@ -178,8 +180,8 @@ export function InvoicesReviewPanel() {
       <p className="mb-4 text-sm text-muted-foreground">
         Uploaded supplier invoices stay here until posted to the ledger.
         Confirmed invoices must still be posted before they appear in payables.
-        Expand a row to review, preview the document, confirm, or post without
-        leaving this page.
+        Click Review on a row to expand actions — post, send back to review,
+        discard, or reclassify.
       </p>
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <TableSkeleton columns={7} />}
@@ -194,14 +196,14 @@ export function InvoicesReviewPanel() {
         <section className="mb-8">
           <h2 className="mb-1 text-sm font-semibold">Ready to post</h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            Confirmed — expand the row and use Post to ledger. Balances update
-            only after posting.
+            Confirmed — expand the row for Post, Send back to review, or Discard.
+            Balances update only after posting.
           </p>
           <InvoiceDraftTable
             rows={readyToPost}
             expandedDraftId={expandedDraftId}
             onToggleExpand={toggleExpand}
-            onUpdated={onUpdated}
+            onUpdated={onDraftUpdated}
           />
         </section>
       )}
@@ -216,7 +218,7 @@ export function InvoicesReviewPanel() {
             rows={pending}
             expandedDraftId={expandedDraftId}
             onToggleExpand={toggleExpand}
-            onUpdated={onUpdated}
+            onUpdated={onDraftUpdated}
           />
         </section>
       )}

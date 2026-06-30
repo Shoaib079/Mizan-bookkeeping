@@ -9,10 +9,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Post-launch — e-Fatura intake & invoice routing |
-| **Active slice** | **IC-A** — Invoice unconfirm / redo (`POST_LAUNCH_PLAN.md` § IC-A) |
-| **Last completed slice** | Supplier activity + inline preview (`v0.73.19-supplier-activity-invoice-preview`) |
-| **Last tag** | `v0.73.19-supplier-activity-invoice-preview` |
-| **Next up** | IC-A → IC-B → IC-C → FP → FS → P3/P5/P6 → IC-D (learning, deferred) → P8 design |
+| **Active slice** | **IC-B** — Classification fixtures + post fixes (`POST_LAUNCH_PLAN.md` § IC-B) |
+| **Last completed slice** | IC-A — Invoice unconfirm / redo (`v0.73.20-invoice-unconfirm-redo`) |
+| **Last tag** | `v0.73.20-invoice-unconfirm-redo` |
+| **Next up** | IC-B → IC-C → FP → FS → P3/P5/P6 → IC-D (learning, deferred) → P8 design |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 
@@ -62,11 +62,11 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**`v0.73.19-supplier-activity-invoice-preview`** — supplier Activity timeline + Excel; inline PDF preview; partial commission draft fixes. Prior: **`v0.73.18`** delivery monthly gross; **`v0.73.7`** entity VKN + supplier auto-create.
+**`v0.73.20-invoice-unconfirm-redo`** — unconfirm/redo confirmed drafts; discard; reclassify. Prior: **`v0.73.19`** supplier activity + preview.
 
 **Deploy:** `alembic upgrade head` through **`059`** on Railway. Set entity VKN in Set up → Restaurant if legacy row.
 
-**Next build:** **`POST_LAUNCH_PLAN.md` § IC-A** (unconfirm/redo), then IC-B (classification + Spice Corner fixtures), IC-C (review UX). **FP/FS after IC-A–IC-C.**
+**Next build:** **`POST_LAUNCH_PLAN.md` § IC-B** (Yemeksepeti/Getir detection + Spice Corner fixtures), then IC-C (review UX). **FP/FS after IC-B–IC-C.**
 
 **Owner sign-off ✓ (2026-06-28)** — clearance auto-pick (`v0.72.0-clearance-auto-pick`). Phase 12.5 statement-learning arc closed.
 

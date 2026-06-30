@@ -61,7 +61,7 @@ def test_confirm_draft_with_supplier(client, restaurant_a) -> None:
     assert body["confirmed_at"] is not None
 
 
-def test_confirmed_draft_immutable(client, restaurant_a) -> None:
+def test_confirmed_draft_immutable_until_unconfirm(client, restaurant_a) -> None:
     draft = _linked_draft(client, restaurant_a.id)
     draft_id = draft["id"]
 
@@ -82,11 +82,94 @@ def test_confirmed_draft_immutable(client, restaurant_a) -> None:
     )
     assert link.status_code == 409
 
+    unconfirm = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/unconfirm",
+        json={"actor_id": str(ACTOR_ID), "reason": "Wrong supplier"},
+    )
+    assert unconfirm.status_code == 200
+    body = unconfirm.json()
+    assert body["status"] == "draft"
+    assert body["confirmed_at"] is None
+    assert body["confirmed_by"] is None
+    assert body["review_reason"] == "Wrong supplier"
+
+    unlink_after = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/unlink-supplier"
+    )
+    assert unlink_after.status_code == 200
+
+
+def test_unconfirm_posted_draft_blocked(client, restaurant_a, db_session) -> None:
+    draft = _linked_draft(client, restaurant_a.id)
+    draft_id = draft["id"]
+
+    client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/confirm",
+        json={"actor_id": str(ACTOR_ID)},
+    )
+
+    from app.db.session import entity_context
+    from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus
+
+    with entity_context(db_session, restaurant_a.id):
+        row = db_session.get(InvoiceDraft, draft_id)
+        assert row is not None
+        row.status = InvoiceDraftStatus.POSTED.value
+        db_session.commit()
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/unconfirm",
+        json={"actor_id": str(ACTOR_ID)},
+    )
+    assert response.status_code == 422
+
+
+def test_reject_confirmed_discards_draft(client, restaurant_a) -> None:
+    draft = _linked_draft(client, restaurant_a.id)
+    draft_id = draft["id"]
+    stored_path = draft["extraction_payload"]["stored_path"]
+
+    client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/confirm",
+        json={"actor_id": str(ACTOR_ID)},
+    )
+
     reject = client.post(
         f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/reject",
-        json={"reason": "Too late"},
+        json={"reason": "Misclassified"},
     )
-    assert reject.status_code == 409
+    assert reject.status_code == 204
+    assert not Path(stored_path).exists()
+
+    gone = client.get(f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}")
+    assert gone.status_code == 404
+
+
+def test_set_kind_supplier_to_commission(client, restaurant_a, db_session) -> None:
+    from tests.delivery_helpers import delivery_setup as build_delivery_setup
+
+    build_delivery_setup(db_session, restaurant_a.id, platform_names=("Getir",))
+    draft = _linked_draft(client, restaurant_a.id)
+    draft_id = draft["id"]
+    assert draft["invoice_kind"] == "supplier"
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/set-kind",
+        json={"invoice_kind": "delivery_commission"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["invoice_kind"] == "delivery_commission"
+    assert body["status"] == "needs_review"
+    assert body["delivery_platform_id"] is None
+
+    back = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/set-kind",
+        json={"invoice_kind": "supplier"},
+    )
+    assert back.status_code == 200
+    assert back.json()["invoice_kind"] == "supplier"
+    assert back.json()["status"] == "draft"
 
 
 def test_reject_discards_draft_and_file(client, restaurant_a) -> None:

@@ -28,7 +28,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 | Priority | ID | Slice | Status |
 |----------|-----|-------|--------|
-| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **Next — blocks daily bookkeeping** |
+| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-A done** — IC-B next |
 | 2 | FP | Partner advance / drawing | Queued |
 | 3 | FS | Salary period + auto-clear advance | Queued |
 | 4 | P3 | Off-site backup of uploads | Queued |
@@ -76,7 +76,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 ---
 
-#### IC-A — Unconfirm / redo (safety net)
+#### IC-A — Unconfirm / redo (safety net) ✅ `v0.73.20-invoice-unconfirm-redo`
 
 **Spec:** Confirmed-but-not-posted → **Send back to review** (status `draft`/`needs_review`, keep PDF + extraction). Then: reject/discard, reclassify supplier ↔ commission, re-link supplier/platform. Audit who/when.
 
