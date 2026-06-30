@@ -12,6 +12,7 @@ node_modules/
 .next/
 out/
 .DS_Store
+.ux-backup/
 backend/.venv/
 backend/*.egg-info/
 backend/data/
