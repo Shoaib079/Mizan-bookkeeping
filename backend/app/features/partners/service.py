@@ -304,6 +304,44 @@ def _build_partner_correction_lines(
         )
         return lines, amount_kurus
 
+    if movement_type == PartnerMovementType.DRAWING:
+        if payload.payment_account_id is None:
+            raise ValueError("payment_account_id required for drawing correction")
+        gl_amount = (
+            payload.amount_kurus
+            if payload.amount_kurus is not None
+            else abs(partner_row.amount_kurus)
+        )
+        payment = partner_posting._validate_payment_account(
+            session, entity_id, payload.payment_account_id
+        )
+        payable = partner_posting._chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
+        lines = partner_posting.build_reimbursement_paid_lines(
+            partner_payable_id=payable.id,
+            payment_account_id=payment.id,
+            amount_kurus=gl_amount,
+        )
+        return lines, -gl_amount
+
+    if movement_type == PartnerMovementType.DRAWING_REPAYMENT:
+        if payload.payment_account_id is None:
+            raise ValueError("payment_account_id required for drawing repayment correction")
+        gl_amount = (
+            payload.amount_kurus
+            if payload.amount_kurus is not None
+            else abs(partner_row.amount_kurus)
+        )
+        payment = partner_posting._validate_payment_account(
+            session, entity_id, payload.payment_account_id
+        )
+        payable = partner_posting._chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
+        lines = partner_posting.build_drawing_repayment_lines(
+            partner_payable_id=payable.id,
+            payment_account_id=payment.id,
+            amount_kurus=gl_amount,
+        )
+        return lines, gl_amount
+
     raise CorrectionNotFoundError("partner movement type is not correctable")
 
 

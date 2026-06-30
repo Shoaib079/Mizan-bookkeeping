@@ -77,6 +77,8 @@ DEDICATED_CORRECTION_ROUTES: dict[JournalEntrySource, str] = {
     JournalEntrySource.STAFF_PAYMENT: "staff payment correction",
     JournalEntrySource.PARTNER_EXPENSE_FRONTED: "partner expense correction",
     JournalEntrySource.PARTNER_REIMBURSEMENT_PAID: "partner reimbursement correction",
+    JournalEntrySource.PARTNER_DRAWING: "partner drawing correction",
+    JournalEntrySource.PARTNER_DRAWING_REPAYMENT: "partner drawing repayment correction",
     JournalEntrySource.EXPENSE_ENTRY: "expense entry correction",
 }
 
