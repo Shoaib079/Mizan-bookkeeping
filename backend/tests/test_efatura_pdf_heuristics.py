@@ -8,8 +8,10 @@ import pytest
 
 from app.adapters.ocr_ai.efatura import (
     EfaturaPdfUnsupportedError,
+    _buyer_vkn_from_pdf,
     _parse_pdf_heuristics,
     _parse_pdf_tr_date,
+    _supplier_name_from_pdf,
     _supplier_vkn_from_pdf,
 )
 
@@ -19,7 +21,11 @@ METRO GROSMARKET B.KÖY ALIS.HIZ.TIC.LTD.STI.      PENDIK DC
 FATURA NUMARASI:    7B92026000094788
 Oluşturma Tarihi     18.06.2026 20:43
 Fiili Sevk Tarihi    18.06.2026 20:44
-e-FATURA                      6/0(077)0777/095021
+Büyük Mükellefler V.D.                            Fax: (0216) 5819032 6200031354
+Mersis No:  www.metro-tr.com   e-FATURA                      6/0(077)0777/095021
+Sevkiyat
+REMBETİKO TURİZM RESTORANT
+VERGİ N/D: 7342656849 / KADIKÖY
 KDV\u2019Siz Toplam      15.453,23
 Brüt Toplam     15.820,15
 """
@@ -32,6 +38,63 @@ def test_parse_metro_style_pdf_snippet() -> None:
     assert extraction.invoice_date == date(2026, 6, 18)
     assert extraction.net_kurus == 1_545_323
     assert extraction.gross_kurus == 1_582_015
+    assert extraction.supplier_vkn == "6200031354"
+
+
+def test_metro_supplier_vkn_excludes_buyer_vergi_nd() -> None:
+    assert _supplier_vkn_from_pdf(METRO_PDF_SNIPPET) == "6200031354"
+    assert (
+        _supplier_vkn_from_pdf(METRO_PDF_SNIPPET, buyer_vkn="7342656849")
+        == "6200031354"
+    )
+
+
+# Inverted GİB portal PDF: pypdf reads SAYIN/buyer before Metro seller block (metr.pdf).
+METR_INVERTED_SNIPPET = """
+SAYIN
+REMBETİKO TURİZM RESTORANT
+KÖRLER SK.
+34714 / KADIKÖY
+Vergi Dairesi: KADIKÖY
+MUSTERINO: 25 701643
+VKN: 7342656849
+Fatura No:7B92026000080926
+Fatura Tarihi:25-05-2026
+METRO GROSMARKET BAKIRKÖY ALIŞVERİŞ HİZMETLERİ TİC.
+LTD. ŞTİ.
+Vergi Dairesi: BÜYÜK MÜKELLEFLER
+MERSISNO: 0620003135400138
+VKN: 6200031354
+Mal Hizmet Toplam Tutarı14.078,09 TL
+Vergiler Dahil Toplam Tutar14.218,87 TL
+"""
+
+
+def test_metr_inverted_layout_buyer_vkn_before_seller() -> None:
+    assert _buyer_vkn_from_pdf(METR_INVERTED_SNIPPET) == "7342656849"
+    assert _supplier_vkn_from_pdf(METR_INVERTED_SNIPPET) == "6200031354"
+    assert (
+        _supplier_vkn_from_pdf(METR_INVERTED_SNIPPET, buyer_vkn="7342656849")
+        == "6200031354"
+    )
+
+
+def test_metr_inverted_layout_supplier_name() -> None:
+    name = _supplier_name_from_pdf(METR_INVERTED_SNIPPET)
+    assert name is not None
+    assert "METRO GROSMARKET" in name
+    assert "BAKIRKÖY" in name
+
+
+def test_parse_metr_inverted_snippet() -> None:
+    extraction = _parse_pdf_heuristics(METR_INVERTED_SNIPPET, buyer_vkn="7342656849")
+    assert extraction.invoice_number == "7B92026000080926"
+    assert extraction.invoice_date == date(2026, 5, 25)
+    assert extraction.supplier_vkn == "6200031354"
+    assert extraction.supplier_name is not None
+    assert "METRO GROSMARKET" in extraction.supplier_name
+    assert extraction.net_kurus == 1_407_809
+    assert extraction.gross_kurus == 1_421_887
 
 
 @pytest.mark.parametrize(

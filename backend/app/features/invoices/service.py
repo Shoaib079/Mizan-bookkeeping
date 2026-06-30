@@ -194,9 +194,18 @@ def _resolve_supplier_for_link(
     if not draft.supplier_vkn:
         raise SupplierLinkError("Draft has no supplier VKN for auto-link")
 
-    supplier = supplier_service.find_by_vkn(session, entity_id, draft.supplier_vkn)
+    entity = entity_service.get_entity(session, entity_id)
+    supplier = supplier_service.find_or_create_supplier_for_efatura(
+        session,
+        entity_id,
+        supplier_vkn=draft.supplier_vkn,
+        supplier_name=draft.supplier_name,
+        entity_vkn=entity.vkn if entity is not None else None,
+    )
     if supplier is None:
-        raise LookupError("No supplier found matching draft VKN")
+        raise SupplierLinkError(
+            "Extracted supplier VKN matches your company tax ID — pick a different supplier"
+        )
     return supplier
 
 
@@ -317,6 +326,19 @@ def create_efatura_draft_from_upload(
         content_type=content_type,
     )
 
+    review_reason: str | None = None
+    if linked_supplier is None and extraction.supplier_vkn:
+        if entity.vkn and extraction.supplier_vkn == entity.vkn:
+            review_reason = (
+                "Extracted supplier VKN matches your company tax ID — "
+                "link the correct supplier before confirm"
+            )
+    elif linked_supplier is None and not extraction.supplier_vkn:
+        review_reason = (
+            "Could not extract supplier VKN from this document — "
+            "create or link a supplier before confirm"
+        )
+
     with entity_context(session, entity_id):
         draft = InvoiceDraft(
             status=InvoiceDraftStatus.DRAFT,
@@ -325,6 +347,7 @@ def create_efatura_draft_from_upload(
             supplier_name=extraction.supplier_name,
             supplier_vkn=extraction.supplier_vkn,
             supplier_id=linked_supplier.id if linked_supplier else None,
+            review_reason=review_reason,
             invoice_number=extraction.invoice_number,
             invoice_date=extraction.invoice_date,
             net_kurus=extraction.net_kurus,

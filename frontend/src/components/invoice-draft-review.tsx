@@ -93,7 +93,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
         `/entities/${entityId}/invoices/drafts/${draftId}`,
       ),
       apiFetch<{ items: SupplierOption[] }>(
-        `/entities/${entityId}/suppliers?limit=100`,
+        `/entities/${entityId}/suppliers?include_inactive=true&limit=100`,
       ),
       apiFetch<{ items: Account[] }>(
         `/entities/${entityId}/chart-of-accounts?limit=200`,

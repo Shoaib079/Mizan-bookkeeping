@@ -15,6 +15,7 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -24,10 +25,8 @@ import { useEntityList } from "@/lib/use-entity-list";
 
 export default function SuppliersPage() {
   const { entityId } = useEntity();
-  const { items, total, loading, error, reload } = useEntityList<SupplierRow>(
-    "/suppliers",
-    entityId,
-  );
+  const { items, total, loading, error, forbidden, reload } =
+    useEntityList<SupplierRow>("/suppliers?include_inactive=true", entityId);
   const [formOpen, setFormOpen] = useState(false);
 
   return (
@@ -35,7 +34,7 @@ export default function SuppliersPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? `${total} supplier${total === 1 ? "" : "s"}`
+            ? `${total} registered supplier${total === 1 ? "" : "s"} (active and inactive)`
             : "Select a restaurant in the sidebar"}
         </p>
         <div className="flex flex-wrap items-center gap-3">
@@ -58,9 +57,12 @@ export default function SuppliersPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {entityId && forbidden && (
+        <ForbiddenMessage context="supplier list" />
+      )}
       {loading && <TableSkeleton columns={3} />}
 
-      {!loading && entityId && items.length === 0 && (
+      {!loading && entityId && !forbidden && items.length === 0 && (
         <EmptyState
           icon={Users}
           title="No suppliers yet"

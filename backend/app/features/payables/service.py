@@ -37,14 +37,15 @@ def list_payables(
     params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        filters = [Supplier.is_active.is_(True)]
+        filters: list = []
         search = text_search_filter(q, Supplier.name, Supplier.vkn)
         if search is not None:
             filters.append(search)
+        balance_expr = func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0)
         stmt = (
             select(
                 Supplier,
-                func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0).label("balance"),
+                balance_expr.label("balance"),
             )
             .outerjoin(
                 SupplierLedgerEntry,
@@ -52,10 +53,14 @@ def list_payables(
             )
             .where(*filters)
             .group_by(Supplier.id)
-            .order_by(Supplier.name)
+            .order_by(balance_expr.desc(), Supplier.name)
         )
-        all_rows = session.execute(stmt).all()
-        total_payables = sum(int(balance) for _, balance in all_rows)
+        total_payables = int(
+            session.scalar(
+                select(func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0))
+            )
+            or 0
+        )
         rows, total = fetch_paginated_rows(session, stmt, params)
         result_rows: list[tuple[Supplier, int]] = [
             (supplier, int(balance)) for supplier, balance in rows

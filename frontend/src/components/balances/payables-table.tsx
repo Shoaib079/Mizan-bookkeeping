@@ -61,8 +61,10 @@ export function PayablesTable() {
     void reload();
   }, [reload]);
 
-  const rows =
-    summary?.suppliers.filter((s) => s.balance_kurus !== 0) ?? [];
+  const outstanding =
+    summary?.suppliers
+      .filter((s) => s.balance_kurus !== 0)
+      .sort((a, b) => b.balance_kurus - a.balance_kurus) ?? [];
 
   return (
     <>
@@ -94,14 +96,19 @@ export function PayablesTable() {
         </div>
       )}
 
-      {!loading && entityId && rows.length === 0 && (
+      {!loading &&
+        entityId &&
+        summary &&
+        outstanding.length === 0 &&
+        summary.total_payables_kurus === 0 && (
         <EmptyState
           icon={HandCoins}
           title="No outstanding payables"
           hint={
             <>
-              Balances appear after you post supplier invoices to the ledger.
-              Check{" "}
+              Payables are not filtered by month — any unpaid posted invoice stays
+              here until paid. Balances appear after you post supplier invoices to
+              the ledger. Check{" "}
               <Link href="/review/invoices" className="text-primary hover:underline">
                 Review → Invoices
               </Link>{" "}
@@ -109,13 +116,22 @@ export function PayablesTable() {
               <Link href="/suppliers" className="text-primary hover:underline">
                 Suppliers
               </Link>{" "}
-              to open a supplier ledger.
+              to open a supplier ledger. If Balance Sheet shows Accounts Payable
+              but this page is empty, you may have posted aggregate opening
+              balance to GL 2000 without per-supplier lines — use{" "}
+              <Link
+                href="/setup/opening-balances"
+                className="text-primary hover:underline"
+              >
+                Setup → Opening balances
+              </Link>{" "}
+              with supplier lines instead.
             </>
           }
         />
       )}
 
-      {rows.length > 0 && (
+      {outstanding.length > 0 && (
         <DataTable>
           <DataTableHead>
             <tr>
@@ -125,7 +141,7 @@ export function PayablesTable() {
             </tr>
           </DataTableHead>
           <DataTableBody>
-            {rows.map((row) => (
+            {outstanding.map((row) => (
               <DataTableRow key={row.supplier_id}>
                 <DataTableCell>
                   <Link

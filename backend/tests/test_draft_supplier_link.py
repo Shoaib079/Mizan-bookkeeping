@@ -5,8 +5,11 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
+import pytest
+
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "efatura"
 SAMPLE_XML = FIXTURES / "sample.xml"
+METR_INVERTED_PDF = FIXTURES / "metr-inverted.pdf"
 
 
 def _upload_draft(client, entity_id, *, content=None):
@@ -138,7 +141,7 @@ def test_cross_entity_supplier_link_rejected(
     assert link.status_code == 404
 
 
-def test_auto_link_no_matching_vkn_returns_404(
+def test_auto_link_recreates_supplier_when_deleted(
     client, restaurant_a, db_session
 ) -> None:
     from app.db.session import entity_context
@@ -164,4 +167,33 @@ def test_auto_link_no_matching_vkn_returns_404(
         f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/link-supplier",
         json={},
     )
-    assert response.status_code == 404
+    assert response.status_code == 200
+    body = response.json()
+    assert body["supplier_id"] is not None
+    assert body["linked_supplier_vkn"] == "1234567890"
+
+
+def test_metr_inverted_pdf_upload_auto_creates_supplier(
+    client, restaurant_a
+) -> None:
+    """Real Metro portal PDF (SAYIN-first layout) must auto-create supplier 6200031354."""
+    if not METR_INVERTED_PDF.exists():
+        pytest.skip("metr-inverted.pdf fixture missing")
+
+    content = METR_INVERTED_PDF.read_bytes()
+    upload = client.post(
+        f"/entities/{restaurant_a.id}/invoices/efatura/draft",
+        files={"file": ("metr.pdf", content, "application/pdf")},
+    )
+    assert upload.status_code == 201
+    body = upload.json()
+    assert body["supplier_id"] is not None
+    assert body["supplier_vkn"] == "6200031354"
+    assert body["linked_supplier_vkn"] == "6200031354"
+    assert body["linked_supplier_name"] is not None
+    assert "METRO GROSMARKET" in body["linked_supplier_name"]
+
+    suppliers = client.get(f"/entities/{restaurant_a.id}/suppliers?limit=50")
+    assert suppliers.status_code == 200
+    vkns = [row["vkn"] for row in suppliers.json()["items"]]
+    assert "6200031354" in vkns

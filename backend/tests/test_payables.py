@@ -22,7 +22,7 @@ from app.core.payables.types import SupplierMovementType
 from app.db.session import entity_context
 from app.features.payables import service as payables_service
 from app.features.suppliers import service as supplier_service
-from app.features.suppliers.schema import SupplierCreate
+from app.features.suppliers.schema import SupplierCreate, SupplierUpdate
 
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
@@ -120,6 +120,44 @@ def test_payables_list_per_supplier_and_total(db_session, restaurant_a) -> None:
     assert balances[s1_id] == 100_000
     assert balances[s2_id] == 40_000
     assert total == 140_000
+
+
+def test_inactive_supplier_with_balance_still_in_payables_list(
+    db_session, restaurant_a
+) -> None:
+    supplier = _supplier(db_session, restaurant_a, name="Inactive Metro", vkn="4444444444")
+    supplier_id = supplier.id
+    _record(db_session, restaurant_a, supplier_id, amount_kurus=64_318_00)
+
+    supplier_service.update_supplier(
+        db_session,
+        restaurant_a.id,
+        supplier_id,
+        SupplierUpdate(is_active=False),
+    )
+
+    total, rows, _ = payables_service.list_payables(db_session, restaurant_a.id)
+    balances = {supplier.id: balance for supplier, balance in rows}
+    assert balances[supplier_id] == 64_318_00
+    assert total == 64_318_00
+
+
+def test_prior_month_payable_still_listed(db_session, restaurant_a) -> None:
+    supplier = _supplier(db_session, restaurant_a, name="May Vendor", vkn="5555555555")
+    supplier_id = supplier.id
+    _record(
+        db_session,
+        restaurant_a,
+        supplier_id,
+        amount_kurus=50_000,
+        movement_date=date(2026, 5, 15),
+        description="May invoice",
+    )
+
+    total, rows, _ = payables_service.list_payables(db_session, restaurant_a.id)
+    balances = {supplier.id: balance for supplier, balance in rows}
+    assert balances[supplier_id] == 50_000
+    assert total == 50_000
 
 
 def test_ledger_entries_chronological(db_session, restaurant_a) -> None:

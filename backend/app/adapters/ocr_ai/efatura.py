@@ -291,15 +291,85 @@ def _collect_tax_ids(text: str) -> list[str]:
         r"Vergi\s*Numaras[ıi]\s*[:\.]?\s*(\d{10,11})",
         r"Vergi\s*No\s*[:\.]?\s*(\d{10,11})",
         r"VKN\s*[:\.]?\s*(\d{10,11})",
+        r"VERG[Iİ]\s*N/D:\s*(\d{10,11})",
+        r"Mükellefler.{0,300}?(\d{10,11})",
+        r"(\d{10,11})\s+Mersis",
     ):
-        for match in re.finditer(pattern, text, re.IGNORECASE):
+        for match in re.finditer(pattern, text, re.IGNORECASE | re.DOTALL):
             ids.append(match.group(1))
     return list(dict.fromkeys(ids))
+
+
+def _buyer_vkn_from_pdf(text: str) -> str | None:
+    """Buyer tax id on GİB PDFs — often labeled VERGİ N/D on the delivery block."""
+    match = re.search(
+        r"VERG[Iİ]\s*N/D:\s*(\d{10,11})",
+        text,
+        re.IGNORECASE,
+    )
+    if match:
+        return match.group(1)
+    buyer_match = re.search(
+        r"Vergi\s*Dairesi\s*ve\s*VKN\s*[:\.]?\s*[A-ZÇĞİÖŞÜa-zçğıöşü\s\.]+\s*(\d{10,11})",
+        text,
+        re.IGNORECASE,
+    )
+    if buyer_match:
+        return buyer_match.group(1)
+    # Inverted portal PDFs: SAYIN / buyer block is extracted before seller (Metro) footer.
+    sayin_pos = text.upper().find("SAYIN")
+    if sayin_pos >= 0:
+        buyer_block = text[sayin_pos : sayin_pos + 1500]
+        first_vkn = re.search(
+            r"VKN\s*[:\.]?\s*(\d{10,11})",
+            buyer_block,
+            re.IGNORECASE,
+        )
+        if first_vkn:
+            return first_vkn.group(1)
+    return None
+
+
+def _supplier_name_from_pdf(text: str) -> str | None:
+    """Best-effort seller name — Metro puts legal name before VKN without Unvan/Satıcı labels."""
+    metro_match = re.search(
+        r"(METRO\s+GROSMARKET[^\n]+(?:\n[^\n]+)?)",
+        text,
+        re.IGNORECASE,
+    )
+    if metro_match:
+        return " ".join(metro_match.group(1).split())
+
+    name_match = re.search(
+        r"(?:Unvan|Satıcı|Satici)\s*[:\.]?\s*(.+?)(?:\n|VKN|TCKN)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if name_match:
+        return name_match.group(1).strip()
+    return None
+
+
+def _header_seller_vkn_candidates(header: str) -> list[str]:
+    """Metro-style PDFs put seller VKN as bare digits after Büyük Mükellefler V.D. / Mersis."""
+    candidates: list[str] = []
+    for pattern in (
+        r"Mükellefler.{0,300}?(\d{10,11})",
+        r"(\d{10,11})\s+Mersis",
+        r"Vergi\s*Numaras[ıi]\s*[:\.]?\s*(\d{10,11})",
+        r"Vergi\s*No\s*[:\.]?\s*(\d{10,11})",
+        r"VKN\s*[:\.]?\s*(\d{10,11})",
+    ):
+        for match in re.finditer(pattern, header, re.IGNORECASE | re.DOTALL):
+            candidates.append(match.group(1))
+    return list(dict.fromkeys(candidates))
 
 
 def _supplier_vkn_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str | None:
     """Seller tax id — header / before SAYIN; inverted GİB layouts put seller last after SAYIN."""
     buyer = buyer_vkn.strip() if buyer_vkn else None
+    if not buyer:
+        buyer = _buyer_vkn_from_pdf(text)
     if buyer:
         others = [tax_id for tax_id in _collect_tax_ids(text) if tax_id != buyer]
         if len(others) == 1:
@@ -307,7 +377,18 @@ def _supplier_vkn_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str | 
 
     header_limit = 2500
     sayin_pos = text.upper().find("SAYIN")
-    header = text[:sayin_pos] if sayin_pos >= 0 else text[:header_limit]
+    sevkiyat_pos = text.upper().find("SEVKIYAT")
+    if sayin_pos >= 0:
+        header = text[:sayin_pos]
+    elif sevkiyat_pos >= 0:
+        header = text[:sevkiyat_pos]
+    else:
+        header = text[:header_limit]
+
+    if buyer:
+        for candidate in _header_seller_vkn_candidates(header):
+            if candidate != buyer:
+                return candidate
 
     for pattern in (
         r"Vergi\s*Numaras[ıi]\s*[:\.]?\s*(\d{10,11})",
@@ -378,14 +459,7 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
 
     supplier_vkn = _supplier_vkn_from_pdf(text, buyer_vkn=buyer_vkn)
 
-    supplier_name = None
-    name_match = re.search(
-        r"(?:Unvan|Satıcı|Satici)\s*[:\.]?\s*(.+?)(?:\n|VKN|TCKN)",
-        text,
-        re.IGNORECASE | re.DOTALL,
-    )
-    if name_match:
-        supplier_name = name_match.group(1).strip()
+    supplier_name = _supplier_name_from_pdf(text)
 
     net_match = _find_labeled_amount(text, _PDF_NET_LABELS)
     if not net_match:
