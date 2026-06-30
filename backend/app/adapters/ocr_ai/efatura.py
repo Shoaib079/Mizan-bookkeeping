@@ -214,12 +214,136 @@ def _extract_pdf_text(content: bytes) -> str:
     return "\n".join(parts)
 
 
+_TR_DATE_TOKEN = r"\d{2}\s*[./-]\s*\d{2}\s*[./-]\s*\d{4}"
+
+# Preferred first — accounting invoice date before creation/shipment fallbacks.
+_PDF_DATE_LABEL_PATTERNS: tuple[str, ...] = (
+    rf"(?:^|\n)\s*Fatura\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
+    rf"D[uü]zenlen?me\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
+    rf"Olu[sş]turma\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
+    rf"Fiili\s*Sevkiyat\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
+    rf"Fiili\s*Sevk\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
+    rf"(?:^|[^\w])Tarih\s*[:\.]?\s*({_TR_DATE_TOKEN})",
+)
+
+_PDF_AMOUNT = r"([\d.,]+)"
+_PDF_AMOUNT_SUFFIX = r"(?:\s*TL)?"
+
+_PDF_NET_LABELS: tuple[str, ...] = (
+    r"Malzeme\s*/?\s*Hizmet\s*Toplam\s*Tutar[ıi]?",
+    r"Mal\s*/?\s*Hizmet\s*Toplam\s*Tutar[ıi]?",
+    r"Mal\s*Hizmet\s*Toplam",
+    r"Ayl[ıi]k\s*[ÜU]cretler",
+    r"Ara\s*Toplam",
+    r"KDV\s*Matrah[ıi]?",
+    r"KDV\s*Hari[cç]",
+    r"KDV\s*.{0,2}s[iı]z\s*Toplam",
+)
+
+_PDF_GROSS_LABELS: tuple[str, ...] = (
+    r"Vergiler\s*Dahil\s*Toplam\s*Tutar[ıi]?",
+    r"[ÖO]denecek\s*Tutar[ıi]?",
+    r"TOPLAM\s*FATURA\s*TUTARI",
+    r"[ÖO]DENECEK\s*TOPLAM\s*TUTAR",
+    r"Genel\s*Toplam",
+    r"KDV\s*Dahil",
+    r"Br[uü]t\s*Toplam",
+    r"Br[uü]t\s*G[ıi]da\s*Top",
+    r"[ÖO]denecek",
+)
+
+
+def _parse_pdf_tr_date(text: str) -> date:
+    """Parse DD.MM.YYYY from common Turkish e-Fatura PDF labels."""
+    for pattern in _PDF_DATE_LABEL_PATTERNS:
+        match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+        if not match:
+            continue
+        raw_date = re.sub(r"\s+", "", match.group(1))
+        raw_date = raw_date.replace("/", "-").replace(".", "-")
+        day, month, year = raw_date.split("-")
+        return date(int(year), int(month), int(day))
+    raise EfaturaPdfUnsupportedError("Could not find invoice date in PDF text")
+
+
+def _find_labeled_amount(text: str, label_patterns: tuple[str, ...]) -> re.Match[str] | None:
+    for label in label_patterns:
+        match = re.search(
+            rf"{label}\s*[:\.]?\s*{_PDF_AMOUNT}{_PDF_AMOUNT_SUFFIX}",
+            text,
+            re.IGNORECASE,
+        )
+        if match:
+            return match
+    return None
+
+
+def _normalize_tr_amount(amount: str) -> str:
+    cleaned = amount.strip()
+    if re.fullmatch(r"\d+\.\d{2}", cleaned):
+        return cleaned
+    return cleaned.replace(".", "").replace(",", ".")
+
+
+def _supplier_vkn_from_pdf(text: str) -> str | None:
+    """Seller tax id — header / before SAYIN; inverted GİB layouts put seller last after SAYIN."""
+    header_limit = 2500
+    sayin_pos = text.upper().find("SAYIN")
+    header = text[:sayin_pos] if sayin_pos >= 0 else text[:header_limit]
+
+    for pattern in (
+        r"Vergi\s*Numaras[ıi]\s*[:\.]?\s*(\d{10,11})",
+        r"Vergi\s*No\s*[:\.]?\s*(\d{10,11})",
+    ):
+        match = re.search(pattern, header, re.IGNORECASE)
+        if match:
+            return match.group(1)
+
+    def _collect_vkns(chunk: str) -> list[str]:
+        return list(
+            dict.fromkeys(
+                match.group(1)
+                for match in re.finditer(
+                    r"VKN\s*[:\.]?\s*(\d{10,11})", chunk, re.IGNORECASE
+                )
+            )
+        )
+
+    header_vkns = _collect_vkns(header)
+    if header_vkns:
+        return header_vkns[0]
+
+    if sayin_pos >= 0:
+        after_sayin = text[sayin_pos + len("SAYIN") :]
+        after_vkns = _collect_vkns(after_sayin)
+        if len(after_vkns) >= 2:
+            return after_vkns[-1]
+        if len(after_vkns) == 1:
+            return after_vkns[0]
+
+    buyer_match = re.search(
+        r"Vergi\s*Dairesi\s*ve\s*VKN\s*[:\.]?\s*[A-ZÇĞİÖŞÜa-zçğıöşü\s\.]+\s*(\d{10,11})",
+        text,
+        re.IGNORECASE,
+    )
+    all_vkns = _collect_vkns(text)
+    if not all_vkns:
+        return None
+    if buyer_match:
+        buyer_vkn = buyer_match.group(1)
+        for vkn in all_vkns:
+            if vkn != buyer_vkn:
+                return vkn
+    return all_vkns[0]
+
+
 def _parse_pdf_heuristics(text: str) -> EInvoiceExtraction:
     """Best-effort regex on GİB-style PDF text — v1 only; unknown layouts fail."""
     invoice_number = None
     for pattern in (
-        r"Fatura\s*(?:No|Numarası)?\s*[:\.]?\s*([A-Z0-9\-]+)",
-        r"Belge\s*No\s*[:\.]?\s*([A-Z0-9\-]+)",
+        r"Fatura\s*(?:No|Numaras[iı]|NUMARASI)\s*[:\.]?\s*([A-Z0-9\-/]+)",
+        r"Fatura\s*Numarası\s*[:\.]?\s*([A-Z0-9\-/]+)",
+        r"Belge\s*No\s*[:\.]?\s*([A-Z0-9\-/]+)",
     ):
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
@@ -228,19 +352,10 @@ def _parse_pdf_heuristics(text: str) -> EInvoiceExtraction:
     if not invoice_number:
         raise EfaturaPdfUnsupportedError("Could not find invoice number in PDF text")
 
-    date_match = re.search(
-        r"(?:Fatura\s*Tarihi|Düzenleme\s*Tarihi|Tarih)\s*[:\.]?\s*(\d{2}[./-]\d{2}[./-]\d{4})",
-        text,
-        re.IGNORECASE,
-    )
-    if not date_match:
-        raise EfaturaPdfUnsupportedError("Could not find invoice date in PDF text")
-    raw_date = date_match.group(1).replace("/", "-").replace(".", "-")
-    day, month, year = raw_date.split("-")
-    parsed_date = date(int(year), int(month), int(day))
+    parsed_date = _parse_pdf_tr_date(text)
 
     vkn_match = re.search(r"VKN\s*[:\.]?\s*(\d{10,11})", text, re.IGNORECASE)
-    supplier_vkn = vkn_match.group(1) if vkn_match else None
+    supplier_vkn = _supplier_vkn_from_pdf(text)
 
     supplier_name = None
     name_match = re.search(
@@ -251,32 +366,34 @@ def _parse_pdf_heuristics(text: str) -> EInvoiceExtraction:
     if name_match:
         supplier_name = name_match.group(1).strip()
 
-    net_match = re.search(
-        r"(?:Mal\s*Hizmet\s*Toplam|Matrah|KDV\s*Hariç)\s*[:\.]?\s*([\d.,]+)",
-        text,
-        re.IGNORECASE,
-    )
-    gross_match = re.search(
-        r"(?:Ödenecek|Odenecek|Genel\s*Toplam|KDV\s*Dahil)\s*[:\.]?\s*([\d.,]+)",
-        text,
-        re.IGNORECASE,
-    )
+    net_match = _find_labeled_amount(text, _PDF_NET_LABELS)
+    if not net_match:
+        matrah_match = re.search(
+            rf"Matrah\s+{_PDF_AMOUNT}\s*TL",
+            text,
+            re.IGNORECASE,
+        )
+        if matrah_match:
+            net_match = matrah_match
+
+    gross_match = _find_labeled_amount(text, _PDF_GROSS_LABELS)
     if not net_match or not gross_match:
         raise EfaturaPdfUnsupportedError("Could not find net/gross totals in PDF text")
 
-    net_kurus = _amount_to_kurus(net_match.group(1).replace(".", "").replace(",", "."))
-    gross_kurus = _amount_to_kurus(gross_match.group(1).replace(".", "").replace(",", "."))
+    net_kurus = _amount_to_kurus(_normalize_tr_amount(net_match.group(1)))
+    gross_kurus = _amount_to_kurus(_normalize_tr_amount(gross_match.group(1)))
 
     vat_breakdown: list[VatBreakdownLine] = []
     for rate_match in re.finditer(
-        r"KDV\s*(?:Oran(?:ı|i)?)?\s*[:\.]?\s*(%?\s*\d+)\s*.*?(\d[\d.,]*)",
+        r"Hesaplanan\s*KDV(?:\s*GERCEK)?\s*\(\s*%?\s*(\d+(?:[.,]\d+)?)\s*\)\s*"
+        rf"{_PDF_AMOUNT}{_PDF_AMOUNT_SUFFIX}",
         text,
         re.IGNORECASE,
     ):
-        rate_str = rate_match.group(1).replace("%", "").strip()
+        rate_str = rate_match.group(1).replace(",", ".")
         amount_str = rate_match.group(2)
         rate = float(rate_str)
-        vat_kurus = _amount_to_kurus(amount_str.replace(".", "").replace(",", "."))
+        vat_kurus = _amount_to_kurus(_normalize_tr_amount(amount_str))
         if rate > 0:
             base_kurus = round(vat_kurus * 100 / rate)
             vat_breakdown.append(
@@ -286,6 +403,15 @@ def _parse_pdf_heuristics(text: str) -> EInvoiceExtraction:
     if not vat_breakdown:
         vat_total = gross_kurus - net_kurus
         vat_breakdown = [{"rate_percent": 20, "base_kurus": net_kurus, "vat_kurus": vat_total}]
+    else:
+        vat_sum = sum(line["vat_kurus"] for line in vat_breakdown)
+        if net_kurus + vat_sum != gross_kurus:
+            # Pre-discount Mal Hizmet total or multi-fee utility bill — align net to VAT.
+            net_kurus = gross_kurus - vat_sum
+            for line in vat_breakdown:
+                rate = line["rate_percent"]
+                if rate > 0:
+                    line["base_kurus"] = round(line["vat_kurus"] * 100 / rate)
 
     validate_invoice_totals(net_kurus, gross_kurus, vat_breakdown)
 
