@@ -64,6 +64,7 @@ def run_onboarding_smoke(
     base_url: str = "",
     headers: Mapping[str, str] | None = None,
     entity_name: str = "Mizan Smoke Test Cafe",
+    entity_vkn: str = "7342656849",
     member_email: str = "smoke-staff@example.com",
     post_opening_balances: bool = True,
     go_live_date: date | None = None,
@@ -80,7 +81,7 @@ def run_onboarding_smoke(
     create = client.request(
         "POST",
         url("/entities"),
-        json={"name": entity_name},
+        json={"name": entity_name, "vkn": entity_vkn},
         headers=hdrs or None,
     )
     create_body = _check_response(create, "POST /entities", expected=201)

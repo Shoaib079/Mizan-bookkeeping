@@ -32,6 +32,12 @@ def test_confirm_requires_supplier(client, restaurant_a) -> None:
     upload = _upload(client, restaurant_a.id)
     draft_id = upload.json()["id"]
 
+    # e-Fatura upload auto-links supplier; clear link to exercise confirm gate.
+    unlink = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/unlink-supplier"
+    )
+    assert unlink.status_code == 200
+
     response = client.post(
         f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/confirm",
         json={"actor_id": str(ACTOR_ID)},
