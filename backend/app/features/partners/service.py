@@ -29,6 +29,10 @@ from app.features.partners.schema import (
     PartnerUpdate,
     ReimbursementPaidCreate,
     ReimbursementPaidResponse,
+    DrawingCreate,
+    DrawingRepaymentCreate,
+    DrawingResponse,
+    DrawingRepaymentResponse,
     PartnerJournalEntryCorrect,
     PartnerJournalEntryCorrectOut,
 )
@@ -203,6 +207,56 @@ def record_reimbursement_paid(
         payment_account_id=payload.payment_account_id,
     )
     return ReimbursementPaidResponse(
+        journal_entry_id=result.journal_entry.id,
+        partner_ledger_entry=PartnerLedgerEntryRead.model_validate(
+            result.partner_ledger_entry
+        ),
+        balance_kurus=result.balance_kurus,
+    )
+
+
+def record_drawing(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: DrawingCreate,
+) -> DrawingResponse:
+    result = partner_posting.post_drawing(
+        session,
+        entity_id,
+        partner_id,
+        drawing_date=payload.drawing_date,
+        amount_kurus=payload.amount_kurus,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+    )
+    return DrawingResponse(
+        journal_entry_id=result.journal_entry.id,
+        partner_ledger_entry=PartnerLedgerEntryRead.model_validate(
+            result.partner_ledger_entry
+        ),
+        balance_kurus=result.balance_kurus,
+    )
+
+
+def record_drawing_repayment(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: DrawingRepaymentCreate,
+) -> DrawingRepaymentResponse:
+    result = partner_posting.post_drawing_repayment(
+        session,
+        entity_id,
+        partner_id,
+        payment_date=payload.payment_date,
+        amount_kurus=payload.amount_kurus,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+    )
+    return DrawingRepaymentResponse(
         journal_entry_id=result.journal_entry.id,
         partner_ledger_entry=PartnerLedgerEntryRead.model_validate(
             result.partner_ledger_entry

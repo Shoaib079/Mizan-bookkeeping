@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { PartnerExpenseFrontedForm } from "@/components/forms/partner-expense-fronted-form";
+import { PartnerCashMovementForm } from "@/components/forms/partner-cash-movement-form";
 import {
   CorrectPartnerLedgerForm,
   type CorrectablePartnerLedgerRow,
@@ -26,6 +27,11 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
+import {
+  partnerBalanceAmount,
+  partnerBalanceHeading,
+  partnerDrawingRepaymentAllowed,
+} from "@/lib/partner-balance";
 import { partnerMovementLabels } from "@/lib/subledger-labels";
 
 type LedgerEntry = {
@@ -56,6 +62,8 @@ export default function PartnerDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [reimburseOpen, setReimburseOpen] = useState(false);
+  const [drawingOpen, setDrawingOpen] = useState(false);
+  const [repaymentOpen, setRepaymentOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
 
   const resetDetailState = useCallback(() => {
@@ -66,6 +74,8 @@ export default function PartnerDetailPage() {
     setEditOpen(false);
     setExpenseOpen(false);
     setReimburseOpen(false);
+    setDrawingOpen(false);
+    setRepaymentOpen(false);
     setCorrectEntry(null);
   }, []);
 
@@ -135,9 +145,11 @@ export default function PartnerDetailPage() {
               )}
             </div>
             <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">Amount owed</p>
+              <p className="text-sm text-muted-foreground">
+                {partnerBalanceHeading(ledger.balance_kurus)}
+              </p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatTry(ledger.balance_kurus)}
+                {partnerBalanceAmount(ledger.balance_kurus)}
               </p>
             </div>
           </div>
@@ -152,6 +164,18 @@ export default function PartnerDetailPage() {
             <Button type="button" variant="secondary" onClick={() => setReimburseOpen(true)}>
               Pay reimbursement
             </Button>
+            <Button type="button" variant="secondary" onClick={() => setDrawingOpen(true)}>
+              Record drawing
+            </Button>
+            {partnerDrawingRepaymentAllowed(ledger.balance_kurus) && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setRepaymentOpen(true)}
+              >
+                Repay drawing
+              </Button>
+            )}
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
@@ -230,6 +254,22 @@ export default function PartnerDetailPage() {
             partnerId={partnerId}
             balanceKurus={ledger?.balance_kurus}
             onClose={() => setReimburseOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <PartnerCashMovementForm
+            open={drawingOpen}
+            partnerId={partnerId}
+            kind="drawing"
+            balanceKurus={ledger?.balance_kurus}
+            onClose={() => setDrawingOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <PartnerCashMovementForm
+            open={repaymentOpen}
+            partnerId={partnerId}
+            kind="repayment"
+            balanceKurus={ledger?.balance_kurus}
+            onClose={() => setRepaymentOpen(false)}
             onSaved={() => void reload()}
           />
           <CorrectPartnerLedgerForm

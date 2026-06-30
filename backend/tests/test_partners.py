@@ -342,6 +342,124 @@ def test_cross_entity_isolation(db_session, restaurant_a, restaurant_b, partner_
     assert partner_ledger.current_balance_kurus(db_session, entity_a, partner_id) == 10_000
 
 
+def test_drawing_allows_negative_balance(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    accounts = partner_setup["accounts"]
+    drawer = partner_setup["drawer"]
+
+    result = partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 6, 3),
+        amount_kurus=100_000,
+        description="Partner drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert result.journal_entry.source == JournalEntrySource.PARTNER_DRAWING
+    assert result.balance_kurus == -100_000
+    assert _subledger_balance(db_session, entity_id, partner_id) == -100_000
+    assert _gl_balance(
+        db_session,
+        entity_id,
+        accounts[PARTNER_REIMBURSEMENT_PAYABLE_CODE],
+        AccountNormalBalance.CREDIT,
+    ) == -100_000
+
+
+def test_drawing_repayment_clears_negative_balance(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    drawer = partner_setup["drawer"]
+
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 6, 3),
+        amount_kurus=100_000,
+        description="Partner drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    result = partner_posting.post_drawing_repayment(
+        db_session,
+        entity_id,
+        partner_id,
+        payment_date=date(2026, 6, 20),
+        amount_kurus=40_000,
+        description="Partial repayment",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert result.journal_entry.source == JournalEntrySource.PARTNER_DRAWING_REPAYMENT
+    assert result.balance_kurus == -60_000
+
+
+def test_drawing_repayment_overpayment_rejected(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    drawer = partner_setup["drawer"]
+
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 6, 3),
+        amount_kurus=50_000,
+        description="Partner drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    with pytest.raises(partner_ledger.OverRepaymentError):
+        partner_posting.post_drawing_repayment(
+            db_session,
+            entity_id,
+            partner_id,
+            payment_date=date(2026, 6, 20),
+            amount_kurus=60_000,
+            description="Too much",
+            actor_id=ACTOR_ID,
+            payment_account_id=drawer.gl_account_id,
+        )
+
+
+def test_drawing_reduces_reimbursement_balance_first(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    accounts = partner_setup["accounts"]
+    drawer = partner_setup["drawer"]
+
+    partner_posting.post_expense_fronted(
+        db_session,
+        entity_id,
+        partner_id,
+        expense_date=date(2026, 6, 1),
+        amount_kurus=200_000,
+        description="Fronted",
+        actor_id=ACTOR_ID,
+        expense_account_id=accounts["5000"],
+    )
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 6, 10),
+        amount_kurus=250_000,
+        description="Drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert _subledger_balance(db_session, entity_id, partner_id) == -50_000
+
+
 def test_partners_api_e2e(client: TestClient, db_session, partner_setup) -> None:
     entity_id = partner_setup["entity_id"]
     drawer = partner_setup["drawer"]

@@ -34,6 +34,10 @@ class OverpaymentError(PartnerLedgerError):
     """Reimbursement would exceed amount owed to partner."""
 
 
+class OverRepaymentError(PartnerLedgerError):
+    """Drawing repayment would exceed amount owed by partner."""
+
+
 def persist_partner_opening_entry(
     session: Session,
     partner_id: uuid.UUID,

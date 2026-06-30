@@ -38,6 +38,8 @@ _OPERATING_SOURCES = frozenset(
         JournalEntrySource.STAFF_PAYMENT,
         JournalEntrySource.STAFF_ADVANCE,
         JournalEntrySource.PARTNER_REIMBURSEMENT_PAID,
+        JournalEntrySource.PARTNER_DRAWING,
+        JournalEntrySource.PARTNER_DRAWING_REPAYMENT,
         JournalEntrySource.CASH_MOVEMENT,
         JournalEntrySource.FX_CONVERSION,
         JournalEntrySource.FX_EXPENSE_SPEND,

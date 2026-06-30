@@ -24,15 +24,17 @@ type Props = {
   open: boolean;
   onClose: () => void;
   partnerId: string;
+  kind: "drawing" | "repayment";
   balanceKurus?: number;
   embedded?: boolean;
   onSaved?: () => void;
 };
 
-export function PartnerReimbursementForm({
+export function PartnerCashMovementForm({
   open,
   onClose,
   partnerId,
+  kind,
   balanceKurus,
   embedded,
   onSaved,
@@ -40,15 +42,19 @@ export function PartnerReimbursementForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const isDrawing = kind === "drawing";
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
+
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
   const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
-  const [description, setDescription] = useState("Partner reimbursement");
+  const [description, setDescription] = useState(
+    isDrawing ? "Partner drawing" : "Partner drawing repayment",
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -73,12 +79,12 @@ export function PartnerReimbursementForm({
       return;
     }
     const amountKurus = parseTryToKurus(amountText);
-    const paymentDate = parseTrDate(dateText);
+    const movementDate = parseTrDate(dateText);
     if (amountKurus === null || amountKurus <= 0) {
       setError("Enter a valid amount.");
       return;
     }
-    if (!paymentDate) {
+    if (!movementDate) {
       setError("Date must be DD.MM.YYYY.");
       return;
     }
@@ -86,32 +92,61 @@ export function PartnerReimbursementForm({
       setError("Choose a cash or bank account.");
       return;
     }
+    if (
+      !isDrawing &&
+      balanceKurus !== undefined &&
+      balanceKurus >= 0
+    ) {
+      setError("This partner has no outstanding drawing to repay.");
+      return;
+    }
+    if (
+      !isDrawing &&
+      balanceKurus !== undefined &&
+      amountKurus > Math.abs(balanceKurus)
+    ) {
+      setError(
+        `Repayment cannot exceed ${partnerBalanceAmount(Math.abs(balanceKurus))}.`,
+      );
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(
-        `/entities/${entityId}/partners/${partnerId}/reimbursements`,
-        {
-          method: "POST",
-        idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            payment_date: paymentDate,
+      const path = isDrawing ? "drawings" : "drawing-repayments";
+      const body = isDrawing
+        ? {
+            drawing_date: movementDate,
             amount_kurus: amountKurus,
             description,
             actor_id: actorId,
             payment_account_id: paymentGlAccountId,
-          }),
+          }
+        : {
+            payment_date: movementDate,
+            amount_kurus: amountKurus,
+            description,
+            actor_id: actorId,
+            payment_account_id: paymentGlAccountId,
+          };
+      await apiFetch(
+        `/entities/${entityId}/partners/${partnerId}/${path}`,
+        {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         },
       );
       submitIdempotency.completeSubmit();
       onSaved?.();
-      toast("Reimbursement recorded");
+      toast(isDrawing ? "Drawing recorded" : "Drawing repayment recorded");
       onClose();
       setAmountText("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed");
+      setError(err instanceof Error ? err.message : "Save failed");
     } finally {
       setSubmitting(false);
     }
@@ -121,59 +156,64 @@ export function PartnerReimbursementForm({
     <FormDialogShell
       embedded={embedded}
       open={open}
-      title="Pay reimbursement"
+      title={isDrawing ? "Record partner drawing" : "Record drawing repayment"}
       onClose={onClose}
     >
       <form onSubmit={onSubmit} className="space-y-3">
-        {balanceKurus !== undefined && balanceKurus > 0 && (
+        {balanceKurus !== undefined && (
           <p className="text-sm text-muted-foreground">
             {partnerBalanceHeading(balanceKurus)}:{" "}
             {partnerBalanceAmount(balanceKurus)}
           </p>
         )}
+        <p className="text-xs text-muted-foreground">
+          {isDrawing
+            ? "Partner withdraws cash from the business — balance may go negative (partner owes you)."
+            : "Partner repays cash against an outstanding drawing."}
+        </p>
         <div>
-          <Label htmlFor="pr-date">Payment date (DD.MM.YYYY)</Label>
+          <Label htmlFor="pc-date">Date (DD.MM.YYYY)</Label>
           <DateInput
-            id="pr-date"
+            id="pc-date"
             value={dateText}
             onChange={setDateText}
             required
           />
         </div>
         <div>
-          <Label htmlFor="pr-amount">Amount (TRY)</Label>
+          <Label htmlFor="pc-amount">Amount (TRY)</Label>
           <MoneyInput
-            id="pr-amount"
+            id="pc-amount"
             value={amountText}
             onChange={setAmountText}
             required
           />
         </div>
         <div>
-          <Label htmlFor="pr-desc">Description</Label>
+          <Label htmlFor="pc-desc">Description</Label>
           <Input
-            id="pr-desc"
+            id="pc-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
           />
         </div>
         <div>
-          <Label htmlFor="pr-account">Pay from</Label>
+          <Label htmlFor="pc-account">{isDrawing ? "Pay from" : "Receive into"}</Label>
           <Combobox
-            id="pr-account"
+            id="pc-account"
             value={paymentGlAccountId}
             onValueChange={setPaymentGlAccountId}
             options={accounts.map((a) => ({
               value: a.gl_account_id,
               label: `${a.name} (${a.account_kind})`,
             }))}
-            placeholder="Pay from account…"
+            placeholder="Choose account…"
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Recording…" : "Record reimbursement"}
+          {submitting ? "Recording…" : isDrawing ? "Record drawing" : "Record repayment"}
         </Button>
       </form>
     </FormDialogShell>

@@ -10,6 +10,8 @@ export const partnerMovementLabels: Record<string, string> = {
   opening_balance: "Opening balance",
   expense_fronted: "Expense fronted",
   reimbursement_paid: "Reimbursement paid",
+  drawing: "Drawing",
+  drawing_repayment: "Drawing repayment",
 };
 
 export const customerMovementLabels: Record<string, string> = {

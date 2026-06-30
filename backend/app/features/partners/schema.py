@@ -100,6 +100,34 @@ class ReimbursementPaidResponse(BaseModel):
     balance_kurus: int
 
 
+class DrawingCreate(BaseModel):
+    drawing_date: date
+    amount_kurus: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID
+    payment_account_id: uuid.UUID
+
+
+class DrawingRepaymentCreate(BaseModel):
+    payment_date: date
+    amount_kurus: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID
+    payment_account_id: uuid.UUID
+
+
+class DrawingResponse(BaseModel):
+    journal_entry_id: uuid.UUID
+    partner_ledger_entry: PartnerLedgerEntryRead
+    balance_kurus: int
+
+
+class DrawingRepaymentResponse(BaseModel):
+    journal_entry_id: uuid.UUID
+    partner_ledger_entry: PartnerLedgerEntryRead
+    balance_kurus: int
+
+
 class PartnerJournalEntryCorrect(BaseModel):
     entry_date: date
     description: str = Field(min_length=1, max_length=512)

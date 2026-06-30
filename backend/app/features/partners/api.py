@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.listing import ListParams, list_params_dependency
 from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError, PostingError
-from app.core.partners.ledger import OverpaymentError, ZeroMovementError
+from app.core.partners.ledger import OverpaymentError, OverRepaymentError, ZeroMovementError
 from app.core.partners.posting import InvalidPartnerPostingError
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
@@ -25,6 +25,10 @@ from app.features.partners.schema import (
     PartnerUpdate,
     ReimbursementPaidCreate,
     ReimbursementPaidResponse,
+    DrawingCreate,
+    DrawingRepaymentCreate,
+    DrawingResponse,
+    DrawingRepaymentResponse,
     PartnerJournalEntryCorrect,
     PartnerJournalEntryCorrectOut,
 )
@@ -160,6 +164,56 @@ def post_reimbursement_paid(
     except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{partner_id}/drawings",
+    response_model=DrawingResponse,
+    status_code=201,
+)
+def post_partner_drawing(
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: DrawingCreate,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> DrawingResponse:
+    try:
+        return service.record_drawing(session, entity_id, partner_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{partner_id}/drawing-repayments",
+    response_model=DrawingRepaymentResponse,
+    status_code=201,
+)
+def post_partner_drawing_repayment(
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: DrawingRepaymentCreate,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> DrawingRepaymentResponse:
+    try:
+        return service.record_drawing_repayment(session, entity_id, partner_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OverRepaymentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

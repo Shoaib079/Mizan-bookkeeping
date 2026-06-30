@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | **IC-D** *(deferred)* — Per-entity classification learning; **FP/FS** next after owner sign-off on IC-C |
-| **Last completed slice** | Invoice review confidence UX (`v0.73.22-invoice-review-confidence-ux`) |
-| **Last commit/tag**      | `v0.73.22-invoice-review-confidence-ux` — kind badge + confidence-driven review; Accept suggestion / Change type only when not HIGH |
-| **Next up**              | **IC-C owner sign-off → FP/FS**; **IC-D** when IC-C stable; **P3/P5/P6**; **P8** groceries design |
+| **Active slice**         | **FS** — Salary period + advance UX (`POST_LAUNCH_PLAN.md` § FS) |
+| **Last completed slice** | Partner advance / drawing (`v0.73.23-partner-advance-drawing`) |
+| **Last commit/tag**      | `v0.73.23-partner-advance-drawing` — partner drawing + repayment; bidirectional balance UX |
+| **Next up**              | **FS** (salary period + payment UX); then **P3/P5/P6**; **IC-D** deferred |
 
 
 ### Next plan (pre-launch, owner-driven)

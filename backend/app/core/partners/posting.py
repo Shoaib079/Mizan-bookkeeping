@@ -40,6 +40,20 @@ class PartnerReimbursementPaidPostResult:
     balance_kurus: int
 
 
+@dataclass(frozen=True, slots=True)
+class PartnerDrawingPostResult:
+    journal_entry: JournalEntry
+    partner_ledger_entry: PartnerLedgerEntry
+    balance_kurus: int
+
+
+@dataclass(frozen=True, slots=True)
+class PartnerDrawingRepaymentPostResult:
+    journal_entry: JournalEntry
+    partner_ledger_entry: PartnerLedgerEntry
+    balance_kurus: int
+
+
 def _get_partner(session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID) -> Partner:
     partner = session.get(Partner, partner_id)
     if partner is None or partner.entity_id != entity_id:
@@ -126,6 +140,29 @@ def build_reimbursement_paid_lines(
         ),
         PostingLine(
             account_id=payment_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.CREDIT,
+        ),
+    ]
+
+
+def build_drawing_repayment_lines(
+    *,
+    partner_payable_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+    amount_kurus: int,
+) -> list[PostingLine]:
+    if amount_kurus <= 0:
+        raise ValueError("drawing repayment amount must be positive kuruş")
+
+    return [
+        PostingLine(
+            account_id=payment_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.DEBIT,
+        ),
+        PostingLine(
+            account_id=partner_payable_id,
             amount_kurus=amount_kurus,
             side=AccountNormalBalance.CREDIT,
         ),
@@ -267,6 +304,152 @@ def post_reimbursement_paid(
             )
         )
         return PartnerReimbursementPaidPostResult(
+            journal_entry=journal_entry,
+            partner_ledger_entry=partner_entry,
+            balance_kurus=int(balance or 0),
+        )
+
+
+def post_drawing(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    *,
+    drawing_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+) -> PartnerDrawingPostResult:
+    """Partner withdraws cash — Dr 2150 / Cr cash; subledger -amount (may go negative)."""
+    if amount_kurus <= 0:
+        raise ValueError("amount_kurus must be positive")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        _get_partner(session, entity_id, partner_id)
+
+        payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
+        partner_payable = _chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
+
+        lines = build_reimbursement_paid_lines(
+            partner_payable_id=partner_payable.id,
+            payment_account_id=payment_gl.id,
+            amount_kurus=amount_kurus,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            drawing_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.PARTNER_DRAWING,
+        )
+
+        partner_entry = partner_ledger.persist_partner_ledger_entry(
+            session,
+            partner_id,
+            movement_date=drawing_date,
+            movement_type=PartnerMovementType.DRAWING,
+            amount_kurus=-amount_kurus,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+        )
+
+        session.commit()
+        session.refresh(journal_entry)
+        session.refresh(partner_entry)
+        _ = list(journal_entry.lines)
+
+        balance = session.scalar(
+            select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0)).where(
+                PartnerLedgerEntry.partner_id == partner_id
+            )
+        )
+        return PartnerDrawingPostResult(
+            journal_entry=journal_entry,
+            partner_ledger_entry=partner_entry,
+            balance_kurus=int(balance or 0),
+        )
+
+
+def post_drawing_repayment(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    *,
+    payment_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+) -> PartnerDrawingRepaymentPostResult:
+    """Partner repays a drawing — Dr cash / Cr 2150; subledger +amount."""
+    if amount_kurus <= 0:
+        raise ValueError("amount_kurus must be positive")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        _get_partner(session, entity_id, partner_id)
+
+        current = partner_ledger.current_balance_kurus(session, entity_id, partner_id)
+        if current >= 0:
+            raise partner_ledger.OverRepaymentError(
+                "Partner has no outstanding drawing balance to repay"
+            )
+        if amount_kurus > abs(current):
+            raise partner_ledger.OverRepaymentError(
+                f"Repayment of {amount_kurus} exceeds partner drawing balance of {abs(current)}"
+            )
+
+        payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
+        partner_payable = _chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
+
+        lines = build_drawing_repayment_lines(
+            partner_payable_id=partner_payable.id,
+            payment_account_id=payment_gl.id,
+            amount_kurus=amount_kurus,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            payment_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.PARTNER_DRAWING_REPAYMENT,
+        )
+
+        partner_entry = partner_ledger.persist_partner_ledger_entry(
+            session,
+            partner_id,
+            movement_date=payment_date,
+            movement_type=PartnerMovementType.DRAWING_REPAYMENT,
+            amount_kurus=amount_kurus,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+        )
+
+        session.commit()
+        session.refresh(journal_entry)
+        session.refresh(partner_entry)
+        _ = list(journal_entry.lines)
+
+        balance = session.scalar(
+            select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0)).where(
+                PartnerLedgerEntry.partner_id == partner_id
+            )
+        )
+        return PartnerDrawingRepaymentPostResult(
             journal_entry=journal_entry,
             partner_ledger_entry=partner_entry,
             balance_kurus=int(balance or 0),

@@ -8,6 +8,7 @@ import { CustomerCreditSaleForm } from "@/components/forms/customer-credit-sale-
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import type { EmployeeRow } from "@/components/forms/employee-form";
 import { PartnerExpenseFrontedForm } from "@/components/forms/partner-expense-fronted-form";
+import { PartnerCashMovementForm } from "@/components/forms/partner-cash-movement-form";
 import type { PartnerRow } from "@/components/forms/partner-form";
 import { PartnerReimbursementForm } from "@/components/forms/partner-reimbursement-form";
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
@@ -55,6 +56,8 @@ const LEDGER_PATH: Partial<Record<PersonPickerKind, (id: string) => string>> = {
 
 const NEEDS_LEDGER_BALANCE = new Set<RecordActionKey>([
   "partnerReimbursement",
+  "partnerDrawing",
+  "partnerDrawingRepayment",
   "customerPayment",
   "supplierPayment",
 ]);
@@ -279,6 +282,24 @@ function renderEmbeddedForm(
         <PartnerReimbursementForm
           {...formProps}
           partnerId={person.id}
+          balanceKurus={balanceKurus}
+        />
+      );
+    case "partnerDrawing":
+      return (
+        <PartnerCashMovementForm
+          {...formProps}
+          partnerId={person.id}
+          kind="drawing"
+          balanceKurus={balanceKurus}
+        />
+      );
+    case "partnerDrawingRepayment":
+      return (
+        <PartnerCashMovementForm
+          {...formProps}
+          partnerId={person.id}
+          kind="repayment"
           balanceKurus={balanceKurus}
         />
       );
