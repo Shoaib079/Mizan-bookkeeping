@@ -25,7 +25,7 @@ RUN apt-get update \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
     && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-18 \
+    && apt-get install -y --no-install-recommends postgresql-client-18 gosu \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
@@ -39,16 +39,15 @@ COPY scripts scripts/
 RUN mkdir -p data/uploads data/backups \
     && groupadd --system app \
     && useradd --system --gid app --home /app app \
-    && chown -R app:app /app
+    && chown -R app:app /app \
+    && chmod +x scripts/docker-entrypoint.sh
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
 EXPOSE 8000
 
-USER app
-
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')" || exit 1
 
-CMD ["sh", "-c", "mkdir -p \"${UPLOAD_DIR:-data/uploads}\" \"${BACKUP_LOCAL_DIR:-data/backups}\" && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
