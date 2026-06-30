@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | Feature gaps FP/FS next                                                                       |
-| **Last completed slice** | Metro PDF supplier intake + payables/suppliers visibility (`v0.73.16-metro-supplier-payables`) |
-| **Last commit/tag**      | `v0.73.16-metro-supplier-payables` — fix Metro PDF VKN/name; payables list; supplier directory |
+| **Last completed slice** | Master directories deactivate-only visibility (`v0.73.17-master-deactivate-only`) |
+| **Last commit/tag**      | `v0.73.17-master-deactivate-only` — show inactive master data; no DELETE routes |
 | **Next up**              | Feature gaps FP/FS; then P3/P5/P6                    |
 
 
@@ -1825,6 +1825,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-30 | Master directories deactivate-only visibility   | `v0.73.17-master-deactivate-only`                      | Guard tests: no DELETE on suppliers/customers/partners/staff; directory UIs include inactive; receivables include inactive; edit forms clarify deactivate-not-delete |
 | 2026-06-30 | Metro PDF supplier intake + payables visibility | `v0.73.16-metro-supplier-payables`                     | Metro bare-VKN + SAYIN-first portal PDF heuristics; supplier name; link-supplier auto-create; payables include inactive; suppliers list include_inactive + forbidden state; `metr-inverted.pdf` fixture; review_reason when VKN missing |
 | 2026-06-30 | Company profile + e-Fatura supplier intake      | `v0.73.7-company-profile-efatura-suppliers`            | Entity `vkn` (migration `058`, required on create, `PATCH` + Set up UI); PDF parse uses buyer VKN; auto-create/link supplier on e-Fatura upload; `test_entity_profile.py`, `test_efatura_pdf_heuristics.py`, supplier auto-create tests; vitest `vkn.test.ts` |
 | 2026-06-30 | Turkish e-Fatura PDF heuristics                 | `bad0de6`                                              | Metro/utility/delivery commission PDF labels; supplier VKN before SAYIN / inverted layouts; `test_efatura_pdf_heuristics.py`                                                                                                                                  |

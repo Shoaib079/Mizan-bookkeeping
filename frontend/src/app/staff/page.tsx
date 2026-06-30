@@ -14,6 +14,7 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -23,10 +24,11 @@ import { useEntityList } from "@/lib/use-entity-list";
 
 export default function StaffPage() {
   const { entityId } = useEntity();
-  const { items, total, loading, error, reload } = useEntityList<EmployeeRow>(
-    "/staff/employees",
-    entityId,
-  );
+  const { items, total, loading, error, forbidden, reload } =
+    useEntityList<EmployeeRow>(
+      "/staff/employees?include_inactive=true",
+      entityId,
+    );
   const [formOpen, setFormOpen] = useState(false);
 
   return (
@@ -34,7 +36,7 @@ export default function StaffPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? `${total} employee${total === 1 ? "" : "s"}`
+            ? `${total} registered employee${total === 1 ? "" : "s"} (active and inactive — never deleted)`
             : "Select a restaurant in the sidebar"}
         </p>
         <div className="flex flex-wrap items-center gap-3">
@@ -53,9 +55,10 @@ export default function StaffPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {entityId && forbidden && <ForbiddenMessage context="staff list" />}
       {loading && <TableSkeleton columns={3} />}
 
-      {!loading && entityId && items.length === 0 && (
+      {!loading && entityId && !forbidden && items.length === 0 && (
         <EmptyState
           icon={UsersRound}
           title="No employees yet"

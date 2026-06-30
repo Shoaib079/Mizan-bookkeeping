@@ -34,7 +34,7 @@ export default function SuppliersPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? `${total} registered supplier${total === 1 ? "" : "s"} (active and inactive)`
+            ? `${total} registered supplier${total === 1 ? "" : "s"} (active and inactive — never deleted)`
             : "Select a restaurant in the sidebar"}
         </p>
         <div className="flex flex-wrap items-center gap-3">

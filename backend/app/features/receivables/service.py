@@ -27,7 +27,7 @@ def list_receivables(
     params = list_params or ListParams()
     with entity_context(session, entity_id):
         require_entity_context()
-        filters = [Customer.is_active.is_(True)]
+        filters: list = []
         search = text_search_filter(q, Customer.name, Customer.identifier)
         if search is not None:
             filters.append(search)
@@ -41,10 +41,14 @@ def list_receivables(
             .where(*filters)
             .group_by(Customer.id)
             .having(balance_expr != 0)
-            .order_by(Customer.name)
+            .order_by(balance_expr.desc(), Customer.name)
         )
-        all_rows = session.execute(stmt).all()
-        total_receivables = sum(int(balance or 0) for _, balance in all_rows)
+        total_receivables = int(
+            session.scalar(
+                select(func.coalesce(func.sum(CustomerLedgerEntry.amount_kurus), 0))
+            )
+            or 0
+        )
         rows, total = fetch_paginated_rows(session, stmt, params)
 
         balances: list[tuple[Customer, int]] = [

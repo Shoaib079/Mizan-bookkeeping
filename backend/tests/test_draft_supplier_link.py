@@ -141,12 +141,9 @@ def test_cross_entity_supplier_link_rejected(
     assert link.status_code == 404
 
 
-def test_auto_link_recreates_supplier_when_deleted(
-    client, restaurant_a, db_session
+def test_auto_link_recreates_supplier_when_deactivated_and_unlinked(
+    client, restaurant_a
 ) -> None:
-    from app.db.session import entity_context
-    from app.features.suppliers.models import Supplier
-
     upload = _upload_draft(client, restaurant_a.id)
     draft_id = upload.json()["id"]
     supplier_id = uuid.UUID(upload.json()["supplier_id"])
@@ -157,11 +154,11 @@ def test_auto_link_recreates_supplier_when_deleted(
     )
     assert unlink.status_code == 200
 
-    with entity_context(db_session, restaurant_a.id):
-        supplier = db_session.get(Supplier, supplier_id)
-        assert supplier is not None
-        db_session.delete(supplier)
-        db_session.commit()
+    deactivate = client.patch(
+        f"/entities/{restaurant_a.id}/suppliers/{supplier_id}",
+        json={"is_active": False},
+    )
+    assert deactivate.status_code == 200
 
     response = client.post(
         f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/link-supplier",
@@ -169,7 +166,7 @@ def test_auto_link_recreates_supplier_when_deleted(
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["supplier_id"] is not None
+    assert body["supplier_id"] == str(supplier_id)
     assert body["linked_supplier_vkn"] == "1234567890"
 
 

@@ -42,7 +42,7 @@ export function StaffBalancesTable() {
     setError(null);
     try {
       const list = await apiFetch<{ items: EmployeeRow[] }>(
-        `/entities/${entityId}/staff/employees?limit=100`,
+        `/entities/${entityId}/staff/employees?include_inactive=true&limit=100`,
       );
       const initial: StaffRowWithBalance[] = list.items.map((employee) => ({
         ...employee,

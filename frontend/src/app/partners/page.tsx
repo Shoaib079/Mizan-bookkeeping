@@ -56,7 +56,7 @@ export default function PartnersPage() {
     setError(null);
     try {
       const res = await apiFetch<PartnerListResponse>(
-        `/entities/${entityId}/partners?limit=50`,
+        `/entities/${entityId}/partners?include_inactive=true&limit=50`,
       );
       setItems(res.items);
       setTotal(res.total);
@@ -84,7 +84,7 @@ export default function PartnersPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? `${total} partner${total === 1 ? "" : "s"}`
+            ? `${total} registered partner${total === 1 ? "" : "s"} (active and inactive — never deleted)`
             : "Select a restaurant in the sidebar"}
         </p>
         <div className="flex flex-wrap items-center gap-3">

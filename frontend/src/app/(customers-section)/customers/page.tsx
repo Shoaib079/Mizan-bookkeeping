@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,10 +23,8 @@ import { useEntityList } from "@/lib/use-entity-list";
 
 export default function CustomersPage() {
   const { entityId } = useEntity();
-  const { items, total, loading, error, reload } = useEntityList<CustomerRow>(
-    "/customers",
-    entityId,
-  );
+  const { items, total, loading, error, forbidden, reload } =
+    useEntityList<CustomerRow>("/customers?include_inactive=true", entityId);
   const [formOpen, setFormOpen] = useState(false);
 
   return (
@@ -33,7 +32,7 @@ export default function CustomersPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? `${total} customer${total === 1 ? "" : "s"}`
+            ? `${total} registered customer${total === 1 ? "" : "s"} (active and inactive — never deleted)`
             : "Select a restaurant in the sidebar"}
         </p>
         <div className="flex flex-wrap items-center gap-3">
@@ -52,9 +51,10 @@ export default function CustomersPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {entityId && forbidden && <ForbiddenMessage context="customer list" />}
       {loading && <TableSkeleton columns={3} />}
 
-      {!loading && entityId && items.length === 0 && (
+      {!loading && entityId && !forbidden && items.length === 0 && (
         <EmptyState
           icon={UserCircle}
           title="No customers yet"

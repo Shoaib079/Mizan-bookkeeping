@@ -148,6 +148,12 @@ export function EmployeeForm({ open, onClose, employee, onSaved }: Props) {
             Active
           </label>
         )}
+        {editing && (
+          <p className="text-xs text-muted-foreground">
+            Inactive staff stay in the ledger and financial reports; records are
+            never deleted.
+          </p>
+        )}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Saving…" : editing ? "Save changes" : "Create employee"}

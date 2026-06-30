@@ -51,7 +51,7 @@ export function PartnersBalancesTable() {
       const res = await apiFetch<{
         items: PartnerRow[];
         ownership_share?: { warning: string | null };
-      }>(`/entities/${entityId}/partners?limit=100`);
+      }>(`/entities/${entityId}/partners?include_inactive=true&limit=100`);
       setShareWarning(res.ownership_share?.warning ?? null);
       const initial: PartnerRowWithBalance[] = res.items.map((partner) => ({
         ...partner,
