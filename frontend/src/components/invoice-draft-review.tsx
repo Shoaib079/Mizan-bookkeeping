@@ -26,6 +26,12 @@ import {
   canDiscardInvoiceDraft,
   canUnconfirmInvoiceDraft,
 } from "@/lib/review-status";
+import {
+  acceptSuggestionLabel,
+  confirmDraftLabel,
+  invoiceKindLabel,
+  needsClassificationReview,
+} from "@/lib/invoice-classification";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
 
 type VatLine = {
@@ -51,6 +57,7 @@ type InvoiceDraft = {
   gross_kurus: number;
   vat_breakdown: VatLine[];
   review_reason: string | null;
+  classification_confidence: "high" | "medium" | "low" | null;
   has_stored_document: boolean;
   source_type: string;
 };
@@ -86,6 +93,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
   const [rejecting, setRejecting] = useState(false);
   const [unconfirming, setUnconfirming] = useState(false);
   const [settingKind, setSettingKind] = useState(false);
+  const [showChangeType, setShowChangeType] = useState(false);
 
   const load = useCallback(async () => {
     if (!entityId) return;
@@ -271,8 +279,18 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
     }
   }
 
-  async function onSetKind(nextKind: "supplier" | "delivery_commission") {
-    if (!entityId || !draft || draft.invoice_kind === nextKind) return;
+  async function onSetKind(
+    nextKind: "supplier" | "delivery_commission",
+    options?: { acceptSuggestion?: boolean },
+  ) {
+    if (!entityId || !draft) return;
+    if (
+      !options?.acceptSuggestion &&
+      draft.invoice_kind === nextKind &&
+      !needsClassificationReview(draft.classification_confidence)
+    ) {
+      return;
+    }
     setSettingKind(true);
     setError(null);
     try {
@@ -288,11 +306,14 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
       );
       submitIdempotency.completeSubmit();
       setDraft(updated);
+      setShowChangeType(false);
       onUpdated?.("updated");
       toast(
-        nextKind === "delivery_commission"
-          ? "Classified as delivery commission"
-          : "Classified as supplier expense",
+        options?.acceptSuggestion
+          ? `Accepted as ${invoiceKindLabel(nextKind).toLowerCase()}`
+          : nextKind === "delivery_commission"
+            ? "Classified as delivery commission"
+            : "Classified as supplier expense",
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reclassify failed");
@@ -343,6 +364,9 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
   }
 
   const isCommission = draft.invoice_kind === "delivery_commission";
+  const classificationReview = needsClassificationReview(
+    draft.classification_confidence,
+  );
   const canLink =
     draft.status === "draft" || draft.status === "needs_review";
   const canConfirm =
@@ -360,11 +384,15 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <StatusBadge status={draft.status} />
-        {isCommission && (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            Delivery commission
-          </span>
-        )}
+        <span
+          className={
+            isCommission
+              ? "rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+              : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
+          }
+        >
+          {invoiceKindLabel(draft.invoice_kind)}
+        </span>
         <span className="text-sm text-muted-foreground">
           {draft.invoice_number} · {formatTrDate(draft.invoice_date)}
         </span>
@@ -450,11 +478,43 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         )}
       </div>
 
-      {canLink && (
+      {canLink && classificationReview && !showChangeType && (
         <div className="rounded-lg border border-border bg-card p-4">
-          <h2 className="mb-2 text-sm font-semibold">Invoice type</h2>
+          <h2 className="mb-1 text-sm font-semibold">Suggested type</h2>
+          <p className="mb-3 text-sm">{invoiceKindLabel(draft.invoice_kind)}</p>
+          {draft.review_reason && (
+            <p className="mb-3 text-sm text-warning">{draft.review_reason}</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              disabled={settingKind}
+              onClick={() =>
+                void onSetKind(
+                  draft.invoice_kind as "supplier" | "delivery_commission",
+                  { acceptSuggestion: true },
+                )
+              }
+            >
+              {acceptSuggestionLabel(draft.invoice_kind)}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={settingKind}
+              onClick={() => setShowChangeType(true)}
+            >
+              Change type
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {canLink && classificationReview && showChangeType && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-2 text-sm font-semibold">Change invoice type</h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            Change how this e-Fatura is classified before confirm.
+            Pick how this e-Fatura should post before confirm.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -472,6 +532,14 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
               onClick={() => void onSetKind("delivery_commission")}
             >
               Delivery commission
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={settingKind}
+              onClick={() => setShowChangeType(false)}
+            >
+              Cancel
             </Button>
           </div>
         </div>
@@ -594,7 +662,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
           {canConfirm && (
             <form onSubmit={onConfirm}>
               <Button type="submit" disabled={confirming}>
-                {confirming ? "Confirming…" : "Confirm draft"}
+                {confirming ? "Confirming…" : confirmDraftLabel(draft.invoice_kind)}
               </Button>
             </form>
           )}

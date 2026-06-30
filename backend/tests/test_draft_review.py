@@ -252,3 +252,31 @@ def test_list_drafts_filter_by_status(client, restaurant_a) -> None:
         params={"status": "draft"},
     )
     assert draft_only.json()["total"] == 0
+
+
+def test_accept_classification_promotes_confidence(client, restaurant_a, db_session) -> None:
+    draft = _linked_draft(client, restaurant_a.id)
+    draft_id = draft["id"]
+
+    from app.db.session import entity_context
+    from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus
+
+    with entity_context(db_session, restaurant_a.id):
+        row = db_session.get(InvoiceDraft, draft_id)
+        assert row is not None
+        payload = dict(row.extraction_payload or {})
+        payload["classification_confidence"] = "medium"
+        row.extraction_payload = payload
+        row.status = InvoiceDraftStatus.NEEDS_REVIEW.value
+        row.review_reason = "Getir invoice — confirm supplier expense vs delivery commission"
+        db_session.commit()
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/set-kind",
+        json={"invoice_kind": "supplier"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["classification_confidence"] == "high"
+    assert body["status"] == "draft"
+    assert body["review_reason"] is None

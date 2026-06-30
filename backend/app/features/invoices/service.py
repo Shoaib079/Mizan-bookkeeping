@@ -138,6 +138,44 @@ def _stored_document_path(draft: InvoiceDraft) -> Path | None:
     return path if path.is_file() else None
 
 
+def _is_classification_review_reason(reason: str | None) -> bool:
+    if not reason:
+        return False
+    return reason.startswith("Getir invoice — confirm")
+
+
+def _draft_classification_confidence(draft: InvoiceDraft) -> str:
+    payload = draft.extraction_payload or {}
+    stored = payload.get("classification_confidence")
+    if stored in ("high", "medium", "low"):
+        return stored
+
+    text_sample = payload.get("text_sample")
+    if isinstance(text_sample, str) and text_sample.strip():
+        extraction = EInvoiceExtraction(
+            supplier_name=draft.supplier_name,
+            supplier_vkn=draft.supplier_vkn,
+            invoice_number=draft.invoice_number,
+            invoice_date=draft.invoice_date,
+            net_kurus=draft.net_kurus,
+            gross_kurus=draft.gross_kurus,
+            vat_breakdown=draft.vat_breakdown or [],
+            currency=draft.currency,
+        )
+        return classify_efatura_intake(extraction, pdf_text=text_sample).confidence
+
+    return "high"
+
+
+def _set_draft_classification_confidence(
+    draft: InvoiceDraft,
+    confidence: str,
+) -> None:
+    payload = dict(draft.extraction_payload or {})
+    payload["classification_confidence"] = confidence
+    draft.extraction_payload = payload
+
+
 def _to_out(
     draft: InvoiceDraft,
     *,
@@ -167,6 +205,7 @@ def _to_out(
         currency=draft.currency,
         extraction_payload=draft.extraction_payload,
         review_reason=draft.review_reason,
+        classification_confidence=_draft_classification_confidence(draft),
         confirmed_at=draft.confirmed_at,
         confirmed_by=draft.confirmed_by,
         posted_at=draft.posted_at,
@@ -324,23 +363,29 @@ def _apply_commission_intake(
     extraction: EInvoiceExtraction,
     payload: dict,
     review_reason: str | None,
-) -> tuple[str, uuid.UUID | None, str | None]:
+) -> tuple[str, uuid.UUID | None, str | None, str]:
     """Auto-classify platform commission e-Faturas when delivery is enabled."""
     if not is_delivery_enabled(session, entity_id):
-        return InvoiceKind.SUPPLIER.value, None, review_reason
+        return InvoiceKind.SUPPLIER.value, None, review_reason, "high"
 
     pdf_text = _commission_pdf_text(payload)
     classification = classify_efatura_intake(extraction, pdf_text=pdf_text)
+    payload["classification_confidence"] = classification.confidence
 
     if classification.invoice_kind == InvoiceKind.SUPPLIER.value:
         if classification.confidence in ("medium", "low"):
             reason = classification.review_reason or review_reason
-            return InvoiceKind.SUPPLIER.value, None, reason
-        return InvoiceKind.SUPPLIER.value, None, review_reason
+            return InvoiceKind.SUPPLIER.value, None, reason, classification.confidence
+        return InvoiceKind.SUPPLIER.value, None, review_reason, classification.confidence
 
     if classification.confidence in ("medium", "low"):
         reason = classification.review_reason or review_reason
-        return InvoiceKind.DELIVERY_COMMISSION.value, None, reason
+        return (
+            InvoiceKind.DELIVERY_COMMISSION.value,
+            None,
+            reason,
+            classification.confidence,
+        )
 
     platform = match_delivery_platform(
         session,
@@ -353,9 +398,19 @@ def _apply_commission_intake(
             review_reason
             or "Platform commission invoice detected — link the delivery platform before confirm"
         )
-        return InvoiceKind.DELIVERY_COMMISSION.value, None, reason
+        return (
+            InvoiceKind.DELIVERY_COMMISSION.value,
+            None,
+            reason,
+            classification.confidence,
+        )
 
-    return InvoiceKind.DELIVERY_COMMISSION.value, platform.id, review_reason
+    return (
+        InvoiceKind.DELIVERY_COMMISSION.value,
+        platform.id,
+        review_reason,
+        classification.confidence,
+    )
 
 
 def _discard_invoice_draft(
@@ -412,7 +467,7 @@ def create_efatura_draft_from_upload(
             "create or link a supplier before confirm"
         )
 
-    invoice_kind, delivery_platform_id, review_reason = _apply_commission_intake(
+    invoice_kind, delivery_platform_id, review_reason, _confidence = _apply_commission_intake(
         session,
         entity_id,
         extraction=extraction,
@@ -720,6 +775,8 @@ def set_invoice_draft_kind(
         require_delivery_enabled(session, entity_id)
 
     with entity_context(session, entity_id):
+        _set_draft_classification_confidence(draft, "high")
+
         if invoice_kind == InvoiceKind.SUPPLIER:
             draft.invoice_kind = InvoiceKind.SUPPLIER.value
             draft.delivery_platform_id = None
@@ -730,7 +787,8 @@ def set_invoice_draft_kind(
                 )
             else:
                 draft.status = InvoiceDraftStatus.DRAFT.value
-                draft.review_reason = None
+                if _is_classification_review_reason(draft.review_reason):
+                    draft.review_reason = None
         elif invoice_kind == InvoiceKind.DELIVERY_COMMISSION:
             draft.invoice_kind = InvoiceKind.DELIVERY_COMMISSION.value
             if draft.delivery_platform_id is None:
@@ -741,7 +799,8 @@ def set_invoice_draft_kind(
                 )
             else:
                 draft.status = InvoiceDraftStatus.DRAFT.value
-                draft.review_reason = None
+                if _is_classification_review_reason(draft.review_reason):
+                    draft.review_reason = None
         session.commit()
         session.refresh(draft)
 

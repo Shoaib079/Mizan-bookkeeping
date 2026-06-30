@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { invoiceKindLabel } from "@/lib/invoice-classification";
 import {
   isInvoiceWorkbenchStatus,
   isPendingReviewStatus,
@@ -30,6 +31,7 @@ type InvoiceDraftRow = {
   id: string;
   status: string;
   invoice_kind: string;
+  classification_confidence: "high" | "medium" | "low" | null;
   invoice_number: string;
   invoice_date: string;
   supplier_name: string | null;
@@ -78,11 +80,15 @@ function InvoiceDraftTable({
                 <DataTableCell>
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium">{row.invoice_number}</span>
-                    {isCommission && (
-                      <span className="text-xs text-primary">
-                        Delivery commission
-                      </span>
-                    )}
+                    <span
+                      className={
+                        isCommission
+                          ? "text-xs text-primary"
+                          : "text-xs text-muted-foreground"
+                      }
+                    >
+                      {invoiceKindLabel(row.invoice_kind)}
+                    </span>
                   </div>
                 </DataTableCell>
                 <DataTableCell>{formatTrDate(row.invoice_date)}</DataTableCell>

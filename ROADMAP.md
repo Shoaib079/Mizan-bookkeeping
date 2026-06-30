@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | **IC-C** — Invoice review confidence UX (see `POST_LAUNCH_PLAN.md` § IC-C) |
-| **Last completed slice** | Invoice classification fixtures (`v0.73.21-invoice-classification-fixtures`) |
-| **Last commit/tag**      | `v0.73.21-invoice-classification-fixtures` — YS Hizmet Bedeli detection; supply layout; Spice Corner fixtures; intake confidence; platform link no longer forces commission |
-| **Next up**              | **IC-C** (review UX); then **FP/FS**; then **P3/P5/P6**; **IC-D** learning after IC-C stable; **P8** groceries design |
+| **Active slice**         | **IC-D** *(deferred)* — Per-entity classification learning; **FP/FS** next after owner sign-off on IC-C |
+| **Last completed slice** | Invoice review confidence UX (`v0.73.22-invoice-review-confidence-ux`) |
+| **Last commit/tag**      | `v0.73.22-invoice-review-confidence-ux` — kind badge + confidence-driven review; Accept suggestion / Change type only when not HIGH |
+| **Next up**              | **IC-C owner sign-off → FP/FS**; **IC-D** when IC-C stable; **P3/P5/P6**; **P8** groceries design |
 
 
 ### Next plan (pre-launch, owner-driven)
@@ -66,7 +66,8 @@
 | Supplier activity timeline + inline invoice preview                              | `v0.73.19-supplier-activity-invoice-preview`        | done           | Re-build separate ledger/invoice tabs; commission confirm requiring supplier; block duplicate discard                        |
 | Invoice unconfirm / redo (IC-A)                                                | `v0.73.20-invoice-unconfirm-redo`                   | done           | Unconfirm confirmed→draft; reject/discard confirmed; set-kind reclassify; review UI |
 | Invoice classification fixtures + post fixes (IC-B)                            | `v0.73.21-invoice-classification-fixtures`          | done           | YS Hizmet Bedeli; supply Depo/SKU; Spice Corner PDF fixtures; intake confidence; platform link preserves kind |
-| Invoice review confidence UX (IC-C)                                            | *queued* — see `POST_LAUNCH_PLAN.md` § IC-C         | planned        | Badge + suggest type; needs_review path only when not HIGH confidence |
+| Invoice review confidence UX (IC-C)                                            | `v0.73.22-invoice-review-confidence-ux`             | done           | Kind badge; HIGH → confirm only; MEDIUM/LOW → Accept suggestion or Change type |
+| Per-entity invoice classification learning (IC-D)                              | *deferred* — see `POST_LAUNCH_PLAN.md` § IC-D       | planned        | Learn on override; suggest after N confirms |
 
 
 **Owner sign-off ✓ (2026-06-28)** on Phase 12.5 statement-learning arc through clearance auto-pick (`v0.72.0-clearance-auto-pick`) — rule auto-post (bank fee + supplier payment), review hub, match_token trim, POS/delivery link-only auto-clear.
@@ -1834,6 +1835,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-25 | Invoice review confidence UX (IC-C)           | `v0.73.22-invoice-review-confidence-ux`              | `classification_confidence` on draft API; kind badge; HIGH → one Confirm; MEDIUM/LOW → Accept suggestion / Change type |
 | 2026-06-25 | Invoice classification fixtures (IC-B)        | `v0.73.21-invoice-classification-fixtures`           | YS Hizmet Bedeli + supply Depo/SKU detection; `classify_efatura_intake` confidence; platform link no longer forces commission; Spice Corner 5-PDF pytest corpus |
 | 2026-06-30 | Invoice unconfirm / redo (IC-A)               | `v0.73.20-invoice-unconfirm-redo`                      | `POST …/unconfirm` + `POST …/set-kind`; reject discards confirmed; draft review UI: Send back to review, Discard, reclassify; review panel keeps expand open on unconfirm |
 | 2026-06-30 | Supplier activity + inline invoice preview      | `v0.73.19-supplier-activity-invoice-preview`           | Chronological supplier timeline API + single-sheet Excel export; inline PDF preview on review hub, supplier activity, draft review; commission confirm without supplier when platform linked; duplicate discard; document download endpoint |

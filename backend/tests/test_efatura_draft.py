@@ -103,6 +103,7 @@ def test_reupload_after_reject_creates_fresh_draft(client, restaurant_a) -> None
     body = second.json()
     assert body["status"] == "draft"
     assert body["review_reason"] is None
+    assert body["classification_confidence"] == "high"
     assert Path(body["extraction_payload"]["stored_path"]).exists()
 
 

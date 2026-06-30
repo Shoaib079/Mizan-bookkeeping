@@ -28,7 +28,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 | Priority | ID | Slice | Status |
 |----------|-----|-------|--------|
-| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-B done** — IC-C next |
+| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-C done** — FP/FS next |
 | 2 | FP | Partner advance / drawing | Queued |
 | 3 | FS | Salary period + auto-clear advance | Queued |
 | 4 | P3 | Off-site backup of uploads | Queued |
@@ -103,7 +103,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 ---
 
-#### IC-C — Review UX (minimal friction)
+#### IC-C — Review UX (minimal friction) ✅ `v0.73.22-invoice-review-confidence-ux`
 
 **Spec:** Preview + badge (**Supplier expense** / **Delivery commission**). HIGH confidence → suggest type + one Confirm. `needs_review` only → Accept suggestion or Change type. Unconfirm on confirmed. Do **not** ask type on every upload once IC-B is green.
 

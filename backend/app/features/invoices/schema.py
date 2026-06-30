@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -82,6 +82,7 @@ class InvoiceDraftOut(BaseModel):
     currency: str
     extraction_payload: dict[str, Any]
     review_reason: str | None = None
+    classification_confidence: Literal["high", "medium", "low"] | None = None
     confirmed_at: datetime | None = None
     confirmed_by: uuid.UUID | None = None
     posted_at: datetime | None = None

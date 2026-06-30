@@ -9,10 +9,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Post-launch — e-Fatura intake & invoice routing |
-| **Active slice** | **IC-C** — Review confidence UX (`POST_LAUNCH_PLAN.md` § IC-C) |
-| **Last completed slice** | IC-B — Classification fixtures + post fixes (`v0.73.21-invoice-classification-fixtures`) |
-| **Last tag** | `v0.73.21-invoice-classification-fixtures` |
-| **Next up** | IC-C → FP → FS → P3/P5/P6 → IC-D (learning, deferred) → P8 design |
+| **Active slice** | **FP/FS** — feature gaps (after IC-C sign-off); **IC-D** deferred |
+| **Last completed slice** | IC-C — Review confidence UX (`v0.73.22-invoice-review-confidence-ux`) |
+| **Last tag** | `v0.73.22-invoice-review-confidence-ux` |
+| **Next up** | FP → FS → P3/P5/P6 → IC-D (learning, deferred) → P8 design |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 
@@ -62,11 +62,11 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**`v0.73.21-invoice-classification-fixtures`** — YS Hizmet Bedeli; supply vs commission; Spice Corner fixtures. Prior: **`v0.73.20`** unconfirm/redo.
+**`v0.73.22-invoice-review-confidence-ux`** — kind badge; HIGH → Confirm; MEDIUM/LOW → Accept/Change type. Prior: **`v0.73.21`** classification fixtures.
 
 **Deploy:** `alembic upgrade head` through **`059`** on Railway. Set entity VKN in Set up → Restaurant if legacy row.
 
-**Next build:** **`POST_LAUNCH_PLAN.md` § IC-C** (review confidence UX). **FP/FS after IC-C.**
+**Next build:** **`POST_LAUNCH_PLAN.md` § FP/FS** after IC-C sign-off. **IC-D** deferred until stable.
 
 **Owner sign-off ✓ (2026-06-28)** — clearance auto-pick (`v0.72.0-clearance-auto-pick`). Phase 12.5 statement-learning arc closed.
 
