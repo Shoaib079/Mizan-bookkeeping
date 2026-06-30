@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { FileUpload } from "@/components/ui/file-upload";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -82,12 +83,12 @@ export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="efatura-file">e-Fatura file</Label>
-          <input
+          <FileUpload
             id="efatura-file"
-            type="file"
             accept=".xml,.pdf,application/xml,application/pdf"
-            className="block w-full text-sm"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            file={file}
+            acceptHint="PDF or XML"
+            onFileChange={setFile}
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

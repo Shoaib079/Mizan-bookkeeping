@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { FileUpload } from "@/components/ui/file-upload";
 import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -295,14 +296,13 @@ export function StatementUploadForm({
           </p>
           <div>
             <Label htmlFor="stmt-file">Statement file</Label>
-            <input
+            <FileUpload
               id="stmt-file"
-              type="file"
               accept={ACCEPT}
-              className="mt-1 block w-full text-sm"
               disabled={loadingPreview}
-              onChange={(e) => {
-                const selected = e.target.files?.[0] ?? null;
+              file={file}
+              acceptHint="CSV or Excel"
+              onFileChange={(selected) => {
                 setFile(selected);
                 if (selected) void loadPreview(selected);
               }}

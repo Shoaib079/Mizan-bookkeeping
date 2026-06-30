@@ -15,8 +15,14 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import {
+  filterExpenseAccounts,
+  findExpenseAccountByCode,
+  formatExpenseAccountLabel,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 
-type ExpenseAccountOption = { id: string; code: string; name: string };
+type ExpenseAccountOption = ChartAccount;
 
 export type CorrectableSupplierInvoiceRow = {
   journal_entry_id: string;
@@ -71,9 +77,9 @@ export function CorrectSupplierInvoiceForm({
     const chart = await apiFetch<{ items: ExpenseAccountOption[] }>(
       `/entities/${entityId}/chart-of-accounts?limit=200`,
     );
-    const expenses = chart.items.filter((a) => a.code.startsWith("5"));
+    const expenses = filterExpenseAccounts(chart.items);
     setAccounts(expenses);
-    const preferred = expenses.find((a) => a.code === "5200");
+    const preferred = findExpenseAccountByCode(chart.items, "5200");
     if (preferred) setExpenseAccountId(preferred.id);
     else if (expenses[0]) setExpenseAccountId(expenses[0].id);
   }, [entityId]);
@@ -167,7 +173,7 @@ export function CorrectSupplierInvoiceForm({
               onValueChange={setExpenseAccountId}
               options={accounts.map((a) => ({
                 value: a.id,
-                label: `${a.code} — ${a.name}`,
+                label: formatExpenseAccountLabel(a),
               }))}
               placeholder="Expense account…"
             />

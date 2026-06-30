@@ -11,6 +11,12 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import {
+  filterExpenseAccounts,
+  findExpenseAccountByCode,
+  formatExpenseAccountLabel,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -51,7 +57,7 @@ type DeliveryReportOption = {
 };
 
 type SupplierOption = { id: string; name: string; vkn: string };
-type Account = { id: string; code: string; name: string };
+type Account = ChartAccount;
 
 type Props = {
   draftId: string;
@@ -102,11 +108,15 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
       reportsRes.items.filter((r) => r.commission_journal_entry_id === null),
     );
     const isCommission = draftRes.invoice_kind === "delivery_commission";
-    const expenses = chartRes.items.filter((a) =>
-      isCommission ? a.code === "5500" : ["5200", "5300"].includes(a.code),
-    );
+    const expenses = isCommission
+      ? chartRes.items.filter((a) => a.code === "5500")
+      : filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(expenses);
-    if (expenses[0]) setExpenseAccountId(expenses[0].id);
+    const preferred = isCommission
+      ? expenses[0]
+      : findExpenseAccountByCode(chartRes.items, "5200");
+    if (preferred) setExpenseAccountId(preferred.id);
+    else if (expenses[0]) setExpenseAccountId(expenses[0].id);
     if (draftRes.supplier_id) setSelectedSupplierId(draftRes.supplier_id);
     if (draftRes.delivery_report_id) {
       setSelectedReportId(draftRes.delivery_report_id);
@@ -454,7 +464,7 @@ export function InvoiceDraftReview({ draftId, onUpdated }: Props) {
             >
               {expenseAccounts.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.code} — {a.name}
+                  {formatExpenseAccountLabel(a)}
                 </option>
               ))}
             </Select>

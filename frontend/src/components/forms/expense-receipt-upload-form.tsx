@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { FileUpload } from "@/components/ui/file-upload";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/input";
@@ -96,12 +97,12 @@ export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="receipt-file">Receipt photo</Label>
-          <input
+          <FileUpload
             id="receipt-file"
-            type="file"
             accept="image/*,.txt"
-            className="block w-full text-sm"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            file={file}
+            acceptHint="Photo or image file"
+            onFileChange={setFile}
           />
         </div>
         <div>

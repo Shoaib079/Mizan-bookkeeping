@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { FileUpload } from "@/components/ui/file-upload";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -72,12 +73,12 @@ export function PosSummaryUploadForm({ open, onClose }: Props) {
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="pos-summary-file">POS summary photo</Label>
-          <input
+          <FileUpload
             id="pos-summary-file"
-            type="file"
             accept="image/*,.txt"
-            className="block w-full text-sm"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            file={file}
+            acceptHint="Photo or image file"
+            onFileChange={setFile}
           />
           <p className="mt-1 text-xs text-muted-foreground">
             Upload the end-of-day POS slip. Amounts are read automatically for
