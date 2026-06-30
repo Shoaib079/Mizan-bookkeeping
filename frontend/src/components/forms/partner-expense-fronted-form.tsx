@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Dialog } from "@/components/ui/dialog";
+import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -25,6 +25,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   partnerId: string;
+  embedded?: boolean;
   onSaved?: () => void;
 };
 
@@ -32,6 +33,7 @@ export function PartnerExpenseFrontedForm({
   open,
   onClose,
   partnerId,
+  embedded,
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
@@ -116,7 +118,12 @@ export function PartnerExpenseFrontedForm({
   }
 
   return (
-    <Dialog open={open} title="Expense fronted by partner" onClose={onClose}>
+    <FormDialogShell
+      embedded={embedded}
+      open={open}
+      title="Expense fronted by partner"
+      onClose={onClose}
+    >
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="pf-date">Expense date (DD.MM.YYYY)</Label>
@@ -163,6 +170,6 @@ export function PartnerExpenseFrontedForm({
           {submitting ? "Recording…" : "Record expense fronted"}
         </Button>
       </form>
-    </Dialog>
+    </FormDialogShell>
   );
 }

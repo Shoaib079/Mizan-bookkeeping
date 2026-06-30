@@ -16,6 +16,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **UX6 — Collapse sidebar (`v0.73.5-ux6-collapse-sidebar`):** Sidebar shows six intents only (Dashboard, Record, Review, Balances, Reports, Set up). Domain pages remain via tabs/redirects; `/uploads` → `/record`; duplicate upload buttons on Sales/Supplier headers replaced with Record links. **234 vitest**; no backend/posting changes.
 
+**UX7 — Unified record dialogs (`v0.73.6-ux7-unified-record-dialogs`):** Record hub people actions (8), bank statement upload, and FX convert/spend use one dialog each — person/account/wallet picker plus form fields on the same screen (matches buy-FX pattern). `FormDialogShell` + `embedded` on money forms; removed `person-picker-dialog.tsx`. Tests: `unified-record-dialogs.test.ts` (4). **Frontend build green**; no backend/posting changes.
+
 ## 2026-06-28
 
 **Owner sign-off — Phase 12.5 clearance auto-pick:** Owner approved POS/delivery settlement link-only auto-clear (`v0.72.0-clearance-auto-pick`) — HIGH-confidence rule + unique existing-settlement match; never auto-creates settlements. **677 pytest green** at sign-off. Phase 12.5 statement-learning arc closed. **Next:** Phase 12 production go-live (migrations, hosts, first restaurant walkthrough).

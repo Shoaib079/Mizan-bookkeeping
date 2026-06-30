@@ -14,9 +14,9 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | UX reorg complete — feature gaps FP/FS next                                                                       |
-| **Last completed slice** | UX6 — Collapse sidebar (`v0.73.5-ux6-collapse-sidebar`)                                            |
-| **Last commit/tag**      | `v0.73.5-ux6-collapse-sidebar` — feat(ux): collapse sidebar to intents              |
+| **Active slice**         | Feature gaps FP/FS next                                                                       |
+| **Last completed slice** | UX7 — Unified record dialogs (`v0.73.6-ux7-unified-record-dialogs`)                                            |
+| **Last commit/tag**      | `v0.73.6-ux7-unified-record-dialogs` — feat(ux): unified record dialogs              |
 | **Next up**              | Feature gaps FP/FS; then P3/P5/P6                    |
 
 

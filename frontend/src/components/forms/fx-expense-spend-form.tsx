@@ -6,7 +6,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Dialog } from "@/components/ui/dialog";
+import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -27,6 +27,7 @@ type Props = {
   onClose: () => void;
   fxAccountId: string;
   currency: string;
+  embedded?: boolean;
   onSaved?: () => void;
 };
 
@@ -35,6 +36,7 @@ export function FxExpenseSpendForm({
   onClose,
   fxAccountId,
   currency,
+  embedded,
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
@@ -115,7 +117,12 @@ export function FxExpenseSpendForm({
   }
 
   return (
-    <Dialog open={open} title={`Spend ${currency} on expense`} onClose={onClose}>
+    <FormDialogShell
+      embedded={embedded}
+      open={open}
+      title={`Spend ${currency} on expense`}
+      onClose={onClose}
+    >
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="fx-spend-native">{currency} amount</Label>
@@ -163,6 +170,6 @@ export function FxExpenseSpendForm({
           {submitting ? "Recording…" : "Record spend"}
         </Button>
       </form>
-    </Dialog>
+    </FormDialogShell>
   );
 }

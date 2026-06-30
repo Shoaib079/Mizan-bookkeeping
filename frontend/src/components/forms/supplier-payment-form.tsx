@@ -6,7 +6,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Dialog } from "@/components/ui/dialog";
+import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -27,6 +27,7 @@ type Props = {
   onClose: () => void;
   supplierId: string;
   balanceKurus?: number;
+  embedded?: boolean;
   onPaid?: () => void;
 };
 
@@ -35,6 +36,7 @@ export function SupplierPaymentForm({
   onClose,
   supplierId,
   balanceKurus,
+  embedded,
   onPaid,
 }: Props) {
   const { entityId, actorId } = useEntity();
@@ -133,7 +135,7 @@ export function SupplierPaymentForm({
   }
 
   return (
-    <Dialog open={open} title="Record payment" onClose={onClose}>
+    <FormDialogShell embedded={embedded} open={open} title="Record payment" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         {balanceKurus !== undefined && balanceKurus > 0 && (
           <p className="text-sm text-muted-foreground">
@@ -204,6 +206,6 @@ export function SupplierPaymentForm({
           {submitting ? "Recording…" : "Record payment"}
         </Button>
       </form>
-    </Dialog>
+    </FormDialogShell>
   );
 }

@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Dialog } from "@/components/ui/dialog";
+import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -21,6 +21,7 @@ type Props = {
   onClose: () => void;
   partnerId: string;
   balanceKurus?: number;
+  embedded?: boolean;
   onSaved?: () => void;
 };
 
@@ -29,6 +30,7 @@ export function PartnerReimbursementForm({
   onClose,
   partnerId,
   balanceKurus,
+  embedded,
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
@@ -112,7 +114,12 @@ export function PartnerReimbursementForm({
   }
 
   return (
-    <Dialog open={open} title="Pay reimbursement" onClose={onClose}>
+    <FormDialogShell
+      embedded={embedded}
+      open={open}
+      title="Pay reimbursement"
+      onClose={onClose}
+    >
       <form onSubmit={onSubmit} className="space-y-3">
         {balanceKurus !== undefined && balanceKurus > 0 && (
           <p className="text-sm text-muted-foreground">
@@ -164,6 +171,6 @@ export function PartnerReimbursementForm({
           {submitting ? "Recording…" : "Record reimbursement"}
         </Button>
       </form>
-    </Dialog>
+    </FormDialogShell>
   );
 }

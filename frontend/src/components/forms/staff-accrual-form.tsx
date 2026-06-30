@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Dialog } from "@/components/ui/dialog";
+import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
@@ -20,6 +20,7 @@ type Props = {
   onClose: () => void;
   employeeId: string;
   payCurrency: string;
+  embedded?: boolean;
   onSaved?: () => void;
 };
 
@@ -28,6 +29,7 @@ export function StaffAccrualForm({
   onClose,
   employeeId,
   payCurrency,
+  embedded,
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
@@ -97,7 +99,12 @@ export function StaffAccrualForm({
   }
 
   return (
-    <Dialog open={open} title="Salary accrual" onClose={onClose}>
+    <FormDialogShell
+      embedded={embedded}
+      open={open}
+      title="Salary accrual"
+      onClose={onClose}
+    >
       <form onSubmit={onSubmit} className="space-y-3">
         <p className="text-xs text-muted-foreground">
           Accrues salary payable ({payCurrency}). No cash movement.
@@ -145,6 +152,6 @@ export function StaffAccrualForm({
           {submitting ? "Recording…" : "Record accrual"}
         </Button>
       </form>
-    </Dialog>
+    </FormDialogShell>
   );
 }

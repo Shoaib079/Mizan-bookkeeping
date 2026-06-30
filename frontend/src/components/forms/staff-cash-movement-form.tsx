@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Dialog } from "@/components/ui/dialog";
+import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -27,6 +27,7 @@ type Props = {
   employeeId: string;
   kind: "advance" | "payment";
   payCurrency: string;
+  embedded?: boolean;
   onSaved?: () => void;
 };
 
@@ -36,6 +37,7 @@ export function StaffCashMovementForm({
   employeeId,
   kind,
   payCurrency,
+  embedded,
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
@@ -168,7 +170,7 @@ export function StaffCashMovementForm({
   const title = kind === "advance" ? "Record advance" : "Record salary payment";
 
   return (
-    <Dialog open={open} title={title} onClose={onClose}>
+    <FormDialogShell embedded={embedded} open={open} title={title} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <p className="text-xs text-muted-foreground">
           {isTry
@@ -264,6 +266,6 @@ export function StaffCashMovementForm({
           {submitting ? "Recording…" : title}
         </Button>
       </form>
-    </Dialog>
+    </FormDialogShell>
   );
 }

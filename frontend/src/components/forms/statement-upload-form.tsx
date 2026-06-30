@@ -6,7 +6,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import type {
@@ -22,7 +22,9 @@ type Props = {
   open: boolean;
   onClose: () => void;
   moneyAccountId: string;
+  embedded?: boolean;
   onUploaded?: () => void;
+  onStepChange?: (step: "pick" | "map") => void;
 };
 
 type DateFormat = "DD.MM.YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD";
@@ -169,7 +171,9 @@ export function StatementUploadForm({
   open,
   onClose,
   moneyAccountId,
+  embedded,
   onUploaded,
+  onStepChange,
 }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
@@ -201,6 +205,10 @@ export function StatementUploadForm({
     if (open) submitIdempotency.resetSubmit();
     else reset();
   }, [open, submitIdempotency, reset]);
+
+  useEffect(() => {
+    if (open) onStepChange?.(step);
+  }, [open, step, onStepChange]);
 
   async function loadPreview(selected: File) {
     if (!entityId) {
@@ -273,7 +281,8 @@ export function StatementUploadForm({
   }
 
   return (
-    <Dialog
+    <FormDialogShell
+      embedded={embedded}
       open={open}
       title={step === "pick" ? "Upload bank statement" : "Map columns"}
       onClose={onClose}
@@ -545,6 +554,6 @@ export function StatementUploadForm({
           </div>
         </form>
       )}
-    </Dialog>
+    </FormDialogShell>
   );
 }

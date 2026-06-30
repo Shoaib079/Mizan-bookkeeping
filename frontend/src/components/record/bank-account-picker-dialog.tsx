@@ -1,10 +1,11 @@
 "use client";
 
+/** Record hub bank statement — pick account and upload in one dialog. */
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { StatementUploadForm } from "@/components/forms/statement-upload-form";
-import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
@@ -29,14 +30,14 @@ export function BankAccountPickerDialog({ open, onClose }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<MoneyAccountRow[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadStep, setUploadStep] = useState<"pick" | "map">("pick");
 
   const reset = useCallback(() => {
     setAccounts([]);
     setSelectedId("");
     setLoadError(null);
     setLoading(false);
-    setUploadOpen(false);
+    setUploadStep("pick");
   }, []);
 
   useEffect(() => {
@@ -78,45 +79,45 @@ export function BankAccountPickerDialog({ open, onClose }: Props) {
     [accounts],
   );
 
+  const title =
+    uploadStep === "map" ? "Map columns" : "Bank statement";
+
   function handleClose() {
     reset();
     onClose();
   }
 
   return (
-    <>
-      <Dialog open={open && !uploadOpen} title="Bank statement" onClose={handleClose}>
-        {!entityId && (
-          <p className="text-sm text-muted-foreground">
-            Select a restaurant in the sidebar first.
+    <Dialog open={open} title={title} onClose={handleClose}>
+      {!entityId && (
+        <p className="text-sm text-muted-foreground">
+          Select a restaurant in the sidebar first.
+        </p>
+      )}
+
+      {entityId && loading && (
+        <p className="text-sm text-muted-foreground">Loading bank accounts…</p>
+      )}
+
+      {entityId && !loading && loadError && (
+        <p className="text-sm text-destructive">{loadError}</p>
+      )}
+
+      {entityId && !loading && !loadError && accounts.length === 0 && (
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            No bank account found. Add one under{" "}
+            <Link href="/banking" className="text-primary hover:underline">
+              Banking
+            </Link>{" "}
+            first.
           </p>
-        )}
+        </div>
+      )}
 
-        {entityId && loading && (
-          <p className="text-sm text-muted-foreground">Loading bank accounts…</p>
-        )}
-
-        {entityId && !loading && loadError && (
-          <p className="text-sm text-destructive">{loadError}</p>
-        )}
-
-        {entityId && !loading && !loadError && accounts.length === 0 && (
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              No bank account found. Add one under{" "}
-              <Link href="/banking" className="text-primary hover:underline">
-                Banking
-              </Link>{" "}
-              first.
-            </p>
-            <Button type="button" variant="ghost" onClick={handleClose}>
-              Close
-            </Button>
-          </div>
-        )}
-
-        {entityId && !loading && accounts.length > 0 && (
-          <div className="space-y-4">
+      {entityId && !loading && accounts.length > 0 && (
+        <div className="space-y-4">
+          {uploadStep === "pick" && (
             <div>
               <Label>Bank account</Label>
               <Combobox
@@ -126,30 +127,20 @@ export function BankAccountPickerDialog({ open, onClose }: Props) {
                 placeholder="Choose account…"
               />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={!selectedId}
-                onClick={() => setUploadOpen(true)}
-              >
-                Continue
-              </Button>
-            </div>
-          </div>
-        )}
-      </Dialog>
+          )}
 
-      <StatementUploadForm
-        open={uploadOpen}
-        moneyAccountId={selectedId}
-        onClose={() => {
-          setUploadOpen(false);
-          handleClose();
-        }}
-      />
-    </>
+          {selectedId && (
+            <StatementUploadForm
+              key={selectedId}
+              embedded
+              open
+              moneyAccountId={selectedId}
+              onStepChange={setUploadStep}
+              onClose={handleClose}
+            />
+          )}
+        </div>
+      )}
+    </Dialog>
   );
 }

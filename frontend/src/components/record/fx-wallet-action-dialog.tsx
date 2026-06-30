@@ -1,5 +1,7 @@
 "use client";
 
+/** Record hub FX convert/spend — pick wallet and enter fields in one dialog. */
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -29,14 +31,12 @@ export function FxWalletActionDialog({ open, onClose, mode }: Props) {
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
 
   const reset = useCallback(() => {
     setAccounts([]);
     setLoadError(null);
     setSelectedId("");
     setLoading(false);
-    setFormOpen(false);
   }, []);
 
   useEffect(() => {
@@ -87,19 +87,6 @@ export function FxWalletActionDialog({ open, onClose, mode }: Props) {
   }
 
   if (!open) return null;
-
-  if (formOpen && selected && selectedCurrency) {
-    const formProps = {
-      open: true,
-      fxAccountId: selected.id,
-      currency: selectedCurrency,
-      onClose: handleClose,
-    };
-    if (mode === "convert") {
-      return <FxConversionForm {...formProps} />;
-    }
-    return <FxExpenseSpendForm {...formProps} />;
-  }
 
   return (
     <Dialog open={open} title={title} onClose={handleClose}>
@@ -160,18 +147,28 @@ export function FxWalletActionDialog({ open, onClose, mode }: Props) {
               );
             })}
           </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={!selectedId}
-              onClick={() => setFormOpen(true)}
-            >
-              Continue
-            </Button>
-          </div>
+
+          {selected && selectedCurrency && (
+            <div key={selected.id} className="border-t border-border pt-4">
+              {mode === "convert" ? (
+                <FxConversionForm
+                  embedded
+                  open
+                  fxAccountId={selected.id}
+                  currency={selectedCurrency}
+                  onClose={handleClose}
+                />
+              ) : (
+                <FxExpenseSpendForm
+                  embedded
+                  open
+                  fxAccountId={selected.id}
+                  currency={selectedCurrency}
+                  onClose={handleClose}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
     </Dialog>

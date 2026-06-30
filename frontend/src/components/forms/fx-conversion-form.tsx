@@ -6,7 +6,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Dialog } from "@/components/ui/dialog";
+import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -24,6 +24,7 @@ type Props = {
   onClose: () => void;
   fxAccountId: string;
   currency: string;
+  embedded?: boolean;
   onSaved?: () => void;
 };
 
@@ -32,6 +33,7 @@ export function FxConversionForm({
   onClose,
   fxAccountId,
   currency,
+  embedded,
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
@@ -127,7 +129,12 @@ export function FxConversionForm({
   }
 
   return (
-    <Dialog open={open} title={`Convert ${currency} to TRY`} onClose={onClose}>
+    <FormDialogShell
+      embedded={embedded}
+      open={open}
+      title={`Convert ${currency} to TRY`}
+      onClose={onClose}
+    >
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="fx-conv-native">{currency} spent</Label>
@@ -185,6 +192,6 @@ export function FxConversionForm({
           {submitting ? "Converting…" : "Record conversion"}
         </Button>
       </form>
-    </Dialog>
+    </FormDialogShell>
   );
 }
