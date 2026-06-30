@@ -20,6 +20,7 @@ from app.core.ledger.posting import (
     InvalidAccountError,
     PostingLine,
     prepare_journal_entry,
+    validate_posting_lines,
 )
 from app.core.payables.ledger import persist_supplier_invoice_entry
 from app.core.payables.models import SupplierLedgerEntry
@@ -50,13 +51,24 @@ def build_invoice_posting_lines(
     gross_kurus: int,
     vat_breakdown: list,
 ) -> list[PostingLine]:
-    """GL pattern: debit expense + input VAT; credit AP for gross."""
+    """GL pattern: debit expense + input VAT; credit AP for gross.
+
+    Expense is gross minus all VAT lines (equals net when totals validate). Negative
+    VAT lines (e.g. Getir line discounts) credit input VAT so debits equal credits.
+    """
     validate_invoice_totals(net_kurus, gross_kurus, vat_breakdown)
+
+    if vat_breakdown:
+        vat_sum = sum(int(entry["vat_kurus"]) for entry in vat_breakdown)
+        expense_kurus = gross_kurus - vat_sum
+    else:
+        expense_kurus = net_kurus
+        vat_sum = gross_kurus - net_kurus
 
     lines: list[PostingLine] = [
         PostingLine(
             account_id=expense_account_id,
-            amount_kurus=net_kurus,
+            amount_kurus=expense_kurus,
             side=AccountNormalBalance.DEBIT,
         ),
     ]
@@ -72,16 +84,22 @@ def build_invoice_posting_lines(
                         side=AccountNormalBalance.DEBIT,
                     )
                 )
-    else:
-        vat_total = gross_kurus - net_kurus
-        if vat_total > 0:
-            lines.append(
-                PostingLine(
-                    account_id=input_vat_account_id,
-                    amount_kurus=vat_total,
-                    side=AccountNormalBalance.DEBIT,
+            elif vat_kurus < 0:
+                lines.append(
+                    PostingLine(
+                        account_id=input_vat_account_id,
+                        amount_kurus=abs(vat_kurus),
+                        side=AccountNormalBalance.CREDIT,
+                    )
                 )
+    elif vat_sum > 0:
+        lines.append(
+            PostingLine(
+                account_id=input_vat_account_id,
+                amount_kurus=vat_sum,
+                side=AccountNormalBalance.DEBIT,
             )
+        )
 
     lines.append(
         PostingLine(
@@ -90,6 +108,7 @@ def build_invoice_posting_lines(
             side=AccountNormalBalance.CREDIT,
         )
     )
+    validate_posting_lines(lines)
     return lines
 
 

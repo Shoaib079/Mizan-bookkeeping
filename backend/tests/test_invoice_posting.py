@@ -15,7 +15,7 @@ from app.core.chart_of_accounts.default_chart import (
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
-from app.core.invoices.posting import DraftPostError, post_confirmed_draft
+from app.core.invoices.posting import DraftPostError, build_invoice_posting_lines, post_confirmed_draft
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource
 from app.core.ledger.posting import InvalidAccountError
 from app.core.payables.models import SupplierLedgerEntry
@@ -285,6 +285,93 @@ def test_per_rate_vat_lines(
         )
     assert len(vat_lines) == 2
     assert sorted(line.amount_kurus for line in vat_lines) == [1_000_000, 1_500_000]
+
+
+def test_build_invoice_posting_lines_negative_vat_balances(seeded_accounts) -> None:
+    """Mixed-rate grocery invoice with discount VAT (Getir-style) must balance."""
+    gross_kurus = 146_022
+    vat_breakdown = [
+        {"rate_percent": 10, "base_kurus": 100_000, "vat_kurus": 36_693},
+        {"rate_percent": 1, "base_kurus": 10_000, "vat_kurus": -2_471},
+    ]
+    net_kurus = gross_kurus - sum(line["vat_kurus"] for line in vat_breakdown)
+
+    lines = build_invoice_posting_lines(
+        expense_account_id=seeded_accounts["5200"],
+        ap_account_id=seeded_accounts[ACCOUNTS_PAYABLE_CODE],
+        input_vat_account_id=seeded_accounts[INPUT_VAT_CODE],
+        net_kurus=net_kurus,
+        gross_kurus=gross_kurus,
+        vat_breakdown=vat_breakdown,
+    )
+
+    debits = sum(
+        line.amount_kurus
+        for line in lines
+        if line.side == AccountNormalBalance.DEBIT
+    )
+    credits = sum(
+        line.amount_kurus
+        for line in lines
+        if line.side == AccountNormalBalance.CREDIT
+    )
+    assert debits == credits
+    ap_credits = [
+        line
+        for line in lines
+        if line.account_id == seeded_accounts[ACCOUNTS_PAYABLE_CODE]
+    ]
+    assert len(ap_credits) == 1
+    assert ap_credits[0].amount_kurus == gross_kurus
+    vat_credits = [
+        line
+        for line in lines
+        if line.account_id == seeded_accounts[INPUT_VAT_CODE]
+        and line.side == AccountNormalBalance.CREDIT
+    ]
+    assert len(vat_credits) == 1
+    assert vat_credits[0].amount_kurus == 2_471
+
+
+def test_post_invoice_with_negative_vat_line(
+    db_session, restaurant_a, seeded_accounts
+) -> None:
+    supplier_id = _supplier(db_session, restaurant_a)
+    gross_kurus = 146_022
+    vat_breakdown = [
+        {"rate_percent": 10, "base_kurus": 100_000, "vat_kurus": 36_693},
+        {"rate_percent": 1, "base_kurus": 10_000, "vat_kurus": -2_471},
+    ]
+    net_kurus = gross_kurus - sum(line["vat_kurus"] for line in vat_breakdown)
+
+    with entity_context(db_session, restaurant_a.id):
+        draft = InvoiceDraft(
+            status=InvoiceDraftStatus.CONFIRMED,
+            source_type=InvoiceSourceType.EFATURA_PDF,
+            file_fingerprint="getir-mixed-vat-discount",
+            supplier_id=supplier_id,
+            invoice_number="Z012026000264846",
+            invoice_date=date(2026, 5, 2),
+            net_kurus=net_kurus,
+            gross_kurus=gross_kurus,
+            vat_breakdown=vat_breakdown,
+            currency="TRY",
+            extraction_payload={},
+            confirmed_by=ACTOR_ID,
+        )
+        db_session.add(draft)
+        db_session.commit()
+        db_session.refresh(draft)
+
+    result = post_confirmed_draft(
+        db_session,
+        restaurant_a.id,
+        draft.id,
+        expense_account_id=seeded_accounts["5200"],
+        actor_id=ACTOR_ID,
+    )
+    assert result.journal_entry.source == JournalEntrySource.INVOICE
+    assert result.supplier_ledger_entry.amount_kurus == gross_kurus
 
 
 def test_cross_entity_isolation(
