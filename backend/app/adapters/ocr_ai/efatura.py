@@ -285,8 +285,26 @@ def _normalize_tr_amount(amount: str) -> str:
     return cleaned.replace(".", "").replace(",", ".")
 
 
-def _supplier_vkn_from_pdf(text: str) -> str | None:
+def _collect_tax_ids(text: str) -> list[str]:
+    ids: list[str] = []
+    for pattern in (
+        r"Vergi\s*Numaras[ıi]\s*[:\.]?\s*(\d{10,11})",
+        r"Vergi\s*No\s*[:\.]?\s*(\d{10,11})",
+        r"VKN\s*[:\.]?\s*(\d{10,11})",
+    ):
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            ids.append(match.group(1))
+    return list(dict.fromkeys(ids))
+
+
+def _supplier_vkn_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str | None:
     """Seller tax id — header / before SAYIN; inverted GİB layouts put seller last after SAYIN."""
+    buyer = buyer_vkn.strip() if buyer_vkn else None
+    if buyer:
+        others = [tax_id for tax_id in _collect_tax_ids(text) if tax_id != buyer]
+        if len(others) == 1:
+            return others[0]
+
     header_limit = 2500
     sayin_pos = text.upper().find("SAYIN")
     header = text[:sayin_pos] if sayin_pos >= 0 else text[:header_limit]
@@ -330,14 +348,18 @@ def _supplier_vkn_from_pdf(text: str) -> str | None:
     if not all_vkns:
         return None
     if buyer_match:
-        buyer_vkn = buyer_match.group(1)
+        buyer_vkn_match = buyer_match.group(1)
         for vkn in all_vkns:
-            if vkn != buyer_vkn:
+            if vkn != buyer_vkn_match:
                 return vkn
+    if buyer:
+        others = [tax_id for tax_id in _collect_tax_ids(text) if tax_id != buyer]
+        if others:
+            return others[0]
     return all_vkns[0]
 
 
-def _parse_pdf_heuristics(text: str) -> EInvoiceExtraction:
+def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoiceExtraction:
     """Best-effort regex on GİB-style PDF text — v1 only; unknown layouts fail."""
     invoice_number = None
     for pattern in (
@@ -354,8 +376,7 @@ def _parse_pdf_heuristics(text: str) -> EInvoiceExtraction:
 
     parsed_date = _parse_pdf_tr_date(text)
 
-    vkn_match = re.search(r"VKN\s*[:\.]?\s*(\d{10,11})", text, re.IGNORECASE)
-    supplier_vkn = _supplier_vkn_from_pdf(text)
+    supplier_vkn = _supplier_vkn_from_pdf(text, buyer_vkn=buyer_vkn)
 
     supplier_name = None
     name_match = re.search(
@@ -428,7 +449,9 @@ def _parse_pdf_heuristics(text: str) -> EInvoiceExtraction:
     )
 
 
-def extract_efatura_pdf(content: bytes) -> EInvoiceExtraction:
+def extract_efatura_pdf(
+    content: bytes, *, buyer_vkn: str | None = None
+) -> EInvoiceExtraction:
     """Extract e-Fatura fields from PDF — fixture registry, then pypdf heuristics."""
     registered = _extract_pdf_from_registry(content)
     if registered is not None:
@@ -439,7 +462,7 @@ def extract_efatura_pdf(content: bytes) -> EInvoiceExtraction:
         raise EfaturaPdfUnsupportedError(
             "PDF contains no extractable text; vision OCR is planned for a later slice"
         )
-    return _parse_pdf_heuristics(text)
+    return _parse_pdf_heuristics(text, buyer_vkn=buyer_vkn)
 
 
 def extraction_to_payload(extraction: EInvoiceExtraction) -> dict[str, Any]:

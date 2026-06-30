@@ -2,6 +2,12 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-06-30
+
+**Company profile + e-Fatura supplier intake (`v0.73.7-company-profile-efatura-suppliers`):** Entity `vkn` column (migration `058`) — required on `POST /entities`, editable via `PATCH /entities/{id}` and Set up → Restaurant **Company profile**; first-run onboarding requires VKN. PDF extraction passes entity VKN as buyer to skip own tax ID on invoices. **`find_or_create_supplier_for_efatura`** — auto-create and link supplier on e-Fatura upload when VKN is new (bank lines stay manual). Tests: `test_entity_profile.py`, `test_efatura_pdf_heuristics.py`, `test_draft_supplier_link.py`, `test_suppliers.py`; vitest `vkn.test.ts`, `first-run-onboarding.test.ts`.
+
+**Turkish e-Fatura PDF heuristics (`bad0de6`):** Extended date/net/gross/VAT/supplier-VKN regex for Metro, utility, Yemeksepeti, Trendyol, Migros commission layouts.
+
 ## 2026-06-24
 
 **UX1 — Record hub (`v0.73.0-ux1-record-hub`):** `/record` card grid; single action registry for New menu, ⌘K, and Record hub; person-picker wrappers. **228 vitest**; no backend/posting changes.

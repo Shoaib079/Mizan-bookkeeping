@@ -573,11 +573,14 @@ def test_list_entities_returns_only_caller_memberships(
     assert str(restaurant_b.id) not in entity_ids
 
 
+from tests.conftest import entity_create_json
+
+
 def test_create_entity_requires_authenticated_user(
     auth_enforced,
     client: TestClient,
 ) -> None:
-    response = client.post("/entities", json={"name": "No Auth Entity"})
+    response = client.post("/entities", json=entity_create_json("No Auth Entity"))
     assert response.status_code == 401
 
 
@@ -590,7 +593,7 @@ def test_create_entity_adds_creator_as_owner_and_lists_entity(
 
     create = client.post(
         "/entities",
-        json={"name": "Creator Restaurant"},
+        json=entity_create_json("Creator Restaurant"),
         headers=auth_headers(creator),
     )
     assert create.status_code == 201
@@ -619,7 +622,7 @@ def test_create_entity_dev_mode_does_not_add_membership(
     client: TestClient,
     db_session: Session,
 ) -> None:
-    response = client.post("/entities", json={"name": "Dev Mode Entity"})
+    response = client.post("/entities", json=entity_create_json("Dev Mode Entity"))
     assert response.status_code == 201
     entity_id = uuid.UUID(response.json()["id"])
 
@@ -638,14 +641,14 @@ def test_create_entity_duplicate_name_same_user_returns_409(
 
     first = client.post(
         "/entities",
-        json={"name": "Kadikoy Branch"},
+        json=entity_create_json("Kadikoy Branch"),
         headers=auth_headers(creator),
     )
     assert first.status_code == 201
 
     second = client.post(
         "/entities",
-        json={"name": "kadikoy branch"},
+        json=entity_create_json("kadikoy branch"),
         headers=auth_headers(creator),
     )
     assert second.status_code == 409
@@ -662,12 +665,12 @@ def test_create_entity_same_name_different_users_allowed(
 
     create_a = client.post(
         "/entities",
-        json={"name": "Shared Name Cafe"},
+        json=entity_create_json("Shared Name Cafe"),
         headers=auth_headers(user_a),
     )
     create_b = client.post(
         "/entities",
-        json={"name": "Shared Name Cafe"},
+        json=entity_create_json("Shared Name Cafe", vkn="2234567890"),
         headers=auth_headers(user_b),
     )
     assert create_a.status_code == 201
@@ -683,12 +686,12 @@ def test_create_entity_different_names_same_user_allowed(
 
     first = client.post(
         "/entities",
-        json={"name": "Branch A"},
+        json=entity_create_json("Branch A"),
         headers=auth_headers(creator),
     )
     second = client.post(
         "/entities",
-        json={"name": "Branch B"},
+        json=entity_create_json("Branch B", vkn="2234567890"),
         headers=auth_headers(creator),
     )
     assert first.status_code == 201
@@ -704,16 +707,18 @@ def test_create_entity_stores_legal_name(
 
     response = client.post(
         "/entities",
-        json={
-            "name": "Display Cafe",
-            "legal_name": "Display Cafe Anonim Şirketi",
-        },
+        json=entity_create_json(
+            "Display Cafe",
+            legal_name="Display Cafe Anonim Şirketi",
+            vkn="3344556677",
+        ),
         headers=auth_headers(creator),
     )
     assert response.status_code == 201
     body = response.json()
     assert body["name"] == "Display Cafe"
     assert body["legal_name"] == "Display Cafe Anonim Şirketi"
+    assert body["vkn"] == "3344556677"
 
 
 def test_patch_users_me_updates_display_name(

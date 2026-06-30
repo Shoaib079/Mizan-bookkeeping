@@ -115,6 +115,50 @@ def test_find_by_vkn(db_session, restaurant_a) -> None:
     assert missing is None
 
 
+def test_find_or_create_supplier_for_efatura_creates(db_session, restaurant_a) -> None:
+    supplier = service.find_or_create_supplier_for_efatura(
+        db_session,
+        restaurant_a.id,
+        supplier_vkn="5555555555",
+        supplier_name="Metro Wholesale",
+    )
+    assert supplier is not None
+    assert supplier.vkn == "5555555555"
+    assert supplier.name == "Metro Wholesale"
+    assert supplier.notes == "Auto-created from e-Fatura upload"
+
+
+def test_find_or_create_supplier_for_efatura_reuses_existing(
+    db_session, restaurant_a
+) -> None:
+    existing = service.create_supplier(db_session, restaurant_a.id, _payload())
+    supplier = service.find_or_create_supplier_for_efatura(
+        db_session,
+        restaurant_a.id,
+        supplier_vkn="1234567890",
+        supplier_name="Different Name On PDF",
+    )
+    assert supplier is not None
+    assert supplier.id == existing.id
+    assert supplier.name == existing.name
+
+
+def test_find_or_create_supplier_skips_entity_buyer_vkn(
+    db_session, restaurant_a
+) -> None:
+    restaurant_a.vkn = "1234567890"
+    db_session.commit()
+
+    supplier = service.find_or_create_supplier_for_efatura(
+        db_session,
+        restaurant_a.id,
+        supplier_vkn="1234567890",
+        supplier_name="Should Not Create",
+        entity_vkn=restaurant_a.vkn,
+    )
+    assert supplier is None
+
+
 def test_invalid_vkn_format_rejected() -> None:
     with pytest.raises(ValueError, match="10 or 11 digits"):
         validate_vkn("12345")

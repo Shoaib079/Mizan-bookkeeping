@@ -19,13 +19,14 @@ from app.core.chart_of_accounts.default_chart import (
 )
 from app.features.banking.models import MoneyAccountKind
 from app.features.entities.models import Entity
+from tests.conftest import entity_create_json
 
 
 def test_create_entity_auto_seeds_chart_and_cash_drawer(
     client: TestClient,
     db_session,
 ) -> None:
-    response = client.post("/entities", json={"name": "Auto Seed Cafe"})
+    response = client.post("/entities", json=entity_create_json("Auto Seed Cafe"))
     assert response.status_code == 201
     entity_id = uuid.UUID(response.json()["id"])
 
@@ -59,7 +60,7 @@ def test_create_entity_auto_seeds_chart_and_cash_drawer(
 
 
 def test_create_entity_opening_balances_work_immediately(client: TestClient) -> None:
-    create = client.post("/entities", json={"name": "OB Ready Cafe"})
+    create = client.post("/entities", json=entity_create_json("OB Ready Cafe"))
     assert create.status_code == 201
     entity_id = create.json()["id"]
 
@@ -99,7 +100,9 @@ def test_create_entity_provision_is_atomic_on_chart_failure(
     )
 
     with pytest.raises(RuntimeError, match="seed failed"):
-        entity_service.create_entity(db_session, EntityCreate(name="Rollback Test"))
+        entity_service.create_entity(
+            db_session, EntityCreate(name="Rollback Test", vkn="1234567890")
+        )
 
     orphan = db_session.scalar(
         select(Entity).where(Entity.name == "Rollback Test")

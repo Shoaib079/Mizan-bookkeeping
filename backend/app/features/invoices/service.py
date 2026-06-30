@@ -113,10 +113,15 @@ def _extension_for(source_type: InvoiceSourceType) -> str:
     return ".xml" if source_type == InvoiceSourceType.EFATURA_XML else ".pdf"
 
 
-def extract_document(content: bytes, source_type: InvoiceSourceType) -> EInvoiceExtraction:
+def extract_document(
+    content: bytes,
+    source_type: InvoiceSourceType,
+    *,
+    buyer_vkn: str | None = None,
+) -> EInvoiceExtraction:
     if source_type == InvoiceSourceType.EFATURA_XML:
         return extract_efatura_xml(content)
-    return extract_efatura_pdf(content)
+    return extract_efatura_pdf(content, buyer_vkn=buyer_vkn)
 
 
 def _to_out(
@@ -227,6 +232,8 @@ def create_efatura_draft_from_upload(
     content_type: str | None = None,
 ) -> InvoiceDraftOut:
     _require_entity(session, entity_id)
+    entity = entity_service.get_entity(session, entity_id)
+    assert entity is not None
 
     fingerprint = file_fingerprint(content)
     existing = _find_by_fingerprint(session, entity_id, fingerprint)
@@ -236,7 +243,9 @@ def create_efatura_draft_from_upload(
     source_type = detect_source_type(content, filename=filename, content_type=content_type)
 
     try:
-        extraction = extract_document(content, source_type)
+        extraction = extract_document(
+            content, source_type, buyer_vkn=entity.vkn
+        )
         validate_invoice_totals(
             extraction.net_kurus, extraction.gross_kurus, extraction.vat_breakdown
         )
@@ -258,8 +267,12 @@ def create_efatura_draft_from_upload(
 
     linked_supplier: Supplier | None = None
     if extraction.supplier_vkn:
-        linked_supplier = supplier_service.find_by_vkn(
-            session, entity_id, extraction.supplier_vkn
+        linked_supplier = supplier_service.find_or_create_supplier_for_efatura(
+            session,
+            entity_id,
+            supplier_vkn=extraction.supplier_vkn,
+            supplier_name=extraction.supplier_name,
+            entity_vkn=entity.vkn,
         )
 
     with entity_context(session, entity_id):

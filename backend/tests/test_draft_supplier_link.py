@@ -5,14 +5,8 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-import pytest
-
-from app.features.suppliers.schema import SupplierCreate
-
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "efatura"
 SAMPLE_XML = FIXTURES / "sample.xml"
-
-ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 
 def _upload_draft(client, entity_id, *, content=None):
@@ -45,12 +39,18 @@ def test_auto_link_on_upload_when_vkn_matches(
     assert body["supplier_vkn"] == "1234567890"
 
 
-def test_no_auto_link_when_vkn_unknown(client, restaurant_a) -> None:
+def test_auto_creates_supplier_on_upload_when_vkn_unknown(client, restaurant_a) -> None:
     upload = _upload_draft(client, restaurant_a.id)
     assert upload.status_code == 201
     body = upload.json()
-    assert body["supplier_id"] is None
-    assert body["linked_supplier_name"] is None
+    assert body["supplier_id"] is not None
+    assert body["linked_supplier_vkn"] == "1234567890"
+    assert body["linked_supplier_name"] == "Metro Gida Ticaret A.S."
+
+    suppliers = client.get(f"/entities/{restaurant_a.id}/suppliers?limit=50")
+    assert suppliers.status_code == 200
+    assert suppliers.json()["total"] == 1
+    assert suppliers.json()["items"][0]["vkn"] == "1234567890"
 
 
 def test_manual_link_supplier(client, restaurant_a) -> None:
@@ -77,17 +77,20 @@ def test_manual_link_supplier(client, restaurant_a) -> None:
 def test_auto_link_by_draft_vkn(client, restaurant_a) -> None:
     upload = _upload_draft(client, restaurant_a.id)
     draft_id = upload.json()["id"]
-    assert upload.json()["supplier_id"] is None
+    assert upload.json()["supplier_id"] is not None
 
-    supplier = _create_supplier(client, restaurant_a.id)
-    assert supplier.status_code == 201
+    unlink = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/unlink-supplier"
+    )
+    assert unlink.status_code == 200
 
     link = client.post(
         f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/link-supplier",
         json={},
     )
     assert link.status_code == 200
-    assert link.json()["supplier_id"] == supplier.json()["id"]
+    assert link.json()["supplier_id"] is not None
+    assert link.json()["linked_supplier_vkn"] == "1234567890"
 
 
 def test_unlink_supplier(client, restaurant_a) -> None:
@@ -136,10 +139,26 @@ def test_cross_entity_supplier_link_rejected(
 
 
 def test_auto_link_no_matching_vkn_returns_404(
-    client, restaurant_a
+    client, restaurant_a, db_session
 ) -> None:
+    from app.db.session import entity_context
+    from app.features.suppliers.models import Supplier
+
     upload = _upload_draft(client, restaurant_a.id)
     draft_id = upload.json()["id"]
+    supplier_id = uuid.UUID(upload.json()["supplier_id"])
+    assert supplier_id is not None
+
+    unlink = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/unlink-supplier"
+    )
+    assert unlink.status_code == 200
+
+    with entity_context(db_session, restaurant_a.id):
+        supplier = db_session.get(Supplier, supplier_id)
+        assert supplier is not None
+        db_session.delete(supplier)
+        db_session.commit()
 
     response = client.post(
         f"/entities/{restaurant_a.id}/invoices/drafts/{draft_id}/link-supplier",

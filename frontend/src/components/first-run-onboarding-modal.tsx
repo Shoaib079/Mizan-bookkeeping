@@ -14,6 +14,7 @@ import {
   shouldShowFirstRunOnboarding,
   submitFirstRunOnboarding,
 } from "@/lib/first-run-onboarding";
+import { vknValidationMessage } from "@/lib/vkn";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 
 export function FirstRunOnboardingModal() {
@@ -33,6 +34,7 @@ export function FirstRunOnboardingModal() {
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [legalName, setLegalName] = useState("");
+  const [vkn, setVkn] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,12 +56,17 @@ export function FirstRunOnboardingModal() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!fullName.trim() || !businessName.trim() || submitting) return;
+    const vknError = vknValidationMessage(vkn);
+    if (vknError) {
+      setError(vknError);
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
     try {
       await submitFirstRunOnboarding(
-        { fullName, businessName, legalName },
+        { fullName, businessName, legalName, vkn },
         {
           clerkEnabled,
           patchDisplayName: async (name) => {
@@ -132,6 +139,18 @@ export function FirstRunOnboardingModal() {
           />
         </div>
         <div>
+          <Label htmlFor="first-run-vkn">Vergi numarası (VKN)</Label>
+          <Input
+            id="first-run-vkn"
+            value={vkn}
+            onChange={(event) => setVkn(event.target.value)}
+            placeholder="10–11 digits"
+            inputMode="numeric"
+            required
+            disabled={submitting}
+          />
+        </div>
+        <div>
           <Label htmlFor="first-run-legal-name">Legal name (optional)</Label>
           <Input
             id="first-run-legal-name"
@@ -145,7 +164,12 @@ export function FirstRunOnboardingModal() {
         <Button
           type="submit"
           className="w-full"
-          disabled={submitting || !fullName.trim() || !businessName.trim()}
+          disabled={
+            submitting ||
+            !fullName.trim() ||
+            !businessName.trim() ||
+            !!vknValidationMessage(vkn)
+          }
         >
           {submitting ? "Setting up…" : "Continue to dashboard"}
         </Button>

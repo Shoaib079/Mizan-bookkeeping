@@ -12,11 +12,18 @@ from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.suppliers.models import Supplier
-from app.features.suppliers.schema import SupplierCreate, SupplierUpdate
+from app.features.suppliers.schema import SupplierCreate, SupplierUpdate, validate_vkn
 
 
 class DuplicateSupplierError(Exception):
     """Raised when a supplier VKN already exists for the entity."""
+
+_EFATURA_AUTO_SUPPLIER_NOTE = "Auto-created from e-Fatura upload"
+
+
+def _efatura_supplier_display_name(name: str | None, vkn: str) -> str:
+    cleaned = (name or "").strip()
+    return cleaned[:512] if cleaned else f"Supplier {vkn}"
 
 
 def create_supplier(
@@ -115,3 +122,34 @@ def find_by_vkn(session: Session, entity_id: uuid.UUID, vkn: str) -> Supplier | 
 
     with entity_context(session, entity_id):
         return session.scalar(select(Supplier).where(Supplier.vkn == vkn))
+
+
+def find_or_create_supplier_for_efatura(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    supplier_vkn: str,
+    supplier_name: str | None = None,
+    entity_vkn: str | None = None,
+) -> Supplier | None:
+    """Link intake to supplier master — create row when VKN is new (e-Fatura upload)."""
+    vkn = validate_vkn(supplier_vkn)
+    if entity_vkn and vkn == validate_vkn(entity_vkn):
+        return None
+
+    existing = find_by_vkn(session, entity_id, vkn)
+    if existing is not None:
+        return existing
+
+    try:
+        return create_supplier(
+            session,
+            entity_id,
+            SupplierCreate(
+                name=_efatura_supplier_display_name(supplier_name, vkn),
+                vkn=vkn,
+                notes=_EFATURA_AUTO_SUPPLIER_NOTE,
+            ),
+        )
+    except DuplicateSupplierError:
+        return find_by_vkn(session, entity_id, vkn)

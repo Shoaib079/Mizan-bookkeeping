@@ -92,7 +92,7 @@ def client(db_session: Session) -> TestClient:
 
 @pytest.fixture
 def restaurant_a(db_session: Session) -> Entity:
-    entity = Entity(name="Restaurant A")
+    entity = Entity(name="Restaurant A", vkn="1000000001")
     db_session.add(entity)
     db_session.commit()
     db_session.refresh(entity)
@@ -101,8 +101,15 @@ def restaurant_a(db_session: Session) -> Entity:
 
 @pytest.fixture
 def restaurant_b(db_session: Session) -> Entity:
-    entity = Entity(name="Restaurant B")
+    entity = Entity(name="Restaurant B", vkn="1000000002")
     db_session.add(entity)
     db_session.commit()
     db_session.refresh(entity)
     return entity
+
+
+def entity_create_json(name: str, *, vkn: str = "1234567890", legal_name: str | None = None) -> dict:
+    payload: dict[str, str] = {"name": name, "vkn": vkn}
+    if legal_name is not None:
+        payload["legal_name"] = legal_name
+    return payload

@@ -95,6 +95,22 @@ def test_supplier_vkn_inverted_migros_layout() -> None:
     assert _supplier_vkn_from_pdf(MIGROS_INVERTED) == "2951116113"
 
 
+def test_supplier_vkn_excludes_entity_buyer_vkn() -> None:
+    snippet = """
+MİGROS TİCARET A.Ş.
+Vergi Numarası: 6220529513
+REMBETİKO TURİZM RESTORAN
+Vergi Numarası: 7342656849
+Fatura No M123
+Fatura Tarihi 01.01.2026
+Mal/Hizmet Toplam Tutarı 100,00 TL
+Vergiler Dahil Toplam Tutar 120,00 TL
+"""
+    assert (
+        _supplier_vkn_from_pdf(snippet, buyer_vkn="7342656849") == "6220529513"
+    )
+
+
 def test_parse_migros_malzeme_net_label() -> None:
     extraction = _parse_pdf_heuristics(MIGROS_INVERTED)
     assert extraction.net_kurus == 21_615

@@ -14,7 +14,7 @@ from app.db.session import entity_context, require_entity_context, user_membersh
 from app.features.auth.models import EntityMembership
 from app.features.chart_of_accounts import service as chart_service
 from app.features.entities.models import Entity, EntitySetting
-from app.features.entities.schema import EntityCreate, EntitySettingCreate
+from app.features.entities.schema import EntityCreate, EntitySettingCreate, EntityUpdate
 
 
 class DuplicateEntitySettingError(ValueError):
@@ -59,7 +59,11 @@ def create_entity(
         )
 
     legal_name = (payload.legal_name or "").strip() or None
-    entity = Entity(name=payload.name, legal_name=legal_name)
+    entity = Entity(
+        name=payload.name.strip(),
+        legal_name=legal_name,
+        vkn=payload.vkn,
+    )
     session.add(entity)
     session.flush()
 
@@ -123,6 +127,25 @@ def list_entities_for_user(
 
 def get_entity(session: Session, entity_id: uuid.UUID) -> Entity | None:
     return session.get(Entity, entity_id)
+
+
+def update_entity(
+    session: Session, entity_id: uuid.UUID, payload: EntityUpdate
+) -> Entity | None:
+    entity = get_entity(session, entity_id)
+    if entity is None:
+        return None
+
+    if payload.name is not None:
+        entity.name = payload.name.strip()
+    if payload.legal_name is not None:
+        entity.legal_name = payload.legal_name.strip() or None
+    if payload.vkn is not None:
+        entity.vkn = payload.vkn
+
+    session.commit()
+    session.refresh(entity)
+    return entity
 
 
 def create_entity_setting(

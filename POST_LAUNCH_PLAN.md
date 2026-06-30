@@ -16,6 +16,9 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 - **Automated DB backups** — nightly `pg_dump` → R2 via the `mizan-backup` Railway cron (`0 3 * * *`).
 - **P1 — Expense account picker labels** — Turkish name first, GL code in parentheses (`formatExpenseAccountLabel`); manual expense, correct expense, partner-fronted, FX spend, receipt review, day closeout.
 - **P2 — AI + learning expense auto-categorize** — `GET /expenses/suggest-account` (learned aliases → AI fallback); migration `057` `default_expense_account_id` on expense items; manual expense form debounced suggest-and-confirm.
+- **Turkish e-Fatura PDF parsing** (`bad0de6`) — Metro, utility, delivery-commission GİB layouts; supplier VKN heuristics (SAYIN / inverted); `test_efatura_pdf_heuristics.py`.
+- **Entity company profile + VKN** (`v0.73.7-company-profile-efatura-suppliers`) — migration `058` `entities.vkn`; required on create; editable in Set up → Restaurant; first-run onboarding VKN field; PDF parse excludes buyer VKN when entity VKN set.
+- **e-Fatura auto-create suppliers** (`v0.73.7-company-profile-efatura-suppliers`) — `find_or_create_supplier_for_efatura` on upload; draft linked immediately; bank statement supplier create stays manual-only.
 
 ---
 
@@ -46,6 +49,10 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 ```
 Remove ESLint "defined but never used" warnings across frontend/src (unused imports/vars, e.g. entity-access.test.ts). No runtime behavior change. Run frontend lint + tests green. Commit: "chore(frontend): remove unused imports".
 ```
+
+### P8 — Groceries / no-invoice card spend (Migros, BİM, etc.)  *(future)*
+**Why:** daily purchases paid by card/bank with no e-Fatura — not supplier payables.
+**Spec:** petty-cash / expense-only path (not auto-supplier from bank). Design slice TBD.
 
 ### Decisions (no build, your call)
 - **Neon 7-day instant restore** (~$5/mo) — upgrade for finer point-in-time DB recovery on top of nightly off-site backups. Optional.

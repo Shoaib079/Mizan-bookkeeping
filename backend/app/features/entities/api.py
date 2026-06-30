@@ -25,6 +25,7 @@ from app.features.entities.schema import (
     EntitySettingCreate,
     EntitySettingRead,
     EntitySettingUpdate,
+    EntityUpdate,
 )
 
 router = APIRouter(prefix="/entities", tags=["entities"])
@@ -75,6 +76,23 @@ def get_entity(
     _: None = Depends(member_read_guard),
 ) -> EntityRead:
     entity = service.get_entity(session, entity_id)
+    if entity is None:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return entity
+
+
+@router.patch("/{entity_id}", response_model=EntityRead)
+def update_entity(
+    entity_id: uuid.UUID,
+    payload: EntityUpdate,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> EntityRead:
+    if service.get_entity(session, entity_id) is None:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    if payload.name is None and payload.legal_name is None and payload.vkn is None:
+        raise HTTPException(status_code=422, detail="At least one field is required")
+    entity = service.update_entity(session, entity_id, payload)
     if entity is None:
         raise HTTPException(status_code=404, detail="Entity not found")
     return entity

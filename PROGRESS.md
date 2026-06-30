@@ -6,11 +6,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch) |
-| **Active slice** | Feature gaps FP/FS (next) |
-| **Last completed slice** | UX6 — Collapse sidebar (`v0.73.5-ux6-collapse-sidebar`) |
-| **Last tag** | `v0.73.5-ux6-collapse-sidebar` |
-| **Next up** | Partner advance (FP) / salary advance clear (FS) |
+| **Phase** | Post-launch — intake & company profile |
+| **Active slice** | Feature gaps FP/FS; P3/P5/P6 (see `POST_LAUNCH_PLAN.md`) |
+| **Last completed slice** | Company profile VKN + e-Fatura supplier auto-create (`v0.73.7-company-profile-efatura-suppliers`) |
+| **Last tag** | `v0.73.7-company-profile-efatura-suppliers` |
+| **Next up** | Partner advance (FP) / salary advance clear (FS); groceries-without-invoice design (P8) |
 
 ## Owner blockers (12.5)
 
@@ -46,7 +46,7 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**Fix D + Feature E committed** — dashboard setup checklist dismissible per entity (`Hide`, localStorage, auto-hide when complete); first-run modal when zero companies (full name → `PATCH /users/me`, business + optional legal name → `POST /entities`); migration `056_entity_legal_name`. **685 pytest** (+3 new; 7 pre-existing env failures: xlrd/sentry); **164 vitest** (+10). **Next:** Phase 12 production go-live (`alembic upgrade head` through `056`).
+**`v0.73.7-company-profile-efatura-suppliers`** — entity `vkn` (migration `058`, required on create, `PATCH` + Set up UI); e-Fatura PDF uses buyer VKN; auto-create/link supplier on invoice upload. Prior: **`bad0de6`** Turkish PDF heuristics; **UX7** (`v0.73.6`). **Deploy:** `alembic upgrade head` through `058` on Railway. Legacy entities: add VKN once in Set up → Company profile. **Next:** FP/FS feature gaps; P8 groceries-without-invoice design (`POST_LAUNCH_PLAN.md`).
 
 **Owner sign-off ✓ (2026-06-28)** — clearance auto-pick (`v0.72.0-clearance-auto-pick`). **677 pytest green** at sign-off. Phase 12.5 statement-learning arc closed.
 

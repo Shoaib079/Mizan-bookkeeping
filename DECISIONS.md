@@ -689,9 +689,27 @@ The `card_sales_batch.gross_amount_kurus` is stored as the full **Z** total (the
 
 **Balance:** `current_balance_kurus(supplier_id)` = SUM(`amount_kurus`); entity total = sum across active suppliers.
 
+## 2026-06-30 — Entity company profile (VKN) + e-Fatura supplier auto-create
+
+**Choice:** `entities.vkn` column (migration `058`) — **required on `POST /entities`**, nullable for legacy rows; optional `legal_name` unchanged. **`PATCH /entities/{id}`** updates display name, legal name, and VKN (owner write). Set up → Restaurant shows **Company profile** form; first-run onboarding requires VKN.
+
+**e-Fatura buyer exclusion:** PDF extraction receives `entity.vkn` as `buyer_vkn` so supplier VKN heuristics skip the restaurant's own tax ID.
+
+**Supplier auto-create on upload:** `find_or_create_supplier_for_efatura()` — when draft upload extracts a supplier VKN not in master, create supplier (name from PDF or `Supplier {vkn}`, note `Auto-created from e-Fatura upload`) and link draft immediately. **Never** create when extracted VKN equals entity buyer VKN. Bank statement `create-supplier-from-line` remains manual-only.
+
+**Why:** Owner uploads invoices before building supplier list; VKN is the stable key (Decisions §8). Name abbreviations on PDFs do not block matching.
+
+**Alternatives considered:** Fuzzy name matching for buyer vs supplier (rejected); auto-create supplier from every bank line (rejected — loans, groceries, reimbursements).
+
+## 2026-06-30 — Turkish e-Fatura PDF heuristics (supplier + delivery commission layouts)
+
+**Choice:** Extend `efatura.py` PDF regex — additional date/net/gross/VAT labels (`Malzeme/Hizmet`, `Vergiler Dahil`, `Hesaplanan KDV`, `SAYIN` / inverted GİB layouts for supplier VKN). Unknown layouts still 422 (`EfaturaPdfUnsupportedError`).
+
+**Why:** Real Metro, utility, Yemeksepeti, Trendyol, Migros commission PDFs failed v1 heuristics; XML path unchanged.
+
 ## 2026-06-21 — Draft → supplier linking (Phase 2)
 
-**Choice:** Nullable `supplier_id` FK on `invoice_drafts` → `suppliers`. On upload, auto-link when extracted VKN matches an existing supplier via `find_by_vkn`. Manual link via `POST .../link-supplier` (explicit `supplier_id` or auto by draft VKN); unlink via `POST .../unlink-supplier`.
+**Choice:** Nullable `supplier_id` FK on `invoice_drafts` → `suppliers`. On upload, auto-link when extracted VKN matches an existing supplier via `find_by_vkn`; **when VKN is new, auto-create supplier** from extracted name/VKN (`find_or_create_supplier_for_efatura`) — never create when extracted VKN equals entity buyer VKN. Manual link via `POST .../link-supplier` (explicit `supplier_id` or auto by draft VKN); unlink via `POST .../unlink-supplier`.
 
 **Why:** Decisions §8 — match e-Fatura supplier VKN to supplier master before review/posting. No ledger posting this slice.
 

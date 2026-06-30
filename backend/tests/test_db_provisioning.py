@@ -88,6 +88,14 @@ def test_alembic_upgrade_head_on_empty_database(alembic_provisioned_url: str) ->
             )
         ).scalar()
         assert legal_name_col == "legal_name"
+        vkn_col = conn.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'entities' "
+                "AND column_name = 'vkn'"
+            )
+        ).scalar()
+        assert vkn_col == "vkn"
         table_count = conn.execute(
             text(
                 "SELECT count(*) FROM information_schema.tables "

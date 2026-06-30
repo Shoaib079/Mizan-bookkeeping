@@ -22,9 +22,11 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_ledger_db_immutability.py` | PostgreSQL triggers block raw SQL UPDATE/DELETE on entries, lines, audit; void gate | pass |
 | `backend/tests/test_manual_journals.py` | Manual journal API — source=manual, list/get filters, cross-entity isolation, void | pass |
 | `backend/tests/test_efatura_draft.py` | e-Fatura upload → draft — UBL-TR XML, math validation, duplicate 409, RLS isolation, PDF fixture | pass |
-| `backend/tests/test_draft_supplier_link.py` | Draft → supplier linking — VKN auto-link, manual link/unlink, cross-entity 404, unknown supplier 404 | pass |
+| `backend/tests/test_efatura_pdf_heuristics.py` | Turkish PDF text heuristics — Metro/Yemeksepeti/Migros layouts, buyer-VKN exclusion, date labels (`bad0de6` + `v0.73.7`) | pass |
+| `backend/tests/test_entity_profile.py` | Entity company profile — VKN required on create, `PATCH` updates name/legal_name/vkn (`058`, `v0.73.7`) | pass |
+| `backend/tests/test_draft_supplier_link.py` | Draft → supplier linking — VKN auto-link, **auto-create supplier on upload**, manual link/unlink, cross-entity 404 (`v0.73.7`) | pass |
 | `backend/tests/test_draft_review.py` | Draft confirm/reject — supplier required, confirmed immutable, status filter, needs_review flow | pass |
-| `backend/tests/test_suppliers.py` | Supplier master — VKN uniqueness per entity, CRUD, deactivate, cross-entity isolation, API | pass |
+| `backend/tests/test_suppliers.py` | Supplier master — VKN uniqueness per entity, CRUD, deactivate, cross-entity isolation, **`find_or_create_supplier_for_efatura`** (`v0.73.7`), API | pass |
 | `backend/tests/test_payables.py` | Payables ledger — balance, opening balance, payments reduce balance + GL link, overpayment rejected, API | pass |
 | `backend/tests/test_invoice_posting.py` | Draft-to-ledger — GL + payables posting, `journal_entry_id` on subledger, VAT lines, reject guards, cross-entity, API E2E | pass |
 | `backend/tests/test_supplier_payment_gl.py` | Supplier payment GL — AP control account = subledger, bank credited, `journal_entry_id` link, non-asset rejected, API E2E | pass |
@@ -85,7 +87,8 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `frontend/src/app/page.test.ts` | Dashboard — RecentEntriesCard below KPIs | pass |
 | `frontend/src/lib/expense-account-suggest.test.ts` | Suggest-and-confirm gating — apply only when user has not manually overridden account | pass |
 | `frontend/src/lib/onboarding.test.ts` | Dashboard setup checklist — role gating, step completion from API totals, admin-only invite step, **dismiss + auto-hide when complete** | pass |
-| `frontend/src/lib/first-run-onboarding.test.ts` | First-run modal — no-company visibility gate; submit patches display name + creates entity + routes to dashboard | pass |
+| `frontend/src/lib/first-run-onboarding.test.ts` | First-run modal — no-company visibility gate; submit patches display name + creates entity with **VKN** + routes to dashboard (`v0.73.7`) | pass |
+| `frontend/src/lib/vkn.test.ts` | VKN validation helper — 10–11 digits, whitespace trim (`v0.73.7`) | pass |
 | `frontend/src/lib/api-error-message.test.ts` | Reports landing — `apiErrorMessage()` prefers ApiError, falls back safely | pass |
 | `frontend/src/lib/review-status.test.ts` | Review screens — `isReviewTerminalStatus()` for posted/rejected guard | pass |
 | `backend/tests/test_idempotency.py` | Mutation idempotency — repeated key dedups, different keys both succeed, enforcement requires header, auth-scoped keys, client retry contract (Slice 11.19) | pass |

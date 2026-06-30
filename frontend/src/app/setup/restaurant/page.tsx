@@ -14,7 +14,15 @@ import {
   KNOWN_ENTITY_SETTINGS,
   type EntitySettingRow,
 } from "@/lib/settings-types";
+import { normalizeVknInput, vknValidationMessage } from "@/lib/vkn";
 import { useToast } from "@/lib/toast";
+
+type EntityProfile = {
+  id: string;
+  name: string;
+  legal_name: string | null;
+  vkn: string | null;
+};
 
 type WizardDraft = Record<string, boolean>;
 
@@ -30,8 +38,17 @@ export default function EntitySettingsPage() {
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
   const [newName, setNewName] = useState("");
+  const [newLegalName, setNewLegalName] = useState("");
+  const [newVkn, setNewVkn] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<EntityProfile | null>(null);
+  const [profileName, setProfileName] = useState("");
+  const [profileLegalName, setProfileLegalName] = useState("");
+  const [profileVkn, setProfileVkn] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [settings, setSettings] = useState<EntitySettingRow[]>([]);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
@@ -48,27 +65,38 @@ export default function EntitySettingsPage() {
     if (!activeEntityId) {
       setSettings([]);
       setChartCount(null);
+      setProfile(null);
       return;
     }
     setSettingsLoading(true);
     setSettingsError(null);
+    setProfileLoading(true);
+    setProfileError(null);
     try {
-      const [settingsRes, chartRes] = await Promise.all([
+      const [settingsRes, chartRes, entityRes] = await Promise.all([
         apiFetch<{ items: EntitySettingRow[] }>(
           `/entities/${activeEntityId}/settings?limit=200`,
         ),
         apiFetch<{ total: number }>(
           `/entities/${activeEntityId}/chart-of-accounts?limit=1`,
         ),
+        apiFetch<EntityProfile>(`/entities/${activeEntityId}`),
       ]);
       setSettings(settingsRes.items);
       setChartCount(chartRes.total);
+      setProfile(entityRes);
+      setProfileName(entityRes.name);
+      setProfileLegalName(entityRes.legal_name ?? "");
+      setProfileVkn(entityRes.vkn ?? "");
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : "Failed to load");
       setSettings([]);
       setChartCount(null);
+      setProfile(null);
+      setProfileError(err instanceof Error ? err.message : "Failed to load profile");
     } finally {
       setSettingsLoading(false);
+      setProfileLoading(false);
     }
   }, [activeEntityId]);
 
@@ -112,20 +140,33 @@ export default function EntitySettingsPage() {
   async function onCreateRestaurant(event: FormEvent) {
     event.preventDefault();
     if (!newName.trim()) return;
+    const vknError = vknValidationMessage(newVkn);
+    if (vknError) {
+      setCreateError(vknError);
+      return;
+    }
     setCreating(true);
     setCreateError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
+      const body: { name: string; vkn: string; legal_name?: string } = {
+        name: newName.trim(),
+        vkn: normalizeVknInput(newVkn),
+      };
+      const legal = newLegalName.trim();
+      if (legal) body.legal_name = legal;
       const entity = await apiFetch<{ id: string; name: string }>("/entities", {
         method: "POST",
         idempotencyKey,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim() }),
+        body: JSON.stringify(body),
       });
       submitIdempotency.completeSubmit();
       await refreshEntities();
       setEntityId(entity.id);
       setNewName("");
+      setNewLegalName("");
+      setNewVkn("");
       setWizardEntityId(entity.id);
       setWizardDraft(defaultWizardDraft());
       toast("Restaurant created");
@@ -145,6 +186,39 @@ export default function EntitySettingsPage() {
   function settingValue(key: string): boolean {
     const row = settings.find((s) => s.key === key);
     return row !== undefined && row.value.trim().toLowerCase() === "true";
+  }
+
+  async function onSaveCompanyProfile(event: FormEvent) {
+    event.preventDefault();
+    if (!entityId || inSetupWizard) return;
+    const vknError = vknValidationMessage(profileVkn);
+    if (vknError) {
+      setProfileError(vknError);
+      return;
+    }
+    setProfileSaving(true);
+    setProfileError(null);
+    try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
+      const updated = await apiFetch<EntityProfile>(`/entities/${entityId}`, {
+        method: "PATCH",
+        idempotencyKey,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profileName.trim(),
+          legal_name: profileLegalName.trim(),
+          vkn: normalizeVknInput(profileVkn),
+        }),
+      });
+      submitIdempotency.completeSubmit();
+      setProfile(updated);
+      await refreshEntities();
+      toast("Company profile saved");
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setProfileSaving(false);
+    }
   }
 
   async function onToggleSetting(key: string, enabled: boolean) {
@@ -284,7 +358,7 @@ export default function EntitySettingsPage() {
           </p>
           <form className="mt-4 space-y-3" onSubmit={onCreateRestaurant}>
             <div>
-              <Label htmlFor="entity-name">Name</Label>
+              <Label htmlFor="entity-name">Display name</Label>
               <Input
                 id="entity-name"
                 value={newName}
@@ -292,10 +366,36 @@ export default function EntitySettingsPage() {
                 placeholder="e.g. Kadıköy branch"
               />
             </div>
+            <div>
+              <Label htmlFor="entity-create-vkn">Vergi numarası (VKN)</Label>
+              <Input
+                id="entity-create-vkn"
+                value={newVkn}
+                onChange={(e) => setNewVkn(e.target.value)}
+                placeholder="10–11 digits"
+                inputMode="numeric"
+              />
+            </div>
+            <div>
+              <Label htmlFor="entity-create-legal-name">Legal name (optional)</Label>
+              <Input
+                id="entity-create-legal-name"
+                value={newLegalName}
+                onChange={(e) => setNewLegalName(e.target.value)}
+                placeholder="Registered company name"
+              />
+            </div>
             {createError && (
               <p className="text-sm text-destructive">{createError}</p>
             )}
-            <Button type="submit" disabled={creating || !newName.trim()}>
+            <Button
+              type="submit"
+              disabled={
+                creating ||
+                !newName.trim() ||
+                !!vknValidationMessage(newVkn)
+              }
+            >
               {creating ? "Creating…" : "Create restaurant"}
             </Button>
           </form>
@@ -303,6 +403,66 @@ export default function EntitySettingsPage() {
 
         {entityId && (
           <>
+            <section className="rounded-lg border border-border bg-card p-5">
+              <h2 className="text-sm font-semibold">Company profile</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your registered business details — used to identify your company
+                on e-Fatura uploads (buyer vs supplier).
+              </p>
+              {profileLoading && !profile ? (
+                <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <form
+                  className="mt-4 space-y-3"
+                  onSubmit={(event) => void onSaveCompanyProfile(event)}
+                >
+                  <div>
+                    <Label htmlFor="profile-name">Display name</Label>
+                    <Input
+                      id="profile-name"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="profile-legal-name">Legal name (optional)</Label>
+                    <Input
+                      id="profile-legal-name"
+                      value={profileLegalName}
+                      onChange={(e) => setProfileLegalName(e.target.value)}
+                      placeholder="Registered company name"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="profile-vkn">Vergi numarası (VKN)</Label>
+                    <Input
+                      id="profile-vkn"
+                      value={profileVkn}
+                      onChange={(e) => setProfileVkn(e.target.value)}
+                      placeholder="10–11 digits"
+                      inputMode="numeric"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  {profileError && (
+                    <p className="text-sm text-destructive">{profileError}</p>
+                  )}
+                  <Button
+                    type="submit"
+                    disabled={
+                      profileSaving ||
+                      !profileName.trim() ||
+                      !!vknValidationMessage(profileVkn)
+                    }
+                  >
+                    {profileSaving ? "Saving…" : "Save company profile"}
+                  </Button>
+                </form>
+              )}
+            </section>
+
             <section className="rounded-lg border border-border bg-card p-5">
               <h2 className="text-sm font-semibold">Chart of accounts</h2>
               <p className="mt-1 text-sm text-muted-foreground">

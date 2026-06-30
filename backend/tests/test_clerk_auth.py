@@ -14,6 +14,7 @@ from app.features.auth import service as auth_service
 from app.features.auth.models import AuthAuditEvent
 from app.launch import validate_launch_settings
 from tests.auth_helpers import auth_headers, clerk_token_for_user
+from tests.conftest import entity_create_json
 from tests.test_roles_permissions import _create_user, auth_enforced, roles_entity_setup
 
 
@@ -183,7 +184,7 @@ def test_inactive_user_denied(
 
     response = client.post(
         "/entities",
-        json={"name": "Should Fail"},
+        json=entity_create_json("Should Fail"),
         headers=auth_headers(user),
     )
     assert response.status_code == 403

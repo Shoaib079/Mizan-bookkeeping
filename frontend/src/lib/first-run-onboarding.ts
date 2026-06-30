@@ -20,12 +20,17 @@ export type FirstRunSubmitPayload = {
   fullName: string;
   businessName: string;
   legalName: string;
+  vkn: string;
 };
 
 export type FirstRunSubmitDeps = {
   clerkEnabled: boolean;
   patchDisplayName: (name: string) => Promise<void>;
-  createEntity: (payload: { name: string; legal_name?: string }) => Promise<{ id: string }>;
+  createEntity: (payload: {
+    name: string;
+    vkn: string;
+    legal_name?: string;
+  }) => Promise<{ id: string }>;
   refreshEntities: () => Promise<void>;
   setEntityId: (id: string, options?: { redirectToDashboard?: boolean }) => void;
 };
@@ -37,12 +42,16 @@ export async function submitFirstRunOnboarding(
   const businessName = payload.businessName.trim();
   const fullName = payload.fullName.trim();
   const legalName = payload.legalName.trim();
+  const vkn = payload.vkn.replace(/\s+/g, "");
 
   if (deps.clerkEnabled) {
     await deps.patchDisplayName(fullName);
   }
 
-  const body: { name: string; legal_name?: string } = { name: businessName };
+  const body: { name: string; vkn: string; legal_name?: string } = {
+    name: businessName,
+    vkn,
+  };
   if (legalName) body.legal_name = legalName;
 
   const entity = await deps.createEntity(body);

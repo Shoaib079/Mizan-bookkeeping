@@ -79,6 +79,7 @@ describe("submitFirstRunOnboarding", () => {
         fullName: " Ayşe Yılmaz ",
         businessName: " Kadıköy Cafe ",
         legalName: " Kadıköy Gıda Ltd ",
+        vkn: "7342656849",
       },
       {
         clerkEnabled: true,
@@ -92,6 +93,7 @@ describe("submitFirstRunOnboarding", () => {
     expect(patchDisplayName).toHaveBeenCalledWith("Ayşe Yılmaz");
     expect(createEntity).toHaveBeenCalledWith({
       name: "Kadıköy Cafe",
+      vkn: "7342656849",
       legal_name: "Kadıköy Gıda Ltd",
     });
     expect(refreshEntities).toHaveBeenCalledTimes(1);
@@ -111,6 +113,7 @@ describe("submitFirstRunOnboarding", () => {
         fullName: "Dev User",
         businessName: "Dev Cafe",
         legalName: "   ",
+        vkn: "1234567890",
       },
       {
         clerkEnabled: false,
@@ -122,6 +125,9 @@ describe("submitFirstRunOnboarding", () => {
     );
 
     expect(patchDisplayName).not.toHaveBeenCalled();
-    expect(createEntity).toHaveBeenCalledWith({ name: "Dev Cafe" });
+    expect(createEntity).toHaveBeenCalledWith({
+      name: "Dev Cafe",
+      vkn: "1234567890",
+    });
   });
 });
