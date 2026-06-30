@@ -9,9 +9,8 @@ const DELIVERY_ON = { deliveryEnabled: true };
 const DELIVERY_OFF = { deliveryEnabled: false };
 
 describe("sidebarGroupRenderMode", () => {
-  it("renders Reports and Set up as direct links", () => {
+  it("renders Reports as a direct link", () => {
     expect(sidebarGroupRenderMode("Reports", DELIVERY_ON)).toBe("link");
-    expect(sidebarGroupRenderMode("Set up", DELIVERY_ON)).toBe("link");
   });
 
   it("does not expose removed domain groups", () => {

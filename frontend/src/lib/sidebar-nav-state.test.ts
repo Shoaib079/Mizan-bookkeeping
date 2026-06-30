@@ -38,7 +38,6 @@ describe("sidebarGroupStateForPathname", () => {
     expect(sidebarGroupStateForPathname("/sales", SETTINGS)).toEqual({});
     expect(sidebarGroupStateForPathname("/record", SETTINGS)).toEqual({});
     expect(sidebarGroupStateForPathname("/reports", SETTINGS)).toEqual({});
-    expect(sidebarGroupStateForPathname("/setup", SETTINGS)).toEqual({});
   });
 
   it("returns empty on Dashboard (pinned outside groups)", () => {
@@ -71,9 +70,6 @@ describe("navGroupContainsPathname", () => {
     expect(navGroupContainsPathname("Overview", "/banking/cash", SETTINGS)).toBe(
       true,
     );
-    expect(navGroupContainsPathname("Set up", "/setup/members", SETTINGS)).toBe(
-      true,
-    );
   });
 });
 
@@ -92,13 +88,13 @@ describe("localStorage persistence", () => {
 describe("collapsible group labels", () => {
   it("excludes Overview (dashboard + hub intents are direct links)", () => {
     expect(COLLAPSIBLE_NAV_GROUP_LABELS).not.toContain("Overview");
-    expect(COLLAPSIBLE_NAV_GROUP_LABELS).toEqual(["Reports", "Set up"]);
+    expect(COLLAPSIBLE_NAV_GROUP_LABELS).toEqual(["Reports"]);
   });
 });
 
 describe("sidebarGroupRenderMode", () => {
-  it("Reports and Set up are always direct links", () => {
-    for (const label of ["Reports", "Set up"] as const) {
+  it("Reports is always a direct link", () => {
+    for (const label of ["Reports"] as const) {
       expect(sidebarGroupRenderMode(label, { deliveryEnabled: true })).toBe("link");
       expect(sidebarGroupRenderMode(label, { deliveryEnabled: false })).toBe("link");
     }

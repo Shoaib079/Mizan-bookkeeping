@@ -1,5 +1,5 @@
-import { DeliveryPlatformsPanel } from "@/components/setup/delivery-platforms-panel";
+import { redirectLegacySetup } from "@/lib/setup-redirect";
 
-export default function SetupDeliveryPlatformsPage() {
-  return <DeliveryPlatformsPanel />;
+export default function SetupDeliveryPlatformsRedirect() {
+  redirectLegacySetup("/setup/delivery-platforms");
 }

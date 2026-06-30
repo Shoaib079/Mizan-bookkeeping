@@ -107,36 +107,22 @@ export default function BankingPage() {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-2">
-          <Link href="/banking/transfers">
-            <Button variant="secondary" type="button">
-              Transfers
-            </Button>
-          </Link>
-          <Link href="/banking/cash">
-            <Button variant="secondary" type="button">
-              Cash drawer
-            </Button>
-          </Link>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            type="button"
-            disabled={!entityId}
-            onClick={() => setTransferOpen(true)}
-          >
-            New transfer
-          </Button>
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setAccountFormOpen(true)}
-          >
-            New account
-          </Button>
-        </div>
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+        <Button
+          variant="secondary"
+          type="button"
+          disabled={!entityId}
+          onClick={() => setTransferOpen(true)}
+        >
+          New transfer
+        </Button>
+        <Button
+          type="button"
+          disabled={!entityId}
+          onClick={() => setAccountFormOpen(true)}
+        >
+          New account
+        </Button>
       </div>
 
       {!entityId && (
@@ -149,7 +135,7 @@ export default function BankingPage() {
 
       {tree && tree.cash.accounts.length === 0 && (
         <p className="mb-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          Set up your cash drawer — seed the chart from Settings → Entity, or
+          Set up your cash drawer — seed the chart from Restaurant settings, or
           add a cash account with New account.
         </p>
       )}

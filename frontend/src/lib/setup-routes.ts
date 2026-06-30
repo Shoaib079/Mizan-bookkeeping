@@ -1,23 +1,43 @@
-/** Set up hub routes and legacy redirects (UX5). */
+/** Workspace settings routes + legacy redirects (settings reorg). */
 
-export const SETUP_TAB_HREFS = {
-  restaurant: "/setup/restaurant",
-  openingBalances: "/setup/opening-balances",
-  members: "/setup/members",
-  expenseItems: "/setup/expense-items",
-  deliveryPlatforms: "/setup/delivery-platforms",
-  accounts: "/setup/accounts",
-  accountant: "/setup/accountant",
-  backups: "/setup/backups",
+export const WORKSPACE_ROUTES = {
+  restaurant: "/settings/restaurant",
+  profile: "/settings/profile",
+  openingBalances: "/onboarding/opening-balances",
+  expenseItems: "/expenses/items",
+  deliveryPlatforms: "/delivery/platforms",
+  banking: "/banking",
+  manualJournals: "/review/manual-journals",
 } as const;
 
-/** Old bookmark URLs → Set up hub tabs. */
+/** Canonical hrefs for workspace / onboarding flows. */
+export const SETUP_TAB_HREFS = {
+  restaurant: WORKSPACE_ROUTES.restaurant,
+  openingBalances: WORKSPACE_ROUTES.openingBalances,
+  members: WORKSPACE_ROUTES.restaurant,
+  expenseItems: WORKSPACE_ROUTES.expenseItems,
+  deliveryPlatforms: WORKSPACE_ROUTES.deliveryPlatforms,
+  accounts: WORKSPACE_ROUTES.banking,
+  accountant: WORKSPACE_ROUTES.manualJournals,
+  backups: WORKSPACE_ROUTES.restaurant,
+} as const;
+
+/** Old bookmark URLs → canonical routes. */
 export const LEGACY_SETUP_REDIRECTS: Record<string, string> = {
-  "/settings": "/setup/restaurant",
-  "/settings/entity": "/setup/restaurant",
-  "/settings/opening-balances": "/setup/opening-balances",
-  "/settings/members": "/setup/members",
-  "/settings/expense-items": "/setup/expense-items",
-  "/delivery/platforms": "/setup/delivery-platforms",
-  "/accounting/manual-journals": "/setup/accountant",
+  "/settings": WORKSPACE_ROUTES.restaurant,
+  "/settings/entity": WORKSPACE_ROUTES.restaurant,
+  "/settings/opening-balances": WORKSPACE_ROUTES.openingBalances,
+  "/settings/members": WORKSPACE_ROUTES.restaurant,
+  "/settings/expense-items": WORKSPACE_ROUTES.expenseItems,
+  "/delivery/platforms": WORKSPACE_ROUTES.deliveryPlatforms,
+  "/accounting/manual-journals": WORKSPACE_ROUTES.manualJournals,
+  "/setup": WORKSPACE_ROUTES.restaurant,
+  "/setup/restaurant": WORKSPACE_ROUTES.restaurant,
+  "/setup/opening-balances": WORKSPACE_ROUTES.openingBalances,
+  "/setup/members": WORKSPACE_ROUTES.restaurant,
+  "/setup/expense-items": WORKSPACE_ROUTES.expenseItems,
+  "/setup/delivery-platforms": WORKSPACE_ROUTES.deliveryPlatforms,
+  "/setup/accounts": WORKSPACE_ROUTES.banking,
+  "/setup/accountant": WORKSPACE_ROUTES.manualJournals,
+  "/setup/backups": WORKSPACE_ROUTES.restaurant,
 };

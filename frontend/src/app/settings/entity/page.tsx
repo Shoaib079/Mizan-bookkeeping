@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirectLegacySetup } from "@/lib/setup-redirect";
 
 export default function SettingsEntityRedirect() {
-  redirect("/setup/restaurant");
+  redirectLegacySetup("/settings/entity");
 }

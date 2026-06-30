@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirectLegacySetup } from "@/lib/setup-redirect";
 
 export default function SettingsOpeningBalancesRedirect() {
-  redirect("/setup/opening-balances");
+  redirectLegacySetup("/settings/opening-balances");
 }

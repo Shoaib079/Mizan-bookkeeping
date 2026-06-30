@@ -3,7 +3,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  accountMenuAdminLinks,
   devModeIdentityLabel,
   recordingForLabel,
   switchConfirmMessage,
@@ -21,26 +20,6 @@ describe("switchConfirmMessage", () => {
 describe("unsavedWorkWarningMessage", () => {
   it("warns before leaving with dirty forms", () => {
     expect(unsavedWorkWarningMessage()).toContain("unsaved");
-  });
-});
-
-describe("accountMenuAdminLinks", () => {
-  it("shows all admin links for owners", () => {
-    const links = accountMenuAdminLinks("owner");
-    expect(links.map((link) => link.href)).toEqual([
-      "/setup/restaurant",
-      "/setup/opening-balances",
-      "/setup/members",
-      "/setup/expense-items",
-    ]);
-  });
-
-  it("hides admin links for cashiers", () => {
-    expect(accountMenuAdminLinks("cashier")).toEqual([]);
-  });
-
-  it("hides admin links for view-only partners", () => {
-    expect(accountMenuAdminLinks("partner_view_only")).toEqual([]);
   });
 });
 

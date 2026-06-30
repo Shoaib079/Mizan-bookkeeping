@@ -1,5 +1,5 @@
-import { ManualJournalsPanel } from "@/components/setup/manual-journals-panel";
+import { redirectLegacySetup } from "@/lib/setup-redirect";
 
-export default function SetupAccountantPage() {
-  return <ManualJournalsPanel />;
+export default function SetupAccountantRedirect() {
+  redirectLegacySetup("/setup/accountant");
 }

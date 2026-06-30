@@ -34,7 +34,7 @@ export function buildOnboardingSteps(
     {
       id: "opening_balances",
       label: "Post opening balances",
-      href: "/setup/opening-balances",
+      href: "/onboarding/opening-balances",
       done: state.openingBalancesPosted,
     },
   ];
@@ -43,7 +43,7 @@ export function buildOnboardingSteps(
     steps.push({
       id: "invite_staff",
       label: "Invite staff",
-      href: "/setup/members",
+      href: "/settings/restaurant",
       done: state.staffInvited,
     });
   }

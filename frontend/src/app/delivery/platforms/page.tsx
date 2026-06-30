@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
+import { DeliveryPlatformsPanel } from "@/components/delivery/delivery-platforms-panel";
 
-/** Legacy URL — UX5 redirect to Set up → Delivery platforms. */
-export default function DeliveryPlatformsRedirectPage() {
-  redirect("/setup/delivery-platforms");
+export default function DeliveryPlatformsPage() {
+  return <DeliveryPlatformsPanel />;
 }

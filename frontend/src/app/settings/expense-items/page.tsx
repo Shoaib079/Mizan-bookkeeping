@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirectLegacySetup } from "@/lib/setup-redirect";
 
 export default function SettingsExpenseItemsRedirect() {
-  redirect("/setup/expense-items");
+  redirectLegacySetup("/settings/expense-items");
 }

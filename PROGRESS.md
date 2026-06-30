@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Post-launch — ops queue (P3/P5/P6) |
 | **Active slice** | **P3** — off-site upload backup (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | FS — Salary period + advance UX (`v0.73.24-salary-period-advance-ux`) |
-| **Last tag** | `v0.73.24-salary-period-advance-ux` |
+| **Last completed slice** | Settings reorg — dissolve Set up hub (`v0.73.25-settings-reorg`) |
+| **Last tag** | `v0.73.25-settings-reorg` |
 | **Next up** | P3 → P5 → P6 → IC-D (deferred) → P8 design |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
@@ -62,7 +62,7 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**`v0.73.24-salary-period-advance-ux`** — salary period on accrual (migration `060`); ledger exposes outstanding advance; payment form previews auto-deduct; `advance_applied_minor` on payment API. Prior: **`v0.73.23`** partner drawing/repayment (FP).
+**`v0.73.25-settings-reorg`** — dissolve Set up sidebar; workspace settings in profile menu (Your profile, Restaurant settings, Add restaurant); Team nested under Restaurant settings; domain config moved to mother sections (opening balances, expense items, delivery platforms, manual journals). Prior: **`v0.73.24`** salary period + advance UX (FS).
 
 **Deploy:** `alembic upgrade head` through **`060`** on Railway.
 

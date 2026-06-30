@@ -208,7 +208,7 @@ function EntryDetailPanel({
       {row.source === "manual" && row.status === "posted" && (
         <p className="text-xs text-muted-foreground">
           To void this manual journal, use{" "}
-          <Link href="/setup/accountant" className="text-primary hover:underline">
+          <Link href="/review/manual-journals" className="text-primary hover:underline">
             Manual journals
           </Link>
           .
@@ -384,7 +384,7 @@ function LedgerPanelContent() {
         general ledger, not the deferred audit-events log (immutable change
         history). Correct posted manual journals and bank fees here; void manual
         journals on{" "}
-        <Link href="/setup/accountant" className="text-primary hover:underline">
+        <Link href="/review/manual-journals" className="text-primary hover:underline">
           Manual journals
         </Link>
         . Subledger-backed entries use their dedicated correction flows.

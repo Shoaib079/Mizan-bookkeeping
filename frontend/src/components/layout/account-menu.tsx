@@ -4,23 +4,21 @@
 
 import { useClerk } from "@clerk/nextjs";
 import {
-  Building2,
   ChevronDown,
   LogOut,
-  Scale,
+  Plus,
   Settings,
-  Tags,
-  Users,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 
+import { CreateRestaurantDialog } from "@/components/settings/create-restaurant-dialog";
 import { EntityBadge } from "@/components/layout/entity-badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import {
-  accountMenuAdminLinks,
   devModeIdentityLabel,
   switchConfirmMessage,
   unsavedWorkWarningMessage,
@@ -31,15 +29,7 @@ import { entityAccentColor, userInitials } from "@/lib/entity-visual";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { useToast } from "@/lib/toast";
 import { useUnsavedWork } from "@/lib/unsaved-work";
-import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
-
-const LINK_ICONS: Record<string, typeof Settings> = {
-  "/setup/restaurant": Building2,
-  "/setup/opening-balances": Scale,
-  "/setup/members": Users,
-  "/setup/expense-items": Tags,
-};
 
 type PendingAction =
   | { type: "switch"; entityId: string; name: string }
@@ -78,7 +68,6 @@ function AccountMenuPanel({
 }) {
   const { toast } = useToast();
   const { hasUnsavedWork } = useUnsavedWork();
-  const { role } = useEntityAccess();
   const {
     entityId,
     setEntityId,
@@ -93,6 +82,7 @@ function AccountMenuPanel({
 
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [switchTarget, setSwitchTarget] = useState<{
     id: string;
     name: string;
@@ -117,8 +107,6 @@ function AccountMenuPanel({
     () => entities.filter((entity) => entity.id !== entityId),
     [entities, entityId],
   );
-
-  const adminLinks = useMemo(() => accountMenuAdminLinks(role), [role]);
 
   const displayName = devMode
     ? devModeIdentityLabel()
@@ -321,25 +309,38 @@ function AccountMenuPanel({
             </div>
           )}
 
-          {adminLinks.length > 0 && (
-            <div className="border-b border-border px-2 py-2">
-              {adminLinks.map((link) => {
-                const Icon = LINK_ICONS[link.href] ?? Settings;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    role="menuitem"
-                    className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted/60"
-                    onClick={closeMenu}
-                  >
-                    <Icon className="size-4 text-muted-foreground" />
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+          <div className="border-b border-border px-2 py-2">
+            <Link
+              href="/settings/profile"
+              role="menuitem"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted/60"
+              onClick={closeMenu}
+            >
+              <User className="size-4 text-muted-foreground" />
+              Your profile
+            </Link>
+            <Link
+              href="/settings/restaurant"
+              role="menuitem"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted/60"
+              onClick={closeMenu}
+            >
+              <Settings className="size-4 text-muted-foreground" />
+              Restaurant settings
+            </Link>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted/60"
+              onClick={() => {
+                closeMenu();
+                setCreateOpen(true);
+              }}
+            >
+              <Plus className="size-4 text-muted-foreground" />
+              Add restaurant
+            </button>
+          </div>
 
           {onSignOut && (
             <div className="px-2 pt-1">
@@ -356,6 +357,11 @@ function AccountMenuPanel({
           )}
         </div>
       )}
+
+      <CreateRestaurantDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+      />
 
       {switchTarget && (
         <ConfirmOverlay

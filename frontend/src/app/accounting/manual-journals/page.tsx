@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirectLegacySetup } from "@/lib/setup-redirect";
 
-/** Legacy URL — UX5 redirect to Set up → Accountant. */
-export default function ManualJournalsRedirectPage() {
-  redirect("/setup/accountant");
+export default function ManualJournalsLegacyRedirect() {
+  redirectLegacySetup("/accounting/manual-journals");
 }

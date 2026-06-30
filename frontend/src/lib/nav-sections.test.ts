@@ -76,23 +76,17 @@ const TAB_ONLY_HREFS = [
   "/review/invoices",
   "/review/delivery",
   "/review/posted",
-  "/setup/restaurant",
-  "/setup/opening-balances",
-  "/setup/members",
-  "/setup/expense-items",
-  "/setup/delivery-platforms",
-  "/setup/accounts",
-  "/setup/accountant",
-  "/setup/backups",
+  "/review/manual-journals",
   "/banking/transfers",
   "/banking/cash",
   "/delivery/reports",
   "/delivery/settlements",
+  "/delivery/platforms",
 ] as const;
 
 describe("REGISTERED_PAGE_ROUTES", () => {
-  it("lists exactly 70 app pages", () => {
-    expect(REGISTERED_PAGE_ROUTES).toHaveLength(70);
+  it("lists exactly 75 app pages", () => {
+    expect(REGISTERED_PAGE_ROUTES).toHaveLength(75);
   });
 
   it("assigns each route exactly one entry kind", () => {
@@ -197,18 +191,25 @@ describe("tab + sidebar highlighting", () => {
     expect(section?.tabs.find((tab) => tab.match("/cards"))?.href).toBe("/cards");
   });
 
-  it("highlights Set up sidebar row on the hub and on tab pages", () => {
-    expect(sidebarHrefActiveForPathname("/setup", "/setup")).toBe(true);
-    expect(sidebarHrefActiveForPathname("/setup", "/setup/members")).toBe(true);
-    expect(sidebarHrefActiveForPathname("/setup", "/settings/members")).toBe(
+  it("highlights Review sidebar row on manual journals tab", () => {
+    expect(sidebarHrefActiveForPathname("/review", "/review/manual-journals")).toBe(
       true,
     );
 
-    const section = navSectionForPathname("/setup/opening-balances");
-    expect(section?.id).toBe("setup");
-    expect(section?.tabs.find((tab) => tab.match("/setup/opening-balances"))?.href).toBe(
-      "/setup/opening-balances",
+    const section = navSectionForPathname("/review/manual-journals");
+    expect(section?.id).toBe("review");
+    expect(
+      section?.tabs.find((tab) => tab.match("/review/manual-journals"))?.href,
+    ).toBe("/review/manual-journals");
+  });
+
+  it("highlights Delivery sidebar row on platforms tab", () => {
+    expect(sidebarHrefActiveForPathname("/delivery", "/delivery/platforms")).toBe(
+      true,
     );
+
+    const section = navSectionForPathname("/delivery/platforms");
+    expect(section?.id).toBe("delivery");
   });
 
   it("highlights Balances sidebar row on the hub and on tab pages", () => {
@@ -229,10 +230,10 @@ describe("tab + sidebar highlighting", () => {
     expect(section?.id).toBe("review");
   });
 
-  it("highlights Set up sidebar row for manual journals (legacy URL)", () => {
-    expect(sidebarHrefActiveForPathname("/setup", "/accounting/manual-journals")).toBe(
-      true,
-    );
+  it("highlights Review sidebar row for legacy manual journals URL redirect", () => {
+    expect(
+      sidebarHrefActiveForPathname("/review", "/accounting/manual-journals"),
+    ).toBe(false);
   });
 });
 

@@ -120,7 +120,7 @@ export function PayablesTable() {
               but this page is empty, you may have posted aggregate opening
               balance to GL 2000 without per-supplier lines — use{" "}
               <Link
-                href="/setup/opening-balances"
+                href="/onboarding/opening-balances"
                 className="text-primary hover:underline"
               >
                 Setup → Opening balances

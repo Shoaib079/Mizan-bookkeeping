@@ -10,7 +10,7 @@ import {
 } from "@/lib/app-routes";
 import { NEW_COMMAND_QUICK_ACTIONS } from "@/lib/nav-sections";
 
-const EXPECTED_SIDEBAR_GROUPS = ["Overview", "Reports", "Set up"] as const;
+const EXPECTED_SIDEBAR_GROUPS = ["Overview", "Reports"] as const;
 
 const NON_NEW_ROUTES = appRoutes.filter((route) => !route.label.startsWith("New:"));
 
@@ -27,9 +27,9 @@ describe("navGroups", () => {
     }
   });
 
-  it("shows a single Set up hub row instead of sub-page rows", () => {
-    const setup = navGroups.find((group) => group.label === "Set up");
-    expect(setup?.items.map((item) => item.href)).toEqual(["/setup"]);
+  it("shows Overview and Reports sidebar groups only", () => {
+    expect(navGroups.map((group) => group.label)).toEqual([...EXPECTED_SIDEBAR_GROUPS]);
+    expect(navGroups.some((group) => group.label === "Set up")).toBe(false);
   });
 
   it("keeps hub intents under Overview in sidebar order", () => {
@@ -58,7 +58,7 @@ describe("navGroups", () => {
     expect(sidebarHrefs).toContain("/partners");
     expect(sidebarHrefs).toContain("/banking");
     expect(sidebarHrefs).not.toContain("/delivery");
-    expect(sidebarHrefs).not.toContain("/setup/restaurant");
+    expect(sidebarHrefs).not.toContain("/settings/restaurant");
   });
 
   it("keeps every non-New route in appRoutes for palette indexing", () => {
@@ -88,12 +88,11 @@ describe("navGroups", () => {
       "/banking/cash",
       "/reports",
       "/review/posted",
-      "/setup",
-      "/setup/restaurant",
-      "/setup/opening-balances",
-      "/setup/members",
-      "/setup/expense-items",
-      "/setup/accountant",
+      "/review/manual-journals",
+      "/settings/restaurant",
+      "/settings/profile",
+      "/onboarding/opening-balances",
+      "/expenses/items",
     ];
     for (const href of expected) {
       expect([...hrefs].some((key) => key.startsWith(`${href}::`))).toBe(true);
@@ -248,7 +247,6 @@ describe("entry dialogs recording context", () => {
 
 describe("sidebarChildrenForNavItem", () => {
   it("returns no nested sidebar children (tabs and report cards instead)", () => {
-    expect(sidebarChildrenForNavItem("/setup", { deliveryEnabled: true })).toEqual([]);
     expect(sidebarChildrenForNavItem("/reports", { deliveryEnabled: false })).toEqual([]);
   });
 });

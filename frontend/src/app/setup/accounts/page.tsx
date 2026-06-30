@@ -1,5 +1,5 @@
-import { BankAccountsEntry } from "@/components/setup/bank-accounts-entry";
+import { redirectLegacySetup } from "@/lib/setup-redirect";
 
-export default function SetupAccountsPage() {
-  return <BankAccountsEntry />;
+export default function SetupAccountsRedirect() {
+  redirectLegacySetup("/setup/accounts");
 }

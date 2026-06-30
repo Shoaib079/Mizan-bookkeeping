@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Salary period + advance UX (`v0.73.24-salary-period-advance-ux`) |
-| **Last commit/tag**      | `v0.73.24-salary-period-advance-ux` — salary period on accrual; ledger advance fields; payment preview UX |
+| **Last completed slice** | Settings reorg — dissolve Set up hub (`v0.73.25-settings-reorg`) |
+| **Last commit/tag**      | `v0.73.25-settings-reorg` — workspace settings in profile menu; Team nested under Restaurant settings; domain pages moved to mother sections |
 | **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover); **IC-D** deferred |
 
 
@@ -49,6 +49,7 @@
 | Phase 9 New menu + receipt review                                                | `v0.55.0-phase9-new-menu`                         | done           | Re-scaffold shell / New dropdown                                                                                           |
 | Phase 9 read-back + Clerk                                                        | `v0.56.0-phase9-readback-clerk`                   | done           | Re-wire auth from scratch                                                                                                  |
 | Nav consolidation (section tabs, reports cards, settings hub)                    | `v0.71.9`                                         | done           | Re-flatten to per-page sidebar rows or re-add duplicate report/settings entries                                            |
+| Set up hub dissolved — workspace settings in profile menu                        | `v0.73.25-settings-reorg`                         | done           | Re-add Set up sidebar section; duplicate create form on restaurant settings; top-level Team menu item                      |
 | Single-item sidebar groups → direct links                                        | `v0.71.10`                                        | done           | Re-wrap single-destination groups in accordions                                                                            |
 | Excel statement import (.xlsx openpyxl, .xls xlrd) + lira amount column          | `v0.71.11`, `v0.71.12`                            | done           | Route `.xls` to openpyxl; revert amount column to kuruş                                                                    |
 | Bank import column mapping + saved per-account profiles                          | `v0.71.13`                                        | done           | Re-add fixed-header-only import; mapping handles Borç/Alacak + start row                                                   |
@@ -1837,6 +1838,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-25 | Settings reorg (UX)                           | `v0.73.25-settings-reorg`                            | Remove Set up sidebar; profile menu → Your profile / Restaurant settings / Add restaurant; Team nested under Restaurant settings (Modules + Team sections); opening balances → `/onboarding/opening-balances`; expense items → `/expenses/items`; platforms → Delivery tab; manual journals → Review tab; legacy `/setup/*` redirects |
 | 2026-06-25 | Salary period + advance UX (FS)               | `v0.73.24-salary-period-advance-ux`                  | Migration `060` accrual period; ledger `outstanding_advance_minor` + `remaining_accrual_minor`; payment `advance_applied_minor`; staff pay form preview |
 | 2026-06-25 | Partner advance / drawing (FP)                | `v0.73.23-partner-advance-drawing`                   | Drawing + repayment posting; bidirectional partner balance; Record hub + partner page |
 | 2026-06-25 | Invoice review confidence UX (IC-C)           | `v0.73.22-invoice-review-confidence-ux`              | `classification_confidence` on draft API; kind badge; HIGH → one Confirm; MEDIUM/LOW → Accept suggestion / Change type |

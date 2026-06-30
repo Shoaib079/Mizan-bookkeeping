@@ -180,39 +180,40 @@ export const appRoutes: AppRoute[] = [
     nestedUnder: "/reports",
   },
   {
-    href: "/setup/accountant",
+    href: "/review/manual-journals",
     label: "Manual journals",
     keywords: "void manual journal",
     icon: BookOpen,
-    group: "Set up",
-    nestedUnder: "/setup",
+    group: "Reports",
+    nestedUnder: "/reports",
   },
-  { href: "/setup", label: "Set up", icon: Settings, group: "Set up" },
   {
-    href: "/setup/restaurant",
+    href: "/settings/restaurant",
     label: "Restaurant settings",
-    keywords: "entity create",
+    keywords: "entity modules team toggles",
     icon: Settings,
-    group: "Set up",
+    group: "Workspace",
   },
   {
-    href: "/setup/opening-balances",
+    href: "/settings/profile",
+    label: "Your profile",
+    keywords: "display name user",
+    icon: UserCircle,
+    group: "Workspace",
+  },
+  {
+    href: "/onboarding/opening-balances",
     label: "Opening balances",
     icon: Settings,
-    group: "Set up",
+    group: "Workspace",
   },
   {
-    href: "/setup/members",
-    label: "Members & roles",
-    icon: Users,
-    group: "Set up",
-  },
-  {
-    href: "/setup/expense-items",
+    href: "/expenses/items",
     label: "Expense items",
     keywords: "merge duplicate items",
     icon: Tags,
-    group: "Set up",
+    group: "Expenses & suppliers",
+    nestedUnder: "/expenses",
   },
   {
     href: "/expenses",
@@ -317,7 +318,6 @@ export function filterNavItemsByEntitySettings(
 const SIDEBAR_GROUP_DEFS = [
   { label: "Overview", icon: LayoutDashboard },
   { label: "Reports", icon: BarChart3 },
-  { label: "Set up", icon: Settings },
 ] as const;
 
 function primarySidebarItems(groupLabel: string): AppRoute[] {

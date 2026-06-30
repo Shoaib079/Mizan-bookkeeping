@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirectLegacySetup } from "@/lib/setup-redirect";
 
-export default function SetupIndexPage() {
-  redirect("/setup/restaurant");
+export default function SetupIndexRedirect() {
+  redirectLegacySetup("/setup");
 }

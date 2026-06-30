@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirectLegacySetup } from "@/lib/setup-redirect";
 
 export default function SettingsMembersRedirect() {
-  redirect("/setup/members");
+  redirectLegacySetup("/settings/members");
 }

@@ -15,12 +15,13 @@ describe("command palette routes", () => {
 });
 
 describe("delivery tabs", () => {
-  it("defines tab links for delivery sub-pages (platforms moved to Set up)", () => {
+  it("defines tab links for delivery sub-pages including platforms", () => {
     const tabs = navSectionById("delivery").tabs.map((tab) => tab.href);
     expect(tabs).toEqual([
       "/delivery",
       "/delivery/reports",
       "/delivery/settlements",
+      "/delivery/platforms",
     ]);
   });
 
