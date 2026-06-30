@@ -19,10 +19,109 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 - **Turkish e-Fatura PDF parsing** (`bad0de6`) — Metro, utility, delivery-commission GİB layouts; supplier VKN heuristics (SAYIN / inverted); `test_efatura_pdf_heuristics.py`.
 - **Entity company profile + VKN** (`v0.73.7-company-profile-efatura-suppliers`) — migration `058` `entities.vkn`; required on create; editable in Set up → Restaurant; first-run onboarding VKN field; PDF parse excludes buyer VKN when entity VKN set.
 - **e-Fatura auto-create suppliers** (`v0.73.7-company-profile-efatura-suppliers`) — `find_or_create_supplier_for_efatura` on upload; draft linked immediately; bank statement supplier create stays manual-only.
+- **Delivery monthly gross + platform commission** (`v0.73.18-delivery-monthly-sales`) — one posted gross per platform/month (KDV dahil); commission e-Fatura linked by platform; migration `059`; `balance_left_kurus` reconciliation.
+- **Supplier activity timeline + inline invoice preview** (`v0.73.19-supplier-activity-invoice-preview`) — chronological supplier Activity tab + Excel export; PDF preview on Review / supplier activity / draft review; document download API; partial commission confirm fix; duplicate discard (draft/duplicate only).
+
+---
+
+## 📋 Master build order (pre-launch — do in this sequence)
+
+| Priority | ID | Slice | Status |
+|----------|-----|-------|--------|
+| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **Next — blocks daily bookkeeping** |
+| 2 | FP | Partner advance / drawing | Queued |
+| 3 | FS | Salary period + auto-clear advance | Queued |
+| 4 | P3 | Off-site backup of uploads | Queued |
+| 5 | P5 | Delete company UI | Queued |
+| 6 | P6 | Production cutover (ops) | Owner |
+| 7 | P8 | Groceries / no-invoice card spend | Design TBD |
+| — | P4, P7 | Backup prune, lint | Optional |
+
+**Rule:** Finish **IC-A through IC-C** before FP/FS. **IC-D** (learning) only after IC-C is stable in production for a few weeks.
 
 ---
 
 ## 🔨 Build queue (each = one slice)
+
+### IC — Invoice classification & e-Fatura routing  *(PRIORITY — before FP/FS)*
+
+**Why:** Platform commission vs supplier expense must be correct before post. Getir uses **one VKN** for groceries (supply) and Komisyon (commission). Yemeksepeti commission invoices **do not contain the word “komisyon”** (they use *Sipariş İletim Hizmet Bedeli*, *Dağıtım Hizmet Bedeli*). **Fatura Tipi SATIS** appears on both types — useless for routing. Owner audit (Spice Corner May 2026 PDFs) confirmed gaps.
+
+**Goal:** Correct kind on upload for the 95% case; recoverable when wrong; learning only for edge cases. **Never auto-post** — confirm remains the human gate.
+
+**Permanent fixture corpus** (copy into `backend/tests/fixtures/efatura/spice_corner/` when building IC-B; CI must keep green):
+
+| File (owner source) | Platform | Expected `invoice_kind` |
+|---------------------|----------|-------------------------|
+| `24.pdf` | Trendyol | `delivery_commission` |
+| `54.pdf` | Yemeksepeti | `delivery_commission` (**currently MISSED by detector**) |
+| `57.pdf` | Migros Yemek | `delivery_commission` |
+| `58.pdf` | Getir | `delivery_commission` |
+| Getir supply (`Fatura Yazdır…pdf`, May 2026) | Getir Perakende | `supplier` (never commission) |
+
+**Classification rules (deterministic — implement in IC-B):**
+
+- **Commission:** Komisyon Bedeli / Komisyon Faturası; YS *Hizmet Bedeli* lines + VKN 9470457468; Migros *Komisyon Faturası*; Trendyol *Komisyon Faturası* / GCF belge.
+- **Supply override:** `Depo:`; ≥3 product SKU lines (food/packaging); mixed low KDV (1%/10%) on Getir groceries.
+- **Never:** classify from platform name, Fatura Tipi SATIS, or Getir VKN alone.
+- **Never:** linking delivery platform silently forces `delivery_commission` on supplier expense.
+
+**Known gaps in shipped code (`v0.73.19`) — fix in IC slices, do not rebuild activity/preview:**
+
+- Confirmed drafts cannot be rejected or unconfirmed (stuck if misclassified).
+- `link_delivery_platform_to_draft` forces `delivery_commission` kind.
+- Commission **post** still requires `supplier_id` though **confirm** does not.
+- Post API may not map period-lock / delivery-disabled errors → opaque client NetworkError.
+- Yemeksepeti commission (`54.pdf`) not detected; supply-layout check false-positive on table headers.
+
+---
+
+#### IC-A — Unconfirm / redo (safety net)
+
+**Spec:** Confirmed-but-not-posted → **Send back to review** (status `draft`/`needs_review`, keep PDF + extraction). Then: reject/discard, reclassify supplier ↔ commission, re-link supplier/platform. Audit who/when.
+
+**Acceptance:** Owner can recover a stuck confirmed invoice without DB surgery.
+
+**Tag target:** `v0.73.20-invoice-unconfirm-redo`
+
+---
+
+#### IC-B — Deterministic classification + fixtures + post fixes
+
+**Spec:**
+
+1. Fix `commission_detect.py` — Yemeksepeti Hizmet Bedeli patterns; tighten supply layout (ignore header-only *Mal/Hizmet* + *Miktar Birim* hits; require Depo or product rows).
+2. Intake confidence: HIGH → auto kind; MEDIUM/LOW → `needs_review` + reason; no auto platform link on supplier expense.
+3. Stop platform link from forcing commission without explicit commission intent.
+4. Align commission post with confirm (no supplier required when platform linked).
+5. Post API: catch `DeliveryNotEnabledError`, period-lock errors → 422 with clear message.
+6. Add Spice Corner fixture tests (five PDFs above).
+
+**Acceptance:** All five fixtures pass in pytest; upload simulation classifies correctly without user picking type.
+
+**Tag target:** `v0.73.21-invoice-classification-fixtures`
+
+---
+
+#### IC-C — Review UX (minimal friction)
+
+**Spec:** Preview + badge (**Supplier expense** / **Delivery commission**). HIGH confidence → suggest type + one Confirm. `needs_review` only → Accept suggestion or Change type. Unconfirm on confirmed. Do **not** ask type on every upload once IC-B is green.
+
+**Acceptance:** Happy path upload → confirm → post (≤3 clicks); review path only when `needs_review`.
+
+**Tag target:** `v0.73.22-invoice-review-confidence-ux`
+
+---
+
+#### IC-D — Per-entity classification learning  *(defer until IC-C stable)*
+
+**Spec:** Same pattern as statement classification (`v0.71.14`): per-entity rules (seller VKN + text tokens → kind); learn on user override/unconfirm+reclassify; suggest after N confirms at HIGH confidence; correction downgrades bad rules. **Never auto-post.** No global cross-restaurant rule pool.
+
+**Acceptance:** After one manual fix of an edge-case PDF, next similar invoice is auto-suggested correctly.
+
+**Tag target:** `v0.73.23-invoice-classification-learning`
+
+---
 
 ### ~~P1 — Expense account picker: show names, not GL codes~~ **DONE**
 
@@ -61,6 +160,8 @@ Remove ESLint "defined but never used" warnings across frontend/src (unused impo
 ---
 
 ## 🧭 UX Reorg — "one home for everything" (from `UX_AUDIT_PROPOSAL.md`)
+
+**Status: DONE (`v0.73.5`–`v0.73.7`, UX1–UX7). Do not rebuild.** Kept below as reference only.
 
 Goal: stop the back-and-forth and the "why is this page here?" confusion. Reorganize the app around what the owner does, give every action/page exactly **one home**, and remove/merge duplicate pages — **without changing any accounting behavior**.
 
@@ -138,13 +239,15 @@ Now that the hubs exist, collapse the sidebar to the 6 intents (Dashboard, Recor
 
 ---
 
-## 🧩 Feature gaps (separate from UX reorg — still needed)
+## 🧩 Feature gaps (separate from UX reorg — after IC-A–IC-C)
 
-These add capability the reorg doesn't (the reorg only relocates). Build alongside/after UX1 since the People forms come front-and-centre there.
+These add capability the reorg doesn't (the reorg only relocates). **Build after invoice classification (IC) slices** — IC blocks daily e-Fatura workflow.
 
 - **FP — Partner advance / drawing (partner OWES the business).** Today the partner ledger only tracks "business owes partner" (expense fronted + reimbursement). Add advance/drawing movements so a partner can owe the business, and show the balance in either direction ("owes you" vs "you owe"). Backend movement + posting + ledger sign; partner page + Record card. *(Ask for full Cursor prompt when ready.)*
 - **FS — Salary period + auto-clear advance.** Add a salary **period/month** to the accrual; when paying salary, surface the employee's **outstanding advance** and auto-deduct it (the posting layer supports `advance_applied`; service currently passes 0 — wire it). *(Ask for full Cursor prompt when ready.)*
 
 ---
 
-**How to use:** pick a slice → paste its Cursor prompt → Cursor builds + tests + commits → push → Railway/Netlify auto-deploy → test live. For the UX reorg, build **UX1 → UX6 in order**, one at a time. Tell me when you start any slice and I'll expand the spec or walk the ops steps.
+**How to use:** pick a slice from the **Master build order** → build + test + commit/tag → push → deploy → test live. **Next:** **IC-A → IC-B → IC-C** (then FP/FS). UX reorg **UX1–UX7 done** — do not rebuild. Tell me when you start any slice and I'll expand the spec or walk the ops steps.
+
+**Session recovery:** read `ROADMAP.md` **Current status** + `PROGRESS.md` **Current** + this file **Master build order** — git tag wins over stale doc lines.

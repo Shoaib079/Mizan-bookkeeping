@@ -14,18 +14,22 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | Feature gaps FP/FS next                                                                       |
+| **Active slice**         | **IC-A** — Invoice unconfirm / redo (see `POST_LAUNCH_PLAN.md` § IC) |
 | **Last completed slice** | Supplier activity timeline + inline invoice preview (`v0.73.19-supplier-activity-invoice-preview`) |
 | **Last commit/tag**      | `v0.73.19-supplier-activity-invoice-preview` — chronological supplier activity, inline PDF preview, commission draft fixes |
-| **Next up**              | Feature gaps FP/FS; then P3/P5/P6                    |
+| **Next up**              | **IC-A → IC-B → IC-C** (invoice classification); then **FP/FS**; then **P3/P5/P6**; **IC-D** learning after IC-C stable; **P8** groceries design |
 
 
 ### Next plan (pre-launch, owner-driven)
 
 1. ~~**Clearance auto-pick (backend, small).**~~ **DONE (`v0.72.0-clearance-auto-pick`).** HIGH-confidence learned rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches; zero or multiple matches → Needs Review. Delivery resolves platform by unique match across entity platforms.
-2. **Run pending migrations before go-live:** `alembic upgrade head` applies through **`059`** (`052`–`059`: import profiles, CSV options, classification rules, rule auto-apply, entity `legal_name`, expense item default account, entity **`vkn`**, delivery monthly sales). Ensure `xlrd` installed.
-3. **Phase 12 owner sign-off** — record first real restaurant on production (provision Postgres, secrets, backup-restore drill, walk a day).
-4. *Optional later:* generic global "starter phrasebook" of non-private TR type-patterns for day-one defaults (personal rules always override).
+2. **Invoice classification (IC-A–IC-D)** — **NEXT.** Unconfirm/redo on confirmed drafts; fix Yemeksepeti + Getir supply vs commission detection; Spice Corner PDF fixture corpus; review UX; per-entity learning (IC-D deferred). Full spec: **`POST_LAUNCH_PLAN.md` § IC**. Blocks FP/FS until IC-A–IC-C ship.
+3. **Run pending migrations before go-live:** `alembic upgrade head` applies through **`059`** (`052`–`059`: import profiles, CSV options, classification rules, rule auto-apply, entity `legal_name`, expense item default account, entity **`vkn`**, delivery monthly sales). Ensure `xlrd` installed.
+4. **Phase 12 owner sign-off** — record first real restaurant on production (provision Postgres, secrets, backup-restore drill, walk a day).
+5. **Feature gaps FP/FS** — partner advance; salary advance auto-clear (after IC-A–IC-C).
+6. **P3/P5/P6** — upload backup, delete company UI, production cutover (`POST_LAUNCH_PLAN.md`).
+7. **P8** — groceries / no-invoice card spend (design only until promoted).
+8. *Optional later:* generic global "starter phrasebook" of non-private TR type-patterns for day-one defaults (personal rules always override).
 
 **2b — Unified statement review hub (frontend) — DONE (`v0.71.16`).** `/banking/review`: status tabs (needs review · auto-posted · posted · linked), inline confirm/classify/correct/create-supplier, suggestion display, token trim, `rule_auto` highlighting.
 
@@ -60,6 +64,7 @@
 | **POS/delivery settlement clearing + commission split (net vs gross)**           | `v0.18.0` + `core/pos`/`core/delivery` posting    | done           | **Re-build deposit clearing or commission net/gross logic — it already exists**                                            |
 | Delivery monthly gross sales + platform-linked commission                        | `v0.73.18-delivery-monthly-sales`                 | done           | Re-add per-report commission/net on sales rows, `link-delivery-report`, report-linked commission post                        |
 | Supplier activity timeline + inline invoice preview                              | `v0.73.19-supplier-activity-invoice-preview`        | done           | Re-build separate ledger/invoice tabs; commission confirm requiring supplier; block duplicate discard                        |
+| Invoice unconfirm / redo + classification fixtures (IC-A–IC-C)                 | *queued* — see `POST_LAUNCH_PLAN.md` § IC          | planned        | Re-implement before IC ships; duplicate YS/Getir rules without fixture corpus                                                |
 
 
 **Owner sign-off ✓ (2026-06-28)** on Phase 12.5 statement-learning arc through clearance auto-pick (`v0.72.0-clearance-auto-pick`) — rule auto-post (bank fee + supplier payment), review hub, match_token trim, POS/delivery link-only auto-clear.
@@ -1828,6 +1833,8 @@ Take the tested app to a real, secure production environment and put real data i
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-06-30 | Supplier activity + inline invoice preview      | `v0.73.19-supplier-activity-invoice-preview`           | Chronological supplier timeline API + single-sheet Excel export; inline PDF preview on review hub, supplier activity, draft review; commission confirm without supplier when platform linked; duplicate discard; document download endpoint |
+| 2026-06-25 | Delivery monthly gross sales + platform commission | `v0.73.18-delivery-monthly-sales`                      | One posted gross per platform/month (KDV dahil); commission e-Fatura linked by platform + auto-detect; `balance_left_kurus` reconciliation; migration `059`; dashboard `delivery_balance_left`; 731+ pytest (7 pre-existing unrelated failures) |
+| *planned*  | Invoice classification IC-A–IC-D                | `POST_LAUNCH_PLAN.md` § IC                             | Unconfirm/redo; Yemeksepeti Hizmet Bedeli + Getir supply vs commission; Spice Corner PDF fixtures; review confidence UX; per-entity learning (IC-D deferred) |
 | 2026-06-30 | Metro PDF supplier intake + payables visibility | `v0.73.16-metro-supplier-payables`                     | Metro bare-VKN + SAYIN-first portal PDF heuristics; supplier name; link-supplier auto-create; payables include inactive; suppliers list include_inactive + forbidden state; `metr-inverted.pdf` fixture; review_reason when VKN missing |
 | 2026-06-30 | Company profile + e-Fatura supplier intake      | `v0.73.7-company-profile-efatura-suppliers`            | Entity `vkn` (migration `058`, required on create, `PATCH` + Set up UI); PDF parse uses buyer VKN; auto-create/link supplier on e-Fatura upload; `test_entity_profile.py`, `test_efatura_pdf_heuristics.py`, supplier auto-create tests; vitest `vkn.test.ts` |
 | 2026-06-30 | Turkish e-Fatura PDF heuristics                 | `bad0de6`                                              | Metro/utility/delivery commission PDF labels; supplier VKN before SAYIN / inverted layouts; `test_efatura_pdf_heuristics.py`                                                                                                                                  |
