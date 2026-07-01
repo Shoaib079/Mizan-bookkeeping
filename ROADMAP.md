@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Statement import production fix — entity-switch reset race (`v0.73.27-statement-import-reset-fix`) |
-| **Last commit/tag**      | `v0.73.27-statement-import-reset-fix` — stop wiping preview on entity hydration; toast import errors |
+| **Last completed slice** | Statement import preview stability — wait for entity list before mount (`v0.73.28-statement-import-preview-stable`) |
+| **Last commit/tag**      | `v0.73.28-statement-import-preview-stable` — gate import UI on entitiesLoaded; ignore stale preview responses |
 | **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover) |
 
 

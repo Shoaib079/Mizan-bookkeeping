@@ -36,19 +36,27 @@ export function createEntitySwitchTracker(): EntitySwitchTracker {
   };
 }
 
-/** Run `reset` synchronously before paint when `entityId` changes. */
-export function useEntitySwitchReset(entityId: string, reset: () => void): void {
+/** Run `reset` synchronously before paint when `sessionKey` changes (after `ready`). */
+export function useEntitySwitchReset(
+  sessionKey: string,
+  reset: () => void,
+  options?: { ready?: boolean },
+): void {
+  const ready = options?.ready ?? true;
   const resetRef = useRef(reset);
   resetRef.current = reset;
   const trackerRef = useRef<EntitySwitchTracker | null>(null);
 
-  if (!trackerRef.current) {
-    trackerRef.current = createEntitySwitchTracker();
-  }
-
   useLayoutEffect(() => {
-    if (trackerRef.current?.sync(entityId)) {
+    if (!ready) {
+      trackerRef.current = null;
+      return;
+    }
+    if (!trackerRef.current) {
+      trackerRef.current = createEntitySwitchTracker();
+    }
+    if (trackerRef.current.sync(sessionKey)) {
       resetRef.current();
     }
-  }, [entityId]);
+  }, [sessionKey, ready]);
 }

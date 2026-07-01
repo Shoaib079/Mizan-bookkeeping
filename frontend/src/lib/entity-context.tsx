@@ -93,16 +93,20 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
         apiFetch<{ items: Entity[] }>("/entities?limit=50"),
       );
       setEntities(res.items);
-      setEntitiesLoaded(true);
       setEntitiesError(false);
       const stored = localStorage.getItem("mizan.entityId");
-      if (stored && res.items.some((e) => e.id === stored)) {
-        setEntityIdState(stored);
-      } else if (res.items.length === 1) {
+      const storedMatch = stored
+        ? res.items.find((entity) => entity.id === stored)
+        : undefined;
+      if (storedMatch) {
+        setEntityIdState(storedMatch.id);
+      } else if (res.items.length > 0) {
         setEntityId(res.items[0].id);
       }
+      setEntitiesLoaded(true);
     } catch {
       setEntitiesError(true);
+      setEntitiesLoaded(true);
     } finally {
       setEntitiesLoading(false);
     }

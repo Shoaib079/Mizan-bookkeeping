@@ -2,33 +2,26 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { StatementImportPanel } from "@/components/banking/statement-import-panel";
 import { apiFetch } from "@/lib/api";
 import type { MoneyAccountRead } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
+import { statementImportSessionKey } from "@/lib/statement-import-helpers";
 
 export default function StatementImportPage() {
   const params = useParams<{ id: string }>();
   const accountId = params.id;
-  const { entityId } = useEntity();
+  const { entityId, entitiesLoaded } = useEntity();
   const [account, setAccount] = useState<MoneyAccountRead | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const reset = useCallback(() => {
-    setAccount(null);
-    setLoading(true);
-    setError(null);
-  }, []);
-
-  useEntitySwitchReset(entityId, reset);
-
   useEffect(() => {
-    if (!entityId || !accountId) return;
+    if (!entityId || !accountId || !entitiesLoaded) return;
     let cancelled = false;
+    setAccount(null);
     setLoading(true);
     setError(null);
     void apiFetch<MoneyAccountRead>(
@@ -48,7 +41,7 @@ export default function StatementImportPage() {
     return () => {
       cancelled = true;
     };
-  }, [entityId, accountId]);
+  }, [entityId, accountId, entitiesLoaded]);
 
   if (!entityId) {
     return (
@@ -58,7 +51,7 @@ export default function StatementImportPage() {
     );
   }
 
-  if (loading) {
+  if (!entitiesLoaded || loading) {
     return <p className="text-sm text-muted-foreground">Loading account…</p>;
   }
 
@@ -91,6 +84,7 @@ export default function StatementImportPage() {
 
   return (
     <StatementImportPanel
+      key={statementImportSessionKey(entityId, accountId)}
       moneyAccountId={accountId}
       accountName={account.name}
       backHref={`/banking/accounts/${accountId}`}

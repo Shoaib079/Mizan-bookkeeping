@@ -3,7 +3,7 @@
 /** Full-page bank statement upload + column mapping. */
 
 import Link from "next/link";
-import { FormEvent, useCallback, useMemo, useState } from "react";
+import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -318,7 +318,7 @@ export function StatementImportPanel({
   backHref,
 }: Props) {
   const router = useRouter();
-  const { entityId } = useEntity();
+  const { entityId, entitiesLoaded } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
 
@@ -331,6 +331,7 @@ export function StatementImportPanel({
   const [submitting, setSubmitting] = useState(false);
   const [autoDetected, setAutoDetected] = useState(false);
   const [assignTarget, setAssignTarget] = useState<ColumnAssignRole | null>(null);
+  const previewRequestRef = useRef(0);
 
   const maxCol = useMemo(() => {
     if (!preview?.rows.length) return 8;
@@ -338,6 +339,7 @@ export function StatementImportPanel({
   }, [preview]);
 
   const reset = useCallback(() => {
+    previewRequestRef.current += 1;
     setFile(null);
     setPreview(null);
     setMapping(DEFAULT_MAPPING);
@@ -357,6 +359,7 @@ export function StatementImportPanel({
   useEntitySwitchReset(
     statementImportSessionKey(entityId, moneyAccountId),
     reset,
+    { ready: entitiesLoaded },
   );
 
   async function loadPreview(selected: File) {
@@ -364,6 +367,8 @@ export function StatementImportPanel({
       setError("Select a restaurant in the sidebar first.");
       return;
     }
+    const requestId = previewRequestRef.current + 1;
+    previewRequestRef.current = requestId;
     setLoadingPreview(true);
     setError(null);
     try {
@@ -379,6 +384,14 @@ export function StatementImportPanel({
           `/entities/${entityId}/banking/accounts/${moneyAccountId}/import-profile`,
         ).catch(() => null),
       ]);
+
+      if (requestId !== previewRequestRef.current) return;
+
+      if (!previewRes.rows?.length) {
+        throw new Error(
+          "Could not read any rows from this file — check the format is CSV or Excel",
+        );
+      }
 
       setPreview(previewRes);
       const csvEncoding = (previewRes.csv_encoding ?? "auto") as CsvEncoding;
@@ -405,6 +418,7 @@ export function StatementImportPanel({
       }
       setStep("map");
     } catch (err) {
+      if (requestId !== previewRequestRef.current) return;
       const message = apiErrorMessage(err, "Preview failed");
       setError(message);
       toast(message, "error");
@@ -549,6 +563,12 @@ export function StatementImportPanel({
                   </button>
                 )}
               </div>
+
+              {preview && preview.rows.length === 0 && (
+                <p className="text-sm text-destructive">
+                  No rows to preview — try another file or check CSV/Excel encoding.
+                </p>
+              )}
 
               {preview && preview.rows.length > 0 && (
                 <StatementPreviewTable
