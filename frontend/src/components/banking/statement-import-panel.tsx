@@ -348,6 +348,7 @@ export function StatementImportPanel({
   const [submitting, setSubmitting] = useState(false);
   const [autoDetected, setAutoDetected] = useState(false);
   const [assignTarget, setAssignTarget] = useState<ColumnAssignRole | null>(null);
+  const [expectedFileName, setExpectedFileName] = useState<string | null>(null);
   const previewRequestRef = useRef(0);
   const storageKey = entityId
     ? statementImportStorageKey(entityId, moneyAccountId)
@@ -368,6 +369,7 @@ export function StatementImportPanel({
     setError(null);
     setAutoDetected(false);
     setAssignTarget(null);
+    setExpectedFileName(null);
     submitIdempotency.resetSubmit();
   }, [storageKey, submitIdempotency]);
 
@@ -380,12 +382,14 @@ export function StatementImportPanel({
     setStep("map");
     setAutoDetected(false);
     setError(null);
+    setExpectedFileName(saved.fileName);
   }, [storageKey]);
 
   function restoreFileFromSession(selected: File): boolean {
     if (!storageKey) return false;
     const saved = readStatementImportSession(storageKey);
     if (!saved || !fileMatchesSession(selected, saved)) return false;
+    setFile(selected);
     setPreview(saved.preview);
     setMapping(saved.mapping);
     setStep("map");
@@ -413,13 +417,14 @@ export function StatementImportPanel({
   function applyPreviewResult(
     result: StatementPreviewLoadResult,
     fileMeta: { name: string; size: number; lastModified: number },
-    selectedFile?: File | null,
+    selectedFile: File,
   ) {
-    if (selectedFile) setFile(selectedFile);
+    setFile(selectedFile);
     setAutoDetected(result.autoDetected);
     setPreview(result.preview);
     setMapping(result.mapping);
     setStep("map");
+    setExpectedFileName(fileMeta.name);
     persistSession(fileMeta, result.preview, result.mapping);
   }
 
@@ -494,7 +499,15 @@ export function StatementImportPanel({
         );
         return true;
       }
-      applyPreviewResult(result, fileMeta, selectedFile ?? null);
+      if (selectedFile) {
+        applyPreviewResult(result, fileMeta, selectedFile);
+      } else {
+        setAutoDetected(result.autoDetected);
+        setPreview(result.preview);
+        setMapping(result.mapping);
+        setStep("map");
+        persistSession(fileMeta, result.preview, result.mapping);
+      }
       return true;
     } catch (err) {
       if (requestId !== previewRequestRef.current) return true;
@@ -681,12 +694,6 @@ export function StatementImportPanel({
         </div>
       ) : (
         <form onSubmit={onSubmit} className="space-y-6">
-          {!file && preview && (
-            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-foreground">
-              Column preview restored — select the same statement file again to
-              enable Import.
-            </p>
-          )}
           {autoDetected && (
             <p className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
               Columns auto-detected (Tarih, Borç/Alacak, etc.). Check the
@@ -773,6 +780,38 @@ export function StatementImportPanel({
             <aside className="flex max-h-[min(85vh,720px)] flex-col rounded-lg border border-border bg-card xl:sticky xl:top-4 xl:self-start">
               <div className="flex-1 space-y-3 overflow-y-auto p-3">
                 <h2 className="text-sm font-semibold">Column mapping</h2>
+
+                <div className="space-y-1.5 rounded-md border border-border bg-muted/20 p-2.5">
+                  <Label className="text-xs font-medium" htmlFor="stmt-file-map">
+                    Statement file
+                  </Label>
+                  {file ? (
+                    <p className="text-xs text-muted-foreground">
+                      {file.name} · ready to import
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        {expectedFileName
+                          ? `Select ${expectedFileName} again to enable Import.`
+                          : "Select the statement file again to enable Import."}
+                      </p>
+                      <FileUpload
+                        id="stmt-file-map"
+                        accept={STATEMENT_FILE_ACCEPT}
+                        disabled={loadingPreview}
+                        file={null}
+                        acceptHint="CSV or Excel"
+                        onFileChange={(selected) => {
+                          if (selected) void loadPreview(selected);
+                        }}
+                      />
+                    </>
+                  )}
+                  {loadingPreview && (
+                    <p className="text-xs text-muted-foreground">Loading preview…</p>
+                  )}
+                </div>
 
                 {preview && <MappingAtAGlance mapping={mapping} preview={preview} />}
 
@@ -1007,11 +1046,12 @@ export function StatementImportPanel({
                     setFile(null);
                     setPreview(null);
                     setAssignTarget(null);
+                    setExpectedFileName(null);
                   }}
                 >
                   Other file
                 </Button>
-                <Button type="submit" disabled={submitting || !file}>
+                <Button type="submit" disabled={submitting || !file || loadingPreview}>
                   {submitting ? "Importing…" : "Import"}
                 </Button>
               </div>
