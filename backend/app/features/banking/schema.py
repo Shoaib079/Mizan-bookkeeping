@@ -220,6 +220,7 @@ class BankStatementPreview(BaseModel):
     total_rows: int
     csv_encoding: str | None = None
     csv_delimiter: str | None = None
+    suggested_profile: BankImportProfileUpsert | None = None
 
 
 class ClassifyStatementLineRequest(BaseModel):

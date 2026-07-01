@@ -24,7 +24,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
-  const [description, setDescription] = useState("Clear card commission");
+  const [description, setDescription] = useState("Clear bank commission");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -57,7 +57,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
       );
       submitIdempotency.completeSubmit();
       onCleared?.();
-      toast("Commission cleared");
+      toast("Bank commission cleared");
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Clear failed");
@@ -67,10 +67,10 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
   }
 
   return (
-    <Dialog open={open} title="Clear card commission" onClose={onClose}>
+    <Dialog open={open} title="Clear bank commission" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Posts accumulated card commission from clearing to expense when all
+          Posts accumulated bank commission from clearing to expense when all
           card sales are settled and in-transit is zero.
         </p>
         <div>
@@ -83,7 +83,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Clearing…" : "Clear commission"}
+          {submitting ? "Clearing…" : "Clear bank commission"}
         </Button>
       </form>
     </Dialog>

@@ -129,6 +129,23 @@ export type BankStatementPreview = {
   total_rows: number;
   csv_encoding: string | null;
   csv_delimiter: string | null;
+  suggested_profile: BankImportProfileUpsert | null;
+};
+
+export type BankImportProfileUpsert = {
+  header_row: number;
+  data_start_row: number;
+  date_col: number;
+  description_col: number;
+  reference_col: number | null;
+  amount_col: number | null;
+  debit_col: number | null;
+  credit_col: number | null;
+  date_format: string;
+  decimal_format: string;
+  debit_is_outflow: boolean;
+  csv_encoding?: string;
+  csv_delimiter?: string;
 };
 
 export type BankImportProfileRead = {

@@ -18,6 +18,9 @@ _DECODE_ORDER: tuple[str, ...] = ("utf-8-sig", "cp1254", "latin-1")
 _SNIFF_DELIMITERS = ";\t,"
 _SAMPLE_BYTES = 8192
 
+# Rows returned in the upload mapping preview (TR exports often have long headers).
+STATEMENT_PREVIEW_ROW_LIMIT = 50
+
 
 def decode_csv_bytes(content: bytes, *, encoding: str = "auto") -> tuple[str, str]:
     """Decode CSV bytes — try utf-8-sig, cp1254, latin-1 unless encoding is explicit."""

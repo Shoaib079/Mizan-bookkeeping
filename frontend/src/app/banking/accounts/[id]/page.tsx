@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { StatementUploadForm } from "@/components/forms/statement-upload-form";
 import { TransferForm } from "@/components/forms/transfer-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +31,6 @@ export default function AccountDetailPage() {
   const [statements, setStatements] = useState<BankStatementRead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploadOpen, setUploadOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
 
   const resetDetailState = useCallback(() => {
@@ -40,7 +38,6 @@ export default function AccountDetailPage() {
     setStatements([]);
     setLoading(true);
     setError(null);
-    setUploadOpen(false);
     setTransferOpen(false);
   }, []);
 
@@ -121,9 +118,9 @@ export default function AccountDetailPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {account.account_kind === "bank" && (
-                <Button onClick={() => setUploadOpen(true)}>
-                  Upload statement
-                </Button>
+                <Link href={`/banking/accounts/${accountId}/import`}>
+                  <Button>Upload statement</Button>
+                </Link>
               )}
               {account.account_kind === "cash" && (
                 <Link href="/banking/cash">
@@ -188,14 +185,6 @@ export default function AccountDetailPage() {
         </>
       )}
 
-      {account?.account_kind === "bank" && (
-        <StatementUploadForm
-          open={uploadOpen}
-          onClose={() => setUploadOpen(false)}
-          moneyAccountId={accountId}
-          onUploaded={() => void reload()}
-        />
-      )}
       <TransferForm
         open={transferOpen}
         onClose={() => setTransferOpen(false)}

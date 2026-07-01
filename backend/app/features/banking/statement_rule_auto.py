@@ -361,7 +361,7 @@ def try_auto_apply_line(
                 line,
                 classification=rule.classification,
                 supplier_id=None,
-                review_reason="bank_fee requires an outflow",
+                review_reason="Bank charges require an outflow",
             )
             return False
         _auto_post_bank_fee(

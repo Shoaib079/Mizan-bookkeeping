@@ -17,11 +17,11 @@ describe("unified record dialogs", () => {
     expect(modals).not.toContain("handlePersonContinue");
   });
 
-  it("embeds bank statement upload in the account picker dialog", () => {
+  it("routes bank statement import to the full-page mapper", () => {
     const bank = read("record/bank-account-picker-dialog.tsx");
-    expect(bank).toContain('embedded');
-    expect(bank).not.toContain("uploadOpen");
-    expect(bank).not.toContain("Continue");
+    expect(bank).toContain("/import");
+    expect(bank).toContain("Continue to import");
+    expect(bank).not.toContain("StatementUploadForm");
   });
 
   it("embeds FX forms inline without a Continue step", () => {

@@ -87,7 +87,7 @@ export default function CardsPage() {
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          Card clearing, bank settlements, commission clearance
+          Card clearing, bank settlements, bank commission clearance
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -104,7 +104,7 @@ export default function CardsPage() {
             disabled={!entityId}
             onClick={() => setClearFormOpen(true)}
           >
-            Clear commission
+            Clear bank commission
           </Button>
           <Button
             type="button"
@@ -195,7 +195,7 @@ export default function CardsPage() {
               <tr>
                 <DataTableHeaderCell>Date</DataTableHeaderCell>
                 <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Commission</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Bank commission</DataTableHeaderCell>
                 <DataTableHeaderCell>Description</DataTableHeaderCell>
               </tr>
             </DataTableHead>

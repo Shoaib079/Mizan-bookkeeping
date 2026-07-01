@@ -174,7 +174,7 @@ export const appRoutes: AppRoute[] = [
   {
     href: "/review/posted",
     label: "General ledger",
-    keywords: "journal entries ledger all entries correct manual bank fee",
+    keywords: "journal entries ledger all entries correct manual bank charges",
     icon: BookOpen,
     group: "Reports",
     nestedUnder: "/reports",

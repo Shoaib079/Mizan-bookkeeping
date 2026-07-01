@@ -29,7 +29,7 @@ const classificationOptions: {
 }[] = [
   { value: "supplier_payment", label: "Supplier payment" },
   { value: "transfer", label: "Transfer" },
-  { value: "bank_fee", label: "Bank fee" },
+  { value: "bank_fee", label: "Bank charges" },
   { value: "credit_card_payment", label: "Credit card payment" },
   { value: "customer_payment", label: "Customer payment" },
   { value: "rent_utility", label: "Rent / utility" },

@@ -8,7 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig
+from app.adapters.bank_parsers.profile_suggest import suggest_import_profile
 from app.adapters.bank_parsers.raw_grid import (
+    STATEMENT_PREVIEW_ROW_LIMIT,
     grid_preview_rows,
     read_raw_grid,
     resolve_csv_read_options,
@@ -17,7 +19,11 @@ from app.adapters.bank_parsers.dispatch import resolve_statement_format
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.import_profile_models import BankImportProfile
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
-from app.features.banking.schema import BankImportProfileRead, BankStatementPreview
+from app.features.banking.schema import (
+    BankImportProfileRead,
+    BankImportProfileUpsert,
+    BankStatementPreview,
+)
 
 
 def _require_bank_money_account(
@@ -149,9 +155,17 @@ def preview_statement_upload(
         csv_encoding=read_encoding,
         csv_delimiter=read_delimiter,
     )
+    suggestion = suggest_import_profile(grid)
+    suggested_profile = None
+    if suggestion is not None:
+        suggested_profile = BankImportProfileUpsert.model_validate(
+            suggestion.model_dump()
+        )
+
     return BankStatementPreview(
-        rows=grid_preview_rows(grid, limit=15),
+        rows=grid_preview_rows(grid, limit=STATEMENT_PREVIEW_ROW_LIMIT),
         total_rows=len(grid),
         csv_encoding=csv_encoding,
         csv_delimiter=csv_delimiter,
+        suggested_profile=suggested_profile,
     )

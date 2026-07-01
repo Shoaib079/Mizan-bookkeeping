@@ -43,7 +43,7 @@ def build_bank_fee_posting_lines(
 ) -> list[PostingLine]:
     """GL pattern: debit bank charges expense, credit bank asset."""
     if amount_kurus <= 0:
-        raise ValueError("bank fee amount must be positive kuruş")
+        raise ValueError("bank charges amount must be positive kuruş")
 
     return [
         PostingLine(
@@ -122,7 +122,7 @@ def _validate_bank_money_account(
     if not money_account.is_active:
         raise InvalidBankStatementPostError("Bank money account is not active")
     if money_account.account_kind != MoneyAccountKind.BANK:
-        raise InvalidBankStatementPostError("Bank fee and card payments require a bank account")
+        raise InvalidBankStatementPostError("Bank charges and card payments require a bank account")
     return money_account
 
 
@@ -182,7 +182,7 @@ def post_bank_fee(
 ) -> BankFeePostResult:
     """Post bank fee: Dr Bank Charges (5300), Cr bank — not classify-only."""
     if amount_kurus <= 0:
-        raise ValueError("Bank fee amount_kurus must be positive")
+        raise ValueError("Bank charges amount_kurus must be positive")
 
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")

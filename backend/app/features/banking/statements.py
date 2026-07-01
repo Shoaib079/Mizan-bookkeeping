@@ -697,7 +697,16 @@ def _parse_statement_content(
             content_type=content_type,
         )
     except BankParseError as exc:
-        raise InvalidClassificationError(str(exc)) from exc
+        message = str(exc)
+        lowered = message.lower()
+        if "header row is missing" in lowered or "missing required columns" in lowered:
+            raise InvalidClassificationError(
+                "This bank export does not use standard column names "
+                "(transaction_date, amount, description). "
+                "Upload again and map your bank's columns on the preview step — "
+                "look for Tarih, Açıklama, Borç/Alacak or Tutar."
+            ) from exc
+        raise InvalidClassificationError(message) from exc
 
 
 def _persist_parsed_statement(
@@ -1265,10 +1274,10 @@ def classify_statement_line(
         elif classification == StatementLineClassification.BANK_FEE:
             if line.amount_kurus >= 0:
                 raise InvalidClassificationError(
-                    "bank_fee classification requires an outflow (negative amount_kurus)"
+                    "Bank charges classification requires an outflow (negative amount_kurus)"
                 )
             if actor_id is None:
-                raise InvalidClassificationError("actor_id is required for bank_fee")
+                raise InvalidClassificationError("actor_id is required for bank charges")
 
         elif classification == StatementLineClassification.RENT_UTILITY:
             if line.amount_kurus >= 0:

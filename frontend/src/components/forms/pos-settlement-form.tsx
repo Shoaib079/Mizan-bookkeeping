@@ -142,7 +142,7 @@ export function PosSettlementForm({ open, onClose, onSaved }: Props) {
           />
         </div>
         <div>
-          <Label htmlFor="pos-settle-commission">Commission (optional)</Label>
+          <Label htmlFor="pos-settle-commission">Bank commission (optional)</Label>
           <MoneyInput
             id="pos-settle-commission"
             placeholder="0,00"

@@ -338,6 +338,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/banking/transfers", kind: "tab" },
   { pattern: "/banking/cash", kind: "tab" },
   { pattern: "/banking/accounts/[id]", kind: "drill-down" },
+  { pattern: "/banking/accounts/[id]/import", kind: "drill-down" },
   { pattern: "/banking/statements/[id]", kind: "drill-down" },
   { pattern: "/banking/fx/[id]", kind: "drill-down" },
   { pattern: "/reports", kind: "sidebar" },
@@ -466,6 +467,9 @@ export function pageTitleForPathname(pathname: string): string {
   if (pathname.startsWith("/partners/")) return "Partner";
   if (pathname.startsWith("/suppliers/")) return "Supplier";
   if (pathname.startsWith("/customers/")) return "Customer";
+  if (pathname.startsWith("/banking/accounts/") && pathname.endsWith("/import")) {
+    return "Import statement";
+  }
   if (pathname.startsWith("/banking/accounts/")) return "Account";
   if (pathname.startsWith("/banking/statements/")) return "Statement review";
   if (pathname.startsWith("/banking/fx/")) return "FX wallet";

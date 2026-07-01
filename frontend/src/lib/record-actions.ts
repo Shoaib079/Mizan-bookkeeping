@@ -194,8 +194,8 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
   },
   {
     id: "clearCommission",
-    label: "Clear card commission",
-    description: "Reconcile processor commission against clearing.",
+    label: "Clear bank commission",
+    description: "Reconcile bank commission against clearing.",
     icon: CreditCard,
     section: "salesCards",
     advanced: true,

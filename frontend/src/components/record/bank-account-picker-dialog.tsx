@@ -1,11 +1,12 @@
 "use client";
 
-/** Record hub bank statement — pick account and upload in one dialog. */
+/** Record hub bank statement — pick account, then open full-page import. */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { StatementUploadForm } from "@/components/forms/statement-upload-form";
+import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
@@ -25,19 +26,18 @@ type Props = {
 };
 
 export function BankAccountPickerDialog({ open, onClose }: Props) {
+  const router = useRouter();
   const { entityId } = useEntity();
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<MoneyAccountRow[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [uploadStep, setUploadStep] = useState<"pick" | "map">("pick");
 
   const reset = useCallback(() => {
     setAccounts([]);
     setSelectedId("");
     setLoadError(null);
     setLoading(false);
-    setUploadStep("pick");
   }, []);
 
   useEffect(() => {
@@ -79,16 +79,19 @@ export function BankAccountPickerDialog({ open, onClose }: Props) {
     [accounts],
   );
 
-  const title =
-    uploadStep === "map" ? "Map columns" : "Bank statement";
-
   function handleClose() {
     reset();
     onClose();
   }
 
+  function openImportPage() {
+    if (!selectedId) return;
+    handleClose();
+    router.push(`/banking/accounts/${selectedId}/import`);
+  }
+
   return (
-    <Dialog open={open} title={title} onClose={handleClose}>
+    <Dialog open={open} title="Bank statement" onClose={handleClose}>
       {!entityId && (
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar first.
@@ -117,28 +120,22 @@ export function BankAccountPickerDialog({ open, onClose }: Props) {
 
       {entityId && !loading && accounts.length > 0 && (
         <div className="space-y-4">
-          {uploadStep === "pick" && (
-            <div>
-              <Label>Bank account</Label>
-              <Combobox
-                value={selectedId}
-                onValueChange={setSelectedId}
-                options={options}
-                placeholder="Choose account…"
-              />
-            </div>
-          )}
-
-          {selectedId && (
-            <StatementUploadForm
-              key={selectedId}
-              embedded
-              open
-              moneyAccountId={selectedId}
-              onStepChange={setUploadStep}
-              onClose={handleClose}
+          <div>
+            <Label>Bank account</Label>
+            <Combobox
+              value={selectedId}
+              onValueChange={setSelectedId}
+              options={options}
+              placeholder="Choose account…"
             />
-          )}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            You will upload and map columns on a full page with an Excel-style
+            preview (columns A, B, C…).
+          </p>
+          <Button type="button" disabled={!selectedId} onClick={openImportPage}>
+            Continue to import
+          </Button>
         </div>
       )}
     </Dialog>

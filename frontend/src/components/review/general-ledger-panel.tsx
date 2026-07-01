@@ -110,8 +110,13 @@ function entryTotalKurus(lines: JournalEntryLine[]): number {
   );
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+  bank_fee: "bank charges",
+  pos_commission_sweep: "bank commission",
+};
+
 function sourceLabel(source: string): string {
-  return source.replaceAll("_", " ");
+  return SOURCE_LABELS[source] ?? source.replaceAll("_", " ");
 }
 
 function ChainLink({
@@ -382,7 +387,7 @@ function LedgerPanelContent() {
       <p className="mb-6 max-w-3xl text-sm text-muted-foreground">
         Every journal entry for this restaurant — posted and voided. This is the
         general ledger, not the deferred audit-events log (immutable change
-        history). Correct posted manual journals and bank fees here; void manual
+        history). Correct posted manual journals and bank charges here; void manual
         journals on{" "}
         <Link href="/review/manual-journals" className="text-primary hover:underline">
           Manual journals

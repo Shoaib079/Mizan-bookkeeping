@@ -24,7 +24,7 @@ describe("balances hub navigation", () => {
     const section = navSectionForPathname("/balances/customers");
     expect(section?.id).toBe("balances");
     expect(section?.tabs.find((tab) => tab.match("/balances/customers"))?.label).toBe(
-      "Customers",
+      "Receivables",
     );
   });
 });

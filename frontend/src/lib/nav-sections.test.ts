@@ -85,8 +85,8 @@ const TAB_ONLY_HREFS = [
 ] as const;
 
 describe("REGISTERED_PAGE_ROUTES", () => {
-  it("lists exactly 75 app pages", () => {
-    expect(REGISTERED_PAGE_ROUTES).toHaveLength(75);
+  it("lists exactly 76 app pages", () => {
+    expect(REGISTERED_PAGE_ROUTES).toHaveLength(76);
   });
 
   it("assigns each route exactly one entry kind", () => {

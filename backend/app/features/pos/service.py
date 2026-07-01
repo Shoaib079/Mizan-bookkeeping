@@ -170,7 +170,7 @@ def clear_card_commission(
         session,
         entity_id,
         clearance_date=payload.clearance_date or date.today(),
-        description=payload.description or "Card commission clearance",
+        description=payload.description or "Bank commission clearance",
         actor_id=payload.actor_id,
     )
     return CardCommissionClearanceRead(
