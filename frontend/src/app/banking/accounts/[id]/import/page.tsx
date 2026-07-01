@@ -23,16 +23,20 @@ export default function StatementImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [sessionValidated, setSessionValidated] = useState(false);
   const validatedSessionRef = useRef<string | null>(null);
+  const prevSessionKeyRef = useRef<string | null>(null);
 
   const sessionKey =
     entityId && accountId ? statementImportSessionKey(entityId, accountId) : "";
 
   useEffect(() => {
-    validatedSessionRef.current = null;
-    setSessionValidated(false);
-    setAccount(null);
-    setLoading(true);
-    setError(null);
+    if (prevSessionKeyRef.current !== null && prevSessionKeyRef.current !== sessionKey) {
+      validatedSessionRef.current = null;
+      setSessionValidated(false);
+      setAccount(null);
+      setLoading(true);
+      setError(null);
+    }
+    prevSessionKeyRef.current = sessionKey;
   }, [sessionKey]);
 
   useEffect(() => {

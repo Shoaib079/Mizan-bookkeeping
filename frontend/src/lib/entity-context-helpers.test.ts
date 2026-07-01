@@ -4,6 +4,7 @@ import {
   ENTITY_FETCH_MAX_ATTEMPTS,
   ENTITY_FETCH_RETRY_DELAY_MS,
   fetchEntitiesWithRetry,
+  resolveEntityIdFromList,
   shouldShowCreateRestaurantPrompt,
 } from "./entity-context-helpers";
 
@@ -83,5 +84,24 @@ describe("fetchEntitiesWithRetry", () => {
       }),
     ).rejects.toThrow("network down");
     expect(fetchOnce).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("resolveEntityIdFromList", () => {
+  const items = [
+    { id: "ent-a", name: "A" },
+    { id: "ent-b", name: "B" },
+  ];
+
+  it("keeps current id when stored restaurant still matches", () => {
+    expect(resolveEntityIdFromList("ent-b", items, "ent-b")).toBe("ent-b");
+  });
+
+  it("does not churn state when resolved id equals current", () => {
+    expect(resolveEntityIdFromList("ent-a", items, "ent-a")).toBe("ent-a");
+  });
+
+  it("falls back to first entity when stored id is missing from list", () => {
+    expect(resolveEntityIdFromList("ent-z", items, "ent-z")).toBe("ent-a");
   });
 });

@@ -6,13 +6,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiFetch, setAuthHeaderProvider } from "@/lib/api";
 import { useApiAuth } from "@/lib/api-auth";
-import { fetchEntitiesWithRetry } from "@/lib/entity-context-helpers";
+import { fetchEntitiesWithRetry, resolveEntityIdFromList } from "@/lib/entity-context-helpers";
 
 const DEFAULT_ACTOR = "00000000-0000-4000-8000-000000000001";
 
@@ -52,6 +53,8 @@ const EntityContext = createContext<EntityContextValue | null>(null);
 
 export function EntityProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
   const { clerkEnabled, isAuthReady } = useApiAuth();
   const [entityId, setEntityIdState] = useState(readStoredEntityId);
   const [actorId, setActorIdState] = useState(readStoredActorId);
@@ -69,19 +72,16 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
     return () => setAuthHeaderProvider(null);
   }, [clerkEnabled, actorId]);
 
-  const setEntityId = useCallback(
-    (id: string, options?: SetEntityOptions) => {
-      setEntityIdState(id);
-      localStorage.setItem("mizan.entityId", id);
-      if (options?.redirectToDashboard) {
-        router.push("/");
-      }
-    },
-    [router],
-  );
+  const setEntityId = useCallback((id: string, options?: SetEntityOptions) => {
+    setEntityIdState((current) => (current === id ? current : id));
+    localStorage.setItem("mizan.entityId", id);
+    if (options?.redirectToDashboard) {
+      routerRef.current.push("/");
+    }
+  }, []);
 
   const setActorId = useCallback((id: string) => {
-    setActorIdState(id);
+    setActorIdState((current) => (current === id ? current : id));
     localStorage.setItem("mizan.actorId", id);
   }, []);
 
@@ -95,13 +95,16 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
       setEntities(res.items);
       setEntitiesError(false);
       const stored = localStorage.getItem("mizan.entityId");
-      const storedMatch = stored
-        ? res.items.find((entity) => entity.id === stored)
-        : undefined;
-      if (storedMatch) {
-        setEntityIdState(storedMatch.id);
-      } else if (res.items.length > 0) {
-        setEntityId(res.items[0].id);
+      setEntityIdState((current) =>
+        resolveEntityIdFromList(current, res.items, stored),
+      );
+      const resolved = resolveEntityIdFromList(
+        readStoredEntityId(),
+        res.items,
+        stored,
+      );
+      if (resolved) {
+        localStorage.setItem("mizan.entityId", resolved);
       }
       setEntitiesLoaded(true);
     } catch {
@@ -110,7 +113,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setEntitiesLoading(false);
     }
-  }, [setEntityId]);
+  }, []);
 
   const refreshUserProfile = useCallback(async () => {
     if (!clerkEnabled || !isAuthReady) return;

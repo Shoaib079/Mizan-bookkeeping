@@ -3,7 +3,7 @@
 /** Full-page bank statement upload + column mapping. */
 
 import Link from "next/link";
-import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,23 @@ import {
   type DecimalFormat,
   type MappingState,
 } from "@/lib/statement-import-helpers";
+import {
+  clearStatementImportPending,
+  clearStatementImportSession,
+  fileMatchesSession,
+  readStatementImportPending,
+  readStatementImportSession,
+  pendingFileMeta,
+  statementImportStorageKey,
+  writeStatementImportPending,
+  writeStatementImportSession,
+} from "@/lib/statement-import-session";
+import {
+  getInflightStatementPreview,
+  statementPreviewInflightKey,
+  trackInflightStatementPreview,
+  type StatementPreviewLoadResult,
+} from "@/lib/statement-import-preview-inflight";
 import { useToast } from "@/lib/toast";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
@@ -332,6 +349,9 @@ export function StatementImportPanel({
   const [autoDetected, setAutoDetected] = useState(false);
   const [assignTarget, setAssignTarget] = useState<ColumnAssignRole | null>(null);
   const previewRequestRef = useRef(0);
+  const storageKey = entityId
+    ? statementImportStorageKey(entityId, moneyAccountId)
+    : "";
 
   const maxCol = useMemo(() => {
     if (!preview?.rows.length) return 8;
@@ -340,6 +360,7 @@ export function StatementImportPanel({
 
   const reset = useCallback(() => {
     previewRequestRef.current += 1;
+    if (storageKey) clearStatementImportSession(storageKey);
     setFile(null);
     setPreview(null);
     setMapping(DEFAULT_MAPPING);
@@ -348,7 +369,146 @@ export function StatementImportPanel({
     setAutoDetected(false);
     setAssignTarget(null);
     submitIdempotency.resetSubmit();
-  }, [submitIdempotency]);
+  }, [storageKey, submitIdempotency]);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    const saved = readStatementImportSession(storageKey);
+    if (!saved) return;
+    setPreview(saved.preview);
+    setMapping(saved.mapping);
+    setStep("map");
+    setAutoDetected(false);
+    setError(null);
+  }, [storageKey]);
+
+  function restoreFileFromSession(selected: File): boolean {
+    if (!storageKey) return false;
+    const saved = readStatementImportSession(storageKey);
+    if (!saved || !fileMatchesSession(selected, saved)) return false;
+    setPreview(saved.preview);
+    setMapping(saved.mapping);
+    setStep("map");
+    setAutoDetected(false);
+    setError(null);
+    return true;
+  }
+
+  function persistSession(
+    fileMeta: { name: string; size: number; lastModified: number },
+    previewRes: BankStatementPreview,
+    nextMapping: MappingState,
+  ) {
+    if (!storageKey) return;
+    writeStatementImportSession(storageKey, {
+      step: "map",
+      preview: previewRes,
+      mapping: nextMapping,
+      fileName: fileMeta.name,
+      fileSize: fileMeta.size,
+      fileLastModified: fileMeta.lastModified,
+    });
+  }
+
+  function applyPreviewResult(
+    result: StatementPreviewLoadResult,
+    fileMeta: { name: string; size: number; lastModified: number },
+    selectedFile?: File | null,
+  ) {
+    if (selectedFile) setFile(selectedFile);
+    setAutoDetected(result.autoDetected);
+    setPreview(result.preview);
+    setMapping(result.mapping);
+    setStep("map");
+    persistSession(fileMeta, result.preview, result.mapping);
+  }
+
+  async function fetchPreviewResult(
+    selected: File,
+  ): Promise<StatementPreviewLoadResult> {
+    const body = new FormData();
+    body.append("file", selected);
+
+    const [previewRes, profileRes] = await Promise.all([
+      apiFetch<BankStatementPreview>(
+        `/entities/${entityId}/banking/accounts/${moneyAccountId}/statements/preview`,
+        { method: "POST", body },
+      ),
+      apiFetch<BankImportProfileRead>(
+        `/entities/${entityId}/banking/accounts/${moneyAccountId}/import-profile`,
+      ).catch(() => null),
+    ]);
+
+    if (!previewRes.rows?.length) {
+      throw new Error(
+        "Could not read any rows from this file — check the format is CSV or Excel",
+      );
+    }
+
+    const csvEncoding = (previewRes.csv_encoding ?? "auto") as CsvEncoding;
+    const csvDelimiter = (previewRes.csv_delimiter ?? "auto") as CsvDelimiter;
+    let nextMapping: MappingState;
+    let autoDetectedResult = false;
+    if (profileRes) {
+      nextMapping = profileToMapping(profileRes);
+    } else if (previewRes.suggested_profile) {
+      nextMapping = suggestedProfileToMapping(
+        previewRes.suggested_profile,
+        csvEncoding,
+        csvDelimiter,
+      );
+      autoDetectedResult = true;
+    } else {
+      nextMapping = {
+        ...DEFAULT_MAPPING,
+        csvEncoding,
+        csvDelimiter,
+      };
+    }
+
+    return {
+      preview: previewRes,
+      mapping: nextMapping,
+      autoDetected: autoDetectedResult,
+    };
+  }
+
+  async function awaitPreviewLoad(
+    fileMeta: { name: string; size: number; lastModified: number },
+    requestId: number,
+    selectedFile?: File | null,
+  ): Promise<boolean> {
+    if (!storageKey) return false;
+    const inflightKey = statementPreviewInflightKey(storageKey, fileMeta);
+    const pending = getInflightStatementPreview(inflightKey);
+    if (!pending) return false;
+
+    setLoadingPreview(true);
+    setError(null);
+    try {
+      const result = await pending;
+      if (requestId !== previewRequestRef.current) {
+        toast(
+          "Preview finished but the page refreshed — try the same file again",
+          "error",
+        );
+        return true;
+      }
+      applyPreviewResult(result, fileMeta, selectedFile ?? null);
+      return true;
+    } catch (err) {
+      if (requestId !== previewRequestRef.current) return true;
+      const message = apiErrorMessage(err, "Preview failed");
+      setError(message);
+      toast(message, "error");
+      return true;
+    } finally {
+      if (storageKey) clearStatementImportPending(storageKey);
+      if (requestId === previewRequestRef.current) {
+        setLoadingPreview(false);
+      }
+    }
+  }
 
   function handleAssignColumn(colIdx: number) {
     if (!assignTarget) return;
@@ -361,68 +521,78 @@ export function StatementImportPanel({
     reset,
   );
 
+  useEffect(() => {
+    if (!storageKey || preview) return;
+    const saved = readStatementImportSession(storageKey);
+    if (saved) return;
+
+    const pending = readStatementImportPending(storageKey);
+    if (!pending) return;
+
+    const inflightKey = statementPreviewInflightKey(
+      storageKey,
+      pendingFileMeta(pending),
+    );
+    if (!getInflightStatementPreview(inflightKey)) return;
+
+    const requestId = previewRequestRef.current + 1;
+    previewRequestRef.current = requestId;
+    void awaitPreviewLoad(pendingFileMeta(pending), requestId);
+  }, [storageKey, preview]);
+
   async function loadPreview(selected: File) {
     if (!entityId) {
       setError("Select a restaurant in the sidebar first.");
       return;
     }
+    setFile(selected);
+    if (restoreFileFromSession(selected)) {
+      return;
+    }
+
+    if (!storageKey) return;
+    const inflightKey = statementPreviewInflightKey(storageKey, selected);
+    const existing = getInflightStatementPreview(inflightKey);
     const requestId = previewRequestRef.current + 1;
     previewRequestRef.current = requestId;
     setLoadingPreview(true);
     setError(null);
+    writeStatementImportPending(storageKey, {
+      fileName: selected.name,
+      fileSize: selected.size,
+      fileLastModified: selected.lastModified,
+    });
+
     try {
-      const body = new FormData();
-      body.append("file", selected);
+      const result = await (existing ??
+        trackInflightStatementPreview(
+          inflightKey,
+          fetchPreviewResult(selected),
+        ));
 
-      const [previewRes, profileRes] = await Promise.all([
-        apiFetch<BankStatementPreview>(
-          `/entities/${entityId}/banking/accounts/${moneyAccountId}/statements/preview`,
-          { method: "POST", body },
-        ),
-        apiFetch<BankImportProfileRead>(
-          `/entities/${entityId}/banking/accounts/${moneyAccountId}/import-profile`,
-        ).catch(() => null),
-      ]);
-
-      if (requestId !== previewRequestRef.current) return;
-
-      if (!previewRes.rows?.length) {
-        throw new Error(
-          "Could not read any rows from this file — check the format is CSV or Excel",
+      if (requestId !== previewRequestRef.current) {
+        toast(
+          "Preview finished but the page refreshed — try the same file again",
+          "error",
         );
+        return;
       }
 
-      setPreview(previewRes);
-      const csvEncoding = (previewRes.csv_encoding ?? "auto") as CsvEncoding;
-      const csvDelimiter = (previewRes.csv_delimiter ?? "auto") as CsvDelimiter;
-      if (profileRes) {
-        setMapping(profileToMapping(profileRes));
-        setAutoDetected(false);
-      } else if (previewRes.suggested_profile) {
-        setMapping(
-          suggestedProfileToMapping(
-            previewRes.suggested_profile,
-            csvEncoding,
-            csvDelimiter,
-          ),
-        );
-        setAutoDetected(true);
-      } else {
-        setMapping({
-          ...DEFAULT_MAPPING,
-          csvEncoding,
-          csvDelimiter,
-        });
-        setAutoDetected(false);
-      }
-      setStep("map");
+      applyPreviewResult(result, {
+        name: selected.name,
+        size: selected.size,
+        lastModified: selected.lastModified,
+      }, selected);
     } catch (err) {
       if (requestId !== previewRequestRef.current) return;
       const message = apiErrorMessage(err, "Preview failed");
       setError(message);
       toast(message, "error");
     } finally {
-      setLoadingPreview(false);
+      if (storageKey) clearStatementImportPending(storageKey);
+      if (requestId === previewRequestRef.current) {
+        setLoadingPreview(false);
+      }
     }
   }
 
@@ -444,6 +614,7 @@ export function StatementImportPanel({
         { method: "POST", body, idempotencyKey },
       );
       submitIdempotency.completeSubmit();
+      if (storageKey) clearStatementImportSession(storageKey);
       const skipped = statement.skipped_duplicate_count ?? 0;
       if (skipped > 0) {
         toast(
@@ -498,8 +669,8 @@ export function StatementImportPanel({
               file={file}
               acceptHint="CSV or Excel"
               onFileChange={(selected) => {
-                setFile(selected);
                 if (selected) void loadPreview(selected);
+                else setFile(null);
               }}
             />
           </div>
@@ -510,6 +681,12 @@ export function StatementImportPanel({
         </div>
       ) : (
         <form onSubmit={onSubmit} className="space-y-6">
+          {!file && preview && (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-foreground">
+              Column preview restored — select the same statement file again to
+              enable Import.
+            </p>
+          )}
           {autoDetected && (
             <p className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
               Columns auto-detected (Tarih, Borç/Alacak, etc.). Check the
@@ -825,6 +1002,7 @@ export function StatementImportPanel({
                   type="button"
                   variant="secondary"
                   onClick={() => {
+                    if (storageKey) clearStatementImportSession(storageKey);
                     setStep("pick");
                     setFile(null);
                     setPreview(null);
@@ -833,7 +1011,7 @@ export function StatementImportPanel({
                 >
                   Other file
                 </Button>
-                <Button type="submit" disabled={submitting}>
+                <Button type="submit" disabled={submitting || !file}>
                   {submitting ? "Importing…" : "Import"}
                 </Button>
               </div>
