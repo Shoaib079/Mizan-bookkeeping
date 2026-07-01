@@ -14,8 +14,20 @@ import { apiFetch, setAuthHeaderProvider } from "@/lib/api";
 import { useApiAuth } from "@/lib/api-auth";
 import { fetchEntitiesWithRetry } from "@/lib/entity-context-helpers";
 
+const DEFAULT_ACTOR = "00000000-0000-4000-8000-000000000001";
+
 type Entity = { id: string; name: string };
 type UserProfile = { id: string; email: string; display_name: string };
+
+function readStoredEntityId(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("mizan.entityId") ?? "";
+}
+
+function readStoredActorId(): string {
+  if (typeof window === "undefined") return DEFAULT_ACTOR;
+  return localStorage.getItem("mizan.actorId") ?? DEFAULT_ACTOR;
+}
 
 type SetEntityOptions = {
   /** Navigate to dashboard after selecting (company switch only). */
@@ -38,13 +50,11 @@ type EntityContextValue = {
 
 const EntityContext = createContext<EntityContextValue | null>(null);
 
-const DEFAULT_ACTOR = "00000000-0000-4000-8000-000000000001";
-
 export function EntityProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { clerkEnabled, isAuthReady } = useApiAuth();
-  const [entityId, setEntityIdState] = useState("");
-  const [actorId, setActorIdState] = useState(DEFAULT_ACTOR);
+  const [entityId, setEntityIdState] = useState(readStoredEntityId);
+  const [actorId, setActorIdState] = useState(readStoredActorId);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [entitiesLoading, setEntitiesLoading] = useState(false);
   const [entitiesLoaded, setEntitiesLoaded] = useState(false);
@@ -58,11 +68,6 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
     );
     return () => setAuthHeaderProvider(null);
   }, [clerkEnabled, actorId]);
-
-  useEffect(() => {
-    setEntityIdState(localStorage.getItem("mizan.entityId") ?? "");
-    setActorIdState(localStorage.getItem("mizan.actorId") ?? DEFAULT_ACTOR);
-  }, []);
 
   const setEntityId = useCallback(
     (id: string, options?: SetEntityOptions) => {

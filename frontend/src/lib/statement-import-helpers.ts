@@ -32,6 +32,14 @@ export type MappingState = {
 export const STATEMENT_FILE_ACCEPT =
   ".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel";
 
+/** Stable key for entity + bank account switch reset (skip first mount). */
+export function statementImportSessionKey(
+  entityId: string,
+  moneyAccountId: string,
+): string {
+  return `${entityId}:${moneyAccountId}`;
+}
+
 export const DATE_FORMATS: DateFormat[] = ["DD.MM.YYYY", "DD/MM/YYYY", "YYYY-MM-DD"];
 
 export const DEFAULT_MAPPING: MappingState = {

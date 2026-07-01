@@ -3,13 +3,14 @@
 /** Full-page bank statement upload + column mapping. */
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/api-error-message";
 import type {
   BankImportProfileRead,
   BankStatementPreview,
@@ -30,6 +31,7 @@ import {
   roleForColumn,
   roleLabel,
   sampleCellAt,
+  statementImportSessionKey,
   STATEMENT_FILE_ACCEPT,
   suggestedProfileToMapping,
   type AmountMode,
@@ -41,6 +43,7 @@ import {
   type MappingState,
 } from "@/lib/statement-import-helpers";
 import { useToast } from "@/lib/toast";
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { cn } from "@/lib/utils";
 
@@ -351,9 +354,10 @@ export function StatementImportPanel({
     setAssignTarget(null);
   }
 
-  useEffect(() => {
-    reset();
-  }, [moneyAccountId, entityId, reset]);
+  useEntitySwitchReset(
+    statementImportSessionKey(entityId, moneyAccountId),
+    reset,
+  );
 
   async function loadPreview(selected: File) {
     if (!entityId) {
@@ -401,8 +405,9 @@ export function StatementImportPanel({
       }
       setStep("map");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Preview failed");
-      setFile(null);
+      const message = apiErrorMessage(err, "Preview failed");
+      setError(message);
+      toast(message, "error");
     } finally {
       setLoadingPreview(false);
     }
@@ -429,7 +434,9 @@ export function StatementImportPanel({
       toast("Statement imported");
       router.push(`/banking/statements/${statement.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      const message = apiErrorMessage(err, "Upload failed");
+      setError(message);
+      toast(message, "error");
     } finally {
       setSubmitting(false);
     }

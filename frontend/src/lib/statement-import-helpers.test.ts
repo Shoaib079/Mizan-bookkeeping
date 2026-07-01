@@ -10,6 +10,7 @@ import {
   headerCellAt,
   roleForColumn,
   sampleCellAt,
+  statementImportSessionKey,
   truncateCell,
 } from "@/lib/statement-import-helpers";
 
@@ -50,5 +51,14 @@ describe("statement import column context", () => {
     const next = applyColumnAssignment(DEFAULT_MAPPING, "date", 2);
     expect(next.dateCol).toBe(2);
     expect(roleForColumn(next, 2)).toBe("date");
+  });
+});
+
+describe("statementImportSessionKey", () => {
+  it("combines entity and account for switch-reset tracking", () => {
+    expect(statementImportSessionKey("ent-1", "acct-1")).toBe("ent-1:acct-1");
+    expect(statementImportSessionKey("ent-1", "acct-2")).not.toBe(
+      statementImportSessionKey("ent-1", "acct-1"),
+    );
   });
 });

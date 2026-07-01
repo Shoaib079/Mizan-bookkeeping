@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Unified document learning — IC-D invoice rules + correction audit (`v0.73.26-unified-document-learning`) |
-| **Last commit/tag**      | `v0.73.26-unified-document-learning` — shared learning core; invoice learn/correct; expense correction events |
+| **Last completed slice** | Statement import production fix — entity-switch reset race (`v0.73.27-statement-import-reset-fix`) |
+| **Last commit/tag**      | `v0.73.27-statement-import-reset-fix` — stop wiping preview on entity hydration; toast import errors |
 | **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover) |
 
 
