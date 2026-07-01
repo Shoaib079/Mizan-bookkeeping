@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Bank statement line dedup — no file retention; overlapping exports skip duplicate lines (`v0.73.29-bank-statement-line-dedup`) |
-| **Last commit/tag**      | `v0.73.29-bank-statement-line-dedup` — line dedup on import; drop statement file storage; allow overlapping exports |
+| **Last completed slice** | Statement import panel stability — no unmount during preview on Vercel (`v0.73.30-statement-import-panel-stable`) |
+| **Last commit/tag**      | `v0.73.30-statement-import-panel-stable` — keep import mapper mounted after first account load |
 | **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover) |
 
 
