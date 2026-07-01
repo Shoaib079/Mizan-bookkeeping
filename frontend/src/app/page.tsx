@@ -214,6 +214,35 @@ function DashboardBody() {
             ))}
           </div>
 
+          {data.fx_balances.length > 0 && (
+            <section className="mt-6 rounded-lg border border-border bg-card p-4">
+              <h2 className="text-sm font-semibold">FX wallets</h2>
+              <ul className="mt-3 space-y-2 text-sm">
+                {data.fx_balances.map((row) => (
+                  <li
+                    key={row.money_account_id}
+                    className="flex justify-between gap-2"
+                  >
+                    <Link
+                      href={`/banking/fx/${row.money_account_id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {row.name} ({row.currency})
+                    </Link>
+                    <div className="text-right">
+                      <p className="tabular-nums">
+                        {formatFxNative(row.native_quantity, row.currency)}
+                      </p>
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        Book cost: {formatTry(row.try_cost_kurus)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {entityId && <RecentEntriesCard entityId={entityId} className="mt-6" />}
 
           {data.sales.total_sales_kurus > 0 && (
@@ -393,35 +422,6 @@ function DashboardBody() {
                     <span className="tabular-nums">
                       {formatTry(row.balance_kurus)}
                     </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {data.fx_balances.length > 0 && (
-            <section className="mt-6 rounded-lg border border-border bg-card p-4">
-              <h2 className="text-sm font-semibold">FX wallets</h2>
-              <ul className="mt-3 space-y-2 text-sm">
-                {data.fx_balances.map((row) => (
-                  <li
-                    key={row.money_account_id}
-                    className="flex justify-between gap-2"
-                  >
-                    <Link
-                      href={`/banking/fx/${row.money_account_id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {row.name} ({row.currency})
-                    </Link>
-                    <div className="text-right">
-                      <p className="tabular-nums">
-                        {formatFxNative(row.native_quantity, row.currency)}
-                      </p>
-                      <p className="text-xs text-muted-foreground tabular-nums">
-                        Book cost: {formatTry(row.try_cost_kurus)}
-                      </p>
-                    </div>
                   </li>
                 ))}
               </ul>
