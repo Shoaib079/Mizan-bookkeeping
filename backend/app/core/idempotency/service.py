@@ -18,6 +18,7 @@ from app.core.idempotency.models import IdempotencyRecord
 ANONYMOUS_SCOPE = "__anonymous__"
 MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 SKIP_PATH_PREFIXES = ("/docs", "/redoc", "/openapi.json")
+SKIP_PATH_SUFFIXES = ("/statements/preview",)
 SKIP_EXACT_PATHS = frozenset({"/", "/health", "/health/ready"})
 
 
@@ -30,7 +31,9 @@ def should_skip_idempotency(method: str, path: str) -> bool:
         return True
     if path in SKIP_EXACT_PATHS:
         return True
-    return any(path.startswith(prefix) for prefix in SKIP_PATH_PREFIXES)
+    if any(path.startswith(prefix) for prefix in SKIP_PATH_PREFIXES):
+        return True
+    return any(path.endswith(suffix) for suffix in SKIP_PATH_SUFFIXES)
 
 
 def validate_idempotency_key(raw_key: str | None) -> str | None:

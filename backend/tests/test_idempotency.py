@@ -173,6 +173,23 @@ def test_health_ready_skips_idempotency(client: TestClient, monkeypatch) -> None
     assert response.status_code == 200
 
 
+def test_statement_preview_skips_idempotency(
+    client: TestClient,
+    idempotency_setup,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "idempotency_enforcement", True)
+    entity_id = idempotency_setup["entity_id"]
+    bank = idempotency_setup["bank"]
+    csv = b"Tarih,Aciklama,Borc,Alacak\n01.02.2026,Test,100,00,\n"
+    response = client.post(
+        f"/entities/{entity_id}/banking/accounts/{bank.id}/statements/preview",
+        files={"file": ("tr.csv", csv, "text/csv")},
+    )
+    assert response.status_code == 200
+    assert response.json()["rows"]
+
+
 def test_optional_key_dedup_when_enforcement_off(
     db_session,
     client: TestClient,

@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Statement import preview persist + entity stability on Vercel (`v0.73.31-statement-import-preview-persist`) |
-| **Last commit/tag**      | `v0.73.31-statement-import-preview-persist` — sessionStorage preview, inflight dedup, stable entity context |
+| **Last completed slice** | Statement preview idempotency skip on Railway (`v0.73.32-statement-preview-idempotency-skip`) |
+| **Last commit/tag**      | `v0.73.32-statement-preview-idempotency-skip` — preview POST exempt from Idempotency-Key (prod 400 fix) |
 | **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover) |
 
 
