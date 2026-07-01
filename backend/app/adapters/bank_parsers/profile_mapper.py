@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from typing import Literal
 
@@ -21,6 +22,41 @@ _DATE_STRPTIME: dict[DateFormat, str] = {
     "DD/MM/YYYY": "%d/%m/%Y",
     "YYYY-MM-DD": "%Y-%m-%d",
 }
+
+# Banks often append time: 30/06/2026-06:26:10 or 01.02.2026 14:30:00
+_DATE_WITH_DMY_TIME = re.compile(
+    r"^(\d{1,2}[/.]\d{1,2}[/.]\d{4})-\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?$"
+)
+
+
+def normalize_transaction_date_cell(raw: str) -> str:
+    """Strip common bank datetime suffixes; leave the calendar date portion."""
+    text = raw.strip()
+    if not text:
+        return text
+    if "T" in text:
+        return text.split("T", 1)[0]
+    if " " in text:
+        return text.split()[0]
+    match = _DATE_WITH_DMY_TIME.match(text)
+    if match:
+        return match.group(1)
+    return text
+
+
+def _formats_to_try(preferred: DateFormat, normalized: str) -> list[DateFormat]:
+    """Prefer user mapping, then infer separator from the cell text."""
+    ordered: list[DateFormat] = [preferred]
+    if re.match(r"^\d{4}-\d{2}-\d{2}", normalized) and "YYYY-MM-DD" not in ordered:
+        ordered.append("YYYY-MM-DD")
+    if "/" in normalized and "DD/MM/YYYY" not in ordered:
+        ordered.append("DD/MM/YYYY")
+    if "." in normalized and "DD.MM.YYYY" not in ordered:
+        ordered.append("DD.MM.YYYY")
+    for fmt in ("DD.MM.YYYY", "DD/MM/YYYY", "YYYY-MM-DD"):
+        if fmt not in ordered:
+            ordered.append(fmt)
+    return ordered
 
 
 class BankImportProfileConfig(BaseModel):
@@ -92,19 +128,21 @@ def parse_date_with_format(
     if not raw:
         raise BankParseError(f"row {row_num}: transaction date is required")
 
-    if date_format in ("DD.MM.YYYY", "DD/MM/YYYY") and " " in raw:
-        raw = raw.split()[0]
+    normalized = normalize_transaction_date_cell(raw)
+    last_error: ValueError | None = None
+    for fmt in _formats_to_try(date_format, normalized):
+        strptime_fmt = _DATE_STRPTIME.get(fmt)
+        if strptime_fmt is None:
+            continue
+        try:
+            return datetime.strptime(normalized, strptime_fmt).date()
+        except ValueError as exc:
+            last_error = exc
+            continue
 
-    strptime_fmt = _DATE_STRPTIME.get(date_format)
-    if strptime_fmt is None:
-        raise BankParseError(f"Unsupported date_format {date_format!r}")
-
-    try:
-        return datetime.strptime(raw, strptime_fmt).date()
-    except ValueError as exc:
-        raise BankParseError(
-            f"row {row_num}: date must be {date_format}, got {raw!r}"
-        ) from exc
+    raise BankParseError(
+        f"row {row_num}: could not parse date (expected {date_format}), got {raw!r}"
+    ) from last_error
 
 
 def _cell(row: list[object], col: int) -> object:

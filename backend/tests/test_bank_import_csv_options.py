@@ -8,6 +8,7 @@ import pytest
 
 from app.adapters.bank_parsers.profile_mapper import (
     BankImportProfileConfig,
+    normalize_transaction_date_cell,
     parse_date_with_format,
     parse_with_profile,
 )
@@ -120,6 +121,49 @@ def test_date_with_trailing_time_uses_date_part() -> None:
     assert parse_date_with_format("01.02.2026 14:30", 2, "DD.MM.YYYY") == date(
         2026, 2, 1
     )
+
+
+def test_date_with_dash_separated_time_slash_format() -> None:
+    assert parse_date_with_format("30/06/2026-06:26:10", 17, "DD/MM/YYYY") == date(
+        2026, 6, 30
+    )
+
+
+def test_date_with_dash_time_falls_back_when_profile_uses_dots() -> None:
+    assert parse_date_with_format("30/06/2026-06:26:10", 17, "DD.MM.YYYY") == date(
+        2026, 6, 30
+    )
+
+
+def test_date_with_dash_separated_time_dot_format() -> None:
+    assert parse_date_with_format("01.02.2026-14:30:00", 3, "DD.MM.YYYY") == date(
+        2026, 2, 1
+    )
+
+
+def test_normalize_transaction_date_cell() -> None:
+    assert normalize_transaction_date_cell("30/06/2026-06:26:10") == "30/06/2026"
+    assert normalize_transaction_date_cell("2026-06-30T06:26:10") == "2026-06-30"
+
+
+def test_slash_date_import_with_dash_time() -> None:
+    csv = (
+        "Tarih;Aciklama;Borc;Alacak\n"
+        "30/06/2026-06:26:10;POS odeme;100,00;\n"
+    )
+    profile = BankImportProfileConfig(
+        header_row=1,
+        data_start_row=2,
+        date_col=0,
+        description_col=1,
+        debit_col=2,
+        credit_col=3,
+        date_format="DD/MM/YYYY",
+        decimal_format="tr",
+        csv_delimiter=";",
+    )
+    parsed = parse_with_profile(csv.encode(), profile, original_filename="bank.csv")
+    assert parsed.lines[0].transaction_date == date(2026, 6, 30)
 
 
 def test_resolve_csv_read_options_reports_detected_values(cp1254_bytes: bytes) -> None:

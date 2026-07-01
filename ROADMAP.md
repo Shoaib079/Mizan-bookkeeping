@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Statement preview idempotency skip on Railway (`v0.73.32-statement-preview-idempotency-skip`) |
-| **Last commit/tag**      | `v0.73.32-statement-preview-idempotency-skip` — preview POST exempt from Idempotency-Key (prod 400 fix) |
+| **Last completed slice** | Bank statement date parsing — slash/dot + datetime suffix (`v0.73.33-bank-date-parse-flex`) |
+| **Last commit/tag**      | `v0.73.33-bank-date-parse-flex` — parse `30/06/2026-06:26:10` and infer `/` vs `.` separators |
 | **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover) |
 
 
@@ -1838,7 +1838,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-06-25 | Statement import preview persist (Vercel)     | `v0.73.31-statement-import-preview-persist`          | sessionStorage restore for column map; module-level inflight preview dedup across remounts; stable `setEntityId`/`refreshEntities`; `resolveEntityIdFromList` avoids entity churn; toast on stale discard |
+| 2026-06-25 | Statement preview idempotency (Railway prod)  | `v0.73.32-statement-preview-idempotency-skip`        | Prod 400 on `POST …/statements/preview` was idempotency middleware requiring Idempotency-Key; skip preview (parse-only, no money post) |
 | 2026-06-25 | Statement import panel stability (Vercel)     | `v0.73.30-statement-import-panel-stable`             | Keep import mapper mounted after first bank account load; no unmount during preview refetch |
 | 2026-06-25 | Settings reorg (UX)                           | `v0.73.25-settings-reorg`                            | Remove Set up sidebar; profile menu → Your profile / Restaurant settings / Add restaurant; Team nested under Restaurant settings (Modules + Team sections); opening balances → `/onboarding/opening-balances`; expense items → `/expenses/items`; platforms → Delivery tab; manual journals → Review tab; legacy `/setup/*` redirects |
 | 2026-06-25 | Salary period + advance UX (FS)               | `v0.73.24-salary-period-advance-ux`                  | Migration `060` accrual period; ledger `outstanding_advance_minor` + `remaining_accrual_minor`; payment `advance_applied_minor`; staff pay form preview |

@@ -5,7 +5,11 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig, DateFormat
+from app.adapters.bank_parsers.profile_mapper import (
+    BankImportProfileConfig,
+    DateFormat,
+    normalize_transaction_date_cell,
+)
 from app.adapters.bank_parsers.row_parse import cell_to_str
 
 _MAX_SCAN_ROWS = 40
@@ -83,9 +87,7 @@ def _detect_date_format(
 ) -> DateFormat:
     if data_row < 1 or data_row > len(grid):
         return "DD.MM.YYYY"
-    val = cell_to_str(_cell(grid[data_row - 1], date_col)).strip()
-    if " " in val:
-        val = val.split()[0]
+    val = normalize_transaction_date_cell(cell_to_str(_cell(grid[data_row - 1], date_col)))
     if re.match(r"^\d{2}\.\d{2}\.\d{4}$", val):
         return "DD.MM.YYYY"
     if re.match(r"^\d{2}/\d{2}/\d{4}$", val):

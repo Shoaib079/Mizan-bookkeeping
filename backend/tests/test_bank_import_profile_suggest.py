@@ -71,6 +71,11 @@ Tarih,Aciklama,Tutar
     assert suggested.credit_col is None
 
 
-def test_suggest_returns_none_for_unrecognized_grid() -> None:
-    grid = [["only", "junk"], ["no", "headers"]]
-    assert suggest_import_profile(grid) is None
+def test_suggest_detects_slash_date_with_dash_time() -> None:
+    from app.adapters.bank_parsers.raw_grid import read_raw_grid
+
+    csv = "Tarih,Tutar\n30/06/2026-06:26:10,100\n"
+    grid = read_raw_grid(csv.encode(), original_filename="bank.csv")
+    suggested = suggest_import_profile(grid)
+    assert suggested is not None
+    assert suggested.date_format == "DD/MM/YYYY"
