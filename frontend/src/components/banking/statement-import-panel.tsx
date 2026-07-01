@@ -318,7 +318,7 @@ export function StatementImportPanel({
   backHref,
 }: Props) {
   const router = useRouter();
-  const { entityId, entitiesLoaded } = useEntity();
+  const { entityId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
 
@@ -359,7 +359,6 @@ export function StatementImportPanel({
   useEntitySwitchReset(
     statementImportSessionKey(entityId, moneyAccountId),
     reset,
-    { ready: entitiesLoaded },
   );
 
   async function loadPreview(selected: File) {

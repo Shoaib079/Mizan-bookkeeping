@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { StatementImportPanel } from "@/components/banking/statement-import-panel";
 import { apiFetch } from "@/lib/api";
 import type { MoneyAccountRead } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
+import {
+  shouldStartAccountFetchLoading,
+  statementImportPagePhase,
+} from "@/lib/statement-import-page";
 import { statementImportSessionKey } from "@/lib/statement-import-helpers";
 
 export default function StatementImportPage() {
@@ -17,31 +21,60 @@ export default function StatementImportPage() {
   const [account, setAccount] = useState<MoneyAccountRead | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sessionValidated, setSessionValidated] = useState(false);
+  const validatedSessionRef = useRef<string | null>(null);
+
+  const sessionKey =
+    entityId && accountId ? statementImportSessionKey(entityId, accountId) : "";
 
   useEffect(() => {
-    if (!entityId || !accountId || !entitiesLoaded) return;
-    let cancelled = false;
+    validatedSessionRef.current = null;
+    setSessionValidated(false);
     setAccount(null);
     setLoading(true);
     setError(null);
+  }, [sessionKey]);
+
+  useEffect(() => {
+    if (!entityId || !accountId || !entitiesLoaded) return;
+
+    let cancelled = false;
+    if (shouldStartAccountFetchLoading(validatedSessionRef.current === sessionKey)) {
+      setLoading(true);
+      setError(null);
+    }
+
     void apiFetch<MoneyAccountRead>(
       `/entities/${entityId}/banking/accounts/${accountId}`,
     )
       .then((acct) => {
-        if (!cancelled) setAccount(acct);
+        if (cancelled) return;
+        setAccount(acct);
+        if (acct.account_kind === "bank") {
+          validatedSessionRef.current = sessionKey;
+          setSessionValidated(true);
+        }
       })
       .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Load failed");
-        }
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Load failed");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
-  }, [entityId, accountId, entitiesLoaded]);
+  }, [entityId, accountId, entitiesLoaded, sessionKey]);
+
+  const phase = statementImportPagePhase({
+    entityId,
+    entitiesLoaded,
+    sessionValidated,
+    loading,
+    error,
+  });
 
   if (!entityId) {
     return (
@@ -51,11 +84,15 @@ export default function StatementImportPage() {
     );
   }
 
-  if (!entitiesLoaded || loading) {
-    return <p className="text-sm text-muted-foreground">Loading account…</p>;
+  if (phase === "wait-entities" || phase === "wait-account") {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {phase === "wait-entities" ? "Loading restaurants…" : "Loading account…"}
+      </p>
+    );
   }
 
-  if (error || !account) {
+  if (phase === "error" || !account) {
     return (
       <div className="space-y-3">
         <p className="text-sm text-destructive">{error ?? "Account not found"}</p>
@@ -84,7 +121,6 @@ export default function StatementImportPage() {
 
   return (
     <StatementImportPanel
-      key={statementImportSessionKey(entityId, accountId)}
       moneyAccountId={accountId}
       accountName={account.name}
       backHref={`/banking/accounts/${accountId}`}
