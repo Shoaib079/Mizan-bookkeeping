@@ -115,13 +115,13 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 ---
 
-#### IC-D — Per-entity classification learning  *(defer until IC-C stable)*
+#### IC-D — Per-entity classification learning ✅ `v0.73.26-unified-document-learning`
 
-**Spec:** Same pattern as statement classification (`v0.71.14`): per-entity rules (seller VKN + text tokens → kind); learn on user override/unconfirm+reclassify; suggest after N confirms at HIGH confidence; correction downgrades bad rules. **Never auto-post.** No global cross-restaurant rule pool.
+**Spec:** Same pattern as statement classification (`v0.71.14`): per-entity rules (seller VKN + text tokens → kind); learn on user override/unconfirm+reclassify; suggest after N confirms at HIGH confidence; correction downgrades bad rules. **Never auto-post.** No global cross-restaurant rule pool. Unified `learning_correction_events` audit across bank, invoice, and expense intakes.
 
 **Acceptance:** After one manual fix of an edge-case PDF, next similar invoice is auto-suggested correctly.
 
-**Tag target:** `v0.73.23-invoice-classification-learning`
+**Tag target:** `v0.73.26-unified-document-learning`
 
 ---
 

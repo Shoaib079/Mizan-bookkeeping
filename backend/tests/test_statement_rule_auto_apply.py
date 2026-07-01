@@ -16,8 +16,8 @@ from app.core.subledger.control_account_tie import assert_entity_control_account
 from app.db.session import entity_context
 from app.features.banking import service as banking_service
 from app.features.banking import statements as statement_service
+from app.core.learning import HIGH_CONFIDENCE_THRESHOLD
 from app.features.banking.classification_learning import (
-    HIGH_CONFIDENCE_THRESHOLD,
     learn_classification_rule,
 )
 from app.features.banking.classification_rule_models import StatementClassificationRule

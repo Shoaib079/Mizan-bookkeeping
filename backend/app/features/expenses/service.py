@@ -319,6 +319,16 @@ def create_expense(
             payload.written_item_description,
             confirm_expense_item_id=payload.confirm_expense_item_id,
         )
+        learned_suggestion = (
+            suggest_learned_expense_account(
+                session, entity_id, payload.written_item_description or ""
+            )
+            if payload.written_item_description
+            else None
+        )
+        suggested_account_id = (
+            learned_suggestion.account_id if learned_suggestion is not None else None
+        )
 
         if resolution.status == ExpenseEntryStatus.NEEDS_REVIEW:
             entry = ExpenseEntry(
@@ -363,6 +373,7 @@ def create_expense(
             written_item_description=payload.written_item_description,
             expense_account_id=payload.expense_account_id,
             expense_item_id=resolution.expense_item_id,
+            suggested_account_id=suggested_account_id,
         )
         session.commit()
         entry = session.get(ExpenseEntry, entry_id)

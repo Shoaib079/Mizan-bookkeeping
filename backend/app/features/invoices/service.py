@@ -39,6 +39,11 @@ from app.core.delivery.commission_detect import (
     classify_efatura_intake,
     match_delivery_platform,
 )
+from app.features.invoices.classification_learning import (
+    classify_invoice_intake,
+    learn_invoice_classification_rule,
+    record_invoice_rule_correction,
+)
 from app.core.delivery.commission_posting import post_delivery_commission_draft
 from app.core.invoices.posting import DraftPostError, post_confirmed_draft
 from app.features.delivery.models import OwnedDeliveryPlatform
@@ -351,6 +356,20 @@ def _extract_and_store_efatura(
     return source_type, extraction, payload, linked_supplier
 
 
+def _draft_extraction(draft: InvoiceDraft) -> EInvoiceExtraction:
+    return EInvoiceExtraction(
+        supplier_name=draft.supplier_name,
+        supplier_vkn=draft.supplier_vkn,
+        invoice_number=draft.invoice_number,
+        invoice_date=draft.invoice_date,
+        net_kurus=draft.net_kurus,
+        gross_kurus=draft.gross_kurus,
+        vat_breakdown=draft.vat_breakdown or [],
+        currency=draft.currency,
+        raw=draft.extraction_payload,
+    )
+
+
 def _commission_pdf_text(payload: dict) -> str | None:
     sample = payload.get("text_sample")
     return sample if isinstance(sample, str) else None
@@ -369,22 +388,34 @@ def _apply_commission_intake(
         return InvoiceKind.SUPPLIER.value, None, review_reason, "high"
 
     pdf_text = _commission_pdf_text(payload)
-    classification = classify_efatura_intake(extraction, pdf_text=pdf_text)
-    payload["classification_confidence"] = classification.confidence
+    invoice_kind, learned_platform_id, confidence, learned_review = classify_invoice_intake(
+        session,
+        extraction,
+        pdf_text=pdf_text,
+    )
+    payload["classification_confidence"] = confidence
 
-    if classification.invoice_kind == InvoiceKind.SUPPLIER.value:
-        if classification.confidence in ("medium", "low"):
-            reason = classification.review_reason or review_reason
-            return InvoiceKind.SUPPLIER.value, None, reason, classification.confidence
-        return InvoiceKind.SUPPLIER.value, None, review_reason, classification.confidence
+    if invoice_kind == InvoiceKind.SUPPLIER.value:
+        if confidence in ("medium", "low"):
+            reason = learned_review or review_reason
+            return InvoiceKind.SUPPLIER.value, None, reason, confidence
+        return InvoiceKind.SUPPLIER.value, None, review_reason, confidence
 
-    if classification.confidence in ("medium", "low"):
-        reason = classification.review_reason or review_reason
+    if confidence in ("medium", "low"):
+        reason = learned_review or review_reason
         return (
             InvoiceKind.DELIVERY_COMMISSION.value,
             None,
             reason,
-            classification.confidence,
+            confidence,
+        )
+
+    if learned_platform_id is not None:
+        return (
+            InvoiceKind.DELIVERY_COMMISSION.value,
+            learned_platform_id,
+            review_reason,
+            confidence,
         )
 
     platform = match_delivery_platform(
@@ -402,14 +433,29 @@ def _apply_commission_intake(
             InvoiceKind.DELIVERY_COMMISSION.value,
             None,
             reason,
-            classification.confidence,
+            confidence,
         )
 
     return (
         InvoiceKind.DELIVERY_COMMISSION.value,
         platform.id,
         review_reason,
-        classification.confidence,
+        confidence,
+    )
+
+
+def _learn_from_draft_classification(
+    session: Session,
+    draft: InvoiceDraft,
+) -> None:
+    """Persist owner-confirmed invoice kind after confirm or platform link."""
+    payload = draft.extraction_payload or {}
+    learn_invoice_classification_rule(
+        session,
+        extraction=_draft_extraction(draft),
+        invoice_kind=draft.invoice_kind,
+        delivery_platform_id=draft.delivery_platform_id,
+        pdf_text=_commission_pdf_text(payload),
     )
 
 
@@ -652,6 +698,7 @@ def link_delivery_platform_to_draft(
             draft.status = InvoiceDraftStatus.DRAFT.value
         if draft.invoice_kind == InvoiceKind.DELIVERY_COMMISSION.value:
             draft.review_reason = None
+        _learn_from_draft_classification(session, draft)
 
         session.commit()
         session.refresh(draft)
@@ -670,11 +717,24 @@ def unlink_delivery_platform_from_draft(
     _ensure_draft_linkable(draft)
 
     with entity_context(session, entity_id):
+        before_kind = draft.invoice_kind
+        before_platform_id = draft.delivery_platform_id
         draft.invoice_kind = InvoiceKind.SUPPLIER.value
         draft.delivery_platform_id = None
         if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
             draft.status = InvoiceDraftStatus.DRAFT.value
             draft.review_reason = None
+        if before_kind != InvoiceKind.SUPPLIER.value:
+            record_invoice_rule_correction(
+                session,
+                extraction=_draft_extraction(draft),
+                before_kind=before_kind,
+                corrected_kind=InvoiceKind.SUPPLIER.value,
+                before_platform_id=before_platform_id,
+                corrected_platform_id=None,
+                pdf_text=_commission_pdf_text(draft.extraction_payload or {}),
+                source_id=draft.id,
+            )
         session.commit()
         session.refresh(draft)
 
@@ -707,6 +767,7 @@ def confirm_invoice_draft(
         draft.confirmed_at = utcnow()
         draft.confirmed_by = actor_id
         draft.review_reason = None
+        _learn_from_draft_classification(session, draft)
         session.commit()
         session.refresh(draft)
 
@@ -775,6 +836,8 @@ def set_invoice_draft_kind(
         require_delivery_enabled(session, entity_id)
 
     with entity_context(session, entity_id):
+        before_kind = draft.invoice_kind
+        before_platform_id = draft.delivery_platform_id
         _set_draft_classification_confidence(draft, "high")
 
         if invoice_kind == InvoiceKind.SUPPLIER:
@@ -801,6 +864,20 @@ def set_invoice_draft_kind(
                 draft.status = InvoiceDraftStatus.DRAFT.value
                 if _is_classification_review_reason(draft.review_reason):
                     draft.review_reason = None
+        if (
+            before_kind != draft.invoice_kind
+            or before_platform_id != draft.delivery_platform_id
+        ):
+            record_invoice_rule_correction(
+                session,
+                extraction=_draft_extraction(draft),
+                before_kind=before_kind,
+                corrected_kind=draft.invoice_kind,
+                before_platform_id=before_platform_id,
+                corrected_platform_id=draft.delivery_platform_id,
+                pdf_text=_commission_pdf_text(draft.extraction_payload or {}),
+                source_id=draft.id,
+            )
         session.commit()
         session.refresh(draft)
 

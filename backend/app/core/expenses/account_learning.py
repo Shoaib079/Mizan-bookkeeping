@@ -17,6 +17,7 @@ from app.core.expenses.normalize import (
     normalize_expense_item_text,
     similarity_score,
 )
+from app.core.learning import LearningDomain, record_learning_correction
 from app.db.session import require_entity_context
 from app.features.expenses.models import ExpenseItem, ExpenseItemAlias
 
@@ -91,6 +92,7 @@ def record_expense_account_learning(
     written_item_description: str | None,
     expense_account_id: uuid.UUID,
     expense_item_id: uuid.UUID | None,
+    suggested_account_id: uuid.UUID | None = None,
 ) -> None:
     """Persist owner-confirmed description→account on the canonical expense item."""
     require_entity_context()
@@ -100,6 +102,19 @@ def record_expense_account_learning(
     normalized = normalize_expense_item_text(written_item_description)
     if not normalized:
         return
+
+    if (
+        suggested_account_id is not None
+        and suggested_account_id != expense_account_id
+    ):
+        record_learning_correction(
+            session,
+            domain=LearningDomain.EXPENSE_RECEIPT,
+            field_name="expense_account_id",
+            before_value=str(suggested_account_id),
+            after_value=str(expense_account_id),
+            match_token=normalized,
+        )
 
     resolved_item: ExpenseItem | None = None
     if expense_item_id is not None:

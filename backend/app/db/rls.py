@@ -10,6 +10,8 @@ RLS_TABLES = (
     "journal_entry_lines",
     "ledger_audit_events",
     "invoice_drafts",
+    "invoice_classification_rules",
+    "learning_correction_events",
     "suppliers",
     "supplier_ledger_entries",
     "money_accounts",

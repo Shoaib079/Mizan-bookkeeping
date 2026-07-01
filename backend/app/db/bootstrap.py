@@ -19,6 +19,8 @@ from app.features.banking.credit_card_payment_models import CreditCardPayment  #
 from app.features.banking.statement_models import BankStatement, BankStatementLine  # noqa: F401
 from app.features.banking.import_profile_models import BankImportProfile  # noqa: F401
 from app.features.banking.classification_rule_models import StatementClassificationRule  # noqa: F401
+from app.core.learning.correction_events import LearningCorrectionEvent  # noqa: F401
+from app.features.invoices.classification_rule_models import InvoiceClassificationRule  # noqa: F401
 from app.features.banking.transfer_models import AccountTransfer  # noqa: F401
 from app.core.fx.models import FxLedgerEntry  # noqa: F401
 from app.features.cash.models import CashDrawerSession, CashDrawerAuditEvent, CashMovement  # noqa: F401

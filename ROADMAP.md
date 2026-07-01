@@ -15,15 +15,15 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Settings reorg — dissolve Set up hub (`v0.73.25-settings-reorg`) |
-| **Last commit/tag**      | `v0.73.25-settings-reorg` — workspace settings in profile menu; Team nested under Restaurant settings; domain pages moved to mother sections |
-| **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover); **IC-D** deferred |
+| **Last completed slice** | Unified document learning — IC-D invoice rules + correction audit (`v0.73.26-unified-document-learning`) |
+| **Last commit/tag**      | `v0.73.26-unified-document-learning` — shared learning core; invoice learn/correct; expense correction events |
+| **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover) |
 
 
 ### Next plan (pre-launch, owner-driven)
 
 1. ~~**Clearance auto-pick (backend, small).**~~ **DONE (`v0.72.0-clearance-auto-pick`).** HIGH-confidence learned rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches; zero or multiple matches → Needs Review. Delivery resolves platform by unique match across entity platforms.
-2. ~~**Invoice classification (IC-A–IC-D)**~~ **IC-A–IC-C DONE** (`v0.73.20`–`v0.73.22`). **IC-D** (per-entity learning) deferred until stable in production. Full spec: **`POST_LAUNCH_PLAN.md` § IC**.
+2. ~~**Invoice classification (IC-A–IC-D)**~~ **DONE** (`v0.73.20`–`v0.73.22`, **IC-D** `v0.73.26-unified-document-learning`). Full spec: **`POST_LAUNCH_PLAN.md` § IC**.
 3. **Run pending migrations before go-live:** `alembic upgrade head` applies through **`060`** (`052`–`060`: … entity **`vkn`**, delivery monthly sales, staff accrual period). Ensure `xlrd` installed.
 4. **Phase 12 owner sign-off** — record first real restaurant on production (provision Postgres, secrets, backup-restore drill, walk a day).
 5. ~~**Feature gaps FP/FS**~~ **DONE** — FP (`v0.73.23` partner drawing/repayment); FS (`v0.73.24` salary period + advance UX at pay time).
@@ -70,7 +70,7 @@
 | Invoice review confidence UX (IC-C)                                            | `v0.73.22-invoice-review-confidence-ux`             | done           | Kind badge; HIGH → confirm only; MEDIUM/LOW → Accept suggestion or Change type |
 | Partner advance / drawing (FP)                                                 | `v0.73.23-partner-advance-drawing`                  | done           | Drawing + repayment movements; bidirectional partner balance UX |
 | Salary period + advance UX at pay (FS)                                         | `v0.73.24-salary-period-advance-ux`                  | done           | Re-add period on accrual only; re-wire auto-clear preview — posting already applied advance |
-| Per-entity invoice classification learning (IC-D)                              | *deferred* — see `POST_LAUNCH_PLAN.md` § IC-D       | planned        | Learn on override; suggest after N confirms |
+| Per-entity invoice classification learning (IC-D)                              | `v0.73.26-unified-document-learning`                | done           | Learn on confirm/override; shared correction audit with bank + expenses |
 
 
 **Owner sign-off ✓ (2026-06-28)** on Phase 12.5 statement-learning arc through clearance auto-pick (`v0.72.0-clearance-auto-pick`) — rule auto-post (bank fee + supplier payment), review hub, match_token trim, POS/delivery link-only auto-clear.

@@ -9,14 +9,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.expenses.normalize import normalize_expense_item_text
+from app.core.learning import LearningDomain, record_learning_correction
+from app.core.learning.confidence import (
+    confidence_label as learning_confidence_label,
+    is_high_confidence as rule_is_high_confidence,
+)
 from app.db.base import utcnow
 from app.features.banking.classification_rule_models import StatementClassificationRule
 from app.features.banking.schema import ClassificationSuggestion
 from app.features.banking.statement_models import StatementLineClassification
-
-
-HIGH_CONFIDENCE_THRESHOLD = 3
-RECENT_HITS_WITHOUT_CORRECTION = 3
 
 
 def _rule_signature(
@@ -27,18 +28,17 @@ def _rule_signature(
 
 def is_high_confidence(rule: StatementClassificationRule) -> bool:
     """HIGH only when confirmed enough times with no recent correction and stable mapping."""
-    return (
-        rule.confirmation_count >= HIGH_CONFIDENCE_THRESHOLD
-        and rule.confirmations_since_correction >= RECENT_HITS_WITHOUT_CORRECTION
+    return rule_is_high_confidence(
+        rule.confirmation_count,
+        rule.confirmations_since_correction,
     )
 
 
 def _confidence_label(rule: StatementClassificationRule) -> str:
-    if is_high_confidence(rule):
-        return "high"
-    if rule.confirmation_count >= 2:
-        return "medium"
-    return "low"
+    return learning_confidence_label(
+        rule.confirmation_count,
+        rule.confirmations_since_correction,
+    )
 
 
 def _matching_rules(
@@ -197,4 +197,23 @@ def record_rule_correction(
         supplier_id=corrected_supplier_id,
         match_token=learn_token,
     )
+
+    record_learning_correction(
+        session,
+        domain=LearningDomain.BANK_STATEMENT,
+        field_name="classification",
+        before_value=matches[0].classification.value if matches else None,
+        after_value=corrected_classification.value,
+        match_token=learn_token,
+    )
+    if matches and matches[0].supplier_id != corrected_supplier_id:
+        record_learning_correction(
+            session,
+            domain=LearningDomain.BANK_STATEMENT,
+            field_name="supplier_id",
+            before_value=str(matches[0].supplier_id) if matches[0].supplier_id else None,
+            after_value=str(corrected_supplier_id) if corrected_supplier_id else None,
+            match_token=learn_token,
+        )
+
     session.flush()
