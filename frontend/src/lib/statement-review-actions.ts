@@ -15,6 +15,7 @@ export type ClassifyLinePayload = {
   counterpart_money_account_id?: string;
   credit_card_money_account_id?: string;
   customer_id?: string;
+  delivery_platform_id?: string;
   expense_account_id?: string;
   confirm_supplier_ledger_entry_id?: string;
   confirm_account_transfer_id?: string;

@@ -32,27 +32,17 @@ type Supplier = { id: string; name: string };
 type Customer = { id: string; name: string };
 type ChartAccount = { id: string; code: string; name_en: string };
 
-const classificationOptions: {
-  value: StatementLineClassification;
-  label: string;
-}[] = [
-  { value: "supplier_payment", label: "Supplier payment" },
-  { value: "transfer", label: "Transfer" },
-  { value: "bank_fee", label: "Bank charges" },
-  { value: "credit_card_payment", label: "Credit card payment" },
-  { value: "customer_payment", label: "Customer payment" },
-  { value: "rent_utility", label: "Rent / utility" },
-  { value: "unknown", label: "Unknown (skip)" },
-];
+import {
+  classificationLabel,
+  classificationOptionsForAmount,
+  STATEMENT_CLASSIFICATION_OPTIONS,
+  suggestClassificationForLine,
+} from "@/lib/statement-classification-options";
 
 type Props = {
   line: StatementLineReview;
   onUpdated: () => void;
 };
-
-function classificationLabel(value: string): string {
-  return value.replace(/_/g, " ");
-}
 
 export function StatementLineReviewRow({ line, onUpdated }: Props) {
   const { entityId, actorId } = useEntity();
@@ -379,7 +369,7 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
                       )
                     }
                   >
-                    {classificationOptions.map((option) => (
+                    {classificationOptionsForAmount(line.amount_kurus).map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -546,7 +536,7 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
                 )
               }
             >
-              {classificationOptions.map((option) => (
+              {STATEMENT_CLASSIFICATION_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

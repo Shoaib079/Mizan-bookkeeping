@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Bank import footer rows + full preview (`v0.73.35-bank-import-footer-preview`) |
-| **Last commit/tag**      | `v0.73.35-bank-import-footer-preview` — skip zero-amount rows, optional last data row, 500-row preview |
+| **Last completed slice** | Statement classify dense table + full options (`v0.73.36-statement-classify-table`) |
+| **Last commit/tag**      | `v0.73.36-statement-classify-table` — one row per line; delivery/POS inflows; shared pickers |
 | **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover) |
 
 
@@ -1838,7 +1838,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-06-25 | Bank import footer rows + full preview          | `v0.73.35-bank-import-footer-preview`                | Skip zero-amount balance/footer rows; optional Last data row mapping; preview up to 500 rows (full file for typical statements) |
+| 2026-07-02 | Statement classify dense table                  | `v0.73.36-statement-classify-table`                  | One table row per bank line; all classifications incl. delivery app + POS; amount-aware options; Trendyol auto-suggest |
 | 2026-06-25 | Statement import panel stability (Vercel)     | `v0.73.30-statement-import-panel-stable`             | Keep import mapper mounted after first bank account load; no unmount during preview refetch |
 | 2026-06-25 | Settings reorg (UX)                           | `v0.73.25-settings-reorg`                            | Remove Set up sidebar; profile menu → Your profile / Restaurant settings / Add restaurant; Team nested under Restaurant settings (Modules + Team sections); opening balances → `/onboarding/opening-balances`; expense items → `/expenses/items`; platforms → Delivery tab; manual journals → Review tab; legacy `/setup/*` redirects |
 | 2026-06-25 | Salary period + advance UX (FS)               | `v0.73.24-salary-period-advance-ux`                  | Migration `060` accrual period; ledger `outstanding_advance_minor` + `remaining_accrual_minor`; payment `advance_applied_minor`; staff pay form preview |
