@@ -155,7 +155,9 @@ def test_xls_import_duplicate_fingerprint_rejected(db_session, restaurant_a, ban
         )
 
 
-def test_xls_period_overlap_still_enforced(db_session, restaurant_a, bank_account) -> None:
+def test_xls_import_allows_overlapping_period_when_lines_differ(
+    db_session, restaurant_a, bank_account
+) -> None:
     import xlwt
 
     def _single_row_xls(amount: str) -> bytes:
@@ -175,7 +177,7 @@ def test_xls_period_overlap_still_enforced(db_session, restaurant_a, bank_accoun
         wb.save(buf)
         return buf.getvalue()
 
-    statement_service.import_bank_statement(
+    first = statement_service.import_bank_statement(
         db_session,
         restaurant_a.id,
         bank_account.id,
@@ -183,15 +185,17 @@ def test_xls_period_overlap_still_enforced(db_session, restaurant_a, bank_accoun
         original_filename="mar-a.xls",
         content_type="application/vnd.ms-excel",
     )
-    with pytest.raises(statement_service.OverlappingPeriodError):
-        statement_service.import_bank_statement(
-            db_session,
-            restaurant_a.id,
-            bank_account.id,
-            _single_row_xls("-200,00"),
-            original_filename="mar-b.xls",
-            content_type="application/vnd.ms-excel",
-        )
+    assert first.line_count == 1
+    second = statement_service.import_bank_statement(
+        db_session,
+        restaurant_a.id,
+        bank_account.id,
+        _single_row_xls("-200,00"),
+        original_filename="mar-b.xls",
+        content_type="application/vnd.ms-excel",
+    )
+    assert second.line_count == 1
+    assert second.lines[0].amount_kurus == -20000
 
 
 def test_dispatch_routes_legacy_xls_not_openpyxl() -> None:

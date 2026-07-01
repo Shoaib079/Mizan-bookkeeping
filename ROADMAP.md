@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Statement import preview stability — wait for entity list before mount (`v0.73.28-statement-import-preview-stable`) |
-| **Last commit/tag**      | `v0.73.28-statement-import-preview-stable` — gate import UI on entitiesLoaded; ignore stale preview responses |
+| **Last completed slice** | Bank statement line dedup — no file retention; overlapping exports skip duplicate lines (`v0.73.29-bank-statement-line-dedup`) |
+| **Last commit/tag**      | `v0.73.29-bank-statement-line-dedup` — line dedup on import; drop statement file storage; allow overlapping exports |
 | **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover) |
 
 

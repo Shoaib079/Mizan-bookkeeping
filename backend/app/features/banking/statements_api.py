@@ -167,7 +167,7 @@ async def import_bank_statement(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except statement_service.DuplicateStatementError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except statement_service.OverlappingPeriodError as exc:
+    except statement_service.NoNewStatementLinesError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except statement_service.NotBankAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

@@ -173,6 +173,7 @@ class BankStatementRead(BaseModel):
     period_end: date
     original_filename: str
     line_count: int
+    skipped_duplicate_count: int = 0
     imported_at: datetime
     lines: list[BankStatementLineRead]
 

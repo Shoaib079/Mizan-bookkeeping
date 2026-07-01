@@ -192,7 +192,7 @@ def test_cp1254_import_duplicate_fingerprint_still_rejected(
         )
 
 
-def test_cp1254_import_period_overlap_still_enforced(
+def test_cp1254_import_overlap_skips_duplicate_lines(
     db_session, restaurant_a, bank_account, cp1254_bytes: bytes
 ) -> None:
     import_profile_service.upsert_import_profile(
@@ -209,11 +209,12 @@ def test_cp1254_import_period_overlap_still_enforced(
         "Tarih;Açıklama;Referans;Borc;Alacak\n"
         "01.02.2026 09:00;Diğer;REF-X;10,00;\n"
     ).encode("cp1254")
-    with pytest.raises(statement_service.OverlappingPeriodError):
-        statement_service.import_bank_statement(
-            db_session,
-            restaurant_a.id,
-            bank_account.id,
-            overlap,
-            original_filename="overlap-b.csv",
-        )
+    second = statement_service.import_bank_statement(
+        db_session,
+        restaurant_a.id,
+        bank_account.id,
+        overlap,
+        original_filename="overlap-b.csv",
+    )
+    assert second.line_count == 1
+    assert second.lines[0].description == "Diğer"

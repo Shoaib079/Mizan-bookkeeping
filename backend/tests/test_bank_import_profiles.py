@@ -139,7 +139,7 @@ def test_profile_import_duplicate_fingerprint_still_rejected(
         )
 
 
-def test_profile_import_period_overlap_still_enforced(
+def test_profile_import_overlap_skips_duplicates_imports_new_lines(
     db_session, restaurant_a, bank_account
 ) -> None:
     import_profile_service.upsert_import_profile(
@@ -161,12 +161,13 @@ junk
 Tarih,Aciklama,Referans,Borc,Alacak
 01.02.2026,Other,REF-X,"10,00",
 """
-    with pytest.raises(statement_service.OverlappingPeriodError):
-        statement_service.import_bank_statement(
-            db_session,
-            restaurant_a.id,
-            bank_account.id,
-            overlap_csv.encode(),
-            original_filename="overlap-b.csv",
-            profile_config=TR_PROFILE.model_copy(update={"header_row": 7, "data_start_row": 8}),
-        )
+    second = statement_service.import_bank_statement(
+        db_session,
+        restaurant_a.id,
+        bank_account.id,
+        overlap_csv.encode(),
+        original_filename="overlap-b.csv",
+        profile_config=TR_PROFILE.model_copy(update={"header_row": 7, "data_start_row": 8}),
+    )
+    assert second.line_count == 1
+    assert second.lines[0].description == "Other"

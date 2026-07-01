@@ -10,10 +10,10 @@ from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.adapters.bank_parsers.dispatch import parse_bank_statement, resolve_statement_format
+from app.adapters.bank_parsers.dispatch import parse_bank_statement
 from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig, parse_with_profile
 from app.adapters.bank_parsers.types import BankParseError, ParsedStatement
-from app.adapters.storage.local import save_upload
+from app.core.banking.line_dedup import plan_statement_line_imports
 from app.core.banking import posting as banking_posting
 from app.core.banking import statement_posting
 from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_date_bounds
@@ -70,8 +70,8 @@ class DuplicateStatementError(Exception):
     """Raised when the same file fingerprint was already imported for this entity."""
 
 
-class OverlappingPeriodError(Exception):
-    """Raised when statement period overlaps an existing import for the same account."""
+class NoNewStatementLinesError(Exception):
+    """Raised when every parsed line is already imported for this bank account."""
 
 
 class NotBankAccountError(Exception):
@@ -134,6 +134,7 @@ def _to_statement_read(
     lines: list[BankStatementLine],
     *,
     session: Session | None = None,
+    skipped_duplicate_count: int = 0,
 ) -> BankStatementRead:
     return BankStatementRead(
         id=statement.id,
@@ -144,6 +145,7 @@ def _to_statement_read(
         period_end=statement.period_end,
         original_filename=statement.original_filename,
         line_count=statement.line_count,
+        skipped_duplicate_count=skipped_duplicate_count,
         imported_at=statement.imported_at,
         lines=[_to_line_read(line, session=session) for line in lines],
     )
@@ -305,22 +307,6 @@ def _get_bank_money_account(
     if money_account.account_kind != MoneyAccountKind.BANK:
         raise NotBankAccountError("Bank statements can only be imported for bank accounts")
     return money_account
-
-
-def _period_overlaps(
-    session: Session,
-    money_account_id: uuid.UUID,
-    period_start: date,
-    period_end: date,
-) -> bool:
-    existing = session.scalar(
-        select(BankStatement.id).where(
-            BankStatement.money_account_id == money_account_id,
-            BankStatement.period_start <= period_end,
-            BankStatement.period_end >= period_start,
-        )
-    )
-    return existing is not None
 
 
 def _used_supplier_ledger_entry_ids(
@@ -713,23 +699,24 @@ def _persist_parsed_statement(
     session: Session,
     entity_id: uuid.UUID,
     money_account_id: uuid.UUID,
-    content: bytes,
     parsed: ParsedStatement,
     *,
     original_filename: str,
-    content_type: str | None,
     fingerprint: str,
 ) -> BankStatementRead:
-    """Store file + create statement rows (dedup/overlap checks run by caller)."""
-    storage_path = save_upload(
-        entity_id,
-        fingerprint,
-        content,
-        extension=resolve_statement_format(
-            original_filename=original_filename,
-            content_type=content_type,
-        ),
-    )
+    """Create statement rows; skip duplicate lines already on this bank account."""
+    rows = [
+        (line.transaction_date, line.amount_kurus, line.description, line.reference)
+        for line in parsed.lines
+    ]
+    plans = plan_statement_line_imports(session, money_account_id, rows)
+    to_import = [plan for plan in plans if not plan.skip_duplicate]
+    skipped_count = sum(1 for plan in plans if plan.skip_duplicate)
+
+    if not to_import:
+        raise NoNewStatementLinesError(
+            "All transactions in this file are already imported for this bank account"
+        )
 
     statement = BankStatement(
         money_account_id=money_account_id,
@@ -737,8 +724,8 @@ def _persist_parsed_statement(
         period_start=parsed.period_start,
         period_end=parsed.period_end,
         original_filename=original_filename,
-        storage_path=storage_path,
-        line_count=len(parsed.lines),
+        storage_path=None,
+        line_count=len(to_import),
     )
     session.add(statement)
     try:
@@ -750,15 +737,22 @@ def _persist_parsed_statement(
         ) from exc
 
     lines: list[BankStatementLine] = []
-    for row in parsed.lines:
+    for plan in to_import:
+        status = (
+            StatementLineStatus.NEEDS_REVIEW
+            if plan.needs_review
+            else StatementLineStatus.IMPORTED
+        )
         line = BankStatementLine(
             statement_id=statement.id,
-            transaction_date=row.transaction_date,
-            amount_kurus=row.amount_kurus,
-            description=row.description,
-            reference=row.reference,
+            transaction_date=plan.transaction_date,
+            amount_kurus=plan.amount_kurus,
+            description=plan.description,
+            reference=plan.reference,
+            dedup_key=plan.dedup_key,
             classification=StatementLineClassification.UNCLASSIFIED,
-            status=StatementLineStatus.IMPORTED,
+            status=status,
+            review_reason=plan.review_reason,
         )
         session.add(line)
         lines.append(line)
@@ -786,7 +780,12 @@ def _persist_parsed_statement(
             .order_by(BankStatementLine.transaction_date, BankStatementLine.id)
         )
     )
-    return _to_statement_read(statement, lines, session=session)
+    return _to_statement_read(
+        statement,
+        lines,
+        session=session,
+        skipped_duplicate_count=skipped_count,
+    )
 
 
 def import_bank_statement(
@@ -800,7 +799,7 @@ def import_bank_statement(
     profile_config: BankImportProfileConfig | None = None,
     save_profile: bool = False,
 ) -> BankStatementRead:
-    """Parse CSV/Excel, store file, create statement + lines. Rejects duplicates and overlaps."""
+    """Parse CSV/Excel and import new statement lines (skips duplicates on same account)."""
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
@@ -827,24 +826,12 @@ def import_bank_statement(
                 "This bank statement file was already imported for this entity"
             )
 
-        if _period_overlaps(
-            session,
-            money_account_id,
-            parsed.period_start,
-            parsed.period_end,
-        ):
-            raise OverlappingPeriodError(
-                "Statement period overlaps an existing import for this bank account"
-            )
-
         result = _persist_parsed_statement(
             session,
             entity_id,
             money_account_id,
-            content,
             parsed,
             original_filename=original_filename,
-            content_type=content_type,
             fingerprint=fingerprint,
         )
 

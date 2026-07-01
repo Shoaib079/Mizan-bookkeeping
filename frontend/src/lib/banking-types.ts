@@ -120,6 +120,7 @@ export type BankStatementRead = {
   period_end: string;
   original_filename: string;
   line_count: number;
+  skipped_duplicate_count?: number;
   imported_at: string;
   lines: BankStatementLine[];
 };

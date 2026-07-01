@@ -59,13 +59,20 @@ class BankStatement(EntityScopedMixin, Base):
     period_start: Mapped[date] = mapped_column(Date, nullable=False)
     period_end: Mapped[date] = mapped_column(Date, nullable=False)
     original_filename: Mapped[str] = mapped_column(String(512), nullable=False)
-    storage_path: Mapped[str] = mapped_column(String(1024), nullable=False)
+    storage_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     line_count: Mapped[int] = mapped_column(Integer, nullable=False)
     imported_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
 class BankStatementLine(EntityScopedMixin, Base):
     __tablename__ = "bank_statement_lines"
+    __table_args__ = (
+        UniqueConstraint(
+            "entity_id",
+            "dedup_key",
+            name="uq_bank_statement_lines_entity_dedup",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     statement_id: Mapped[uuid.UUID] = mapped_column(
@@ -78,6 +85,7 @@ class BankStatementLine(EntityScopedMixin, Base):
     amount_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[str] = mapped_column(String(512), nullable=False)
     reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    dedup_key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     classification: Mapped[StatementLineClassification] = mapped_column(
         Enum(
             StatementLineClassification,

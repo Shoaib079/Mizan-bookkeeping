@@ -445,7 +445,14 @@ export function StatementImportPanel({
         { method: "POST", body, idempotencyKey },
       );
       submitIdempotency.completeSubmit();
-      toast("Statement imported");
+      const skipped = statement.skipped_duplicate_count ?? 0;
+      if (skipped > 0) {
+        toast(
+          `Statement imported — ${statement.line_count} new line${statement.line_count === 1 ? "" : "s"}, ${skipped} duplicate${skipped === 1 ? "" : "s"} skipped`,
+        );
+      } else {
+        toast("Statement imported");
+      }
       router.push(`/banking/statements/${statement.id}`);
     } catch (err) {
       const message = apiErrorMessage(err, "Upload failed");
