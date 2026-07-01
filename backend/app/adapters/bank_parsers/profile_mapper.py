@@ -8,7 +8,11 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.adapters.bank_parsers.amount_lira import DecimalFormat, parse_lira_to_kurus
+from app.adapters.bank_parsers.amount_lira import (
+    DecimalFormat,
+    parse_lira_to_kurus,
+    try_parse_lira_to_kurus,
+)
 from app.adapters.bank_parsers.raw_grid import read_raw_grid
 from app.adapters.bank_parsers.row_parse import build_parsed_statement, cell_to_str
 from app.adapters.bank_parsers.types import BankParseError, ParsedStatement, ParsedStatementLine
@@ -64,6 +68,11 @@ class BankImportProfileConfig(BaseModel):
 
     header_row: int = Field(ge=1, description="1-based row index of column headers")
     data_start_row: int = Field(ge=1, description="1-based row index where transactions begin")
+    data_end_row: int | None = Field(
+        default=None,
+        ge=1,
+        description="Optional 1-based last transaction row (footer rows below are ignored)",
+    )
     date_col: int = Field(ge=0)
     description_col: int = Field(ge=0)
     reference_col: int | None = Field(default=None, ge=0)
@@ -95,6 +104,11 @@ class BankImportProfileConfig(BaseModel):
             )
         if self.data_start_row < self.header_row:
             raise ValueError("data_start_row must be >= header_row")
+        if (
+            self.data_end_row is not None
+            and self.data_end_row < self.data_start_row
+        ):
+            raise ValueError("data_end_row must be >= data_start_row")
         return self
 
     def required_columns(self) -> list[int]:
@@ -160,7 +174,7 @@ def _parse_optional_amount(
     raw = cell_to_str(value).strip()
     if not raw or raw in {"-", "—"}:
         return None
-    return parse_lira_to_kurus(raw, row_num, decimal_format=decimal_format)
+    return try_parse_lira_to_kurus(raw, row_num, decimal_format=decimal_format)
 
 
 def _signed_amount_from_row(
@@ -172,7 +186,7 @@ def _signed_amount_from_row(
         raw = cell_to_str(_cell(row, profile.amount_col)).strip()
         if not raw:
             return None
-        return parse_lira_to_kurus(
+        return try_parse_lira_to_kurus(
             raw, row_num, decimal_format=profile.decimal_format
         )
 
@@ -226,6 +240,11 @@ def validate_profile_against_grid(
             f"data_start_row {profile.data_start_row} is beyond the file ({len(grid)} rows)"
         )
 
+    if profile.data_end_row is not None and profile.data_end_row > len(grid):
+        raise BankParseError(
+            f"data_end_row {profile.data_end_row} is beyond the file ({len(grid)} rows)"
+        )
+
     header = grid[profile.header_row - 1]
     max_col = profile.max_column_index()
     if len(header) <= max_col:
@@ -255,11 +274,11 @@ def _map_row(
     )
     amount_kurus = _signed_amount_from_row(row, row_num, profile)
     if amount_kurus is None:
-        raise BankParseError(f"row {row_num}: amount is required")
+        return None
 
     desc = cell_to_str(_cell(row, profile.description_col)).strip()
     if not desc:
-        raise BankParseError(f"row {row_num}: description is required")
+        return None
 
     ref: str | None = None
     if profile.reference_col is not None:
@@ -291,7 +310,8 @@ def parse_with_profile(
     validate_profile_against_grid(grid, profile)
 
     lines: list[ParsedStatementLine] = []
-    for row_idx in range(profile.data_start_row - 1, len(grid)):
+    last_row = profile.data_end_row if profile.data_end_row is not None else len(grid)
+    for row_idx in range(profile.data_start_row - 1, min(last_row, len(grid))):
         row = grid[row_idx]
         row_num = row_idx + 1
         mapped = _map_row(row, row_num, profile)

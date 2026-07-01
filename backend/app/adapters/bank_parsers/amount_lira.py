@@ -151,3 +151,21 @@ def parse_lira_to_kurus(
     if kurus_int == 0:
         raise BankParseError(f"row {row_num}: amount must be non-zero")
     return kurus_int
+
+
+def try_parse_lira_to_kurus(
+    value: str,
+    row_num: int,
+    *,
+    decimal_format: DecimalFormat = "tr",
+) -> int | None:
+    """Parse lira, or return None when the cell is empty or zero (balance/footer rows)."""
+    raw = value.strip() if value is not None else ""
+    if not raw or raw in {"-", "—"}:
+        return None
+    try:
+        return parse_lira_to_kurus(raw, row_num, decimal_format=decimal_format)
+    except BankParseError as exc:
+        if "non-zero" in str(exc):
+            return None
+        raise

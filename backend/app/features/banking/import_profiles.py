@@ -43,6 +43,7 @@ def profile_to_config(model: BankImportProfile) -> BankImportProfileConfig:
     return BankImportProfileConfig(
         header_row=model.header_row,
         data_start_row=model.data_start_row,
+        data_end_row=model.data_end_row,
         date_col=model.date_col,
         description_col=model.description_col,
         reference_col=model.reference_col,
@@ -112,6 +113,7 @@ def upsert_import_profile(
 
         existing.header_row = config.header_row
         existing.data_start_row = config.data_start_row
+        existing.data_end_row = config.data_end_row
         existing.date_col = config.date_col
         existing.description_col = config.description_col
         existing.reference_col = config.reference_col

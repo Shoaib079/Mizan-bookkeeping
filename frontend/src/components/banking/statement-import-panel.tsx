@@ -188,6 +188,7 @@ function MappingAtAGlance({
         <dt className="w-20 shrink-0">Rows</dt>
         <dd>
           header {mapping.headerRow} · data from {mapping.dataStartRow}
+          {mapping.dataEndRow != null ? ` · through ${mapping.dataEndRow}` : ""}
         </dd>
       </div>
     </dl>
@@ -288,7 +289,11 @@ function StatementPreviewTable({
             const rowNumber = rowIdx + 1;
             const isHeader = rowNumber === mapping.headerRow;
             const isDataStart = rowNumber === mapping.dataStartRow;
-            const isDataRow = rowNumber >= mapping.dataStartRow;
+            const isDataEnd =
+              mapping.dataEndRow != null && rowNumber === mapping.dataEndRow;
+            const isDataRow =
+              rowNumber >= mapping.dataStartRow &&
+              (mapping.dataEndRow == null || rowNumber <= mapping.dataEndRow);
             return (
               <tr
                 key={rowIdx}
@@ -296,7 +301,8 @@ function StatementPreviewTable({
                   "border-b last:border-0",
                   isHeader && "bg-primary/15",
                   isDataStart && !isHeader && "bg-emerald-500/10",
-                  isDataRow && !isHeader && !isDataStart && "bg-muted/30",
+                  isDataEnd && !isHeader && "bg-amber-500/10",
+                  isDataRow && !isHeader && !isDataStart && !isDataEnd && "bg-muted/30",
                 )}
               >
                 <td
@@ -304,10 +310,11 @@ function StatementPreviewTable({
                     "sticky left-0 z-10 bg-background px-2 py-1 font-mono text-muted-foreground",
                     isHeader && "bg-primary/20 font-semibold text-foreground",
                     isDataStart && !isHeader && "font-semibold text-foreground",
+                    isDataEnd && !isHeader && "font-semibold text-foreground",
                   )}
                 >
                   {rowNumber}
-                  {isHeader ? " H" : isDataStart ? " D" : ""}
+                  {isHeader ? " H" : isDataStart ? " D" : isDataEnd ? " E" : ""}
                 </td>
                 {Array.from({ length: columnCount }, (_, colIdx) => (
                   <td
@@ -706,9 +713,12 @@ export function StatementImportPanel({
               <div>
                 <h2 className="text-sm font-semibold">File preview</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {file?.name} · {preview?.total_rows ?? 0} rows · showing first{" "}
-                  {preview?.rows.length ?? 0}. The <strong>Header</strong> row
-                  under each letter shows what your bank put in that column.
+                  {file?.name} · {preview?.total_rows ?? 0} rows
+                  {preview && preview.rows.length >= preview.total_rows
+                    ? " · full file shown"
+                    : ` · showing first ${preview?.rows.length ?? 0}`}
+                  . The <strong>Header</strong> row under each letter shows what your
+                  bank put in that column.
                 </p>
               </div>
 
@@ -842,6 +852,28 @@ export function StatementImportPanel({
                         }))
                       }
                     />
+                  </div>
+                  <div className="col-span-2 space-y-0.5">
+                    <Label className="text-xs">Last data row (optional)</Label>
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder="All rows to end of file"
+                      className="block h-8 w-full rounded-md border border-input px-2 text-xs"
+                      value={mapping.dataEndRow ?? ""}
+                      onChange={(e) => {
+                        const raw = e.target.value.trim();
+                        setMapping((m) => ({
+                          ...m,
+                          dataEndRow: raw === "" ? null : Number(raw),
+                        }));
+                      }}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Last transaction row when the bank adds balance or summary
+                      lines below. Leave empty to scan to the end — zero-amount
+                      footer rows are skipped automatically.
+                    </p>
                   </div>
                 </div>
 

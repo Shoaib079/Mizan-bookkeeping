@@ -30,6 +30,7 @@ class BankImportProfile(EntityScopedMixin, Base):
     )
     header_row: Mapped[int] = mapped_column(Integer, nullable=False)
     data_start_row: Mapped[int] = mapped_column(Integer, nullable=False)
+    data_end_row: Mapped[int | None] = mapped_column(Integer, nullable=True)
     date_col: Mapped[int] = mapped_column(Integer, nullable=False)
     description_col: Mapped[int] = mapped_column(Integer, nullable=False)
     reference_col: Mapped[int | None] = mapped_column(Integer, nullable=True)

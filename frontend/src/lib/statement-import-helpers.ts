@@ -14,6 +14,7 @@ export type AmountMode = "signed" | "debit_credit";
 export type MappingState = {
   headerRow: number;
   dataStartRow: number;
+  dataEndRow: number | null;
   dateCol: number;
   descriptionCol: number;
   referenceCol: number | null;
@@ -45,6 +46,7 @@ export const DATE_FORMATS: DateFormat[] = ["DD.MM.YYYY", "DD/MM/YYYY", "YYYY-MM-
 export const DEFAULT_MAPPING: MappingState = {
   headerRow: 1,
   dataStartRow: 2,
+  dataEndRow: null,
   dateCol: 0,
   descriptionCol: 1,
   referenceCol: null,
@@ -204,6 +206,7 @@ export function profileToMapping(profile: BankImportProfileRead): MappingState {
   return {
     headerRow: profile.header_row,
     dataStartRow: profile.data_start_row,
+    dataEndRow: profile.data_end_row ?? null,
     dateCol: profile.date_col,
     descriptionCol: profile.description_col,
     referenceCol: profile.reference_col,
@@ -230,6 +233,7 @@ export function suggestedProfileToMapping(
   return {
     headerRow: profile.header_row,
     dataStartRow: profile.data_start_row,
+    dataEndRow: profile.data_end_row ?? null,
     dateCol: profile.date_col,
     descriptionCol: profile.description_col,
     referenceCol: profile.reference_col,
@@ -250,6 +254,7 @@ export function mappingToProfilePayload(mapping: MappingState) {
   return {
     header_row: mapping.headerRow,
     data_start_row: mapping.dataStartRow,
+    data_end_row: mapping.dataEndRow,
     date_col: mapping.dateCol,
     description_col: mapping.descriptionCol,
     reference_col: mapping.referenceCol,

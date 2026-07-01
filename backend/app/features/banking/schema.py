@@ -186,6 +186,7 @@ class BankImportProfileRead(BaseModel):
     money_account_id: uuid.UUID
     header_row: int = Field(ge=1)
     data_start_row: int = Field(ge=1)
+    data_end_row: int | None = Field(default=None, ge=1)
     date_col: int = Field(ge=0)
     description_col: int = Field(ge=0)
     reference_col: int | None = Field(default=None, ge=0)
@@ -203,6 +204,7 @@ class BankImportProfileRead(BaseModel):
 class BankImportProfileUpsert(BaseModel):
     header_row: int = Field(ge=1)
     data_start_row: int = Field(ge=1)
+    data_end_row: int | None = Field(default=None, ge=1)
     date_col: int = Field(ge=0)
     description_col: int = Field(ge=0)
     reference_col: int | None = Field(default=None, ge=0)

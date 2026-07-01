@@ -19,7 +19,7 @@ _SNIFF_DELIMITERS = ";\t,"
 _SAMPLE_BYTES = 8192
 
 # Rows returned in the upload mapping preview (TR exports often have long headers).
-STATEMENT_PREVIEW_ROW_LIMIT = 50
+STATEMENT_PREVIEW_ROW_LIMIT = 500
 
 
 def decode_csv_bytes(content: bytes, *, encoding: str = "auto") -> tuple[str, str]:

@@ -136,6 +136,7 @@ export type BankStatementPreview = {
 export type BankImportProfileUpsert = {
   header_row: number;
   data_start_row: number;
+  data_end_row?: number | null;
   date_col: number;
   description_col: number;
   reference_col: number | null;
@@ -155,6 +156,7 @@ export type BankImportProfileRead = {
   money_account_id: string;
   header_row: number;
   data_start_row: number;
+  data_end_row: number | null;
   date_col: number;
   description_col: number;
   reference_col: number | null;
