@@ -21,10 +21,20 @@ export type StatementClassificationPickers = {
   creditCards: MoneyAccountOption[];
   expenseAccounts: ChartAccountOption[];
   deliveryPlatforms: DeliveryPlatform[];
+  deliveryPlatformsError: string | null;
   loading: boolean;
   error: string | null;
   reload: () => Promise<void>;
 };
+
+export function deliveryPlatformComboboxOptions(
+  platforms: DeliveryPlatform[],
+): { value: string; label: string }[] {
+  return platforms.map((platform) => ({
+    value: platform.id,
+    label: platform.is_active ? platform.name : `${platform.name} (inactive)`,
+  }));
+}
 
 export function useStatementClassificationPickers(
   entityId: string,
@@ -37,6 +47,9 @@ export function useStatementClassificationPickers(
   const [creditCards, setCreditCards] = useState<MoneyAccountOption[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<ChartAccountOption[]>([]);
   const [deliveryPlatforms, setDeliveryPlatforms] = useState<DeliveryPlatform[]>([]);
+  const [deliveryPlatformsError, setDeliveryPlatformsError] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,8 +57,9 @@ export function useStatementClassificationPickers(
     if (!entityId) return;
     setLoading(true);
     setError(null);
+    setDeliveryPlatformsError(null);
     try {
-      const [supRes, custRes, empRes, partRes, acctRes, ccRes, chartRes, platRes] =
+      const [supRes, custRes, empRes, partRes, acctRes, ccRes, chartRes] =
         await Promise.all([
           apiFetch<{ items: SupplierOption[] }>(
             `/entities/${entityId}/suppliers?limit=200`,
@@ -68,9 +82,6 @@ export function useStatementClassificationPickers(
           apiFetch<{ items: ChartAccountOption[] }>(
             `/entities/${entityId}/chart-of-accounts?limit=200`,
           ),
-          apiFetch<{ items: DeliveryPlatform[] }>(
-            `/entities/${entityId}/delivery/platforms?limit=50`,
-          ).catch(() => ({ items: [] as DeliveryPlatform[] })),
         ]);
       setSuppliers(supRes.items);
       setCustomers(custRes.items);
@@ -79,9 +90,22 @@ export function useStatementClassificationPickers(
       setMoneyAccounts(acctRes.items);
       setCreditCards(ccRes.items);
       setExpenseAccounts(chartRes.items.filter((a) => a.code.startsWith("5")));
-      setDeliveryPlatforms(platRes.items.filter((p) => p.is_active));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load pickers");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const platRes = await apiFetch<{ items: DeliveryPlatform[] }>(
+        `/entities/${entityId}/delivery/platforms?include_inactive=true&limit=200`,
+      );
+      setDeliveryPlatforms(platRes.items);
+    } catch (err) {
+      setDeliveryPlatforms([]);
+      setDeliveryPlatformsError(
+        err instanceof Error ? err.message : "Failed to load delivery platforms",
+      );
     } finally {
       setLoading(false);
     }
@@ -100,6 +124,7 @@ export function useStatementClassificationPickers(
     creditCards,
     expenseAccounts,
     deliveryPlatforms,
+    deliveryPlatformsError,
     loading,
     error,
     reload,

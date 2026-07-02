@@ -261,7 +261,46 @@ export function suggestDeliveryPlatformId(
     );
     if (ys) return ys.id;
   }
-  return platforms[0]?.id ?? null;
+  if (/MIGROS/.test(upper)) {
+    const migros = platforms.find((p) => p.name.toUpperCase().includes("MIGROS"));
+    if (migros) return migros.id;
+  }
+  return null;
+}
+
+/** Best-effort brand label from bank description (for picker hints). */
+export function likelyDeliveryBrandInDescription(description: string): string | null {
+  const upper = description.toUpperCase();
+  if (/TRENDYOL|TYG\s/.test(upper)) return "Trendyol";
+  if (/GETIR/.test(upper)) return "Getir";
+  if (/YEMEK|SEPET/.test(upper)) return "Yemeksepeti";
+  if (/MIGROS/.test(upper)) return "Migros";
+  return null;
+}
+
+function platformMatchesBrand(
+  platformName: string,
+  brand: string,
+): boolean {
+  const name = platformName.toUpperCase();
+  const brandUpper = brand.toUpperCase();
+  if (brandUpper === "YEMEKSEPETI") return /YEMEK|SEPET/.test(name);
+  return name.includes(brandUpper);
+}
+
+/** Hint when description names a delivery brand missing from platform list. */
+export function deliveryPlatformPickerHint(
+  description: string,
+  platforms: { name: string }[],
+): string | null {
+  if (platforms.length === 0) {
+    return "No delivery platforms yet — add them under Delivery → Platforms. Suppliers are separate.";
+  }
+  const brand = likelyDeliveryBrandInDescription(description);
+  if (!brand) return null;
+  const hasPlatform = platforms.some((p) => platformMatchesBrand(p.name, brand));
+  if (hasPlatform) return null;
+  return `This line looks like ${brand}, but that platform is not in your delivery list. Add it under Delivery → Platforms — suppliers do not appear here.`;
 }
 
 export function truncateStatementText(text: string, max = 72): string {

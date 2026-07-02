@@ -19,11 +19,15 @@ import {
   classificationLabel,
   classificationOption,
   classificationOptionsForAmount,
+  deliveryPlatformPickerHint,
   suggestClassificationForLine,
   suggestDeliveryPlatformId,
   truncateStatementText,
 } from "@/lib/statement-classification-options";
-import type { StatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
+import {
+  deliveryPlatformComboboxOptions,
+  type StatementClassificationPickers,
+} from "@/lib/use-statement-classification-pickers";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -224,18 +228,27 @@ export function StatementLineClassifyRow({
       );
     }
     if (targetKind === "delivery_platform") {
+      const hint = deliveryPlatformPickerHint(
+        line.description,
+        pickers.deliveryPlatforms,
+      );
       return (
-        <Combobox
-          id={`plat-${line.id}`}
-          value={deliveryPlatformId}
-          onValueChange={setDeliveryPlatformId}
-          options={pickers.deliveryPlatforms.map((p) => ({
-            value: p.id,
-            label: p.name,
-          }))}
-          placeholder="Platform…"
-          className="h-8 min-w-[10rem] text-xs"
-        />
+        <div className="space-y-1">
+          <Combobox
+            id={`plat-${line.id}`}
+            value={deliveryPlatformId}
+            onValueChange={setDeliveryPlatformId}
+            options={deliveryPlatformComboboxOptions(pickers.deliveryPlatforms)}
+            placeholder="Platform…"
+            emptyMessage={
+              pickers.deliveryPlatformsError
+                ? "Could not load platforms"
+                : "No delivery platforms"
+            }
+            className="h-8 min-w-[10rem] text-xs"
+          />
+          {hint && <p className="text-[10px] text-warning">{hint}</p>}
+        </div>
       );
     }
     return <span className="text-xs text-muted-foreground">—</span>;

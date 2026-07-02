@@ -4,6 +4,7 @@ import {
   classificationMatchesAmount,
   classificationOptionGroups,
   classificationOptionsForAmount,
+  deliveryPlatformPickerHint,
   suggestClassificationForLine,
   suggestDeliveryPlatformId,
 } from "@/lib/statement-classification-options";
@@ -71,5 +72,24 @@ describe("suggestDeliveryPlatformId", () => {
       { id: "p-ty", name: "Trendyol" },
     ]);
     expect(id).toBe("p-ty");
+  });
+
+  it("does not default to the first platform when description names another brand", () => {
+    const id = suggestDeliveryPlatformId(
+      "YEMEK SEPETI ELEKTRONIK ODEME",
+      [{ id: "p-getir", name: "Getir" }],
+    );
+    expect(id).toBeNull();
+  });
+});
+
+describe("deliveryPlatformPickerHint", () => {
+  it("explains when Yemeksepeti is missing from delivery platforms", () => {
+    const hint = deliveryPlatformPickerHint(
+      "YEMEK SEPETI ELEKTRONIK ODEME",
+      [{ name: "Getir" }],
+    );
+    expect(hint).toMatch(/Yemeksepeti/);
+    expect(hint).toMatch(/Delivery → Platforms/);
   });
 });

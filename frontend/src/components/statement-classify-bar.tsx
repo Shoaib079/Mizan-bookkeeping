@@ -22,9 +22,14 @@ import {
   classificationMatchesAmount,
   classificationOption,
   classificationOptionGroups,
+  deliveryPlatformPickerHint,
   suggestClassificationForLine,
   suggestDeliveryPlatformId,
 } from "@/lib/statement-classification-options";
+import {
+  deliveryPlatformComboboxOptions,
+  type StatementClassificationPickers,
+} from "@/lib/use-statement-classification-pickers";
 import {
   classifyStatementLine,
   correctStatementLine,
@@ -33,7 +38,6 @@ import {
   isCorrectableLine,
   isQueueLine,
 } from "@/lib/statement-line-filters";
-import type { StatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -104,8 +108,13 @@ export function StatementClassifyBar({
       line.description,
       pickers.deliveryPlatforms,
     );
-    setDeliveryPlatformId(suggestedPlatform ?? pickers.deliveryPlatforms[0]?.id ?? "");
+    setDeliveryPlatformId(suggestedPlatform ?? "");
   }, [line, pickers]);
+
+  const deliveryPlatformHint =
+    line != null && classification === "delivery_settlement"
+      ? deliveryPlatformPickerHint(line.description, pickers.deliveryPlatforms)
+      : null;
 
   const selectedOption = classificationOption(classification);
   const amountMismatch =
@@ -338,17 +347,29 @@ export function StatementClassifyBar({
     }
     if (targetKind === "delivery_platform") {
       return (
-        <Combobox
-          id="classify-platform"
-          value={deliveryPlatformId}
-          onValueChange={setDeliveryPlatformId}
-          options={pickers.deliveryPlatforms.map((p) => ({
-            value: p.id,
-            label: p.name,
-          }))}
-          placeholder="Platform…"
-          className="h-9 w-full min-w-0 text-xs"
-        />
+        <div className="space-y-1">
+          <Combobox
+            id="classify-platform"
+            value={deliveryPlatformId}
+            onValueChange={setDeliveryPlatformId}
+            options={deliveryPlatformComboboxOptions(pickers.deliveryPlatforms)}
+            placeholder="Platform…"
+            emptyMessage={
+              pickers.deliveryPlatformsError
+                ? "Could not load platforms"
+                : "No delivery platforms — add under Delivery → Platforms"
+            }
+            className="h-9 w-full min-w-0 text-xs"
+          />
+          {pickers.deliveryPlatformsError && (
+            <p className="text-[11px] text-destructive">
+              {pickers.deliveryPlatformsError}
+            </p>
+          )}
+          {deliveryPlatformHint && (
+            <p className="text-[11px] text-warning">{deliveryPlatformHint}</p>
+          )}
+        </div>
       );
     }
     return null;
