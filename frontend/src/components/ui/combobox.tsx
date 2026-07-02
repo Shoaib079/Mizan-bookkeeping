@@ -7,13 +7,14 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 
-import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { cn } from "@/lib/utils";
 
 export type ComboboxOption = {
@@ -51,6 +52,11 @@ export function Combobox({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const selected = options.find((option) => option.value === value);
 
@@ -88,7 +94,43 @@ export function Combobox({
     }, 0);
   }, [disabled]);
 
-  useDismissOnOutsideClick(rootRef, open, close, { escape: false });
+  const updateMenuPosition = useCallback(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    const rect = input.getBoundingClientRect();
+    setMenuPosition({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return;
+    }
+    updateMenuPosition();
+    const onReposition = () => updateMenuPosition();
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
+    return () => {
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+  }, [open, updateMenuPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocumentMouseDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (listRef.current?.contains(target)) return;
+      close();
+    }
+    document.addEventListener("mousedown", onDocumentMouseDown);
+    return () => document.removeEventListener("mousedown", onDocumentMouseDown);
+  }, [open, close]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -199,40 +241,50 @@ export function Combobox({
         <ChevronDown className="h-4 w-4" />
       </button>
 
-      {open && (
-        <div
-          id={listboxId}
-          ref={listRef}
-          role="listbox"
-          className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-border bg-card py-1 shadow-md"
-        >
-          {filtered.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">
-              {emptyMessage}
-            </p>
-          ) : (
-            filtered.map((option, index) => (
-              <button
-                key={`${option.value}-${option.label}`}
-                id={`${listboxId}-opt-${index}`}
-                type="button"
-                role="option"
-                aria-selected={option.value === value}
-                className={cn(
-                  "flex w-full px-3 py-2 text-left text-sm",
-                  index === activeIndex && "bg-sidebar-accent text-primary",
-                  option.value === value && index !== activeIndex && "font-medium",
-                )}
-                onMouseEnter={() => setActiveIndex(index)}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => select(option.value)}
-              >
-                {option.label}
-              </button>
-            ))
-          )}
-        </div>
-      )}
+      {open &&
+        menuPosition &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            id={listboxId}
+            ref={listRef}
+            role="listbox"
+            style={{
+              position: "fixed",
+              top: menuPosition.top,
+              left: menuPosition.left,
+              width: menuPosition.width,
+            }}
+            className="z-[200] max-h-60 overflow-y-auto rounded-md border border-border bg-card py-1 shadow-lg"
+          >
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-muted-foreground">
+                {emptyMessage}
+              </p>
+            ) : (
+              filtered.map((option, index) => (
+                <button
+                  key={`${option.value}-${option.label}`}
+                  id={`${listboxId}-opt-${index}`}
+                  type="button"
+                  role="option"
+                  aria-selected={option.value === value}
+                  className={cn(
+                    "flex w-full px-3 py-2 text-left text-sm",
+                    index === activeIndex && "bg-sidebar-accent text-primary",
+                    option.value === value && index !== activeIndex && "font-medium",
+                  )}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => select(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

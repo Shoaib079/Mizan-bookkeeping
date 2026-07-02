@@ -427,7 +427,7 @@ export function StatementClassifyBar({
         : "";
 
   return (
-    <div className="sticky top-0 z-10 mb-4 overflow-hidden space-y-2 rounded-lg border border-primary/30 bg-card p-3 shadow-sm">
+    <div className="sticky top-0 z-10 mb-4 space-y-2 rounded-lg border border-primary/30 bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>
           {inQueue ? (
@@ -465,7 +465,7 @@ export function StatementClassifyBar({
 
       <form
         onSubmit={inQueue ? handlePost : (e) => e.preventDefault()}
-        className="overflow-hidden rounded-md border border-border/60 bg-muted/15 p-2"
+        className="rounded-md border border-border/60 bg-muted/15 p-2"
       >
         <div className="flex flex-wrap items-center gap-2">
           <span
