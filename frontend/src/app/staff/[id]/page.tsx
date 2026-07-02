@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -147,12 +146,6 @@ export default function StaffDetailPage() {
 
   return (
     <AppShell title={employee?.name ?? "Employee"}>
-      <div className="mb-4">
-        <Link href="/staff" className="text-sm text-primary hover:underline">
-          ← Staff
-        </Link>
-      </div>
-
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && (
         <p className="text-sm text-muted-foreground">Loading employee…</p>

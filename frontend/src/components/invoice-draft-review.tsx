@@ -239,9 +239,11 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         },
       );
       submitIdempotency.completeSubmit();
-      await load();
-      onUpdated?.("removed");
       toast("Invoice posted");
+      onUpdated?.("removed");
+      if (!embedded) {
+        router.push("/review/invoices");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
     } finally {

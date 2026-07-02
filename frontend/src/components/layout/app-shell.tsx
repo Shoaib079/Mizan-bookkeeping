@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 
 import { AccountMenu } from "@/components/layout/account-menu";
 import { EntityBadge } from "@/components/layout/entity-badge";
+import { PageBackLink } from "@/components/layout/page-back-link";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { NewMenu } from "@/components/new-menu";
@@ -90,7 +91,10 @@ function AppShellInner({
             <AccountMenu />
           </div>
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6">
+          <PageBackLink />
+          {children}
+        </main>
       </div>
       <CommandPalette deliveryEnabled={deliveryEnabled} />
     </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -117,12 +116,6 @@ export default function PartnerDetailPage() {
 
   return (
     <AppShell title={partner?.name ?? "Partner"}>
-      <div className="mb-4">
-        <Link href="/partners" className="text-sm text-primary hover:underline">
-          ← Partners
-        </Link>
-      </div>
-
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && (
         <p className="text-sm text-muted-foreground">Loading partner…</p>

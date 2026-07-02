@@ -139,6 +139,7 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
         submitIdempotency.completeSubmit();
       } else {
         toast("Daily sales posted");
+        router.push("/sales");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Confirm failed");
@@ -165,7 +166,7 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
       submitIdempotency.completeSubmit();
       onUpdated?.();
       toast("Summary rejected");
-      router.push("/review/sales");
+      router.push("/sales");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {

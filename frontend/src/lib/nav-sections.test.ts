@@ -16,6 +16,7 @@ import {
   REGISTERED_PAGE_ROUTES,
   REPORTS_CARD_HREFS,
   SIDEBAR_HIDDEN_HREFS,
+  backLinkForPathname,
   navSectionForPathname,
   sidebarHrefActiveForPathname,
 } from "@/lib/nav-sections";
@@ -248,5 +249,50 @@ describe("NEW_COMMAND_QUICK_ACTIONS", () => {
       "New: Supplier",
       "New: Supplier invoice (e-Fatura)",
     ]);
+  });
+});
+
+describe("backLinkForPathname", () => {
+  it("returns null on section hubs and tabs", () => {
+    expect(backLinkForPathname("/record")).toBeNull();
+    expect(backLinkForPathname("/review/invoices")).toBeNull();
+    expect(backLinkForPathname("/banking/transfers")).toBeNull();
+  });
+
+  it("maps drill-down routes to their parent list", () => {
+    expect(backLinkForPathname("/sales/abc")).toEqual({
+      href: "/sales",
+      label: "Daily sales",
+    });
+    expect(backLinkForPathname("/review/invoices/abc")).toEqual({
+      href: "/review/invoices",
+      label: "Invoices",
+    });
+    expect(backLinkForPathname("/review/receipts/abc")).toEqual({
+      href: "/review/receipts",
+      label: "Receipts",
+    });
+    expect(backLinkForPathname("/suppliers/abc")).toEqual({
+      href: "/suppliers",
+      label: "All suppliers",
+    });
+  });
+
+  it("maps nested banking import to account detail", () => {
+    expect(backLinkForPathname("/banking/accounts/acct-1/import")).toEqual({
+      href: "/banking/accounts/acct-1",
+      label: "Account",
+    });
+  });
+
+  it("maps report cards back to the reports hub", () => {
+    expect(backLinkForPathname("/reports/profit-and-loss")).toEqual({
+      href: "/reports",
+      label: "Reports",
+    });
+  });
+
+  it("keeps statement review on a page-local dynamic back link", () => {
+    expect(backLinkForPathname("/banking/statements/stmt-1")).toBeNull();
   });
 });

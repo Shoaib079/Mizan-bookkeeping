@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -114,12 +113,6 @@ export default function CustomerDetailPage() {
 
   return (
     <>
-      <div className="mb-4">
-        <Link href="/customers" className="text-sm text-primary hover:underline">
-          ← Customers
-        </Link>
-      </div>
-
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && (
         <p className="text-sm text-muted-foreground">Loading customer…</p>

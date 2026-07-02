@@ -230,7 +230,7 @@ export function ReceiptReview({
       toast("Receipt expenses posted");
       onUpdated?.("removed");
       if (!embedded) {
-        router.push("/");
+        router.push("/review/receipts");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Confirm failed");

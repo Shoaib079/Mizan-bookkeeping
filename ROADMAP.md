@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | — (awaiting next slice) |
-| **Last completed slice** | Delivery reports/settlements date-range hubs + Excel export (`v0.73.38-delivery-date-range-hubs`) |
-| **Last commit/tag**      | `v0.73.38-delivery-date-range-hubs` — period_start/end sales; from–to hubs; combined + per-platform Excel export; migration `065` |
+| **Last completed slice** | Page back links + review exit navigation (`v0.73.42-page-back-review-exit`) |
+| **Last commit/tag**      | `v0.73.42-page-back-review-exit` — AppShell back links on drill-downs; close review on post/reject |
 | **Next up**              | **P3** (upload backup) |
 
 

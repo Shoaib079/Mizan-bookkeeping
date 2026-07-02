@@ -2,7 +2,6 @@
 
 /** Full-page bank statement upload + column mapping. */
 
-import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -67,7 +66,6 @@ import { cn } from "@/lib/utils";
 type Props = {
   moneyAccountId: string;
   accountName?: string;
-  backHref: string;
 };
 
 function ColumnSelect({
@@ -341,7 +339,6 @@ function StatementPreviewTable({
 export function StatementImportPanel({
   moneyAccountId,
   accountName,
-  backHref,
 }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
@@ -666,10 +663,7 @@ export function StatementImportPanel({
   return (
     <div className="space-y-6">
       <div>
-        <Link href={backHref} className="text-sm text-primary hover:underline">
-          ← Back to account
-        </Link>
-        <h1 className="mt-2 text-lg font-semibold">
+        <h1 className="text-lg font-semibold">
           Import bank statement
           {accountName ? ` — ${accountName}` : ""}
         </h1>

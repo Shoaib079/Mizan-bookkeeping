@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -98,28 +97,15 @@ export default function StatementImportPage() {
 
   if (phase === "error" || !account) {
     return (
-      <div className="space-y-3">
-        <p className="text-sm text-destructive">{error ?? "Account not found"}</p>
-        <Link href="/banking" className="text-sm text-primary hover:underline">
-          ← Banking
-        </Link>
-      </div>
+      <p className="text-sm text-destructive">{error ?? "Account not found"}</p>
     );
   }
 
   if (account.account_kind !== "bank") {
     return (
-      <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          Statements can only be imported for bank accounts.
-        </p>
-        <Link
-          href={`/banking/accounts/${accountId}`}
-          className="text-sm text-primary hover:underline"
-        >
-          ← Back to account
-        </Link>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Statements can only be imported for bank accounts.
+      </p>
     );
   }
 
@@ -127,7 +113,6 @@ export default function StatementImportPage() {
     <StatementImportPanel
       moneyAccountId={accountId}
       accountName={account.name}
-      backHref={`/banking/accounts/${accountId}`}
     />
   );
 }

@@ -92,12 +92,6 @@ export default function AccountDetailPage() {
 
   return (
     <>
-      <div className="mb-4">
-        <Link href="/banking" className="text-sm text-primary hover:underline">
-          ← Banking
-        </Link>
-      </div>
-
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && (
         <p className="text-sm text-muted-foreground">Loading account…</p>

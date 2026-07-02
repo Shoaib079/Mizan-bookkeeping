@@ -2,7 +2,6 @@
 
 /** FX wallet — purchase, convert, spend, ledger — Phase 9 Slice 4. */
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -114,12 +113,6 @@ export default function FxWalletPage() {
 
   return (
     <>
-      <div className="mb-4">
-        <Link href="/banking" className="text-sm text-primary hover:underline">
-          ← Banking
-        </Link>
-      </div>
-
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && (
         <p className="text-sm text-muted-foreground">Loading wallet…</p>

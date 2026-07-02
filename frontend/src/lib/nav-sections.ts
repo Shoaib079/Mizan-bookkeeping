@@ -471,3 +471,92 @@ export function pageTitleForPathname(pathname: string): string {
   if (pathname.startsWith("/reports/")) return "Report";
   return "Mizan";
 }
+
+export type PageBackLink = {
+  href: string;
+  label: string;
+};
+
+/** Parent link for drill-down and nested pages. Returns null on hubs and dynamic-parent pages. */
+export function backLinkForPathname(pathname: string): PageBackLink | null {
+  // Statement review resolves account id after load — keep page-local back link.
+  if (pathname.startsWith("/banking/statements/")) return null;
+
+  const importMatch = pathname.match(/^\/banking\/accounts\/([^/]+)\/import$/);
+  if (importMatch) {
+    return {
+      href: `/banking/accounts/${importMatch[1]}`,
+      label: "Account",
+    };
+  }
+
+  const rules: {
+    test: (path: string) => boolean;
+    href: string;
+    label: string;
+  }[] = [
+    {
+      test: (path) => /^\/sales\/[^/]+$/.test(path),
+      href: "/sales",
+      label: "Daily sales",
+    },
+    {
+      test: (path) => /^\/review\/invoices\/[^/]+$/.test(path),
+      href: "/review/invoices",
+      label: "Invoices",
+    },
+    {
+      test: (path) => /^\/review\/receipts\/[^/]+$/.test(path),
+      href: "/review/receipts",
+      label: "Receipts",
+    },
+    {
+      test: (path) => /^\/suppliers\/[^/]+$/.test(path),
+      href: "/suppliers",
+      label: "All suppliers",
+    },
+    {
+      test: (path) => /^\/staff\/[^/]+$/.test(path),
+      href: "/staff",
+      label: "Staff",
+    },
+    {
+      test: (path) => /^\/partners\/[^/]+$/.test(path),
+      href: "/partners",
+      label: "Partners",
+    },
+    {
+      test: (path) => /^\/customers\/[^/]+$/.test(path),
+      href: "/customers",
+      label: "Customers",
+    },
+    {
+      test: (path) => /^\/banking\/accounts\/[^/]+$/.test(path),
+      href: "/banking",
+      label: "Banking",
+    },
+    {
+      test: (path) => /^\/banking\/fx\/[^/]+$/.test(path),
+      href: "/banking",
+      label: "Banking",
+    },
+    {
+      test: (path) => path.startsWith("/reports/") && path !== "/reports",
+      href: "/reports",
+      label: "Reports",
+    },
+    {
+      test: (path) => path === "/expenses/items",
+      href: "/expenses",
+      label: "Expenses",
+    },
+  ];
+
+  for (const rule of rules) {
+    if (rule.test(pathname)) {
+      return { href: rule.href, label: rule.label };
+    }
+  }
+
+  return null;
+}

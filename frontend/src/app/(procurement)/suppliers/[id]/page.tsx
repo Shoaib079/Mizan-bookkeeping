@@ -3,7 +3,7 @@
 /** Supplier detail — ledger, drafts, payment — Phase 9 Slice 3. */
 
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -53,6 +53,7 @@ type DraftRow = {
 export default function SupplierDetailPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const supplierId = params.id;
   const highlightDraftId = searchParams.get("draft");
 
@@ -127,6 +128,16 @@ export default function SupplierDetailPage() {
     void reload();
   }, [reload]);
 
+  function handleDraftUpdated(outcome?: "removed" | "updated") {
+    void reload();
+    if (outcome === "removed") {
+      setExpandedDraftId(null);
+      if (highlightDraftId) {
+        router.replace(`/suppliers/${supplierId}`);
+      }
+    }
+  }
+
   if (!entityId) {
     return (
       <>
@@ -139,15 +150,6 @@ export default function SupplierDetailPage() {
 
   return (
     <>
-      <div className="mb-4">
-        <Link
-          href="/suppliers"
-          className="text-sm text-primary hover:underline"
-        >
-          ← All suppliers
-        </Link>
-      </div>
-
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && (
         <p className="text-sm text-muted-foreground">Loading supplier…</p>
@@ -214,7 +216,7 @@ export default function SupplierDetailPage() {
               <InvoiceDraftReview
                 draftId={highlightDraftId}
                 embedded
-                onUpdated={() => void reload()}
+                onUpdated={handleDraftUpdated}
               />
             </div>
           )}
@@ -270,7 +272,7 @@ export default function SupplierDetailPage() {
                         <InvoiceDraftReview
                           draftId={draft.id}
                           embedded
-                          onUpdated={() => void reload()}
+                          onUpdated={handleDraftUpdated}
                         />
                       </div>
                     )}
