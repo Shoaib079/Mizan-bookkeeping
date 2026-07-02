@@ -71,9 +71,15 @@ function linesMatchServer(
 
 type Props = {
   intakeId: string;
+  embedded?: boolean;
+  onUpdated?: (outcome?: "removed" | "updated") => void;
 };
 
-export function ReceiptReview({ intakeId }: Props) {
+export function ReceiptReview({
+  intakeId,
+  embedded = false,
+  onUpdated,
+}: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -187,7 +193,10 @@ export function ReceiptReview({ intakeId }: Props) {
       submitIdempotency.completeSubmit();
       clearDraft();
       toast("Receipt rejected");
-      router.push("/review/receipts");
+      onUpdated?.("removed");
+      if (!embedded) {
+        router.push("/review/receipts");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {
@@ -219,7 +228,10 @@ export function ReceiptReview({ intakeId }: Props) {
       submitIdempotency.completeSubmit();
       clearDraft();
       toast("Receipt expenses posted");
-      router.push("/");
+      onUpdated?.("removed");
+      if (!embedded) {
+        router.push("/");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Confirm failed");
     } finally {

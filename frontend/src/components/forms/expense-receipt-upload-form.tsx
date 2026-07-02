@@ -83,7 +83,7 @@ export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
       onClose();
       setFile(null);
       toast("Receipt uploaded");
-      router.push(`/review/receipts/${intake.id}`);
+      router.push(`/record?receipt=${intake.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {

@@ -37,4 +37,15 @@ describe("unified record dialogs", () => {
     expect(people).toContain("renderEmbeddedForm");
     expect(people).not.toContain("onContinue");
   });
+
+  it("opens invoice and receipt review in a dialog on the record page", () => {
+    const panel = read("record/record-review-panel.tsx");
+    const efatura = read("forms/efatura-upload-form.tsx");
+    const receipt = read("forms/expense-receipt-upload-form.tsx");
+    const recordPage = read("../app/record/page.tsx");
+    expect(panel).toContain("<Dialog");
+    expect(efatura).toContain("/record?invoice=");
+    expect(receipt).toContain("/record?receipt=");
+    expect(recordPage).toContain("RecordReviewPanel");
+  });
 });

@@ -68,7 +68,7 @@ export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
       toast("Invoice uploaded");
       const reviewPath = supplierId
         ? `/suppliers/${supplierId}?draft=${draft.id}`
-        : `/review/invoices/${draft.id}`;
+        : `/record?invoice=${draft.id}`;
       router.push(reviewPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");

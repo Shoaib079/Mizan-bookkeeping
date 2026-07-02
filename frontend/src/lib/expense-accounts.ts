@@ -13,20 +13,20 @@ export type ChartAccount = {
 export function expenseAccountDisplayName(
   account: Pick<ChartAccount, "name_tr" | "name_en" | "name" | "code">,
 ): string {
-  const tr = account.name_tr?.trim();
-  if (tr) return tr;
   const en = account.name_en?.trim();
   if (en) return en;
+  const tr = account.name_tr?.trim();
+  if (tr) return tr;
   const legacy = account.name?.trim();
   if (legacy) return legacy;
   return account.code;
 }
 
-/** Human-readable picker label: Turkish name first, GL code in parentheses. */
+/** Picker label for expense GL accounts — English name with code (review & posting). */
 export function formatExpenseAccountLabel(
   account: Pick<ChartAccount, "code" | "name_tr" | "name_en" | "name">,
 ): string {
-  return `${expenseAccountDisplayName(account)} (${account.code})`;
+  return `${account.code} — ${expenseAccountDisplayName(account)}`;
 }
 
 export function filterExpenseAccounts(accounts: ChartAccount[]): ChartAccount[] {

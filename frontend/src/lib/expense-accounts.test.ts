@@ -75,30 +75,29 @@ describe("findExpenseAccountByCode", () => {
 });
 
 describe("formatExpenseAccountLabel", () => {
-  it("prefers Turkish name with code in parentheses", () => {
+  it("shows English name with GL code prefix", () => {
     expect(
       formatExpenseAccountLabel({
         code: "5000",
         name_en: "Rent Expense",
         name_tr: "Kira Gideri",
       }),
-    ).toBe("Kira Gideri (5000)");
+    ).toBe("5000 — Rent Expense");
   });
 
-  it("falls back to English when Turkish is empty", () => {
+  it("falls back to Turkish when English is empty", () => {
     expect(
       formatExpenseAccountLabel({
         code: "5200",
-        name_en: "General Expense",
-        name_tr: "",
+        name_en: "",
+        name_tr: "Genel Giderler",
       }),
-    ).toBe("General Expense (5200)");
+    ).toBe("5200 — Genel Giderler");
   });
 
-  it("does not lead with GL code", () => {
+  it("uses English for general expense accounts", () => {
     const label = formatExpenseAccountLabel(SAMPLE[1]);
-    expect(label.startsWith("5200")).toBe(false);
-    expect(label).toBe("Genel Giderler (5200)");
+    expect(label).toBe("5200 — General Expense");
   });
 });
 

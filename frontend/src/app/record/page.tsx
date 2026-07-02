@@ -2,6 +2,7 @@
 
 import { AppShell } from "@/components/layout/app-shell";
 import { RecordHub } from "@/components/record/record-hub";
+import { RecordReviewPanel } from "@/components/record/record-review-panel";
 import { useEntity } from "@/lib/entity-context";
 
 export default function RecordPage() {
@@ -14,6 +15,7 @@ export default function RecordPage() {
           ? "Post sales, expenses, payments, and uploads from one place."
           : "Select a restaurant in the sidebar to record transactions."}
       </p>
+      <RecordReviewPanel />
       <RecordHub />
     </AppShell>
   );
