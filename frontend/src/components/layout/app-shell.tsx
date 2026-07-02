@@ -11,7 +11,7 @@ import { PageBackLink } from "@/components/layout/page-back-link";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { NewMenu } from "@/components/new-menu";
-import { QuickActionsProvider, useQuickActions } from "@/components/quick-actions";
+import { useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/input";
 import { useEntity } from "@/lib/entity-context";
@@ -23,11 +23,7 @@ export function AppShell({
   children: React.ReactNode;
   title?: string;
 }) {
-  return (
-    <QuickActionsProvider>
-      <AppShellInner title={title}>{children}</AppShellInner>
-    </QuickActionsProvider>
-  );
+  return <AppShellInner title={title}>{children}</AppShellInner>;
 }
 
 function AppShellInner({

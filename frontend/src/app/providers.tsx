@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 
 import { AuthReadyGate } from "@/components/auth-ready-gate";
 import { FirstRunOnboardingModal } from "@/components/first-run-onboarding-modal";
+import { QuickActionsProvider } from "@/components/quick-actions";
 import { ApiAuthProvider } from "@/lib/api-auth";
 import { EntityProvider } from "@/lib/entity-context";
 import { ToastProvider } from "@/lib/toast";
@@ -17,8 +18,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <EntityProvider>
         <UnsavedWorkProvider>
           <ToastProvider>
-            <FirstRunOnboardingModal />
-            <AuthReadyGate>{children}</AuthReadyGate>
+            <QuickActionsProvider>
+              <FirstRunOnboardingModal />
+              <AuthReadyGate>{children}</AuthReadyGate>
+            </QuickActionsProvider>
           </ToastProvider>
         </UnsavedWorkProvider>
       </EntityProvider>

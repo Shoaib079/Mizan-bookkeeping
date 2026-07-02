@@ -33,20 +33,38 @@ type QuickActionsContextValue = {
 
 const QuickActionsContext = createContext<QuickActionsContextValue | null>(null);
 
+/** Per-entity cache so delivery nav does not flash false on remount. */
+const deliveryEnabledCache = new Map<string, boolean>();
+
 export function QuickActionsProvider({ children }: { children: React.ReactNode }) {
   const { entityId } = useEntity();
   const { canWriteOperations } = useEntityAccess();
   const [active, setActive] = useState<RecordActionKey | null>(null);
-  const [deliveryEnabled, setDeliveryEnabled] = useState(false);
+  const [deliveryEnabled, setDeliveryEnabled] = useState(() => {
+    if (!entityId) return false;
+    return deliveryEnabledCache.get(entityId) ?? false;
+  });
 
   useEffect(() => {
     if (!entityId) {
       setDeliveryEnabled(false);
       return;
     }
+    const cached = deliveryEnabledCache.get(entityId);
+    if (cached !== undefined) {
+      setDeliveryEnabled(cached);
+      return;
+    }
+    setDeliveryEnabled(false);
     void isEntitySettingEnabled(entityId, "delivery_enabled")
-      .then(setDeliveryEnabled)
-      .catch(() => setDeliveryEnabled(false));
+      .then((enabled) => {
+        deliveryEnabledCache.set(entityId, enabled);
+        setDeliveryEnabled(enabled);
+      })
+      .catch(() => {
+        deliveryEnabledCache.set(entityId, false);
+        setDeliveryEnabled(false);
+      });
   }, [entityId]);
 
   const openRecordAction = useCallback(
