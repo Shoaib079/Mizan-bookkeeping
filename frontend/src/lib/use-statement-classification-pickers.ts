@@ -8,11 +8,15 @@ import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
 export type MoneyAccountOption = { id: string; name: string; account_kind: string };
 export type SupplierOption = { id: string; name: string };
 export type CustomerOption = { id: string; name: string };
+export type EmployeeOption = { id: string; name: string };
+export type PartnerOption = { id: string; name: string };
 export type ChartAccountOption = { id: string; code: string; name_en: string };
 
 export type StatementClassificationPickers = {
   suppliers: SupplierOption[];
   customers: CustomerOption[];
+  employees: EmployeeOption[];
+  partners: PartnerOption[];
   moneyAccounts: MoneyAccountOption[];
   creditCards: MoneyAccountOption[];
   expenseAccounts: ChartAccountOption[];
@@ -27,6 +31,8 @@ export function useStatementClassificationPickers(
 ): StatementClassificationPickers {
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [partners, setPartners] = useState<PartnerOption[]>([]);
   const [moneyAccounts, setMoneyAccounts] = useState<MoneyAccountOption[]>([]);
   const [creditCards, setCreditCards] = useState<MoneyAccountOption[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<ChartAccountOption[]>([]);
@@ -39,7 +45,7 @@ export function useStatementClassificationPickers(
     setLoading(true);
     setError(null);
     try {
-      const [supRes, custRes, acctRes, ccRes, chartRes, platRes] =
+      const [supRes, custRes, empRes, partRes, acctRes, ccRes, chartRes, platRes] =
         await Promise.all([
           apiFetch<{ items: SupplierOption[] }>(
             `/entities/${entityId}/suppliers?limit=200`,
@@ -47,6 +53,12 @@ export function useStatementClassificationPickers(
           apiFetch<{ items: CustomerOption[] }>(
             `/entities/${entityId}/customers?limit=200`,
           ),
+          apiFetch<{ items: EmployeeOption[] }>(
+            `/entities/${entityId}/staff/employees?limit=200`,
+          ).catch(() => ({ items: [] as EmployeeOption[] })),
+          apiFetch<{ items: PartnerOption[] }>(
+            `/entities/${entityId}/partners?limit=200`,
+          ).catch(() => ({ items: [] as PartnerOption[] })),
           apiFetch<{ items: MoneyAccountOption[] }>(
             `/entities/${entityId}/banking/accounts?limit=100`,
           ),
@@ -62,6 +74,8 @@ export function useStatementClassificationPickers(
         ]);
       setSuppliers(supRes.items);
       setCustomers(custRes.items);
+      setEmployees(empRes.items);
+      setPartners(partRes.items);
       setMoneyAccounts(acctRes.items);
       setCreditCards(ccRes.items);
       setExpenseAccounts(chartRes.items.filter((a) => a.code.startsWith("5")));
@@ -80,6 +94,8 @@ export function useStatementClassificationPickers(
   return {
     suppliers,
     customers,
+    employees,
+    partners,
     moneyAccounts,
     creditCards,
     expenseAccounts,

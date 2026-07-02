@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | **P3/P5/P6** — post-launch ops (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Statement classify dense table + full options (`v0.73.36-statement-classify-table`) |
-| **Last commit/tag**      | `v0.73.36-statement-classify-table` — one row per line; delivery/POS inflows; shared pickers |
-| **Next up**              | **P3** (upload backup) → **P5** (delete company) → **P6** (cutover) |
+| **Active slice**         | — (awaiting next slice) |
+| **Last completed slice** | Statement classify bar, discard import, pay-at-time salary, reports-only ledger (`v0.73.37-statement-classify-discard-ledger-reports`) |
+| **Last commit/tag**      | `v0.73.37-statement-classify-discard-ledger-reports` — classify queue + line table; discard import; salary period pay; ledger under Reports only |
+| **Next up**              | **P3** (upload backup) |
 
 
 ### Next plan (pre-launch, owner-driven)
@@ -1838,6 +1838,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-25 | Statement classify bar + line ledger (WIP)      | *(uncommitted — owner review)*                         | Posting bar; full grouped classify; merge multi-column bank descriptions on import; full description in UI; loan/partner/staff/expense GL hints; discard single statement import; **pay-at-time salary** (period + partial pay + excess→advance, no manual accrual); **staff incentive** classification |
 | 2026-07-02 | Statement classify dense table                  | `v0.73.36-statement-classify-table`                  | One table row per bank line; all classifications incl. delivery app + POS; amount-aware options; Trendyol auto-suggest |
 | 2026-06-25 | Statement import panel stability (Vercel)     | `v0.73.30-statement-import-panel-stable`             | Keep import mapper mounted after first bank account load; no unmount during preview refetch |
 | 2026-06-25 | Settings reorg (UX)                           | `v0.73.25-settings-reorg`                            | Remove Set up sidebar; profile menu → Your profile / Restaurant settings / Add restaurant; Team nested under Restaurant settings (Modules + Team sections); opening balances → `/onboarding/opening-balances`; expense items → `/expenses/items`; platforms → Delivery tab; manual journals → Review tab; legacy `/setup/*` redirects |

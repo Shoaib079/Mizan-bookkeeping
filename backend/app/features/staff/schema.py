@@ -93,6 +93,23 @@ class StaffPaymentCreate(BaseModel):
     payment_account_id: uuid.UUID | None = None
     fx_money_account_id: uuid.UUID | None = None
     try_cost_kurus: int | None = Field(default=None, gt=0)
+    period_year: int | None = Field(default=None, ge=2000, le=2100)
+    period_month: int | None = Field(default=None, ge=1, le=12)
+    period_salary_minor: int | None = Field(
+        default=None,
+        gt=0,
+        description="Month salary total — accrues at pay time if not already recorded",
+    )
+
+
+class SalaryPeriodStatusRead(BaseModel):
+    employee_id: uuid.UUID
+    period_year: int
+    period_month: int
+    period_salary_minor: int
+    period_paid_minor: int
+    period_remaining_minor: int
+    outstanding_advance_minor: int
 
 
 class StaffAccrualResponse(BaseModel):

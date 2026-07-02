@@ -97,6 +97,34 @@ def _detect_date_format(
     return "DD.MM.YYYY"
 
 
+def _pick_description_columns(
+    roles: dict[str, int],
+    date_col: int,
+    header_row: list[object],
+) -> tuple[int | None, list[int]]:
+    """Primary description column + any additional description-like columns."""
+    primary: int | None = roles.get("description")
+    extras: list[int] = []
+    used = set(roles.values())
+
+    if primary is None:
+        for candidate in (date_col + 1, date_col + 2, date_col - 1):
+            if candidate >= 0 and candidate not in used:
+                primary = candidate
+                break
+    if primary is None:
+        return None, []
+
+    for idx, cell in enumerate(header_row):
+        if idx == primary or idx in used:
+            continue
+        norm = _norm_header(cell)
+        if _matches_role(norm, _ROLE_PATTERNS["description"][0]):
+            extras.append(idx)
+
+    return primary, extras
+
+
 def _pick_description_col(roles: dict[str, int], date_col: int) -> int | None:
     if "description" in roles:
         return roles["description"]
@@ -140,7 +168,8 @@ def suggest_import_profile(
         return None
 
     date_col = best_roles["date"]
-    desc_col = _pick_description_col(best_roles, date_col)
+    header_row = grid[best_row - 1]
+    desc_col, desc_extras = _pick_description_columns(best_roles, date_col, header_row)
     if desc_col is None:
         return None
 
@@ -173,6 +202,7 @@ def suggest_import_profile(
         data_start_row=data_start,
         date_col=date_col,
         description_col=desc_col,
+        description_extra_cols=desc_extras,
         reference_col=ref_col,
         amount_col=amount_col,
         debit_col=debit_col,

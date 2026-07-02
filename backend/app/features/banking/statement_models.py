@@ -22,6 +22,14 @@ class StatementLineClassification(str, enum.Enum):
     RENT_UTILITY = "rent_utility"
     CREDIT_CARD_PAYMENT = "credit_card_payment"
     CUSTOMER_PAYMENT = "customer_payment"
+    STAFF_PAYMENT = "staff_payment"
+    STAFF_ADVANCE = "staff_advance"
+    STAFF_INCENTIVE = "staff_incentive"
+    PARTNER_DRAWING = "partner_drawing"
+    PARTNER_REIMBURSEMENT = "partner_reimbursement"
+    PARTNER_DRAWING_REPAYMENT = "partner_drawing_repayment"
+    LOAN_PAYMENT = "loan_payment"
+    LOAN_RECEIPT = "loan_receipt"
     UNKNOWN = "unknown"
 
 

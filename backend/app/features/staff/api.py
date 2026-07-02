@@ -26,6 +26,7 @@ from app.features.staff.schema import (
     StaffLedgerRead,
     StaffPaymentCreate,
     StaffPaymentResponse,
+    SalaryPeriodStatusRead,
     StaffJournalEntryCorrect,
     StaffJournalEntryCorrectOut,
 )
@@ -112,6 +113,32 @@ def get_staff_ledger(
 ) -> StaffLedgerRead:
     try:
         return service.get_staff_ledger(session, entity_id, employee_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/employees/{employee_id}/salary-periods/{period_year}/{period_month}",
+    response_model=SalaryPeriodStatusRead,
+)
+def get_salary_period_status(
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    period_year: int,
+    period_month: int,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+    period_salary_minor: int | None = Query(default=None, gt=0),
+) -> SalaryPeriodStatusRead:
+    try:
+        return service.get_salary_period_status(
+            session,
+            entity_id,
+            employee_id,
+            period_year=period_year,
+            period_month=period_month,
+            period_salary_minor=period_salary_minor,
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

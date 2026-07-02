@@ -11,14 +11,13 @@ import {
 } from "@/lib/nav-sections";
 
 describe("review hub navigation", () => {
-  it("maps legacy review URLs to hub tabs", () => {
+  it("maps legacy review URLs to hub tabs or reports", () => {
     expect(LEGACY_REVIEW_REDIRECTS["/banking/review"]).toBe("/review/bank");
-    expect(LEGACY_REVIEW_REDIRECTS["/reports/ledger"]).toBe("/review/posted");
+    expect(LEGACY_REVIEW_REDIRECTS["/review/posted"]).toBe("/reports/ledger");
   });
 
   it("highlights Review sidebar on hub and tab routes", () => {
     expect(sidebarHrefActiveForPathname("/review", "/review/bank")).toBe(true);
-    expect(sidebarHrefActiveForPathname("/review", "/review/posted")).toBe(true);
     expect(sidebarHrefActiveForPathname("/review", "/banking/review")).toBe(true);
     expect(sidebarHrefActiveForPathname("/review", "/review/receipts/abc")).toBe(
       true,

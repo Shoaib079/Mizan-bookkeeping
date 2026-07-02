@@ -1,6 +1,6 @@
 "use client";
 
-/** General ledger — all journal entries (Review hub → All posted). */
+/** General ledger — all journal entries (Reports → Financial statements). */
 
 import Link from "next/link";
 import {

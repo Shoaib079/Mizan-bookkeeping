@@ -46,6 +46,7 @@ def profile_to_config(model: BankImportProfile) -> BankImportProfileConfig:
         data_end_row=model.data_end_row,
         date_col=model.date_col,
         description_col=model.description_col,
+        description_extra_cols=list(model.description_extra_cols or []),
         reference_col=model.reference_col,
         amount_col=model.amount_col,
         debit_col=model.debit_col,
@@ -116,6 +117,7 @@ def upsert_import_profile(
         existing.data_end_row = config.data_end_row
         existing.date_col = config.date_col
         existing.description_col = config.description_col
+        existing.description_extra_cols = list(config.description_extra_cols)
         existing.reference_col = config.reference_col
         existing.amount_col = config.amount_col
         existing.debit_col = config.debit_col

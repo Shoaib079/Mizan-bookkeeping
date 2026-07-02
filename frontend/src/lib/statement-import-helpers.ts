@@ -17,6 +17,7 @@ export type MappingState = {
   dataEndRow: number | null;
   dateCol: number;
   descriptionCol: number;
+  descriptionExtraCol: number | null;
   referenceCol: number | null;
   amountMode: AmountMode;
   amountCol: number | null;
@@ -49,6 +50,7 @@ export const DEFAULT_MAPPING: MappingState = {
   dataEndRow: null,
   dateCol: 0,
   descriptionCol: 1,
+  descriptionExtraCol: null,
   referenceCol: null,
   amountMode: "debit_credit",
   amountCol: null,
@@ -136,6 +138,7 @@ export function columnSelectionHint(
 export type ColumnAssignRole =
   | "date"
   | "description"
+  | "description_extra"
   | "reference"
   | "amount"
   | "debit"
@@ -144,6 +147,7 @@ export type ColumnAssignRole =
 export const COLUMN_ASSIGN_ROLES: { id: ColumnAssignRole; label: string }[] = [
   { id: "date", label: "Date" },
   { id: "description", label: "Description" },
+  { id: "description_extra", label: "Extra description" },
   { id: "reference", label: "Reference" },
   { id: "debit", label: "Borç" },
   { id: "credit", label: "Alacak" },
@@ -160,6 +164,8 @@ export function applyColumnAssignment(
       return { ...mapping, dateCol: colIdx };
     case "description":
       return { ...mapping, descriptionCol: colIdx };
+    case "description_extra":
+      return { ...mapping, descriptionExtraCol: colIdx };
     case "reference":
       return { ...mapping, referenceCol: colIdx };
     case "amount":
@@ -189,6 +195,7 @@ export function roleForColumn(
 ): ColumnAssignRole | null {
   if (mapping.dateCol === colIdx) return "date";
   if (mapping.descriptionCol === colIdx) return "description";
+  if (mapping.descriptionExtraCol === colIdx) return "description_extra";
   if (mapping.referenceCol === colIdx) return "reference";
   if (mapping.amountMode === "signed" && mapping.amountCol === colIdx) return "amount";
   if (mapping.amountMode === "debit_credit" && mapping.debitCol === colIdx) return "debit";
@@ -209,6 +216,7 @@ export function profileToMapping(profile: BankImportProfileRead): MappingState {
     dataEndRow: profile.data_end_row ?? null,
     dateCol: profile.date_col,
     descriptionCol: profile.description_col,
+    descriptionExtraCol: profile.description_extra_cols?.[0] ?? null,
     referenceCol: profile.reference_col,
     amountMode,
     amountCol: profile.amount_col,
@@ -236,6 +244,7 @@ export function suggestedProfileToMapping(
     dataEndRow: profile.data_end_row ?? null,
     dateCol: profile.date_col,
     descriptionCol: profile.description_col,
+    descriptionExtraCol: profile.description_extra_cols?.[0] ?? null,
     referenceCol: profile.reference_col,
     amountMode,
     amountCol: profile.amount_col,
@@ -257,6 +266,8 @@ export function mappingToProfilePayload(mapping: MappingState) {
     data_end_row: mapping.dataEndRow,
     date_col: mapping.dateCol,
     description_col: mapping.descriptionCol,
+    description_extra_cols:
+      mapping.descriptionExtraCol != null ? [mapping.descriptionExtraCol] : [],
     reference_col: mapping.referenceCol,
     amount_col: mapping.amountMode === "signed" ? mapping.amountCol : null,
     debit_col: mapping.amountMode === "debit_credit" ? mapping.debitCol : null,

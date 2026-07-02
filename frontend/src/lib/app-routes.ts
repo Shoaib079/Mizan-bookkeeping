@@ -172,7 +172,7 @@ export const appRoutes: AppRoute[] = [
   { href: "/banking/cash", label: "Cash drawer", icon: Wallet, group: "Cash & bank" },
   { href: "/reports", label: "Reports", icon: BarChart3, group: "Reports" },
   {
-    href: "/review/posted",
+    href: "/reports/ledger",
     label: "General ledger",
     keywords: "journal entries ledger all entries correct manual bank charges",
     icon: BookOpen,

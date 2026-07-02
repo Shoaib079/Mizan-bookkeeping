@@ -5,6 +5,8 @@ import type { StatementLineClassification } from "@/lib/banking-types";
 export type ClassificationTarget =
   | "supplier"
   | "customer"
+  | "employee"
+  | "partner"
   | "transfer"
   | "credit_card"
   | "expense"
@@ -22,18 +24,18 @@ export type ClassificationOption = {
 /** All classifications the backend supports (excluding unclassified). */
 export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
   {
+    value: "pos_settlement",
+    label: "Card acquirer deposit (clears card sales)",
+    hint: "NET SATIŞ / POS batch — links to recorded card sales",
+    direction: "inflow",
+    target: null,
+  },
+  {
     value: "delivery_settlement",
     label: "Delivery app payment",
     hint: "Trendyol, Getir, Yemeksepeti, Migros…",
     direction: "inflow",
     target: "delivery_platform",
-  },
-  {
-    value: "pos_settlement",
-    label: "POS / card settlement",
-    hint: "Card acquirer deposit to bank",
-    direction: "inflow",
-    target: null,
   },
   {
     value: "customer_payment",
@@ -43,48 +45,123 @@ export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
     target: "customer",
   },
   {
+    value: "loan_receipt",
+    label: "Loan proceeds received",
+    hint: "Bank credit from a loan — increases 2200 Loans Payable",
+    direction: "inflow",
+    target: null,
+  },
+  {
+    value: "partner_drawing_repayment",
+    label: "Partner repayment (money in)",
+    hint: "Partner returns a prior drawing",
+    direction: "inflow",
+    target: "partner",
+  },
+  {
     value: "transfer",
-    label: "Transfer",
-    hint: "Move between your accounts",
+    label: "Transfer between your accounts",
+    hint: "Bank ↔ cash ↔ another bank — not revenue or expense",
     direction: "both",
     target: "transfer",
   },
   {
     value: "supplier_payment",
     label: "Supplier payment",
-    hint: "Pay a supplier from bank",
+    hint: "Pay a supplier invoice from bank",
     direction: "outflow",
     target: "supplier",
   },
   {
+    value: "staff_payment",
+    label: "Salary payment",
+    hint: "Pay a month’s salary — accrues at post time; partial pay OK",
+    direction: "outflow",
+    target: "employee",
+  },
+  {
+    value: "staff_incentive",
+    label: "Staff incentive / company expense",
+    hint: "Meals, transport, bonus — expense, not salary payable",
+    direction: "outflow",
+    target: "employee",
+  },
+  {
+    value: "staff_advance",
+    label: "Salary advance",
+    hint: "Advance paid before accrual",
+    direction: "outflow",
+    target: "employee",
+  },
+  {
+    value: "partner_drawing",
+    label: "Partner withdrawal",
+    hint: "Partner takes money out of the business",
+    direction: "outflow",
+    target: "partner",
+  },
+  {
+    value: "partner_reimbursement",
+    label: "Repay partner (fronted expenses)",
+    hint: "Pay back what you owe the partner — not an expense",
+    direction: "outflow",
+    target: "partner",
+  },
+  {
+    value: "loan_payment",
+    label: "Loan repayment",
+    hint: "Repay bank loan — reduces 2200 Loans Payable (no separate lender picker yet)",
+    direction: "outflow",
+    target: null,
+  },
+  {
     value: "credit_card_payment",
-    label: "Credit card payment",
-    hint: "Pay card liability from bank",
+    label: "Credit card bill payment",
+    hint: "Pay card liability from bank — not an expense",
     direction: "outflow",
     target: "credit_card",
   },
   {
     value: "rent_utility",
-    label: "Rent / utility",
-    hint: "Expense posted from bank",
+    label: "Expense from bank",
+    hint: "Pick GL account: 5000 rent, 5210 utilities, 5230 repairs, 5220 supplies, 5240 advertising…",
     direction: "outflow",
     target: "expense",
   },
   {
     value: "bank_fee",
-    label: "Bank charges",
-    hint: "Fees, EFT charges, commissions",
+    label: "Bank fee / charge",
+    hint: "BSM, havale, EFT, commission — Dr bank charges / Cr bank",
     direction: "outflow",
     target: null,
   },
   {
     value: "unknown",
-    label: "Unknown (skip)",
-    hint: "Leave unposted — review later",
+    label: "Decide later (no ledger)",
+    hint: "Marks line only — nothing posts to P&L or balance sheet",
     direction: "both",
     target: null,
   },
 ];
+
+export type ClassificationOptionGroups = {
+  inflows: ClassificationOption[];
+  outflows: ClassificationOption[];
+  other: ClassificationOption[];
+};
+
+/** Always show the full chart — grouped for the dropdown. */
+export function classificationOptionGroups(): ClassificationOptionGroups {
+  const inflows: ClassificationOption[] = [];
+  const outflows: ClassificationOption[] = [];
+  const other: ClassificationOption[] = [];
+  for (const opt of STATEMENT_CLASSIFICATION_OPTIONS) {
+    if (opt.direction === "inflow") inflows.push(opt);
+    else if (opt.direction === "outflow") outflows.push(opt);
+    else other.push(opt);
+  }
+  return { inflows, outflows, other };
+}
 
 export function classificationOptionsForAmount(
   amountKurus: number,
@@ -102,6 +179,18 @@ export function classificationOptionsForAmount(
   return STATEMENT_CLASSIFICATION_OPTIONS;
 }
 
+export function classificationMatchesAmount(
+  value: StatementLineClassification,
+  amountKurus: number,
+): boolean {
+  const opt = classificationOption(value);
+  if (!opt) return false;
+  if (opt.direction === "both") return true;
+  if (opt.direction === "inflow") return amountKurus > 0;
+  if (opt.direction === "outflow") return amountKurus < 0;
+  return false;
+}
+
 export function classificationOption(
   value: StatementLineClassification,
 ): ClassificationOption | undefined {
@@ -117,8 +206,11 @@ export function classificationLabel(value: string): string {
 
 const DELIVERY_HINT =
   /TRENDYOL|GETIR|YEMEK|MIGROS|TYG\s|DELIVERY|MARKETPLACE|YEMEKSEPETI/i;
-const POS_HINT = /POS|KART|CARD|ÖKC|BKM|SANAL|VISA|MASTERCARD/i;
-const BANK_FEE_HINT = /KOMISYON|BANKA|MASRAF|ÜCRET|EFT|HAVALE|BSMV/i;
+const POS_HINT =
+  /POS|KART|CARD|ÖKC|BKM|SANAL|VISA|MASTERCARD|NET\s*SAT/i;
+const BANK_FEE_HINT = /KOMISYON|BANKA|MASRAF|ÜCRET|EFT|HAVALE|BSM|BSMV/i;
+const SALARY_HINT = /MAAŞ|MAAS|SALARY|ÜCRET\s*ÖD|UCRET\s*OD/i;
+const LOAN_HINT = /KREDI|LOAN|FAIZ|FAİZ|TAKSIT|TAKSİT/i;
 
 /** Best-effort default when a line is first shown. */
 export function suggestClassificationForLine(line: {
@@ -129,10 +221,13 @@ export function suggestClassificationForLine(line: {
   if (line.amount_kurus > 0) {
     if (DELIVERY_HINT.test(text)) return "delivery_settlement";
     if (POS_HINT.test(text)) return "pos_settlement";
+    if (LOAN_HINT.test(text)) return "loan_receipt";
     return "customer_payment";
   }
   if (line.amount_kurus < 0) {
     if (BANK_FEE_HINT.test(text)) return "bank_fee";
+    if (SALARY_HINT.test(text)) return "staff_payment";
+    if (LOAN_HINT.test(text)) return "loan_payment";
     return "supplier_payment";
   }
   return "unknown";

@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { FormDialogShell } from "@/components/ui/form-dialog-shell";
@@ -18,21 +19,16 @@ import {
   loadForeignCurrencyAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
-import { parseTrDate, parseTryToKurus, formatTry } from "@/lib/money";
+import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
-import {
-  advanceAppliedPreview,
-  payableClearedPreview,
-} from "@/lib/staff-salary";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   employeeId: string;
+  employeeName?: string;
   kind: "advance" | "payment";
   payCurrency: string;
-  outstandingAdvanceMinor?: number;
-  remainingAccrualMinor?: number;
   embedded?: boolean;
   onSaved?: () => void;
 };
@@ -41,10 +37,9 @@ export function StaffCashMovementForm({
   open,
   onClose,
   employeeId,
+  employeeName = "Employee",
   kind,
   payCurrency,
-  outstandingAdvanceMinor = 0,
-  remainingAccrualMinor = 0,
   embedded,
   onSaved,
 }: Props) {
@@ -55,6 +50,62 @@ export function StaffCashMovementForm({
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
+
+  if (kind === "payment") {
+    if (!entityId) return null;
+    return (
+      <StaffSalaryPaymentDialog
+        open={open}
+        onClose={onClose}
+        entityId={entityId}
+        employeeId={employeeId}
+        employeeName={employeeName}
+        payCurrency={payCurrency}
+        source="staff"
+        onSaved={onSaved}
+      />
+    );
+  }
+
+  return (
+    <StaffAdvanceForm
+      open={open}
+      onClose={onClose}
+      employeeId={employeeId}
+      payCurrency={payCurrency}
+      embedded={embedded}
+      onSaved={onSaved}
+      entityId={entityId}
+      actorId={actorId}
+      toast={toast}
+      submitIdempotency={submitIdempotency}
+    />
+  );
+}
+
+function StaffAdvanceForm({
+  open,
+  onClose,
+  employeeId,
+  payCurrency,
+  embedded,
+  onSaved,
+  entityId,
+  actorId,
+  toast,
+  submitIdempotency,
+}: {
+  open: boolean;
+  onClose: () => void;
+  employeeId: string;
+  payCurrency: string;
+  embedded?: boolean;
+  onSaved?: () => void;
+  entityId: string | null;
+  actorId: string | null;
+  toast: (message: string) => void;
+  submitIdempotency: ReturnType<typeof useSubmitIdempotency>;
+}) {
   const isTry = payCurrency === "TRY";
 
   const [tryAccounts, setTryAccounts] = useState<MoneyAccountOption[]>([]);
@@ -64,9 +115,7 @@ export function StaffCashMovementForm({
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [tryCostText, setTryCostText] = useState("");
-  const [description, setDescription] = useState(
-    kind === "advance" ? "Salary advance" : "Salary payment",
-  );
+  const [description, setDescription] = useState("Salary advance");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -151,20 +200,19 @@ export function StaffCashMovementForm({
     setSubmitting(true);
     setError(null);
     try {
-      const path =
-        kind === "advance"
-          ? `/entities/${entityId}/staff/employees/${employeeId}/advances`
-          : `/entities/${entityId}/staff/employees/${employeeId}/payments`;
       const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(path, {
-        method: "POST",
-        idempotencyKey,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      await apiFetch(
+        `/entities/${entityId}/staff/employees/${employeeId}/advances`,
+        {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
       submitIdempotency.completeSubmit();
       onSaved?.();
-      toast(kind === "advance" ? "Advance recorded" : "Payment recorded");
+      toast("Advance recorded");
       onClose();
       setAmountText("");
       setTryCostText("");
@@ -175,35 +223,8 @@ export function StaffCashMovementForm({
     }
   }
 
-  const title = kind === "advance" ? "Record advance" : "Record salary payment";
-
-  const cashMinorPreview = isTry
-    ? parseTryToKurus(amountText) ?? 0
-    : parseFxNative(amountText) ?? 0;
-  const advancePreview =
-    kind === "payment" && cashMinorPreview > 0
-      ? advanceAppliedPreview(
-          cashMinorPreview,
-          remainingAccrualMinor,
-          outstandingAdvanceMinor,
-        )
-      : 0;
-  const payablePreview =
-    kind === "payment" && cashMinorPreview > 0
-      ? payableClearedPreview(
-          cashMinorPreview,
-          remainingAccrualMinor,
-          outstandingAdvanceMinor,
-        )
-      : 0;
-
-  function formatPayMinor(minor: number): string {
-    if (isTry) return formatTry(minor);
-    return `${(minor / 100).toFixed(2)} ${payCurrency}`;
-  }
-
   return (
-    <FormDialogShell embedded={embedded} open={open} title={title} onClose={onClose}>
+    <FormDialogShell embedded={embedded} open={open} title="Record advance" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <p className="text-xs text-muted-foreground">
           {isTry
@@ -294,47 +315,9 @@ export function StaffCashMovementForm({
             />
           </div>
         )}
-        {kind === "payment" && outstandingAdvanceMinor > 0 && (
-          <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
-            <p>
-              Outstanding advance:{" "}
-              <span className="font-medium tabular-nums">
-                {formatPayMinor(outstandingAdvanceMinor)}
-              </span>
-            </p>
-            {remainingAccrualMinor > 0 && (
-              <p className="mt-1 text-muted-foreground">
-                Accrued salary not yet paid:{" "}
-                <span className="tabular-nums">
-                  {formatPayMinor(remainingAccrualMinor)}
-                </span>
-              </p>
-            )}
-            {advancePreview > 0 && (
-              <p className="mt-2 text-muted-foreground">
-                On save,{" "}
-                <span className="font-medium tabular-nums text-foreground">
-                  {formatPayMinor(advancePreview)}
-                </span>{" "}
-                advance will auto-clear against salary payable
-                {payablePreview > cashMinorPreview && (
-                  <>
-                    {" "}
-                    (total payable cleared:{" "}
-                    <span className="tabular-nums">
-                      {formatPayMinor(payablePreview)}
-                    </span>
-                    )
-                  </>
-                )}
-                .
-              </p>
-            )}
-          </div>
-        )}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Recording…" : title}
+          {submitting ? "Recording…" : "Record advance"}
         </Button>
       </form>
     </FormDialogShell>

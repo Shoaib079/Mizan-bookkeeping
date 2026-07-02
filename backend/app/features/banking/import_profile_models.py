@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, UniqueConstraint, Uuid
+from sqlalchemy import Boolean, ForeignKey, Integer, JSON, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, EntityScopedMixin, utcnow
@@ -33,6 +33,7 @@ class BankImportProfile(EntityScopedMixin, Base):
     data_end_row: Mapped[int | None] = mapped_column(Integer, nullable=True)
     date_col: Mapped[int] = mapped_column(Integer, nullable=False)
     description_col: Mapped[int] = mapped_column(Integer, nullable=False)
+    description_extra_cols: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     reference_col: Mapped[int | None] = mapped_column(Integer, nullable=True)
     amount_col: Mapped[int | None] = mapped_column(Integer, nullable=True)
     debit_col: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -22,6 +22,12 @@ from app.core.payables import posting as payables_posting
 from app.core.pos import posting as pos_posting
 from app.core.delivery import posting as delivery_posting
 from app.core.expenses.posting import InvalidExpensePostingError, post_expense_entry
+from app.core.partners import posting as partner_posting
+from app.core.partners.ledger import OverpaymentError as PartnerOverpaymentError
+from app.core.partners.ledger import OverRepaymentError as PartnerOverRepaymentError
+from app.core.staff import posting as staff_posting
+from app.core.staff.ledger import OverpaymentError as StaffOverpaymentError
+from app.core.staff.posting import InvalidStaffPostingError
 from app.features.delivery import platform_service
 from app.features.delivery.platform_service import InactiveDeliveryPlatformError
 from app.features.delivery.settings import (
@@ -37,6 +43,7 @@ from app.features.banking.schema import (
     BankStatementRead,
     ClassifyStatementLineResult,
     CreateSupplierFromLineResult,
+    DiscardBankStatementResult,
     NeedsReviewStatementLineRead,
 )
 from app.features.banking.classification_learning import (
@@ -59,6 +66,8 @@ from app.features.banking.transfer_models import AccountTransfer
 from app.features.delivery.models import DeliverySettlement
 from app.features.pos.models import PosSettlement
 from app.features.customers.models import Customer
+from app.features.partners.models import Partner
+from app.features.staff.models import Employee
 from app.features.suppliers.models import Supplier
 from app.features.suppliers.schema import SupplierCreate
 from app.features.suppliers.service import DuplicateSupplierError, create_supplier
@@ -88,6 +97,35 @@ class InvalidClassificationError(ValueError):
 
 class LineNotCorrectableError(ValueError):
     """Raised when a statement line cannot be corrected in its current state."""
+
+
+class StatementNotDiscardableError(Exception):
+    """Raised when a statement has lines linked to the ledger."""
+
+    def __init__(
+        self,
+        *,
+        posted_count: int,
+        linked_count: int,
+        ledger_linked_count: int,
+    ):
+        self.posted_count = posted_count
+        self.linked_count = linked_count
+        self.ledger_linked_count = ledger_linked_count
+        parts: list[str] = []
+        if posted_count:
+            parts.append(f"{posted_count} posted")
+        if linked_count:
+            parts.append(f"{linked_count} linked")
+        if ledger_linked_count:
+            parts.append(f"{ledger_linked_count} with ledger entries")
+        summary = ", ".join(parts) if parts else "ledger-linked lines"
+        super().__init__(
+            f"Cannot discard this import: {summary}. "
+            "Void or correct those lines in Review first. "
+            "Discarding removes only this file import — your company, chart, suppliers, "
+            "and other statements are not affected."
+        )
 
 
 def file_fingerprint(content: bytes) -> str:
@@ -868,6 +906,82 @@ def get_bank_statement(
         return _to_statement_read(statement, lines, session=session)
 
 
+def _line_blocks_statement_discard(line: BankStatementLine) -> bool:
+    if line.status in (StatementLineStatus.POSTED, StatementLineStatus.LINKED):
+        return True
+    return any(
+        (
+            line.journal_entry_id,
+            line.supplier_ledger_entry_id,
+            line.account_transfer_id,
+            line.pos_settlement_id,
+            line.delivery_settlement_id,
+            line.credit_card_payment_id,
+            line.customer_ledger_entry_id,
+            line.expense_entry_id,
+        )
+    )
+
+
+def discard_bank_statement(
+    session: Session, entity_id: uuid.UUID, statement_id: uuid.UUID
+) -> DiscardBankStatementResult:
+    """Remove an unposted bank statement import. Does not touch ledger or company data."""
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        statement = session.get(BankStatement, statement_id)
+        if statement is None:
+            raise LookupError("Bank statement not found")
+
+        lines = list(
+            session.scalars(
+                select(BankStatementLine).where(
+                    BankStatementLine.statement_id == statement_id
+                )
+            )
+        )
+        blocking = [line for line in lines if _line_blocks_statement_discard(line)]
+        if blocking:
+            posted_count = sum(
+                1 for line in blocking if line.status == StatementLineStatus.POSTED
+            )
+            linked_count = sum(
+                1 for line in blocking if line.status == StatementLineStatus.LINKED
+            )
+            ledger_linked_count = sum(
+                1
+                for line in blocking
+                if any(
+                    (
+                        line.journal_entry_id,
+                        line.supplier_ledger_entry_id,
+                        line.account_transfer_id,
+                        line.pos_settlement_id,
+                        line.delivery_settlement_id,
+                        line.credit_card_payment_id,
+                        line.customer_ledger_entry_id,
+                        line.expense_entry_id,
+                    )
+                )
+            )
+            raise StatementNotDiscardableError(
+                posted_count=posted_count,
+                linked_count=linked_count,
+                ledger_linked_count=ledger_linked_count,
+            )
+
+        result = DiscardBankStatementResult(
+            statement_id=statement.id,
+            original_filename=statement.original_filename,
+            line_count=statement.line_count,
+        )
+        session.delete(statement)
+        session.commit()
+        return result
+
+
 def list_bank_statements(
     session: Session,
     entity_id: uuid.UUID,
@@ -929,6 +1043,11 @@ def classify_statement_line(
     confirm_account_transfer_id: uuid.UUID | None = None,
     delivery_platform_id: uuid.UUID | None = None,
     expense_account_id: uuid.UUID | None = None,
+    employee_id: uuid.UUID | None = None,
+    period_year: int | None = None,
+    period_month: int | None = None,
+    period_salary_minor: int | None = None,
+    partner_id: uuid.UUID | None = None,
     match_token: str | None = None,
 ) -> ClassifyStatementLineResult:
     if entity_service.get_entity(session, entity_id) is None:
@@ -1310,6 +1429,104 @@ def classify_statement_line(
             if customer is None:
                 raise LookupError("Customer not found")
 
+        elif classification == StatementLineClassification.STAFF_PAYMENT:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "staff_payment requires an outflow (negative amount_kurus)"
+                )
+            if employee_id is None or actor_id is None:
+                raise InvalidClassificationError(
+                    "employee_id and actor_id are required for staff_payment"
+                )
+            if (
+                period_year is None
+                or period_month is None
+                or period_salary_minor is None
+                or period_salary_minor <= 0
+            ):
+                raise InvalidClassificationError(
+                    "period_year, period_month, and period_salary_minor are required "
+                    "for staff_payment"
+                )
+            if session.get(Employee, employee_id) is None:
+                raise LookupError("Employee not found")
+
+        elif classification == StatementLineClassification.STAFF_INCENTIVE:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "staff_incentive requires an outflow (negative amount_kurus)"
+                )
+            if employee_id is None or actor_id is None:
+                raise InvalidClassificationError(
+                    "employee_id and actor_id are required for staff_incentive"
+                )
+            if session.get(Employee, employee_id) is None:
+                raise LookupError("Employee not found")
+
+        elif classification == StatementLineClassification.STAFF_ADVANCE:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "staff_advance requires an outflow (negative amount_kurus)"
+                )
+            if employee_id is None or actor_id is None:
+                raise InvalidClassificationError(
+                    "employee_id and actor_id are required for staff_advance"
+                )
+            if session.get(Employee, employee_id) is None:
+                raise LookupError("Employee not found")
+
+        elif classification == StatementLineClassification.PARTNER_DRAWING:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "partner_drawing requires an outflow (negative amount_kurus)"
+                )
+            if partner_id is None or actor_id is None:
+                raise InvalidClassificationError(
+                    "partner_id and actor_id are required for partner_drawing"
+                )
+            if session.get(Partner, partner_id) is None:
+                raise LookupError("Partner not found")
+
+        elif classification == StatementLineClassification.PARTNER_REIMBURSEMENT:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "partner_reimbursement requires an outflow (negative amount_kurus)"
+                )
+            if partner_id is None or actor_id is None:
+                raise InvalidClassificationError(
+                    "partner_id and actor_id are required for partner_reimbursement"
+                )
+            if session.get(Partner, partner_id) is None:
+                raise LookupError("Partner not found")
+
+        elif classification == StatementLineClassification.PARTNER_DRAWING_REPAYMENT:
+            if line.amount_kurus <= 0:
+                raise InvalidClassificationError(
+                    "partner_drawing_repayment requires an inflow (positive amount_kurus)"
+                )
+            if partner_id is None or actor_id is None:
+                raise InvalidClassificationError(
+                    "partner_id and actor_id are required for partner_drawing_repayment"
+                )
+            if session.get(Partner, partner_id) is None:
+                raise LookupError("Partner not found")
+
+        elif classification == StatementLineClassification.LOAN_PAYMENT:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "loan_payment requires an outflow (negative amount_kurus)"
+                )
+            if actor_id is None:
+                raise InvalidClassificationError("actor_id is required for loan_payment")
+
+        elif classification == StatementLineClassification.LOAN_RECEIPT:
+            if line.amount_kurus <= 0:
+                raise InvalidClassificationError(
+                    "loan_receipt requires an inflow (positive amount_kurus)"
+                )
+            if actor_id is None:
+                raise InvalidClassificationError("actor_id is required for loan_receipt")
+
         elif classification == StatementLineClassification.UNKNOWN:
             line.classification = classification
             line.status = StatementLineStatus.CLASSIFIED
@@ -1637,6 +1854,360 @@ def classify_statement_line(
             journal_entry_id=journal_id,
         )
 
+    if classification == StatementLineClassification.STAFF_PAYMENT:
+        payment_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        assert employee_id is not None
+        assert period_year is not None
+        assert period_month is not None
+        assert period_salary_minor is not None
+        try:
+            result = staff_posting.post_period_salary_payment(
+                session,
+                entity_id,
+                employee_id,
+                payment_date=line.transaction_date,
+                cash_minor=payment_amount,
+                period_year=period_year,
+                period_month=period_month,
+                period_salary_minor=period_salary_minor,
+                description=line.description,
+                actor_id=actor_id,
+                payment_account_id=money_account.gl_account_id,
+            )
+        except (InvalidStaffPostingError, StaffOverpaymentError, ValueError) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.STAFF_PAYMENT
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.STAFF_PAYMENT,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.STAFF_INCENTIVE:
+        incentive_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        assert employee_id is not None
+        try:
+            result = staff_posting.post_incentive_paid(
+                session,
+                entity_id,
+                employee_id,
+                payment_date=line.transaction_date,
+                amount_minor=incentive_amount,
+                description=line.description,
+                actor_id=actor_id,
+                payment_account_id=money_account.gl_account_id,
+            )
+        except (InvalidStaffPostingError, ValueError) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.STAFF_INCENTIVE
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.STAFF_INCENTIVE,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.STAFF_ADVANCE:
+        advance_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        assert employee_id is not None
+        try:
+            result = staff_posting.post_advance_paid(
+                session,
+                entity_id,
+                employee_id,
+                payment_date=line.transaction_date,
+                amount_minor=advance_amount,
+                description=line.description,
+                actor_id=actor_id,
+                payment_account_id=money_account.gl_account_id,
+            )
+        except (InvalidStaffPostingError, ValueError) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.STAFF_ADVANCE
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.STAFF_ADVANCE,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.PARTNER_DRAWING:
+        drawing_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        assert partner_id is not None
+        try:
+            result = partner_posting.post_drawing(
+                session,
+                entity_id,
+                partner_id,
+                drawing_date=line.transaction_date,
+                amount_kurus=drawing_amount,
+                description=line.description,
+                actor_id=actor_id,
+                payment_account_id=money_account.gl_account_id,
+            )
+        except (partner_posting.InvalidPartnerPostingError, ValueError) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.PARTNER_DRAWING
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.PARTNER_DRAWING,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.PARTNER_REIMBURSEMENT:
+        reimbursement_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        assert partner_id is not None
+        try:
+            result = partner_posting.post_reimbursement_paid(
+                session,
+                entity_id,
+                partner_id,
+                payment_date=line.transaction_date,
+                amount_kurus=reimbursement_amount,
+                description=line.description,
+                actor_id=actor_id,
+                payment_account_id=money_account.gl_account_id,
+            )
+        except (
+            partner_posting.InvalidPartnerPostingError,
+            PartnerOverpaymentError,
+            ValueError,
+        ) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.PARTNER_REIMBURSEMENT
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.PARTNER_REIMBURSEMENT,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.PARTNER_DRAWING_REPAYMENT:
+        repayment_amount = line.amount_kurus
+        assert actor_id is not None
+        assert partner_id is not None
+        try:
+            result = partner_posting.post_drawing_repayment(
+                session,
+                entity_id,
+                partner_id,
+                payment_date=line.transaction_date,
+                amount_kurus=repayment_amount,
+                description=line.description,
+                actor_id=actor_id,
+                payment_account_id=money_account.gl_account_id,
+            )
+        except (
+            partner_posting.InvalidPartnerPostingError,
+            PartnerOverRepaymentError,
+            ValueError,
+        ) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.PARTNER_DRAWING_REPAYMENT
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.PARTNER_DRAWING_REPAYMENT,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.LOAN_PAYMENT:
+        loan_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        try:
+            result = statement_posting.post_loan_payment(
+                session,
+                entity_id,
+                bank_money_account_id=statement.money_account_id,
+                payment_date=line.transaction_date,
+                amount_kurus=loan_amount,
+                description=line.description,
+                actor_id=actor_id,
+            )
+        except (statement_posting.InvalidBankStatementPostError, ValueError) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.LOAN_PAYMENT
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.LOAN_PAYMENT,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.LOAN_RECEIPT:
+        loan_amount = line.amount_kurus
+        assert actor_id is not None
+        try:
+            result = statement_posting.post_loan_receipt(
+                session,
+                entity_id,
+                bank_money_account_id=statement.money_account_id,
+                receipt_date=line.transaction_date,
+                amount_kurus=loan_amount,
+                description=line.description,
+                actor_id=actor_id,
+            )
+        except (statement_posting.InvalidBankStatementPostError, ValueError) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.LOAN_RECEIPT
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.LOAN_RECEIPT,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
     if classification != StatementLineClassification.TRANSFER:
         raise RuntimeError("unreachable")
 
@@ -1733,6 +2304,11 @@ def correct_statement_line(
     credit_card_money_account_id: uuid.UUID | None = None,
     delivery_platform_id: uuid.UUID | None = None,
     expense_account_id: uuid.UUID | None = None,
+    employee_id: uuid.UUID | None = None,
+    period_year: int | None = None,
+    period_month: int | None = None,
+    period_salary_minor: int | None = None,
+    partner_id: uuid.UUID | None = None,
     reason: str | None = None,
     match_token: str | None = None,
 ) -> ClassifyStatementLineResult:
@@ -1801,5 +2377,10 @@ def correct_statement_line(
         actor_id=actor_id,
         delivery_platform_id=delivery_platform_id,
         expense_account_id=expense_account_id,
+        employee_id=employee_id,
+        period_year=period_year,
+        period_month=period_month,
+        period_salary_minor=period_salary_minor,
+        partner_id=partner_id,
         match_token=match_token,
     )

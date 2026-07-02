@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.adapters.bank_parsers.amount_lira import (
     DecimalFormat,
@@ -31,6 +32,51 @@ _DATE_STRPTIME: dict[DateFormat, str] = {
 _DATE_WITH_DMY_TIME = re.compile(
     r"^(\d{1,2}[/.]\d{1,2}[/.]\d{4})-\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?$"
 )
+
+_DESC_HEADER_KEYWORDS = (
+    "aciklama",
+    "description",
+    "detay",
+    "hareket",
+    "islem aciklamasi",
+    "islem detayi",
+    "ek aciklama",
+    "unvan",
+    "karsi taraf",
+    "karsi hesap",
+    "alici",
+    "gonderen",
+)
+_DESC_HEADER_EXCLUDE = ("bakiye", "balance", "doviz", "kur ", " sube", "branch", "tarih", "date", "tutar", "amount", "borc", "alacak", "referans", "ref")
+
+
+def _norm_header(text: object) -> str:
+    raw = cell_to_str(text).strip().lower()
+    decomposed = unicodedata.normalize("NFKD", raw)
+    asciiish = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return re.sub(r"\s+", " ", asciiish).strip()
+
+
+def _is_description_header(norm: str) -> bool:
+    if not norm:
+        return False
+    if any(ex in norm for ex in _DESC_HEADER_EXCLUDE):
+        return False
+    return any(kw in norm or norm == kw for kw in _DESC_HEADER_KEYWORDS)
+
+
+def _merge_description_parts(parts: list[str]) -> str:
+    merged: list[str] = []
+    for part in parts:
+        text = part.strip()
+        if not text:
+            continue
+        if merged and (text in merged[-1] or merged[-1] in text):
+            if len(text) > len(merged[-1]):
+                merged[-1] = text
+            continue
+        merged.append(text)
+    return " · ".join(merged)
 
 
 def normalize_transaction_date_cell(raw: str) -> str:
@@ -75,6 +121,10 @@ class BankImportProfileConfig(BaseModel):
     )
     date_col: int = Field(ge=0)
     description_col: int = Field(ge=0)
+    description_extra_cols: list[int] = Field(
+        default_factory=list,
+        description="Additional 0-based columns merged into description (full bank text)",
+    )
     reference_col: int | None = Field(default=None, ge=0)
     amount_col: int | None = Field(default=None, ge=0)
     debit_col: int | None = Field(default=None, ge=0)
@@ -94,6 +144,17 @@ class BankImportProfileConfig(BaseModel):
         description="CSV field delimiter — auto-detects ; , or tab",
     )
 
+    @field_validator("description_extra_cols")
+    @classmethod
+    def _unique_extra_cols(cls, value: list[int]) -> list[int]:
+        seen: set[int] = set()
+        ordered: list[int] = []
+        for col in value:
+            if col not in seen and col >= 0:
+                seen.add(col)
+                ordered.append(col)
+        return ordered
+
     @model_validator(mode="after")
     def _validate_amount_mode(self) -> BankImportProfileConfig:
         has_amount = self.amount_col is not None
@@ -112,7 +173,7 @@ class BankImportProfileConfig(BaseModel):
         return self
 
     def required_columns(self) -> list[int]:
-        cols = [self.date_col, self.description_col]
+        cols = [self.date_col, self.description_col, *self.description_extra_cols]
         if self.reference_col is not None:
             cols.append(self.reference_col)
         if self.amount_col is not None:
@@ -120,6 +181,31 @@ class BankImportProfileConfig(BaseModel):
         else:
             cols.extend([self.debit_col, self.credit_col])  # type: ignore[list-item]
         return cols
+
+    def description_column_indices(
+        self,
+        grid: list[list[object]] | None = None,
+    ) -> list[int]:
+        """Primary + saved extras + auto-detected description headers."""
+        indices = [self.description_col]
+        for col in self.description_extra_cols:
+            if col not in indices:
+                indices.append(col)
+        if grid is not None and self.header_row <= len(grid):
+            header = grid[self.header_row - 1]
+            used = {
+                self.date_col,
+                self.reference_col,
+                self.amount_col,
+                self.debit_col,
+                self.credit_col,
+            }
+            for idx, cell in enumerate(header):
+                if idx in indices or idx in used:
+                    continue
+                if _is_description_header(_norm_header(cell)):
+                    indices.append(idx)
+        return sorted(indices)
 
     def max_column_index(self) -> int:
         return max(self.required_columns())
@@ -214,7 +300,9 @@ def _signed_amount_from_row(
 
 def _row_is_blank(row: list[object], profile: BankImportProfileConfig) -> bool:
     date_empty = not cell_to_str(_cell(row, profile.date_col)).strip()
-    desc_empty = not cell_to_str(_cell(row, profile.description_col)).strip()
+    desc_empty = not _merge_description_parts(
+        [cell_to_str(_cell(row, col)) for col in [profile.description_col]]
+    ).strip()
     if profile.amount_col is not None:
         amount_empty = not cell_to_str(_cell(row, profile.amount_col)).strip()
     else:
@@ -265,6 +353,8 @@ def _map_row(
     row: list[object],
     row_num: int,
     profile: BankImportProfileConfig,
+    *,
+    description_cols: list[int],
 ) -> ParsedStatementLine | None:
     if _row_is_blank(row, profile):
         return None
@@ -276,7 +366,9 @@ def _map_row(
     if amount_kurus is None:
         return None
 
-    desc = cell_to_str(_cell(row, profile.description_col)).strip()
+    desc = _merge_description_parts(
+        [cell_to_str(_cell(row, col)) for col in description_cols]
+    ).strip()
     if not desc:
         return None
 
@@ -309,12 +401,13 @@ def parse_with_profile(
     )
     validate_profile_against_grid(grid, profile)
 
+    description_cols = profile.description_column_indices(grid)
     lines: list[ParsedStatementLine] = []
     last_row = profile.data_end_row if profile.data_end_row is not None else len(grid)
     for row_idx in range(profile.data_start_row - 1, min(last_row, len(grid))):
         row = grid[row_idx]
         row_num = row_idx + 1
-        mapped = _map_row(row, row_num, profile)
+        mapped = _map_row(row, row_num, profile, description_cols=description_cols)
         if mapped is not None:
             lines.append(mapped)
 

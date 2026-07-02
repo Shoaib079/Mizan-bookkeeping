@@ -5,6 +5,7 @@
 import {
   ArrowLeftRight,
   BarChart3,
+  BookOpen,
   FileSpreadsheet,
   Landmark,
   Percent,
@@ -39,6 +40,7 @@ type ReportCard = {
   category: string;
   financial: boolean;
   asOf?: boolean;
+  hideExport?: boolean;
 };
 
 const reportCards: ReportCard[] = [
@@ -66,6 +68,15 @@ const reportCards: ReportCard[] = [
     icon: ArrowLeftRight,
     category: "Financial statements",
     financial: true,
+  },
+  {
+    href: "/reports/ledger",
+    title: "General ledger",
+    description: "Every journal entry with debit and credit lines.",
+    icon: BookOpen,
+    category: "Financial statements",
+    financial: true,
+    hideExport: true,
   },
   {
     href: "/reports/kdv-input",
@@ -225,11 +236,13 @@ function ReportsBody() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {card.description}
               </p>
-              <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                <FileSpreadsheet className="size-3.5" />
-                Excel
-                {card.financial && !card.asOf && " · PDF"}
-              </div>
+              {!card.hideExport && (
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <FileSpreadsheet className="size-3.5" />
+                  Excel
+                  {card.financial && !card.asOf && " · PDF"}
+                </div>
+              )}
             </Link>
           );
         })}

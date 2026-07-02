@@ -178,6 +178,12 @@ class BankStatementRead(BaseModel):
     lines: list[BankStatementLineRead]
 
 
+class DiscardBankStatementResult(BaseModel):
+    statement_id: uuid.UUID
+    original_filename: str
+    line_count: int
+
+
 class BankImportProfileRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -189,6 +195,7 @@ class BankImportProfileRead(BaseModel):
     data_end_row: int | None = Field(default=None, ge=1)
     date_col: int = Field(ge=0)
     description_col: int = Field(ge=0)
+    description_extra_cols: list[int] = Field(default_factory=list)
     reference_col: int | None = Field(default=None, ge=0)
     amount_col: int | None = Field(default=None, ge=0)
     debit_col: int | None = Field(default=None, ge=0)
@@ -207,6 +214,7 @@ class BankImportProfileUpsert(BaseModel):
     data_end_row: int | None = Field(default=None, ge=1)
     date_col: int = Field(ge=0)
     description_col: int = Field(ge=0)
+    description_extra_cols: list[int] = Field(default_factory=list)
     reference_col: int | None = Field(default=None, ge=0)
     amount_col: int | None = Field(default=None, ge=0)
     debit_col: int | None = Field(default=None, ge=0)
@@ -243,6 +251,31 @@ class ClassifyStatementLineRequest(BaseModel):
         default=None,
         description="Required for rent_utility — owner picks expense GL account (e.g. 5000 rent)",
     )
+    employee_id: uuid.UUID | None = Field(
+        default=None,
+        description="Required for staff_payment, staff_advance, and staff_incentive",
+    )
+    period_year: int | None = Field(
+        default=None,
+        ge=2000,
+        le=2100,
+        description="Salary month year — required for staff_payment (accrues at pay time)",
+    )
+    period_month: int | None = Field(
+        default=None,
+        ge=1,
+        le=12,
+        description="Salary month 1–12 — required for staff_payment",
+    )
+    period_salary_minor: int | None = Field(
+        default=None,
+        gt=0,
+        description="Total salary for that month — required for staff_payment",
+    )
+    partner_id: uuid.UUID | None = Field(
+        default=None,
+        description="Required for partner_drawing, partner_reimbursement, partner_drawing_repayment",
+    )
     match_token: str | None = Field(
         default=None,
         max_length=512,
@@ -259,6 +292,11 @@ class CorrectStatementLineRequest(BaseModel):
     customer_id: uuid.UUID | None = None
     delivery_platform_id: uuid.UUID | None = None
     expense_account_id: uuid.UUID | None = None
+    employee_id: uuid.UUID | None = None
+    period_year: int | None = Field(default=None, ge=2000, le=2100)
+    period_month: int | None = Field(default=None, ge=1, le=12)
+    period_salary_minor: int | None = Field(default=None, gt=0)
+    partner_id: uuid.UUID | None = None
     reason: str | None = Field(default=None, max_length=512)
     match_token: str | None = Field(
         default=None,

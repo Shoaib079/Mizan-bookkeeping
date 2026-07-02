@@ -150,6 +150,7 @@ function MappingAtAGlance({
   const rows: { role: string; col: number | null }[] = [
     { role: "Date", col: mapping.dateCol },
     { role: "Description", col: mapping.descriptionCol },
+    { role: "Extra description", col: mapping.descriptionExtraCol },
     { role: "Reference", col: mapping.referenceCol },
   ];
   if (mapping.amountMode === "signed") {
@@ -198,6 +199,7 @@ function MappingAtAGlance({
 function mappedColumnClass(mapping: MappingState, colIdx: number): string {
   if (mapping.dateCol === colIdx) return "ring-1 ring-inset ring-primary/50 bg-primary/5";
   if (mapping.descriptionCol === colIdx) return "ring-1 ring-inset ring-primary/40 bg-primary/5";
+  if (mapping.descriptionExtraCol === colIdx) return "ring-1 ring-inset ring-primary/35 bg-primary/5";
   if (mapping.referenceCol === colIdx) return "ring-1 ring-inset ring-primary/30";
   if (mapping.amountMode === "signed" && mapping.amountCol === colIdx) {
     return "ring-1 ring-inset ring-primary/50 bg-primary/5";
@@ -899,6 +901,23 @@ export function StatementImportPanel({
                         v != null && setMapping((m) => ({ ...m, descriptionCol: v }))
                       }
                     />
+                    <ColumnSelect
+                      label="Extra description (optional)"
+                      value={mapping.descriptionExtraCol}
+                      maxCol={maxCol}
+                      preview={preview}
+                      headerRow={mapping.headerRow}
+                      dataStartRow={mapping.dataStartRow}
+                      allowEmpty
+                      onChange={(v) =>
+                        setMapping((m) => ({ ...m, descriptionExtraCol: v }))
+                      }
+                    />
+                    <p className="text-[11px] text-muted-foreground -mt-1">
+                      Turkish exports often split text across Açıklama + Detay columns.
+                      Both are merged into one full description on import. Auto-detect
+                      also merges other description headers when you leave this empty.
+                    </p>
                     <ColumnSelect
                       label="Reference (optional)"
                       value={mapping.referenceCol}

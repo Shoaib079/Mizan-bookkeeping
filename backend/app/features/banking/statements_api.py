@@ -31,6 +31,7 @@ from app.features.banking.schema import (
     CorrectStatementLineRequest,
     CreateSupplierFromLineRequest,
     CreateSupplierFromLineResult,
+    DiscardBankStatementResult,
     NeedsReviewStatementLineRead,
 )
 
@@ -281,6 +282,26 @@ def get_bank_statement(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@statements_router.delete(
+    "/{statement_id}",
+    response_model=DiscardBankStatementResult,
+)
+def discard_bank_statement(
+    entity_id: uuid.UUID,
+    statement_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> DiscardBankStatementResult:
+    try:
+        return statement_service.discard_bank_statement(
+            session, entity_id, statement_id
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except statement_service.StatementNotDiscardableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @statements_router.patch(
     "/{statement_id}/lines/{line_id}/classify",
     response_model=ClassifyStatementLineResult,
@@ -309,6 +330,11 @@ def classify_statement_line(
             confirm_account_transfer_id=payload.confirm_account_transfer_id,
             delivery_platform_id=payload.delivery_platform_id,
             expense_account_id=payload.expense_account_id,
+            employee_id=payload.employee_id,
+            period_year=payload.period_year,
+            period_month=payload.period_month,
+            period_salary_minor=payload.period_salary_minor,
+            partner_id=payload.partner_id,
             match_token=payload.match_token,
         )
     except LookupError as exc:
@@ -351,6 +377,11 @@ def correct_statement_line(
             customer_id=payload.customer_id,
             delivery_platform_id=payload.delivery_platform_id,
             expense_account_id=payload.expense_account_id,
+            employee_id=payload.employee_id,
+            period_year=payload.period_year,
+            period_month=payload.period_month,
+            period_salary_minor=payload.period_salary_minor,
+            partner_id=payload.partner_id,
             reason=payload.reason,
             match_token=payload.match_token,
         )

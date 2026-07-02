@@ -174,6 +174,49 @@ def remaining_accrual_minor(session: Session, employee_id: uuid.UUID) -> int:
     return accrued + paid
 
 
+def period_accrued_minor(
+    session: Session, employee_id: uuid.UUID, *, period_year: int, period_month: int
+) -> int:
+    total = session.scalar(
+        select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
+            StaffLedgerEntry.employee_id == employee_id,
+            StaffLedgerEntry.movement_type == StaffMovementType.SALARY_ACCRUED,
+            StaffLedgerEntry.period_year == period_year,
+            StaffLedgerEntry.period_month == period_month,
+        )
+    )
+    return int(total or 0)
+
+
+def period_paid_minor(
+    session: Session, employee_id: uuid.UUID, *, period_year: int, period_month: int
+) -> int:
+    """Cash + advance-applied salary settled for one pay period (positive kuruş)."""
+    total = session.scalar(
+        select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
+            StaffLedgerEntry.employee_id == employee_id,
+            StaffLedgerEntry.movement_type == StaffMovementType.SALARY_PAYMENT,
+            StaffLedgerEntry.period_year == period_year,
+            StaffLedgerEntry.period_month == period_month,
+        )
+    )
+    return -int(total or 0)
+
+
+def period_remaining_minor(
+    session: Session,
+    employee_id: uuid.UUID,
+    *,
+    period_year: int,
+    period_month: int,
+    period_salary_minor: int,
+) -> int:
+    paid = period_paid_minor(
+        session, employee_id, period_year=period_year, period_month=period_month
+    )
+    return max(0, period_salary_minor - paid)
+
+
 def outstanding_advance_minor(session: Session, employee_id: uuid.UUID) -> int:
     """Unapplied advance total in pay-currency minor units (positive number)."""
     advance = _sum_by_type(session, employee_id, StaffMovementType.ADVANCE_PAID)

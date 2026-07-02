@@ -194,8 +194,8 @@ export default function StaffDetailPage() {
             <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
               Edit
             </Button>
-            <Button type="button" onClick={() => setAccrualOpen(true)}>
-              Salary accrual
+            <Button type="button" variant="ghost" onClick={() => setAccrualOpen(true)}>
+              Adjust accrual (advanced)
             </Button>
             <Button type="button" variant="secondary" onClick={() => setAdvanceOpen(true)}>
               Advance
@@ -296,9 +296,8 @@ export default function StaffDetailPage() {
             open={paymentOpen}
             kind="payment"
             employeeId={employeeId}
+            employeeName={employee.name}
             payCurrency={employee.pay_currency}
-            outstandingAdvanceMinor={ledger?.outstanding_advance_minor ?? 0}
-            remainingAccrualMinor={ledger?.remaining_accrual_minor ?? 0}
             onClose={() => setPaymentOpen(false)}
             onSaved={() => void reload()}
           />

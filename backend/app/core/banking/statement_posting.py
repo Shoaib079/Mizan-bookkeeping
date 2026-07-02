@@ -9,7 +9,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.chart_of_accounts.default_chart import BANK_CHARGES_CODE
+from app.core.chart_of_accounts.default_chart import BANK_CHARGES_CODE, LOANS_PAYABLE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 from app.core.ledger.models import JournalEntry, JournalEntrySource
@@ -288,3 +288,145 @@ def post_credit_card_payment(
             journal_entry=journal_entry,
             credit_card_payment=payment,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class LoanMovementPostResult:
+    journal_entry: JournalEntry
+
+
+def build_loan_payment_lines(
+    *,
+    loans_payable_account_id: uuid.UUID,
+    bank_gl_account_id: uuid.UUID,
+    amount_kurus: int,
+) -> list[PostingLine]:
+    """GL pattern: debit loans payable, credit bank."""
+    if amount_kurus <= 0:
+        raise ValueError("loan payment amount must be positive kuruş")
+    return [
+        PostingLine(
+            account_id=loans_payable_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.DEBIT,
+        ),
+        PostingLine(
+            account_id=bank_gl_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.CREDIT,
+        ),
+    ]
+
+
+def build_loan_receipt_lines(
+    *,
+    bank_gl_account_id: uuid.UUID,
+    loans_payable_account_id: uuid.UUID,
+    amount_kurus: int,
+) -> list[PostingLine]:
+    """GL pattern: debit bank, credit loans payable (loan proceeds received)."""
+    if amount_kurus <= 0:
+        raise ValueError("loan receipt amount must be positive kuruş")
+    return [
+        PostingLine(
+            account_id=bank_gl_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.DEBIT,
+        ),
+        PostingLine(
+            account_id=loans_payable_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.CREDIT,
+        ),
+    ]
+
+
+def _chart_account_by_code(session: Session, entity_id: uuid.UUID, code: str) -> Account:
+    account = session.scalar(
+        select(Account).where(Account.entity_id == entity_id, Account.code == code)
+    )
+    if account is None:
+        raise InvalidAccountError(f"chart account {code} not found")
+    return account
+
+
+def post_loan_payment(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    bank_money_account_id: uuid.UUID,
+    payment_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+) -> LoanMovementPostResult:
+    """Repay bank loan from this account — Dr 2200 / Cr bank."""
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        bank_account = _validate_bank_money_account(session, entity_id, bank_money_account_id)
+        loans = _chart_account_by_code(session, entity_id, LOANS_PAYABLE_CODE)
+        _validate_liability_gl_account(session, entity_id, loans.id)
+        _validate_bank_gl_account(session, entity_id, bank_account.gl_account_id)
+
+        lines = build_loan_payment_lines(
+            loans_payable_account_id=loans.id,
+            bank_gl_account_id=bank_account.gl_account_id,
+            amount_kurus=amount_kurus,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            payment_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.PAYMENT,
+        )
+        session.commit()
+        session.refresh(journal_entry)
+        _ = list(journal_entry.lines)
+        return LoanMovementPostResult(journal_entry=journal_entry)
+
+
+def post_loan_receipt(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    bank_money_account_id: uuid.UUID,
+    receipt_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+) -> LoanMovementPostResult:
+    """Loan proceeds deposited — Dr bank / Cr 2200."""
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        bank_account = _validate_bank_money_account(session, entity_id, bank_money_account_id)
+        loans = _chart_account_by_code(session, entity_id, LOANS_PAYABLE_CODE)
+        _validate_liability_gl_account(session, entity_id, loans.id)
+        _validate_bank_gl_account(session, entity_id, bank_account.gl_account_id)
+
+        lines = build_loan_receipt_lines(
+            bank_gl_account_id=bank_account.gl_account_id,
+            loans_payable_account_id=loans.id,
+            amount_kurus=amount_kurus,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            receipt_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.PAYMENT,
+        )
+        session.commit()
+        session.refresh(journal_entry)
+        _ = list(journal_entry.lines)
+        return LoanMovementPostResult(journal_entry=journal_entry)

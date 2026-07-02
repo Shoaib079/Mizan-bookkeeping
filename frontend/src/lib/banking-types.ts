@@ -63,6 +63,14 @@ export type StatementLineClassification =
   | "rent_utility"
   | "credit_card_payment"
   | "customer_payment"
+  | "staff_payment"
+  | "staff_advance"
+  | "staff_incentive"
+  | "partner_drawing"
+  | "partner_reimbursement"
+  | "partner_drawing_repayment"
+  | "loan_payment"
+  | "loan_receipt"
   | "unknown";
 
 export type BankStatementLine = {
@@ -77,6 +85,8 @@ export type BankStatementLine = {
   supplier_id: string | null;
   review_reason: string | null;
   journal_entry_id: string | null;
+  candidate_supplier_ledger_entry_id?: string | null;
+  candidate_account_transfer_id?: string | null;
   classification_source?: string | null;
   suggestion?: ClassificationSuggestion | null;
 };
@@ -139,6 +149,7 @@ export type BankImportProfileUpsert = {
   data_end_row?: number | null;
   date_col: number;
   description_col: number;
+  description_extra_cols?: number[];
   reference_col: number | null;
   amount_col: number | null;
   debit_col: number | null;
@@ -159,6 +170,7 @@ export type BankImportProfileRead = {
   data_end_row: number | null;
   date_col: number;
   description_col: number;
+  description_extra_cols?: number[];
   reference_col: number | null;
   amount_col: number | null;
   debit_col: number | null;

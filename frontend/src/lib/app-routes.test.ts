@@ -87,7 +87,7 @@ describe("navGroups", () => {
       "/banking/transfers",
       "/banking/cash",
       "/reports",
-      "/review/posted",
+      "/reports/ledger",
       "/review/manual-journals",
       "/settings/restaurant",
       "/settings/profile",

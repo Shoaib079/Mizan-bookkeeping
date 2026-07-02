@@ -58,7 +58,7 @@ export function RecentEntriesCard({ entityId, className }: Props) {
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Recent entries</h2>
         <Link
-          href="/review/posted"
+          href="/reports/ledger"
           className="text-xs text-primary hover:underline"
         >
           View all

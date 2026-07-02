@@ -7,13 +7,14 @@ async function readReportsPageSource() {
 }
 
 describe("reports landing (UX4)", () => {
-  it("lists financial statement cards only — no ledger or manual journals", async () => {
+  it("lists financial statement cards including general ledger", async () => {
     const source = await readReportsPageSource();
     expect(source).toContain("/reports/profit-and-loss");
     expect(source).toContain("/reports/period-comparison");
-    expect(source).not.toContain("/review/posted");
+    expect(source).toContain("/reports/ledger");
+    expect(source).toContain("General ledger");
+    expect(source).toContain("Financial statements");
     expect(source).not.toContain("/accounting/manual-journals");
-    expect(source).not.toContain("General ledger");
     expect(source).not.toContain("Manual journals");
   });
 });

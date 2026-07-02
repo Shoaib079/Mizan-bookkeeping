@@ -17,6 +17,11 @@ export type ClassifyLinePayload = {
   customer_id?: string;
   delivery_platform_id?: string;
   expense_account_id?: string;
+  employee_id?: string;
+  period_year?: number;
+  period_month?: number;
+  period_salary_minor?: number;
+  partner_id?: string;
   confirm_supplier_ledger_entry_id?: string;
   confirm_account_transfer_id?: string;
 };

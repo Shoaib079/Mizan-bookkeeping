@@ -75,7 +75,6 @@ const TAB_ONLY_HREFS = [
   "/review/receipts",
   "/review/invoices",
   "/review/delivery",
-  "/review/posted",
   "/review/manual-journals",
   "/banking/transfers",
   "/banking/cash",
