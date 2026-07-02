@@ -44,6 +44,7 @@ describe("navGroups", () => {
       "/staff",
       "/partners",
       "/banking",
+      "/delivery",
     ]);
   });
 
@@ -57,7 +58,7 @@ describe("navGroups", () => {
     expect(sidebarHrefs).toContain("/staff");
     expect(sidebarHrefs).toContain("/partners");
     expect(sidebarHrefs).toContain("/banking");
-    expect(sidebarHrefs).not.toContain("/delivery");
+    expect(sidebarHrefs).toContain("/delivery");
     expect(sidebarHrefs).not.toContain("/settings/restaurant");
   });
 

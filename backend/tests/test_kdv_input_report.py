@@ -258,21 +258,23 @@ def test_delivery_commission_posted_invoice_included(
 ) -> None:
     from app.features.delivery.schema import DeliveryReportCreate, DeliveryReportPostRequest
     from app.features.delivery import service as delivery_service
+    from tests.delivery_helpers import calendar_month_period
 
     entity_id = commission_setup["entity_id"]
     getir = commission_setup["getir"]
     supplier_id = commission_setup["supplier_id"]
     expense_id = commission_setup["accounts"][DELIVERY_COMMISSION_EXPENSE_CODE]
 
+    period_start, period_end = calendar_month_period(2026, 4)
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=getir.id,
-            period_year=2026,
-            period_month=4,
+            period_start=period_start,
+            period_end=period_end,
             gross_kurus=500_000,
-            description="April monthly sales",
+            description="April platform sales",
             actor_id=ACTOR_ID,
         ),
     )

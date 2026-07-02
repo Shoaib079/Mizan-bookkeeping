@@ -152,9 +152,9 @@ describe("route reachability guard", () => {
     expect([...tabs].some((href) => href.startsWith("/delivery"))).toBe(false);
   });
 
-  it("keeps delivery tab routes reachable when the module is on", () => {
-    expect(collectTabHrefs(settingsOn).has("/delivery")).toBe(true);
-    expect(collectSidebarEntryHrefs(settingsOn).has("/delivery")).toBe(false);
+  it("keeps delivery sidebar and sub-tabs reachable when the module is on", () => {
+    expect(collectTabHrefs(settingsOn).has("/delivery/platforms")).toBe(true);
+    expect(collectSidebarEntryHrefs(settingsOn).has("/delivery")).toBe(true);
   });
 
   it("marks drill-down routes separately from tabs and sidebar rows", () => {

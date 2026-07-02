@@ -65,16 +65,17 @@ def test_rename_and_deactivate_platform(db_session, restaurant_a) -> None:
 
     from app.features.delivery.schema import DeliveryReportCreate
     from app.features.delivery import service as delivery_service
-    from datetime import date
+    from tests.delivery_helpers import calendar_month_period
 
+    period_start, period_end = calendar_month_period(2026, 4)
     with pytest.raises(InactiveDeliveryPlatformError):
         delivery_service.create_delivery_report(
             db_session,
             restaurant_a.id,
             DeliveryReportCreate(
                 delivery_platform_id=platform_id,
-                period_year=2026,
-                period_month=4,
+                period_start=period_start,
+                period_end=period_end,
                 gross_kurus=100_000,
                 description="Blocked",
                 actor_id=ACTOR_ID,

@@ -8,11 +8,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Post-launch — ops queue (P3/P5/P6) |
-| **Active slice** | **P3** — off-site upload backup (`POST_LAUNCH_PLAN.md`) |
-| **Last completed slice** | Settings reorg — dissolve Set up hub (`v0.73.25-settings-reorg`) |
-| **Last tag** | `v0.73.25-settings-reorg` |
-| **Next up** | P3 → P5 → P6 → IC-D (deferred) → P8 design |
+| **Phase** | Phase 12.5 — pre-launch ops + delivery UX |
+| **Active slice** | — (awaiting next slice) |
+| **Last completed slice** | Delivery reports/settlements date-range hubs + Excel export (`v0.73.38-delivery-date-range-hubs`) |
+| **Last tag** | `v0.73.38-delivery-date-range-hubs` |
+| **Next up** | P3 upload backup |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 

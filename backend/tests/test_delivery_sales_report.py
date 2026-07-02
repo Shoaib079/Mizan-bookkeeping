@@ -14,7 +14,12 @@ from app.features.delivery.schema import DeliveryReportCreate, DeliveryReportPos
 from app.features.delivery import service as delivery_service
 from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
-from tests.delivery_helpers import ACTOR_ID, delivery_setup as build_delivery_setup
+from tests.delivery_helpers import (
+    ACTOR_ID,
+    calendar_month_period,
+    delivery_setup as build_delivery_setup,
+    period_ending_on,
+)
 
 
 @pytest.fixture
@@ -36,13 +41,14 @@ def _create_and_post(
     report_date: date,
     gross_kurus: int,
 ):
+    period_start, period_end = period_ending_on(report_date)
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=platform_id,
-            period_year=report_date.year,
-            period_month=report_date.month,
+            period_start=period_start,
+            period_end=period_end,
             gross_kurus=gross_kurus,
             description=f"Report {report_date}",
             actor_id=ACTOR_ID,
@@ -109,13 +115,14 @@ def test_non_posted_statuses_excluded(db_session, two_platform_setup) -> None:
 
     _create_and_post(db_session, entity_id, getir_id, date(2026, 1, 10), 100_000)
 
+    feb_start, feb_end = calendar_month_period(2026, 2)
     draft = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=getir_id,
-            period_year=2026,
-            period_month=2,
+            period_start=feb_start,
+            period_end=feb_end,
             gross_kurus=200_000,
             description="Draft",
             actor_id=ACTOR_ID,
@@ -123,13 +130,14 @@ def test_non_posted_statuses_excluded(db_session, two_platform_setup) -> None:
     )
     assert draft.status == "draft"
 
+    mar_start, mar_end = calendar_month_period(2026, 3)
     rejected_created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=getir_id,
-            period_year=2026,
-            period_month=3,
+            period_start=mar_start,
+            period_end=mar_end,
             gross_kurus=400_000,
             description="To reject",
             actor_id=ACTOR_ID,

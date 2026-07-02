@@ -192,15 +192,15 @@ def post_delivery_report(
         existing_posted = session.scalar(
             select(DeliveryReport).where(
                 DeliveryReport.delivery_platform_id == report.delivery_platform_id,
-                DeliveryReport.period_year == report.period_year,
-                DeliveryReport.period_month == report.period_month,
+                DeliveryReport.period_start == report.period_start,
+                DeliveryReport.period_end == report.period_end,
                 DeliveryReport.status == DeliveryReportStatus.POSTED.value,
                 DeliveryReport.id != report.id,
             )
         )
         if existing_posted is not None:
             raise InvalidDeliveryReportError(
-                "A posted monthly sales entry already exists for this platform and period"
+                "A posted sales entry already exists for this platform and date range"
             )
 
         clearing_account = session.get(Account, platform.gl_account_id)

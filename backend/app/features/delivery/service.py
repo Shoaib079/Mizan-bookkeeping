@@ -14,7 +14,6 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.delivery.posting import (
     InvalidDeliveryReportError,
-    period_end_date,
     post_delivery_report,
     post_delivery_settlement,
 )
@@ -65,12 +64,12 @@ class MonthlySalesAlreadyPostedError(Exception):
 def report_fingerprint(
     *,
     delivery_platform_id: uuid.UUID,
-    period_year: int,
-    period_month: int,
+    period_start: date,
+    period_end: date,
     gross_kurus: int,
 ) -> str:
     payload = (
-        f"{delivery_platform_id}|{period_year}|{period_month}|{gross_kurus}"
+        f"{delivery_platform_id}|{period_start}|{period_end}|{gross_kurus}"
     )
     return hashlib.sha256(payload.encode()).hexdigest()
 
@@ -92,6 +91,8 @@ def _to_report_read(session: Session, report: DeliveryReport) -> DeliveryReportR
         delivery_platform_id=report.delivery_platform_id,
         platform_name=_platform_name(session, report.delivery_platform_id),
         report_date=report.report_date,
+        period_start=report.period_start,
+        period_end=report.period_end,
         period_year=report.period_year,
         period_month=report.period_month,
         gross_kurus=report.gross_kurus,
@@ -143,14 +144,14 @@ def _posted_for_period_exists(
     session: Session,
     *,
     delivery_platform_id: uuid.UUID,
-    period_year: int,
-    period_month: int,
+    period_start: date,
+    period_end: date,
     exclude_report_id: uuid.UUID | None = None,
 ) -> DeliveryReport | None:
     filters = [
         DeliveryReport.delivery_platform_id == delivery_platform_id,
-        DeliveryReport.period_year == period_year,
-        DeliveryReport.period_month == period_month,
+        DeliveryReport.period_start == period_start,
+        DeliveryReport.period_end == period_end,
         DeliveryReport.status == DeliveryReportStatus.POSTED.value,
     ]
     if exclude_report_id is not None:
@@ -170,8 +171,8 @@ def create_delivery_report(
 
     fingerprint = report_fingerprint(
         delivery_platform_id=payload.delivery_platform_id,
-        period_year=payload.period_year,
-        period_month=payload.period_month,
+        period_start=payload.period_start,
+        period_end=payload.period_end,
         gross_kurus=payload.gross_kurus,
     )
 
@@ -181,11 +182,11 @@ def create_delivery_report(
         if _posted_for_period_exists(
             session,
             delivery_platform_id=payload.delivery_platform_id,
-            period_year=payload.period_year,
-            period_month=payload.period_month,
+            period_start=payload.period_start,
+            period_end=payload.period_end,
         ) is not None:
             raise MonthlySalesAlreadyPostedError(
-                "Monthly sales already posted for this platform and period"
+                "Sales already posted for this platform and date range"
             )
 
         existing = session.scalar(
@@ -194,15 +195,16 @@ def create_delivery_report(
         if existing is not None:
             raise DuplicateDeliveryReportError(existing)
 
-        report_date = period_end_date(
-            period_year=payload.period_year,
-            period_month=payload.period_month,
-        )
+        report_date = payload.period_end
+        period_year = payload.period_end.year
+        period_month = payload.period_end.month
         report = DeliveryReport(
             delivery_platform_id=payload.delivery_platform_id,
             report_date=report_date,
-            period_year=payload.period_year,
-            period_month=payload.period_month,
+            period_start=payload.period_start,
+            period_end=payload.period_end,
+            period_year=period_year,
+            period_month=period_month,
             gross_kurus=payload.gross_kurus,
             status=DeliveryReportStatus.DRAFT.value,
             file_fingerprint=fingerprint,
@@ -297,11 +299,10 @@ def list_delivery_reports(
             filters.append(DeliveryReport.delivery_platform_id == delivery_platform_id)
         if status is not None:
             filters.append(DeliveryReport.status == status.value)
-        filters.extend(
-            date_range_filters(
-                DeliveryReport.report_date, from_date=from_date, to_date=to_date
-            )
-        )
+        if from_date is not None:
+            filters.append(DeliveryReport.period_end >= from_date)
+        if to_date is not None:
+            filters.append(DeliveryReport.period_start <= to_date)
         filters.extend(
             amount_range_filters(
                 DeliveryReport.gross_kurus,
@@ -316,8 +317,8 @@ def list_delivery_reports(
             select(DeliveryReport)
             .where(*filters)
             .order_by(
-                DeliveryReport.period_year.desc(),
-                DeliveryReport.period_month.desc(),
+                DeliveryReport.period_end.desc(),
+                DeliveryReport.period_start.desc(),
                 DeliveryReport.created_at.desc(),
             )
         )
@@ -547,3 +548,51 @@ def get_delivery_clearing_reconciliation(
             )
 
     return DeliveryClearingReconciliationRead(platforms=platforms)
+
+
+def export_delivery_activity(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    from_date: date,
+    to_date: date,
+    delivery_platform_id: uuid.UUID | None = None,
+) -> tuple[bytes, str]:
+    if from_date > to_date:
+        raise ValueError("from must be on or before to")
+
+    platform_label = "All platforms"
+    if delivery_platform_id is not None:
+        platform_label = _platform_name(session, delivery_platform_id)
+
+    list_params = ListParams(limit=500, offset=0)
+    sales, _ = list_delivery_reports(
+        session,
+        entity_id,
+        delivery_platform_id=delivery_platform_id,
+        from_date=from_date,
+        to_date=to_date,
+        list_params=list_params,
+    )
+    settlements, _ = list_delivery_settlements(
+        session,
+        entity_id,
+        delivery_platform_id=delivery_platform_id,
+        from_date=from_date,
+        to_date=to_date,
+        list_params=list_params,
+    )
+
+    from app.features.delivery import excel_export
+
+    data = excel_export.build_delivery_activity_xlsx(
+        entity_id=entity_id,
+        from_date=from_date,
+        to_date=to_date,
+        platform_label=platform_label,
+        sales=sales,
+        settlements=settlements,
+    )
+    slug = platform_label.replace(" ", "-").lower() if delivery_platform_id else "all-platforms"
+    filename = f"delivery-{slug}-{from_date.isoformat()}-{to_date.isoformat()}.xlsx"
+    return data, filename

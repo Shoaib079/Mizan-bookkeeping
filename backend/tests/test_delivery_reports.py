@@ -25,7 +25,11 @@ from app.features.delivery.schema import (
 )
 from app.features.delivery import service as delivery_service
 from app.features.delivery.settings import DeliveryNotEnabledError
-from tests.delivery_helpers import ACTOR_ID, delivery_setup as build_delivery_setup
+from tests.delivery_helpers import (
+    ACTOR_ID,
+    calendar_month_period,
+    delivery_setup as build_delivery_setup,
+)
 
 
 def _monthly_sales(
@@ -36,10 +40,11 @@ def _monthly_sales(
     gross_kurus: int = 500_000,
     description: str = "Getir monthly sales",
 ) -> DeliveryReportCreate:
+    period_start, period_end = calendar_month_period(period_year, period_month)
     return DeliveryReportCreate(
         delivery_platform_id=platform_id,
-        period_year=period_year,
-        period_month=period_month,
+        period_start=period_start,
+        period_end=period_end,
         gross_kurus=gross_kurus,
         description=description,
         actor_id=ACTOR_ID,
@@ -68,6 +73,8 @@ def test_delivery_report_posts_dr_clearing_cr_revenue(db_session, delivery_setup
     assert created.status == DeliveryReportStatus.DRAFT.value
     assert created.period_year == 2026
     assert created.period_month == 3
+    assert created.period_start == date(2026, 3, 1)
+    assert created.period_end == date(2026, 3, 31)
     assert created.report_date == date(2026, 3, 31)
 
     posted = delivery_service.post_delivery_report_intake(
@@ -286,8 +293,8 @@ def test_delivery_reports_api_e2e(client: TestClient, db_session, delivery_setup
         f"/entities/{entity_id}/delivery/reports",
         json={
             "delivery_platform_id": getir_id,
-            "period_year": 2026,
-            "period_month": 10,
+            "period_start": "2026-10-01",
+            "period_end": "2026-10-31",
             "gross_kurus": 250_000,
             "description": "API monthly sales",
             "actor_id": str(ACTOR_ID),
@@ -326,14 +333,55 @@ def test_delivery_reports_api_e2e(client: TestClient, db_session, delivery_setup
         f"/entities/{entity_id}/delivery/reports",
         json={
             "delivery_platform_id": getir_id,
-            "period_year": 2026,
-            "period_month": 10,
+            "period_start": "2026-10-01",
+            "period_end": "2026-10-31",
             "gross_kurus": 250_000,
             "description": "Duplicate",
             "actor_id": str(ACTOR_ID),
         },
     )
     assert dup_resp.status_code == 409
+
+
+def test_delivery_activity_export_xlsx(client: TestClient, db_session, delivery_setup) -> None:
+    entity_id = delivery_setup["entity_id"]
+    getir_id = str(delivery_setup["getir"].id)
+
+    create_resp = client.post(
+        f"/entities/{entity_id}/delivery/reports",
+        json={
+            "delivery_platform_id": getir_id,
+            "period_start": "2026-11-01",
+            "period_end": "2026-11-30",
+            "gross_kurus": 180_000,
+            "description": "November sales",
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert create_resp.status_code == 201
+
+    export_resp = client.get(
+        f"/entities/{entity_id}/delivery/activity/export",
+        params={"from": "2026-11-01", "to": "2026-11-30"},
+    )
+    assert export_resp.status_code == 200
+    assert (
+        export_resp.headers["content-type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert "attachment" in export_resp.headers.get("content-disposition", "")
+    assert len(export_resp.content) > 500
+
+    platform_export = client.get(
+        f"/entities/{entity_id}/delivery/activity/export",
+        params={
+            "from": "2026-11-01",
+            "to": "2026-11-30",
+            "delivery_platform_id": getir_id,
+        },
+    )
+    assert platform_export.status_code == 200
+    assert len(platform_export.content) > 500
 
 
 def test_classify_statement_delivery_settlement(

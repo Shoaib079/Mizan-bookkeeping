@@ -92,7 +92,14 @@ export function Combobox({
 
   useEffect(() => {
     setActiveIndex(0);
+    listRef.current?.scrollTo({ top: 0 });
   }, [query]);
+
+  useEffect(() => {
+    if (open) {
+      listRef.current?.scrollTo({ top: 0 });
+    }
+  }, [open]);
 
   useEffect(() => {
     const el = listRef.current?.children[activeIndex] as HTMLElement | undefined;

@@ -107,6 +107,13 @@ export const appRoutes: AppRoute[] = [
     icon: Building2,
     group: "Overview",
   },
+  {
+    href: "/delivery",
+    label: "Delivery",
+    keywords: "delivery platforms getir yemeksepeti settlements reports",
+    icon: Truck,
+    group: "Overview",
+  },
   { href: "/sales", label: "Sales", icon: ShoppingBag, group: "Sales" },
   {
     href: "/close-day",
@@ -116,11 +123,10 @@ export const appRoutes: AppRoute[] = [
     group: "Sales",
   },
   { href: "/cards", label: "Cards", icon: CreditCard, group: "Sales" },
-  { href: "/delivery", label: "Delivery", icon: Truck, group: "Sales" },
   {
     href: "/delivery/platforms",
-    label: "Platforms",
-    keywords: "delivery platforms",
+    label: "Delivery platforms",
+    keywords: "delivery platforms getir yemeksepeti trendyol",
     icon: Truck,
     group: "Sales",
     nestedUnder: "/delivery",

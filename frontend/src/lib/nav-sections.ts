@@ -85,8 +85,7 @@ export const NAV_SECTIONS: NavSection[] = [
       },
       {
         href: "/delivery/platforms",
-        label: "Platforms",
-        requiresDelivery: true,
+        label: "Delivery platforms",
         match: (path) => path === "/delivery/platforms",
       },
     ],
@@ -236,7 +235,6 @@ export const NAV_SECTIONS: NavSection[] = [
 /** Routes registered in appRoutes but hidden from sidebar (reachable via tabs/cards). */
 export const SIDEBAR_HIDDEN_HREFS = new Set([
   "/sales",
-  "/delivery",
   "/expenses",
   "/uploads",
   "/close-day",
@@ -309,7 +307,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/sales/[id]", kind: "drill-down" },
   { pattern: "/cards", kind: "tab" },
   { pattern: "/close-day", kind: "tab" },
-  { pattern: "/delivery", kind: "tab" },
+  { pattern: "/delivery", kind: "sidebar" },
   { pattern: "/delivery/platforms", kind: "tab" },
   { pattern: "/delivery/reports", kind: "tab" },
   { pattern: "/delivery/reports/[id]", kind: "drill-down" },
@@ -453,7 +451,7 @@ export function pageTitleForPathname(pathname: string): string {
     "/settings/profile": "Your profile",
     "/onboarding/opening-balances": "Opening balances",
     "/delivery": "Delivery",
-    "/delivery/platforms": "Platforms",
+    "/delivery/platforms": "Delivery platforms",
     "/sales": "Daily sales",
   };
   if (titles[pathname]) return titles[pathname];

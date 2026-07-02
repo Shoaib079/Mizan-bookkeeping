@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { apiFetch } from "@/lib/api";
@@ -14,36 +14,29 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useRegisterUnsaved } from "@/lib/unsaved-work";
 import { useEntity } from "@/lib/entity-context";
-import { parseTryToKurus } from "@/lib/money";
+import { formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
 import type { DeliveryPlatform, DeliveryReport } from "@/lib/pos-delivery-types";
-
-const MONTHS = [
-  { value: "1", label: "January" },
-  { value: "2", label: "February" },
-  { value: "3", label: "March" },
-  { value: "4", label: "April" },
-  { value: "5", label: "May" },
-  { value: "6", label: "June" },
-  { value: "7", label: "July" },
-  { value: "8", label: "August" },
-  { value: "9", label: "September" },
-  { value: "10", label: "October" },
-  { value: "11", label: "November" },
-  { value: "12", label: "December" },
-];
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSaved?: () => void;
+  onSaved?: (reportId?: string) => void;
+  defaultPlatformId?: string;
+  defaultPeriodFrom?: string;
+  defaultPeriodTo?: string;
 };
 
-export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
-  const router = useRouter();
+export function DeliveryReportForm({
+  open,
+  onClose,
+  onSaved,
+  defaultPlatformId,
+  defaultPeriodFrom,
+  defaultPeriodTo,
+}: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
-  const now = new Date();
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -51,10 +44,10 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
 
   const [platforms, setPlatforms] = useState<DeliveryPlatform[]>([]);
   const [platformId, setPlatformId] = useState("");
-  const [periodYear, setPeriodYear] = useState(String(now.getFullYear()));
-  const [periodMonth, setPeriodMonth] = useState(String(now.getMonth() + 1));
+  const [periodFromText, setPeriodFromText] = useState("");
+  const [periodToText, setPeriodToText] = useState("");
   const [grossText, setGrossText] = useState("");
-  const [description, setDescription] = useState("Delivery platform monthly sales");
+  const [description, setDescription] = useState("Delivery platform sales");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -69,14 +62,21 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
     );
     const active = res.items.filter((p) => p.is_active);
     setPlatforms(active);
-    if (active[0]) setPlatformId(active[0].id);
   }, [entityId]);
 
   useEffect(() => {
     if (open) {
+      setPlatformId(defaultPlatformId ?? "");
+      setPeriodFromText(
+        defaultPeriodFrom ? formatTrDate(defaultPeriodFrom) : "",
+      );
+      setPeriodToText(defaultPeriodTo ? formatTrDate(defaultPeriodTo) : "");
+      setGrossText("");
+      setDescription("Delivery platform sales");
+      setError(null);
       void loadPlatforms().catch(() => undefined);
     }
-  }, [open, loadPlatforms]);
+  }, [open, loadPlatforms, defaultPlatformId, defaultPeriodFrom, defaultPeriodTo]);
 
   const grossKurus = parseTryToKurus(grossText) ?? 0;
   const submitBlocked = grossKurus <= 0;
@@ -88,21 +88,21 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
       return;
     }
     if (!platformId) {
-      setError("Add a delivery platform first.");
+      setError("Choose a delivery platform.");
       return;
     }
-    const year = Number.parseInt(periodYear, 10);
-    const month = Number.parseInt(periodMonth, 10);
-    if (!Number.isFinite(year) || year < 2020) {
-      setError("Enter a valid year.");
+    const periodStart = parseTrDate(periodFromText);
+    const periodEnd = parseTrDate(periodToText);
+    if (!periodStart || !periodEnd) {
+      setError("Enter valid period dates (DD.MM.YYYY).");
       return;
     }
-    if (!Number.isFinite(month) || month < 1 || month > 12) {
-      setError("Select a valid month.");
+    if (periodStart > periodEnd) {
+      setError("Period start must be on or before period end.");
       return;
     }
     if (grossKurus <= 0) {
-      setError("Enter total monthly sales (KDV dahil).");
+      setError("Enter total sales for the period (KDV dahil).");
       return;
     }
     setSubmitting(true);
@@ -117,20 +117,19 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             delivery_platform_id: platformId,
-            period_year: year,
-            period_month: month,
+            period_start: periodStart,
+            period_end: periodEnd,
             gross_kurus: grossKurus,
-            description: description.trim() || "Delivery platform monthly sales",
+            description: description.trim() || "Delivery platform sales",
             actor_id: actorId,
           }),
         },
       );
       submitIdempotency.completeSubmit();
-      onSaved?.();
-      toast("Monthly sales saved — confirm and post on review");
+      onSaved?.(report.id);
+      toast("Sales saved — confirm and post below");
       onClose();
       setGrossText("");
-      router.push(`/delivery/reports/${report.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -139,7 +138,7 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
   }
 
   return (
-    <Dialog open={open} title="Monthly platform sales" onClose={onClose}>
+    <Dialog open={open} title="Record platform sales" onClose={onClose}>
       <RecordingForBanner />
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
@@ -156,32 +155,27 @@ export function DeliveryReportForm({ open, onClose, onSaved }: Props) {
                     label: p.name,
                   }))
             }
-            placeholder="Platform…"
+            placeholder="Choose platform…"
+            required
             disabled={platforms.length === 0}
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label htmlFor="dr-month">Month</Label>
-            <Select
-              id="dr-month"
-              value={periodMonth}
-              onChange={(e) => setPeriodMonth(e.target.value)}
-            >
-              {MONTHS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </Select>
+            <Label htmlFor="dr-from">Period from</Label>
+            <DateInput
+              id="dr-from"
+              value={periodFromText}
+              onChange={setPeriodFromText}
+              required
+            />
           </div>
           <div>
-            <Label htmlFor="dr-year">Year</Label>
-            <Input
-              id="dr-year"
-              inputMode="numeric"
-              value={periodYear}
-              onChange={(e) => setPeriodYear(e.target.value)}
+            <Label htmlFor="dr-to">Period to</Label>
+            <DateInput
+              id="dr-to"
+              value={periodToText}
+              onChange={setPeriodToText}
               required
             />
           </div>

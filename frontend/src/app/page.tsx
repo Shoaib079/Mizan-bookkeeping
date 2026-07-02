@@ -339,7 +339,7 @@ function DashboardBody() {
                 )}
                 {data.needs_review.delivery_reports > 0 && (
                   <div>
-                    <dt className="text-muted-foreground">Monthly sales</dt>
+                    <dt className="text-muted-foreground">Platform sales</dt>
                     <dd className="tabular-nums">
                       <Link
                         href={reviewHrefForNeedsReviewKey("delivery_reports")}

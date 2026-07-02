@@ -36,6 +36,7 @@ from app.features.partners.api import router as partners_router
 from app.features.customers.api import router as customers_router
 from app.features.receivables.api import router as receivables_router
 from app.features.delivery.api import (
+    activity_router as delivery_activity_router,
     platforms_router as delivery_platforms_router,
     reconciliation_router as delivery_reconciliation_router,
     reports_router as delivery_reports_router,
@@ -109,6 +110,7 @@ app.include_router(delivery_platforms_router)
 app.include_router(delivery_reports_router)
 app.include_router(delivery_settlements_router)
 app.include_router(delivery_reconciliation_router)
+app.include_router(delivery_activity_router)
 app.include_router(expenses_router)
 app.include_router(operations_router)
 app.include_router(reports_router)

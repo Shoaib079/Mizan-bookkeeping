@@ -1,6 +1,6 @@
 "use client";
 
-/** Delivery hub — platforms, monthly sales, settlements — Phase 9 Slice 5. */
+/** Delivery hub — platforms, sales, settlements — Phase 9 Slice 5. */
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -64,7 +64,7 @@ export default function DeliveryPage() {
           disabled={!entityId}
           onClick={() => setReportFormOpen(true)}
         >
-          Monthly sales
+          Record sales
         </Button>
       </div>
 
@@ -82,7 +82,7 @@ export default function DeliveryPage() {
           <Link href="/delivery/platforms" className="text-primary underline">
             Add a platform
           </Link>{" "}
-          to track monthly sales and settlements.
+          to track platform sales and settlements.
         </p>
       )}
 

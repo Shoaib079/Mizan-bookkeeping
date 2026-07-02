@@ -6,6 +6,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.delivery.posting import InvalidDeliveryReportError
@@ -15,6 +16,7 @@ from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.delivery import platform_service
 from app.features.delivery import service as delivery_service
 from app.features.delivery.models import DeliveryReportStatus
+from app.features.reports.excel_export import xlsx_response
 from app.features.delivery.platform_schema import (
     DeliveryPlatformCreate,
     DeliveryPlatformRead,
@@ -46,6 +48,10 @@ settlements_router = APIRouter(
 )
 reconciliation_router = APIRouter(
     prefix="/entities/{entity_id}/delivery/clearing-reconciliation",
+    tags=["delivery"],
+)
+activity_router = APIRouter(
+    prefix="/entities/{entity_id}/delivery/activity",
     tags=["delivery"],
 )
 
@@ -312,3 +318,27 @@ def get_delivery_clearing_reconciliation(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DeliveryNotEnabledError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@activity_router.get("/export")
+def export_delivery_activity(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    delivery_platform_id: uuid.UUID | None = Query(default=None),
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> StreamingResponse:
+    try:
+        data, filename = delivery_service.export_delivery_activity(
+            session,
+            entity_id,
+            from_date=from_date,
+            to_date=to_date,
+            delivery_platform_id=delivery_platform_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return xlsx_response(data, filename)

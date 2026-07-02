@@ -20,9 +20,15 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onSaved?: () => void;
+  defaultPlatformId?: string;
 };
 
-export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
+export function DeliverySettlementForm({
+  open,
+  onClose,
+  onSaved,
+  defaultPlatformId,
+}: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -53,21 +59,32 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
     const active = platRes.items.filter((p) => p.is_active);
     setPlatforms(active);
     setBankAccounts(bankRes.items);
-    if (active[0]) setPlatformId(active[0].id);
-    if (bankRes.items[0]) setMoneyAccountId(bankRes.items[0].id);
   }, [entityId]);
 
   useEffect(() => {
     if (open) {
+      setPlatformId(defaultPlatformId ?? "");
+      setMoneyAccountId("");
       setDateText(todayTrDate());
+      setAmountText("");
+      setDescription("Delivery settlement");
+      setError(null);
       void loadOptions().catch(() => undefined);
     }
-  }, [open, loadOptions]);
+  }, [open, loadOptions, defaultPlatformId]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!entityId) {
       setError("Select a restaurant in the sidebar first.");
+      return;
+    }
+    if (!platformId) {
+      setError("Choose a delivery platform.");
+      return;
+    }
+    if (!moneyAccountId) {
+      setError("Choose a bank account.");
       return;
     }
     const settlementDate = parseTrDate(dateText);
@@ -123,7 +140,8 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
               value: p.id,
               label: p.name,
             }))}
-            placeholder="Platform…"
+            placeholder="Choose platform…"
+            required
           />
         </div>
         <div>
@@ -136,7 +154,8 @@ export function DeliverySettlementForm({ open, onClose, onSaved }: Props) {
               value: a.id,
               label: a.name,
             }))}
-            placeholder="Bank account…"
+            placeholder="Choose bank account…"
+            required
           />
         </div>
         <div>

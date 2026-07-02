@@ -35,7 +35,12 @@ from app.features.delivery import service as delivery_service
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind, InvoiceSourceType
 from app.features.invoices import service as invoice_service
 from app.features.suppliers.models import Supplier
-from tests.delivery_helpers import ACTOR_ID, delivery_setup as build_delivery_setup, enable_delivery
+from tests.delivery_helpers import (
+    ACTOR_ID,
+    calendar_month_period,
+    delivery_setup as build_delivery_setup,
+    enable_delivery,
+)
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "efatura"
 SAMPLE_XML = FIXTURES / "sample.xml"
@@ -59,13 +64,14 @@ def _posted_monthly_sales(
     period_year: int = 2026,
     period_month: int = 4,
 ):
+    period_start, period_end = calendar_month_period(period_year, period_month)
     created = delivery_service.create_delivery_report(
         db_session,
         entity_id,
         DeliveryReportCreate(
             delivery_platform_id=platform_id,
-            period_year=period_year,
-            period_month=period_month,
+            period_start=period_start,
+            period_end=period_end,
             gross_kurus=gross_kurus,
             description="Getir monthly sales",
             actor_id=ACTOR_ID,
@@ -372,8 +378,8 @@ def test_api_commission_e2e(client: TestClient, db_session, commission_setup) ->
         f"/entities/{entity_id}/delivery/reports",
         json={
             "delivery_platform_id": getir_id,
-            "period_year": 2026,
-            "period_month": 4,
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
             "gross_kurus": 300_000,
             "description": "API monthly sales",
             "actor_id": str(ACTOR_ID),

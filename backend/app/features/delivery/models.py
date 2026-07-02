@@ -57,11 +57,11 @@ class DeliveryReport(EntityScopedMixin, Base):
             name="uq_delivery_reports_entity_fingerprint",
         ),
         Index(
-            "uq_delivery_reports_entity_platform_period_posted",
+            "uq_delivery_reports_entity_platform_period_range_posted",
             "entity_id",
             "delivery_platform_id",
-            "period_year",
-            "period_month",
+            "period_start",
+            "period_end",
             unique=True,
             postgresql_where=text("status = 'posted'"),
         ),
@@ -75,6 +75,8 @@ class DeliveryReport(EntityScopedMixin, Base):
         index=True,
     )
     report_date: Mapped[date] = mapped_column(Date, nullable=False)
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
     period_year: Mapped[int] = mapped_column(Integer, nullable=False)
     period_month: Mapped[int] = mapped_column(Integer, nullable=False)
     gross_kurus: Mapped[int] = mapped_column(Integer, nullable=False)

@@ -18,21 +18,7 @@ import {
 } from "@/lib/money";
 import type { DeliveryReport } from "@/lib/pos-delivery-types";
 
-const MONTH_NAMES = [
-  "",
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+import { formatDeliveryPeriod } from "@/lib/delivery-period";
 
 type Props = {
   reportId: string;
@@ -100,7 +86,7 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
       submitIdempotency.completeSubmit();
       setReport(updated);
       onUpdated?.();
-      toast("Monthly sales posted");
+      toast("Platform sales posted");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
     } finally {
@@ -121,7 +107,7 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
       submitIdempotency.completeSubmit();
       setReport(updated);
       onUpdated?.();
-      toast("Monthly sales entry rejected");
+      toast("Platform sales entry rejected");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {
@@ -145,7 +131,7 @@ export function DeliveryReportReview({ reportId, onUpdated }: Props) {
     report.status === "draft" || report.status === "needs_review";
   const isTerminal =
     report.status === "posted" || report.status === "rejected";
-  const periodLabel = `${MONTH_NAMES[report.period_month] ?? report.period_month} ${report.period_year}`;
+  const periodLabel = formatDeliveryPeriod(report);
 
   return (
     <div className="space-y-4">

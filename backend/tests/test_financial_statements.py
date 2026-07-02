@@ -32,7 +32,7 @@ from app.features.onboarding.opening_balances import OpeningBalanceLineInput
 from app.features.reports import financial_statements
 from app.features.suppliers import service as supplier_service
 from app.features.suppliers.schema import SupplierCreate
-from tests.delivery_helpers import ACTOR_ID, delivery_setup as build_delivery_setup
+from tests.delivery_helpers import ACTOR_ID, calendar_month_period, delivery_setup as build_delivery_setup
 
 RENT_EXPENSE_CODE = "5000"
 ACCOUNTS_PAYABLE_CODE = "2000"
@@ -125,15 +125,16 @@ def _post_period_sales(db_session, setup) -> None:
 
 
 def _post_delivery_sale(db_session, setup, gross_kurus: int = 300_000) -> None:
+    period_start, period_end = calendar_month_period(2026, 1)
     created = delivery_service.create_delivery_report(
         db_session,
         setup["entity_id"],
         DeliveryReportCreate(
             delivery_platform_id=setup["getir"].id,
-            period_year=2026,
-            period_month=1,
+            period_start=period_start,
+            period_end=period_end,
             gross_kurus=gross_kurus,
-            description="Delivery monthly sales",
+            description="Delivery platform sales",
             actor_id=ACTOR_ID,
         ),
     )

@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | — (awaiting next slice) |
-| **Last completed slice** | Statement classify bar, discard import, pay-at-time salary, reports-only ledger (`v0.73.37-statement-classify-discard-ledger-reports`) |
-| **Last commit/tag**      | `v0.73.37-statement-classify-discard-ledger-reports` — classify queue + line table; discard import; salary period pay; ledger under Reports only |
+| **Last completed slice** | Delivery reports/settlements date-range hubs + Excel export (`v0.73.38-delivery-date-range-hubs`) |
+| **Last commit/tag**      | `v0.73.38-delivery-date-range-hubs` — period_start/end sales; from–to hubs; combined + per-platform Excel export; migration `065` |
 | **Next up**              | **P3** (upload backup) |
 
 
@@ -24,7 +24,7 @@
 
 1. ~~**Clearance auto-pick (backend, small).**~~ **DONE (`v0.72.0-clearance-auto-pick`).** HIGH-confidence learned rules auto-**link** (never create) `pos_settlement` / `delivery_settlement` inflows when exactly one unused settlement record matches; zero or multiple matches → Needs Review. Delivery resolves platform by unique match across entity platforms.
 2. ~~**Invoice classification (IC-A–IC-D)**~~ **DONE** (`v0.73.20`–`v0.73.22`, **IC-D** `v0.73.26-unified-document-learning`). Full spec: **`POST_LAUNCH_PLAN.md` § IC**.
-3. **Run pending migrations before go-live:** `alembic upgrade head` applies through **`060`** (`052`–`060`: … entity **`vkn`**, delivery monthly sales, staff accrual period). Ensure `xlrd` installed.
+3. **Run pending migrations before go-live:** `alembic upgrade head` applies through **`065`** (`052`–`065`: … entity **`vkn`**, delivery monthly sales → **period date range**, staff accrual period). Ensure `xlrd` installed.
 4. **Phase 12 owner sign-off** — record first real restaurant on production (provision Postgres, secrets, backup-restore drill, walk a day).
 5. ~~**Feature gaps FP/FS**~~ **DONE** — FP (`v0.73.23` partner drawing/repayment); FS (`v0.73.24` salary period + advance UX at pay time).
 6. **P3/P5/P6** — upload backup, delete company UI, production cutover (`POST_LAUNCH_PLAN.md`).
@@ -64,6 +64,7 @@
 | e-Fatura auto-create supplier on upload                                          | `v0.73.7-company-profile-efatura-suppliers`       | done           | Re-add `find_or_create_supplier_for_efatura`; bank lines stay manual-only                                                                    |
 | **POS/delivery settlement clearing + commission split (net vs gross)**           | `v0.18.0` + `core/pos`/`core/delivery` posting    | done           | **Re-build deposit clearing or commission net/gross logic — it already exists**                                            |
 | Delivery monthly gross sales + platform-linked commission                        | `v0.73.18-delivery-monthly-sales`                 | done           | Re-add per-report commission/net on sales rows, `link-delivery-report`, report-linked commission post                        |
+| Delivery reports/settlements date-range hubs + activity Excel export           | `v0.73.38-delivery-date-range-hubs`                | done           | Re-add month/year pickers on delivery sales; duplicate `/delivery/reports/{id}` detail page; per-platform + combined export    |
 | Supplier activity timeline + inline invoice preview                              | `v0.73.19-supplier-activity-invoice-preview`        | done           | Re-build separate ledger/invoice tabs; commission confirm requiring supplier; block duplicate discard                        |
 | Invoice unconfirm / redo (IC-A)                                                | `v0.73.20-invoice-unconfirm-redo`                   | done           | Unconfirm confirmed→draft; reject/discard confirmed; set-kind reclassify; review UI |
 | Invoice classification fixtures + post fixes (IC-B)                            | `v0.73.21-invoice-classification-fixtures`          | done           | YS Hizmet Bedeli; supply Depo/SKU; Spice Corner PDF fixtures; intake confidence; platform link preserves kind |

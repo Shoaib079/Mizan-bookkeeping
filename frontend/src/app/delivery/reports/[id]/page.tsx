@@ -1,10 +1,11 @@
-import { DeliveryReportReview } from "@/components/delivery-report-review";
+import { redirect } from "next/navigation";
 
-export default async function DeliveryReportReviewPage({
+/** Legacy drill-down — open inline on the reports hub. */
+export default async function DeliveryReportRedirectPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <DeliveryReportReview reportId={id} />;
+  redirect(`/delivery/reports?report=${id}`);
 }

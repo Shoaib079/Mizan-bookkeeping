@@ -29,7 +29,7 @@ describe("workspace settings navigation", () => {
     expect(delivery?.id).toBe("delivery");
     expect(
       delivery?.tabs.find((tab) => tab.match("/delivery/platforms"))?.label,
-    ).toBe("Platforms");
+    ).toBe("Delivery platforms");
 
     const review = navSectionForPathname("/review/manual-journals");
     expect(review?.id).toBe("review");

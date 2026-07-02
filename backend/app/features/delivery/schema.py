@@ -5,25 +5,24 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.listing.schema import PaginatedListOut
 
 
 class DeliveryReportCreate(BaseModel):
     delivery_platform_id: uuid.UUID
-    period_year: int = Field(ge=2020, le=2100)
-    period_month: int = Field(ge=1, le=12)
-    gross_kurus: int = Field(gt=0, description="Monthly sales total, KDV dahil")
+    period_start: date
+    period_end: date
+    gross_kurus: int = Field(gt=0, description="Sales total for the period, KDV dahil")
     description: str = Field(min_length=1, max_length=512)
     actor_id: uuid.UUID
 
-    @field_validator("period_month")
-    @classmethod
-    def validate_month(cls, value: int) -> int:
-        if not 1 <= value <= 12:
-            raise ValueError("period_month must be 1–12")
-        return value
+    @model_validator(mode="after")
+    def validate_period_range(self) -> DeliveryReportCreate:
+        if self.period_start > self.period_end:
+            raise ValueError("period_start must be on or before period_end")
+        return self
 
 
 class DeliveryReportPostRequest(BaseModel):
@@ -39,6 +38,8 @@ class DeliveryReportRead(BaseModel):
     delivery_platform_id: uuid.UUID
     platform_name: str
     report_date: date
+    period_start: date
+    period_end: date
     period_year: int
     period_month: int
     gross_kurus: int

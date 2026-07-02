@@ -54,6 +54,8 @@ export type DeliveryReport = {
   delivery_platform_id: string;
   platform_name: string;
   report_date: string;
+  period_start: string;
+  period_end: string;
   period_year: number;
   period_month: number;
   gross_kurus: number;

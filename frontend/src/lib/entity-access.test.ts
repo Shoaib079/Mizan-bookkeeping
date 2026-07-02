@@ -104,9 +104,9 @@ describe("delivery setting filters", () => {
     expect(routes.some((r) => r.label === "New: Delivery report")).toBe(false);
   });
 
-  it("hides delivery nav item from removed Sales group when module is off", () => {
-    const sales = appRoutes.filter((r) => r.group === "Sales" && !r.nestedUnder);
-    const filtered = filterNavItemsByEntitySettings(sales, { deliveryEnabled: false });
+  it("hides delivery nav item from Overview when module is off", () => {
+    const overview = appRoutes.filter((r) => r.group === "Overview" && !r.nestedUnder);
+    const filtered = filterNavItemsByEntitySettings(overview, { deliveryEnabled: false });
     expect(filtered.some((r) => r.href === "/delivery")).toBe(false);
   });
 
