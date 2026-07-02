@@ -15,8 +15,8 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | — (awaiting next slice) |
-| **Last completed slice** | Page back links + review exit navigation (`v0.73.42-page-back-review-exit`) |
-| **Last commit/tag**      | `v0.73.42-page-back-review-exit` — AppShell back links on drill-downs; close review on post/reject |
+| **Last completed slice** | Delivery sidebar flicker fix (`v0.73.43-delivery-sidebar-persist`) |
+| **Last commit/tag**      | `v0.73.43-delivery-sidebar-persist` — hoist QuickActionsProvider; cache delivery_enabled per entity |
 | **Next up**              | **P3** (upload backup) |
 
 
