@@ -234,6 +234,8 @@ _PDF_NET_LABELS: tuple[str, ...] = (
     r"Mal\s*/?\s*Hizmet\s*Toplam\s*Tutar[ıi]?",
     r"Mal\s*Hizmet\s*Toplam",
     r"Ayl[ıi]k\s*[ÜU]cretler",
+    r"K\.D\.V\.\s*MATRAHI\s*%\s*\d+",
+    r"Ara\s*Tutar",
     r"Ara\s*Toplam",
     r"KDV\s*Matrah[ıi]?",
     r"KDV\s*Hari[cç]",
@@ -243,7 +245,9 @@ _PDF_NET_LABELS: tuple[str, ...] = (
 _PDF_GROSS_LABELS: tuple[str, ...] = (
     r"Vergiler\s*Dahil\s*Toplam\s*Tutar[ıi]?",
     r"[ÖO]denecek\s*Tutar[ıi]?",
+    r"Fatura\s*Toplam[ıi]?",
     r"TOPLAM\s*FATURA\s*TUTARI",
+    r"Toplam\s*Tutar",
     r"[ÖO]DENECEK\s*TOPLAM\s*TUTAR",
     r"Genel\s*Toplam",
     r"KDV\s*Dahil",
@@ -494,6 +498,25 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
             vat_breakdown.append(
                 {"rate_percent": rate, "base_kurus": base_kurus, "vat_kurus": vat_kurus}
             )
+
+    if not vat_breakdown:
+        for rate_match in re.finditer(
+            r"K\.D\.V\.\s*%\s*(\d+)\s*[:\.]?\s*"
+            rf"{_PDF_AMOUNT}{_PDF_AMOUNT_SUFFIX}?",
+            text,
+            re.IGNORECASE,
+        ):
+            rate = float(rate_match.group(1))
+            vat_kurus = _amount_to_kurus(_normalize_tr_amount(rate_match.group(2)))
+            if rate > 0:
+                base_kurus = round(vat_kurus * 100 / rate)
+                vat_breakdown.append(
+                    {
+                        "rate_percent": float(rate),
+                        "base_kurus": base_kurus,
+                        "vat_kurus": vat_kurus,
+                    }
+                )
 
     if not vat_breakdown:
         vat_total = gross_kurus - net_kurus

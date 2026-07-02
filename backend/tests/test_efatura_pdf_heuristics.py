@@ -179,3 +179,48 @@ def test_parse_migros_malzeme_net_label() -> None:
     assert extraction.net_kurus == 21_615
     assert extraction.gross_kurus == 25_938
     assert extraction.invoice_number == "DPG2026000011163"
+
+
+MIGROS_SUPPLY_TOTALS = """
+Fatura No: MIG202600000013
+Fatura Tarihi: 11.02.2026
+MİGROS TİCARET A.Ş.
+Vergi Numarası: 6220529513
+REMBETİKO TURİZM RESTORAN
+Vergi Numarası: 7342656849
+ARA TOPLAM : 1877.16
+FATURA TOPLAMI :1877.16
+TOPLAM KDV :18.59
+K.D.V. MATRAHI % 1 :1858.57
+K.D.V. % 1 :18.59
+"""
+
+
+def test_parse_migros_supply_fatura_toplami_layout() -> None:
+    extraction = _parse_pdf_heuristics(MIGROS_SUPPLY_TOTALS, buyer_vkn="7342656849")
+    assert extraction.net_kurus == 185_857
+    assert extraction.gross_kurus == 187_716
+    assert extraction.vat_breakdown[0]["rate_percent"] == 1.0
+    assert extraction.supplier_vkn == "6220529513"
+
+
+TRENDYOL_RETAIL_TOTALS = """
+FATURA NO: TYE2026000000256
+FATURA TARİHİ: 12- 02- 2026
+VKN:7342656849
+ARA TUTAR 1.020,83TL
+TOPLAM İSKONTO 50,00TL
+HESAPLANAN KDV(%20.0)194,17TL
+TOPLAM TUTAR 1.165,00TL
+ÖDENECEK TUTAR1.165,00TL
+VKN: 8590921777
+"""
+
+
+def test_parse_trendyol_retail_ara_tutar_layout() -> None:
+    extraction = _parse_pdf_heuristics(TRENDYOL_RETAIL_TOTALS, buyer_vkn="7342656849")
+    assert extraction.invoice_number == "TYE2026000000256"
+    assert extraction.invoice_date == date(2026, 2, 12)
+    assert extraction.net_kurus == 97_083
+    assert extraction.gross_kurus == 116_500
+    assert extraction.supplier_vkn == "8590921777"

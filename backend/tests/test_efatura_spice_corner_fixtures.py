@@ -23,6 +23,16 @@ SPICE_CORNER_CASES = (
         InvoiceKind.SUPPLIER.value,
         id="getir-supply",
     ),
+    pytest.param(
+        "migros_supply_13.pdf",
+        InvoiceKind.SUPPLIER.value,
+        id="migros-supply-feb",
+    ),
+    pytest.param(
+        "trendyol_retail_17.pdf",
+        InvoiceKind.SUPPLIER.value,
+        id="trendyol-retail-feb",
+    ),
 )
 
 
