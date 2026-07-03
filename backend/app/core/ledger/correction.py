@@ -951,6 +951,10 @@ def correct_supplier_invoice(
         def update_draft(sess: Session, corrected: JournalEntry) -> None:
             if draft is not None:
                 draft.journal_entry_id = corrected.id
+                draft.net_kurus = net_kurus
+                draft.gross_kurus = gross_kurus
+                draft.vat_breakdown = vat_breakdown
+                draft.invoice_date = invoice_date
             suggestion = suggest_supplier_expense_account(sess, entity_id, supplier_id)
             learn_supplier_expense_account(
                 sess,

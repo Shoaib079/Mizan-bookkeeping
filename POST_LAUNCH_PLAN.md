@@ -25,7 +25,10 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 - **Salary period + advance UX (FS)** (`v0.73.24-salary-period-advance-ux`) — accrual period fields (migration `060`); ledger advance totals; payment preview + `advance_applied_minor` on API response.
 - **Supplier invoice expense-account learning** (`v0.73.44-invoice-supplier-expense-learning`) — migration `066` `supplier_expense_account_rules`; learns on post; HIGH confidence preselects expense account on draft review.
 - **Invoice one-click post (IC-E slice 1)** (`v0.73.46-invoice-one-click-post`) — `POST confirm-and-post` when supplier linked + classification HIGH + expense account HIGH; atomic confirm+post; trusted UI replaces separate Confirm step.
+- **Invoice auto-post on upload (IC-E slice 2)** (`v0.73.48-invoice-supplier-auto-post`) — entity setting `invoice_supplier_auto_post` (off by default); supplier invoices only; all HIGH gates; `RULE_AUTO` audit; failures → needs review.
 - **Supplier invoice Edit (fix)** — Edit only on current posted row; prefill expense account from ledger (not 5200 default); resolve void/reversal chain; learns expense account on edit.
+- **Supplier invoice number uniqueness** — live posted guard on `(supplier, invoice_number)`; upload marks `duplicate`; post/auto-post/one-click blocked; edit/correct exempt.
+- **Supplier activity void display** — İptal rows show negative amounts; invoice totals count live rows only; draft amounts sync on edit.
 
 ---
 
@@ -128,15 +131,15 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 ---
 
-#### IC-E — Invoice one-click post & optional auto-post *(in progress)*
+#### IC-E — Invoice one-click post & optional auto-post ✅
 
 **Slice 1 — One-click confirm+post** ✅ `v0.73.46-invoice-one-click-post`
 
 When supplier linked, invoice kind HIGH, and learned expense account HIGH: single **Post invoice & payable** (confirm+post atomically). Two-step Confirm → Post remains for untrusted drafts.
 
-**Slice 2 — Opt-in auto-post on upload** *(queued)*
+**Slice 2 — Opt-in auto-post on upload** ✅ `v0.73.48-invoice-supplier-auto-post`
 
-Entity setting; supplier invoices only; all HIGH gates + totals valid; `rule_auto` audit flag; failures → needs review.
+Entity setting `invoice_supplier_auto_post` (Set up → Restaurant, off by default). When on and all trust gates pass, upload confirm+posts with `RULE_AUTO` audit. Commission / uncertain drafts unchanged.
 
 ---
 

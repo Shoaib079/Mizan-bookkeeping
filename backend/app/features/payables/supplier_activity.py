@@ -9,7 +9,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.ledger.models import JournalEntry
+from app.core.ledger.models import JournalEntry, JournalEntryStatus
 from app.core.payables.ledger import list_ledger_entries
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
@@ -159,39 +159,65 @@ def get_supplier_activity(
             expense_account_id: uuid.UUID | None = None
             draft_journal_entry_id: uuid.UUID | None = None
 
+            movement_label = _movement_label(entry.movement_type)
+            affects_balance = True
+
             if entry.movement_type == SupplierMovementType.INVOICE:
                 draft = _invoice_draft_for_entry(session, entry)
-                if draft is not None:
-                    invoice_draft_id = draft.id
-                    draft_journal_entry_id = draft.journal_entry_id
-                    document_ref = draft.invoice_number
-                    net_kurus = draft.net_kurus
-                    vat_kurus = _vat_total_kurus(draft)
-                    amount_kurus = draft.gross_kurus
-                    detail = f"Kayıtlı · {draft.invoice_number}"
-                    has_document = _has_stored_document(draft)
-                else:
-                    amount_kurus = entry.amount_kurus
-                    document_ref = entry.description[:64]
-
                 journal = (
                     session.get(JournalEntry, entry.journal_entry_id)
                     if entry.journal_entry_id is not None
                     else None
                 )
-                if journal is not None and entry.description.startswith("Void:"):
-                    detail = entry.description
-                can_edit = invoice_edit.supplier_invoice_row_is_editable(
-                    session,
-                    entry,
-                    draft_journal_entry_id=draft_journal_entry_id,
+                is_void_reversal = entry.description.startswith("Void:")
+                is_superseded = (
+                    journal is not None
+                    and journal.status == JournalEntryStatus.VOIDED
+                    and not is_void_reversal
                 )
-                if can_edit and journal is not None:
-                    expense_account_id = invoice_edit.expense_account_id_from_journal(
-                        session,
-                        entity_id,
-                        journal,
+
+                if draft is not None:
+                    invoice_draft_id = draft.id
+                    draft_journal_entry_id = draft.journal_entry_id
+                    document_ref = draft.invoice_number
+                    has_document = _has_stored_document(draft)
+
+                if is_void_reversal:
+                    amount_kurus = entry.amount_kurus
+                    movement_label = "İptal"
+                    detail = entry.description
+                    document_ref = (
+                        draft.invoice_number if draft is not None else document_ref
                     )
+                elif is_superseded:
+                    amount_kurus = entry.amount_kurus
+                    movement_label = "Fatura (iptal edildi)"
+                    detail = entry.description
+                    affects_balance = False
+                    if draft is not None:
+                        net_kurus = draft.net_kurus
+                        vat_kurus = _vat_total_kurus(draft)
+                elif draft is not None:
+                    net_kurus = draft.net_kurus
+                    vat_kurus = _vat_total_kurus(draft)
+                    amount_kurus = draft.gross_kurus
+                    detail = f"Kayıtlı · {draft.invoice_number}"
+                else:
+                    amount_kurus = entry.amount_kurus
+                    document_ref = entry.description[:64]
+
+                if journal is not None and not is_void_reversal:
+                    can_edit = invoice_edit.supplier_invoice_row_is_editable(
+                        session,
+                        entry,
+                        draft_journal_entry_id=draft_journal_entry_id,
+                    )
+                    if can_edit:
+                        expense_account_id = invoice_edit.expense_account_id_from_journal(
+                            session,
+                            entity_id,
+                            journal,
+                        )
             elif entry.movement_type == SupplierMovementType.PAYMENT:
                 amount_kurus = abs(entry.amount_kurus)
                 bank_name, dekont_ref, detail = _payment_details(session, entry)
@@ -208,7 +234,7 @@ def get_supplier_activity(
                     SupplierActivityRow(
                         movement_date=entry.movement_date,
                         movement_kind=entry.movement_type.value,
-                        movement_label=_movement_label(entry.movement_type),
+                        movement_label=movement_label,
                         document_ref=document_ref,
                         detail=detail,
                         net_kurus=net_kurus,
@@ -217,7 +243,7 @@ def get_supplier_activity(
                         bank_name=bank_name,
                         dekont_ref=dekont_ref,
                         balance_kurus=running,
-                        affects_balance=True,
+                        affects_balance=affects_balance,
                         invoice_draft_id=invoice_draft_id,
                         journal_entry_id=entry.journal_entry_id,
                         has_document=has_document,
@@ -311,6 +337,8 @@ def get_supplier_activity(
         r.amount_kurus or 0
         for r in rows
         if r.movement_kind == "invoice"
+        and r.affects_balance
+        and (r.amount_kurus or 0) > 0
     ) + sum(
         r.amount_kurus or 0
         for r in rows
@@ -323,6 +351,8 @@ def get_supplier_activity(
         r.vat_kurus or 0
         for r in rows
         if r.movement_kind in {"invoice", "unposted_invoice"}
+        and r.affects_balance
+        and (r.amount_kurus or 0) > 0
     )
 
     return SupplierActivityRead(

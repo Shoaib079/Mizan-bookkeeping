@@ -46,6 +46,11 @@ from app.features.invoices.classification_learning import (
 )
 from app.features.invoices.supplier_expense_learning import suggest_supplier_expense_account
 from app.features.invoices.one_click_post import is_one_click_post_eligible
+from app.features.invoices.invoice_auto_post import confirm_and_post_trusted_supplier_draft
+from app.features.invoices.invoice_uniqueness import (
+    duplicate_invoice_review_reason,
+    live_posted_invoice_exists,
+)
 from app.core.delivery.commission_posting import post_delivery_commission_draft
 from app.core.invoices.posting import DraftPostError, post_confirmed_draft, post_supplier_invoice_draft_to_ledger
 from app.features.delivery.models import OwnedDeliveryPlatform
@@ -192,6 +197,7 @@ def _to_out(
     suggested_expense_account_id: uuid.UUID | None = None,
     expense_account_confidence: str | None = None,
     one_click_post_eligible: bool = False,
+    posted_by_rule_auto: bool = False,
 ) -> InvoiceDraftOut:
     return InvoiceDraftOut(
         id=draft.id,
@@ -226,6 +232,7 @@ def _to_out(
         suggested_expense_account_id=suggested_expense_account_id,
         expense_account_confidence=expense_account_confidence,
         one_click_post_eligible=one_click_post_eligible,
+        posted_by_rule_auto=posted_by_rule_auto,
     )
 
 
@@ -258,6 +265,8 @@ def _draft_out(session: Session, entity_id: uuid.UUID, draft: InvoiceDraft) -> I
         classification_confidence=classification_confidence,
         expense_suggestion=expense_suggestion,
     )
+    payload = draft.extraction_payload or {}
+    posted_by_rule_auto = bool(payload.get("posted_by_rule_auto"))
     return _to_out(
         draft,
         linked_name=linked_name,
@@ -266,6 +275,7 @@ def _draft_out(session: Session, entity_id: uuid.UUID, draft: InvoiceDraft) -> I
         suggested_expense_account_id=suggested_expense_account_id,
         expense_account_confidence=expense_account_confidence,
         one_click_post_eligible=one_click_eligible,
+        posted_by_rule_auto=posted_by_rule_auto,
     )
 
 
@@ -507,14 +517,6 @@ def create_efatura_draft_from_upload(
     assert entity is not None
 
     fingerprint = file_fingerprint(content)
-    existing = _find_by_fingerprint(session, entity_id, fingerprint)
-    if existing is not None:
-        if _draft_status(existing) == InvoiceDraftStatus.REJECTED:
-            with entity_context(session, entity_id):
-                _discard_invoice_draft(session, existing)
-                session.commit()
-        else:
-            raise DuplicateInvoiceDraftError(existing)
 
     source_type, extraction, payload, linked_supplier = _extract_and_store_efatura(
         session,
@@ -556,16 +558,50 @@ def create_efatura_draft_from_upload(
                 "link the delivery platform before confirm"
             )
 
-    initial_status = (
-        InvoiceDraftStatus.NEEDS_REVIEW if review_reason else InvoiceDraftStatus.DRAFT
-    )
+    supplier_id_for_draft = linked_supplier.id if linked_supplier else None
+    duplicate_of_posted = False
+    with entity_context(session, entity_id):
+        if (
+            invoice_kind == InvoiceKind.SUPPLIER.value
+            and supplier_id_for_draft is not None
+            and live_posted_invoice_exists(
+                session,
+                entity_id,
+                supplier_id_for_draft,
+                extraction.invoice_number,
+            )
+        ):
+            duplicate_of_posted = True
+
+    draft_fingerprint = fingerprint
+    if duplicate_of_posted:
+        draft_fingerprint = hashlib.sha256(
+            f"{fingerprint}:num-dup:{uuid.uuid4()}".encode()
+        ).hexdigest()
+    else:
+        existing = _find_by_fingerprint(session, entity_id, fingerprint)
+        if existing is not None:
+            if _draft_status(existing) == InvoiceDraftStatus.REJECTED:
+                with entity_context(session, entity_id):
+                    _discard_invoice_draft(session, existing)
+                    session.commit()
+            else:
+                raise DuplicateInvoiceDraftError(existing)
+
+    if duplicate_of_posted:
+        initial_status = InvoiceDraftStatus.DUPLICATE
+        review_reason = duplicate_invoice_review_reason(extraction.invoice_number)
+    else:
+        initial_status = (
+            InvoiceDraftStatus.NEEDS_REVIEW if review_reason else InvoiceDraftStatus.DRAFT
+        )
 
     with entity_context(session, entity_id):
         draft = InvoiceDraft(
             status=initial_status.value,
             invoice_kind=invoice_kind,
             source_type=source_type,
-            file_fingerprint=fingerprint,
+            file_fingerprint=draft_fingerprint,
             supplier_name=extraction.supplier_name,
             supplier_vkn=extraction.supplier_vkn,
             supplier_id=linked_supplier.id if linked_supplier else None,
@@ -582,6 +618,11 @@ def create_efatura_draft_from_upload(
         session.add(draft)
         session.commit()
         session.refresh(draft)
+
+    from app.features.invoices.invoice_auto_post import try_auto_post_supplier_draft_on_upload
+
+    if not duplicate_of_posted:
+        try_auto_post_supplier_draft_on_upload(session, entity_id, draft)
 
     return _draft_out(session, entity_id, draft)
 
@@ -677,6 +718,18 @@ def link_supplier_to_draft(
 
     with entity_context(session, entity_id):
         draft.supplier_id = supplier.id
+        if (
+            InvoiceKind(draft.invoice_kind) == InvoiceKind.SUPPLIER
+            and live_posted_invoice_exists(
+                session,
+                entity_id,
+                supplier.id,
+                draft.invoice_number,
+                exclude_draft_id=draft.id,
+            )
+        ):
+            draft.status = InvoiceDraftStatus.DUPLICATE.value
+            draft.review_reason = duplicate_invoice_review_reason(draft.invoice_number)
         session.commit()
         session.refresh(draft)
 
@@ -977,13 +1030,9 @@ def confirm_and_post_supplier_invoice_draft(
                 f"Draft status {_draft_status(draft).value!r} cannot be one-click posted"
             )
 
-        draft.status = InvoiceDraftStatus.CONFIRMED.value
-        draft.confirmed_at = utcnow()
-        draft.confirmed_by = actor_id
-        draft.review_reason = None
-        _learn_from_draft_classification(session, draft)
+        assert expense_suggestion is not None
 
-        result = post_supplier_invoice_draft_to_ledger(
+        result = confirm_and_post_trusted_supplier_draft(
             session,
             entity_id,
             draft,

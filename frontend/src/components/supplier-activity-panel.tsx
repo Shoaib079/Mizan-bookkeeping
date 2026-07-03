@@ -203,7 +203,9 @@ export function SupplierActivityPanel({
                   <DataTableCell>{row.document_ref}</DataTableCell>
                   <DataTableCell
                     className={
-                      !row.affects_balance ? "italic text-muted-foreground" : undefined
+                      !row.affects_balance || row.movement_label === "İptal"
+                        ? "italic text-muted-foreground"
+                        : undefined
                     }
                   >
                     {row.detail}

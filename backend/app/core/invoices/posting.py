@@ -27,6 +27,7 @@ from app.core.payables.models import SupplierLedgerEntry
 from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
+from app.features.invoices.invoice_uniqueness import live_posted_invoice_exists
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
 from app.features.invoices.supplier_expense_learning import (
     learn_supplier_expense_account,
@@ -136,6 +137,7 @@ def post_supplier_invoice_draft_to_ledger(
     *,
     expense_account_id: uuid.UUID,
     actor_id: uuid.UUID,
+    journal_source: JournalEntrySource = JournalEntrySource.INVOICE,
 ) -> InvoicePostResult:
     """Post a supplier invoice draft to GL; caller holds entity_context and commits."""
     require_entity_context()
@@ -146,6 +148,17 @@ def post_supplier_invoice_draft_to_ledger(
         )
     if draft.supplier_id is None:
         raise DraftPostError("Supplier must be linked before posting")
+
+    if live_posted_invoice_exists(
+        session,
+        entity_id,
+        draft.supplier_id,
+        draft.invoice_number,
+        exclude_draft_id=draft.id,
+    ):
+        raise DraftPostError(
+            f"Supplier already has a posted invoice with number {draft.invoice_number!r}"
+        )
 
     status = InvoiceDraftStatus(draft.status)
     if status == InvoiceDraftStatus.POSTED:
@@ -190,7 +203,7 @@ def post_supplier_invoice_draft_to_ledger(
         description,
         lines,
         actor_id=actor_id,
-        source=JournalEntrySource.INVOICE,
+        source=journal_source,
     )
 
     supplier_entry = persist_supplier_invoice_entry(

@@ -34,6 +34,12 @@ export const ENTITY_ROLES: { value: EntityRole; label: string }[] = [
 
 export const KNOWN_ENTITY_SETTINGS = [
   {
+    key: "invoice_supplier_auto_post",
+    label: "Auto-post trusted supplier invoices",
+    description:
+      "When classification and expense account are both fully learned (HIGH), upload posts to the ledger automatically. Commission invoices and uncertain drafts always stay in review.",
+  },
+  {
     key: "delivery_enabled",
     label: "Delivery module",
     description: "Enable delivery platform reports, settlements, and reconciliation.",

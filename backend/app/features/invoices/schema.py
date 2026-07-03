@@ -98,6 +98,7 @@ class InvoiceDraftOut(BaseModel):
     suggested_expense_account_id: uuid.UUID | None = None
     expense_account_confidence: Literal["high", "medium", "low"] | None = None
     one_click_post_eligible: bool = False
+    posted_by_rule_auto: bool = False
 
 
 class InvoiceDraftListOut(PaginatedListOut[InvoiceDraftOut]):

@@ -63,6 +63,7 @@ type InvoiceDraft = {
   suggested_expense_account_id: string | null;
   expense_account_confidence: "high" | "medium" | "low" | null;
   one_click_post_eligible: boolean;
+  posted_by_rule_auto: boolean;
 };
 
 type SupplierOption = { id: string; name: string; vkn: string };
@@ -445,6 +446,11 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         <span className="text-sm text-muted-foreground">
           {draft.invoice_number} · {formatTrDate(draft.invoice_date)}
         </span>
+        {draft.posted_by_rule_auto && (
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            Auto-posted
+          </span>
+        )}
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4">
