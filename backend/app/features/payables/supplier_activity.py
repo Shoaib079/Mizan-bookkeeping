@@ -389,7 +389,13 @@ def get_supplier_activity(
     invoices_gross = sum(
         r.amount_kurus or 0
         for r in rows
-        if r.movement_kind in {"invoice", "credit_note"}
+        if r.movement_kind == "invoice"
+        and r.affects_balance
+        and (r.amount_kurus or 0) > 0
+    ) + sum(
+        r.amount_kurus or 0
+        for r in rows
+        if r.movement_kind == "credit_note"
         and r.affects_balance
     ) + sum(
         r.amount_kurus or 0
@@ -402,8 +408,18 @@ def get_supplier_activity(
     vat_total = sum(
         r.vat_kurus or 0
         for r in rows
-        if r.movement_kind in {"invoice", "credit_note", "unposted_invoice"}
+        if r.movement_kind == "invoice"
         and r.affects_balance
+        and (r.amount_kurus or 0) > 0
+    ) + sum(
+        r.vat_kurus or 0
+        for r in rows
+        if r.movement_kind == "credit_note"
+        and r.affects_balance
+    ) + sum(
+        r.vat_kurus or 0
+        for r in rows
+        if r.movement_kind == "unposted_invoice"
     )
 
     return SupplierActivityRead(
