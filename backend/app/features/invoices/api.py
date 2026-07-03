@@ -19,6 +19,7 @@ from app.core.invoices.posting import DraftPostError
 from app.core.ledger.errors import PostingError
 from app.core.ledger.posting import InvalidAccountError
 from app.features.invoices.schema import (
+    ConfirmAndPostInvoiceDraftRequest,
     ConfirmDraftRequest,
     InvoiceDraftListOut,
     InvoiceDraftOut,
@@ -295,6 +296,34 @@ def reject_invoice_draft(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except service.DraftImmutableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/drafts/{draft_id}/confirm-and-post", response_model=PostInvoiceDraftOut)
+def confirm_and_post_invoice_draft(
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    payload: ConfirmAndPostInvoiceDraftRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> PostInvoiceDraftOut:
+    try:
+        return service.confirm_and_post_supplier_invoice_draft(
+            session,
+            entity_id,
+            draft_id,
+            expense_account_id=payload.expense_account_id,
+            actor_id=payload.actor_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.DraftConfirmError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DraftPostError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/drafts/{draft_id}/post", response_model=PostInvoiceDraftOut)

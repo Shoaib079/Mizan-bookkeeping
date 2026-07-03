@@ -62,6 +62,7 @@ type InvoiceDraft = {
   source_type: string;
   suggested_expense_account_id: string | null;
   expense_account_confidence: "high" | "medium" | "low" | null;
+  one_click_post_eligible: boolean;
 };
 
 type SupplierOption = { id: string; name: string; vkn: string };
@@ -228,6 +229,38 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
     }
   }
 
+  async function onConfirmAndPost(event: FormEvent) {
+    event.preventDefault();
+    if (!entityId || !draft) return;
+    setPosting(true);
+    setError(null);
+    try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
+      await apiFetch(
+        `/entities/${entityId}/invoices/drafts/${draftId}/confirm-and-post`,
+        {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actor_id: actorId,
+            expense_account_id: expenseAccountId,
+          }),
+        },
+      );
+      submitIdempotency.completeSubmit();
+      toast("Invoice posted");
+      onUpdated?.("removed");
+      if (!embedded) {
+        router.push("/review/invoices");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Post failed");
+    } finally {
+      setPosting(false);
+    }
+  }
+
   async function onPost(event: FormEvent) {
     event.preventDefault();
     if (!entityId || !draft) return;
@@ -389,6 +422,11 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
       ? Boolean(draft.delivery_platform_id)
       : Boolean(draft.supplier_id));
   const canPost = draft.status === "confirmed";
+  const canOneClickPost =
+    draft.one_click_post_eligible &&
+    canLink &&
+    !isCommission &&
+    Boolean(draft.supplier_id);
   const canUnconfirm = canUnconfirmInvoiceDraft(draft.status);
   const canReject = canDiscardInvoiceDraft(draft.status);
   const isTerminal =
@@ -630,6 +668,35 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </form>
       )}
 
+      {canOneClickPost && (
+        <form
+          onSubmit={onConfirmAndPost}
+          className="rounded-lg border border-border bg-card p-4"
+        >
+          <h2 className="mb-2 text-sm font-semibold">Post to ledger</h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Trusted supplier invoice — confirm and post in one step.
+          </p>
+          <div className="mb-3">
+            <Label htmlFor="one-click-exp-account">Expense account</Label>
+            <Select
+              id="one-click-exp-account"
+              value={expenseAccountId}
+              onChange={(e) => setExpenseAccountId(e.target.value)}
+            >
+              {expenseAccounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {formatExpenseAccountLabel(a)}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <Button type="submit" disabled={posting || !expenseAccountId}>
+            {posting ? "Posting…" : "Post invoice & payable"}
+          </Button>
+        </form>
+      )}
+
       {canPost && (
         <form
           onSubmit={onPost}
@@ -679,7 +746,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
               </Button>
             </form>
           )}
-          {canConfirm && (
+          {canConfirm && !canOneClickPost && (
             <form onSubmit={onConfirm}>
               <Button type="submit" disabled={confirming}>
                 {confirming ? "Confirming…" : confirmDraftLabel(draft.invoice_kind)}

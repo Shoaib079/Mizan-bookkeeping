@@ -129,6 +129,113 @@ def _validate_expense_account(session: Session, entity_id: uuid.UUID, account_id
     return account
 
 
+def post_supplier_invoice_draft_to_ledger(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft: InvoiceDraft,
+    *,
+    expense_account_id: uuid.UUID,
+    actor_id: uuid.UUID,
+) -> InvoicePostResult:
+    """Post a supplier invoice draft to GL; caller holds entity_context and commits."""
+    require_entity_context()
+
+    if InvoiceKind(draft.invoice_kind) == InvoiceKind.DELIVERY_COMMISSION:
+        raise DraftPostError(
+            "Delivery commission drafts must use delivery commission posting"
+        )
+    if draft.supplier_id is None:
+        raise DraftPostError("Supplier must be linked before posting")
+
+    status = InvoiceDraftStatus(draft.status)
+    if status == InvoiceDraftStatus.POSTED:
+        raise DraftPostError("Draft is already posted")
+    if status not in {InvoiceDraftStatus.CONFIRMED, InvoiceDraftStatus.DRAFT, InvoiceDraftStatus.NEEDS_REVIEW}:
+        raise DraftPostError(f"Draft status {status.value!r} cannot be posted")
+
+    _validate_expense_account(session, entity_id, expense_account_id)
+
+    ap_account = session.scalar(
+        select(Account).where(Account.code == ACCOUNTS_PAYABLE_CODE)
+    )
+    if ap_account is None:
+        raise InvalidAccountError(
+            f"accounts payable account {ACCOUNTS_PAYABLE_CODE} not found"
+        )
+    input_vat_account = session.scalar(
+        select(Account).where(Account.code == INPUT_VAT_CODE)
+    )
+    if input_vat_account is None:
+        raise InvalidAccountError(
+            f"input VAT account {INPUT_VAT_CODE} not found"
+        )
+
+    try:
+        lines = build_invoice_posting_lines(
+            expense_account_id=expense_account_id,
+            ap_account_id=ap_account.id,
+            input_vat_account_id=input_vat_account.id,
+            net_kurus=draft.net_kurus,
+            gross_kurus=draft.gross_kurus,
+            vat_breakdown=draft.vat_breakdown,
+        )
+    except InvoiceTotalsError as exc:
+        raise DraftPostError(str(exc)) from exc
+
+    description = f"Invoice {draft.invoice_number}"
+    journal_entry = prepare_journal_entry(
+        session,
+        entity_id,
+        draft.invoice_date,
+        description,
+        lines,
+        actor_id=actor_id,
+        source=JournalEntrySource.INVOICE,
+    )
+
+    supplier_entry = persist_supplier_invoice_entry(
+        session,
+        draft.supplier_id,
+        movement_date=draft.invoice_date,
+        amount_kurus=draft.gross_kurus,
+        description=description,
+        actor_id=actor_id,
+        journal_entry_id=journal_entry.id,
+        reference_type="invoice_draft",
+        reference_id=draft.id,
+    )
+
+    draft.status = InvoiceDraftStatus.POSTED
+    draft.posted_at = utcnow()
+    draft.posted_by = actor_id
+    draft.journal_entry_id = journal_entry.id
+
+    suggestion = suggest_supplier_expense_account(
+        session, entity_id, draft.supplier_id
+    )
+    learn_supplier_expense_account(
+        session,
+        entity_id,
+        supplier_id=draft.supplier_id,
+        expense_account_id=expense_account_id,
+        suggested_account_id=suggestion.account_id if suggestion else None,
+    )
+
+    session.flush()
+    _ = list(journal_entry.lines)
+
+    balance = session.scalar(
+        select(func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0)).where(
+            SupplierLedgerEntry.supplier_id == draft.supplier_id
+        )
+    )
+    return InvoicePostResult(
+        journal_entry=journal_entry,
+        supplier_ledger_entry=supplier_entry,
+        payable_balance_kurus=int(balance or 0),
+    )
+
+
 def post_confirmed_draft(
     session: Session,
     entity_id: uuid.UUID,
@@ -142,8 +249,6 @@ def post_confirmed_draft(
         raise LookupError("Entity not found")
 
     with entity_context(session, entity_id):
-        require_entity_context()
-
         draft = session.get(InvoiceDraft, draft_id)
         if draft is None:
             raise LookupError("Invoice draft not found")
@@ -154,94 +259,16 @@ def post_confirmed_draft(
             raise DraftPostError(
                 f"Draft status {status.value!r} must be confirmed to post"
             )
-        if InvoiceKind(draft.invoice_kind) == InvoiceKind.DELIVERY_COMMISSION:
-            raise DraftPostError(
-                "Delivery commission drafts must use delivery commission posting"
-            )
-        if draft.supplier_id is None:
-            raise DraftPostError("Supplier must be linked before posting")
 
-        _validate_expense_account(session, entity_id, expense_account_id)
-
-        ap_account = session.scalar(
-            select(Account).where(Account.code == ACCOUNTS_PAYABLE_CODE)
-        )
-        if ap_account is None:
-            raise InvalidAccountError(
-                f"accounts payable account {ACCOUNTS_PAYABLE_CODE} not found"
-            )
-        input_vat_account = session.scalar(
-            select(Account).where(Account.code == INPUT_VAT_CODE)
-        )
-        if input_vat_account is None:
-            raise InvalidAccountError(
-                f"input VAT account {INPUT_VAT_CODE} not found"
-            )
-
-        try:
-            lines = build_invoice_posting_lines(
-                expense_account_id=expense_account_id,
-                ap_account_id=ap_account.id,
-                input_vat_account_id=input_vat_account.id,
-                net_kurus=draft.net_kurus,
-                gross_kurus=draft.gross_kurus,
-                vat_breakdown=draft.vat_breakdown,
-            )
-        except InvoiceTotalsError as exc:
-            raise DraftPostError(str(exc)) from exc
-
-        description = f"Invoice {draft.invoice_number}"
-        journal_entry = prepare_journal_entry(
+        result = post_supplier_invoice_draft_to_ledger(
             session,
             entity_id,
-            draft.invoice_date,
-            description,
-            lines,
-            actor_id=actor_id,
-            source=JournalEntrySource.INVOICE,
-        )
-
-        supplier_entry = persist_supplier_invoice_entry(
-            session,
-            draft.supplier_id,
-            movement_date=draft.invoice_date,
-            amount_kurus=draft.gross_kurus,
-            description=description,
-            actor_id=actor_id,
-            journal_entry_id=journal_entry.id,
-            reference_type="invoice_draft",
-            reference_id=draft.id,
-        )
-
-        draft.status = InvoiceDraftStatus.POSTED
-        draft.posted_at = utcnow()
-        draft.posted_by = actor_id
-        draft.journal_entry_id = journal_entry.id
-
-        suggestion = suggest_supplier_expense_account(
-            session, entity_id, draft.supplier_id
-        )
-        learn_supplier_expense_account(
-            session,
-            entity_id,
-            supplier_id=draft.supplier_id,
+            draft,
             expense_account_id=expense_account_id,
-            suggested_account_id=suggestion.account_id if suggestion else None,
+            actor_id=actor_id,
         )
-
         session.commit()
-        session.refresh(journal_entry)
-        session.refresh(supplier_entry)
+        session.refresh(result.journal_entry)
+        session.refresh(result.supplier_ledger_entry)
         session.refresh(draft)
-        _ = list(journal_entry.lines)
-
-        balance = session.scalar(
-            select(func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0)).where(
-                SupplierLedgerEntry.supplier_id == draft.supplier_id
-            )
-        )
-        return InvoicePostResult(
-            journal_entry=journal_entry,
-            supplier_ledger_entry=supplier_entry,
-            payable_balance_kurus=int(balance or 0),
-        )
+        return result

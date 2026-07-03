@@ -94,6 +94,57 @@ def _manual_confirmed_draft(
         return draft
 
 
+def _trusted_supplier_draft(
+    db_session,
+    entity,
+    supplier_id,
+    *,
+    invoice_number: str,
+) -> InvoiceDraft:
+    with entity_context(db_session, entity.id):
+        draft = InvoiceDraft(
+            status=InvoiceDraftStatus.DRAFT,
+            invoice_kind="supplier",
+            source_type=InvoiceSourceType.EFATURA_XML,
+            file_fingerprint=f"trusted-{invoice_number}",
+            supplier_id=supplier_id,
+            invoice_number=invoice_number,
+            invoice_date=date(2026, 3, 15),
+            net_kurus=1_000_000,
+            gross_kurus=1_200_000,
+            vat_breakdown=[
+                {"rate_percent": 20, "base_kurus": 1_000_000, "vat_kurus": 200_000},
+            ],
+            currency="TRY",
+            extraction_payload={"classification_confidence": "high"},
+        )
+        db_session.add(draft)
+        db_session.commit()
+        db_session.refresh(draft)
+        return draft
+
+
+def _seed_high_expense_learning(
+    db_session,
+    entity,
+    supplier_id,
+    supplies_id,
+    *,
+    count: int = 3,
+) -> None:
+    for index in range(count):
+        draft = _manual_confirmed_draft(
+            db_session, entity, supplier_id, invoice_number=f"SEED-{index}"
+        )
+        post_confirmed_draft(
+            db_session,
+            entity.id,
+            draft.id,
+            expense_account_id=supplies_id,
+            actor_id=ACTOR_ID,
+        )
+
+
 def _upload(client, entity_id, *, content=None):
     content = content or SAMPLE_XML.read_bytes()
     return client.post(
@@ -699,3 +750,60 @@ def test_draft_get_omits_inactive_learned_account(
     assert response.status_code == 200
     assert response.json()["suggested_expense_account_id"] is None
     assert response.json()["expense_account_confidence"] is None
+
+
+def test_draft_get_one_click_post_eligible_after_learning(
+    client, db_session, restaurant_a, seeded_accounts
+) -> None:
+    supplier_id = _supplier(db_session, restaurant_a)
+    supplies_id = seeded_accounts["5220"]
+    _seed_high_expense_learning(db_session, restaurant_a, supplier_id, supplies_id)
+
+    draft = _trusted_supplier_draft(
+        db_session, restaurant_a, supplier_id, invoice_number="ONE-CLICK"
+    )
+    response = client.get(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft.id}",
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["one_click_post_eligible"] is True
+    assert body["expense_account_confidence"] == "high"
+
+
+def test_confirm_and_post_one_click(
+    client, db_session, restaurant_a, seeded_accounts
+) -> None:
+    supplier_id = _supplier(db_session, restaurant_a)
+    supplies_id = seeded_accounts["5220"]
+    _seed_high_expense_learning(db_session, restaurant_a, supplier_id, supplies_id)
+
+    draft = _trusted_supplier_draft(
+        db_session, restaurant_a, supplier_id, invoice_number="ONE-CLICK-POST"
+    )
+    response = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft.id}/confirm-and-post",
+        json={"actor_id": str(ACTOR_ID), "expense_account_id": str(supplies_id)},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["draft"]["status"] == "posted"
+    assert body["supplier_ledger_entry_id"] is not None
+
+
+def test_confirm_and_post_rejects_untrusted_draft(
+    client, db_session, restaurant_a, seeded_accounts
+) -> None:
+    supplier_id = _supplier(db_session, restaurant_a)
+    draft = _trusted_supplier_draft(
+        db_session, restaurant_a, supplier_id, invoice_number="NOT-TRUSTED"
+    )
+    response = client.post(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft.id}/confirm-and-post",
+        json={
+            "actor_id": str(ACTOR_ID),
+            "expense_account_id": str(seeded_accounts["5220"]),
+        },
+    )
+    assert response.status_code == 422
+    assert "one-click" in response.json()["detail"].lower()

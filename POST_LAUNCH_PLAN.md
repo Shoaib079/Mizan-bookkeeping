@@ -23,6 +23,8 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 - **Supplier activity timeline + inline invoice preview** (`v0.73.19-supplier-activity-invoice-preview`) — chronological supplier Activity tab + Excel export; PDF preview on Review / supplier activity / draft review; document download API; partial commission confirm fix; duplicate discard (draft/duplicate only).
 - **Partner advance / drawing (FP)** (`v0.73.23-partner-advance-drawing`) — drawing + repayment movements; bidirectional partner balance; partner page + Record hub.
 - **Salary period + advance UX (FS)** (`v0.73.24-salary-period-advance-ux`) — accrual period fields (migration `060`); ledger advance totals; payment preview + `advance_applied_minor` on API response.
+- **Supplier invoice expense-account learning** (`v0.73.44-invoice-supplier-expense-learning`) — migration `066` `supplier_expense_account_rules`; learns on post; HIGH confidence preselects expense account on draft review.
+- **Invoice one-click post (IC-E slice 1)** (`v0.73.46-invoice-one-click-post`) — `POST confirm-and-post` when supplier linked + classification HIGH + expense account HIGH; atomic confirm+post; trusted UI replaces separate Confirm step.
 
 ---
 
@@ -122,6 +124,18 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 **Acceptance:** After one manual fix of an edge-case PDF, next similar invoice is auto-suggested correctly.
 
 **Tag target:** `v0.73.26-unified-document-learning`
+
+---
+
+#### IC-E — Invoice one-click post & optional auto-post *(in progress)*
+
+**Slice 1 — One-click confirm+post** ✅ `v0.73.46-invoice-one-click-post`
+
+When supplier linked, invoice kind HIGH, and learned expense account HIGH: single **Post invoice & payable** (confirm+post atomically). Two-step Confirm → Post remains for untrusted drafts.
+
+**Slice 2 — Opt-in auto-post on upload** *(queued)*
+
+Entity setting; supplier invoices only; all HIGH gates + totals valid; `rule_auto` audit flag; failures → needs review.
 
 ---
 

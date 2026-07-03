@@ -49,6 +49,11 @@ class PostInvoiceDraftRequest(BaseModel):
     expense_account_id: uuid.UUID
 
 
+class ConfirmAndPostInvoiceDraftRequest(BaseModel):
+    actor_id: uuid.UUID
+    expense_account_id: uuid.UUID
+
+
 class PostInvoiceDraftOut(BaseModel):
     draft: InvoiceDraftOut
     journal_entry_id: uuid.UUID
@@ -92,6 +97,7 @@ class InvoiceDraftOut(BaseModel):
     has_stored_document: bool = False
     suggested_expense_account_id: uuid.UUID | None = None
     expense_account_confidence: Literal["high", "medium", "low"] | None = None
+    one_click_post_eligible: bool = False
 
 
 class InvoiceDraftListOut(PaginatedListOut[InvoiceDraftOut]):

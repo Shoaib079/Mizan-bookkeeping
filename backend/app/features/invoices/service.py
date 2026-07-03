@@ -45,8 +45,9 @@ from app.features.invoices.classification_learning import (
     record_invoice_rule_correction,
 )
 from app.features.invoices.supplier_expense_learning import suggest_supplier_expense_account
+from app.features.invoices.one_click_post import is_one_click_post_eligible
 from app.core.delivery.commission_posting import post_delivery_commission_draft
-from app.core.invoices.posting import DraftPostError, post_confirmed_draft
+from app.core.invoices.posting import DraftPostError, post_confirmed_draft, post_supplier_invoice_draft_to_ledger
 from app.features.delivery.models import OwnedDeliveryPlatform
 from app.features.delivery.settings import (
     DeliveryNotEnabledError,
@@ -190,6 +191,7 @@ def _to_out(
     linked_platform_name: str | None = None,
     suggested_expense_account_id: uuid.UUID | None = None,
     expense_account_confidence: str | None = None,
+    one_click_post_eligible: bool = False,
 ) -> InvoiceDraftOut:
     return InvoiceDraftOut(
         id=draft.id,
@@ -223,6 +225,7 @@ def _to_out(
         has_stored_document=_stored_document_path(draft) is not None,
         suggested_expense_account_id=suggested_expense_account_id,
         expense_account_confidence=expense_account_confidence,
+        one_click_post_eligible=one_click_post_eligible,
     )
 
 
@@ -232,22 +235,29 @@ def _draft_out(session: Session, entity_id: uuid.UUID, draft: InvoiceDraft) -> I
     linked_platform_name: str | None = None
     suggested_expense_account_id: uuid.UUID | None = None
     expense_account_confidence: str | None = None
+    expense_suggestion = None
     with entity_context(session, entity_id):
         if draft.supplier_id is not None:
             supplier = session.get(Supplier, draft.supplier_id)
             if supplier is not None:
                 linked_name = supplier.name
                 linked_vkn = supplier.vkn
-                suggestion = suggest_supplier_expense_account(
+                expense_suggestion = suggest_supplier_expense_account(
                     session, entity_id, draft.supplier_id
                 )
-                if suggestion is not None:
-                    suggested_expense_account_id = suggestion.account_id
-                    expense_account_confidence = suggestion.confidence
+                if expense_suggestion is not None:
+                    suggested_expense_account_id = expense_suggestion.account_id
+                    expense_account_confidence = expense_suggestion.confidence
         if draft.delivery_platform_id is not None:
             platform = session.get(OwnedDeliveryPlatform, draft.delivery_platform_id)
             if platform is not None:
                 linked_platform_name = platform.name
+    classification_confidence = _draft_classification_confidence(draft)
+    one_click_eligible = is_one_click_post_eligible(
+        draft,
+        classification_confidence=classification_confidence,
+        expense_suggestion=expense_suggestion,
+    )
     return _to_out(
         draft,
         linked_name=linked_name,
@@ -255,6 +265,7 @@ def _draft_out(session: Session, entity_id: uuid.UUID, draft: InvoiceDraft) -> I
         linked_platform_name=linked_platform_name,
         suggested_expense_account_id=suggested_expense_account_id,
         expense_account_confidence=expense_account_confidence,
+        one_click_post_eligible=one_click_eligible,
     )
 
 
@@ -930,6 +941,73 @@ def reject_invoice_draft(
     with entity_context(session, entity_id):
         _discard_invoice_draft(session, draft)
         session.commit()
+
+
+def confirm_and_post_supplier_invoice_draft(
+    session: Session,
+    entity_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    *,
+    expense_account_id: uuid.UUID,
+    actor_id: uuid.UUID,
+) -> PostInvoiceDraftOut:
+    """Confirm and post a trusted supplier invoice in one transaction."""
+    _require_entity(session, entity_id)
+
+    draft = _get_draft_row(session, entity_id, draft_id)
+    with entity_context(session, entity_id):
+        expense_suggestion = (
+            suggest_supplier_expense_account(session, entity_id, draft.supplier_id)
+            if draft.supplier_id is not None
+            else None
+        )
+        classification_confidence = _draft_classification_confidence(draft)
+        if not is_one_click_post_eligible(
+            draft,
+            classification_confidence=classification_confidence,
+            expense_suggestion=expense_suggestion,
+        ):
+            raise DraftConfirmError("Invoice is not eligible for one-click post")
+
+        if _draft_status(draft) not in {
+            InvoiceDraftStatus.DRAFT,
+            InvoiceDraftStatus.NEEDS_REVIEW,
+        }:
+            raise DraftConfirmError(
+                f"Draft status {_draft_status(draft).value!r} cannot be one-click posted"
+            )
+
+        draft.status = InvoiceDraftStatus.CONFIRMED.value
+        draft.confirmed_at = utcnow()
+        draft.confirmed_by = actor_id
+        draft.review_reason = None
+        _learn_from_draft_classification(session, draft)
+
+        result = post_supplier_invoice_draft_to_ledger(
+            session,
+            entity_id,
+            draft,
+            expense_account_id=expense_account_id,
+            actor_id=actor_id,
+        )
+        journal_entry_id = result.journal_entry.id
+        journal_entry_date = result.journal_entry.entry_date
+        journal_entry_description = result.journal_entry.description
+        journal_entry_source = result.journal_entry.source
+        supplier_ledger_entry_id = result.supplier_ledger_entry.id
+        payable_balance_kurus = result.payable_balance_kurus
+        session.commit()
+        session.refresh(draft)
+
+    return PostInvoiceDraftOut(
+        draft=_draft_out(session, entity_id, draft),
+        journal_entry_id=journal_entry_id,
+        journal_entry_date=journal_entry_date,
+        journal_entry_description=journal_entry_description,
+        journal_entry_source=journal_entry_source,
+        supplier_ledger_entry_id=supplier_ledger_entry_id,
+        payable_balance_kurus=payable_balance_kurus,
+    )
 
 
 def post_invoice_draft(
