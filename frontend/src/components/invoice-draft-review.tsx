@@ -106,7 +106,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         `/entities/${entityId}/invoices/drafts/${draftId}`,
       ),
       apiFetch<{ items: SupplierOption[] }>(
-        `/entities/${entityId}/suppliers?include_inactive=true&limit=100`,
+        `/entities/${entityId}/suppliers?include_inactive=false&limit=100`,
       ),
       apiFetch<{ items: Account[] }>(
         `/entities/${entityId}/chart-of-accounts?limit=200`,
@@ -654,6 +654,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
                 id="link-supplier"
                 value={selectedSupplierId}
                 onValueChange={setSelectedSupplierId}
+                placement="above"
                 options={[
                   { value: "", label: "Auto-match by VKN" },
                   ...suppliers.map((s) => ({

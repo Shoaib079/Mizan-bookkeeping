@@ -3,7 +3,7 @@
 /** Suppliers list — Phase 9 Slice 3. */
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { SupplierForm, type SupplierRow } from "@/components/forms/supplier-form";
 import { Button } from "@/components/ui/button";
@@ -23,21 +23,81 @@ import { Users } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityList } from "@/lib/use-entity-list";
 
+function SupplierTable({ rows }: { rows: SupplierRow[] }) {
+  return (
+    <DataTable>
+      <DataTableHead>
+        <tr>
+          <DataTableHeaderCell>Name</DataTableHeaderCell>
+          <DataTableHeaderCell>VKN</DataTableHeaderCell>
+          <DataTableHeaderCell>Status</DataTableHeaderCell>
+        </tr>
+      </DataTableHead>
+      <DataTableBody>
+        {rows.map((row) => (
+          <DataTableRow key={row.id}>
+            <DataTableCell>
+              <Link
+                href={`/suppliers/${row.id}`}
+                className="text-primary hover:underline"
+              >
+                {row.name}
+              </Link>
+            </DataTableCell>
+            <DataTableCell>{row.vkn}</DataTableCell>
+            <DataTableCell>
+              <StatusBadge status={row.is_active ? "active" : "inactive"} />
+            </DataTableCell>
+          </DataTableRow>
+        ))}
+      </DataTableBody>
+    </DataTable>
+  );
+}
+
 export default function SuppliersPage() {
   const { entityId } = useEntity();
+  const [showInactive, setShowInactive] = useState(false);
+  const listPath = showInactive
+    ? "/suppliers?include_inactive=true"
+    : "/suppliers?include_inactive=false";
   const { items, total, loading, error, forbidden, reload } =
-    useEntityList<SupplierRow>("/suppliers?include_inactive=true", entityId);
+    useEntityList<SupplierRow>(listPath, entityId);
   const [formOpen, setFormOpen] = useState(false);
+
+  const activeItems = useMemo(
+    () => items.filter((row) => row.is_active),
+    [items],
+  );
+  const inactiveItems = useMemo(
+    () => items.filter((row) => !row.is_active),
+    [items],
+  );
+
+  const activeCount = showInactive ? activeItems.length : total;
 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? `${total} registered supplier${total === 1 ? "" : "s"} (active and inactive — never deleted)`
+            ? showInactive
+              ? `${activeCount} active · ${inactiveItems.length} inactive`
+              : `${total} active supplier${total === 1 ? "" : "s"}`
             : "Select a restaurant in the sidebar"}
         </p>
         <div className="flex flex-wrap items-center gap-3">
+          {entityId && (
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(event) => setShowInactive(event.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              Show inactive suppliers
+            </label>
+          )}
           {entityId && (
             <Link
               href="/balances/suppliers"
@@ -70,37 +130,32 @@ export default function SuppliersPage() {
         />
       )}
 
-      {items.length > 0 && (
-        <DataTable>
-          <DataTableHead>
-            <tr>
-              <DataTableHeaderCell>Name</DataTableHeaderCell>
-              <DataTableHeaderCell>VKN</DataTableHeaderCell>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-            </tr>
-          </DataTableHead>
-          <DataTableBody>
-            {items.map((row) => (
-              <DataTableRow key={row.id}>
-                <DataTableCell>
-                  <Link
-                    href={`/suppliers/${row.id}`}
-                    className="text-primary hover:underline"
-                  >
-                    {row.name}
-                  </Link>
-                </DataTableCell>
-                <DataTableCell>{row.vkn}</DataTableCell>
-                <DataTableCell>
-                  <StatusBadge
-                    status={row.is_active ? "active" : "inactive"}
-                  />
-                </DataTableCell>
-              </DataTableRow>
-            ))}
-          </DataTableBody>
-        </DataTable>
+      {!loading && !forbidden && showInactive && activeItems.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-2 text-sm font-semibold text-foreground">
+            Active suppliers
+          </h2>
+          <SupplierTable rows={activeItems} />
+        </section>
       )}
+
+      {!loading && !forbidden && showInactive && inactiveItems.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
+            Inactive suppliers
+          </h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Deactivated suppliers stay in history but are hidden from invoice
+            linking and new payments.
+          </p>
+          <SupplierTable rows={inactiveItems} />
+        </section>
+      )}
+
+      {!loading &&
+        !forbidden &&
+        !showInactive &&
+        items.length > 0 && <SupplierTable rows={items} />}
 
       <p className="mt-4 text-xs text-muted-foreground">
         Outstanding balances across all suppliers are on{" "}

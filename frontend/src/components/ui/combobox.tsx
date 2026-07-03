@@ -22,6 +22,10 @@ export type ComboboxOption = {
   label: string;
 };
 
+const MAX_MENU_HEIGHT_PX = 240;
+
+export type ComboboxPlacement = "auto" | "above" | "below";
+
 export type ComboboxProps = {
   id?: string;
   options: ComboboxOption[];
@@ -32,6 +36,8 @@ export type ComboboxProps = {
   emptyMessage?: string;
   className?: string;
   required?: boolean;
+  /** Prefer opening above the input when space is tight (e.g. bottom of review panels). */
+  placement?: ComboboxPlacement;
 };
 
 export function Combobox({
@@ -44,6 +50,7 @@ export function Combobox({
   emptyMessage = "No matches",
   className,
   required,
+  placement = "auto",
 }: ComboboxProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,9 +60,12 @@ export function Combobox({
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [menuPosition, setMenuPosition] = useState<{
-    top: number;
+    top?: number;
+    bottom?: number;
     left: number;
     width: number;
+    maxHeight: number;
+    openAbove: boolean;
   } | null>(null);
 
   const selected = options.find((option) => option.value === value);
@@ -98,12 +108,34 @@ export function Combobox({
     const input = inputRef.current;
     if (!input) return;
     const rect = input.getBoundingClientRect();
+    const gap = 4;
+    const spaceBelow = window.innerHeight - rect.bottom - gap;
+    const spaceAbove = rect.top - gap;
+
+    let openAbove = false;
+    if (placement === "above") {
+      openAbove = true;
+    } else if (placement === "below") {
+      openAbove = false;
+    } else {
+      openAbove =
+        spaceBelow < MAX_MENU_HEIGHT_PX && spaceAbove > spaceBelow;
+    }
+
+    const maxHeight = Math.min(
+      MAX_MENU_HEIGHT_PX,
+      Math.max(openAbove ? spaceAbove : spaceBelow, 120),
+    );
+
     setMenuPosition({
-      top: rect.bottom + 4,
+      top: openAbove ? undefined : rect.bottom + gap,
+      bottom: openAbove ? window.innerHeight - rect.top + gap : undefined,
       left: rect.left,
       width: rect.width,
+      maxHeight,
+      openAbove,
     });
-  }, []);
+  }, [placement]);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -118,7 +150,7 @@ export function Combobox({
       window.removeEventListener("resize", onReposition);
       window.removeEventListener("scroll", onReposition, true);
     };
-  }, [open, updateMenuPosition]);
+  }, [open, updateMenuPosition, filtered.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -251,11 +283,14 @@ export function Combobox({
             role="listbox"
             style={{
               position: "fixed",
-              top: menuPosition.top,
+              ...(menuPosition.openAbove
+                ? { bottom: menuPosition.bottom }
+                : { top: menuPosition.top }),
               left: menuPosition.left,
               width: menuPosition.width,
+              maxHeight: menuPosition.maxHeight,
             }}
-            className="z-[200] max-h-60 overflow-y-auto rounded-md border border-border bg-card py-1 shadow-lg"
+            className="z-[200] overflow-y-auto rounded-md border border-border bg-card py-1 shadow-lg"
           >
             {filtered.length === 0 ? (
               <p className="px-3 py-2 text-sm text-muted-foreground">
