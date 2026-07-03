@@ -46,6 +46,7 @@ from app.features.expenses.api import router as expenses_router
 from app.features.operations.api import router as operations_router
 from app.features.reports.api import router as reports_router
 from app.features.dashboard.api import router as dashboard_router
+from app.features.review_counts.api import router as review_counts_router
 from app.features.auth.api import members_router as auth_members_router
 from app.features.auth.api import users_router as auth_users_router
 from app.adapters.storage.local import ensure_storage_roots
@@ -115,6 +116,7 @@ app.include_router(expenses_router)
 app.include_router(operations_router)
 app.include_router(reports_router)
 app.include_router(dashboard_router)
+app.include_router(review_counts_router)
 app.include_router(auth_users_router)
 app.include_router(auth_members_router)
 

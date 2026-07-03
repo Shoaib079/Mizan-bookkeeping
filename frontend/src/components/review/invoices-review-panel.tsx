@@ -18,6 +18,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
+import { invalidateReviewCounts } from "@/lib/review-counts-types";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { invoiceKindLabel } from "@/lib/invoice-classification";
 import {
@@ -168,6 +169,7 @@ export function InvoicesReviewPanel() {
 
   function onDraftUpdated(outcome?: "removed" | "updated") {
     void reload();
+    invalidateReviewCounts();
     if (outcome === "removed") {
       setExpandedDraftId(null);
     }

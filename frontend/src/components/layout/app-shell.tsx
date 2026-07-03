@@ -2,6 +2,7 @@
 
 /** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6). */
 
+import Link from "next/link";
 import { Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -13,8 +14,11 @@ import { CommandPalette } from "@/components/command-palette";
 import { NewMenu } from "@/components/new-menu";
 import { useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
+import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { Label } from "@/components/ui/input";
 import { useEntity } from "@/lib/entity-context";
+import { ReviewCountsProvider } from "@/lib/review-counts-context";
+import { useReviewCounts } from "@/lib/use-review-counts";
 
 export function AppShell({
   children,
@@ -36,9 +40,11 @@ function AppShellInner({
   const pathname = usePathname();
   const { deliveryEnabled } = useQuickActions();
   const { entityId, entities, entitiesLoading } = useEntity();
+  const { counts: reviewCounts } = useReviewCounts(entityId);
 
   const navSettings = { deliveryEnabled };
   const activeEntity = entities.find((entity) => entity.id === entityId);
+  const onReviewPage = pathname.startsWith("/review");
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -64,11 +70,26 @@ function AppShellInner({
             )}
           </div>
         </div>
-        <SidebarNav pathname={pathname} settings={navSettings} />
+        <SidebarNav
+          pathname={pathname}
+          settings={navSettings}
+          reviewTotal={reviewCounts.total}
+        />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background px-6">
-          <h1 className="text-sm font-semibold">{title}</h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <h1 className="truncate text-sm font-semibold">{title}</h1>
+            {reviewCounts.total > 0 && !onReviewPage && (
+              <Link
+                href="/review"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-warning/15 dark:text-amber-200"
+              >
+                Review
+                <NavCountBadge count={reviewCounts.total} className="bg-warning/25" />
+              </Link>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -89,7 +110,9 @@ function AppShellInner({
         </header>
         <main className="flex-1 p-6">
           <PageBackLink />
-          {children}
+          <ReviewCountsProvider counts={reviewCounts}>
+            {children}
+          </ReviewCountsProvider>
         </main>
       </div>
       <CommandPalette deliveryEnabled={deliveryEnabled} />

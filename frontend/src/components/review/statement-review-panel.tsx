@@ -14,6 +14,7 @@ import {
   type StatementReviewTab,
 } from "@/lib/statement-review";
 import { useEntity } from "@/lib/entity-context";
+import { invalidateReviewCounts } from "@/lib/review-counts-types";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,7 @@ export function StatementReviewPanel() {
     try {
       const loaded = await loadStatementReviewLines(entityId);
       setLines(loaded);
+      invalidateReviewCounts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Load failed");
       setLines([]);
