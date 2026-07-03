@@ -126,12 +126,9 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
     const suggestedAccount = suggested
       ? expenses.find((a) => a.id === suggested)
       : undefined;
-    const highConfidence = draftRes.expense_account_confidence === "high";
     const preferred = isCommission
       ? expenses[0]
-      : highConfidence && suggestedAccount
-        ? suggestedAccount
-        : findExpenseAccountByCode(chartRes.items, "5200");
+      : suggestedAccount ?? findExpenseAccountByCode(chartRes.items, "5200");
     if (preferred) setExpenseAccountId(preferred.id);
     else if (expenses[0]) setExpenseAccountId(expenses[0].id);
     if (draftRes.supplier_id) setSelectedSupplierId(draftRes.supplier_id);

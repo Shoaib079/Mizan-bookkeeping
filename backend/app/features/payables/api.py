@@ -11,7 +11,12 @@ from sqlalchemy.orm import Session
 from app.core.listing import ListParams, list_params_dependency
 
 from app.core.ledger.correction import CorrectionNotFoundError
-from app.core.ledger.posting import InvalidAccountError, PostingError
+from app.core.ledger.posting import (
+    AlreadyVoidedError,
+    InvalidAccountError,
+    NotVoidableError,
+    PostingError,
+)
 from app.core.payables.ledger import (
     DisallowedMovementTypeError,
     OverpaymentError,
@@ -314,6 +319,8 @@ def correct_supplier_invoice(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except CorrectionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (NotVoidableError, AlreadyVoidedError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except (ZeroMovementError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:

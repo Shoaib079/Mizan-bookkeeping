@@ -43,6 +43,11 @@ from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.expenses.models import ExpenseEntry
 from app.features.invoices.models import InvoiceDraft
+from app.features.invoices.supplier_expense_learning import (
+    learn_supplier_expense_account,
+    suggest_supplier_expense_account,
+)
+from app.features.payables import invoice_edit
 from app.features.cash.models import CashMovement, CashMovementDirection
 from app.core.cash.guards import resolve_session_for_movement
 
@@ -902,13 +907,16 @@ def correct_supplier_invoice(
 
     with entity_context(session, entity_id):
         require_entity_context()
-        original_row = _get_supplier_ledger_row(session, journal_entry_id)
+        target_id = invoice_edit.resolve_supplier_invoice_edit_target(
+            session, journal_entry_id
+        )
+        original_row = _get_supplier_ledger_row(session, target_id)
         if original_row.movement_type != SupplierMovementType.INVOICE:
             raise CorrectionNotFoundError("journal entry is not a supplier invoice")
 
         supplier_id = original_row.supplier_id
         draft = session.scalar(
-            select(InvoiceDraft).where(InvoiceDraft.journal_entry_id == journal_entry_id)
+            select(InvoiceDraft).where(InvoiceDraft.journal_entry_id == target_id)
         )
 
         ap_account = session.scalar(
@@ -943,11 +951,19 @@ def correct_supplier_invoice(
         def update_draft(sess: Session, corrected: JournalEntry) -> None:
             if draft is not None:
                 draft.journal_entry_id = corrected.id
+            suggestion = suggest_supplier_expense_account(sess, entity_id, supplier_id)
+            learn_supplier_expense_account(
+                sess,
+                entity_id,
+                supplier_id=supplier_id,
+                expense_account_id=expense_account_id,
+                suggested_account_id=suggestion.account_id if suggestion else None,
+            )
 
     return correct_gl_with_subledger_rows(
         session,
         entity_id,
-        journal_entry_id,
+        target_id,
         invoice_date,
         description,
         lines,

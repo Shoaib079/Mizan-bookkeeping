@@ -42,6 +42,8 @@ export type SupplierActivityRow = {
   invoice_draft_id: string | null;
   journal_entry_id: string | null;
   has_document: boolean;
+  can_edit: boolean;
+  expense_account_id: string | null;
 };
 
 type SupplierActivity = {
@@ -66,18 +68,19 @@ type Props = {
     amount_kurus: number;
     description: string;
   }) => void;
-  onCorrectInvoice?: (row: {
+  onEditInvoice?: (row: {
     journal_entry_id: string;
     movement_date: string;
     amount_kurus: number;
     description: string;
+    expense_account_id?: string | null;
   }) => void;
 };
 
 export function SupplierActivityPanel({
   supplierId,
   onCorrectPayment,
-  onCorrectInvoice,
+  onEditInvoice,
 }: Props) {
   const { entityId } = useEntity();
   const [range, setRange] = useState(currentMonthRange);
@@ -263,21 +266,23 @@ export function SupplierActivityPanel({
                       )}
                     {row.movement_kind === "invoice" &&
                       row.journal_entry_id &&
-                      onCorrectInvoice && (
+                      row.can_edit &&
+                      onEditInvoice && (
                         <Button
                           type="button"
                           variant="secondary"
                           className="h-8 px-2"
                           onClick={() =>
-                            onCorrectInvoice({
+                            onEditInvoice({
                               journal_entry_id: row.journal_entry_id!,
                               movement_date: row.movement_date,
                               amount_kurus: row.amount_kurus ?? 0,
                               description: row.detail,
+                              expense_account_id: row.expense_account_id,
                             })
                           }
                         >
-                          Correct
+                          Edit
                         </Button>
                       )}
                     {row.invoice_draft_id &&

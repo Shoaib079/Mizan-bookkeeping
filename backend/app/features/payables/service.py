@@ -14,12 +14,18 @@ from app.core.ledger.correction import (
     correct_supplier_invoice,
     correct_supplier_payment,
 )
-from app.core.ledger.posting import InvalidAccountError, PostingError
+from app.core.ledger.posting import (
+    AlreadyVoidedError,
+    InvalidAccountError,
+    NotVoidableError,
+    PostingError,
+)
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
 from app.core.listing import ListParams, fetch_paginated_rows, text_search_filter
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
+from app.features.payables import invoice_edit
 from app.features.suppliers.models import Supplier
 
 
@@ -205,9 +211,12 @@ def correct_supplier_invoice_entry(
     period_unlock_reason: str | None = None,
 ):
     with entity_context(session, entity_id):
+        target_id = invoice_edit.resolve_supplier_invoice_edit_target(
+            session, journal_entry_id
+        )
         row = session.scalar(
             select(SupplierLedgerEntry).where(
-                SupplierLedgerEntry.journal_entry_id == journal_entry_id
+                SupplierLedgerEntry.journal_entry_id == target_id
             )
         )
         if row is None or row.supplier_id != supplier_id:
@@ -218,7 +227,7 @@ def correct_supplier_invoice_entry(
     result = correct_supplier_invoice(
         session,
         entity_id,
-        journal_entry_id,
+        target_id,
         invoice_date=invoice_date,
         description=description,
         actor_id=actor_id,

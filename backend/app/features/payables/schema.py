@@ -142,6 +142,8 @@ class SupplierActivityRow(BaseModel):
     invoice_draft_id: uuid.UUID | None = None
     journal_entry_id: uuid.UUID | None = None
     has_document: bool = False
+    can_edit: bool = False
+    expense_account_id: uuid.UUID | None = None
 
 
 class SupplierActivityRead(BaseModel):

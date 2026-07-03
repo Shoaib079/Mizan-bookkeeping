@@ -25,6 +25,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 - **Salary period + advance UX (FS)** (`v0.73.24-salary-period-advance-ux`) — accrual period fields (migration `060`); ledger advance totals; payment preview + `advance_applied_minor` on API response.
 - **Supplier invoice expense-account learning** (`v0.73.44-invoice-supplier-expense-learning`) — migration `066` `supplier_expense_account_rules`; learns on post; HIGH confidence preselects expense account on draft review.
 - **Invoice one-click post (IC-E slice 1)** (`v0.73.46-invoice-one-click-post`) — `POST confirm-and-post` when supplier linked + classification HIGH + expense account HIGH; atomic confirm+post; trusted UI replaces separate Confirm step.
+- **Supplier invoice Edit (fix)** — Edit only on current posted row; prefill expense account from ledger (not 5200 default); resolve void/reversal chain; learns expense account on edit.
 
 ---
 

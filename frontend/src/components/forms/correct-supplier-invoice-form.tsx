@@ -29,6 +29,7 @@ export type CorrectableSupplierInvoiceRow = {
   movement_date: string;
   amount_kurus: number;
   description: string;
+  expense_account_id?: string | null;
 };
 
 type Props = {
@@ -77,16 +78,8 @@ export function CorrectSupplierInvoiceForm({
     const chart = await apiFetch<{ items: ExpenseAccountOption[] }>(
       `/entities/${entityId}/chart-of-accounts?limit=200`,
     );
-    const expenses = filterExpenseAccounts(chart.items);
-    setAccounts(expenses);
-    const preferred = findExpenseAccountByCode(chart.items, "5200");
-    if (preferred) setExpenseAccountId(preferred.id);
-    else if (expenses[0]) setExpenseAccountId(expenses[0].id);
+    setAccounts(filterExpenseAccounts(chart.items));
   }, [entityId]);
-
-  useEffect(() => {
-    if (open) submitIdempotency.resetSubmit();
-  }, [open, submitIdempotency]);
 
   useEffect(() => {
     if (!open || !invoice) return;
@@ -97,6 +90,23 @@ export function CorrectSupplierInvoiceForm({
     setReason("");
     setError(null);
   }, [open, invoice, loadAccounts]);
+
+  useEffect(() => {
+    if (!open || accounts.length === 0) return;
+    const fromInvoice = invoice?.expense_account_id
+      ? accounts.find((a) => a.id === invoice.expense_account_id)
+      : undefined;
+    if (fromInvoice) {
+      setExpenseAccountId(fromInvoice.id);
+      return;
+    }
+    const fallback = findExpenseAccountByCode(accounts, "5200") ?? accounts[0];
+    if (fallback) setExpenseAccountId(fallback.id);
+  }, [open, invoice?.expense_account_id, accounts]);
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
 
   const grossKurus = parseTryToKurus(grossText);
 
@@ -145,9 +155,9 @@ export function CorrectSupplierInvoiceForm({
       submitIdempotency.completeSubmit();
       onClose();
       onSaved();
-      toast("Invoice corrected");
+      toast("Invoice updated");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Correction failed");
+      setError(err instanceof Error ? err.message : "Update failed");
     } finally {
       setSubmitting(false);
     }
@@ -155,7 +165,7 @@ export function CorrectSupplierInvoiceForm({
 
   return (
     <>
-      <Dialog open={open} title="Correct supplier invoice" onClose={onClose}>
+      <Dialog open={open} title="Edit supplier invoice" onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <Label htmlFor="csi-date">Invoice date</Label>
@@ -188,7 +198,7 @@ export function CorrectSupplierInvoiceForm({
             />
           </div>
           <div>
-            <Label htmlFor="csi-reason">Correction reason (optional)</Label>
+            <Label htmlFor="csi-reason">Edit reason (optional)</Label>
             <Input id="csi-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -196,7 +206,7 @@ export function CorrectSupplierInvoiceForm({
             type="submit"
             disabled={submitting || grossKurus === null || grossKurus <= 0 || !expenseAccountId}
           >
-            {submitting ? "Saving…" : "Save correction"}
+            {submitting ? "Saving…" : "Save changes"}
           </Button>
         </form>
       </Dialog>

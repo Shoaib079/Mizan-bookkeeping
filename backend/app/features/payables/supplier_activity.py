@@ -9,6 +9,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.ledger.models import JournalEntry
 from app.core.payables.ledger import list_ledger_entries
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
@@ -18,6 +19,7 @@ from app.features.banking.statements import BANK_STATEMENT_LINE_REF
 from app.features.entities import service as entity_service
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
 from app.features.banking.models import MoneyAccount
+from app.features.payables import invoice_edit
 from app.features.payables.schema import SupplierActivityRead, SupplierActivityRow
 from app.features.suppliers import service as supplier_service
 
@@ -153,11 +155,15 @@ def get_supplier_activity(
             document_ref = "—"
             invoice_draft_id: uuid.UUID | None = None
             has_document = False
+            can_edit = False
+            expense_account_id: uuid.UUID | None = None
+            draft_journal_entry_id: uuid.UUID | None = None
 
             if entry.movement_type == SupplierMovementType.INVOICE:
                 draft = _invoice_draft_for_entry(session, entry)
                 if draft is not None:
                     invoice_draft_id = draft.id
+                    draft_journal_entry_id = draft.journal_entry_id
                     document_ref = draft.invoice_number
                     net_kurus = draft.net_kurus
                     vat_kurus = _vat_total_kurus(draft)
@@ -167,6 +173,25 @@ def get_supplier_activity(
                 else:
                     amount_kurus = entry.amount_kurus
                     document_ref = entry.description[:64]
+
+                journal = (
+                    session.get(JournalEntry, entry.journal_entry_id)
+                    if entry.journal_entry_id is not None
+                    else None
+                )
+                if journal is not None and entry.description.startswith("Void:"):
+                    detail = entry.description
+                can_edit = invoice_edit.supplier_invoice_row_is_editable(
+                    session,
+                    entry,
+                    draft_journal_entry_id=draft_journal_entry_id,
+                )
+                if can_edit and journal is not None:
+                    expense_account_id = invoice_edit.expense_account_id_from_journal(
+                        session,
+                        entity_id,
+                        journal,
+                    )
             elif entry.movement_type == SupplierMovementType.PAYMENT:
                 amount_kurus = abs(entry.amount_kurus)
                 bank_name, dekont_ref, detail = _payment_details(session, entry)
@@ -196,6 +221,8 @@ def get_supplier_activity(
                         invoice_draft_id=invoice_draft_id,
                         journal_entry_id=entry.journal_entry_id,
                         has_document=has_document,
+                        can_edit=can_edit,
+                        expense_account_id=expense_account_id,
                     ),
                 )
             )

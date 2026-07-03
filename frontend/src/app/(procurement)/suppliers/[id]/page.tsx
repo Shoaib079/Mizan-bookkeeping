@@ -226,7 +226,7 @@ export default function SupplierDetailPage() {
             <SupplierActivityPanel
               supplierId={supplierId}
               onCorrectPayment={(row) => setCorrectPayment(row)}
-              onCorrectInvoice={(row) => setCorrectInvoice(row)}
+              onEditInvoice={(row) => setCorrectInvoice(row)}
             />
           </section>
 
