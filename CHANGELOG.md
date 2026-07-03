@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-03
 
+**IE-B — AI vision PDF extraction (`v0.74.1-invoice-vision-extraction`):** When pypdf heuristics fail or PDF has no text layer, optional env-gated vision OCR (`EXPENSE_RECEIPT_VISION_*`) fills `EInvoiceExtraction` with per-field confidences. Validates totals + GİB VKN/TCKN checksum (`core/turkish_vkn.py`); routes low-confidence/invalid to `needs_review` (`vision_low_confidence`, `vision_totals_mismatch`, `vision_invalid_vkn`). Vision extractions never eligible for one-click or auto-post (`raw.source == "vision"`). Unconfigured vision falls back to IE-A. Tests: `test_efatura_pdf_vision.py` (+11).
+
 **IE-A — never reject PDF extraction (`v0.74.0-invoice-never-reject-pdf`):** PDF upload no longer returns 422 for extraction failures — always creates a `needs_review` draft with the stored file. `extract_efatura_pdf_for_intake` harvests partial fields when heuristics fail; `assumed_vat` and `net_adjusted` flags force review and block one-click/auto-post. Review UI shows `—` for missing invoice date/amounts. Tests: `test_efatura_pdf_intake.py`.
 
 ## 2026-06-30

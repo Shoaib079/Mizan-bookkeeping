@@ -10,9 +10,9 @@
 |-------|-------|
 | **Phase** | Phase 12.5 — pre-launch ops + delivery UX |
 | **Active slice** | — (awaiting next slice) |
-| **Last completed slice** | IE-A — never reject PDFs (`v0.74.0-invoice-never-reject-pdf`) |
-| **Last tag** | `v0.74.0-invoice-never-reject-pdf` |
-| **Next up** | **IE-B** — AI vision PDF extraction; then P3 upload backup |
+| **Last completed slice** | IE-B — AI vision PDF extraction (`v0.74.1-invoice-vision-extraction`) |
+| **Last tag** | `v0.74.1-invoice-vision-extraction` |
+| **Next up** | **IE-C** — PyMuPDF text layer hardening; then P3 upload backup |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 

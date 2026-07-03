@@ -30,6 +30,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 - **Supplier invoice number uniqueness** — live posted guard on `(supplier, invoice_number)`; upload marks `duplicate`; post/auto-post/one-click blocked; edit/correct exempt.
 - **Supplier activity void display** — İptal rows show negative amounts; invoice totals count live rows only; draft amounts sync on edit.
 - **IE-A — never reject PDF extraction** (`v0.74.0-invoice-never-reject-pdf`) — PDF upload failures → `needs_review` draft with stored file; partial field harvest; `assumed_vat`/`net_adjusted` force review and block one-click/auto-post.
+- **IE-B — AI vision PDF extraction** (`v0.74.1-invoice-vision-extraction`) — optional vision OCR fallback for no-text/scanned PDFs; VKN checksum validation; vision never auto-posts.
 
 ---
 
@@ -40,7 +41,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 | **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-C done** — IC-D deferred |
 | 2 | FP | Partner advance / drawing | **Done** (`v0.73.23`) |
 | 3 | FS | Salary period + auto-clear advance | **Done** (`v0.73.24`) |
-| 4 | **IE-B → IE-C** | **Invoice PDF extraction** (vision fallback + PyMuPDF hardening) | **IE-A done** (`v0.74.0`) — **Next: IE-B** |
+| 4 | **IE-B → IE-C** | **Invoice PDF extraction** (vision fallback + PyMuPDF hardening) | **IE-B done** (`v0.74.1`) — **Next: IE-C** |
 | 5 | P3 | Off-site backup of uploads | Queued |
 | 6 | P5 | Delete company UI | Queued |
 | 7 | P6 | Production cutover (ops) | Owner |

@@ -171,9 +171,19 @@ def _pdf_extraction_needs_review(extraction: EInvoiceExtraction) -> bool:
     return bool(raw.get("assumed_vat") or raw.get("net_adjusted"))
 
 
+def _is_vision_extraction_payload(payload: dict) -> bool:
+    raw = payload.get("raw")
+    return isinstance(raw, dict) and raw.get("source") == "vision"
+
+
 def _draft_classification_confidence(draft: InvoiceDraft) -> str:
     payload = draft.extraction_payload or {}
     raw = payload.get("raw")
+    if isinstance(raw, dict) and raw.get("source") == "vision":
+        stored = payload.get("classification_confidence")
+        if stored in ("high", "medium", "low"):
+            return stored
+        return "medium"
     if isinstance(raw, dict) and (raw.get("assumed_vat") or raw.get("net_adjusted")):
         return "low"
     stored = payload.get("classification_confidence")
@@ -400,7 +410,11 @@ def _extract_and_store_efatura(
 
     payload = extraction_to_payload(extraction)
     payload["stored_path"] = stored_path
-    if pdf_intake_review_reason or _pdf_extraction_needs_review(extraction):
+    if _is_vision_extraction_payload(payload):
+        payload["classification_confidence"] = (
+            "low" if pdf_intake_review_reason else "medium"
+        )
+    elif pdf_intake_review_reason or _pdf_extraction_needs_review(extraction):
         payload["classification_confidence"] = "low"
 
     linked_supplier: Supplier | None = None

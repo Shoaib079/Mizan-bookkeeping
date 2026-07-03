@@ -23,7 +23,16 @@ _BLOCKING_REVIEW_MARKERS = (
     "pdf_no_text_layer",
     "pdf_fields_missing",
     "pdf_extraction_failed",
+    "vision_low_confidence",
+    "vision_totals_mismatch",
+    "vision_invalid_vkn",
 )
+
+
+def _is_vision_extraction(draft: InvoiceDraft) -> bool:
+    payload = draft.extraction_payload or {}
+    raw = payload.get("raw")
+    return isinstance(raw, dict) and raw.get("source") == "vision"
 
 
 def _has_blocking_review_reason(reason: str | None) -> bool:
@@ -41,6 +50,9 @@ def is_one_click_post_eligible(
 ) -> bool:
     """Supplier invoice ready for a single confirm+post action."""
     if InvoiceKind(draft.invoice_kind) != InvoiceKind.SUPPLIER:
+        return False
+
+    if _is_vision_extraction(draft):
         return False
 
     status = InvoiceDraftStatus(draft.status)

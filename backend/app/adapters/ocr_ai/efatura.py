@@ -7,14 +7,24 @@ never a hardcoded restaurant name.
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import json
 import re
+import urllib.error
+import urllib.request
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from typing import Any
 from xml.etree import ElementTree as ET
 
-from app.features.invoices.validation import VatBreakdownLine, validate_invoice_totals
+from app.config import settings
+from app.core.turkish_vkn import is_valid_vkn_or_tckn
+from app.features.invoices.validation import (
+    InvoiceTotalsError,
+    VatBreakdownLine,
+    validate_invoice_totals,
+)
 
 UBL_NS = {
     "inv": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
@@ -886,6 +896,230 @@ def _pdf_intake_failure_reason(exc: Exception, missing: list[str]) -> str:
     return f"pdf_extraction_failed:{exc}"
 
 
+_VISION_CONFIDENCE_FIELDS: tuple[str, ...] = (
+    "supplier_name",
+    "supplier_vkn",
+    "invoice_number",
+    "invoice_date",
+    "net_kurus",
+    "gross_kurus",
+    "vat_breakdown",
+)
+
+
+def _parse_vision_date_token(raw_date: str) -> date | None:
+    cleaned = raw_date.strip()
+    if not cleaned:
+        return None
+    try:
+        return _parse_tr_date_token(cleaned)
+    except ValueError:
+        pass
+    try:
+        return date.fromisoformat(cleaned)
+    except ValueError:
+        return None
+
+
+def _normalize_vision_confidence(value: Any) -> str:
+    if not isinstance(value, str):
+        return "low"
+    lowered = value.strip().casefold()
+    if lowered in {"high", "medium", "low"}:
+        return lowered
+    return "low"
+
+
+def _parse_vision_json(
+    payload: dict[str, Any],
+    *,
+    model: str,
+) -> EInvoiceExtraction:
+    invoice_number = str(payload.get("invoice_number", "")).strip()
+    if not invoice_number:
+        raise EfaturaExtractionError("Vision OCR missing invoice_number")
+
+    parsed_date = _parse_vision_date_token(str(payload.get("invoice_date", "")))
+    if parsed_date is None:
+        raise EfaturaExtractionError("Vision OCR missing or invalid invoice_date")
+
+    supplier_name = payload.get("supplier_name")
+    supplier_name_str = str(supplier_name).strip() if supplier_name else None
+    supplier_vkn_raw = payload.get("supplier_vkn")
+    supplier_vkn = str(supplier_vkn_raw).strip() if supplier_vkn_raw else None
+
+    net_kurus = int(payload["net_kurus"])
+    gross_kurus = int(payload["gross_kurus"])
+
+    vat_breakdown: list[VatBreakdownLine] = []
+    for item in payload.get("vat_breakdown", []):
+        if not isinstance(item, dict):
+            continue
+        vat_breakdown.append(
+            {
+                "rate_percent": float(item["rate_percent"]),
+                "base_kurus": int(item["base_kurus"]),
+                "vat_kurus": int(item["vat_kurus"]),
+            }
+        )
+
+    invoice_type_code = payload.get("invoice_type_code")
+    invoice_type_code_str = (
+        str(invoice_type_code).strip().upper() if invoice_type_code else None
+    )
+
+    referenced_invoice_number = payload.get("referenced_invoice_number")
+    referenced_invoice_number_str = (
+        str(referenced_invoice_number).strip() if referenced_invoice_number else None
+    )
+    referenced_invoice_date: date | None = None
+    referenced_raw = payload.get("referenced_invoice_date")
+    if isinstance(referenced_raw, str) and referenced_raw.strip():
+        referenced_invoice_date = _parse_vision_date_token(referenced_raw)
+
+    confidences_raw = payload.get("confidences", {})
+    confidences: dict[str, str] = {}
+    if isinstance(confidences_raw, dict):
+        for field_name, confidence in confidences_raw.items():
+            if isinstance(field_name, str):
+                confidences[field_name] = _normalize_vision_confidence(confidence)
+
+    return EInvoiceExtraction(
+        supplier_name=supplier_name_str,
+        supplier_vkn=supplier_vkn,
+        invoice_number=invoice_number,
+        invoice_date=parsed_date,
+        net_kurus=net_kurus,
+        gross_kurus=gross_kurus,
+        vat_breakdown=vat_breakdown,
+        currency="TRY",
+        invoice_type_code=invoice_type_code_str,
+        referenced_invoice_number=referenced_invoice_number_str,
+        referenced_invoice_date=referenced_invoice_date,
+        raw={
+            "source": "vision",
+            "model": model,
+            "confidences": confidences,
+            "vision_response": True,
+        },
+    )
+
+
+def _extract_efatura_vision(content: bytes) -> EInvoiceExtraction | None:
+    """Optional vision OCR when ``EXPENSE_RECEIPT_VISION_URL`` is configured."""
+    url = settings.expense_receipt_vision_url
+    if not url:
+        return None
+
+    model = settings.expense_receipt_vision_model
+    b64 = base64.b64encode(content).decode("ascii")
+    body = json.dumps(
+        {
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                "Extract fields from this Turkish e-Fatura PDF. "
+                                "Return strict JSON only with: supplier_name, supplier_vkn "
+                                "(VKN/TCKN digits only), invoice_number, invoice_date "
+                                "(DD.MM.YYYY or ISO), net_kurus, gross_kurus (whole kuruş, "
+                                "1 TL = 100), vat_breakdown "
+                                "[{rate_percent, base_kurus, vat_kurus}], invoice_type_code "
+                                "(e.g. SATIS or IADE), referenced_invoice_number/date for "
+                                "İADE credits, and confidences object mapping each field to "
+                                "high, medium, or low. Convert comma decimals to integer kuruş."
+                            ),
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:application/pdf;base64,{b64}",
+                            },
+                        },
+                    ],
+                }
+            ],
+            "response_format": {"type": "json_object"},
+        }
+    ).encode("utf-8")
+
+    headers = {"Content-Type": "application/json"}
+    if settings.expense_receipt_vision_api_key:
+        headers["Authorization"] = f"Bearer {settings.expense_receipt_vision_api_key}"
+
+    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            raw = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError, OSError):
+        return None
+
+    content_text = raw.get("choices", [{}])[0].get("message", {}).get("content", "")
+    if not content_text:
+        return None
+    try:
+        parsed = json.loads(content_text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    try:
+        return _parse_vision_json(parsed, model=model)
+    except (EfaturaExtractionError, KeyError, TypeError, ValueError):
+        return None
+
+
+def _vision_intake_review_reason(
+    extraction: EInvoiceExtraction,
+    *,
+    buyer_vkn: str | None,
+) -> str | None:
+    try:
+        validate_invoice_totals(
+            extraction.net_kurus,
+            extraction.gross_kurus,
+            extraction.vat_breakdown,
+        )
+    except InvoiceTotalsError:
+        return "vision_totals_mismatch"
+
+    supplier_vkn = (extraction.supplier_vkn or "").strip()
+    if not supplier_vkn or not is_valid_vkn_or_tckn(supplier_vkn):
+        return "vision_invalid_vkn"
+
+    buyer = buyer_vkn.strip() if buyer_vkn else None
+    if buyer and supplier_vkn == buyer:
+        return "vision_invalid_vkn"
+
+    confidences = (extraction.raw or {}).get("confidences", {})
+    if not isinstance(confidences, dict):
+        return "vision_low_confidence"
+    for field_name in _VISION_CONFIDENCE_FIELDS:
+        if confidences.get(field_name, "low") != "high":
+            return "vision_low_confidence"
+
+    return None
+
+
+def _try_vision_pdf_intake(
+    content: bytes,
+    *,
+    buyer_vkn: str | None,
+) -> PdfIntakeResult | None:
+    """Try vision once; None when unconfigured or HTTP/parse fails."""
+    extraction = _extract_efatura_vision(content)
+    if extraction is None:
+        return None
+    return PdfIntakeResult(
+        extraction=extraction,
+        review_reason=_vision_intake_review_reason(extraction, buyer_vkn=buyer_vkn),
+    )
+
+
 def extract_efatura_pdf_for_intake(
     content: bytes, *, buyer_vkn: str | None = None
 ) -> PdfIntakeResult:
@@ -896,6 +1130,9 @@ def extract_efatura_pdf_for_intake(
 
     text = _extract_pdf_text(content)
     if not text.strip():
+        vision_result = _try_vision_pdf_intake(content, buyer_vkn=buyer_vkn)
+        if vision_result is not None:
+            return vision_result
         return PdfIntakeResult(
             extraction=_empty_pdf_extraction(
                 raw={"source": "pdf_no_text", "text_length": 0}
@@ -910,12 +1147,18 @@ def extract_efatura_pdf_for_intake(
             review_reason=_pdf_heuristic_review_reason(extraction),
         )
     except EfaturaPdfUnsupportedError as exc:
+        vision_result = _try_vision_pdf_intake(content, buyer_vkn=buyer_vkn)
+        if vision_result is not None:
+            return vision_result
         partial, missing = _partial_pdf_extraction(text, buyer_vkn=buyer_vkn)
         return PdfIntakeResult(
             extraction=partial,
             review_reason=_pdf_intake_failure_reason(exc, missing),
         )
     except (EfaturaExtractionError, InvoiceTotalsError) as exc:
+        vision_result = _try_vision_pdf_intake(content, buyer_vkn=buyer_vkn)
+        if vision_result is not None:
+            return vision_result
         partial, missing = _partial_pdf_extraction(text, buyer_vkn=buyer_vkn)
         return PdfIntakeResult(
             extraction=partial,
