@@ -10,9 +10,9 @@
 |-------|-------|
 | **Phase** | Phase 12.5 — pre-launch ops + delivery UX |
 | **Active slice** | — (awaiting next slice) |
-| **Last completed slice** | IE-B — AI vision PDF extraction (`v0.74.1-invoice-vision-extraction`) |
-| **Last tag** | `v0.74.1-invoice-vision-extraction` |
-| **Next up** | **IE-C** — PyMuPDF text layer hardening; then P3 upload backup |
+| **Last completed slice** | IE-C — Extraction hardening: PyMuPDF, VKN checksum, stage telemetry (`v0.74.2-invoice-extraction-hardening`) |
+| **Last tag** | `v0.74.2-invoice-extraction-hardening` |
+| **Next up** | **P3** — off-site upload backup; then P5/P6 |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 

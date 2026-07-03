@@ -15,9 +15,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | — (awaiting next slice) |
-| **Last completed slice** | IE-B — AI vision PDF extraction (`v0.74.1-invoice-vision-extraction`) |
-| **Last commit/tag**      | `v0.74.1-invoice-vision-extraction` — optional vision OCR for no-text/failed PDF heuristics; VKN checksum validation; vision extractions never auto-post |
-| **Next up**              | **IE-C** — PyMuPDF text layer + heuristic hardening; then **P3** (upload backup) |
+| **Last completed slice** | IE-C — Extraction hardening: PyMuPDF, VKN checksum, stage telemetry (`v0.74.2-invoice-extraction-hardening`) |
+| **Last commit/tag**      | `v0.74.2-invoice-extraction-hardening` — PyMuPDF text extraction (lazy, pypdf fallback); VKN checksum blocks invalid supplier auto-creation on heuristic PDFs; structured telemetry log on draft creation |
+| **Next up**              | **P3** — off-site upload backup; then P5/P6 |
 
 
 ### Next plan (pre-launch, owner-driven)
@@ -1839,6 +1839,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-03 | IE-C — Extraction hardening (PyMuPDF + VKN + telemetry) | `v0.74.2-invoice-extraction-hardening`           | PyMuPDF text first (pypdf fallback); VKN checksum on heuristic extractions; structured `invoice_draft_created` log; IE arc complete |
 | 2026-07-03 | IE-B — AI vision PDF extraction fallback        | `v0.74.1-invoice-vision-extraction`                  | `_extract_efatura_vision`; VKN checksum; vision never auto-post; IE-A fallback when unconfigured |
 | 2026-07-03 | IE-A — never reject PDF extraction failures     | `v0.74.0-invoice-never-reject-pdf`                     | `extract_efatura_pdf_for_intake`; no 422 on PDF extraction; `pdf_assumed_vat`/`pdf_net_adjusted` block auto-post |
 | 2026-06-25 | Statement classify bar + line ledger (WIP)      | *(uncommitted — owner review)*                         | Posting bar; full grouped classify; merge multi-column bank descriptions on import; full description in UI; loan/partner/staff/expense GL hints; discard single statement import; **pay-at-time salary** (period + partial pay + excess→advance, no manual accrual); **staff incentive** classification |

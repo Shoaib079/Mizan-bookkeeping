@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from datetime import date
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -17,6 +20,7 @@ from app.adapters.ocr_ai.efatura import (
     extract_efatura_xml,
     extraction_to_payload,
 )
+from app.core.turkish_vkn import is_valid_vkn_or_tckn
 from app.adapters.storage.local import delete_stored_upload, save_upload
 from app.db.base import utcnow
 from app.db.session import entity_context
@@ -418,14 +422,23 @@ def _extract_and_store_efatura(
         payload["classification_confidence"] = "low"
 
     linked_supplier: Supplier | None = None
+    raw_source = (extraction.raw or {}).get("source", "")
+    pdf_heuristic_source = raw_source in ("pdf_heuristics", "pdf_partial")
+
     if extraction.supplier_vkn:
-        linked_supplier = supplier_service.find_or_create_supplier_for_efatura(
-            session,
-            entity_id,
-            supplier_vkn=extraction.supplier_vkn,
-            supplier_name=extraction.supplier_name,
-            entity_vkn=entity.vkn,
-        )
+        vkn_valid = is_valid_vkn_or_tckn(extraction.supplier_vkn)
+        if pdf_heuristic_source and not vkn_valid:
+            pdf_intake_review_reason = _merge_review_reasons(
+                pdf_intake_review_reason, "pdf_invalid_supplier_vkn"
+            )
+        else:
+            linked_supplier = supplier_service.find_or_create_supplier_for_efatura(
+                session,
+                entity_id,
+                supplier_vkn=extraction.supplier_vkn,
+                supplier_name=extraction.supplier_name,
+                entity_vkn=entity.vkn,
+            )
 
     return source_type, extraction, payload, linked_supplier, pdf_intake_review_reason
 
@@ -689,6 +702,19 @@ def create_efatura_draft_from_upload(
         session.add(draft)
         session.commit()
         session.refresh(draft)
+
+    raw = extraction.raw or {}
+    logger.info(
+        "invoice_draft_created",
+        extra={
+            "entity_id": str(entity_id),
+            "source": raw.get("source"),
+            "status": draft.status,
+            "review_reason": draft.review_reason,
+            "has_vision": raw.get("source") == "vision",
+            "text_extractor": raw.get("text_extractor"),
+        },
+    )
 
     from app.features.invoices.invoice_auto_post import try_auto_post_supplier_draft_on_upload
 

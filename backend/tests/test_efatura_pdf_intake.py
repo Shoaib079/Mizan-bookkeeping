@@ -58,7 +58,7 @@ def test_upload_partial_layout_pdf_creates_needs_review_with_fields(
 ) -> None:
     monkeypatch.setattr(
         "app.adapters.ocr_ai.efatura._extract_pdf_text",
-        lambda _content: PARTIAL_LAYOUT_SNIPPET,
+        lambda _content: (PARTIAL_LAYOUT_SNIPPET, "pypdf"),
     )
     response = client.post(
         f"/entities/{restaurant_a.id}/invoices/efatura/draft",
@@ -78,7 +78,7 @@ def test_assumed_vat_pdf_needs_review_and_blocks_one_click(
 ) -> None:
     monkeypatch.setattr(
         "app.adapters.ocr_ai.efatura._extract_pdf_text",
-        lambda _content: METRO_PDF_SNIPPET,
+        lambda _content: (METRO_PDF_SNIPPET, "pypdf"),
     )
     response = client.post(
         f"/entities/{restaurant_a.id}/invoices/efatura/draft",

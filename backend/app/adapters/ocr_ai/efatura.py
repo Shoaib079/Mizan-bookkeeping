@@ -272,23 +272,42 @@ def _extract_pdf_from_registry(content: bytes) -> EInvoiceExtraction | None:
     )
 
 
-def _extract_pdf_text(content: bytes) -> str:
+def _extract_pdf_text(content: bytes) -> tuple[str, str]:
+    """Extract text from PDF — returns (text, extractor_name).
+
+    Tries PyMuPDF first (better Turkish chars, multi-column, scanned-with-text-overlay).
+    Falls back to pypdf when pymupdf is unavailable.
+    """
+    from io import BytesIO
+
+    try:
+        import fitz  # pymupdf
+
+        doc = fitz.open(stream=content, filetype="pdf")
+        parts: list[str] = []
+        for page in doc:
+            text = page.get_text()
+            if text:
+                parts.append(text)
+        doc.close()
+        return "\n".join(parts), "pymupdf"
+    except ImportError:
+        pass
+
     try:
         from pypdf import PdfReader
     except ImportError as exc:
         raise EfaturaPdfUnsupportedError(
-            "pypdf is not installed; PDF extraction unavailable"
+            "Neither pymupdf nor pypdf is installed; PDF extraction unavailable"
         ) from exc
 
-    from io import BytesIO
-
     reader = PdfReader(BytesIO(content))
-    parts: list[str] = []
+    parts = []
     for page in reader.pages:
         text = page.extract_text()
         if text:
             parts.append(text)
-    return "\n".join(parts)
+    return "\n".join(parts), "pypdf"
 
 
 _TR_DATE_TOKEN = r"\d{2}\s*[./-]\s*\d{2}\s*[./-]\s*\d{4}"
@@ -1128,20 +1147,22 @@ def extract_efatura_pdf_for_intake(
     if registered is not None:
         return PdfIntakeResult(extraction=registered)
 
-    text = _extract_pdf_text(content)
+    text, text_extractor = _extract_pdf_text(content)
     if not text.strip():
         vision_result = _try_vision_pdf_intake(content, buyer_vkn=buyer_vkn)
         if vision_result is not None:
             return vision_result
         return PdfIntakeResult(
             extraction=_empty_pdf_extraction(
-                raw={"source": "pdf_no_text", "text_length": 0}
+                raw={"source": "pdf_no_text", "text_length": 0,
+                     "text_extractor": text_extractor}
             ),
             review_reason="pdf_no_text_layer",
         )
 
     try:
         extraction = _parse_pdf_heuristics(text, buyer_vkn=buyer_vkn)
+        extraction.raw["text_extractor"] = text_extractor
         return PdfIntakeResult(
             extraction=extraction,
             review_reason=_pdf_heuristic_review_reason(extraction),
@@ -1151,6 +1172,7 @@ def extract_efatura_pdf_for_intake(
         if vision_result is not None:
             return vision_result
         partial, missing = _partial_pdf_extraction(text, buyer_vkn=buyer_vkn)
+        partial.raw["text_extractor"] = text_extractor
         return PdfIntakeResult(
             extraction=partial,
             review_reason=_pdf_intake_failure_reason(exc, missing),
@@ -1160,6 +1182,7 @@ def extract_efatura_pdf_for_intake(
         if vision_result is not None:
             return vision_result
         partial, missing = _partial_pdf_extraction(text, buyer_vkn=buyer_vkn)
+        partial.raw["text_extractor"] = text_extractor
         return PdfIntakeResult(
             extraction=partial,
             review_reason=_pdf_intake_failure_reason(exc, missing),
@@ -1169,17 +1192,19 @@ def extract_efatura_pdf_for_intake(
 def extract_efatura_pdf(
     content: bytes, *, buyer_vkn: str | None = None
 ) -> EInvoiceExtraction:
-    """Extract e-Fatura fields from PDF — fixture registry, then pypdf heuristics."""
+    """Extract e-Fatura fields from PDF — fixture registry, then heuristics."""
     registered = _extract_pdf_from_registry(content)
     if registered is not None:
         return registered
 
-    text = _extract_pdf_text(content)
+    text, text_extractor = _extract_pdf_text(content)
     if not text.strip():
         raise EfaturaPdfUnsupportedError(
             "PDF contains no extractable text; vision OCR is planned for a later slice"
         )
-    return _parse_pdf_heuristics(text, buyer_vkn=buyer_vkn)
+    extraction = _parse_pdf_heuristics(text, buyer_vkn=buyer_vkn)
+    extraction.raw["text_extractor"] = text_extractor
+    return extraction
 
 
 def extraction_to_payload(extraction: EInvoiceExtraction) -> dict[str, Any]:
