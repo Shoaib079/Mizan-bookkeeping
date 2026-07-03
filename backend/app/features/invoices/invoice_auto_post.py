@@ -24,6 +24,9 @@ RULE_AUTO_ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 def _draft_classification_confidence(draft: InvoiceDraft) -> str:
     payload = draft.extraction_payload or {}
+    raw = payload.get("raw")
+    if isinstance(raw, dict) and (raw.get("assumed_vat") or raw.get("net_adjusted")):
+        return "low"
     stored = payload.get("classification_confidence")
     if stored in ("high", "medium", "low"):
         return stored

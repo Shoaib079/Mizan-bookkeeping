@@ -2,6 +2,10 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-07-03
+
+**IE-A — never reject PDF extraction (`v0.74.0-invoice-never-reject-pdf`):** PDF upload no longer returns 422 for extraction failures — always creates a `needs_review` draft with the stored file. `extract_efatura_pdf_for_intake` harvests partial fields when heuristics fail; `assumed_vat` and `net_adjusted` flags force review and block one-click/auto-post. Review UI shows `—` for missing invoice date/amounts. Tests: `test_efatura_pdf_intake.py`.
+
 ## 2026-06-30
 
 **Company profile + e-Fatura supplier intake (`v0.73.7-company-profile-efatura-suppliers`):** Entity `vkn` column (migration `058`) — required on `POST /entities`, editable via `PATCH /entities/{id}` and Set up → Restaurant **Company profile**; first-run onboarding requires VKN. PDF extraction passes entity VKN as buyer to skip own tax ID on invoices. **`find_or_create_supplier_for_efatura`** — auto-create and link supplier on e-Fatura upload when VKN is new (bank lines stay manual). Tests: `test_entity_profile.py`, `test_efatura_pdf_heuristics.py`, `test_draft_supplier_link.py`, `test_suppliers.py`; vitest `vkn.test.ts`, `first-run-onboarding.test.ts`.

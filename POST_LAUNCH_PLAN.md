@@ -29,6 +29,7 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 - **Supplier invoice Edit (fix)** — Edit only on current posted row; prefill expense account from ledger (not 5200 default); resolve void/reversal chain; learns expense account on edit.
 - **Supplier invoice number uniqueness** — live posted guard on `(supplier, invoice_number)`; upload marks `duplicate`; post/auto-post/one-click blocked; edit/correct exempt.
 - **Supplier activity void display** — İptal rows show negative amounts; invoice totals count live rows only; draft amounts sync on edit.
+- **IE-A — never reject PDF extraction** (`v0.74.0-invoice-never-reject-pdf`) — PDF upload failures → `needs_review` draft with stored file; partial field harvest; `assumed_vat`/`net_adjusted` force review and block one-click/auto-post.
 
 ---
 
@@ -39,10 +40,11 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 | **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-C done** — IC-D deferred |
 | 2 | FP | Partner advance / drawing | **Done** (`v0.73.23`) |
 | 3 | FS | Salary period + auto-clear advance | **Done** (`v0.73.24`) |
-| 4 | P3 | Off-site backup of uploads | **Next** |
-| 5 | P5 | Delete company UI | Queued |
-| 6 | P6 | Production cutover (ops) | Owner |
-| 7 | P8 | Groceries / no-invoice card spend | Design TBD |
+| 4 | **IE-B → IE-C** | **Invoice PDF extraction** (vision fallback + PyMuPDF hardening) | **IE-A done** (`v0.74.0`) — **Next: IE-B** |
+| 5 | P3 | Off-site backup of uploads | Queued |
+| 6 | P5 | Delete company UI | Queued |
+| 7 | P6 | Production cutover (ops) | Owner |
+| 8 | P8 | Groceries / no-invoice card spend | Design TBD |
 | — | P4, P7 | Backup prune, lint | Optional |
 
 **Rule:** Finish **IC-A through IC-C** before FP/FS. **IC-D** (learning) only after IC-C is stable in production for a few weeks.

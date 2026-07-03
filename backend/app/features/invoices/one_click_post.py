@@ -18,6 +18,11 @@ _BLOCKING_REVIEW_MARKERS = (
     "Link a supplier",
     "link the delivery platform",
     "confirm or change type",
+    "pdf_assumed_vat",
+    "pdf_net_adjusted",
+    "pdf_no_text_layer",
+    "pdf_fields_missing",
+    "pdf_extraction_failed",
 )
 
 

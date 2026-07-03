@@ -39,6 +39,7 @@ def test_parse_metro_style_pdf_snippet() -> None:
     assert extraction.net_kurus == 1_545_323
     assert extraction.gross_kurus == 1_582_015
     assert extraction.supplier_vkn == "6200031354"
+    assert extraction.raw.get("assumed_vat") is True
 
 
 def test_metro_supplier_vkn_excludes_buyer_vergi_nd() -> None:

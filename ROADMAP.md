@@ -15,9 +15,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
 | **Active slice**         | — (awaiting next slice) |
-| **Last completed slice** | Delivery sidebar flicker fix (`v0.73.43-delivery-sidebar-persist`) |
-| **Last commit/tag**      | `v0.73.43-delivery-sidebar-persist` — hoist QuickActionsProvider; cache delivery_enabled per entity |
-| **Next up**              | **P3** (upload backup) |
+| **Last completed slice** | IE-A — never reject PDFs (`v0.74.0-invoice-never-reject-pdf`) |
+| **Last commit/tag**      | `v0.74.0-invoice-never-reject-pdf` — PDF extraction failures → `needs_review` draft with stored file; `assumed_vat`/`net_adjusted` blocked from auto-post |
+| **Next up**              | **IE-B** — AI vision PDF extraction fallback; then **P3** (upload backup) |
 
 
 ### Next plan (pre-launch, owner-driven)
@@ -1839,6 +1839,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-03 | IE-A — never reject PDF extraction failures     | `v0.74.0-invoice-never-reject-pdf`                     | `extract_efatura_pdf_for_intake`; no 422 on PDF extraction; `pdf_assumed_vat`/`pdf_net_adjusted` block auto-post |
 | 2026-06-25 | Statement classify bar + line ledger (WIP)      | *(uncommitted — owner review)*                         | Posting bar; full grouped classify; merge multi-column bank descriptions on import; full description in UI; loan/partner/staff/expense GL hints; discard single statement import; **pay-at-time salary** (period + partial pay + excess→advance, no manual accrual); **staff incentive** classification |
 | 2026-07-02 | Statement classify dense table                  | `v0.73.36-statement-classify-table`                  | One table row per bank line; all classifications incl. delivery app + POS; amount-aware options; Trendyol auto-suggest |
 | 2026-06-25 | Statement import panel stability (Vercel)     | `v0.73.30-statement-import-panel-stable`             | Keep import mapper mounted after first bank account load; no unmount during preview refetch |

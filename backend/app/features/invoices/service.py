@@ -13,8 +13,7 @@ from sqlalchemy.orm import Session
 from app.adapters.ocr_ai.efatura import (
     EInvoiceExtraction,
     EfaturaExtractionError,
-    EfaturaPdfUnsupportedError,
-    extract_efatura_pdf,
+    extract_efatura_pdf_for_intake,
     extract_efatura_xml,
     extraction_to_payload,
 )
@@ -145,7 +144,7 @@ def extract_document(
 ) -> EInvoiceExtraction:
     if source_type == InvoiceSourceType.EFATURA_XML:
         return extract_efatura_xml(content)
-    return extract_efatura_pdf(content, buyer_vkn=buyer_vkn)
+    return extract_efatura_pdf_for_intake(content, buyer_vkn=buyer_vkn).extraction
 
 
 def _stored_document_path(draft: InvoiceDraft) -> Path | None:
@@ -162,8 +161,21 @@ def _is_classification_review_reason(reason: str | None) -> bool:
     return reason.startswith("Getir invoice — confirm")
 
 
+def _merge_review_reasons(*reasons: str | None) -> str | None:
+    parts = [reason.strip() for reason in reasons if reason and reason.strip()]
+    return "; ".join(parts) if parts else None
+
+
+def _pdf_extraction_needs_review(extraction: EInvoiceExtraction) -> bool:
+    raw = extraction.raw or {}
+    return bool(raw.get("assumed_vat") or raw.get("net_adjusted"))
+
+
 def _draft_classification_confidence(draft: InvoiceDraft) -> str:
     payload = draft.extraction_payload or {}
+    raw = payload.get("raw")
+    if isinstance(raw, dict) and (raw.get("assumed_vat") or raw.get("net_adjusted")):
+        return "low"
     stored = payload.get("classification_confidence")
     if stored in ("high", "medium", "low"):
         return stored
@@ -362,20 +374,22 @@ def _extract_and_store_efatura(
     *,
     filename: str | None = None,
     content_type: str | None = None,
-) -> tuple[InvoiceSourceType, EInvoiceExtraction, dict, Supplier | None]:
+) -> tuple[InvoiceSourceType, EInvoiceExtraction, dict, Supplier | None, str | None]:
     source_type = detect_source_type(content, filename=filename, content_type=content_type)
+    pdf_intake_review_reason: str | None = None
 
-    try:
-        extraction = extract_document(
-            content, source_type, buyer_vkn=entity.vkn
-        )
-        validate_invoice_totals(
-            extraction.net_kurus, extraction.gross_kurus, extraction.vat_breakdown
-        )
-    except EfaturaPdfUnsupportedError as exc:
-        raise exc
-    except (EfaturaExtractionError, InvoiceTotalsError) as exc:
-        raise ValueError(str(exc)) from exc
+    if source_type == InvoiceSourceType.EFATURA_PDF:
+        intake = extract_efatura_pdf_for_intake(content, buyer_vkn=entity.vkn)
+        extraction = intake.extraction
+        pdf_intake_review_reason = intake.review_reason
+    else:
+        try:
+            extraction = extract_efatura_xml(content)
+            validate_invoice_totals(
+                extraction.net_kurus, extraction.gross_kurus, extraction.vat_breakdown
+            )
+        except (EfaturaExtractionError, InvoiceTotalsError) as exc:
+            raise ValueError(str(exc)) from exc
 
     stored_path = save_upload(
         entity_id,
@@ -386,6 +400,8 @@ def _extract_and_store_efatura(
 
     payload = extraction_to_payload(extraction)
     payload["stored_path"] = stored_path
+    if pdf_intake_review_reason or _pdf_extraction_needs_review(extraction):
+        payload["classification_confidence"] = "low"
 
     linked_supplier: Supplier | None = None
     if extraction.supplier_vkn:
@@ -397,7 +413,7 @@ def _extract_and_store_efatura(
             entity_vkn=entity.vkn,
         )
 
-    return source_type, extraction, payload, linked_supplier
+    return source_type, extraction, payload, linked_supplier, pdf_intake_review_reason
 
 
 def _draft_extraction(draft: InvoiceDraft) -> EInvoiceExtraction:
@@ -538,7 +554,8 @@ def create_efatura_draft_from_upload(
 
     fingerprint = file_fingerprint(content)
 
-    source_type, extraction, payload, linked_supplier = _extract_and_store_efatura(
+    source_type, extraction, payload, linked_supplier, pdf_intake_review_reason = (
+        _extract_and_store_efatura(
         session,
         entity_id,
         entity,
@@ -546,19 +563,22 @@ def create_efatura_draft_from_upload(
         fingerprint,
         filename=filename,
         content_type=content_type,
+        )
     )
 
-    review_reason: str | None = None
+    review_reason: str | None = pdf_intake_review_reason
     if linked_supplier is None and extraction.supplier_vkn:
         if entity.vkn and extraction.supplier_vkn == entity.vkn:
-            review_reason = (
+            review_reason = _merge_review_reasons(
+                review_reason,
                 "Extracted supplier VKN matches your company tax ID — "
-                "link the correct supplier before confirm"
+                "link the correct supplier before confirm",
             )
     elif linked_supplier is None and not extraction.supplier_vkn:
-        review_reason = (
+        review_reason = _merge_review_reasons(
+            review_reason,
             "Could not extract supplier VKN from this document — "
-            "create or link a supplier before confirm"
+            "create or link a supplier before confirm",
         )
 
     invoice_kind, delivery_platform_id, review_reason, _confidence = (
@@ -631,7 +651,6 @@ def create_efatura_draft_from_upload(
         initial_status = (
             InvoiceDraftStatus.NEEDS_REVIEW if review_reason else InvoiceDraftStatus.DRAFT
         )
-
     with entity_context(session, entity_id):
         draft = InvoiceDraft(
             status=initial_status.value,

@@ -1,4 +1,9 @@
-"""e-Fatura document extraction — UBL-TR XML (real) and PDF v1 stub/heuristics."""
+"""e-Fatura document extraction — UBL-TR XML (real) and PDF v1 stub/heuristics.
+
+PDF heuristics are layout-based (GİB portal, retail receipt, wholesaler, etc.) and
+use the active entity's VKN from upload to distinguish buyer vs seller tax ids —
+never a hardcoded restaurant name.
+"""
 
 from __future__ import annotations
 
@@ -40,6 +45,14 @@ class EfaturaExtractionError(ValueError):
 
 class EfaturaPdfUnsupportedError(EfaturaExtractionError):
     """PDF text extraction insufficient; full OCR lands in a later slice."""
+
+
+@dataclass
+class PdfIntakeResult:
+    """PDF extraction for invoice upload — never raises; caller routes to needs_review."""
+
+    extraction: EInvoiceExtraction
+    review_reason: str | None = None
 
 
 # Test/CI fixture registry: SHA256 hex -> extraction fields (without raw).
@@ -288,13 +301,16 @@ def _parse_referenced_invoice_pdf(text: str) -> tuple[str | None, date | None]:
 
 
 # Preferred first — accounting invoice date before creation/shipment fallbacks.
+# Amount label on same line or next line (A101: "Fatura Tarihi\n17.02.2026").
 _PDF_DATE_LABEL_PATTERNS: tuple[str, ...] = (
-    rf"(?:^|\n)\s*Fatura\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
-    rf"D[uü]zenlen?me\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
-    rf"Olu[sş]turma\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
-    rf"Fiili\s*Sevkiyat\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
-    rf"Fiili\s*Sevk\s*Tarih[iı]?\s*[:\.]?\s*({_TR_DATE_TOKEN})",
-    rf"(?:^|[^\w])Tarih\s*[:\.]?\s*({_TR_DATE_TOKEN})",
+    rf"(?:e-Fatura\s*)Fatura\s*Tarih[iı]?\s*[:\.]?\s*(?:\n\s*)?({_TR_DATE_TOKEN})",
+    rf"(?<![\w])Fatura\s*Tarih[iı]?\s*[:\.]?\s*(?:\n\s*)?({_TR_DATE_TOKEN})",
+    rf"(?<![\w])FATURA\s*TAR[iI]H[iI]?\s*[:\.]?\s*(?:\n\s*)?({_TR_DATE_TOKEN})",
+    rf"D[uü]zenlen?me\s*Tarih[iı]?\s*[:\.]?\s*(?:\n\s*)?({_TR_DATE_TOKEN})",
+    rf"Olu[sş]turma\s*Tarih[iı]?\s*[:\.]?\s*(?:\n\s*)?({_TR_DATE_TOKEN})",
+    rf"Fiili\s*Sevkiyat\s*Tarih[iı]?\s*[:\.]?\s*(?:\n\s*)?({_TR_DATE_TOKEN})",
+    rf"Fiili\s*Sevk\s*Tarih[iı]?\s*[:\.]?\s*(?:\n\s*)?({_TR_DATE_TOKEN})",
+    rf"(?<![\w])Tarih\s*[:\.]?\s*(?:\n\s*)?({_TR_DATE_TOKEN})",
 )
 
 _PDF_AMOUNT = r"([\d.,]+)"
@@ -306,6 +322,7 @@ _PDF_NET_LABELS: tuple[str, ...] = (
     r"Mal\s*Hizmet\s*Toplam",
     r"Ayl[ıi]k\s*[ÜU]cretler",
     r"K\.D\.V\.\s*MATRAHI\s*%\s*\d+",
+    r"ARA\s*TOPLAM",
     r"Ara\s*Tutar",
     r"Ara\s*Toplam",
     r"KDV\s*Matrah[ıi]?",
@@ -314,8 +331,11 @@ _PDF_NET_LABELS: tuple[str, ...] = (
 )
 
 _PDF_GROSS_LABELS: tuple[str, ...] = (
+    r"TOPLAM\s*TUTAR",
+    r"TOP[aA]M\s*TUTAR",
     r"Vergiler\s*Dahil\s*Toplam\s*Tutar[ıi]?",
     r"[ÖO]denecek\s*Tutar[ıi]?",
+    r"FATURA\s*TOPLAM[ıi]?",
     r"Fatura\s*Toplam[ıi]?",
     r"TOPLAM\s*FATURA\s*TUTARI",
     r"Toplam\s*Tutar",
@@ -331,13 +351,14 @@ _PDF_GROSS_LABELS: tuple[str, ...] = (
 def _parse_pdf_tr_date(text: str) -> date:
     """Parse DD.MM.YYYY from common Turkish e-Fatura PDF labels."""
     for pattern in _PDF_DATE_LABEL_PATTERNS:
-        match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-        if not match:
-            continue
-        raw_date = re.sub(r"\s+", "", match.group(1))
-        raw_date = raw_date.replace("/", "-").replace(".", "-")
-        day, month, year = raw_date.split("-")
-        return date(int(year), int(month), int(day))
+        for match in re.finditer(pattern, text, re.IGNORECASE | re.MULTILINE):
+            prefix = text[max(0, match.start() - 24) : match.start()]
+            if re.search(r"Sonraki\s*$", prefix, re.IGNORECASE):
+                continue
+            raw_date = re.sub(r"\s+", "", match.group(1))
+            raw_date = raw_date.replace("/", "-").replace(".", "-")
+            day, month, year = raw_date.split("-")
+            return date(int(year), int(month), int(day))
     raise EfaturaPdfUnsupportedError("Could not find invoice date in PDF text")
 
 
@@ -365,8 +386,10 @@ def _collect_tax_ids(text: str) -> list[str]:
     for pattern in (
         r"Vergi\s*Numaras[ıi]\s*[:\.]?\s*(\d{10,11})",
         r"Vergi\s*No\s*[:\.]?\s*(\d{10,11})",
+        r"VKN/TCKN\s*[:\.]?\s*(\d{10,11})",
         r"VKN\s*[:\.]?\s*(\d{10,11})",
         r"VERG[Iİ]\s*N/D:\s*(\d{10,11})",
+        r"V\.?\s*D\.?\s*[:\.]?\s*(\d{10,11})",
         r"Mükellefler.{0,300}?(\d{10,11})",
         r"(\d{10,11})\s+Mersis",
     ):
@@ -375,8 +398,52 @@ def _collect_tax_ids(text: str) -> list[str]:
     return list(dict.fromkeys(ids))
 
 
+def _buyer_section_start(text: str, *, buyer_vkn: str | None = None) -> int:
+    """Index where the buyer/customer block starts; seller header is text before this."""
+    if buyer_vkn:
+        for pattern in (
+            rf"(?:VKN/TCKN|VKN|VERG[Iİ]\s*N/D)\s*[:\.]?\s*{re.escape(buyer_vkn)}",
+            rf"Vergi\s*Numaras[ıi]\s*[:\.]?\s*{re.escape(buyer_vkn)}",
+        ):
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                line_start = text.rfind("\n", 0, match.start()) + 1
+                prev_line = text.rfind("\n", 0, max(0, line_start - 1))
+                return max(0, prev_line)
+        idx = text.find(buyer_vkn)
+        if idx >= 0:
+            return max(0, text.rfind("\n", 0, idx))
+
+    sayin = re.search(r"(?:^|\n)\s*SAYIN\b", text, re.IGNORECASE | re.MULTILINE)
+    if sayin:
+        return sayin.start()
+
+    vkn_tckn = re.search(r"VKN/TCKN\s*[:\.]?\s*(\d{10,11})", text, re.IGNORECASE)
+    if vkn_tckn:
+        return max(0, text.rfind("\n", 0, vkn_tckn.start()))
+
+    vergi_nd = re.search(r"VERG[Iİ]\s*N/D:\s*(\d{10,11})", text, re.IGNORECASE)
+    if vergi_nd:
+        return max(0, text.rfind("\n", 0, vergi_nd.start()))
+
+    return min(len(text), 2000)
+
+
+def _resolve_buyer_vkn(text: str, buyer_vkn: str | None) -> str | None:
+    if buyer_vkn and buyer_vkn.strip():
+        return buyer_vkn.strip()
+    return _buyer_vkn_from_pdf(text)
+
+
 def _buyer_vkn_from_pdf(text: str) -> str | None:
     """Buyer tax id on GİB PDFs — often labeled VERGİ N/D on the delivery block."""
+    vkn_tckn = re.search(
+        r"VKN/TCKN\s*[:\.]?\s*(\d{10,11})",
+        text,
+        re.IGNORECASE,
+    )
+    if vkn_tckn:
+        return vkn_tckn.group(1)
     match = re.search(
         r"VERG[Iİ]\s*N/D:\s*(\d{10,11})",
         text,
@@ -405,23 +472,46 @@ def _buyer_vkn_from_pdf(text: str) -> str | None:
     return None
 
 
-def _supplier_name_from_pdf(text: str) -> str | None:
-    """Best-effort seller name — Metro puts legal name before VKN without Unvan/Satıcı labels."""
-    metro_match = re.search(
-        r"(METRO\s+GROSMARKET[^\n]+(?:\n[^\n]+)?)",
-        text,
-        re.IGNORECASE,
-    )
-    if metro_match:
-        return " ".join(metro_match.group(1).split())
+def _supplier_name_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str | None:
+    """Best-effort seller name from header or inverted GİB footer after buyer block."""
 
-    name_match = re.search(
-        r"(?:Unvan|Satıcı|Satici)\s*[:\.]?\s*(.+?)(?:\n|VKN|TCKN)",
-        text,
-        re.IGNORECASE | re.DOTALL,
-    )
-    if name_match:
-        return name_match.group(1).strip()
+    def _name_from_chunk(chunk: str) -> str | None:
+        name_match = re.search(
+            r"(?:Unvan|Satıcı|Satici)\s*[:\.]?\s*(.+?)(?:\n|VKN|TCKN)",
+            chunk,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if name_match:
+            return name_match.group(1).strip()
+
+        legal_match = re.search(
+            r"(?:^|\n)([A-ZÇĞİÖŞÜ0-9][^\n]*(?:A\.Ş\.|LTD|LİMİTED|TİC\.|ŞTİ\.)[^\n]*)",
+            chunk,
+            re.MULTILINE | re.IGNORECASE,
+        )
+        if legal_match:
+            name = legal_match.group(1).strip()
+            if len(name) >= 4 and not name.upper().startswith("BÖLGE"):
+                return name
+
+        banner_match = re.search(
+            r"(?:^|\n)((?:METRO\s+GROSMARKET|MİGROS|TRENDYOL|GETIR|YEMEK\s+SEPETİ|A101)[^\n]+(?:\n[^\n]+)?)",
+            chunk,
+            re.IGNORECASE | re.MULTILINE,
+        )
+        if banner_match:
+            return " ".join(banner_match.group(1).split())
+        return None
+
+    header = text[: _buyer_section_start(text, buyer_vkn=buyer_vkn)]
+    name = _name_from_chunk(header)
+    if name:
+        return name
+
+    sayin = re.search(r"(?:^|\n)\s*SAYIN\b", text, re.IGNORECASE | re.MULTILINE)
+    if sayin:
+        return _name_from_chunk(text[sayin.end() : sayin.end() + 2500])
+
     return None
 
 
@@ -433,6 +523,7 @@ def _header_seller_vkn_candidates(header: str) -> list[str]:
         r"(\d{10,11})\s+Mersis",
         r"Vergi\s*Numaras[ıi]\s*[:\.]?\s*(\d{10,11})",
         r"Vergi\s*No\s*[:\.]?\s*(\d{10,11})",
+        r"V\.?\s*D\.?\s*[:\.]?\s*(\d{10,11})",
         r"VKN\s*[:\.]?\s*(\d{10,11})",
     ):
         for match in re.finditer(pattern, header, re.IGNORECASE | re.DOTALL):
@@ -519,7 +610,8 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
     """Best-effort regex on GİB-style PDF text — v1 only; unknown layouts fail."""
     invoice_number = None
     for pattern in (
-        r"Fatura\s*(?:No|Numaras[iı]|NUMARASI)\s*[:\.]?\s*([A-Z0-9\-/]+)",
+        r"Fatura\s*(?:No|Numaras[iı]|NUMARASI|ID)\s*[:\.]?\s*([A-Z0-9\-/]+)",
+        r"FATURA\s*(?:NO|NUMARASI|ID)\s*[:\.]?\s*([A-Z0-9\-/]+)",
         r"Fatura\s*Numarası\s*[:\.]?\s*([A-Z0-9\-/]+)",
         r"Belge\s*No\s*[:\.]?\s*([A-Z0-9\-/]+)",
     ):
@@ -532,9 +624,9 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
 
     parsed_date = _parse_pdf_tr_date(text)
 
-    supplier_vkn = _supplier_vkn_from_pdf(text, buyer_vkn=buyer_vkn)
-
-    supplier_name = _supplier_name_from_pdf(text)
+    resolved_buyer = _resolve_buyer_vkn(text, buyer_vkn)
+    supplier_vkn = _supplier_vkn_from_pdf(text, buyer_vkn=resolved_buyer)
+    supplier_name = _supplier_name_from_pdf(text, buyer_vkn=resolved_buyer)
 
     net_match = _find_labeled_amount(text, _PDF_NET_LABELS)
     if not net_match:
@@ -572,6 +664,25 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
 
     if not vat_breakdown:
         for rate_match in re.finditer(
+            r"KDV\s*\(\s*%?\s*(\d+(?:[.,]\d+)?)\s*\)\s*[:\.]?\s*"
+            rf"{_PDF_AMOUNT}{_PDF_AMOUNT_SUFFIX}?",
+            text,
+            re.IGNORECASE,
+        ):
+            rate = float(rate_match.group(1).replace(",", "."))
+            vat_kurus = _amount_to_kurus(_normalize_tr_amount(rate_match.group(2)))
+            if rate > 0:
+                base_kurus = round(vat_kurus * 100 / rate)
+                vat_breakdown.append(
+                    {
+                        "rate_percent": float(rate),
+                        "base_kurus": base_kurus,
+                        "vat_kurus": vat_kurus,
+                    }
+                )
+
+    if not vat_breakdown:
+        for rate_match in re.finditer(
             r"K\.D\.V\.\s*%\s*(\d+)\s*[:\.]?\s*"
             rf"{_PDF_AMOUNT}{_PDF_AMOUNT_SUFFIX}?",
             text,
@@ -589,9 +700,11 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
                     }
                 )
 
+    raw_flags: dict[str, Any] = {}
     if not vat_breakdown:
         vat_total = gross_kurus - net_kurus
         vat_breakdown = [{"rate_percent": 20, "base_kurus": net_kurus, "vat_kurus": vat_total}]
+        raw_flags["assumed_vat"] = True
     else:
         vat_sum = sum(line["vat_kurus"] for line in vat_breakdown)
         if net_kurus + vat_sum != gross_kurus:
@@ -601,12 +714,19 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
                 rate = line["rate_percent"]
                 if rate > 0:
                     line["base_kurus"] = round(line["vat_kurus"] * 100 / rate)
+            raw_flags["net_adjusted"] = True
 
     validate_invoice_totals(net_kurus, gross_kurus, vat_breakdown)
 
     invoice_type_code = _parse_invoice_type_code_pdf(text)
     referenced_invoice_number, referenced_invoice_date = _parse_referenced_invoice_pdf(text)
 
+    raw: dict[str, Any] = {
+        "source": "pdf_heuristics",
+        "text_length": len(text),
+        "text_sample": text[:8000],
+        **raw_flags,
+    }
     return EInvoiceExtraction(
         supplier_name=supplier_name,
         supplier_vkn=supplier_vkn,
@@ -619,8 +739,188 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
         invoice_type_code=invoice_type_code,
         referenced_invoice_number=referenced_invoice_number,
         referenced_invoice_date=referenced_invoice_date,
-        raw={"source": "pdf_heuristics", "text_length": len(text), "text_sample": text[:8000]},
+        raw=raw,
     )
+
+
+def _pdf_heuristic_review_reason(extraction: EInvoiceExtraction) -> str | None:
+    raw = extraction.raw or {}
+    parts: list[str] = []
+    if raw.get("assumed_vat"):
+        parts.append("pdf_assumed_vat")
+    if raw.get("net_adjusted"):
+        parts.append("pdf_net_adjusted")
+    return "; ".join(parts) if parts else None
+
+
+def _empty_pdf_extraction(
+    text: str = "",
+    *,
+    buyer_vkn: str | None = None,
+    raw: dict[str, Any] | None = None,
+) -> EInvoiceExtraction:
+    resolved_buyer = _resolve_buyer_vkn(text, buyer_vkn) if text.strip() else buyer_vkn
+    supplier_vkn = _supplier_vkn_from_pdf(text, buyer_vkn=resolved_buyer) if text.strip() else None
+    supplier_name = (
+        _supplier_name_from_pdf(text, buyer_vkn=resolved_buyer) if text.strip() else None
+    )
+    payload = {
+        "source": "pdf_partial",
+        "text_length": len(text),
+        "text_sample": text[:8000] if text else "",
+        "invoice_date_missing": True,
+        "amounts_missing": True,
+        **(raw or {}),
+    }
+    return EInvoiceExtraction(
+        supplier_name=supplier_name,
+        supplier_vkn=supplier_vkn,
+        invoice_number="",
+        invoice_date=date.today(),
+        net_kurus=0,
+        gross_kurus=0,
+        vat_breakdown=[],
+        currency="TRY",
+        raw=payload,
+    )
+
+
+def _try_invoice_number_from_pdf(text: str) -> str | None:
+    for pattern in (
+        r"Fatura\s*(?:No|Numaras[iı]|NUMARASI|ID)\s*[:\.]?\s*([A-Z0-9\-/]+)",
+        r"FATURA\s*(?:NO|NUMARASI|ID)\s*[:\.]?\s*([A-Z0-9\-/]+)",
+        r"Fatura\s*Numarası\s*[:\.]?\s*([A-Z0-9\-/]+)",
+        r"Belge\s*No\s*[:\.]?\s*([A-Z0-9\-/]+)",
+    ):
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+    return None
+
+
+def _try_pdf_tr_date(text: str) -> date | None:
+    try:
+        return _parse_pdf_tr_date(text)
+    except EfaturaPdfUnsupportedError:
+        return None
+
+
+def _try_net_gross_from_pdf(text: str) -> tuple[int | None, int | None]:
+    net_match = _find_labeled_amount(text, _PDF_NET_LABELS)
+    if not net_match:
+        matrah_match = re.search(
+            rf"Matrah\s+{_PDF_AMOUNT}\s*TL",
+            text,
+            re.IGNORECASE,
+        )
+        if matrah_match:
+            net_match = matrah_match
+    gross_match = _find_labeled_amount(text, _PDF_GROSS_LABELS)
+    if not net_match or not gross_match:
+        return None, None
+    return (
+        _amount_to_kurus(_normalize_tr_amount(net_match.group(1))),
+        _amount_to_kurus(_normalize_tr_amount(gross_match.group(1))),
+    )
+
+
+def _partial_pdf_extraction(
+    text: str, *, buyer_vkn: str | None = None
+) -> tuple[EInvoiceExtraction, list[str]]:
+    """Best-effort field harvest when strict heuristics fail."""
+    missing: list[str] = []
+    invoice_number = _try_invoice_number_from_pdf(text)
+    if not invoice_number:
+        missing.append("invoice_number")
+        invoice_number = ""
+
+    parsed_date = _try_pdf_tr_date(text)
+    if parsed_date is None:
+        missing.append("invoice_date")
+        parsed_date = date.today()
+
+    net_kurus, gross_kurus = _try_net_gross_from_pdf(text)
+    if net_kurus is None or gross_kurus is None:
+        missing.extend(["net_kurus", "gross_kurus"])
+        net_kurus = net_kurus or 0
+        gross_kurus = gross_kurus or 0
+
+    resolved_buyer = _resolve_buyer_vkn(text, buyer_vkn)
+    supplier_vkn = _supplier_vkn_from_pdf(text, buyer_vkn=resolved_buyer)
+    supplier_name = _supplier_name_from_pdf(text, buyer_vkn=resolved_buyer)
+    if not supplier_vkn:
+        missing.append("supplier_vkn")
+
+    raw: dict[str, Any] = {
+        "source": "pdf_partial",
+        "text_length": len(text),
+        "text_sample": text[:8000],
+    }
+    if "invoice_date" in missing:
+        raw["invoice_date_missing"] = True
+    if "net_kurus" in missing or "gross_kurus" in missing:
+        raw["amounts_missing"] = True
+
+    extraction = EInvoiceExtraction(
+        supplier_name=supplier_name,
+        supplier_vkn=supplier_vkn,
+        invoice_number=invoice_number,
+        invoice_date=parsed_date,
+        net_kurus=net_kurus,
+        gross_kurus=gross_kurus,
+        vat_breakdown=[],
+        currency="TRY",
+        raw=raw,
+    )
+    return extraction, missing
+
+
+def _pdf_intake_failure_reason(exc: Exception, missing: list[str]) -> str:
+    if isinstance(exc, EfaturaPdfUnsupportedError):
+        message = str(exc)
+        if "no extractable text" in message.casefold():
+            return "pdf_no_text_layer"
+        if missing:
+            return f"pdf_fields_missing:{','.join(missing)}"
+        return f"pdf_extraction_failed:{message}"
+    return f"pdf_extraction_failed:{exc}"
+
+
+def extract_efatura_pdf_for_intake(
+    content: bytes, *, buyer_vkn: str | None = None
+) -> PdfIntakeResult:
+    """Extract PDF for upload intake — always returns a draftable result."""
+    registered = _extract_pdf_from_registry(content)
+    if registered is not None:
+        return PdfIntakeResult(extraction=registered)
+
+    text = _extract_pdf_text(content)
+    if not text.strip():
+        return PdfIntakeResult(
+            extraction=_empty_pdf_extraction(
+                raw={"source": "pdf_no_text", "text_length": 0}
+            ),
+            review_reason="pdf_no_text_layer",
+        )
+
+    try:
+        extraction = _parse_pdf_heuristics(text, buyer_vkn=buyer_vkn)
+        return PdfIntakeResult(
+            extraction=extraction,
+            review_reason=_pdf_heuristic_review_reason(extraction),
+        )
+    except EfaturaPdfUnsupportedError as exc:
+        partial, missing = _partial_pdf_extraction(text, buyer_vkn=buyer_vkn)
+        return PdfIntakeResult(
+            extraction=partial,
+            review_reason=_pdf_intake_failure_reason(exc, missing),
+        )
+    except (EfaturaExtractionError, InvoiceTotalsError) as exc:
+        partial, missing = _partial_pdf_extraction(text, buyer_vkn=buyer_vkn)
+        return PdfIntakeResult(
+            extraction=partial,
+            review_reason=_pdf_intake_failure_reason(exc, missing),
+        )
 
 
 def extract_efatura_pdf(

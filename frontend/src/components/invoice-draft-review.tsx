@@ -62,6 +62,11 @@ type InvoiceDraft = {
   classification_confidence: "high" | "medium" | "low" | null;
   has_stored_document: boolean;
   source_type: string;
+  extraction_payload?: {
+    invoice_date_missing?: boolean;
+    amounts_missing?: boolean;
+    stored_path?: string;
+  };
   suggested_expense_account_id: string | null;
   expense_account_confidence: "high" | "medium" | "low" | null;
   one_click_post_eligible: boolean;
@@ -432,6 +437,11 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
   const canReject = canDiscardInvoiceDraft(draft.status);
   const isTerminal =
     draft.status === "posted" || draft.status === "rejected";
+  const invoiceNumberLabel = draft.invoice_number.trim() || "—";
+  const invoiceDateLabel = draft.extraction_payload?.invoice_date_missing
+    ? "—"
+    : formatTrDate(draft.invoice_date);
+  const amountsMissing = Boolean(draft.extraction_payload?.amounts_missing);
 
   return (
     <div className="space-y-4">
@@ -449,7 +459,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
           {invoiceKindLabel(draft.invoice_kind)}
         </span>
         <span className="text-sm text-muted-foreground">
-          {draft.invoice_number} · {formatTrDate(draft.invoice_date)}
+          {invoiceNumberLabel} · {invoiceDateLabel}
         </span>
         {draft.posted_by_rule_auto && (
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -525,12 +535,14 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         <dl className="grid gap-1 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Net</dt>
-            <dd className="tabular-nums">{formatTry(draft.net_kurus)}</dd>
+            <dd className="tabular-nums">
+              {amountsMissing ? "—" : formatTry(draft.net_kurus)}
+            </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Gross</dt>
             <dd className="tabular-nums font-medium">
-              {formatTry(draft.gross_kurus)}
+              {amountsMissing ? "—" : formatTry(draft.gross_kurus)}
             </dd>
           </div>
         </dl>

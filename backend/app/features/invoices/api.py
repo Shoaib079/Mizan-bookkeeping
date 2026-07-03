@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.adapters.ocr_ai.efatura import EfaturaPdfUnsupportedError
 from app.core.listing import ListParams, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
@@ -65,8 +64,6 @@ async def upload_efatura_draft(
                 "existing_draft_id": str(exc.existing.id),
             },
         ) from exc
-    except EfaturaPdfUnsupportedError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
