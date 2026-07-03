@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 import type {
   CashDrawerSessionDetail,
   CashDrawerSessionRead,
@@ -122,6 +123,7 @@ export default function CashDrawerPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          idempotencyKey: newIdempotencyKey(),
           body: JSON.stringify({
             reason,
             actor_id: actorId,

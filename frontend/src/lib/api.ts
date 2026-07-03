@@ -1,6 +1,18 @@
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
 
+function assertApiBase(): void {
+  if (
+    API_BASE === "http://localhost:8000" &&
+    typeof window !== "undefined" &&
+    process.env.NODE_ENV === "production"
+  ) {
+    throw new Error(
+      "NEXT_PUBLIC_API_URL must be set for production builds — the app is pointing at localhost:8000",
+    );
+  }
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -75,6 +87,7 @@ export async function apiFetch<T>(
   path: string,
   init?: ApiFetchInit,
 ): Promise<T> {
+  assertApiBase();
   const { idempotencyKey: _key, ...fetchInit } = init ?? {};
   void _key;
   const maxAttempts = authHeaderProvider ? AUTH_401_MAX_ATTEMPTS : 1;
@@ -138,6 +151,7 @@ function parseContentDispositionFilename(
 export async function apiDownload(
   path: string,
 ): Promise<{ blob: Blob; filename: string }> {
+  assertApiBase();
   const maxAttempts = authHeaderProvider ? AUTH_401_MAX_ATTEMPTS : 1;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {

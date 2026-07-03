@@ -17,8 +17,8 @@ type MyMembershipRead = {
   permissions: string[];
 };
 
-/** Dev fallback when auth enforcement is off and no membership is found. */
-export const DEFAULT_DEV_ROLE: EntityRole = "owner";
+/** Least-privilege fallback until the real membership is loaded. */
+export const DEFAULT_DEV_ROLE: EntityRole = "partner_view_only";
 
 export function useEntityAccess() {
   const { entityId } = useEntity();

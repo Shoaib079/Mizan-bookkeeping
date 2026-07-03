@@ -13,7 +13,7 @@ export function sanitizeTryInput(raw: string): string {
   return s;
 }
 
-function parseTryParts(cleaned: string): { whole: string; frac: string } | null {
+export function parseTryParts(cleaned: string): { whole: string; frac: string } | null {
   if (!cleaned || !/^[\d.,]+$/.test(cleaned)) return null;
 
   if (cleaned.includes(",")) {
