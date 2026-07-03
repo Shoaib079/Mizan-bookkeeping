@@ -69,6 +69,7 @@ def create_pos_settlement(
 def list_pos_settlements(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     money_account_id: uuid.UUID | None = Query(default=None),
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
@@ -104,6 +105,7 @@ def get_pos_settlement(
     entity_id: uuid.UUID,
     settlement_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> PosSettlementRead:
     try:
         return pos_service.get_pos_settlement(session, entity_id, settlement_id)
@@ -130,6 +132,7 @@ def create_card_sales_batch(
 def list_card_sales_batches(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
     q: str | None = Query(default=None, max_length=256),
@@ -162,6 +165,7 @@ def list_card_sales_batches(
 def get_clearing_reconciliation(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> ClearingReconciliationRead:
     try:
         return pos_service.get_clearing_reconciliation(session, entity_id)
@@ -257,6 +261,7 @@ def get_pos_daily_summary(
     entity_id: uuid.UUID,
     summary_id: uuid.UUID,
     session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
 ) -> PosDailySummaryRead:
     try:
         return daily_summary_service.get_pos_daily_summary(session, entity_id, summary_id)

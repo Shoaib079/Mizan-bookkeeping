@@ -15,6 +15,7 @@ from app.core.auth.deps import (
     operations_write_guard,
     reports_read_guard,
     require_admin_members,
+    require_authenticated_user,
 )
 from app.db.base import EntityScopedMixin
 from app.db.audit_immutability import (
@@ -34,6 +35,7 @@ GUARD_CALLABLES = frozenset(
         financial_reports_guard,
         reports_read_guard,
         require_admin_members,
+        require_authenticated_user,
     }
 )
 

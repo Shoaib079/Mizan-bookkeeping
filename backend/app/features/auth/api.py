@@ -11,6 +11,7 @@ from app.core.listing import ListParams, PaginatedListOut, list_params_dependenc
 from app.config import settings
 from app.core.auth.deps import (
     require_admin_members,
+    require_authenticated_user,
     require_entity_membership,
     resolve_current_user,
 )
@@ -33,7 +34,9 @@ members_router = APIRouter(prefix="/entities/{entity_id}/members", tags=["auth"]
 
 @users_router.post("", response_model=UserRead, status_code=201)
 def create_user(
-    payload: UserCreate, session: Session = Depends(get_session)
+    payload: UserCreate,
+    session: Session = Depends(get_session),
+    _caller: object = Depends(require_authenticated_user),
 ) -> UserRead:
     try:
         user = service.create_user(session, payload)
@@ -70,7 +73,9 @@ def update_current_user_profile(
 
 @users_router.get("/{user_id}", response_model=UserRead)
 def get_user(
-    user_id: uuid.UUID, session: Session = Depends(get_session)
+    user_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _caller: object = Depends(require_authenticated_user),
 ) -> UserRead:
     user = service.get_user(session, user_id)
     if user is None:

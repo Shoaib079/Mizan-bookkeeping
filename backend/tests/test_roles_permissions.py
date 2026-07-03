@@ -191,11 +191,12 @@ def test_membership_crud_api(
     create_user_resp = client.post(
         "/users",
         json={"email": "new@example.com", "display_name": "New User"},
+        headers=auth_headers(admin),
     )
     assert create_user_resp.status_code == 201
     new_user_id = create_user_resp.json()["id"]
 
-    get_user_resp = client.get(f"/users/{new_user_id}")
+    get_user_resp = client.get(f"/users/{new_user_id}", headers=auth_headers(admin))
     assert get_user_resp.status_code == 200
     assert get_user_resp.json()["email"] == "new@example.com"
 
