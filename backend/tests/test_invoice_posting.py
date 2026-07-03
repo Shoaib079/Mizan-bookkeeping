@@ -64,6 +64,36 @@ def _confirmed_draft(db_session, entity, supplier_id) -> InvoiceDraft:
         return draft
 
 
+def _manual_confirmed_draft(
+    db_session,
+    entity,
+    supplier_id,
+    *,
+    invoice_number: str,
+) -> InvoiceDraft:
+    with entity_context(db_session, entity.id):
+        draft = InvoiceDraft(
+            status=InvoiceDraftStatus.CONFIRMED,
+            source_type=InvoiceSourceType.EFATURA_XML,
+            file_fingerprint=f"learn-{invoice_number}",
+            supplier_id=supplier_id,
+            invoice_number=invoice_number,
+            invoice_date=date(2026, 3, 15),
+            net_kurus=1_000_000,
+            gross_kurus=1_200_000,
+            vat_breakdown=[
+                {"rate_percent": 20, "base_kurus": 1_000_000, "vat_kurus": 200_000},
+            ],
+            currency="TRY",
+            extraction_payload={},
+            confirmed_by=ACTOR_ID,
+        )
+        db_session.add(draft)
+        db_session.commit()
+        db_session.refresh(draft)
+        return draft
+
+
 def _upload(client, entity_id, *, content=None):
     content = content or SAMPLE_XML.read_bytes()
     return client.post(
@@ -485,3 +515,187 @@ def test_api_post_period_locked_returns_422(
     )
     assert post.status_code == 422
     assert "closed period" in post.json()["detail"].lower()
+
+
+def test_post_learns_supplier_expense_account(
+    db_session, restaurant_a, seeded_accounts
+) -> None:
+    supplier_id = _supplier(db_session, restaurant_a)
+    supplies_id = seeded_accounts["5220"]
+
+    post_confirmed_draft(
+        db_session,
+        restaurant_a.id,
+        _confirmed_draft(db_session, restaurant_a, supplier_id).id,
+        expense_account_id=supplies_id,
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, restaurant_a.id):
+        from app.features.invoices.supplier_expense_rule_models import (
+            SupplierExpenseAccountRule,
+        )
+
+        rule = db_session.scalar(
+            select(SupplierExpenseAccountRule).where(
+                SupplierExpenseAccountRule.supplier_id == supplier_id
+            )
+        )
+        assert rule is not None
+        assert rule.expense_account_id == supplies_id
+        assert rule.confirmation_count == 1
+
+
+def test_three_posts_same_supplier_account_yields_high_suggestion(
+    client, db_session, restaurant_a, seeded_accounts
+) -> None:
+    supplier_id = _supplier(db_session, restaurant_a)
+    supplies_id = seeded_accounts["5220"]
+
+    for index in range(3):
+        draft = _manual_confirmed_draft(
+            db_session, restaurant_a, supplier_id, invoice_number=f"LEARN-{index}"
+        )
+        post_confirmed_draft(
+            db_session,
+            restaurant_a.id,
+            draft.id,
+            expense_account_id=supplies_id,
+            actor_id=ACTOR_ID,
+        )
+
+    draft = _manual_confirmed_draft(
+        db_session, restaurant_a, supplier_id, invoice_number="HIGH-SUGGEST"
+    )
+    response = client.get(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft.id}",
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["suggested_expense_account_id"] == str(supplies_id)
+    assert body["expense_account_confidence"] == "high"
+
+
+def test_expense_account_correction_resets_confidence(
+    db_session, restaurant_a, seeded_accounts
+) -> None:
+    supplier_id = _supplier(db_session, restaurant_a)
+    supplies_id = seeded_accounts["5220"]
+    rent_id = seeded_accounts["5200"]
+
+    for index, account_id in enumerate((supplies_id, supplies_id, supplies_id)):
+        draft = _manual_confirmed_draft(
+            db_session, restaurant_a, supplier_id, invoice_number=f"CORR-{index}"
+        )
+        post_confirmed_draft(
+            db_session,
+            restaurant_a.id,
+            draft.id,
+            expense_account_id=account_id,
+            actor_id=ACTOR_ID,
+        )
+
+    draft = _manual_confirmed_draft(
+        db_session, restaurant_a, supplier_id, invoice_number="CORR-FINAL"
+    )
+    post_confirmed_draft(
+        db_session,
+        restaurant_a.id,
+        draft.id,
+        expense_account_id=rent_id,
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, restaurant_a.id):
+        from app.features.invoices.supplier_expense_learning import (
+            suggest_supplier_expense_account,
+        )
+
+        suggestion = suggest_supplier_expense_account(
+            db_session, restaurant_a.id, supplier_id
+        )
+        assert suggestion is not None
+        assert suggestion.account_id == rent_id
+        assert suggestion.confidence == "low"
+
+
+def test_different_suppliers_learn_independently(
+    db_session, restaurant_a, seeded_accounts
+) -> None:
+    supplies_id = seeded_accounts["5220"]
+    rent_id = seeded_accounts["5200"]
+
+    with entity_context(db_session, restaurant_a.id):
+        supplier_a = Supplier(name="Metro Gida", vkn="1234567890")
+        supplier_b = Supplier(name="Other Vendor", vkn="9876543210")
+        db_session.add_all([supplier_a, supplier_b])
+        db_session.commit()
+        supplier_a_id = supplier_a.id
+        supplier_b_id = supplier_b.id
+
+    draft_a = _manual_confirmed_draft(
+        db_session, restaurant_a, supplier_a_id, invoice_number="SUP-A"
+    )
+    post_confirmed_draft(
+        db_session,
+        restaurant_a.id,
+        draft_a.id,
+        expense_account_id=supplies_id,
+        actor_id=ACTOR_ID,
+    )
+    draft_b = _manual_confirmed_draft(
+        db_session, restaurant_a, supplier_b_id, invoice_number="SUP-B"
+    )
+    post_confirmed_draft(
+        db_session,
+        restaurant_a.id,
+        draft_b.id,
+        expense_account_id=rent_id,
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, restaurant_a.id):
+        from app.features.invoices.supplier_expense_rule_models import (
+            SupplierExpenseAccountRule,
+        )
+
+        rules = list(db_session.scalars(select(SupplierExpenseAccountRule)))
+        assert len(rules) == 2
+        by_supplier = {rule.supplier_id: rule.expense_account_id for rule in rules}
+        assert by_supplier[supplier_a_id] == supplies_id
+        assert by_supplier[supplier_b_id] == rent_id
+
+
+def test_draft_get_omits_inactive_learned_account(
+    client, db_session, restaurant_a, seeded_accounts
+) -> None:
+    supplier_id = _supplier(db_session, restaurant_a)
+    supplies_id = seeded_accounts["5220"]
+
+    for index in range(3):
+        draft = _manual_confirmed_draft(
+            db_session, restaurant_a, supplier_id, invoice_number=f"LEARN-{index}"
+        )
+        post_confirmed_draft(
+            db_session,
+            restaurant_a.id,
+            draft.id,
+            expense_account_id=supplies_id,
+            actor_id=ACTOR_ID,
+        )
+
+    with entity_context(db_session, restaurant_a.id):
+        account = db_session.get(Account, supplies_id)
+        assert account is not None
+        account.is_active = False
+        db_session.commit()
+
+    draft = _manual_confirmed_draft(
+        db_session, restaurant_a, supplier_id, invoice_number="INACTIVE-CHECK"
+    )
+    response = client.get(
+        f"/entities/{restaurant_a.id}/invoices/drafts/{draft.id}",
+    )
+    assert response.status_code == 200
+    assert response.json()["suggested_expense_account_id"] is None
+    assert response.json()["expense_account_confidence"] is None

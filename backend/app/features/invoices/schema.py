@@ -90,6 +90,8 @@ class InvoiceDraftOut(BaseModel):
     journal_entry_id: uuid.UUID | None = None
     created_at: datetime
     has_stored_document: bool = False
+    suggested_expense_account_id: uuid.UUID | None = None
+    expense_account_confidence: Literal["high", "medium", "low"] | None = None
 
 
 class InvoiceDraftListOut(PaginatedListOut[InvoiceDraftOut]):

@@ -44,6 +44,7 @@ from app.features.invoices.classification_learning import (
     learn_invoice_classification_rule,
     record_invoice_rule_correction,
 )
+from app.features.invoices.supplier_expense_learning import suggest_supplier_expense_account
 from app.core.delivery.commission_posting import post_delivery_commission_draft
 from app.core.invoices.posting import DraftPostError, post_confirmed_draft
 from app.features.delivery.models import OwnedDeliveryPlatform
@@ -187,6 +188,8 @@ def _to_out(
     linked_name: str | None = None,
     linked_vkn: str | None = None,
     linked_platform_name: str | None = None,
+    suggested_expense_account_id: uuid.UUID | None = None,
+    expense_account_confidence: str | None = None,
 ) -> InvoiceDraftOut:
     return InvoiceDraftOut(
         id=draft.id,
@@ -218,6 +221,8 @@ def _to_out(
         journal_entry_id=draft.journal_entry_id,
         created_at=draft.created_at,
         has_stored_document=_stored_document_path(draft) is not None,
+        suggested_expense_account_id=suggested_expense_account_id,
+        expense_account_confidence=expense_account_confidence,
     )
 
 
@@ -225,12 +230,20 @@ def _draft_out(session: Session, entity_id: uuid.UUID, draft: InvoiceDraft) -> I
     linked_name: str | None = None
     linked_vkn: str | None = None
     linked_platform_name: str | None = None
+    suggested_expense_account_id: uuid.UUID | None = None
+    expense_account_confidence: str | None = None
     with entity_context(session, entity_id):
         if draft.supplier_id is not None:
             supplier = session.get(Supplier, draft.supplier_id)
             if supplier is not None:
                 linked_name = supplier.name
                 linked_vkn = supplier.vkn
+                suggestion = suggest_supplier_expense_account(
+                    session, entity_id, draft.supplier_id
+                )
+                if suggestion is not None:
+                    suggested_expense_account_id = suggestion.account_id
+                    expense_account_confidence = suggestion.confidence
         if draft.delivery_platform_id is not None:
             platform = session.get(OwnedDeliveryPlatform, draft.delivery_platform_id)
             if platform is not None:
@@ -240,6 +253,8 @@ def _draft_out(session: Session, entity_id: uuid.UUID, draft: InvoiceDraft) -> I
         linked_name=linked_name,
         linked_vkn=linked_vkn,
         linked_platform_name=linked_platform_name,
+        suggested_expense_account_id=suggested_expense_account_id,
+        expense_account_confidence=expense_account_confidence,
     )
 
 

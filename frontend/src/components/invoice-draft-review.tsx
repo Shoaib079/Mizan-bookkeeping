@@ -60,6 +60,8 @@ type InvoiceDraft = {
   classification_confidence: "high" | "medium" | "low" | null;
   has_stored_document: boolean;
   source_type: string;
+  suggested_expense_account_id: string | null;
+  expense_account_confidence: "high" | "medium" | "low" | null;
 };
 
 type SupplierOption = { id: string; name: string; vkn: string };
@@ -119,9 +121,16 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
       ? chartRes.items.filter((a) => a.code === "5500")
       : filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(expenses);
+    const suggested = draftRes.suggested_expense_account_id;
+    const suggestedAccount = suggested
+      ? expenses.find((a) => a.id === suggested)
+      : undefined;
+    const highConfidence = draftRes.expense_account_confidence === "high";
     const preferred = isCommission
       ? expenses[0]
-      : findExpenseAccountByCode(chartRes.items, "5200");
+      : highConfidence && suggestedAccount
+        ? suggestedAccount
+        : findExpenseAccountByCode(chartRes.items, "5200");
     if (preferred) setExpenseAccountId(preferred.id);
     else if (expenses[0]) setExpenseAccountId(expenses[0].id);
     if (draftRes.supplier_id) setSelectedSupplierId(draftRes.supplier_id);
@@ -368,6 +377,9 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
   const isCommission = draft.invoice_kind === "delivery_commission";
   const classificationReview = needsClassificationReview(
     draft.classification_confidence,
+  );
+  const expenseAccountReview = needsClassificationReview(
+    draft.expense_account_confidence,
   );
   const canLink =
     draft.status === "draft" || draft.status === "needs_review";
@@ -641,6 +653,12 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
                 </option>
               ))}
             </Select>
+            {expenseAccountReview && draft.suggested_expense_account_id && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Learned expense account suggestion — confirm or pick another
+                account.
+              </p>
+            )}
           </div>
           <Button type="submit" disabled={posting}>
             {posting

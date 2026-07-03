@@ -28,6 +28,10 @@ from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
+from app.features.invoices.supplier_expense_learning import (
+    learn_supplier_expense_account,
+    suggest_supplier_expense_account,
+)
 from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
 
 
@@ -213,6 +217,17 @@ def post_confirmed_draft(
         draft.posted_at = utcnow()
         draft.posted_by = actor_id
         draft.journal_entry_id = journal_entry.id
+
+        suggestion = suggest_supplier_expense_account(
+            session, entity_id, draft.supplier_id
+        )
+        learn_supplier_expense_account(
+            session,
+            entity_id,
+            supplier_id=draft.supplier_id,
+            expense_account_id=expense_account_id,
+            suggested_account_id=suggestion.account_id if suggestion else None,
+        )
 
         session.commit()
         session.refresh(journal_entry)
