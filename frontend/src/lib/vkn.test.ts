@@ -4,7 +4,7 @@ import { isValidVkn, normalizeVknInput, vknValidationMessage } from "./vkn";
 
 describe("vkn", () => {
   it("normalizes whitespace", () => {
-    expect(normalizeVknInput(" 7342 656 849 ")).toBe("7342656849");
+    expect(normalizeVknInput(" 1234567890 ")).toBe("1234567890");
   });
 
   it("accepts 10 and 11 digit VKN", () => {

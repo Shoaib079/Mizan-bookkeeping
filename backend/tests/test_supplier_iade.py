@@ -40,10 +40,11 @@ from app.features.suppliers.models import Supplier
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "efatura"
 METRO_IADE_PDF = FIXTURES / "metro-fritoz-iade.pdf"
 
+from tests.fixtures.efatura.regression_constants import REGRESSION_FIXTURE_BUYER_VKN
+
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 METRO_VKN = "6200031354"
-BUYER_VKN = "7342656849"
 IADE_NUMBER = "GIB2026000000004"
 IADE_DATE = date(2026, 6, 18)
 REF_NUMBER = "OUP2025000013559"
@@ -136,7 +137,7 @@ def _credit_draft(
 
 def test_pdf_extraction_parses_iade_and_referenced_invoice() -> None:
     content = METRO_IADE_PDF.read_bytes()
-    extraction = extract_efatura_pdf(content, buyer_vkn=BUYER_VKN)
+    extraction = extract_efatura_pdf(content, buyer_vkn=REGRESSION_FIXTURE_BUYER_VKN)
 
     assert extraction.invoice_type_code == "IADE"
     assert extraction.invoice_number == IADE_NUMBER
@@ -311,7 +312,7 @@ def test_full_iade_credit_equals_original_invoice_gross(
 def test_intake_from_pdf_sets_supplier_credit_kind(
     db_session, restaurant_a, seeded_accounts
 ) -> None:
-    restaurant_a.vkn = BUYER_VKN
+    restaurant_a.vkn = REGRESSION_FIXTURE_BUYER_VKN
     db_session.commit()
     db_session.refresh(restaurant_a)
 

@@ -79,7 +79,7 @@ describe("submitFirstRunOnboarding", () => {
         fullName: " Ayşe Yılmaz ",
         businessName: " Kadıköy Cafe ",
         legalName: " Kadıköy Gıda Ltd ",
-        vkn: "7342656849",
+        vkn: "1234567890",
       },
       {
         clerkEnabled: true,
@@ -93,7 +93,7 @@ describe("submitFirstRunOnboarding", () => {
     expect(patchDisplayName).toHaveBeenCalledWith("Ayşe Yılmaz");
     expect(createEntity).toHaveBeenCalledWith({
       name: "Kadıköy Cafe",
-      vkn: "7342656849",
+      vkn: "1234567890",
       legal_name: "Kadıköy Gıda Ltd",
     });
     expect(refreshEntities).toHaveBeenCalledTimes(1);

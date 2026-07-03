@@ -10,14 +10,17 @@ def test_create_entity_requires_vkn(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+SAMPLE_VKN = "1234567890"
+
+
 def test_create_entity_stores_vkn(client: TestClient) -> None:
     response = client.post(
         "/entities",
-        json=entity_create_json("VKN Cafe", vkn="7342656849"),
+        json=entity_create_json("VKN Cafe", vkn=SAMPLE_VKN),
     )
     assert response.status_code == 201
     body = response.json()
-    assert body["vkn"] == "7342656849"
+    assert body["vkn"] == SAMPLE_VKN
 
 
 def test_patch_entity_updates_company_profile(
@@ -27,19 +30,19 @@ def test_patch_entity_updates_company_profile(
     patch = client.patch(
         f"/entities/{restaurant_a.id}",
         json={
-            "name": "Rembetiko Kadıköy",
-            "legal_name": "REMBETİKO TURİZM RESTORAN LTD",
-            "vkn": "7342656849",
+            "name": "Demo Kadıköy",
+            "legal_name": "DEMO RESTORAN LTD",
+            "vkn": SAMPLE_VKN,
         },
     )
     assert patch.status_code == 200
     body = patch.json()
-    assert body["name"] == "Rembetiko Kadıköy"
-    assert body["legal_name"] == "REMBETİKO TURİZM RESTORAN LTD"
-    assert body["vkn"] == "7342656849"
+    assert body["name"] == "Demo Kadıköy"
+    assert body["legal_name"] == "DEMO RESTORAN LTD"
+    assert body["vkn"] == SAMPLE_VKN
 
     get_resp = client.get(f"/entities/{restaurant_a.id}")
-    assert get_resp.json()["vkn"] == "7342656849"
+    assert get_resp.json()["vkn"] == SAMPLE_VKN
 
 
 def test_patch_entity_rejects_invalid_vkn(client: TestClient, restaurant_a) -> None:

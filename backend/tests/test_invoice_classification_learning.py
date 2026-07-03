@@ -23,8 +23,9 @@ from app.features.invoices.models import InvoiceDraftStatus, InvoiceKind
 from app.features.invoices import service as invoice_service
 from tests.delivery_helpers import ACTOR_ID, delivery_setup as build_delivery_setup
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures" / "efatura" / "spice_corner"
-BUYER_VKN = "7342656849"
+from tests.fixtures.efatura.regression_constants import REGRESSION_FIXTURE_BUYER_VKN
+
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "efatura" / "regression"
 GETIR_SUPPLY = FIXTURES / "getir_supply.pdf"
 
 
@@ -38,7 +39,7 @@ def test_invoice_learn_on_confirm_then_suggest_getir_supply(
 ) -> None:
     entity_id = delivery_entity["entity_id"]
     pdf_bytes = GETIR_SUPPLY.read_bytes()
-    extraction = extract_efatura_pdf(pdf_bytes, buyer_vkn=BUYER_VKN)
+    extraction = extract_efatura_pdf(pdf_bytes, buyer_vkn=REGRESSION_FIXTURE_BUYER_VKN)
     text = extraction.raw.get("text_sample") if extraction.raw else None
 
     with entity_context(db_session, entity_id):
@@ -160,7 +161,7 @@ def test_entity_a_invoice_rules_invisible_in_entity_b(
     seed_default_chart(db_session, restaurant_a.id)
     seed_default_chart(db_session, restaurant_b.id)
     pdf_bytes = GETIR_SUPPLY.read_bytes()
-    extraction = extract_efatura_pdf(pdf_bytes, buyer_vkn=BUYER_VKN)
+    extraction = extract_efatura_pdf(pdf_bytes, buyer_vkn=REGRESSION_FIXTURE_BUYER_VKN)
     text = extraction.raw.get("text_sample") if extraction.raw else None
 
     with entity_context(db_session, restaurant_a.id):
