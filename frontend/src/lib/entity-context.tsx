@@ -15,8 +15,6 @@ import { apiFetch, setAuthHeaderProvider } from "@/lib/api";
 import { useApiAuth } from "@/lib/api-auth";
 import { fetchEntitiesWithRetry, resolveEntityIdFromList } from "@/lib/entity-context-helpers";
 
-const DEFAULT_ACTOR = "00000000-0000-4000-8000-000000000001";
-
 type Entity = { id: string; name: string };
 type UserProfile = { id: string; email: string; display_name: string };
 
@@ -26,8 +24,23 @@ function readStoredEntityId(): string {
 }
 
 function readStoredActorId(): string {
-  if (typeof window === "undefined") return DEFAULT_ACTOR;
-  return localStorage.getItem("mizan.actorId") ?? DEFAULT_ACTOR;
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("mizan.actorId") ?? "";
+}
+
+/** Remove all mizan.* / mizan:* keys from localStorage (sign-out hygiene). */
+export function clearMizanStorage(): void {
+  if (typeof window === "undefined") return;
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.startsWith("mizan.") || key.startsWith("mizan:"))) {
+      keysToRemove.push(key);
+    }
+  }
+  for (const key of keysToRemove) {
+    localStorage.removeItem(key);
+  }
 }
 
 type SetEntityOptions = {

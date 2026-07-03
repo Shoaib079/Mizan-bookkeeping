@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, list_params_dependency, paginated_list
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.invoices import service
 from app.features.invoices.models import InvoiceDraftStatus
 from app.core.invoices.posting import DraftPostError
@@ -218,11 +219,12 @@ def confirm_invoice_draft(
     draft_id: uuid.UUID,
     payload: ConfirmDraftRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.confirm_invoice_draft(
-            session, entity_id, draft_id, actor_id=payload.actor_id
+            session, entity_id, draft_id, actor_id=actor_id
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -236,14 +238,15 @@ def unconfirm_invoice_draft(
     draft_id: uuid.UUID,
     payload: UnconfirmDraftRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> InvoiceDraftOut:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.unconfirm_invoice_draft(
             session,
             entity_id,
             draft_id,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
             reason=payload.reason,
         )
     except LookupError as exc:
@@ -301,15 +304,16 @@ def confirm_and_post_invoice_draft(
     draft_id: uuid.UUID,
     payload: ConfirmAndPostInvoiceDraftRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> PostInvoiceDraftOut:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.confirm_and_post_supplier_invoice_draft(
             session,
             entity_id,
             draft_id,
             expense_account_id=payload.expense_account_id,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -329,15 +333,16 @@ def post_invoice_draft(
     draft_id: uuid.UUID,
     payload: PostInvoiceDraftRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> PostInvoiceDraftOut:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.post_invoice_draft(
             session,
             entity_id,
             draft_id,
             expense_account_id=payload.expense_account_id,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

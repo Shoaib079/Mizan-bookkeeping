@@ -23,7 +23,8 @@ from app.core.payables.ledger import (
     ZeroMovementError,
 )
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.payables import activity_excel
 from app.features.payables import supplier_activity
 from app.features.payables import service
@@ -166,8 +167,9 @@ def record_supplier_movement(
     supplier_id: uuid.UUID,
     payload: SupplierMovementCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> SupplierLedgerEntryRead:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         entry = service.record_movement(
             session,
@@ -177,7 +179,7 @@ def record_supplier_movement(
             movement_type=payload.movement_type,
             amount_kurus=payload.amount_kurus,
             description=payload.description,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -201,8 +203,9 @@ def post_supplier_payment(
     supplier_id: uuid.UUID,
     payload: SupplierPaymentCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> SupplierPaymentRead:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         result = service.record_payment(
             session,
@@ -211,7 +214,7 @@ def post_supplier_payment(
             payment_date=payload.payment_date,
             amount_kurus=payload.amount_kurus,
             description=payload.description,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
             payment_account_id=payload.payment_account_id,
             reference=payload.reference,
         )
@@ -245,8 +248,9 @@ def correct_supplier_payment(
     journal_entry_id: uuid.UUID,
     payload: SupplierPaymentCorrect,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> SupplierPaymentCorrectOut:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         result, balance, new_row = service.correct_supplier_payment_entry(
             session,
@@ -256,7 +260,7 @@ def correct_supplier_payment(
             payment_date=payload.payment_date,
             amount_kurus=payload.amount_kurus,
             description=payload.description,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
             payment_account_id=payload.payment_account_id,
             reference=payload.reference,
             reason=payload.reason,
@@ -296,8 +300,9 @@ def correct_supplier_invoice(
     journal_entry_id: uuid.UUID,
     payload: SupplierInvoiceCorrect,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> SupplierInvoiceCorrectOut:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         result, balance, new_row = service.correct_supplier_invoice_entry(
             session,
@@ -306,7 +311,7 @@ def correct_supplier_invoice(
             journal_entry_id,
             invoice_date=payload.invoice_date,
             description=payload.description,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
             expense_account_id=payload.expense_account_id,
             net_kurus=payload.net_kurus,
             gross_kurus=payload.gross_kurus,

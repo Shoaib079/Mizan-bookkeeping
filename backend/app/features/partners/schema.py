@@ -61,7 +61,7 @@ class PartnerLedgerEntryRead(BaseModel):
     movement_type: PartnerMovementType
     amount_kurus: int
     description: str
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     journal_entry_id: uuid.UUID | None
     created_at: datetime
 
@@ -76,7 +76,7 @@ class ExpenseFrontedCreate(BaseModel):
     expense_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     expense_account_id: uuid.UUID
 
 
@@ -84,7 +84,7 @@ class ReimbursementPaidCreate(BaseModel):
     payment_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     payment_account_id: uuid.UUID
 
 
@@ -104,7 +104,7 @@ class DrawingCreate(BaseModel):
     drawing_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     payment_account_id: uuid.UUID
 
 
@@ -112,7 +112,7 @@ class DrawingRepaymentCreate(BaseModel):
     payment_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     payment_account_id: uuid.UUID
 
 
@@ -131,7 +131,7 @@ class DrawingRepaymentResponse(BaseModel):
 class PartnerJournalEntryCorrect(BaseModel):
     entry_date: date
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     amount_kurus: int | None = Field(default=None, gt=0)
     expense_account_id: uuid.UUID | None = None
     payment_account_id: uuid.UUID | None = None

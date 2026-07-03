@@ -17,7 +17,8 @@ from app.core.payables.ledger import OverpaymentError as SupplierOverpaymentErro
 from app.core.banking.posting import InvalidTransferError
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.banking import import_profiles as import_profile_service
 from app.features.banking import statements as statement_service
 from app.features.suppliers.service import DuplicateSupplierError
@@ -312,8 +313,9 @@ def classify_statement_line(
     line_id: uuid.UUID,
     payload: ClassifyStatementLineRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ClassifyStatementLineResult:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return statement_service.classify_statement_line(
             session,
@@ -325,7 +327,7 @@ def classify_statement_line(
             counterpart_money_account_id=payload.counterpart_money_account_id,
             credit_card_money_account_id=payload.credit_card_money_account_id,
             customer_id=payload.customer_id,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
             confirm_supplier_ledger_entry_id=payload.confirm_supplier_ledger_entry_id,
             confirm_account_transfer_id=payload.confirm_account_transfer_id,
             delivery_platform_id=payload.delivery_platform_id,
@@ -361,15 +363,16 @@ def correct_statement_line(
     line_id: uuid.UUID,
     payload: CorrectStatementLineRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ClassifyStatementLineResult:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return statement_service.correct_statement_line(
             session,
             entity_id,
             statement_id,
             line_id,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
             classification=payload.classification,
             supplier_id=payload.supplier_id,
             counterpart_money_account_id=payload.counterpart_money_account_id,

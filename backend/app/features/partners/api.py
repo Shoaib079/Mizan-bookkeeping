@@ -13,7 +13,8 @@ from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.partners.ledger import OverpaymentError, OverRepaymentError, ZeroMovementError
 from app.core.partners.posting import InvalidPartnerPostingError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.partners import service
 from app.features.partners.schema import (
     ExpenseFrontedCreate,
@@ -131,8 +132,9 @@ def post_expense_fronted(
     partner_id: uuid.UUID,
     payload: ExpenseFrontedCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseFrontedResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.record_expense_fronted(session, entity_id, partner_id, payload)
     except LookupError as exc:
@@ -155,8 +157,9 @@ def post_reimbursement_paid(
     partner_id: uuid.UUID,
     payload: ReimbursementPaidCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ReimbursementPaidResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.record_reimbursement_paid(session, entity_id, partner_id, payload)
     except LookupError as exc:
@@ -181,8 +184,9 @@ def post_partner_drawing(
     partner_id: uuid.UUID,
     payload: DrawingCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> DrawingResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.record_drawing(session, entity_id, partner_id, payload)
     except LookupError as exc:
@@ -205,8 +209,9 @@ def post_partner_drawing_repayment(
     partner_id: uuid.UUID,
     payload: DrawingRepaymentCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> DrawingRepaymentResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.record_drawing_repayment(session, entity_id, partner_id, payload)
     except LookupError as exc:
@@ -231,8 +236,9 @@ def correct_partner_journal_entry(
     journal_entry_id: uuid.UUID,
     payload: PartnerJournalEntryCorrect,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> PartnerJournalEntryCorrectOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.correct_partner_journal_entry_http(
             session, entity_id, partner_id, journal_entry_id, payload

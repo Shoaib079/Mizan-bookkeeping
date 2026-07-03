@@ -13,7 +13,8 @@ from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.staff.ledger import OverpaymentError, ZeroMovementError
 from app.core.staff.posting import InvalidStaffPostingError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.staff import service
 from app.features.staff.schema import (
     EmployeeCreate,
@@ -153,8 +154,9 @@ def post_staff_accrual(
     employee_id: uuid.UUID,
     payload: StaffAccrualCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> StaffAccrualResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.record_accrual(session, entity_id, employee_id, payload)
     except LookupError as exc:
@@ -177,8 +179,9 @@ def post_staff_advance(
     employee_id: uuid.UUID,
     payload: StaffAdvanceCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> StaffAdvanceResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.record_advance(session, entity_id, employee_id, payload)
     except LookupError as exc:
@@ -201,8 +204,9 @@ def post_staff_payment(
     employee_id: uuid.UUID,
     payload: StaffPaymentCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> StaffPaymentResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.record_payment(session, entity_id, employee_id, payload)
     except LookupError as exc:
@@ -227,8 +231,9 @@ def correct_staff_journal_entry(
     journal_entry_id: uuid.UUID,
     payload: StaffJournalEntryCorrect,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> StaffJournalEntryCorrectOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.correct_staff_journal_entry_http(
             session, entity_id, employee_id, journal_entry_id, payload

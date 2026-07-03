@@ -17,7 +17,7 @@ class CreateManualJournalRequest(BaseModel):
     entry_date: date | None = None
     description: str = Field(max_length=512)
     lines: list[PostingLineIn] = Field(min_length=2)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 

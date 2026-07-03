@@ -288,7 +288,7 @@ class CorrectStatementLineRequest(BaseModel):
     supplier_id: uuid.UUID | None = None
     counterpart_money_account_id: uuid.UUID | None = None
     credit_card_money_account_id: uuid.UUID | None = None
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     customer_id: uuid.UUID | None = None
     delivery_platform_id: uuid.UUID | None = None
     expense_account_id: uuid.UUID | None = None
@@ -320,7 +320,7 @@ class AccountTransferCreate(BaseModel):
     transfer_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
 
 
 class AccountTransferRead(BaseModel):

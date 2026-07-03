@@ -12,7 +12,8 @@ from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.receivables.ledger import OverpaymentError, ZeroMovementError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.customers import service
 from app.features.customers.schema import (
     CreditSaleCreate,
@@ -126,8 +127,9 @@ def post_credit_sale(
     customer_id: uuid.UUID,
     payload: CreditSaleCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CreditSaleResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.record_credit_sale(session, entity_id, customer_id, payload)
     except LookupError as exc:
@@ -150,8 +152,9 @@ def post_customer_payment(
     customer_id: uuid.UUID,
     payload: CustomerPaymentCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CustomerPaymentResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.record_customer_payment(session, entity_id, customer_id, payload)
     except LookupError as exc:
@@ -176,8 +179,9 @@ def correct_customer_payment(
     journal_entry_id: uuid.UUID,
     payload: CustomerPaymentCorrect,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CustomerPaymentCorrectOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         result, balance, new_row = service.correct_customer_payment_entry(
             session,
@@ -222,8 +226,9 @@ def correct_credit_sale(
     journal_entry_id: uuid.UUID,
     payload: CreditSaleCorrect,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CreditSaleCorrectOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         result, balance, new_row = service.correct_credit_sale_entry(
             session,

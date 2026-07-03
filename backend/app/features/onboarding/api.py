@@ -5,7 +5,8 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from app.core.auth.deps import operations_write_guard
+from app.core.auth.deps import operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -105,18 +106,19 @@ def post_opening_balances_api(
     entity_id: uuid.UUID,
     payload: OpeningBalancePostRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> OpeningBalancePostResponse:
     if entity_service.get_entity(session, entity_id) is None:
         raise HTTPException(status_code=404, detail="Entity not found")
 
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         result = post_opening_balances(
             session,
             entity_id,
             go_live_date=payload.go_live_date,
             lines=_line_inputs(payload.lines),
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
         )
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

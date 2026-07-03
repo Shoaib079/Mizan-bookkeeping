@@ -17,7 +17,8 @@ from app.core.pos.posting import (
 )
 from app.core.ledger.posting import PostingError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.pos import daily_summary_service
 from app.features.pos import service as pos_service
 from app.features.pos.models import PosDailySummaryStatus
@@ -53,8 +54,9 @@ def create_pos_settlement(
     entity_id: uuid.UUID,
     payload: PosSettlementCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> PosSettlementRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return pos_service.create_pos_settlement(session, entity_id, payload)
     except LookupError as exc:
@@ -118,8 +120,9 @@ def create_card_sales_batch(
     entity_id: uuid.UUID,
     payload: CardSalesBatchCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CardSalesBatchRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return pos_service.create_card_sales_batch(session, entity_id, payload)
     except LookupError as exc:
@@ -178,8 +181,9 @@ def clear_card_commission(
     entity_id: uuid.UUID,
     payload: CardCommissionClearanceRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CardCommissionClearanceRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return pos_service.clear_card_commission(session, entity_id, payload)
     except LookupError as exc:
@@ -275,8 +279,9 @@ def confirm_pos_daily_summary(
     summary_id: uuid.UUID,
     payload: ConfirmPosDailySummaryRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> PosDailySummaryRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return daily_summary_service.confirm_pos_daily_summary_intake(
             session, entity_id, summary_id, payload
@@ -313,8 +318,9 @@ def correct_pos_daily_summary(
     summary_id: uuid.UUID,
     payload: CorrectPosDailySummaryRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> PosDailySummaryRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return daily_summary_service.correct_pos_daily_summary_intake(
             session, entity_id, summary_id, payload
@@ -334,8 +340,9 @@ def create_manual_daily_sales(
     entity_id: uuid.UUID,
     payload: ManualDailySalesRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> PosDailySummaryRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return daily_summary_service.create_manual_daily_sales(session, entity_id, payload)
     except LookupError as exc:

@@ -16,7 +16,7 @@ class DeliveryReportCreate(BaseModel):
     period_end: date
     gross_kurus: int = Field(gt=0, description="Sales total for the period, KDV dahil")
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def validate_period_range(self) -> DeliveryReportCreate:
@@ -26,7 +26,7 @@ class DeliveryReportCreate(BaseModel):
 
 
 class DeliveryReportPostRequest(BaseModel):
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     gross_kurus: int | None = Field(default=None, gt=0)
 
 
@@ -64,7 +64,7 @@ class DeliverySettlementCreate(BaseModel):
     settlement_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     delivery_report_id: uuid.UUID | None = None
 
 

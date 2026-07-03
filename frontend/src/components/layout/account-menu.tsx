@@ -24,7 +24,7 @@ import {
   unsavedWorkWarningMessage,
 } from "@/lib/account-menu-helpers";
 import { useApiAuth } from "@/lib/api-auth";
-import { useEntity } from "@/lib/entity-context";
+import { clearMizanStorage, useEntity } from "@/lib/entity-context";
 import { entityAccentColor, userInitials } from "@/lib/entity-visual";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { useToast } from "@/lib/toast";
@@ -48,6 +48,7 @@ function AccountMenuWithClerk() {
   const { signOut } = useClerk();
 
   const handleSignOut = useCallback(async () => {
+    clearMizanStorage();
     await signOut({ redirectUrl: "/sign-in" });
     router.push("/sign-in");
   }, [router, signOut]);

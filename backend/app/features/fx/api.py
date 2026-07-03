@@ -16,7 +16,8 @@ from app.core.fx.spend_posting import InvalidFxSpendError
 from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.fx import service as fx_service
 from app.features.fx.schema import (
     FxBalanceRead,
@@ -41,8 +42,9 @@ def create_fx_purchase(
     entity_id: uuid.UUID,
     payload: FxPurchaseCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> FxPurchaseResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return fx_service.create_fx_purchase(session, entity_id, payload)
     except LookupError as exc:
@@ -59,8 +61,9 @@ def correct_fx_purchase(
     journal_entry_id: uuid.UUID,
     payload: FxPurchaseCorrect,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> FxPurchaseCorrectOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return fx_service.correct_fx_purchase_entry(
             session, entity_id, journal_entry_id, payload
@@ -80,8 +83,9 @@ def create_fx_conversion(
     entity_id: uuid.UUID,
     payload: FxConversionCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> FxConversionResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return fx_service.create_fx_conversion(session, entity_id, payload)
     except LookupError as exc:
@@ -97,8 +101,9 @@ def create_fx_expense_spend(
     entity_id: uuid.UUID,
     payload: FxExpenseSpendCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> FxExpenseSpendResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return fx_service.create_fx_expense_spend(session, entity_id, payload)
     except LookupError as exc:
@@ -115,8 +120,9 @@ def correct_fx_conversion_or_spend(
     journal_entry_id: uuid.UUID,
     payload: FxLedgerEntryCorrect,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> FxLedgerEntryCorrectOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return fx_service.correct_fx_conversion_or_spend_entry(
             session, entity_id, journal_entry_id, payload

@@ -19,7 +19,7 @@ class DayCloseoutRequest(BaseModel):
     cash_kurus: int = Field(ge=0)
     card_kurus: int = Field(ge=0)
     money_account_id: uuid.UUID
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     z_report_kurus: int | None = Field(default=None, ge=0)
     description: str | None = Field(default=None, max_length=512)
     period_unlock_reason: str | None = Field(default=None, max_length=512)

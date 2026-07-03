@@ -166,11 +166,21 @@ def operations_write_guard(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     authorization: str | None = Header(None),
-) -> None:
+) -> User | None:
     if not settings.auth_enforcement:
-        return
+        return None
     user = resolve_current_user(session, authorization)
     require_permission(session, entity_id, user, Permission.OPERATIONS_WRITE)
+    return user
+
+
+def resolve_actor_id(auth_user: User | None, body_actor_id: uuid.UUID | None) -> uuid.UUID:
+    """Return the authenticated user's ID when auth is enforced, else the body value."""
+    if auth_user is not None:
+        return auth_user.id
+    if body_actor_id is not None:
+        return body_actor_id
+    raise HTTPException(status_code=422, detail="actor_id is required")
 
 
 def member_read_guard(

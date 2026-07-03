@@ -84,7 +84,7 @@ class OpeningBalanceValidateResponse(BaseModel):
 
 class OpeningBalancePostRequest(BaseModel):
     go_live_date: date
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     lines: list[OpeningBalanceLineIn] = Field(min_length=1)
 
 

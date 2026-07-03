@@ -13,7 +13,8 @@ from app.core.ledger.correction import SubledgerBackedCorrectionError
 from app.core.ledger.posting import PostingError
 from app.core.listing import ListParams, list_params_dependency, paginated_list
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.ledger import service
 from app.features.ledger.schema import (
     CorrectJournalEntryOut,
@@ -70,8 +71,9 @@ def void_entry(
     entry_id: uuid.UUID,
     payload: VoidJournalEntryRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> VoidJournalEntryOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         original, reversal = service.void_entry(session, entity_id, entry_id, payload)
     except LookupError as exc:
@@ -90,8 +92,9 @@ def correct_entry(
     entry_id: uuid.UUID,
     payload: CorrectJournalEntryRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CorrectJournalEntryOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         original, reversal, corrected = service.correct_entry(
             session, entity_id, entry_id, payload

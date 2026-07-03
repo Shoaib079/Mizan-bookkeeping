@@ -18,7 +18,8 @@ from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.errors import PostingError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.expenses import service as expenses_service
 from app.features.expenses.models import ExpenseEntryStatus, ExpenseReceiptIntakeStatus
 from app.features.expenses import receipt_service
@@ -98,8 +99,9 @@ def merge_expense_items(
     entity_id: uuid.UUID,
     payload: ExpenseItemMergeRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseItemRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return expenses_service.merge_items(session, entity_id, payload)
     except LookupError as exc:
@@ -126,8 +128,9 @@ def create_expense(
     entity_id: uuid.UUID,
     payload: ExpenseCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return expenses_service.create_expense(session, entity_id, payload)
     except LookupError as exc:
@@ -184,10 +187,11 @@ async def upload_tip_photo(
     entity_id: uuid.UUID,
     file: UploadFile = File(...),
     money_account_id: uuid.UUID = Form(...),
-    actor_id: uuid.UUID = Form(...),
+    actor_id: uuid.UUID | None = Form(None),
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseRead:
+    resolved_actor = resolve_actor_id(_guard, actor_id)
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
@@ -197,7 +201,7 @@ async def upload_tip_photo(
             entity_id,
             content,
             money_account_id=money_account_id,
-            actor_id=actor_id,
+            actor_id=resolved_actor,
             filename=file.filename,
             content_type=file.content_type,
         )
@@ -222,10 +226,11 @@ async def upload_expense_receipt(
     entity_id: uuid.UUID,
     file: UploadFile = File(...),
     money_account_id: uuid.UUID = Form(...),
-    actor_id: uuid.UUID = Form(...),
+    actor_id: uuid.UUID | None = Form(None),
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseReceiptRead:
+    resolved_actor = resolve_actor_id(_guard, actor_id)
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
@@ -235,7 +240,7 @@ async def upload_expense_receipt(
             entity_id,
             content,
             money_account_id=money_account_id,
-            actor_id=actor_id,
+            actor_id=resolved_actor,
             filename=file.filename,
             content_type=file.content_type,
         )
@@ -299,8 +304,9 @@ def confirm_expense_receipt(
     intake_id: uuid.UUID,
     payload: ConfirmExpenseReceiptRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseReceiptRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return receipt_service.confirm_expense_receipt(
             session, entity_id, intake_id, payload
@@ -354,8 +360,9 @@ def confirm_tip_photo(
     expense_id: uuid.UUID,
     payload: ConfirmTipPhotoRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return expenses_service.confirm_tip_expense(
             session, entity_id, expense_id, payload
@@ -376,8 +383,9 @@ def correct_expense(
     expense_id: uuid.UUID,
     payload: ExpenseCorrect,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseCorrectOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return expenses_service.correct_expense_by_id(
             session, entity_id, expense_id, payload
@@ -402,8 +410,9 @@ def confirm_expense_item(
     expense_id: uuid.UUID,
     payload: ExpenseConfirmItemRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return expenses_service.confirm_expense_item(
             session, entity_id, expense_id, payload

@@ -28,7 +28,7 @@ class ExpenseItemRead(BaseModel):
 class ExpenseItemMergeRequest(BaseModel):
     source_id: uuid.UUID
     target_id: uuid.UUID
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
 
 
 class ExpenseAccountSuggestResponse(BaseModel):
@@ -46,7 +46,7 @@ class ExpenseCreate(BaseModel):
     has_source_document: bool = False
     description: str = Field(min_length=1, max_length=512)
     notes: str | None = Field(default=None, max_length=512)
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     confirm_expense_item_id: uuid.UUID | None = None
 
 
@@ -65,7 +65,7 @@ class ExpenseCorrectOut(BaseModel):
 
 class ExpenseConfirmItemRequest(BaseModel):
     expense_item_id: uuid.UUID
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
 
 
 class ConfirmTipPhotoRequest(BaseModel):
@@ -75,7 +75,7 @@ class ConfirmTipPhotoRequest(BaseModel):
     cash/bank account it was paid from, and the date before it posts.
     """
 
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     amount_kurus: int | None = Field(default=None, gt=0)
     money_account_id: uuid.UUID | None = None
     expense_date: date | None = None
@@ -96,7 +96,7 @@ class ExpenseRead(BaseModel):
     has_source_document: bool
     description: str
     notes: str | None
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     journal_entry_id: uuid.UUID | None
     bank_statement_line_id: uuid.UUID | None
     review_reason: str | None
@@ -130,7 +130,7 @@ class ExpenseReceiptRead(BaseModel):
     receipt_total_kurus: int | None
     extraction_payload: dict
     review_reason: str | None
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     posted_at: datetime | None
     lines: list[ExpenseReceiptLineRead]
     created_at: datetime
@@ -145,7 +145,7 @@ class ConfirmExpenseReceiptLineRequest(BaseModel):
 
 
 class ConfirmExpenseReceiptRequest(BaseModel):
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     expense_date: date | None = None
     money_account_id: uuid.UUID | None = None
     lines: list[ConfirmExpenseReceiptLineRequest] | None = None

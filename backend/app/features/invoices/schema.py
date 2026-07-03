@@ -28,7 +28,7 @@ class LinkDeliveryPlatformRequest(BaseModel):
 
 
 class ConfirmDraftRequest(BaseModel):
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
 
 
 class RejectDraftRequest(BaseModel):
@@ -36,7 +36,7 @@ class RejectDraftRequest(BaseModel):
 
 
 class UnconfirmDraftRequest(BaseModel):
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     reason: str | None = Field(default=None, max_length=512)
 
 
@@ -45,12 +45,12 @@ class SetInvoiceKindRequest(BaseModel):
 
 
 class PostInvoiceDraftRequest(BaseModel):
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     expense_account_id: uuid.UUID
 
 
 class ConfirmAndPostInvoiceDraftRequest(BaseModel):
-    actor_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
     expense_account_id: uuid.UUID
 
 

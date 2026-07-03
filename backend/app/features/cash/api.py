@@ -15,7 +15,7 @@ from app.core.cash.errors import DrawerDayClosedError, DrawerUnlockRequiredError
 from app.core.cash.posting import InvalidCashDrawerError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard, require_owner_members
+from app.core.auth.deps import member_read_guard, operations_write_guard, require_owner_members, resolve_actor_id
 from app.features.auth.models import User
 from app.features.cash import service as cash_service
 from app.features.cash.schema import (
@@ -38,8 +38,9 @@ def create_cash_movement(
     entity_id: uuid.UUID,
     payload: CashMovementCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CashMovementRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return cash_service.create_cash_movement(session, entity_id, payload)
     except LookupError as exc:
@@ -104,8 +105,9 @@ def close_cash_drawer_day_route(
     entity_id: uuid.UUID,
     payload: CashDrawerCloseDayRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CashDrawerCloseResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return cash_service.close_cash_drawer_day(session, entity_id, payload)
     except LookupError as exc:
@@ -122,15 +124,16 @@ def close_cash_drawer_session_route(
     session_id: uuid.UUID,
     payload: CashDrawerCloseRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> CashDrawerCloseResponse:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return cash_service.close_cash_drawer(
             session,
             entity_id,
             session_id,
             counted_balance_kurus=payload.counted_balance_kurus,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
             description=payload.description,
         )
     except LookupError as exc:
@@ -149,12 +152,7 @@ def reopen_cash_drawer_session_route(
     session: Session = Depends(get_session),
     owner: User | None = Depends(require_owner_members),
 ) -> CashDrawerSessionRead:
-    if settings.auth_enforcement:
-        if owner is None:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        actor_id = owner.id
-    else:
-        actor_id = payload.actor_id
+    actor_id = resolve_actor_id(owner, payload.actor_id)
     try:
         return cash_service.reopen_cash_drawer(
             session,

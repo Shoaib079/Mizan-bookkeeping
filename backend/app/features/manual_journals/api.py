@@ -12,7 +12,8 @@ from app.core.listing import ListParams, list_params_dependency, paginated_list
 from app.core.ledger.models import JournalEntryStatus
 from app.core.ledger.posting import PostingError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.manual_journals import service
 from app.features.manual_journals.schema import (
     CreateManualJournalRequest,
@@ -30,8 +31,9 @@ def create_manual_journal(
     entity_id: uuid.UUID,
     payload: CreateManualJournalRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ManualJournalOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return service.create_manual_journal(session, entity_id, payload)
     except LookupError as exc:
@@ -94,8 +96,9 @@ def void_manual_journal(
     entry_id: uuid.UUID,
     payload: VoidJournalEntryRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> ManualJournalVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         original, reversal = service.void_manual_journal(
             session, entity_id, entry_id, payload

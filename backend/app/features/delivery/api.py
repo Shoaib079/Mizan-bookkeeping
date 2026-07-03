@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 from app.core.delivery.posting import InvalidDeliveryReportError
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.delivery import platform_service
 from app.features.delivery import service as delivery_service
 from app.features.delivery.models import DeliveryReportStatus
@@ -142,8 +143,9 @@ def create_delivery_report(
     entity_id: uuid.UUID,
     payload: DeliveryReportCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> DeliveryReportRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return delivery_service.create_delivery_report(session, entity_id, payload)
     except LookupError as exc:
@@ -218,8 +220,9 @@ def post_delivery_report(
     report_id: uuid.UUID,
     payload: DeliveryReportPostRequest,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> DeliveryReportRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return delivery_service.post_delivery_report_intake(
             session, entity_id, report_id, payload
@@ -257,8 +260,9 @@ def create_delivery_settlement(
     entity_id: uuid.UUID,
     payload: DeliverySettlementCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> DeliverySettlementRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return delivery_service.create_delivery_settlement(session, entity_id, payload)
     except LookupError as exc:

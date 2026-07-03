@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.banking.posting import InvalidTransferError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.features.auth.models import User
 from app.features.banking import transfers as transfer_service
 from app.features.banking.schema import AccountTransferCreate, AccountTransferRead
 
@@ -23,8 +24,9 @@ def create_account_transfer(
     entity_id: uuid.UUID,
     payload: AccountTransferCreate,
     session: Session = Depends(get_session),
-    _: None = Depends(operations_write_guard),
+    _guard: User | None = Depends(operations_write_guard),
 ) -> AccountTransferRead:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
         return transfer_service.create_account_transfer(session, entity_id, payload)
     except LookupError as exc:
