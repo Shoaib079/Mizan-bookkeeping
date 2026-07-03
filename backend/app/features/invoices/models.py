@@ -29,6 +29,7 @@ class InvoiceSourceType(str, enum.Enum):
 
 class InvoiceKind(str, enum.Enum):
     SUPPLIER = "supplier"
+    SUPPLIER_CREDIT = "supplier_credit"
     DELIVERY_COMMISSION = "delivery_commission"
 
 
@@ -66,6 +67,8 @@ class InvoiceDraft(EntityScopedMixin, Base):
         index=True,
     )
     invoice_number: Mapped[str] = mapped_column(String(128), nullable=False)
+    referenced_invoice_number: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    referenced_invoice_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     invoice_date: Mapped[date] = mapped_column(Date, nullable=False)
     net_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
     gross_kurus: Mapped[int] = mapped_column(Integer, nullable=False)

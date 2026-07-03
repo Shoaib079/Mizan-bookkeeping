@@ -80,6 +80,8 @@ class InvoiceDraftOut(BaseModel):
     linked_supplier_vkn: str | None = None
     linked_platform_name: str | None = None
     invoice_number: str
+    referenced_invoice_number: str | None = None
+    referenced_invoice_date: date | None = None
     invoice_date: date
     net_kurus: int
     gross_kurus: int

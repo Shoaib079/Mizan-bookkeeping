@@ -45,6 +45,8 @@ type InvoiceDraft = {
   status: string;
   invoice_kind: string;
   invoice_number: string;
+  referenced_invoice_number: string | null;
+  referenced_invoice_date: string | null;
   invoice_date: string;
   supplier_name: string | null;
   supplier_vkn: string | null;
@@ -406,6 +408,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
   }
 
   const isCommission = draft.invoice_kind === "delivery_commission";
+  const isCreditNote = draft.invoice_kind === "supplier_credit";
   const classificationReview = needsClassificationReview(
     draft.classification_confidence,
   );
@@ -438,7 +441,9 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
           className={
             isCommission
               ? "rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
-              : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
+              : isCreditNote
+                ? "rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200"
+                : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
           }
         >
           {invoiceKindLabel(draft.invoice_kind)}
@@ -480,6 +485,14 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         )}
         {draft.review_reason && (
           <p className="mt-2 text-sm text-warning">{draft.review_reason}</p>
+        )}
+        {isCreditNote && draft.referenced_invoice_number && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            İadeye konu fatura: {draft.referenced_invoice_number}
+            {draft.referenced_invoice_date
+              ? ` (${formatTrDate(draft.referenced_invoice_date)})`
+              : ""}
+          </p>
         )}
       </div>
 

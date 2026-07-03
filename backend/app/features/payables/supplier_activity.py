@@ -37,7 +37,7 @@ def _movement_label(movement_type: SupplierMovementType) -> str:
         SupplierMovementType.INVOICE: "Fatura",
         SupplierMovementType.PAYMENT: "Ödeme",
         SupplierMovementType.ADJUSTMENT: "Düzeltme",
-        SupplierMovementType.CREDIT_NOTE: "Alacak dekontu",
+        SupplierMovementType.CREDIT_NOTE: "İade",
     }.get(movement_type, movement_type.value)
 
 
@@ -218,6 +218,53 @@ def get_supplier_activity(
                             entity_id,
                             journal,
                         )
+            elif entry.movement_type == SupplierMovementType.CREDIT_NOTE:
+                draft = _invoice_draft_for_entry(session, entry)
+                journal = (
+                    session.get(JournalEntry, entry.journal_entry_id)
+                    if entry.journal_entry_id is not None
+                    else None
+                )
+                is_void_reversal = entry.description.startswith("Void:")
+                is_superseded = (
+                    journal is not None
+                    and journal.status == JournalEntryStatus.VOIDED
+                    and not is_void_reversal
+                )
+
+                if draft is not None:
+                    invoice_draft_id = draft.id
+                    draft_journal_entry_id = draft.journal_entry_id
+                    document_ref = draft.invoice_number
+                    has_document = _has_stored_document(draft)
+
+                if is_void_reversal:
+                    amount_kurus = entry.amount_kurus
+                    movement_label = "İptal"
+                    detail = entry.description
+                    document_ref = (
+                        draft.invoice_number if draft is not None else document_ref
+                    )
+                elif is_superseded:
+                    amount_kurus = entry.amount_kurus
+                    movement_label = "İade (iptal edildi)"
+                    detail = entry.description
+                    affects_balance = False
+                    if draft is not None:
+                        net_kurus = -draft.net_kurus
+                        vat_kurus = -_vat_total_kurus(draft)
+                elif draft is not None:
+                    net_kurus = -draft.net_kurus
+                    vat_kurus = -_vat_total_kurus(draft)
+                    amount_kurus = -draft.gross_kurus
+                    detail = f"İade · {draft.invoice_number}"
+                    if draft.referenced_invoice_number:
+                        detail = (
+                            f"{detail} (iadeye konu: {draft.referenced_invoice_number})"
+                        )
+                else:
+                    amount_kurus = entry.amount_kurus
+                    document_ref = entry.description[:64]
             elif entry.movement_type == SupplierMovementType.PAYMENT:
                 amount_kurus = abs(entry.amount_kurus)
                 bank_name, dekont_ref, detail = _payment_details(session, entry)
@@ -263,7 +310,12 @@ def get_supplier_activity(
             session.scalars(
                 select(InvoiceDraft).where(
                     InvoiceDraft.supplier_id == supplier_id,
-                    InvoiceDraft.invoice_kind == InvoiceKind.SUPPLIER.value,
+                    InvoiceDraft.invoice_kind.in_(
+                        (
+                            InvoiceKind.SUPPLIER.value,
+                            InvoiceKind.SUPPLIER_CREDIT.value,
+                        )
+                    ),
                     InvoiceDraft.status.in_(
                         [
                             InvoiceDraftStatus.DRAFT.value,
@@ -281,6 +333,7 @@ def get_supplier_activity(
             if draft.id in posted_draft_ids:
                 continue
             vat = _vat_total_kurus(draft)
+            is_credit = InvoiceKind(draft.invoice_kind) == InvoiceKind.SUPPLIER_CREDIT
             raw_rows.append(
                 (
                     draft.invoice_date,
@@ -288,12 +341,12 @@ def get_supplier_activity(
                     SupplierActivityRow(
                         movement_date=draft.invoice_date,
                         movement_kind="unposted_invoice",
-                        movement_label="Fatura",
+                        movement_label="İade" if is_credit else "Fatura",
                         document_ref=draft.invoice_number,
                         detail=_draft_status_label(InvoiceDraftStatus(draft.status)),
-                        net_kurus=draft.net_kurus,
-                        vat_kurus=vat,
-                        amount_kurus=draft.gross_kurus,
+                        net_kurus=-draft.net_kurus if is_credit else draft.net_kurus,
+                        vat_kurus=-vat if is_credit else vat,
+                        amount_kurus=-draft.gross_kurus if is_credit else draft.gross_kurus,
                         bank_name=None,
                         dekont_ref=None,
                         balance_kurus=running,
@@ -336,9 +389,8 @@ def get_supplier_activity(
     invoices_gross = sum(
         r.amount_kurus or 0
         for r in rows
-        if r.movement_kind == "invoice"
+        if r.movement_kind in {"invoice", "credit_note"}
         and r.affects_balance
-        and (r.amount_kurus or 0) > 0
     ) + sum(
         r.amount_kurus or 0
         for r in rows
@@ -350,9 +402,8 @@ def get_supplier_activity(
     vat_total = sum(
         r.vat_kurus or 0
         for r in rows
-        if r.movement_kind in {"invoice", "unposted_invoice"}
+        if r.movement_kind in {"invoice", "credit_note", "unposted_invoice"}
         and r.affects_balance
-        and (r.amount_kurus or 0) > 0
     )
 
     return SupplierActivityRead(

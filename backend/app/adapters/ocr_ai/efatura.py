@@ -28,6 +28,9 @@ class EInvoiceExtraction:
     gross_kurus: int
     vat_breakdown: list[VatBreakdownLine]
     currency: str = "TRY"
+    invoice_type_code: str | None = None
+    referenced_invoice_number: str | None = None
+    referenced_invoice_date: date | None = None
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -86,6 +89,46 @@ def _find_all(root: ET.Element, path: str) -> list[ET.Element]:
     return list(root.findall(path, UBL_NS))
 
 
+def _parse_tr_date_token(raw_date: str) -> date:
+    cleaned = re.sub(r"\s+", "", raw_date.strip())
+    cleaned = cleaned.replace("/", "-").replace(".", "-")
+    parts = cleaned.split("-")
+    if len(parts) == 3 and len(parts[0]) == 4:
+        year, month, day = parts
+    elif len(parts) == 3:
+        day, month, year = parts
+    else:
+        raise ValueError(f"Invalid date token: {raw_date!r}")
+    return date(int(year), int(month), int(day))
+
+
+def _parse_invoice_type_code_pdf(text: str) -> str | None:
+    match = re.search(r"Fatura\s*Tipi\s*[:\.]?\s*(\w+)", text, re.IGNORECASE)
+    if match is None:
+        return None
+    return match.group(1).strip().upper()
+
+
+def _parse_billing_references_xml(root: ET.Element) -> tuple[str | None, date | None]:
+    for billing_ref in _find_all(root, ".//cac:BillingReference"):
+        doc_ref = billing_ref.find("cac:InvoiceDocumentReference", UBL_NS)
+        if doc_ref is None:
+            continue
+        id_node = doc_ref.find("cbc:ID", UBL_NS)
+        if id_node is None or not id_node.text:
+            continue
+        invoice_number = id_node.text.strip()
+        referenced_date: date | None = None
+        date_node = doc_ref.find("cbc:IssueDate", UBL_NS)
+        if date_node is not None and date_node.text:
+            try:
+                referenced_date = date.fromisoformat(date_node.text.strip())
+            except ValueError:
+                referenced_date = None
+        return invoice_number, referenced_date
+    return None, None
+
+
 def extract_efatura_xml(content: bytes) -> EInvoiceExtraction:
     """Parse standard Turkish UBL-TR e-Fatura XML."""
     try:
@@ -101,6 +144,11 @@ def extract_efatura_xml(content: bytes) -> EInvoiceExtraction:
         raise EfaturaExtractionError("Missing invoice number (cbc:ID)")
     if not issue_date:
         raise EfaturaExtractionError("Missing invoice date (cbc:IssueDate)")
+
+    invoice_type_code = _find_text(root, "cbc:InvoiceTypeCode")
+    if invoice_type_code:
+        invoice_type_code = invoice_type_code.strip().upper()
+    referenced_invoice_number, referenced_invoice_date = _parse_billing_references_xml(root)
 
     supplier_name = _find_text(
         root, ".//cac:AccountingSupplierParty/cac:Party/cac:PartyName/cbc:Name"
@@ -171,6 +219,9 @@ def extract_efatura_xml(content: bytes) -> EInvoiceExtraction:
         gross_kurus=gross_kurus,
         vat_breakdown=vat_breakdown,
         currency=currency,
+        invoice_type_code=invoice_type_code,
+        referenced_invoice_number=referenced_invoice_number,
+        referenced_invoice_date=referenced_invoice_date,
         raw=raw,
     )
 
@@ -191,6 +242,9 @@ def _extract_pdf_from_registry(content: bytes) -> EInvoiceExtraction | None:
         gross_kurus=fields["gross_kurus"],
         vat_breakdown=vat_breakdown,
         currency=fields.get("currency", "TRY"),
+        invoice_type_code=fields.get("invoice_type_code"),
+        referenced_invoice_number=fields.get("referenced_invoice_number"),
+        referenced_invoice_date=fields.get("referenced_invoice_date"),
         raw={"source": "pdf_fixture_registry", "fingerprint": fingerprint},
     )
 
@@ -215,6 +269,23 @@ def _extract_pdf_text(content: bytes) -> str:
 
 
 _TR_DATE_TOKEN = r"\d{2}\s*[./-]\s*\d{2}\s*[./-]\s*\d{4}"
+
+
+def _parse_referenced_invoice_pdf(text: str) -> tuple[str | None, date | None]:
+    block_match = re.search(
+        rf"İadeye\s*Konu\s*Olan\s*Faturalar.*?([A-Z0-9\-/]+)\s+({_TR_DATE_TOKEN})",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if block_match is None:
+        return None, None
+    invoice_number = block_match.group(1).strip()
+    try:
+        referenced_date = _parse_tr_date_token(block_match.group(2))
+    except ValueError:
+        return invoice_number, None
+    return invoice_number, referenced_date
+
 
 # Preferred first — accounting invoice date before creation/shipment fallbacks.
 _PDF_DATE_LABEL_PATTERNS: tuple[str, ...] = (
@@ -533,6 +604,9 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
 
     validate_invoice_totals(net_kurus, gross_kurus, vat_breakdown)
 
+    invoice_type_code = _parse_invoice_type_code_pdf(text)
+    referenced_invoice_number, referenced_invoice_date = _parse_referenced_invoice_pdf(text)
+
     return EInvoiceExtraction(
         supplier_name=supplier_name,
         supplier_vkn=supplier_vkn,
@@ -542,6 +616,9 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
         gross_kurus=gross_kurus,
         vat_breakdown=vat_breakdown,
         currency="TRY",
+        invoice_type_code=invoice_type_code,
+        referenced_invoice_number=referenced_invoice_number,
+        referenced_invoice_date=referenced_invoice_date,
         raw={"source": "pdf_heuristics", "text_length": len(text), "text_sample": text[:8000]},
     )
 
@@ -565,4 +642,8 @@ def extract_efatura_pdf(
 def extraction_to_payload(extraction: EInvoiceExtraction) -> dict[str, Any]:
     payload = asdict(extraction)
     payload["invoice_date"] = extraction.invoice_date.isoformat()
+    if extraction.referenced_invoice_date is not None:
+        payload["referenced_invoice_date"] = extraction.referenced_invoice_date.isoformat()
+    else:
+        payload["referenced_invoice_date"] = None
     return payload

@@ -50,9 +50,15 @@ from app.features.invoices.invoice_auto_post import confirm_and_post_trusted_sup
 from app.features.invoices.invoice_uniqueness import (
     duplicate_invoice_review_reason,
     live_posted_invoice_exists,
+    live_posted_supplier_credit_exists,
 )
 from app.core.delivery.commission_posting import post_delivery_commission_draft
-from app.core.invoices.posting import DraftPostError, post_confirmed_draft, post_supplier_invoice_draft_to_ledger
+from app.core.invoices.posting import (
+    DraftPostError,
+    post_confirmed_draft,
+    post_supplier_credit_draft_to_ledger,
+    post_supplier_invoice_draft_to_ledger,
+)
 from app.features.delivery.models import OwnedDeliveryPlatform
 from app.features.delivery.settings import (
     DeliveryNotEnabledError,
@@ -214,6 +220,8 @@ def _to_out(
         linked_supplier_vkn=linked_vkn,
         linked_platform_name=linked_platform_name,
         invoice_number=draft.invoice_number,
+        referenced_invoice_number=draft.referenced_invoice_number,
+        referenced_invoice_date=draft.referenced_invoice_date,
         invoice_date=draft.invoice_date,
         net_kurus=draft.net_kurus,
         gross_kurus=draft.gross_kurus,
@@ -402,6 +410,9 @@ def _draft_extraction(draft: InvoiceDraft) -> EInvoiceExtraction:
         gross_kurus=draft.gross_kurus,
         vat_breakdown=draft.vat_breakdown or [],
         currency=draft.currency,
+        invoice_type_code=(draft.extraction_payload or {}).get("invoice_type_code"),
+        referenced_invoice_number=draft.referenced_invoice_number,
+        referenced_invoice_date=draft.referenced_invoice_date,
         raw=draft.extraction_payload,
     )
 
@@ -409,6 +420,15 @@ def _draft_extraction(draft: InvoiceDraft) -> EInvoiceExtraction:
 def _commission_pdf_text(payload: dict) -> str | None:
     sample = payload.get("text_sample")
     return sample if isinstance(sample, str) else None
+
+
+def _apply_iade_intake(
+    extraction: EInvoiceExtraction,
+    review_reason: str | None,
+) -> tuple[str, uuid.UUID | None, str | None, str] | None:
+    if (extraction.invoice_type_code or "").upper() != "IADE":
+        return None
+    return InvoiceKind.SUPPLIER_CREDIT.value, None, review_reason, "high"
 
 
 def _apply_commission_intake(
@@ -541,13 +561,18 @@ def create_efatura_draft_from_upload(
             "create or link a supplier before confirm"
         )
 
-    invoice_kind, delivery_platform_id, review_reason, _confidence = _apply_commission_intake(
-        session,
-        entity_id,
-        extraction=extraction,
-        payload=payload,
-        review_reason=review_reason,
+    invoice_kind, delivery_platform_id, review_reason, _confidence = (
+        _apply_iade_intake(extraction, review_reason)
+        or _apply_commission_intake(
+            session,
+            entity_id,
+            extraction=extraction,
+            payload=payload,
+            review_reason=review_reason,
+        )
     )
+    if (extraction.invoice_type_code or "").upper() == "IADE":
+        payload["classification_confidence"] = _confidence
 
     if invoice_kind == InvoiceKind.DELIVERY_COMMISSION.value:
         if delivery_platform_id is not None:
@@ -565,6 +590,17 @@ def create_efatura_draft_from_upload(
             invoice_kind == InvoiceKind.SUPPLIER.value
             and supplier_id_for_draft is not None
             and live_posted_invoice_exists(
+                session,
+                entity_id,
+                supplier_id_for_draft,
+                extraction.invoice_number,
+            )
+        ):
+            duplicate_of_posted = True
+        elif (
+            invoice_kind == InvoiceKind.SUPPLIER_CREDIT.value
+            and supplier_id_for_draft is not None
+            and live_posted_supplier_credit_exists(
                 session,
                 entity_id,
                 supplier_id_for_draft,
@@ -608,6 +644,8 @@ def create_efatura_draft_from_upload(
             delivery_platform_id=delivery_platform_id,
             review_reason=review_reason,
             invoice_number=extraction.invoice_number,
+            referenced_invoice_number=extraction.referenced_invoice_number,
+            referenced_invoice_date=extraction.referenced_invoice_date,
             invoice_date=extraction.invoice_date,
             net_kurus=extraction.net_kurus,
             gross_kurus=extraction.gross_kurus,
@@ -721,6 +759,18 @@ def link_supplier_to_draft(
         if (
             InvoiceKind(draft.invoice_kind) == InvoiceKind.SUPPLIER
             and live_posted_invoice_exists(
+                session,
+                entity_id,
+                supplier.id,
+                draft.invoice_number,
+                exclude_draft_id=draft.id,
+            )
+        ):
+            draft.status = InvoiceDraftStatus.DUPLICATE.value
+            draft.review_reason = duplicate_invoice_review_reason(draft.invoice_number)
+        elif (
+            InvoiceKind(draft.invoice_kind) == InvoiceKind.SUPPLIER_CREDIT
+            and live_posted_supplier_credit_exists(
                 session,
                 entity_id,
                 supplier.id,
@@ -1087,6 +1137,37 @@ def post_invoice_draft(
             journal_entry_description=result.journal_entry.description,
             journal_entry_source=result.journal_entry.source,
             delivery_platform_id=result.delivery_platform_id,
+        )
+
+    if InvoiceKind(draft.invoice_kind) == InvoiceKind.SUPPLIER_CREDIT:
+        with entity_context(session, entity_id):
+            draft = _get_draft_row(session, entity_id, draft_id)
+            status = _draft_status(draft)
+            if status == InvoiceDraftStatus.POSTED:
+                raise DraftPostError("Draft is already posted")
+            if status != InvoiceDraftStatus.CONFIRMED:
+                raise DraftPostError(
+                    f"Draft status {status.value!r} must be confirmed to post"
+                )
+            result = post_supplier_credit_draft_to_ledger(
+                session,
+                entity_id,
+                draft,
+                expense_account_id=expense_account_id,
+                actor_id=actor_id,
+            )
+            session.commit()
+            session.refresh(result.journal_entry)
+            session.refresh(result.supplier_ledger_entry)
+            session.refresh(draft)
+        return PostInvoiceDraftOut(
+            draft=_draft_out(session, entity_id, draft),
+            journal_entry_id=result.journal_entry.id,
+            journal_entry_date=result.journal_entry.entry_date,
+            journal_entry_description=result.journal_entry.description,
+            journal_entry_source=result.journal_entry.source,
+            supplier_ledger_entry_id=result.supplier_ledger_entry.id,
+            payable_balance_kurus=result.payable_balance_kurus,
         )
 
     result = post_confirmed_draft(

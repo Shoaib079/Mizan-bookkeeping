@@ -53,6 +53,7 @@ def get_kdv_input_report(
                 InvoiceDraft.invoice_kind.in_(
                     (
                         InvoiceKind.SUPPLIER.value,
+                        InvoiceKind.SUPPLIER_CREDIT.value,
                         InvoiceKind.DELIVERY_COMMISSION.value,
                     )
                 ),
@@ -64,10 +65,15 @@ def get_kdv_input_report(
 
         for draft in drafts:
             all_invoice_ids.add(draft.id)
+            sign = (
+                -1
+                if InvoiceKind(draft.invoice_kind) == InvoiceKind.SUPPLIER_CREDIT
+                else 1
+            )
             for entry in draft.vat_breakdown:
                 rate = _normalize_rate(entry["rate_percent"])
-                rate_base[rate] += int(entry["base_kurus"])
-                rate_vat[rate] += int(entry["vat_kurus"])
+                rate_base[rate] += sign * int(entry["base_kurus"])
+                rate_vat[rate] += sign * int(entry["vat_kurus"])
                 rate_invoice_ids[rate].add(draft.id)
 
     rates = [

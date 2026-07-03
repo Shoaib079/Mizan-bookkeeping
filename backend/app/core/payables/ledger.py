@@ -108,6 +108,43 @@ def persist_supplier_invoice_entry(
     return entry
 
 
+def persist_supplier_credit_note_entry(
+    session: Session,
+    supplier_id: uuid.UUID,
+    *,
+    movement_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    reference_type: str,
+    reference_id: uuid.UUID,
+) -> SupplierLedgerEntry:
+    """Persist supplier credit note (iade) — negative amount reduces payable."""
+    if amount_kurus >= 0:
+        raise ZeroMovementError("Credit note amount_kurus must be negative")
+
+    supplier = session.get(Supplier, supplier_id)
+    if supplier is None:
+        raise LookupError("Supplier not found")
+
+    entry = SupplierLedgerEntry(
+        supplier_id=supplier_id,
+        movement_date=movement_date,
+        movement_type=SupplierMovementType.CREDIT_NOTE,
+        amount_kurus=amount_kurus,
+        description=description,
+        actor_id=actor_id,
+        journal_entry_id=journal_entry_id,
+        reference_type=reference_type,
+        reference_id=reference_id,
+    )
+    session.add(entry)
+    session.flush()
+    session.refresh(entry)
+    return entry
+
+
 def record_supplier_movement(
     session: Session,
     entity_id: uuid.UUID,

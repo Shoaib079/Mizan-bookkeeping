@@ -55,6 +55,58 @@ def find_live_posted_supplier_invoice(
     return None
 
 
+def find_live_posted_supplier_credit_note(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    invoice_number: str,
+    *,
+    exclude_draft_id: uuid.UUID | None = None,
+) -> InvoiceDraft | None:
+    """Return a live posted supplier credit note for (entity, supplier, invoice_number), if any."""
+    normalized = normalize_invoice_number(invoice_number)
+    stmt = (
+        select(InvoiceDraft)
+        .join(JournalEntry, InvoiceDraft.journal_entry_id == JournalEntry.id)
+        .where(
+            InvoiceDraft.entity_id == entity_id,
+            InvoiceDraft.supplier_id == supplier_id,
+            InvoiceDraft.invoice_kind == InvoiceKind.SUPPLIER_CREDIT.value,
+            InvoiceDraft.status == InvoiceDraftStatus.POSTED.value,
+            JournalEntry.status == JournalEntryStatus.POSTED.value,
+            func.lower(func.trim(InvoiceDraft.invoice_number)) == normalized,
+        )
+    )
+    if exclude_draft_id is not None:
+        stmt = stmt.where(InvoiceDraft.id != exclude_draft_id)
+
+    candidates = list(session.scalars(stmt))
+    for draft in candidates:
+        if normalize_invoice_number(draft.invoice_number) == normalized:
+            return draft
+    return None
+
+
+def live_posted_supplier_credit_exists(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    invoice_number: str,
+    *,
+    exclude_draft_id: uuid.UUID | None = None,
+) -> bool:
+    return (
+        find_live_posted_supplier_credit_note(
+            session,
+            entity_id,
+            supplier_id,
+            invoice_number,
+            exclude_draft_id=exclude_draft_id,
+        )
+        is not None
+    )
+
+
 def live_posted_invoice_exists(
     session: Session,
     entity_id: uuid.UUID,

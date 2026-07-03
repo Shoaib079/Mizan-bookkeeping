@@ -9,6 +9,7 @@ import {
 
 describe("invoiceKindLabel", () => {
   it("labels supplier and commission kinds", () => {
+    expect(invoiceKindLabel("supplier_credit")).toBe("İade");
     expect(invoiceKindLabel("supplier")).toBe("Supplier expense");
     expect(invoiceKindLabel("delivery_commission")).toBe("Delivery commission");
   });
