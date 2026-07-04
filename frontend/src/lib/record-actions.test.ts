@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   filterRecordActions,
   isQuickActionKey,
-  NEW_COMMAND_QUICK_ACTIONS,
   PERSON_PICKER_ACTIONS,
   RECORD_ACTIONS,
   recordActionsBySection,
@@ -50,10 +49,12 @@ describe("record-actions", () => {
     expect(PERSON_PICKER_ACTIONS.has("expense")).toBe(false);
   });
 
-  it("keeps New menu palette keys as quick actions only", () => {
-    for (const key of Object.values(NEW_COMMAND_QUICK_ACTIONS)) {
-      expect(isQuickActionKey(key)).toBe(true);
-    }
+  it("identifies quick action keys correctly", () => {
+    expect(isQuickActionKey("expense")).toBe(true);
+    expect(isQuickActionKey("sales")).toBe(true);
+    expect(isQuickActionKey("efatura")).toBe(true);
+    expect(isQuickActionKey("closeDay")).toBe(false);
+    expect(isQuickActionKey("transfer")).toBe(false);
   });
 
   it("filters delivery-gated actions from the full list", () => {

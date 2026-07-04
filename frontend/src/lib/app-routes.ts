@@ -8,11 +8,9 @@ import {
   Building2,
   ClipboardList,
   CreditCard,
-  FileText,
   HandCoins,
   Handshake,
   LayoutDashboard,
-  Receipt,
   ScanSearch,
   Scale,
   Settings,
@@ -26,7 +24,6 @@ import {
   Wallet,
 } from "lucide-react";
 
-import type { RecordActionKey } from "@/lib/record-actions";
 import { SIDEBAR_HIDDEN_HREFS, sidebarHrefActiveForPathname } from "@/lib/nav-sections";
 
 export type AppRoute = {
@@ -37,8 +34,6 @@ export type AppRoute = {
   group: string;
   /** @deprecated nested sidebar removed — tabs/cards only; kept for palette indexing. */
   nestedUnder?: string;
-  /** Command palette: open modal instead of navigating. */
-  quickAction?: RecordActionKey;
 };
 
 export type NavGroupIcon = LucideIcon;
@@ -53,8 +48,8 @@ export const appRoutes: AppRoute[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
   {
     href: "/record",
-    label: "Record",
-    keywords: "post new expense sales payment upload",
+    label: "Add",
+    keywords: "post new record expense sales payment upload",
     icon: ClipboardList,
     group: "Overview",
   },
@@ -221,75 +216,6 @@ export const appRoutes: AppRoute[] = [
     group: "Expenses & suppliers",
     nestedUnder: "/expenses",
   },
-  {
-    href: "/expenses",
-    label: "New: Manual expense",
-    keywords: "new expense",
-    icon: Wallet,
-    group: "New",
-    quickAction: "expense",
-  },
-  {
-    href: "/sales",
-    label: "New: Daily sales (manual)",
-    keywords: "pos manual",
-    icon: ShoppingBag,
-    group: "New",
-    quickAction: "sales",
-  },
-  {
-    href: "/banking",
-    label: "New: Buy foreign currency",
-    keywords: "fx forex usd eur gbp",
-    icon: Banknote,
-    group: "New",
-    quickAction: "buyFx",
-  },
-  {
-    href: "/close-day",
-    label: "New: Close day",
-    keywords: "close-out sales expenses",
-    icon: ShoppingBag,
-    group: "New",
-    quickAction: "closeDay",
-  },
-  {
-    href: "/sales",
-    label: "New: POS summary (photo)",
-    keywords: "upload z",
-    icon: ShoppingBag,
-    group: "New",
-    quickAction: "posPhoto",
-  },
-  {
-    href: "/delivery/reports",
-    label: "New: Delivery report",
-    icon: Truck,
-    group: "New",
-    quickAction: "deliveryReport",
-  },
-  {
-    href: "/expenses",
-    label: "New: Expense receipt (photo)",
-    icon: Receipt,
-    group: "New",
-    quickAction: "receipt",
-  },
-  {
-    href: "/suppliers",
-    label: "New: Supplier",
-    icon: Users,
-    group: "New",
-    quickAction: "supplier",
-  },
-  {
-    href: "/suppliers",
-    label: "New: Supplier invoice (e-Fatura)",
-    keywords: "efatura upload",
-    icon: FileText,
-    group: "New",
-    quickAction: "efatura",
-  },
 ];
 
 export function sidebarChildren(parentHref: string): AppRoute[] {
@@ -301,10 +227,10 @@ export type EntityNavSettings = {
 };
 
 function isDeliveryRoute(route: AppRoute): boolean {
-  return route.href.startsWith("/delivery") || route.label === "New: Delivery report";
+  return route.href.startsWith("/delivery");
 }
 
-/** Hide delivery pages and New-menu shortcuts when the module is off. */
+/** Hide delivery pages when the module is off. */
 export function filterRoutesByEntitySettings(
   routes: AppRoute[],
   settings: EntityNavSettings,
@@ -330,7 +256,6 @@ function primarySidebarItems(groupLabel: string): AppRoute[] {
   return appRoutes.filter(
     (route) =>
       route.group === groupLabel &&
-      !route.label.startsWith("New:") &&
       !route.nestedUnder &&
       !SIDEBAR_HIDDEN_HREFS.has(route.href),
   );

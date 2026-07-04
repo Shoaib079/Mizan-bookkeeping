@@ -44,7 +44,7 @@ function DashboardBody() {
     entitiesError,
     refreshEntities,
   } = useEntity();
-  const { openQuickAction, deliveryEnabled } = useQuickActions();
+  const { openQuickAction, openRecordAction, deliveryEnabled } = useQuickActions();
   const { role, canReadFinancialReports } = useEntityAccess();
   const showWriteChrome = shouldShowWriteChrome(role);
   const [range, setRange] = useState(currentMonthRange);
@@ -152,13 +152,15 @@ function DashboardBody() {
               <Wallet className="size-4" />
               Add expense
             </Button>
-            <Link
-              href="/close-day"
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted"
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-2"
+              onClick={() => openRecordAction("closeDay")}
             >
               <ShoppingBag className="size-4" />
               Close day
-            </Link>
+            </Button>
           </div>
         )}
       </div>

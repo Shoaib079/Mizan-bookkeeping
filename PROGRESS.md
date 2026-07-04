@@ -9,10 +9,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | — (awaiting next slice) |
-| **Last completed slice** | Review smart redirect — `/review` lands on first tab with pending items (`v0.review-smart-redirect`) |
-| **Last tag** | `v0.review-smart-redirect` (after SEC-1→4 `v0.75.x`, telecom/ÖİV `v0.76.0`, invoice learning pipeline + commission one-click) |
-| **Next up** | **DEPLOY CATCH-UP + Vercel cleanup** (72 commits unshipped; `PRE_DEPLOY_CHECKLIST.md`), then **Phase 13** sequence in `POST_LAUNCH_PLAN.md` |
+| **Active slice** | UX-A — Retire "New", rename Record → "Add" (awaiting tests + commit) |
+| **Last completed slice** | Deploy catch-up — Netlify→Vercel cleanup (`v0.deploy-vercel-cleanup`) |
+| **Last tag** | `v0.deploy-vercel-cleanup` |
+| **Next up** | UX-B (data-first global search), then remaining Phase 13 sequence in `POST_LAUNCH_PLAN.md` |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 

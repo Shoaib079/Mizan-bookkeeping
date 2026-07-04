@@ -6,7 +6,7 @@ async function readSource(relativePath: string) {
   );
 }
 
-describe("FX purchase New menu", () => {
+describe("FX purchase Add hub", () => {
   it("registers buyFx in record actions and opens FxPurchaseQuickAction", async () => {
     const registry = await readSource("./record-actions.ts");
     const modals = await readSource("../components/record-action-modals.tsx");
@@ -15,11 +15,11 @@ describe("FX purchase New menu", () => {
     expect(modals).toContain('modalAction === "buyFx"');
   });
 
-  it("lists Buy foreign currency in the New menu", async () => {
-    const newMenu = await readSource("../components/new-menu.tsx");
-    expect(newMenu).toContain('key: "buyFx"');
-    expect(newMenu).toContain("Buy foreign currency");
-    expect(newMenu).toContain("Cash & bank");
+  it("lists Buy foreign currency in record actions (Add hub)", async () => {
+    const registry = await readSource("./record-actions.ts");
+    expect(registry).toContain('"buyFx"');
+    expect(registry).toContain("Buy foreign currency");
+    expect(registry).toContain('"cashFx"');
   });
 
   it("shows currency toggles and form on one screen", async () => {

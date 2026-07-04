@@ -12,7 +12,6 @@ import {
   LEGACY_SETUP_REDIRECTS,
   LEGACY_UPLOADS_REDIRECTS,
   NAV_SECTIONS,
-  NEW_COMMAND_QUICK_ACTIONS,
   REGISTERED_PAGE_ROUTES,
   REPORTS_CARD_HREFS,
   SIDEBAR_HIDDEN_HREFS,
@@ -237,20 +236,6 @@ describe("tab + sidebar highlighting", () => {
   });
 });
 
-describe("NEW_COMMAND_QUICK_ACTIONS", () => {
-  it("maps every modal New: palette label to a quick action key", () => {
-    expect(Object.keys(NEW_COMMAND_QUICK_ACTIONS)).toEqual([
-      "New: Manual expense",
-      "New: Daily sales (manual)",
-      "New: Buy foreign currency",
-      "New: POS summary (photo)",
-      "New: Delivery report",
-      "New: Expense receipt (photo)",
-      "New: Supplier",
-      "New: Supplier invoice (e-Fatura)",
-    ]);
-  });
-});
 
 describe("backLinkForPathname", () => {
   it("returns null on section hubs and tabs", () => {

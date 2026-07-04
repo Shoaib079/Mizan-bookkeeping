@@ -11,7 +11,6 @@ import { EntityBadge } from "@/components/layout/entity-badge";
 import { PageBackLink } from "@/components/layout/page-back-link";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { CommandPalette } from "@/components/command-palette";
-import { NewMenu } from "@/components/new-menu";
 import { useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
@@ -53,7 +52,6 @@ function AppShellInner({
           <p className="text-lg font-semibold text-primary">Mizan</p>
           <p className="text-xs text-muted-foreground">Restaurant bookkeeping</p>
         </div>
-        <NewMenu />
         <div className="border-b border-border px-3 py-3">
           <Label htmlFor="sidebar-active-restaurant">Restaurant</Label>
           <div className="mt-1" id="sidebar-active-restaurant">

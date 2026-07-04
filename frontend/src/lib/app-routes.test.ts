@@ -8,11 +8,7 @@ import {
   navGroups,
   sidebarChildrenForNavItem,
 } from "@/lib/app-routes";
-import { NEW_COMMAND_QUICK_ACTIONS } from "@/lib/nav-sections";
-
 const EXPECTED_SIDEBAR_GROUPS = ["Overview", "Reports"] as const;
-
-const NON_NEW_ROUTES = appRoutes.filter((route) => !route.label.startsWith("New:"));
 
 describe("navGroups", () => {
   it("uses six-intent sidebar sections only", () => {
@@ -62,8 +58,8 @@ describe("navGroups", () => {
     expect(sidebarHrefs).not.toContain("/settings/restaurant");
   });
 
-  it("keeps every non-New route in appRoutes for palette indexing", () => {
-    const hrefs = new Set(NON_NEW_ROUTES.map((route) => `${route.href}::${route.label}`));
+  it("keeps every page route in appRoutes for palette indexing", () => {
+    const hrefs = new Set(appRoutes.map((route) => `${route.href}::${route.label}`));
     const expected = [
       "/",
       "/record",
@@ -101,31 +97,28 @@ describe("navGroups", () => {
   });
 });
 
-describe("New menu command palette routes", () => {
-  const newRoutes = appRoutes.filter((route) => route.label.startsWith("New:"));
-
-  it("omits Cash tip and Card sales batch shortcuts", () => {
-    const labels = newRoutes.map((route) => route.label);
-    expect(labels).not.toContain("New: Cash tip");
-    expect(labels).not.toContain("New: Card sales batch");
+describe("no New: routes remain after UX-A retirement", () => {
+  it("has no routes with 'New:' prefix", () => {
+    const newRoutes = appRoutes.filter((route) => route.label.startsWith("New:"));
+    expect(newRoutes).toEqual([]);
   });
 
-  it("uses quickAction for modal New: entries (matching the New menu)", () => {
-    for (const [label, key] of Object.entries(NEW_COMMAND_QUICK_ACTIONS)) {
-      const route = newRoutes.find((entry) => entry.label === label);
-      expect(route?.quickAction).toBe(key);
-    }
+  it("has no routes with quickAction property", () => {
+    const quickRoutes = appRoutes.filter((route) => "quickAction" in route);
+    expect(quickRoutes).toEqual([]);
   });
 });
 
 describe("app shell header", () => {
-  it("does not export top-bar quick-action button labels", async () => {
+  it("does not contain New menu or quick-action buttons", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/layout/app-shell.tsx", import.meta.url),
         "utf8",
       ),
     );
+    expect(source).not.toContain("NewMenu");
+    expect(source).not.toContain("new-menu");
     expect(source).not.toMatch(/Daily sales/);
     expect(source).not.toMatch(/Add expense/);
     expect(source).not.toMatch(/openQuickAction\("sales"\)/);
@@ -253,7 +246,7 @@ describe("sidebarChildrenForNavItem", () => {
 });
 
 describe("intent sidebar highlighting", () => {
-  it("highlights Record when on legacy sales routes", () => {
+  it("highlights Add when on legacy sales routes", () => {
     const record = navGroups
       .find((group) => group.label === "Overview")
       ?.items.find((item) => item.href === "/record");
@@ -300,15 +293,16 @@ describe("delivery gating", () => {
   });
 });
 
-describe("command palette quick actions", () => {
-  it("opens modals for quickAction routes instead of navigating", async () => {
+describe("command palette", () => {
+  it("navigates via router.push, no quickAction modal routing", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/command-palette.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("route.quickAction");
-    expect(source).toContain("openRecordAction(route.quickAction)");
+    expect(source).toContain("router.push(route.href)");
+    expect(source).not.toContain("quickAction");
+    expect(source).not.toContain("openRecordAction");
   });
 });

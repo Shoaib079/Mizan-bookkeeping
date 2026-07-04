@@ -333,13 +333,3 @@ export function recordActionsBySection(
   );
 }
 
-export const NEW_COMMAND_QUICK_ACTIONS: Record<string, QuickActionKey> = {
-  "New: Manual expense": "expense",
-  "New: Daily sales (manual)": "sales",
-  "New: Buy foreign currency": "buyFx",
-  "New: POS summary (photo)": "posPhoto",
-  "New: Delivery report": "deliveryReport",
-  "New: Expense receipt (photo)": "receipt",
-  "New: Supplier": "supplier",
-  "New: Supplier invoice (e-Fatura)": "efatura",
-};

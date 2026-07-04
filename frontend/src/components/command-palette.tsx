@@ -6,7 +6,6 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useQuickActions } from "@/components/quick-actions";
 import { Input } from "@/components/ui/input";
 import { appRoutes, filterRoutesByEntitySettings } from "@/lib/app-routes";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
@@ -18,7 +17,6 @@ type Props = {
 
 export function CommandPalette({ deliveryEnabled }: Props) {
   const router = useRouter();
-  const { openRecordAction } = useQuickActions();
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -56,13 +54,9 @@ export function CommandPalette({ deliveryEnabled }: Props) {
       const route = filtered[index];
       if (!route) return;
       close();
-      if (route.quickAction) {
-        openRecordAction(route.quickAction);
-        return;
-      }
       router.push(route.href);
     },
-    [close, filtered, openRecordAction, router],
+    [close, filtered, router],
   );
 
   useEffect(() => {

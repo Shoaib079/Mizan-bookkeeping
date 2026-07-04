@@ -46,7 +46,7 @@ Live app (staging-mode): Frontend **Vercel** (migrated from Netlify) · API **Re
 | — | Telecom | KDV Matrah + ÖİV extraction | **Done** (`v0.76.0`) |
 | — | Learning | Invoice learning pipeline + commission one-click | **Done** |
 | **0** | **DEPLOY** | **Deploy catch-up: ship 72 commits + Netlify→Vercel cleanup** | **Config done** — owner: env vars + deploy + smoke |
-| **1** | **UX-A** | Retire "New" menu, rename Record → "Add", unify dashboard shortcuts | Phase 13 |
+| **1** | **UX-A** | Retire "New" menu, rename Record → "Add", unify dashboard shortcuts | **Done** (`v0.uxa-retire-new`) |
 | **2** | **UX-B** | Data-first global search (suppliers + commodities, names only) | Phase 13 |
 | **3** | **DASH-A** | Dashboard composition charts (free — existing data) | Phase 13 |
 | **4** | **UX-C** | Unified "Add document" upload (auto-detect + confirm) | Phase 13 |

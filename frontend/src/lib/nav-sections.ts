@@ -1,6 +1,5 @@
 /** Tab sections + route reachability registry (IA audit v0.71.9). */
 
-import { NEW_COMMAND_QUICK_ACTIONS } from "@/lib/record-actions";
 import {
   LEGACY_UPLOADS_REDIRECT,
   LEGACY_UPLOADS_REDIRECTS,
@@ -11,7 +10,6 @@ import { LEGACY_REVIEW_REDIRECTS } from "@/lib/review-routes";
 import { LEGACY_SETUP_REDIRECTS } from "@/lib/setup-routes";
 
 export {
-  NEW_COMMAND_QUICK_ACTIONS,
   LEGACY_REVIEW_REDIRECTS,
   LEGACY_SETUP_REDIRECTS,
   LEGACY_UPLOADS_REDIRECT,
@@ -423,7 +421,7 @@ export function pageTitleForPathname(pathname: string): string {
   }
   const titles: Record<string, string> = {
     "/": "Dashboard",
-    "/record": "Record",
+    "/record": "Add",
     "/review": "Review",
     "/review/bank": "Review",
     "/review/sales": "Review",

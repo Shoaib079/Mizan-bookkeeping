@@ -16,3 +16,13 @@ describe("dashboard recent entries", () => {
     expect(cardPos).toBeGreaterThan(kpiGridEnd);
   });
 });
+
+describe("dashboard shortcut buttons use one action source (UX-A)", () => {
+  it("all three buttons use openQuickAction or openRecordAction, not Link", async () => {
+    const source = await readDashboardPage();
+    expect(source).toContain('openQuickAction("sales")');
+    expect(source).toContain('openQuickAction("expense")');
+    expect(source).toContain('openRecordAction("closeDay")');
+    expect(source).not.toMatch(/href="\/close-day"/);
+  });
+});

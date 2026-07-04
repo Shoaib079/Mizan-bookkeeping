@@ -9,11 +9,11 @@ export default function RecordPage() {
   const { entityId } = useEntity();
 
   return (
-    <AppShell title="Record">
+    <AppShell title="Add">
       <p className="mb-6 text-sm text-muted-foreground">
         {entityId
           ? "Post sales, expenses, payments, and uploads from one place."
-          : "Select a restaurant in the sidebar to record transactions."}
+          : "Select a restaurant in the sidebar to add transactions."}
       </p>
       <RecordReviewPanel />
       <RecordHub />
