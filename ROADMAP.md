@@ -15,9 +15,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none — ready for next) |
-| **Last completed slice** | UX-B — Data-first global search (`v0.uxb-global-search`) |
-| **Last commit/tag**      | `v0.uxb-global-search` |
-| **Next up**              | DASH-A (dashboard composition charts), then remaining Phase 13 sequence — `POST_LAUNCH_PLAN.md` § Phase 13 |
+| **Last completed slice** | DASH-A — Dashboard composition charts (`v0.dasha-dashboard-charts`) |
+| **Last commit/tag**      | `v0.dasha-dashboard-charts` |
+| **Next up**              | UX-C (unified "Add document" upload), then remaining Phase 13 sequence — `POST_LAUNCH_PLAN.md` § Phase 13 |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 

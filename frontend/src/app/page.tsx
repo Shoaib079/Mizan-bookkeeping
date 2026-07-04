@@ -7,6 +7,11 @@ import { ShoppingBag, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { useQuickActions } from "@/components/quick-actions";
+import {
+  SalesMixChart,
+  SalesExpensesNetChart,
+  OwedOwingChart,
+} from "@/components/dashboard/dashboard-charts";
 import { RecentEntriesCard } from "@/components/dashboard/recent-entries-card";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
@@ -231,6 +236,27 @@ function DashboardBody() {
               );
             })}
           </div>
+
+          {canReadFinancialReports && (
+            <div className="mt-6 grid gap-4 lg:grid-cols-3">
+              <SalesMixChart
+                cashKurus={data.sales.cash_sales_kurus}
+                posCardKurus={data.sales.pos_card_sales_kurus}
+                deliveryKurus={data.sales.delivery_sales_kurus}
+                otherKurus={data.sales.other_sales_kurus}
+              />
+              <SalesExpensesNetChart
+                salesKurus={data.sales.total_sales_kurus}
+                expensesKurus={data.total_expenses_kurus}
+                netKurus={data.net_result_kurus}
+              />
+              <OwedOwingChart
+                payablesKurus={data.total_payables_kurus}
+                receivablesKurus={data.total_receivables_kurus}
+                tryPositionKurus={data.total_try_position_kurus}
+              />
+            </div>
+          )}
 
           {data.fx_balances.length > 0 && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
