@@ -10,9 +10,9 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none — ready for next) |
-| **Last completed slice** | DASH-B — Time-series aggregation + trend charts (`v0.dashb-time-series`) |
-| **Last tag** | `v0.dashb-time-series` |
-| **Next up** | SRCH-B (spend totals in search), then remaining Phase 13 sequence in `POST_LAUNCH_PLAN.md` |
+| **Last completed slice** | SRCH-B — Spend totals in search (`v0.srchb-spend-search`) |
+| **Last tag** | `v0.srchb-spend-search` |
+| **Next up** | UX-D (self-curating "Most used" in Add), then remaining Phase 13 sequence in `POST_LAUNCH_PLAN.md` |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 

@@ -7,6 +7,7 @@ from app.features.reports.time_series import (
     DailyPoint,
     ExpenseByAccount,
     ExpenseByItem,
+    SpendBySupplier,
     TimeSeriesRead,
     _merge_daily,
 )
@@ -89,6 +90,13 @@ class TestTimeSeriesReadSchema:
                     total_kurus=1500,
                 )
             ],
+            spend_by_supplier=[
+                SpendBySupplier(
+                    supplier_id="s1",
+                    supplier_name="Metro",
+                    total_kurus=42000,
+                )
+            ],
         )
         d = ts.model_dump()
         assert d["entity_id"] == "abc"
@@ -96,3 +104,5 @@ class TestTimeSeriesReadSchema:
         assert d["daily"][0]["net_kurus"] == 7000
         assert d["expenses_by_account"][0]["account_code"] == "5200"
         assert d["expenses_by_item"][0]["canonical_name"] == "Peynir"
+        assert d["spend_by_supplier"][0]["supplier_name"] == "Metro"
+        assert d["spend_by_supplier"][0]["total_kurus"] == 42000

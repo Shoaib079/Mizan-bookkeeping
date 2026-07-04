@@ -176,6 +176,11 @@ export type TimeSeriesRead = {
     canonical_name: string;
     total_kurus: number;
   }[];
+  spend_by_supplier: {
+    supplier_id: string;
+    supplier_name: string;
+    total_kurus: number;
+  }[];
 };
 
 export type ReportSlug =

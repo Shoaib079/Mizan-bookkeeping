@@ -23,6 +23,8 @@ from app.core.ledger.models import (
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.expenses.models import ExpenseEntry, ExpenseItem
+from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus
+from app.features.suppliers.models import Supplier
 
 
 class DailyPoint(BaseModel):
@@ -45,6 +47,12 @@ class ExpenseByItem(BaseModel):
     total_kurus: int
 
 
+class SpendBySupplier(BaseModel):
+    supplier_id: str
+    supplier_name: str
+    total_kurus: int
+
+
 class TimeSeriesRead(BaseModel):
     entity_id: str
     from_date: date
@@ -52,6 +60,7 @@ class TimeSeriesRead(BaseModel):
     daily: list[DailyPoint]
     expenses_by_account: list[ExpenseByAccount]
     expenses_by_item: list[ExpenseByItem]
+    spend_by_supplier: list[SpendBySupplier]
 
 
 def get_time_series(
@@ -78,6 +87,7 @@ def get_time_series(
 
         by_account = _expenses_by_account(session, from_date, to_date)
         by_item = _expenses_by_item(session, from_date, to_date)
+        by_supplier = _spend_by_supplier(session, from_date, to_date)
 
     return TimeSeriesRead(
         entity_id=str(entity_id),
@@ -86,6 +96,7 @@ def get_time_series(
         daily=daily,
         expenses_by_account=by_account,
         expenses_by_item=by_item,
+        spend_by_supplier=by_supplier,
     )
 
 
@@ -231,5 +242,38 @@ def _expenses_by_item(
             total_kurus=int(total),
         )
         for eid, name, total in rows
+        if int(total) != 0
+    ]
+
+
+def _spend_by_supplier(
+    session: Session,
+    from_date: date,
+    to_date: date,
+) -> list[SpendBySupplier]:
+    """Posted invoice gross totals grouped by supplier for the period."""
+    rows = session.execute(
+        select(
+            Supplier.id,
+            Supplier.name,
+            func.coalesce(func.sum(InvoiceDraft.gross_kurus), 0),
+        )
+        .select_from(InvoiceDraft)
+        .join(Supplier, Supplier.id == InvoiceDraft.supplier_id)
+        .where(
+            InvoiceDraft.status == InvoiceDraftStatus.POSTED.value,
+            InvoiceDraft.invoice_date >= from_date,
+            InvoiceDraft.invoice_date <= to_date,
+        )
+        .group_by(Supplier.id, Supplier.name)
+        .order_by(func.sum(InvoiceDraft.gross_kurus).desc())
+    ).all()
+    return [
+        SpendBySupplier(
+            supplier_id=str(sid),
+            supplier_name=name,
+            total_kurus=int(total),
+        )
+        for sid, name, total in rows
         if int(total) != 0
     ]

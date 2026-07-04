@@ -351,13 +351,50 @@ describe("command palette (UX-B data-first search)", () => {
     expect(source).toContain("openRecordAction(row.action.id)");
   });
 
-  it("has subtitle slot reserved for SRCH-B spend totals", async () => {
+  it("shows spend totals in subtitle slot (SRCH-B)", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/command-palette.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("SRCH-B");
+    expect(source).toContain("supplierSpend");
+    expect(source).toContain("itemSpend");
+    expect(source).toContain("formatTry(spend)");
+    expect(source).toContain("reports/time-series");
+  });
+
+  it("fetches spend data on palette open", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("spend_by_supplier");
+    expect(source).toContain("expenses_by_item");
+    expect(source).toContain("currentMonthRange");
+  });
+
+  it("builds spend lookup maps from time-series response", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("new Map(ts.spend_by_supplier");
+    expect(source).toContain("new Map(ts.expenses_by_item");
+  });
+
+  it("falls back to type label when no spend data", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain('spend ? formatTry(spend) : "Supplier"');
+    expect(source).toContain('spend ? formatTry(spend) : "Item"');
   });
 });

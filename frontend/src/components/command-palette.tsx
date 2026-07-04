@@ -25,6 +25,10 @@ import {
   type PaletteSupplier,
   type PaletteExpenseItem,
 } from "@/lib/palette-search";
+import { currentMonthRange } from "@/lib/date-range";
+import { formatTry } from "@/lib/money";
+import type { TimeSeriesRead } from "@/lib/report-types";
+import { apiFetch } from "@/lib/api";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { canWriteOperations } from "@/lib/entity-access";
@@ -57,15 +61,42 @@ export function CommandPalette({ deliveryEnabled }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const prevEntityRef = useRef(entityId);
 
+  // SRCH-B: spend lookup maps (fetched once per palette open)
+  const [supplierSpend, setSupplierSpend] = useState<Map<string, number>>(new Map());
+  const [itemSpend, setItemSpend] = useState<Map<string, number>>(new Map());
+
   // Stale guard: reset search results on entity switch
   useEffect(() => {
     if (prevEntityRef.current !== entityId) {
       prevEntityRef.current = entityId;
       setSuppliers([]);
       setItems([]);
+      setSupplierSpend(new Map());
+      setItemSpend(new Map());
       nextSearchGeneration();
     }
   }, [entityId]);
+
+  // SRCH-B: fetch spend totals when palette opens
+  useEffect(() => {
+    if (!open || !entityId) return;
+    const range = currentMonthRange();
+    void apiFetch<TimeSeriesRead>(
+      `/entities/${entityId}/reports/time-series?from=${range.from}&to=${range.to}`,
+    )
+      .then((ts) => {
+        setSupplierSpend(
+          new Map(ts.spend_by_supplier.map((s) => [s.supplier_id, s.total_kurus])),
+        );
+        setItemSpend(
+          new Map(ts.expenses_by_item.map((i) => [i.expense_item_id, i.total_kurus])),
+        );
+      })
+      .catch(() => {
+        setSupplierSpend(new Map());
+        setItemSpend(new Map());
+      });
+  }, [open, entityId]);
 
   const routes = useMemo(
     () => filterRoutesByEntitySettings(appRoutes, { deliveryEnabled }),
@@ -294,9 +325,8 @@ export function CommandPalette({ deliveryEnabled }: Props) {
               >
                 <RowIcon row={row} />
                 <span className="min-w-0 flex-1 truncate">{rowLabel(row)}</span>
-                {/* Subtitle slot — reserved for SRCH-B spend totals */}
                 <span className="shrink-0 text-xs text-muted-foreground">
-                  {rowBadge(row)}
+                  {rowBadge(row, supplierSpend, itemSpend)}
                 </span>
               </button>
             ))
@@ -348,12 +378,20 @@ function rowLabel(row: PaletteRow): string {
   }
 }
 
-function rowBadge(row: PaletteRow): string {
+function rowBadge(
+  row: PaletteRow,
+  supplierSpend: Map<string, number>,
+  itemSpend: Map<string, number>,
+): string {
   switch (row.kind) {
-    case "supplier":
-      return "Supplier";
-    case "item":
-      return "Item";
+    case "supplier": {
+      const spend = supplierSpend.get(row.supplier.id);
+      return spend ? formatTry(spend) : "Supplier";
+    }
+    case "item": {
+      const spend = itemSpend.get(row.item.id);
+      return spend ? formatTry(spend) : "Item";
+    }
     case "page":
       return row.group;
     case "action":

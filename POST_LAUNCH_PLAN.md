@@ -83,7 +83,7 @@ Backend + frontend. Backend: extend `detect_source_type` into a shared `detect_d
 ### DASH-B — Time-series aggregation + trend charts
 Backend + frontend. New entity-scoped, date-range-bounded endpoint returning sales and expenses grouped by day (and expenses by category) over the selected range. Frontend: sales/expenses/net trend line(s) on the dashboard. **This aggregation is the shared foundation for SRCH-B — build it to also answer "total per expense item/commodity over range."** Tests: aggregation is RLS-scoped (entity A can't see B), sums match the totals DASH-A shows, empty range clean.
 
-### SRCH-B — Spend totals in search
+### SRCH-B — Spend totals in search ✅ `v0.srchb-spend-search`
 Small backend (reuse DASH-B aggregation) + frontend. Fill the result-row subtitle slot from UX-B: "Peynir — ₺4,200 this period", supplier spend likewise. Type "cheese"/"peynir" → see the number. Tests: totals match the by-category aggregation; entity-scoped; period-aware.
 
 ### UX-D — Self-curating "Most used" in Add

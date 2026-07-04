@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-04
 
+**SRCH-B — Spend totals in search (`v0.srchb-spend-search`):** Backend: added `spend_by_supplier` (posted invoice gross totals grouped by supplier) to `TimeSeriesRead` / `get_time_series` — reuses existing DASH-B time-series endpoint. Frontend: command palette fetches time-series on open (current month range), builds supplier/item spend lookup maps, and shows formatted TRY spend in the badge slot (e.g. "₺4,200.00 ₺" instead of "Supplier"). Falls back to type label when no spend data. 4 new frontend tests (spend in badge, lookup maps, fallback, time-series fetch). Backend schema test updated with `SpendBySupplier`.
+
 **Deploy catch-up — Netlify→Vercel (`v0.deploy-vercel-cleanup`):** Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) and static asset cache moved from `netlify.toml` into `next.config.ts` `headers()`. `netlify.toml` deleted; `frontend/vercel.json` added. `DEPLOY.md`, `ROADMAP.md`, `POST_LAUNCH_PLAN.md`, `PRE_DEPLOY_CHECKLIST.md` updated for Vercel.
 
 **UX-A — Retire "New", rename Record → "Add" (`v0.uxa-retire-new`):** Sidebar "New" dropdown (`new-menu.tsx`) deleted. `NEW_COMMAND_QUICK_ACTIONS` and all `group: "New"` palette entries removed from `app-routes.ts` — every action already lives in `RECORD_ACTIONS`. Sidebar + page title renamed "Record" → "Add". Dashboard "Close day" button changed from `<Link>` to `openRecordAction("closeDay")` — all three shortcut buttons now use one action source. Command palette simplified (no `quickAction` routing). Tests updated: no orphaned New refs, dashboard buttons share one source, gated actions still hidden.
