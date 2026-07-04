@@ -16,6 +16,9 @@ ACCOUNTS_PAYABLE_CODE = "2000"
 LOANS_PAYABLE_CODE = "2200"
 SALARIES_PAYABLE_CODE = "2250"
 PARTNER_REIMBURSEMENT_PAYABLE_CODE = "2150"
+RETAINED_EARNINGS_CODE = "3100"
+OWNER_DRAWINGS_CODE = "3200"
+PARTNER_CAPITAL_CODE = "3300"
 SALARY_EXPENSE_CODE = "5100"
 EMPLOYEE_ADVANCES_CODE = "1300"
 CARD_SALES_CLEARING_CODE = "1400"
@@ -96,6 +99,14 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
     DefaultAccount("3000", "Owner Capital", "Sermaye", AccountType.EQUITY, AccountNormalBalance.CREDIT, False),
     DefaultAccount("3100", "Retained Earnings", "Geçmiş Yıl Karları", AccountType.EQUITY, AccountNormalBalance.CREDIT, False),
     DefaultAccount("3200", "Owner Drawings", "Ortak Çekimleri", AccountType.EQUITY, AccountNormalBalance.DEBIT, False),
+    DefaultAccount(
+        PARTNER_CAPITAL_CODE,
+        "Partner Capital",
+        "Ortak Sermaye Hesabı",
+        AccountType.EQUITY,
+        AccountNormalBalance.CREDIT,
+        False,
+    ),
     DefaultAccount(
         OPENING_BALANCE_EQUITY_CODE,
         "Opening Balance Equity",

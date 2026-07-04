@@ -21,6 +21,7 @@ import { ExpenseReceiptUploadForm } from "@/components/forms/expense-receipt-upl
 import { FxPurchaseQuickAction } from "@/components/forms/fx-purchase-quick-action";
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
+import { PartnerProfitAllocationForm } from "@/components/forms/partner-profit-allocation-form";
 import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
 import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
 import { SupplierForm } from "@/components/forms/supplier-form";
@@ -158,6 +159,10 @@ export function RecordActionModals({ active, onClose }: Props) {
       <PosSettlementForm open={effectiveModal === "posSettlement"} onClose={closeAll} />
       <ClearCommissionForm
         open={effectiveModal === "clearCommission"}
+        onClose={closeAll}
+      />
+      <PartnerProfitAllocationForm
+        open={effectiveModal === "partnerProfitAllocation"}
         onClose={closeAll}
       />
     </>

@@ -14,6 +14,7 @@ from app.core.chart_of_accounts.default_chart import (
     ACCOUNTS_PAYABLE_CODE,
     ACCOUNTS_RECEIVABLE_CODE,
     EMPLOYEE_ADVANCES_CODE,
+    PARTNER_CAPITAL_CODE,
     PARTNER_REIMBURSEMENT_PAYABLE_CODE,
     SALARIES_PAYABLE_CODE,
 )
@@ -126,8 +127,16 @@ def staff_employee_advances_subledger_total(db_session: Session, entity_id: uuid
         return -int(total or 0)
 
 
+def partner_reimbursement_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:
+    return partner_ledger.entity_reimbursement_total_kurus(db_session, entity_id)
+
+
+def partner_capital_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:
+    return partner_ledger.entity_capital_total_kurus(db_session, entity_id)
+
+
 def partner_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:
-    return partner_ledger.entity_total_balance_kurus(db_session, entity_id)
+    return partner_reimbursement_subledger_total(db_session, entity_id)
 
 
 def fx_try_cost_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:
@@ -198,7 +207,13 @@ CONTROL_ACCOUNT_TIES: tuple[ControlAccountTie, ...] = (
     ControlAccountTie(
         table_name="partner_ledger_entries",
         account_code=PARTNER_REIMBURSEMENT_PAYABLE_CODE,
-        balance_fn=partner_subledger_total,
+        balance_fn=partner_reimbursement_subledger_total,
+        normal_side="liability",
+    ),
+    ControlAccountTie(
+        table_name="partner_ledger_entries",
+        account_code=PARTNER_CAPITAL_CODE,
+        balance_fn=partner_capital_subledger_total,
         normal_side="liability",
     ),
     ControlAccountTie(

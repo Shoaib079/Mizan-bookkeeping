@@ -12,6 +12,6 @@ export function partnerBalanceAmount(balanceKurus: number): string {
   return formatTry(Math.abs(balanceKurus));
 }
 
-export function partnerDrawingRepaymentAllowed(balanceKurus: number): boolean {
-  return balanceKurus < 0;
+export function partnerDrawingRepaymentAllowed(capitalBalanceKurus: number): boolean {
+  return capitalBalanceKurus < 0;
 }

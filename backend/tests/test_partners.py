@@ -342,7 +342,7 @@ def test_cross_entity_isolation(db_session, restaurant_a, restaurant_b, partner_
     assert partner_ledger.current_balance_kurus(db_session, entity_a, partner_id) == 10_000
 
 
-def test_drawing_allows_negative_balance(db_session, partner_setup) -> None:
+def test_drawing_allows_negative_capital_balance(db_session, partner_setup) -> None:
     entity_id = partner_setup["entity_id"]
     partner_id = partner_setup["partner_id"]
     accounts = partner_setup["accounts"]
@@ -361,13 +361,24 @@ def test_drawing_allows_negative_balance(db_session, partner_setup) -> None:
 
     assert result.journal_entry.source == JournalEntrySource.PARTNER_DRAWING
     assert result.balance_kurus == -100_000
-    assert _subledger_balance(db_session, entity_id, partner_id) == -100_000
+    assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == -100_000
+    assert partner_ledger.reimbursement_balance_kurus(db_session, entity_id, partner_id) == 0
+    assert _gl_balance(
+        db_session,
+        entity_id,
+        accounts["3200"],
+        AccountNormalBalance.DEBIT,
+    ) == 100_000
     assert _gl_balance(
         db_session,
         entity_id,
         accounts[PARTNER_REIMBURSEMENT_PAYABLE_CODE],
         AccountNormalBalance.CREDIT,
-    ) == -100_000
+    ) == 0
+
+
+def test_drawing_allows_negative_balance(db_session, partner_setup) -> None:
+    test_drawing_allows_negative_capital_balance(db_session, partner_setup)
 
 
 def test_drawing_repayment_clears_negative_balance(db_session, partner_setup) -> None:
@@ -430,7 +441,7 @@ def test_drawing_repayment_overpayment_rejected(db_session, partner_setup) -> No
         )
 
 
-def test_drawing_reduces_reimbursement_balance_first(db_session, partner_setup) -> None:
+def test_drawing_does_not_reduce_reimbursement_balance(db_session, partner_setup) -> None:
     entity_id = partner_setup["entity_id"]
     partner_id = partner_setup["partner_id"]
     accounts = partner_setup["accounts"]
@@ -457,7 +468,12 @@ def test_drawing_reduces_reimbursement_balance_first(db_session, partner_setup) 
         payment_account_id=drawer.gl_account_id,
     )
 
-    assert _subledger_balance(db_session, entity_id, partner_id) == -50_000
+    assert partner_ledger.reimbursement_balance_kurus(db_session, entity_id, partner_id) == 200_000
+    assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == -250_000
+
+
+def test_drawing_reduces_reimbursement_balance_first(db_session, partner_setup) -> None:
+    test_drawing_does_not_reduce_reimbursement_balance(db_session, partner_setup)
 
 
 def test_partners_api_e2e(client: TestClient, db_session, partner_setup) -> None:

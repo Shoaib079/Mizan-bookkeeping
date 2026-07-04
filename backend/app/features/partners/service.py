@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -10,12 +11,20 @@ from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.partners import posting as partner_posting
-from app.core.partners.ledger import current_balance_kurus, list_ledger_entries
+from app.core.partners.ledger import (
+    capital_balance_kurus,
+    current_balance_kurus,
+    list_ledger_entries,
+    reimbursement_balance_kurus,
+)
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import PartnerMovementType
 from app.core.ledger.correction import CorrectionNotFoundError, correct_partner_journal_entry
 from app.core.ledger.posting import PostingLine
-from app.core.chart_of_accounts.default_chart import PARTNER_REIMBURSEMENT_PAYABLE_CODE
+from app.core.chart_of_accounts.default_chart import (
+    OWNER_DRAWINGS_CODE,
+    PARTNER_REIMBURSEMENT_PAYABLE_CODE,
+)
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.partners.models import Partner
@@ -35,7 +44,17 @@ from app.features.partners.schema import (
     DrawingRepaymentResponse,
     PartnerJournalEntryCorrect,
     PartnerJournalEntryCorrectOut,
+    ProfitAllocationPost,
+    ProfitAllocationPostOut,
+    ProfitAllocationPreviewLine,
+    ProfitAllocationPreviewRead,
+    ProfitAllocationPreviewRequest,
+    ProfitAllocationVoid,
+    ProfitAllocationVoidOut,
 )
+from app.core.partners import profit_allocation as partner_profit_allocation
+from app.core.partners.profit_allocation import OwnershipShareError
+from app.features.reports.financial_statements import get_profit_and_loss
 
 HUNDRED = Decimal("100")
 
@@ -156,11 +175,13 @@ def update_partner(
 def get_partner_ledger(
     session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
 ) -> PartnerLedgerRead:
-    balance = current_balance_kurus(session, entity_id, partner_id)
+    reimbursement = reimbursement_balance_kurus(session, entity_id, partner_id)
+    capital = capital_balance_kurus(session, entity_id, partner_id)
     entries = list_ledger_entries(session, entity_id, partner_id)
     return PartnerLedgerRead(
         partner_id=partner_id,
-        balance_kurus=balance,
+        balance_kurus=reimbursement,
+        capital_balance_kurus=capital,
         entries=[PartnerLedgerEntryRead.model_validate(e) for e in entries],
     )
 
@@ -315,9 +336,9 @@ def _build_partner_correction_lines(
         payment = partner_posting._validate_payment_account(
             session, entity_id, payload.payment_account_id
         )
-        payable = partner_posting._chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
-        lines = partner_posting.build_reimbursement_paid_lines(
-            partner_payable_id=payable.id,
+        drawings = partner_posting._chart_account(session, OWNER_DRAWINGS_CODE)
+        lines = partner_posting.build_drawing_lines(
+            drawings_account_id=drawings.id,
             payment_account_id=payment.id,
             amount_kurus=gl_amount,
         )
@@ -334,13 +355,18 @@ def _build_partner_correction_lines(
         payment = partner_posting._validate_payment_account(
             session, entity_id, payload.payment_account_id
         )
-        payable = partner_posting._chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
+        drawings = partner_posting._chart_account(session, OWNER_DRAWINGS_CODE)
         lines = partner_posting.build_drawing_repayment_lines(
-            partner_payable_id=payable.id,
+            drawings_account_id=drawings.id,
             payment_account_id=payment.id,
             amount_kurus=gl_amount,
         )
         return lines, gl_amount
+
+    if movement_type == PartnerMovementType.PROFIT_ALLOCATION:
+        raise CorrectionNotFoundError(
+            "profit allocation must be voided at entity level, not per-partner correct"
+        )
 
     raise CorrectionNotFoundError("partner movement type is not correctable")
 
@@ -398,4 +424,102 @@ def correct_partner_journal_entry_http(
         corrected_journal_entry_id=result.corrected.id,
         partner_ledger_entry=PartnerLedgerEntryRead.model_validate(new_row),
         balance_kurus=balance,
+    )
+
+
+def _resolve_profit_kurus(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    profit_kurus: int | None,
+    period_from: date | None,
+    period_to: date | None,
+) -> int:
+    if profit_kurus is not None:
+        return profit_kurus
+    if period_from is None or period_to is None:
+        raise ValueError("Provide profit_kurus or both period_from and period_to")
+    pl = get_profit_and_loss(session, entity_id, period_from, period_to)
+    if pl.net_income_kurus <= 0:
+        raise ValueError("Period net profit must be positive to allocate")
+    return pl.net_income_kurus
+
+
+def preview_profit_allocation(
+    session: Session,
+    entity_id: uuid.UUID,
+    payload: ProfitAllocationPreviewRequest,
+) -> ProfitAllocationPreviewRead:
+    profit_kurus = _resolve_profit_kurus(
+        session,
+        entity_id,
+        profit_kurus=payload.profit_kurus,
+        period_from=payload.period_from,
+        period_to=payload.period_to,
+    )
+    preview = partner_profit_allocation.preview_profit_allocation(
+        session, entity_id, profit_kurus=profit_kurus
+    )
+    return ProfitAllocationPreviewRead(
+        total_profit_kurus=preview.total_profit_kurus,
+        lines=[
+            ProfitAllocationPreviewLine(
+                partner_id=line.partner_id,
+                partner_name=line.partner_name,
+                ownership_share_pct=line.ownership_share_pct,
+                amount_kurus=line.amount_kurus,
+            )
+            for line in preview.splits
+        ],
+    )
+
+
+def post_profit_allocation(
+    session: Session,
+    entity_id: uuid.UUID,
+    payload: ProfitAllocationPost,
+) -> ProfitAllocationPostOut:
+    profit_kurus = _resolve_profit_kurus(
+        session,
+        entity_id,
+        profit_kurus=payload.profit_kurus,
+        period_from=payload.period_from,
+        period_to=payload.period_to,
+    )
+    result = partner_profit_allocation.post_profit_allocation(
+        session,
+        entity_id,
+        allocation_date=payload.allocation_date,
+        profit_kurus=profit_kurus,
+        description=payload.description,
+        actor_id=payload.actor_id,
+    )
+    return ProfitAllocationPostOut(
+        journal_entry_id=result.journal_entry.id,
+        total_profit_kurus=profit_kurus,
+        partner_ledger_entries=[
+            PartnerLedgerEntryRead.model_validate(entry)
+            for entry in result.partner_ledger_entries
+        ],
+    )
+
+
+def void_profit_allocation(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: ProfitAllocationVoid,
+) -> ProfitAllocationVoidOut:
+    original, reversal = partner_profit_allocation.void_profit_allocation(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=payload.actor_id,
+        reason=payload.reason,
+        void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
+    )
+    return ProfitAllocationVoidOut(
+        original_journal_entry_id=original.id,
+        reversal_journal_entry_id=reversal.id,
     )

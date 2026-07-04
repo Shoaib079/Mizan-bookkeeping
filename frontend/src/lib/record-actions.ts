@@ -48,6 +48,7 @@ export type RecordActionKey =
   | "partnerReimbursement"
   | "partnerDrawing"
   | "partnerDrawingRepayment"
+  | "partnerProfitAllocation"
   | "customerCreditSale"
   | "customerPayment"
   | "supplierPayment";
@@ -269,6 +270,13 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     icon: Handshake,
     section: "people",
     personKind: "partner",
+  },
+  {
+    id: "partnerProfitAllocation",
+    label: "Allocate profit to partners",
+    description: "Distribute net profit to partners by ownership share.",
+    icon: Handshake,
+    section: "people",
   },
   {
     id: "customerCreditSale",

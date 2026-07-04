@@ -32,9 +32,75 @@ from app.features.partners.schema import (
     DrawingRepaymentResponse,
     PartnerJournalEntryCorrect,
     PartnerJournalEntryCorrectOut,
+    ProfitAllocationPost,
+    ProfitAllocationPostOut,
+    ProfitAllocationPreviewRead,
+    ProfitAllocationPreviewRequest,
+    ProfitAllocationVoid,
+    ProfitAllocationVoidOut,
 )
+from app.core.partners.profit_allocation import OwnershipShareError
 
 router = APIRouter(prefix="/entities/{entity_id}/partners", tags=["partners"])
+
+
+@router.post("/profit-allocation/preview", response_model=ProfitAllocationPreviewRead)
+def preview_profit_allocation(
+    entity_id: uuid.UUID,
+    payload: ProfitAllocationPreviewRequest,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> ProfitAllocationPreviewRead:
+    try:
+        return service.preview_profit_allocation(session, entity_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (OwnershipShareError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/profit-allocation", response_model=ProfitAllocationPostOut, status_code=201)
+def post_profit_allocation(
+    entity_id: uuid.UUID,
+    payload: ProfitAllocationPost,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> ProfitAllocationPostOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.post_profit_allocation(session, entity_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (OwnershipShareError, ValueError, InvalidPartnerPostingError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/profit-allocation/{journal_entry_id}/void",
+    response_model=ProfitAllocationVoidOut,
+)
+def void_profit_allocation(
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: ProfitAllocationVoid,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> ProfitAllocationVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.void_profit_allocation(
+            session, entity_id, journal_entry_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("", response_model=PartnerRead, status_code=201)

@@ -6,10 +6,13 @@ import uuid
 from dataclasses import dataclass
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.chart_of_accounts.default_chart import PARTNER_REIMBURSEMENT_PAYABLE_CODE
+from app.core.chart_of_accounts.default_chart import (
+    OWNER_DRAWINGS_CODE,
+    PARTNER_REIMBURSEMENT_PAYABLE_CODE,
+)
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 from app.core.ledger.models import JournalEntry, JournalEntrySource
@@ -146,9 +149,32 @@ def build_reimbursement_paid_lines(
     ]
 
 
+def build_drawing_lines(
+    *,
+    drawings_account_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+    amount_kurus: int,
+) -> list[PostingLine]:
+    if amount_kurus <= 0:
+        raise ValueError("drawing amount must be positive kuruş")
+
+    return [
+        PostingLine(
+            account_id=drawings_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.DEBIT,
+        ),
+        PostingLine(
+            account_id=payment_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.CREDIT,
+        ),
+    ]
+
+
 def build_drawing_repayment_lines(
     *,
-    partner_payable_id: uuid.UUID,
+    drawings_account_id: uuid.UUID,
     payment_account_id: uuid.UUID,
     amount_kurus: int,
 ) -> list[PostingLine]:
@@ -162,7 +188,7 @@ def build_drawing_repayment_lines(
             side=AccountNormalBalance.DEBIT,
         ),
         PostingLine(
-            account_id=partner_payable_id,
+            account_id=drawings_account_id,
             amount_kurus=amount_kurus,
             side=AccountNormalBalance.CREDIT,
         ),
@@ -224,16 +250,22 @@ def post_expense_fronted(
         session.refresh(partner_entry)
         _ = list(journal_entry.lines)
 
-        balance = session.scalar(
-            select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0)).where(
-                PartnerLedgerEntry.partner_id == partner_id
-            )
-        )
+        balance = partner_ledger.reimbursement_balance_kurus(session, entity_id, partner_id)
         return PartnerExpenseFrontedPostResult(
             journal_entry=journal_entry,
             partner_ledger_entry=partner_entry,
-            balance_kurus=int(balance or 0),
+            balance_kurus=balance,
         )
+
+
+def _reimbursement_balance(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    return partner_ledger.reimbursement_balance_kurus(session, entity_id, partner_id)
+
+
+def _capital_balance(session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID) -> int:
+    return partner_ledger.capital_balance_kurus(session, entity_id, partner_id)
 
 
 def post_reimbursement_paid(
@@ -298,15 +330,11 @@ def post_reimbursement_paid(
         session.refresh(partner_entry)
         _ = list(journal_entry.lines)
 
-        balance = session.scalar(
-            select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0)).where(
-                PartnerLedgerEntry.partner_id == partner_id
-            )
-        )
+        balance = _reimbursement_balance(session, entity_id, partner_id)
         return PartnerReimbursementPaidPostResult(
             journal_entry=journal_entry,
             partner_ledger_entry=partner_entry,
-            balance_kurus=int(balance or 0),
+            balance_kurus=balance,
         )
 
 
@@ -321,7 +349,7 @@ def post_drawing(
     actor_id: uuid.UUID,
     payment_account_id: uuid.UUID,
 ) -> PartnerDrawingPostResult:
-    """Partner withdraws cash — Dr 2150 / Cr cash; subledger -amount (may go negative)."""
+    """Partner withdraws cash — Dr 3200 / Cr cash; capital subledger -amount."""
     if amount_kurus <= 0:
         raise ValueError("amount_kurus must be positive")
 
@@ -333,10 +361,10 @@ def post_drawing(
         _get_partner(session, entity_id, partner_id)
 
         payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
-        partner_payable = _chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
+        drawings_gl = _chart_account(session, OWNER_DRAWINGS_CODE)
 
-        lines = build_reimbursement_paid_lines(
-            partner_payable_id=partner_payable.id,
+        lines = build_drawing_lines(
+            drawings_account_id=drawings_gl.id,
             payment_account_id=payment_gl.id,
             amount_kurus=amount_kurus,
         )
@@ -366,15 +394,11 @@ def post_drawing(
         session.refresh(partner_entry)
         _ = list(journal_entry.lines)
 
-        balance = session.scalar(
-            select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0)).where(
-                PartnerLedgerEntry.partner_id == partner_id
-            )
-        )
+        balance = _capital_balance(session, entity_id, partner_id)
         return PartnerDrawingPostResult(
             journal_entry=journal_entry,
             partner_ledger_entry=partner_entry,
-            balance_kurus=int(balance or 0),
+            balance_kurus=balance,
         )
 
 
@@ -389,7 +413,7 @@ def post_drawing_repayment(
     actor_id: uuid.UUID,
     payment_account_id: uuid.UUID,
 ) -> PartnerDrawingRepaymentPostResult:
-    """Partner repays a drawing — Dr cash / Cr 2150; subledger +amount."""
+    """Partner repays a drawing — Dr cash / Cr 3200; capital subledger +amount."""
     if amount_kurus <= 0:
         raise ValueError("amount_kurus must be positive")
 
@@ -400,7 +424,7 @@ def post_drawing_repayment(
         require_entity_context()
         _get_partner(session, entity_id, partner_id)
 
-        current = partner_ledger.current_balance_kurus(session, entity_id, partner_id)
+        current = _capital_balance(session, entity_id, partner_id)
         if current >= 0:
             raise partner_ledger.OverRepaymentError(
                 "Partner has no outstanding drawing balance to repay"
@@ -411,10 +435,10 @@ def post_drawing_repayment(
             )
 
         payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
-        partner_payable = _chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
+        drawings_gl = _chart_account(session, OWNER_DRAWINGS_CODE)
 
         lines = build_drawing_repayment_lines(
-            partner_payable_id=partner_payable.id,
+            drawings_account_id=drawings_gl.id,
             payment_account_id=payment_gl.id,
             amount_kurus=amount_kurus,
         )
@@ -444,13 +468,9 @@ def post_drawing_repayment(
         session.refresh(partner_entry)
         _ = list(journal_entry.lines)
 
-        balance = session.scalar(
-            select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0)).where(
-                PartnerLedgerEntry.partner_id == partner_id
-            )
-        )
+        balance = _capital_balance(session, entity_id, partner_id)
         return PartnerDrawingRepaymentPostResult(
             journal_entry=journal_entry,
             partner_ledger_entry=partner_entry,
-            balance_kurus=int(balance or 0),
+            balance_kurus=balance,
         )

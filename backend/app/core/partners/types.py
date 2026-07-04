@@ -11,7 +11,24 @@ class PartnerMovementType(str, enum.Enum):
     REIMBURSEMENT_PAID = "reimbursement_paid"
     DRAWING = "drawing"
     DRAWING_REPAYMENT = "drawing_repayment"
+    PROFIT_ALLOCATION = "profit_allocation"
 
+
+REIMBURSEMENT_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
+    {
+        PartnerMovementType.OPENING_BALANCE,
+        PartnerMovementType.EXPENSE_FRONTED,
+        PartnerMovementType.REIMBURSEMENT_PAID,
+    }
+)
+
+CAPITAL_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
+    {
+        PartnerMovementType.PROFIT_ALLOCATION,
+        PartnerMovementType.DRAWING,
+        PartnerMovementType.DRAWING_REPAYMENT,
+    }
+)
 
 WRITABLE_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
     {
@@ -19,5 +36,6 @@ WRITABLE_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
         PartnerMovementType.REIMBURSEMENT_PAID,
         PartnerMovementType.DRAWING,
         PartnerMovementType.DRAWING_REPAYMENT,
+        PartnerMovementType.PROFIT_ALLOCATION,
     }
 )

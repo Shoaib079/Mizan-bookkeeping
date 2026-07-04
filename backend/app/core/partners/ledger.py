@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import (
+    CAPITAL_MOVEMENT_TYPES,
+    REIMBURSEMENT_MOVEMENT_TYPES,
     WRITABLE_MOVEMENT_TYPES,
     PartnerMovementType,
 )
@@ -159,19 +161,29 @@ def record_partner_movement(
         return entry
 
 
-def _balance_kurus_in_context(session: Session, partner_id: uuid.UUID) -> int:
+def _sum_balance(
+    session: Session,
+    partner_id: uuid.UUID | None,
+    movement_types: frozenset[PartnerMovementType] | None = None,
+) -> int:
     require_entity_context()
-    total = session.scalar(
-        select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0)).where(
-            PartnerLedgerEntry.partner_id == partner_id
-        )
-    )
+    stmt = select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0))
+    if partner_id is not None:
+        stmt = stmt.where(PartnerLedgerEntry.partner_id == partner_id)
+    if movement_types is not None:
+        stmt = stmt.where(PartnerLedgerEntry.movement_type.in_(movement_types))
+    total = session.scalar(stmt)
     return int(total or 0)
 
 
-def current_balance_kurus(
+def _balance_kurus_in_context(session: Session, partner_id: uuid.UUID) -> int:
+    return _sum_balance(session, partner_id, REIMBURSEMENT_MOVEMENT_TYPES)
+
+
+def reimbursement_balance_kurus(
     session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
 ) -> int:
+    """Net reimbursement owed to partner (2150 subledger movements)."""
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
@@ -188,17 +200,60 @@ def current_balance_kurus(
         return _balance_kurus_in_context(session, partner_id)
 
 
-def entity_total_balance_kurus(session: Session, entity_id: uuid.UUID) -> int:
-    """Sum partner subledger balances for control-account reconciliation."""
+def capital_balance_kurus(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    """Net partner capital (3300 allocations minus drawings)."""
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    def _read() -> int:
+        partner = session.get(Partner, partner_id)
+        if partner is None:
+            raise LookupError("Partner not found")
+        return _sum_balance(session, partner_id, CAPITAL_MOVEMENT_TYPES)
+
+    if get_current_entity_id() == entity_id:
+        return _read()
+
+    with entity_context(session, entity_id):
+        return _read()
+
+
+def current_balance_kurus(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    """Reimbursement balance — alias for expense/reimbursement flows."""
+    return reimbursement_balance_kurus(session, entity_id, partner_id)
+
+
+def entity_reimbursement_total_kurus(session: Session, entity_id: uuid.UUID) -> int:
+    """Sum partner reimbursement subledger for 2150 control-account tie."""
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
     with entity_context(session, entity_id):
         require_entity_context()
-        total = session.scalar(
-            select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0))
+        return _sum_balance(session, None, REIMBURSEMENT_MOVEMENT_TYPES)
+
+
+def entity_capital_total_kurus(session: Session, entity_id: uuid.UUID) -> int:
+    """Sum profit-allocation subledger for 3300 control-account tie."""
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        return _sum_balance(
+            session,
+            None,
+            frozenset({PartnerMovementType.PROFIT_ALLOCATION}),
         )
-        return int(total or 0)
+
+
+def entity_total_balance_kurus(session: Session, entity_id: uuid.UUID) -> int:
+    """Sum partner reimbursement subledger balances (2150 tie)."""
+    return entity_reimbursement_total_kurus(session, entity_id)
 
 
 def list_ledger_entries(

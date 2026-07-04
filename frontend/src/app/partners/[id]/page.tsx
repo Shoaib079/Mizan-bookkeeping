@@ -10,6 +10,7 @@ import {
   type CorrectablePartnerLedgerRow,
 } from "@/components/forms/correct-partner-ledger-form";
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
+import { PartnerProfitAllocationForm } from "@/components/forms/partner-profit-allocation-form";
 import { PartnerReimbursementForm } from "@/components/forms/partner-reimbursement-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ const correctablePartnerTypes = new Set(["expense_fronted", "reimbursement_paid"
 
 type LedgerResponse = {
   balance_kurus: number;
+  capital_balance_kurus: number;
   entries: LedgerEntry[];
 };
 
@@ -63,6 +65,7 @@ export default function PartnerDetailPage() {
   const [reimburseOpen, setReimburseOpen] = useState(false);
   const [drawingOpen, setDrawingOpen] = useState(false);
   const [repaymentOpen, setRepaymentOpen] = useState(false);
+  const [allocateOpen, setAllocateOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
 
   const resetDetailState = useCallback(() => {
@@ -75,6 +78,7 @@ export default function PartnerDetailPage() {
     setReimburseOpen(false);
     setDrawingOpen(false);
     setRepaymentOpen(false);
+    setAllocateOpen(false);
     setCorrectEntry(null);
   }, []);
 
@@ -144,6 +148,10 @@ export default function PartnerDetailPage() {
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {partnerBalanceAmount(ledger.balance_kurus)}
               </p>
+              <p className="mt-3 text-sm text-muted-foreground">Partner capital</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {formatTry(ledger.capital_balance_kurus)}
+              </p>
             </div>
           </div>
 
@@ -160,7 +168,10 @@ export default function PartnerDetailPage() {
             <Button type="button" variant="secondary" onClick={() => setDrawingOpen(true)}>
               Record drawing
             </Button>
-            {partnerDrawingRepaymentAllowed(ledger.balance_kurus) && (
+            <Button type="button" variant="secondary" onClick={() => setAllocateOpen(true)}>
+              Allocate profit
+            </Button>
+            {partnerDrawingRepaymentAllowed(ledger.capital_balance_kurus) && (
               <Button
                 type="button"
                 variant="secondary"
@@ -261,8 +272,13 @@ export default function PartnerDetailPage() {
             open={repaymentOpen}
             partnerId={partnerId}
             kind="repayment"
-            balanceKurus={ledger?.balance_kurus}
+            balanceKurus={ledger?.capital_balance_kurus}
             onClose={() => setRepaymentOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <PartnerProfitAllocationForm
+            open={allocateOpen}
+            onClose={() => setAllocateOpen(false)}
             onSaved={() => void reload()}
           />
           <CorrectPartnerLedgerForm

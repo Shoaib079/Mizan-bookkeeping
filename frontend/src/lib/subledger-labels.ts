@@ -13,6 +13,7 @@ export const partnerMovementLabels: Record<string, string> = {
   reimbursement_paid: "Reimbursement paid",
   drawing: "Drawing",
   drawing_repayment: "Drawing repayment",
+  profit_allocation: "Profit allocation",
 };
 
 export const customerMovementLabels: Record<string, string> = {

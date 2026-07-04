@@ -69,6 +69,7 @@ class PartnerLedgerEntryRead(BaseModel):
 class PartnerLedgerRead(BaseModel):
     partner_id: uuid.UUID
     balance_kurus: int
+    capital_balance_kurus: int = 0
     entries: list[PartnerLedgerEntryRead]
 
 
@@ -146,3 +147,48 @@ class PartnerJournalEntryCorrectOut(BaseModel):
     corrected_journal_entry_id: uuid.UUID
     partner_ledger_entry: PartnerLedgerEntryRead
     balance_kurus: int
+
+
+class ProfitAllocationPreviewLine(BaseModel):
+    partner_id: uuid.UUID
+    partner_name: str
+    ownership_share_pct: Decimal
+    amount_kurus: int
+
+
+class ProfitAllocationPreviewRead(BaseModel):
+    total_profit_kurus: int
+    lines: list[ProfitAllocationPreviewLine]
+
+
+class ProfitAllocationPreviewRequest(BaseModel):
+    profit_kurus: int | None = Field(default=None, gt=0)
+    period_from: date | None = None
+    period_to: date | None = None
+
+
+class ProfitAllocationPost(BaseModel):
+    allocation_date: date
+    profit_kurus: int | None = Field(default=None, gt=0)
+    period_from: date | None = None
+    period_to: date | None = None
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: uuid.UUID | None = None
+
+
+class ProfitAllocationPostOut(BaseModel):
+    journal_entry_id: uuid.UUID
+    total_profit_kurus: int
+    partner_ledger_entries: list[PartnerLedgerEntryRead]
+
+
+class ProfitAllocationVoid(BaseModel):
+    actor_id: uuid.UUID | None = None
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
+class ProfitAllocationVoidOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID

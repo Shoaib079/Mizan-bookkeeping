@@ -39,7 +39,7 @@ type Props = {
   onClose: () => void;
 };
 
-type LedgerBalance = { balance_kurus: number };
+type LedgerBalance = { balance_kurus: number; capital_balance_kurus?: number };
 
 const LIST_PATH: Record<PersonPickerKind, string> = {
   staff: "/staff/employees",
@@ -77,6 +77,9 @@ export function PeopleRecordDialog({
   const [balanceKurus, setBalanceKurus] = useState<number | undefined>(
     undefined,
   );
+  const [capitalBalanceKurus, setCapitalBalanceKurus] = useState<
+    number | undefined
+  >(undefined);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
 
@@ -86,6 +89,7 @@ export function PeopleRecordDialog({
     setLoadError(null);
     setLoading(false);
     setBalanceKurus(undefined);
+    setCapitalBalanceKurus(undefined);
     setBalanceLoading(false);
     setBalanceError(null);
   }, []);
@@ -127,12 +131,14 @@ export function PeopleRecordDialog({
   useEffect(() => {
     if (!open || !entityId || !selectedId) {
       setBalanceKurus(undefined);
+    setCapitalBalanceKurus(undefined);
       setBalanceError(null);
       setBalanceLoading(false);
       return;
     }
     if (!NEEDS_LEDGER_BALANCE.has(action)) {
       setBalanceKurus(undefined);
+    setCapitalBalanceKurus(undefined);
       setBalanceError(null);
       setBalanceLoading(false);
       return;
@@ -152,6 +158,7 @@ export function PeopleRecordDialog({
       .then((ledger) => {
         if (cancelled) return;
         setBalanceKurus(ledger.balance_kurus);
+        setCapitalBalanceKurus(ledger.capital_balance_kurus ?? 0);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -159,6 +166,7 @@ export function PeopleRecordDialog({
           err instanceof Error ? err.message : "Failed to load balance",
         );
         setBalanceKurus(undefined);
+        setCapitalBalanceKurus(undefined);
       })
       .finally(() => {
         if (!cancelled) setBalanceLoading(false);
@@ -228,7 +236,13 @@ export function PeopleRecordDialog({
 
           {formReady && selected && (
             <div key={selected.id} className="border-t border-border pt-4">
-              {renderEmbeddedForm(action, selected, balanceKurus, handleClose)}
+              {renderEmbeddedForm(
+                action,
+                selected,
+                balanceKurus,
+                capitalBalanceKurus,
+                handleClose,
+              )}
             </div>
           )}
         </div>
@@ -241,6 +255,7 @@ function renderEmbeddedForm(
   action: RecordActionKey,
   person: PersonPickerResult,
   balanceKurus: number | undefined,
+  capitalBalanceKurus: number | undefined,
   onClose: () => void,
 ) {
   const payCurrency = person.payCurrency ?? "TRY";
@@ -300,7 +315,7 @@ function renderEmbeddedForm(
           {...formProps}
           partnerId={person.id}
           kind="repayment"
-          balanceKurus={balanceKurus}
+          balanceKurus={capitalBalanceKurus ?? balanceKurus}
         />
       );
     case "customerCreditSale":
