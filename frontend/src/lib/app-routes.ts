@@ -218,10 +218,6 @@ export const appRoutes: AppRoute[] = [
   },
 ];
 
-export function sidebarChildren(parentHref: string): AppRoute[] {
-  return appRoutes.filter((route) => route.nestedUnder === parentHref);
-}
-
 export type EntityNavSettings = {
   deliveryEnabled: boolean;
 };
@@ -279,12 +275,4 @@ export function sidebarChildrenForNavItem(
 
 export function isNavItemActive(pathname: string, item: AppRoute): boolean {
   return sidebarHrefActiveForPathname(item.href, pathname);
-}
-
-export function isNavChildActive(pathname: string, child: AppRoute): boolean {
-  return pathname === child.href || pathname.startsWith(`${child.href}/`);
-}
-
-export function navGroupIcon(label: string): NavGroupIcon | undefined {
-  return SIDEBAR_GROUP_DEFS.find((group) => group.label === label)?.icon;
 }

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from datetime import date
 
@@ -14,6 +13,7 @@ from app.adapters.bank_parsers.dispatch import parse_bank_statement
 from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig, parse_with_profile
 from app.adapters.bank_parsers.types import BankParseError, ParsedStatement
 from app.core.banking.line_dedup import plan_statement_line_imports
+from app.core.content_fingerprint import file_fingerprint
 from app.core.banking import posting as banking_posting
 from app.core.banking import statement_posting
 from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_date_bounds
@@ -126,10 +126,6 @@ class StatementNotDiscardableError(Exception):
             "Discarding removes only this file import — your company, chart, suppliers, "
             "and other statements are not affected."
         )
-
-
-def file_fingerprint(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()
 
 
 def _to_line_read(

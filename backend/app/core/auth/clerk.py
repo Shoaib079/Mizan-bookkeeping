@@ -30,12 +30,6 @@ def _get_jwk_client() -> PyJWKClient:
     return _jwk_client
 
 
-def reset_jwk_client_for_tests() -> None:
-    """Clear cached JWKS client (tests only)."""
-    global _jwk_client
-    _jwk_client = None
-
-
 def _extract_email(claims: dict[str, Any]) -> tuple[str, bool]:
     email = claims.get("email")
     if isinstance(email, str) and email.strip():

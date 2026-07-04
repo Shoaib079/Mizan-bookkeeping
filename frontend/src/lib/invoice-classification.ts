@@ -1,7 +1,5 @@
 /** Invoice kind labels and review-confidence helpers (IC-C). */
 
-export type InvoiceKind = "supplier" | "supplier_credit" | "delivery_commission";
-
 export type ClassificationConfidence = "high" | "medium" | "low";
 
 export function invoiceKindLabel(kind: string): string {

@@ -313,19 +313,6 @@ def extract_expense_receipt(content: bytes) -> ExpenseReceiptExtraction:
         "Image contains no extractable text; configure vision OCR or enter lines manually"
     )
 
-
-def lines_sum_kurus(lines: list[ExpenseReceiptLineExtraction]) -> int:
-    return sum(line.amount_kurus for line in lines)
-
-
-def total_matches_lines(
-    lines: list[ExpenseReceiptLineExtraction], receipt_total_kurus: int | None
-) -> bool:
-    if receipt_total_kurus is None:
-        return True
-    return lines_sum_kurus(lines) == receipt_total_kurus
-
-
 def extraction_to_payload(extraction: ExpenseReceiptExtraction) -> dict[str, Any]:
     payload = asdict(extraction)
     payload["expense_date"] = (

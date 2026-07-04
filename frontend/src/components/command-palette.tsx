@@ -2,7 +2,7 @@
 
 /** Global ⌘K data-first search — suppliers, items, pages, actions (UX-B). */
 
-import { Search, Users, Tags, FileText } from "lucide-react";
+import { Search, Users, Tags } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 

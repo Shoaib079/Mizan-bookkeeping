@@ -9,10 +9,6 @@ export function entityResetKey(entityId: string): string {
   return entityId || "";
 }
 
-export function useEntityResetKey(entityId: string): string {
-  return entityResetKey(entityId);
-}
-
 type EntitySwitchTracker = {
   sync: (entityId: string) => boolean;
 };

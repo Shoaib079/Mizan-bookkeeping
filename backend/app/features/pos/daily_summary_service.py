@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from datetime import date
 
@@ -18,6 +17,7 @@ from app.adapters.ocr_ai.pos_summary import (
     math_valid,
 )
 from app.adapters.storage.local import delete_stored_upload, save_upload
+from app.core.content_fingerprint import file_fingerprint
 from app.core.pos.daily_summary_posting import (
     PosDailySummaryPostError,
     confirm_pos_daily_summary,
@@ -48,10 +48,6 @@ class PosDailySummaryConfirmError(Exception):
 
 class PosDailySummaryImmutableError(Exception):
     """Raised when a posted/rejected summary is modified."""
-
-
-def file_fingerprint(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()
 
 
 def _require_entity(session: Session, entity_id: uuid.UUID) -> None:

@@ -4,7 +4,6 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { BackupsInfoPanel } from "@/components/settings/backups-info-panel";
 import {
-  defaultModuleDraft,
   EntityFeatureToggles,
 } from "@/components/settings/entity-feature-toggles";
 import { TeamPanel } from "@/components/settings/team-panel";

@@ -23,7 +23,3 @@ function toIso(d: Date): string {
 export function buildRangeQuery(from: string, to: string): string {
   return `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 }
-
-export function buildAsOfQuery(asOf: string): string {
-  return `as_of=${encodeURIComponent(asOf)}`;
-}

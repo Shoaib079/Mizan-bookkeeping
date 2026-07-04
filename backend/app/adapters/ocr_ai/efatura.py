@@ -19,6 +19,7 @@ from typing import Any
 from xml.etree import ElementTree as ET
 
 from app.config import settings
+from app.core.money import amount_text_to_kurus
 from app.core.turkish_vkn import is_valid_vkn_or_tckn
 from app.features.invoices.validation import (
     InvoiceTotalsError,
@@ -75,27 +76,6 @@ def register_pdf_fixture(content: bytes, fields: dict[str, Any]) -> str:
     fingerprint = hashlib.sha256(content).hexdigest()
     _PDF_FIXTURE_REGISTRY[fingerprint] = fields
     return fingerprint
-
-
-def _amount_to_kurus(text: str) -> int:
-    cleaned = text.strip()
-    if not cleaned:
-        raise ValueError("empty amount")
-    negative = cleaned.startswith("-")
-    cleaned = cleaned.lstrip("-")
-    if "," in cleaned and "." in cleaned:
-        cleaned = cleaned.replace(".", "").replace(",", ".")
-    elif "," in cleaned:
-        cleaned = cleaned.replace(",", ".")
-    parts = cleaned.split(".")
-    if len(parts) == 1:
-        lira, frac = int(parts[0]), 0
-    else:
-        lira = int(parts[0])
-        frac_str = parts[1][:2].ljust(2, "0")
-        frac = int(frac_str)
-    value = lira * 100 + frac
-    return -value if negative else value
 
 
 def _local(tag: str) -> str:
@@ -193,8 +173,8 @@ def extract_efatura_xml(content: bytes) -> EInvoiceExtraction:
     if net_text is None or gross_text is None:
         raise EfaturaExtractionError("Missing LegalMonetaryTotal amounts")
 
-    net_kurus = _amount_to_kurus(net_text)
-    gross_kurus = _amount_to_kurus(gross_text)
+    net_kurus = amount_text_to_kurus(net_text)
+    gross_kurus = amount_text_to_kurus(gross_text)
 
     vat_breakdown: list[VatBreakdownLine] = []
     for subtotal in _find_all(root, ".//cac:TaxTotal/cac:TaxSubtotal"):
@@ -208,8 +188,8 @@ def extract_efatura_xml(content: bytes) -> EInvoiceExtraction:
         vat_breakdown.append(
             {
                 "rate_percent": float(rate_node.text.strip()),
-                "base_kurus": _amount_to_kurus(base_node.text),
-                "vat_kurus": _amount_to_kurus(vat_node.text),
+                "base_kurus": amount_text_to_kurus(base_node.text),
+                "vat_kurus": amount_text_to_kurus(vat_node.text),
             }
         )
 
@@ -931,8 +911,8 @@ def _parse_pdf_heuristics(
         re.IGNORECASE,
     ):
         rate = float(m.group(1).replace(",", "."))
-        base = _amount_to_kurus(_normalize_tr_amount(m.group(2)))
-        vat = _amount_to_kurus(_normalize_tr_amount(m.group(3)))
+        base = amount_text_to_kurus(_normalize_tr_amount(m.group(2)))
+        vat = amount_text_to_kurus(_normalize_tr_amount(m.group(3)))
         kdv_matrah_vat.append(
             {"rate_percent": rate, "base_kurus": base, "vat_kurus": vat}
         )
@@ -944,17 +924,17 @@ def _parse_pdf_heuristics(
         text,
         re.IGNORECASE,
     ):
-        other_taxes_kurus += _amount_to_kurus(_normalize_tr_amount(m.group(3)))
+        other_taxes_kurus += amount_text_to_kurus(_normalize_tr_amount(m.group(3)))
 
     has_net = net_match is not None or bool(kdv_matrah_vat)
     if not has_net or not gross_match:
         raise EfaturaPdfUnsupportedError("Could not find net/gross totals in PDF text")
 
     if net_match:
-        net_kurus = _amount_to_kurus(_normalize_tr_amount(net_match.group(1)))
+        net_kurus = amount_text_to_kurus(_normalize_tr_amount(net_match.group(1)))
     else:
         net_kurus = kdv_matrah_vat[0]["base_kurus"]
-    gross_kurus = _amount_to_kurus(_normalize_tr_amount(gross_match.group(1)))
+    gross_kurus = amount_text_to_kurus(_normalize_tr_amount(gross_match.group(1)))
 
     vat_breakdown: list[VatBreakdownLine] = []
     for rate_match in re.finditer(
@@ -966,7 +946,7 @@ def _parse_pdf_heuristics(
         rate_str = rate_match.group(1).replace(",", ".")
         amount_str = rate_match.group(2)
         rate = float(rate_str)
-        vat_kurus = _amount_to_kurus(_normalize_tr_amount(amount_str))
+        vat_kurus = amount_text_to_kurus(_normalize_tr_amount(amount_str))
         if rate > 0:
             base_kurus = round(vat_kurus * 100 / rate)
             vat_breakdown.append(
@@ -981,7 +961,7 @@ def _parse_pdf_heuristics(
             re.IGNORECASE,
         ):
             rate = float(rate_match.group(1).replace(",", "."))
-            vat_kurus = _amount_to_kurus(_normalize_tr_amount(rate_match.group(2)))
+            vat_kurus = amount_text_to_kurus(_normalize_tr_amount(rate_match.group(2)))
             if rate > 0:
                 base_kurus = round(vat_kurus * 100 / rate)
                 vat_breakdown.append(
@@ -1000,7 +980,7 @@ def _parse_pdf_heuristics(
             re.IGNORECASE,
         ):
             rate = float(rate_match.group(1))
-            vat_kurus = _amount_to_kurus(_normalize_tr_amount(rate_match.group(2)))
+            vat_kurus = amount_text_to_kurus(_normalize_tr_amount(rate_match.group(2)))
             if rate > 0:
                 base_kurus = round(vat_kurus * 100 / rate)
                 vat_breakdown.append(
@@ -1154,8 +1134,8 @@ def _try_net_gross_from_pdf(text: str) -> tuple[int | None, int | None]:
     if not net_match or not gross_match:
         return None, None
     return (
-        _amount_to_kurus(_normalize_tr_amount(net_match.group(1))),
-        _amount_to_kurus(_normalize_tr_amount(gross_match.group(1))),
+        amount_text_to_kurus(_normalize_tr_amount(net_match.group(1))),
+        amount_text_to_kurus(_normalize_tr_amount(gross_match.group(1))),
     )
 
 

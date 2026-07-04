@@ -2,9 +2,11 @@
 
 Ordered, tick-off checklist for taking Mizan to production. Derived from `DEPLOY.md` (the source of truth) — this just sequences it.
 
+> **Stack (2026-07):** Neon (Postgres) · Railway (`mizan-api` + worker/cron) · Vercel (frontend) · Cloudflare R2 (backups) · Clerk (auth). Where older docs say Render or Netlify, read **Railway** / **Vercel**.
+
 **Golden rules**
 - **Staging first.** Run the entire path on a prod-like staging stack before touching production.
-- **Secrets live only in host secret stores** (Render / Netlify) — never commit real `.env`.
+- **Secrets live only in host secret stores** (Railway / Vercel) — never commit real `.env`.
 - **Schema is built only by Alembic** (`migrate_production.sh`) — never `init_database` / `create_all`.
 - Legend: 🧑 = owner action (accounts/credentials/UI) · 💻 = run a command · ✅ = success check.
 
@@ -12,10 +14,10 @@ Ordered, tick-off checklist for taking Mizan to production. Derived from `DEPLOY
 
 ## Phase 0 — Accounts (🧑 one-time)
 
-- [ ] Netlify (frontend)
-- [ ] Render or Railway (API + Celery worker + beat)
-- [ ] Managed Postgres with **encryption at rest** (Neon / Supabase / Render Postgres)
-- [ ] Redis (Upstash works for staging)
+- [ ] Vercel (frontend)
+- [ ] Railway (API + worker/cron)
+- [ ] Managed Postgres with **encryption at rest** (Neon recommended)
+- [ ] Redis (Upstash works for staging) — if using Celery worker/beat
 - [ ] S3-compatible bucket, **private + SSE** (Cloudflare R2 or S3) — separate/restricted credentials
 - [ ] Clerk (auth)
 
@@ -47,7 +49,7 @@ Ordered, tick-off checklist for taking Mizan to production. Derived from `DEPLOY
 cd backend
 export DATABASE_URL='postgresql+psycopg://mizan_app:…@host:5432/mizan?sslmode=require'
 export DATABASE_ADMIN_URL='postgresql+psycopg://mizan:…@host:5432/postgres?sslmode=require'
-bash scripts/migrate_production.sh      # alembic upgrade head (applies 052–055), no drop + grants
+bash scripts/migrate_production.sh      # alembic upgrade head, no drop + grants
 bash scripts/verify_production_db.sh    # confirms head, RLS on every entity table, immutability triggers
 ```
 - [ ] `migrate_production.sh` prints `migrate ok`
@@ -57,16 +59,16 @@ bash scripts/verify_production_db.sh    # confirms head, RLS on every entity tab
 
 ## Phase 3 — Deploy STAGING services (🧑)
 
-### 3a. Backend (Render)
-- [ ] Connect repo; apply `render.yaml` (api + celery-worker + celery-beat)
-- [ ] Attach persistent disk ≥10 GB at `/app/data` on **api** and **worker**
-- [ ] Paste env from `.env.production.example`; secrets `sync: false`
-- [ ] Set `CORS_ORIGINS` to the Netlify URL(s) — **not** the localhost default
-- [ ] Deploy; note the API URL (e.g. `https://mizan-api.onrender.com`)
+### 3a. Backend (Railway)
+- [ ] Connect repo to Railway `mizan-api` service
+- [ ] Set pre-deploy command: `bash scripts/migrate_production.sh` (migrates Neon on each deploy)
+- [ ] Paste env from `.env.production.example`; secrets not in git
+- [ ] Set `CORS_ORIGINS` to the Vercel URL(s) — **not** the localhost default
+- [ ] Deploy; note the API URL (e.g. `https://mizan-api-….up.railway.app`)
 
-### 3b. Frontend (Netlify)
-- [ ] Import repo (`netlify.toml` handles build); set `NEXT_PUBLIC_API_URL` + `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- [ ] Deploy; confirm HTTPS on the `*.netlify.app` URL
+### 3b. Frontend (Vercel)
+- [ ] Import repo; set `NEXT_PUBLIC_API_URL` + `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- [ ] Deploy; confirm HTTPS on the `*.vercel.app` URL
 
 ---
 
@@ -74,15 +76,15 @@ bash scripts/verify_production_db.sh    # confirms head, RLS on every entity tab
 
 ### 4a. Health + CORS smoke
 ```bash
-export API_URL='https://your-staging-api.onrender.com'
-export FRONTEND_ORIGIN='https://your-staging.netlify.app'
+export API_URL='https://your-staging-api.up.railway.app'
+export FRONTEND_ORIGIN='https://your-staging.vercel.app'
 ./scripts/smoke_staging.sh
 ```
 - [ ] ✅ `/health` ok · `/health/ready` 200 + `"db":"up"` · CORS preflight passes
 
 ### 4b. Automated onboarding smoke (creates real rows — staging only)
 ```bash
-export API_URL='https://your-staging-api.onrender.com'
+export API_URL='https://your-staging-api.up.railway.app'
 export SMOKE_AUTH=enforced
 ./scripts/smoke_onboarding.sh
 ```
@@ -105,9 +107,9 @@ bash scripts/security_production_pytest.sh    # guard tests under production-lik
 - [ ] ✅ All three green
 
 ### 4e. Observability wired
-- [ ] `SENTRY_DSN` set on `mizan-api` (optional but recommended); test error appears in Sentry
+- [ ] `SENTRY_DSN` set on Railway `mizan-api` (optional but recommended); test error appears in Sentry
 - [ ] External uptime monitor on `/health/ready` (UptimeRobot/Better Stack)
-- [ ] Render alerts on deploy-failure + service-unhealthy; worker alert on `daily backup task failed`
+- [ ] Railway alerts on deploy-failure + service-unhealthy; worker/cron alert on `daily backup task failed`
 
 ### 4f. Owner walkthrough on staging (🧑, DEPLOY.md §15)
 - [ ] Your email provisioned (invite-only) → sign in via Clerk
@@ -130,7 +132,7 @@ bash scripts/security_production_pytest.sh    # guard tests under production-lik
 - [ ] 🧑 Provision production Postgres / Redis / bucket (repeat Phase 1 for prod)
 - [ ] 🧑 Flip Clerk to **live** keys (`sk_live_` / `pk_live_`); set `CLERK_JWKS_URL`, `CLERK_ISSUER`, `CLERK_AUDIENCE`
 - [ ] 🧑 Set production `CORS_ORIGINS` + `NEXT_PUBLIC_API_URL` to final HTTPS URLs
-- [ ] 💻 Production DB: `migrate_production.sh` + `verify_production_db.sh` (runs auto as Render preDeploy when env set)
+- [ ] 💻 Production DB: `migrate_production.sh` + `verify_production_db.sh` (Railway pre-deploy runs migrate automatically)
 - [ ] 🧑 Deploy API + frontend
 - [ ] 💻 `./scripts/smoke_staging.sh` against **production** URLs → green
 - [ ] 💻 Production backup drill: `./scripts/run_backup_drill.sh` → PASS
@@ -139,7 +141,7 @@ bash scripts/security_production_pytest.sh    # guard tests under production-lik
 
 ## Phase 7 — First real data + sign-off (🧑)
 
-- [ ] Record first real restaurant; confirm Celery worker + beat logs show Redis connected
+- [ ] Record first real restaurant; confirm Celery worker + beat logs show Redis connected (if used)
 - [ ] Morning after first beat run: worker logs show `daily backup completed`
 - [ ] **Owner sign-off:** app is live, backed up, monitored, real data recorded successfully → **Phase 12 COMPLETE**
 

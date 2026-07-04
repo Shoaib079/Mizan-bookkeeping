@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { appRoutes } from "@/lib/app-routes";
 import {
   ROLE_PERMISSIONS,
-  canReadFinancialReports,
   canWriteOperations,
   filterDashboardKpis,
   filterDeliveryReportCards,

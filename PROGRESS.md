@@ -46,18 +46,18 @@ Owner must confirm before storing real people's data (not automatable in CI):
 
 Owner must wire on host dashboards (not automatable in CI):
 
-- Create Sentry project; set `SENTRY_DSN` on Render **mizan-api** (see `DEPLOY.md` §12).
-- Enable Render service unhealthy + deploy failure notifications.
+- Create Sentry project; set `SENTRY_DSN` on Railway **mizan-api** (see `DEPLOY.md` §12).
+- Enable Railway service unhealthy + deploy failure notifications.
 - Optional external uptime monitor on `GET /health/ready`.
 
 ## Owner blockers (12.3)
 
 Owner must run against their staging/prod hosts (not automatable in CI):
 
-- Provision Postgres/Redis/Render/Netlify (Slice 12.1 scaffolding).
+- Provision Postgres/Redis/Railway/Vercel (Slice 12.1 scaffolding).
 - Run `backend/scripts/migrate_production.sh` and `verify_production_db.sh` with real `DATABASE_URL` / `DATABASE_ADMIN_URL`.
 - Run `scripts/smoke_staging.sh` against deployed staging API before production cutover.
-- Flip Clerk live keys on Render + Netlify for production — API guard blocks `sk_test_` / `pk_test_` when `APP_ENV=production`.
+- Flip Clerk live keys on Railway + Vercel for production — API guard blocks `sk_test_` / `pk_test_` when `APP_ENV=production`.
 - **Staging backup drill:** `backend/scripts/run_backup_drill.sh` (or verify after scheduled beat) per `DEPLOY.md` §11 before trusting prod backups.
 
 ## Resume point

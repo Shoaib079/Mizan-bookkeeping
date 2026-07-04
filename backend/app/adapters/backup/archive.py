@@ -125,11 +125,3 @@ def extract_backup_bundle(artifact_path: Path, dest_dir: Path) -> BackupManifest
             f"checksum mismatch: manifest {manifest.sha256!r} != content {actual!r}"
         )
     return manifest
-
-
-def verify_manifest_checksum(extracted_dir: Path, manifest: BackupManifest) -> None:
-    actual = _content_checksum(extracted_dir)
-    if manifest.sha256 != actual:
-        raise ValueError(
-            f"checksum mismatch: manifest {manifest.sha256!r} != content {actual!r}"
-        )

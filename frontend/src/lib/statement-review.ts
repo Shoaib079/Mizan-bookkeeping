@@ -71,11 +71,3 @@ export function isLineCorrectable(line: StatementLineReview): boolean {
     line.status === "classified"
   );
 }
-
-export function isLineActionable(line: StatementLineReview): boolean {
-  return (
-    line.status === "needs_review" ||
-    line.status === "imported" ||
-    isLineCorrectable(line)
-  );
-}

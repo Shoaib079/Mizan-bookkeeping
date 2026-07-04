@@ -9,7 +9,6 @@ venv
 data/
 .env
 .env.*
-!.env.production.example
 tests/
 htmlcov
 .coverage

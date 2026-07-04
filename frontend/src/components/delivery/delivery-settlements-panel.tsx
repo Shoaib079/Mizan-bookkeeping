@@ -12,7 +12,6 @@ import {
   DataTableCell,
   DataTableHead,
   DataTableHeaderCell,
-  DataTableRow,
 } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";

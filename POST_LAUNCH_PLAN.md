@@ -2,15 +2,15 @@
 
 Actionable companion to `ROADMAP.md`. **Done** items are recorded so they are never rebuilt. **To-build** items are written as slices — each has a ready-to-paste **Cursor prompt**. Build one slice at a time; commit + push after each.
 
-Live app (staging-mode): Frontend **Vercel** (migrated from Netlify) · API **Render** (`render.yaml`) · DB Neon (PG18) · Auth Clerk (dev keys) · Backups → Cloudflare R2 (nightly).
+Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) · DB **Neon** (PG18) · Auth Clerk (dev keys) · Backups → Cloudflare R2 (nightly).
 
 ---
 
 ## ✅ Done (do not rebuild)
 
-- **Production go-live** — Neon Postgres + Railway API + Netlify frontend + Clerk auth, `APP_ENV=staging`.
+- **Production go-live** — Neon Postgres + Railway API + Vercel frontend + Clerk auth, `APP_ENV=staging`.
 - **Open self-signup** (`6c6bf92`) — first verified sign-in auto-provisions a user; `SELF_SIGNUP_ENABLED` flag; invites still work; new user becomes owner on first company.
-- **Auth/deploy enablement** — `CLERK_AUDIENCE` optional; managed-Postgres (Neon) role-hardening tolerance + RLS verify; cold-load 401 fix (auth provider waits for token + `AuthReadyGate` + 401 retry); Netlify Next.js runtime; Dockerfile pip retries; `pg_dump 18` in image.
+- **Auth/deploy enablement** — `CLERK_AUDIENCE` optional; managed-Postgres (Neon) role-hardening tolerance + RLS verify; cold-load 401 fix (auth provider waits for token + `AuthReadyGate` + 401 retry); Vercel Next.js runtime; Dockerfile pip retries; `pg_dump 18` in image.
 - **Entity fixes** (`0411d54`) — reliable company-list load (no false "register" prompt); block duplicate company names per user (409); land on dashboard on company switch.
 - **First-run onboarding + Fix D** (`dc115a4`) — onboarding modal (full name, business name, optional legal name); migration `056_entity_legal_name`; `PATCH /users/me`; dismissible dashboard setup checklist.
 - **Automated DB backups** — nightly `pg_dump` → R2 via the `mizan-backup` Railway cron (`0 3 * * *`).
@@ -45,7 +45,7 @@ Live app (staging-mode): Frontend **Vercel** (migrated from Netlify) · API **Re
 | — | SEC-1→4 | Security audit fixes (POS guards, /users, actor, entity-switch, +4) | **Done** (`v0.75.0`–`.3`) |
 | — | Telecom | KDV Matrah + ÖİV extraction | **Done** (`v0.76.0`) |
 | — | Learning | Invoice learning pipeline + commission one-click | **Done** |
-| **0** | **DEPLOY** | **Deploy catch-up: ship 72 commits + Netlify→Vercel cleanup** | **Config done** — owner: env vars + deploy + smoke |
+| **0** | **DEPLOY** | **Deploy catch-up: ship commits + Vercel frontend cleanup** | **Config done** — owner: env vars + deploy + smoke |
 | **1** | **UX-A** | Retire "New" menu, rename Record → "Add", unify dashboard shortcuts | **Done** (`v0.uxa-retire-new`) |
 | **2** | **UX-B** | Data-first global search (suppliers + commodities, names only) | Phase 13 |
 | **3** | **DASH-A** | Dashboard composition charts (free — existing data) | Phase 13 |
@@ -205,7 +205,7 @@ Entity setting `invoice_supplier_auto_post` (Set up → Restaurant, off by defau
 
 ### P6 — Full production cutover  *(ops, not Cursor — owner steps)*
 **Why:** currently staging-mode (Clerk dev keys, `APP_ENV=staging`).
-**Steps (when you have a domain):** buy/point a custom domain → Netlify custom domain + Railway custom domain (HTTPS) → Clerk **production instance** + live keys (`pk_live_`/`sk_live_`) → set `APP_ENV=production`, live Clerk keys, and `CORS_ORIGINS` to the real domain on Railway → set `NEXT_PUBLIC_*` to live values on Netlify → re-run smoke. (Ask me to walk it step-by-step.)
+**Steps (when you have a domain):** buy/point a custom domain → Vercel custom domain + Railway custom domain (HTTPS) → Clerk **production instance** + live keys (`pk_live_`/`sk_live_`) → set `APP_ENV=production`, live Clerk keys, and `CORS_ORIGINS` to the real domain on Railway → set `NEXT_PUBLIC_*` to live values on Vercel → re-run smoke. (Ask me to walk it step-by-step.)
 
 ### P7 — Lint cleanup  *(cosmetic, optional)*
 **Cursor prompt:**

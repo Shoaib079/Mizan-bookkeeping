@@ -6,7 +6,6 @@ import {
 } from "@/lib/sidebar-nav-state";
 
 const DELIVERY_ON = { deliveryEnabled: true };
-const DELIVERY_OFF = { deliveryEnabled: false };
 
 describe("sidebarGroupRenderMode", () => {
   it("renders Reports as a direct link", () => {

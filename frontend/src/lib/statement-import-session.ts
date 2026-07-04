@@ -53,17 +53,6 @@ export function clearStatementImportPending(storageKey: string): void {
   sessionStorage.removeItem(statementImportPendingKey(storageKey));
 }
 
-export function pendingMatchesFile(
-  pending: StatementImportPending,
-  file: File,
-): boolean {
-  return (
-    file.name === pending.fileName &&
-    file.size === pending.fileSize &&
-    file.lastModified === pending.fileLastModified
-  );
-}
-
 export function pendingFileMeta(
   pending: StatementImportPending,
 ): { name: string; size: number; lastModified: number } {

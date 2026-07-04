@@ -1,12 +1,13 @@
-"""POS daily-summary photo OCR v1 — fixture registry + text heuristics (Decisions §9)."""
+"""POS daily-summary photo OCR v1 — text heuristics (Decisions §9)."""
 
 from __future__ import annotations
 
-import hashlib
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from typing import Any
+
+from app.core.money import amount_text_to_kurus
 
 
 @dataclass
@@ -26,37 +27,6 @@ class PosSummaryUnsupportedError(PosSummaryExtractionError):
     """Image/text extraction insufficient; full vision OCR lands in a later slice."""
 
 
-_FIXTURE_REGISTRY: dict[str, dict[str, Any]] = {}
-
-
-def register_pos_fixture(content: bytes, fields: dict[str, Any]) -> str:
-    """Register known image bytes for deterministic test extraction."""
-    fingerprint = hashlib.sha256(content).hexdigest()
-    _FIXTURE_REGISTRY[fingerprint] = fields
-    return fingerprint
-
-
-def _amount_to_kurus(text: str) -> int:
-    cleaned = text.strip()
-    if not cleaned:
-        raise ValueError("empty amount")
-    negative = cleaned.startswith("-")
-    cleaned = cleaned.lstrip("-")
-    if "," in cleaned and "." in cleaned:
-        cleaned = cleaned.replace(".", "").replace(",", ".")
-    elif "," in cleaned:
-        cleaned = cleaned.replace(",", ".")
-    parts = cleaned.split(".")
-    if len(parts) == 1:
-        lira, frac = int(parts[0]), 0
-    else:
-        lira = int(parts[0])
-        frac_str = parts[1][:2].ljust(2, "0")
-        frac = int(frac_str)
-    value = lira * 100 + frac
-    return -value if negative else value
-
-
 def _parse_date(text: str) -> date | None:
     match = re.search(
         r"(?:Tarih|Date|Gun|Gün)\s*[:\.]?\s*(\d{2}[./-]\d{2}[./-]\d{4})",
@@ -68,20 +38,6 @@ def _parse_date(text: str) -> date | None:
     raw = match.group(1).replace("/", "-").replace(".", "-")
     day, month, year = raw.split("-")
     return date(int(year), int(month), int(day))
-
-
-def _extract_from_registry(content: bytes) -> PosSummaryExtraction | None:
-    fingerprint = hashlib.sha256(content).hexdigest()
-    fields = _FIXTURE_REGISTRY.get(fingerprint)
-    if fields is None:
-        return None
-    return PosSummaryExtraction(
-        summary_date=fields.get("summary_date"),
-        cash_kurus=fields["cash_kurus"],
-        card_kurus=fields["card_kurus"],
-        total_kurus=fields["total_kurus"],
-        raw={"source": "pos_fixture_registry", "fingerprint": fingerprint},
-    )
 
 
 def _decode_text(content: bytes) -> str:
@@ -113,9 +69,9 @@ def _parse_text_heuristics(text: str) -> PosSummaryExtraction:
             "Could not find cash, card, and total amounts in document text"
         )
 
-    cash_kurus = _amount_to_kurus(cash_match.group(1))
-    card_kurus = _amount_to_kurus(card_match.group(1))
-    total_kurus = _amount_to_kurus(total_match.group(1))
+    cash_kurus = amount_text_to_kurus(cash_match.group(1))
+    card_kurus = amount_text_to_kurus(card_match.group(1))
+    total_kurus = amount_text_to_kurus(total_match.group(1))
 
     return PosSummaryExtraction(
         summary_date=_parse_date(text),
@@ -127,11 +83,7 @@ def _parse_text_heuristics(text: str) -> PosSummaryExtraction:
 
 
 def extract_pos_summary(content: bytes) -> PosSummaryExtraction:
-    """Extract POS daily-summary fields — fixture registry, then UTF-8 text heuristics."""
-    registered = _extract_from_registry(content)
-    if registered is not None:
-        return registered
-
+    """Extract POS daily-summary fields from UTF-8 text heuristics."""
     text = _decode_text(content)
     if not text.strip():
         raise PosSummaryUnsupportedError(

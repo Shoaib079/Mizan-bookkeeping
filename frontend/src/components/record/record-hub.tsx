@@ -152,12 +152,3 @@ function RecordCard({
     </button>
   );
 }
-
-export function visibleRecordActionCount(opts: {
-  deliveryEnabled: boolean;
-}): number {
-  return filterRecordActions(
-    SECTION_ORDER.flatMap((section) => recordActionsBySection(section, opts)),
-    opts,
-  ).length;
-}

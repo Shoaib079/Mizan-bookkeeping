@@ -2,8 +2,7 @@
 
 The owner uploads an expense/receipt photo; this adapter reads the **tip** off it
 so the service can create a general-expense draft in Needs Review (a tip is a
-cash expense — ``Dr <chosen expense> / Cr cash`` — never auto-posted). Mirrors the POS
-daily-summary adapter: a fixture registry for deterministic tests, then UTF-8 text
+cash expense — ``Dr <chosen expense> / Cr cash`` — never auto-posted). UTF-8 text
 heuristics; real binary images route to Needs Review until vision OCR lands.
 
 Scope is deliberately the tip only (the explicit owner ask). The general receipt
@@ -12,7 +11,6 @@ total / line-item read is the manual expenses pipeline's job, not this slice.
 
 from __future__ import annotations
 
-import hashlib
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import date
@@ -37,17 +35,8 @@ class ExpensePhotoUnsupportedError(ExpensePhotoExtractionError):
     """Image/text extraction insufficient; full vision OCR lands in a later slice."""
 
 
-_FIXTURE_REGISTRY: dict[str, dict[str, Any]] = {}
-
 # Turkish tip labels: Bahşiş / Bahsis / Servis (service), plus English Tip / Gratuity.
 _TIP_LABEL = r"(?:Bah[sş]i[sş]|Servis(?:\s*[UÜ]creti)?|Tip|Gratuity)"
-
-
-def register_expense_photo_fixture(content: bytes, fields: dict[str, Any]) -> str:
-    """Register known image bytes for deterministic test extraction."""
-    fingerprint = hashlib.sha256(content).hexdigest()
-    _FIXTURE_REGISTRY[fingerprint] = fields
-    return fingerprint
 
 
 def _parse_date(text: str) -> date | None:
@@ -61,20 +50,6 @@ def _parse_date(text: str) -> date | None:
     raw = match.group(1).replace("/", "-").replace(".", "-")
     day, month, year = raw.split("-")
     return date(int(year), int(month), int(day))
-
-
-def _extract_from_registry(content: bytes) -> ExpensePhotoExtraction | None:
-    fingerprint = hashlib.sha256(content).hexdigest()
-    fields = _FIXTURE_REGISTRY.get(fingerprint)
-    if fields is None:
-        return None
-    tip_kurus = int(fields.get("tip_kurus", 0))
-    return ExpensePhotoExtraction(
-        expense_date=fields.get("expense_date"),
-        tip_kurus=tip_kurus,
-        tip_found=bool(fields.get("tip_found", tip_kurus > 0)),
-        raw={"source": "expense_photo_fixture_registry", "fingerprint": fingerprint},
-    )
 
 
 def _decode_text(content: bytes) -> str:
@@ -115,11 +90,7 @@ def _parse_text_heuristics(text: str) -> ExpensePhotoExtraction:
 
 
 def extract_expense_photo(content: bytes) -> ExpensePhotoExtraction:
-    """Extract the cash tip from an expense photo — fixture registry, then text heuristics."""
-    registered = _extract_from_registry(content)
-    if registered is not None:
-        return registered
-
+    """Extract the cash tip from an expense photo via UTF-8 text heuristics."""
     text = _decode_text(content)
     if not text.strip():
         raise ExpensePhotoUnsupportedError(

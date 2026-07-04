@@ -20,6 +20,7 @@ from app.adapters.ocr_ai.efatura import (
     extract_efatura_xml,
     extraction_to_payload,
 )
+from app.core.content_fingerprint import file_fingerprint
 from app.core.turkish_vkn import is_valid_vkn_or_tckn
 from app.adapters.storage.local import delete_stored_upload, save_upload
 from app.db.base import utcnow
@@ -107,10 +108,6 @@ class DraftImmutableError(Exception):
 def _require_entity(session: Session, entity_id: uuid.UUID) -> None:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
-
-
-def file_fingerprint(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()
 
 
 def detect_source_type(

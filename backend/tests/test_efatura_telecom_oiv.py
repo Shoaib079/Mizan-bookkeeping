@@ -9,7 +9,6 @@ import pytest
 
 from app.adapters.ocr_ai.efatura import (
     EInvoiceExtraction,
-    _amount_to_kurus,
     _normalize_tr_amount,
     _parse_pdf_heuristics,
     _supplier_name_from_pdf,

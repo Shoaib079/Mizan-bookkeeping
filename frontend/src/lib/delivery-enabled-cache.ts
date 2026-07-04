@@ -12,13 +12,6 @@ export function getCachedDeliveryEnabled(
   return deliveryEnabledCache.get(entityId);
 }
 
-export function setCachedDeliveryEnabled(
-  entityId: string,
-  enabled: boolean,
-): void {
-  deliveryEnabledCache.set(entityId, enabled);
-}
-
 export function clearDeliveryEnabledCache(entityId: string): void {
   deliveryEnabledCache.delete(entityId);
 }
