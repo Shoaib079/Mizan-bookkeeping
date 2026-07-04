@@ -11,6 +11,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # account_type / normal_balance are varchar; ORM Enum uses uppercase NAMES.
     op.execute(
         """
         INSERT INTO accounts (

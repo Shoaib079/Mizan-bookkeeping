@@ -20,6 +20,7 @@ class Account(EntityScopedMixin, Base):
     code: Mapped[str] = mapped_column(String(16), nullable=False)
     name_en: Mapped[str] = mapped_column(String(255), nullable=False)
     name_tr: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Raw-SQL migrations MUST insert uppercase enum NAMES (EQUITY, CREDIT), not values.
     account_type: Mapped[AccountType] = mapped_column(
         Enum(AccountType, name="account_type", native_enum=False, length=16),
         nullable=False,

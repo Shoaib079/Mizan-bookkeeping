@@ -164,6 +164,7 @@ class JournalEntryLine(EntityScopedMixin, Base):
         index=True,
     )
     amount_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Raw-SQL migrations MUST insert uppercase enum NAMES (DEBIT, CREDIT), not values.
     side: Mapped[AccountNormalBalance] = mapped_column(
         Enum(AccountNormalBalance, name="journal_line_side", native_enum=False, length=8),
         nullable=False,
