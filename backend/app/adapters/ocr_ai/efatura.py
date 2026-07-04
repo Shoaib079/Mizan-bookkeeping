@@ -506,8 +506,230 @@ def _buyer_vkn_from_pdf(text: str) -> str | None:
     return None
 
 
-def _supplier_name_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str | None:
-    """Best-effort seller name from header or inverted GİB footer after buyer block."""
+_LEGAL_ENTITY_IN_LINE = (
+    r"(?:A\.Ş\.|A\.S\.|LTD\.?|LİMİTED|LIMITED|TİC\.|ŞTİ\.|"
+    r"ANON[İI]M\s+[ŞS][İI]RKET[İI]|ANON[İI]M\s+SIRKETI)"
+)
+
+_GENERIC_LEGAL_TOKENS = frozenset(
+    {
+        "TICARET",
+        "TİCARET",
+        "LIMITED",
+        "LİMİTED",
+        "LIMITE",
+        "SANAYI",
+        "SANAYİ",
+        "SIRKETI",
+        "ŞİRKETİ",
+        "SIRKET",
+        "ŞİRKET",
+        "ANONIM",
+        "ANONİM",
+        "ISLETMECILIGI",
+        "İŞLETMECİLİĞİ",
+        "ISLETMECILIK",
+        "İŞLETMECİLİK",
+        "RESTORAN",
+        "RESTORANT",
+        "TURIZM",
+        "TURİZM",
+        "VE",
+        "AS",
+        "AŞ",
+        "AS.",
+        "STI",
+        "ŞTİ",
+        "STI.",
+        "ŞTİ.",
+        "LTD",
+        "LTD.",
+    }
+)
+
+_SKIP_NAME_LINE = re.compile(
+    r"^(Unvan|Satıcı|Satici|Tel|Faks|E-Posta|Web|Sicil|Mersis|Vergi|Özelleştirme|"
+    r"Senaryo|Fatura|e-Fatura|HİZMET|HESAP|ETTN|ÖDENECEK|SON|BİR|TOPLAM|DEVLETE|"
+    r"Kampanya|Tamamlanan|Müşteri|Değerli|HATIRLATMA|SİZE|Fatura Yazdır|Ödenmemiş|"
+    r"Son ödeme|Hesap Numaranız|Faturanızı|Değerli Müşterimiz|müşterilerimizin)",
+    re.IGNORECASE,
+)
+
+
+def _normalize_name_key(name: str) -> str:
+    upper = name.upper()
+    upper = re.sub(r"[^\w\s]", " ", upper, flags=re.UNICODE)
+    return " ".join(upper.split())
+
+
+def _is_generic_legal_suffix_only(name: str) -> bool:
+    tokens = _normalize_name_key(name).split()
+    if not tokens:
+        return True
+    distinctive = [token for token in tokens if token not in _GENERIC_LEGAL_TOKENS]
+    return not distinctive
+
+
+def _names_conflict(supplier_name: str, buyer_name: str) -> bool:
+    supplier_key = _normalize_name_key(supplier_name)
+    buyer_key = _normalize_name_key(buyer_name)
+    if not supplier_key or not buyer_key:
+        return False
+    if supplier_key == buyer_key:
+        return True
+    if supplier_key in buyer_key or buyer_key in supplier_key:
+        return True
+    return False
+
+
+def sanitize_supplier_name(
+    name: str | None,
+    *,
+    buyer_names: tuple[str, ...] = (),
+) -> str | None:
+    """Drop supplier names that mirror the buyer or are only a legal-form suffix."""
+    cleaned = (name or "").strip()
+    if not cleaned:
+        return None
+    if _is_generic_legal_suffix_only(cleaned):
+        return None
+    for buyer in buyer_names:
+        candidate = buyer.strip()
+        if candidate and _names_conflict(cleaned, candidate):
+            return None
+    return cleaned
+
+
+def _collect_rejection_buyer_names(
+    explicit: tuple[str, ...],
+    text: str,
+    buyer_vkn: str | None,
+) -> tuple[str, ...]:
+    names = [name.strip() for name in explicit if name and name.strip()]
+    pdf_buyer = _buyer_company_name_from_pdf(text, buyer_vkn=buyer_vkn)
+    if pdf_buyer:
+        names.append(pdf_buyer)
+    return tuple(dict.fromkeys(names))
+
+
+def _buyer_company_name_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str | None:
+    """Best-effort buyer unvan from the SAYIN block — used to reject bad supplier names."""
+    sayin = re.search(r"SAYIN\s*", text, re.IGNORECASE)
+    if sayin is None:
+        return None
+    chunk = text[sayin.end() : sayin.end() + 900]
+    if buyer_vkn:
+        vkn_idx = chunk.find(buyer_vkn)
+        if vkn_idx >= 0:
+            chunk = chunk[:vkn_idx]
+
+    lines: list[str] = []
+    for line in chunk.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            if lines:
+                break
+            continue
+        if _SKIP_NAME_LINE.match(stripped):
+            if lines:
+                break
+            continue
+        if re.match(r"^(Vergi|VKN|Tel|Faks|ETTN|HESAP|SON|ÖDENECEK)\b", stripped, re.I):
+            if lines:
+                break
+            continue
+        if re.match(r"^\d", stripped):
+            if lines:
+                break
+            continue
+        lines.append(stripped)
+
+    if not lines:
+        return None
+    return " ".join(" ".join(lines).split())
+
+
+_ADDRESS_LINE = re.compile(
+    r"(\d{5}|/\s*[A-ZÇĞİÖŞÜ]|Mah\.|Mahalle|Sk\.|Sokak|Sok\.|No:|Kat:|Cad\.|Caddesi|\bTel\b|\bFaks\b|@)",
+    re.IGNORECASE,
+)
+
+
+def _looks_like_company_line(line: str, *, allow_continuation: bool) -> bool:
+    if _ADDRESS_LINE.search(line):
+        return False
+    if re.search(_LEGAL_ENTITY_IN_LINE, line, re.IGNORECASE):
+        return True
+    if re.match(
+        r"^(METRO|MİGROS|TRENDYOL|GETIR|YEMEK|A101|TTNET|TÜRK TELEKOM|Türk Telekom)",
+        line,
+        re.IGNORECASE,
+    ):
+        return True
+    if allow_continuation and re.match(
+        r"^[A-ZÇĞİÖŞÜ0-9][A-ZÇĞİÖŞÜ0-9\s&'.-]{2,}$",
+        line,
+    ):
+        return True
+    return False
+
+
+def _company_name_before_vkn(text: str, vkn: str) -> str | None:
+    """Company unvan on the line(s) immediately preceding a known seller VKN."""
+    match_pos: int | None = None
+    for pattern in (
+        rf"Vergi\s*Numaras[ıi]\s*[:\.]?\s*{re.escape(vkn)}",
+        rf"Vergi\s*No\s*[:\.]?\s*{re.escape(vkn)}",
+        rf"VKN/TCKN\s*[:\.]?\s*{re.escape(vkn)}",
+        rf"VKN\s*[:\.]?\s*{re.escape(vkn)}",
+        rf"VERG[Iİ]\s*N/D:\s*{re.escape(vkn)}",
+    ):
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            match_pos = match.start()
+            break
+    if match_pos is None:
+        idx = text.find(vkn)
+        if idx < 0:
+            return None
+        match_pos = idx
+
+    lines = text[:match_pos].splitlines()
+    name_parts: list[str] = []
+    for line in reversed(lines):
+        stripped = line.strip()
+        if not stripped:
+            if name_parts:
+                break
+            continue
+        if _SKIP_NAME_LINE.match(stripped):
+            if name_parts:
+                break
+            continue
+        if re.match(r"^(Vergi|Mersis|Sicil|Web|E-Posta|Tel|Faks)\b", stripped, re.I):
+            if name_parts:
+                break
+            continue
+        if _looks_like_company_line(stripped, allow_continuation=bool(name_parts)):
+            name_parts.insert(0, stripped)
+            continue
+        if name_parts:
+            break
+
+    if not name_parts:
+        return None
+    name = " ".join(" ".join(name_parts).split())
+    return name if len(name) >= 4 else None
+
+
+def _supplier_name_from_pdf(
+    text: str,
+    *,
+    buyer_vkn: str | None = None,
+    supplier_vkn: str | None = None,
+    buyer_names: tuple[str, ...] = (),
+) -> str | None:
+    """Best-effort seller name — prefer lines before the resolved seller VKN."""
 
     def _name_from_chunk(chunk: str) -> str | None:
         name_match = re.search(
@@ -519,7 +741,7 @@ def _supplier_name_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str |
             return name_match.group(1).strip()
 
         legal_match = re.search(
-            r"(?:^|\n)([A-ZÇĞİÖŞÜ0-9][^\n]*(?:A\.Ş\.|LTD|LİMİTED|TİC\.|ŞTİ\.)[^\n]*)",
+            rf"(?:^|\n)([A-ZÇĞİÖŞÜ0-9][^\n]*{_LEGAL_ENTITY_IN_LINE}[^\n]*)",
             chunk,
             re.MULTILINE | re.IGNORECASE,
         )
@@ -529,7 +751,7 @@ def _supplier_name_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str |
                 return name
 
         banner_match = re.search(
-            r"(?:^|\n)((?:METRO\s+GROSMARKET|MİGROS|TRENDYOL|GETIR|YEMEK\s+SEPETİ|A101)[^\n]+(?:\n[^\n]+)?)",
+            r"(?:^|\n)((?:METRO\s+GROSMARKET|MİGROS|TRENDYOL|GETIR|YEMEK\s+SEPETİ|A101|TTNET)[^\n]+(?:\n[^\n]+)?)",
             chunk,
             re.IGNORECASE | re.MULTILINE,
         )
@@ -537,14 +759,22 @@ def _supplier_name_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str |
             return " ".join(banner_match.group(1).split())
         return None
 
+    resolved_supplier_vkn = supplier_vkn or _supplier_vkn_from_pdf(text, buyer_vkn=buyer_vkn)
+    if resolved_supplier_vkn:
+        anchored = _company_name_before_vkn(text, resolved_supplier_vkn)
+        if anchored:
+            return sanitize_supplier_name(
+                anchored,
+                buyer_names=_collect_rejection_buyer_names(buyer_names, text, buyer_vkn),
+            )
+
     header = text[: _buyer_section_start(text, buyer_vkn=buyer_vkn)]
     name = _name_from_chunk(header)
     if name:
-        return name
-
-    sayin = re.search(r"(?:^|\n)\s*SAYIN\b", text, re.IGNORECASE | re.MULTILINE)
-    if sayin:
-        return _name_from_chunk(text[sayin.end() : sayin.end() + 2500])
+        return sanitize_supplier_name(
+            name,
+            buyer_names=_collect_rejection_buyer_names(buyer_names, text, buyer_vkn),
+        )
 
     return None
 
@@ -645,7 +875,12 @@ def _supplier_vkn_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str | 
     return all_vkns[0]
 
 
-def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoiceExtraction:
+def _parse_pdf_heuristics(
+    text: str,
+    *,
+    buyer_vkn: str | None = None,
+    buyer_names: tuple[str, ...] = (),
+) -> EInvoiceExtraction:
     """Best-effort regex on GİB-style PDF text — v1 only; unknown layouts fail."""
     invoice_number = None
     for pattern in (
@@ -665,7 +900,16 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
 
     resolved_buyer = _resolve_buyer_vkn(text, buyer_vkn)
     supplier_vkn = _supplier_vkn_from_pdf(text, buyer_vkn=resolved_buyer)
-    supplier_name = _supplier_name_from_pdf(text, buyer_vkn=resolved_buyer)
+    rejection_buyers = _collect_rejection_buyer_names(buyer_names, text, resolved_buyer)
+    supplier_name = sanitize_supplier_name(
+        _supplier_name_from_pdf(
+            text,
+            buyer_vkn=resolved_buyer,
+            supplier_vkn=supplier_vkn,
+            buyer_names=rejection_buyers,
+        ),
+        buyer_names=rejection_buyers,
+    )
 
     net_match = _find_labeled_amount(text, _PDF_NET_LABELS)
     if not net_match:
@@ -832,12 +1076,28 @@ def _empty_pdf_extraction(
     text: str = "",
     *,
     buyer_vkn: str | None = None,
+    buyer_names: tuple[str, ...] = (),
     raw: dict[str, Any] | None = None,
 ) -> EInvoiceExtraction:
     resolved_buyer = _resolve_buyer_vkn(text, buyer_vkn) if text.strip() else buyer_vkn
     supplier_vkn = _supplier_vkn_from_pdf(text, buyer_vkn=resolved_buyer) if text.strip() else None
+    rejection_buyers = (
+        _collect_rejection_buyer_names(buyer_names, text, resolved_buyer)
+        if text.strip()
+        else buyer_names
+    )
     supplier_name = (
-        _supplier_name_from_pdf(text, buyer_vkn=resolved_buyer) if text.strip() else None
+        sanitize_supplier_name(
+            _supplier_name_from_pdf(
+                text,
+                buyer_vkn=resolved_buyer,
+                supplier_vkn=supplier_vkn,
+                buyer_names=rejection_buyers,
+            ),
+            buyer_names=rejection_buyers,
+        )
+        if text.strip()
+        else None
     )
     payload = {
         "source": "pdf_partial",
@@ -900,7 +1160,10 @@ def _try_net_gross_from_pdf(text: str) -> tuple[int | None, int | None]:
 
 
 def _partial_pdf_extraction(
-    text: str, *, buyer_vkn: str | None = None
+    text: str,
+    *,
+    buyer_vkn: str | None = None,
+    buyer_names: tuple[str, ...] = (),
 ) -> tuple[EInvoiceExtraction, list[str]]:
     """Best-effort field harvest when strict heuristics fail."""
     missing: list[str] = []
@@ -922,7 +1185,16 @@ def _partial_pdf_extraction(
 
     resolved_buyer = _resolve_buyer_vkn(text, buyer_vkn)
     supplier_vkn = _supplier_vkn_from_pdf(text, buyer_vkn=resolved_buyer)
-    supplier_name = _supplier_name_from_pdf(text, buyer_vkn=resolved_buyer)
+    rejection_buyers = _collect_rejection_buyer_names(buyer_names, text, resolved_buyer)
+    supplier_name = sanitize_supplier_name(
+        _supplier_name_from_pdf(
+            text,
+            buyer_vkn=resolved_buyer,
+            supplier_vkn=supplier_vkn,
+            buyer_names=rejection_buyers,
+        ),
+        buyer_names=rejection_buyers,
+    )
     if not supplier_vkn:
         missing.append("supplier_vkn")
 
@@ -1187,7 +1459,10 @@ def _try_vision_pdf_intake(
 
 
 def extract_efatura_pdf_for_intake(
-    content: bytes, *, buyer_vkn: str | None = None
+    content: bytes,
+    *,
+    buyer_vkn: str | None = None,
+    buyer_names: tuple[str, ...] = (),
 ) -> PdfIntakeResult:
     """Extract PDF for upload intake — always returns a draftable result."""
     registered = _extract_pdf_from_registry(content)
@@ -1208,7 +1483,9 @@ def extract_efatura_pdf_for_intake(
         )
 
     try:
-        extraction = _parse_pdf_heuristics(text, buyer_vkn=buyer_vkn)
+        extraction = _parse_pdf_heuristics(
+            text, buyer_vkn=buyer_vkn, buyer_names=buyer_names
+        )
         extraction.raw["text_extractor"] = text_extractor
         return PdfIntakeResult(
             extraction=extraction,
@@ -1218,7 +1495,9 @@ def extract_efatura_pdf_for_intake(
         vision_result = _try_vision_pdf_intake(content, buyer_vkn=buyer_vkn)
         if vision_result is not None:
             return vision_result
-        partial, missing = _partial_pdf_extraction(text, buyer_vkn=buyer_vkn)
+        partial, missing = _partial_pdf_extraction(
+            text, buyer_vkn=buyer_vkn, buyer_names=buyer_names
+        )
         partial.raw["text_extractor"] = text_extractor
         return PdfIntakeResult(
             extraction=partial,
@@ -1228,7 +1507,9 @@ def extract_efatura_pdf_for_intake(
         vision_result = _try_vision_pdf_intake(content, buyer_vkn=buyer_vkn)
         if vision_result is not None:
             return vision_result
-        partial, missing = _partial_pdf_extraction(text, buyer_vkn=buyer_vkn)
+        partial, missing = _partial_pdf_extraction(
+            text, buyer_vkn=buyer_vkn, buyer_names=buyer_names
+        )
         partial.raw["text_extractor"] = text_extractor
         return PdfIntakeResult(
             extraction=partial,
@@ -1237,7 +1518,10 @@ def extract_efatura_pdf_for_intake(
 
 
 def extract_efatura_pdf(
-    content: bytes, *, buyer_vkn: str | None = None
+    content: bytes,
+    *,
+    buyer_vkn: str | None = None,
+    buyer_names: tuple[str, ...] = (),
 ) -> EInvoiceExtraction:
     """Extract e-Fatura fields from PDF — fixture registry, then heuristics."""
     registered = _extract_pdf_from_registry(content)
@@ -1249,7 +1533,9 @@ def extract_efatura_pdf(
         raise EfaturaPdfUnsupportedError(
             "PDF contains no extractable text; vision OCR is planned for a later slice"
         )
-    extraction = _parse_pdf_heuristics(text, buyer_vkn=buyer_vkn)
+    extraction = _parse_pdf_heuristics(
+        text, buyer_vkn=buyer_vkn, buyer_names=buyer_names
+    )
     extraction.raw["text_extractor"] = text_extractor
     return extraction
 

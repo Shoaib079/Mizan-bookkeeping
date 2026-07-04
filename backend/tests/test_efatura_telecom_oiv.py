@@ -12,7 +12,10 @@ from app.adapters.ocr_ai.efatura import (
     _amount_to_kurus,
     _normalize_tr_amount,
     _parse_pdf_heuristics,
+    _supplier_name_from_pdf,
     _supplier_vkn_from_pdf,
+    extract_efatura_pdf,
+    sanitize_supplier_name,
 )
 from app.features.invoices.validation import (
     InvoiceTotalsError,
@@ -151,6 +154,47 @@ def test_extraction_dataclass_other_taxes_default() -> None:
 # --- Fixture PDF test (requires turktelekom_oiv_55.pdf) ---
 
 FIXTURE_PDF = FIXTURES / "turktelekom_oiv_55.pdf"
+
+
+@pytest.mark.skipif(
+    not FIXTURE_PDF.exists(),
+    reason="turktelekom_oiv_55.pdf fixture not placed yet",
+)
+def test_turktelekom_oiv_55_supplier_name_not_buyer_fragment() -> None:
+    """TTNET seller name must come from header/VKN — never the buyer legal suffix."""
+    pdf_bytes = FIXTURE_PDF.read_bytes()
+    extraction = extract_efatura_pdf(
+        pdf_bytes, buyer_vkn=REGRESSION_FIXTURE_BUYER_VKN
+    )
+    assert extraction.supplier_vkn == "8590491872"
+    assert extraction.supplier_name in (None, "TTNET ANONIM SIRKETI")
+    if extraction.supplier_name is not None:
+        assert "TİCARET LİMİTED" not in extraction.supplier_name
+        assert "REMBETİKO" not in extraction.supplier_name.upper()
+
+
+def test_ttnet_supplier_name_anchored_to_seller_vkn() -> None:
+    snippet = """\
+TTNET ANONIM SIRKETI
+Gayrettepe Mahallesi Vefa Bayırı Sokak
+Vergi Numarası: 8590491872
+SAYIN
+REMBETİKO TURİZM RESTORAN İŞLETMECİLİĞİ SANAYİ VE
+TİCARET LİMİTED ŞİRKETİ
+VKN: 7342656849
+"""
+    name = _supplier_name_from_pdf(
+        snippet,
+        buyer_vkn=REGRESSION_FIXTURE_BUYER_VKN,
+        supplier_vkn="8590491872",
+    )
+    assert name == "TTNET ANONIM SIRKETI"
+
+
+def test_sanitize_rejects_buyer_legal_suffix_only() -> None:
+    buyer = "REMBETİKO TURİZM RESTORAN İŞLETMECİLİĞİ SANAYİ VE TİCARET LİMİTED ŞİRKETİ"
+    assert sanitize_supplier_name("TİCARET LİMİTED ŞİRKETİ", buyer_names=(buyer,)) is None
+    assert sanitize_supplier_name("TİCARET LİMİTED ŞİRKETİ") is None
 
 
 @pytest.mark.skipif(

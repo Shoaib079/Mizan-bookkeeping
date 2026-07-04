@@ -392,6 +392,8 @@ def _resolve_supplier_for_link(
         supplier_vkn=draft.supplier_vkn,
         supplier_name=draft.supplier_name,
         entity_vkn=entity.vkn if entity is not None else None,
+        entity_name=entity.name if entity is not None else None,
+        entity_legal_name=entity.legal_name if entity is not None else None,
     )
     if supplier is None:
         raise SupplierLinkError(
@@ -443,7 +445,15 @@ def _extract_and_store_efatura(
     pdf_intake_review_reason: str | None = None
 
     if source_type == InvoiceSourceType.EFATURA_PDF:
-        intake = extract_efatura_pdf_for_intake(content, buyer_vkn=entity.vkn)
+        intake = extract_efatura_pdf_for_intake(
+            content,
+            buyer_vkn=entity.vkn,
+            buyer_names=tuple(
+                name
+                for name in (entity.legal_name, entity.name)
+                if name and name.strip()
+            ),
+        )
         extraction = intake.extraction
         pdf_intake_review_reason = intake.review_reason
     else:
@@ -491,6 +501,8 @@ def _extract_and_store_efatura(
                 supplier_vkn=extraction.supplier_vkn,
                 supplier_name=extraction.supplier_name,
                 entity_vkn=entity.vkn,
+                entity_name=entity.name,
+                entity_legal_name=entity.legal_name,
             )
 
     return source_type, extraction, payload, linked_supplier, pdf_intake_review_reason

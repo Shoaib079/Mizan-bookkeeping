@@ -159,6 +159,22 @@ def test_find_or_create_supplier_skips_entity_buyer_vkn(
     assert supplier is None
 
 
+def test_find_or_create_supplier_rejects_buyer_name_fragment(
+    db_session, restaurant_a
+) -> None:
+    supplier = service.find_or_create_supplier_for_efatura(
+        db_session,
+        restaurant_a.id,
+        supplier_vkn="8590491872",
+        supplier_name="TİCARET LİMİTED ŞİRKETİ",
+        entity_legal_name="REMBETİKO TURİZM RESTORAN İŞLETMECİLİĞİ SANAYİ VE TİCARET LİMİTED ŞİRKETİ",
+    )
+    assert supplier is not None
+    assert supplier.vkn == "8590491872"
+    assert supplier.name == "Supplier 8590491872"
+    assert "TİCARET LİMİTED" not in supplier.name
+
+
 def test_invalid_vkn_format_rejected() -> None:
     with pytest.raises(ValueError, match="10 or 11 digits"):
         validate_vkn("12345")

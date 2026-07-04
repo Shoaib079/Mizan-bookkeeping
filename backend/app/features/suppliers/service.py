@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
+from app.adapters.ocr_ai.efatura import sanitize_supplier_name
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.suppliers.models import Supplier
@@ -131,11 +132,20 @@ def find_or_create_supplier_for_efatura(
     supplier_vkn: str,
     supplier_name: str | None = None,
     entity_vkn: str | None = None,
+    entity_name: str | None = None,
+    entity_legal_name: str | None = None,
 ) -> Supplier | None:
     """Link intake to supplier master — create row when VKN is new (e-Fatura upload)."""
     vkn = validate_vkn(supplier_vkn)
     if entity_vkn and vkn == validate_vkn(entity_vkn):
         return None
+
+    buyer_names = tuple(
+        name.strip()
+        for name in (entity_legal_name, entity_name)
+        if name and name.strip()
+    )
+    safe_name = sanitize_supplier_name(supplier_name, buyer_names=buyer_names)
 
     existing = find_by_vkn(session, entity_id, vkn)
     if existing is not None:
@@ -146,7 +156,7 @@ def find_or_create_supplier_for_efatura(
             session,
             entity_id,
             SupplierCreate(
-                name=_efatura_supplier_display_name(supplier_name, vkn),
+                name=_efatura_supplier_display_name(safe_name, vkn),
                 vkn=vkn,
                 notes=_EFATURA_AUTO_SUPPLIER_NOTE,
             ),
