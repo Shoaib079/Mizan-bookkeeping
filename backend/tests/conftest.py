@@ -48,7 +48,11 @@ def test_engine():
             text(f"GRANT TRUNCATE ON ALL TABLES IN SCHEMA public TO {APP_DB_ROLE}")
         )
     admin_engine.dispose()
-    engine = create_engine(settings.test_database_url, pool_pre_ping=True)
+    engine = create_engine(
+        settings.test_database_url,
+        pool_pre_ping=True,
+        connect_args={"options": "-c TimeZone=UTC"},
+    )
     yield engine
     engine.dispose()
 

@@ -14,7 +14,8 @@ from app.core.ledger.posting import PostingError
 from app.db.base import utcnow
 from app.db.session import entity_context
 from app.features.invoices.classification_learning import learn_invoice_classification_rule
-from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus
+from app.features.invoices.payload_helpers import pdf_text_from_payload as _pdf_text_from_payload
+from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
 from app.features.invoices.one_click_post import is_one_click_post_eligible
 from app.features.invoices.settings import is_invoice_supplier_auto_post_enabled
 from app.features.invoices.supplier_expense_learning import suggest_supplier_expense_account
@@ -30,14 +31,12 @@ def _draft_classification_confidence(draft: InvoiceDraft) -> str:
         if stored in ("high", "medium", "low"):
             return stored
         return "medium"
-    if isinstance(raw, dict) and (raw.get("assumed_vat") or raw.get("net_adjusted")):
-        return "low"
     stored = payload.get("classification_confidence")
     if stored in ("high", "medium", "low"):
         return stored
 
-    text_sample = payload.get("text_sample")
-    if isinstance(text_sample, str) and text_sample.strip():
+    text_sample = _pdf_text_from_payload(payload)
+    if text_sample:
         extraction = EInvoiceExtraction(
             supplier_name=draft.supplier_name,
             supplier_vkn=draft.supplier_vkn,
@@ -55,8 +54,7 @@ def _draft_classification_confidence(draft: InvoiceDraft) -> str:
 
 def _learn_from_draft_classification(session: Session, draft: InvoiceDraft) -> None:
     payload = draft.extraction_payload or {}
-    pdf_text = payload.get("text_sample")
-    text = pdf_text if isinstance(pdf_text, str) else None
+    text = _pdf_text_from_payload(payload)
     learn_invoice_classification_rule(
         session,
         extraction=EInvoiceExtraction(
@@ -112,6 +110,9 @@ def try_auto_post_supplier_draft_on_upload(
     draft: InvoiceDraft,
 ) -> bool:
     """Post immediately when setting is on and all trust gates pass; else leave draft."""
+    if InvoiceKind(draft.invoice_kind) != InvoiceKind.SUPPLIER:
+        return False
+
     if not is_invoice_supplier_auto_post_enabled(session, entity_id):
         return False
 

@@ -46,8 +46,12 @@ from app.features.invoices.classification_learning import (
     classify_invoice_intake,
     learn_invoice_classification_rule,
     record_invoice_rule_correction,
+    suggest_invoice_classification,
 )
-from app.features.invoices.supplier_expense_learning import suggest_supplier_expense_account
+from app.features.invoices.supplier_expense_learning import (
+    suggest_commission_expense_account,
+    suggest_supplier_expense_account,
+)
 from app.features.invoices.one_click_post import is_one_click_post_eligible
 from app.features.invoices.invoice_auto_post import confirm_and_post_trusted_supplier_draft
 from app.features.invoices.invoice_uniqueness import (
@@ -188,14 +192,12 @@ def _draft_classification_confidence(draft: InvoiceDraft) -> str:
         if stored in ("high", "medium", "low"):
             return stored
         return "medium"
-    if isinstance(raw, dict) and (raw.get("assumed_vat") or raw.get("net_adjusted")):
-        return "low"
     stored = payload.get("classification_confidence")
     if stored in ("high", "medium", "low"):
         return stored
 
-    text_sample = payload.get("text_sample")
-    if isinstance(text_sample, str) and text_sample.strip():
+    text_sample = _pdf_text_from_payload(payload)
+    if text_sample:
         extraction = EInvoiceExtraction(
             supplier_name=draft.supplier_name,
             supplier_vkn=draft.supplier_vkn,
@@ -216,6 +218,43 @@ def _set_draft_classification_confidence(
     confidence: str,
 ) -> None:
     payload = dict(draft.extraction_payload or {})
+    payload["classification_confidence"] = confidence
+    draft.extraction_payload = payload
+
+
+_PDF_EXTRACTION_MARKERS = ("assumed_vat", "net_adjusted", "fields_missing", "no_text_layer")
+
+
+def _recompute_confidence_on_confirm(session: Session, draft: InvoiceDraft) -> None:
+    """After owner confirms and totals validate, clear parse-quality markers
+    and recompute classification_confidence from the learned rule."""
+    from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
+
+    try:
+        validate_invoice_totals(
+            draft.net_kurus,
+            draft.gross_kurus,
+            draft.vat_breakdown or [],
+            other_taxes_kurus=draft.other_taxes_kurus,
+        )
+    except InvoiceTotalsError:
+        return
+
+    payload = dict(draft.extraction_payload or {})
+    raw = payload.get("raw")
+    if isinstance(raw, dict):
+        raw = dict(raw)
+        for marker in _PDF_EXTRACTION_MARKERS:
+            raw.pop(marker, None)
+        payload["raw"] = raw
+
+    from app.features.invoices.classification_learning import get_classification_confidence
+
+    confidence = get_classification_confidence(
+        session,
+        seller_vkn=draft.supplier_vkn,
+        pdf_text=_pdf_text_from_payload(payload),
+    )
     payload["classification_confidence"] = confidence
     draft.extraction_payload = payload
 
@@ -294,13 +333,23 @@ def _draft_out(session: Session, entity_id: uuid.UUID, draft: InvoiceDraft) -> I
             platform = session.get(OwnedDeliveryPlatform, draft.delivery_platform_id)
             if platform is not None:
                 linked_platform_name = platform.name
+        if (
+            InvoiceKind(draft.invoice_kind) == InvoiceKind.DELIVERY_COMMISSION
+            and expense_suggestion is None
+        ):
+            expense_suggestion = suggest_commission_expense_account(session)
+            if expense_suggestion is not None:
+                suggested_expense_account_id = expense_suggestion.account_id
+                expense_account_confidence = expense_suggestion.confidence
     classification_confidence = _draft_classification_confidence(draft)
+    payload = draft.extraction_payload or {}
+    classification_learned = bool(payload.get("classification_learned"))
     one_click_eligible = is_one_click_post_eligible(
         draft,
         classification_confidence=classification_confidence,
         expense_suggestion=expense_suggestion,
+        classification_learned=classification_learned,
     )
-    payload = draft.extraction_payload or {}
     posted_by_rule_auto = bool(payload.get("posted_by_rule_auto"))
     return _to_out(
         draft,
@@ -465,9 +514,11 @@ def _draft_extraction(draft: InvoiceDraft) -> EInvoiceExtraction:
     )
 
 
+from app.features.invoices.payload_helpers import pdf_text_from_payload as _pdf_text_from_payload
+
+
 def _commission_pdf_text(payload: dict) -> str | None:
-    sample = payload.get("text_sample")
-    return sample if isinstance(sample, str) else None
+    return _pdf_text_from_payload(payload)
 
 
 def _apply_iade_intake(
@@ -492,12 +543,14 @@ def _apply_commission_intake(
         return InvoiceKind.SUPPLIER.value, None, review_reason, "high"
 
     pdf_text = _commission_pdf_text(payload)
+    learned_suggestion = suggest_invoice_classification(session, extraction, pdf_text=pdf_text)
     invoice_kind, learned_platform_id, confidence, learned_review = classify_invoice_intake(
         session,
         extraction,
         pdf_text=pdf_text,
     )
     payload["classification_confidence"] = confidence
+    payload["classification_learned"] = learned_suggestion is not None and learned_suggestion.learned
 
     if invoice_kind == InvoiceKind.SUPPLIER.value:
         if confidence in ("medium", "low"):
@@ -509,7 +562,7 @@ def _apply_commission_intake(
         reason = learned_review or review_reason
         return (
             InvoiceKind.DELIVERY_COMMISSION.value,
-            None,
+            learned_platform_id,
             reason,
             confidence,
         )
@@ -962,6 +1015,7 @@ def confirm_invoice_draft(
         draft.confirmed_by = actor_id
         draft.review_reason = None
         _learn_from_draft_classification(session, draft)
+        _recompute_confidence_on_confirm(session, draft)
         session.commit()
         session.refresh(draft)
 
@@ -1119,21 +1173,27 @@ def confirm_and_post_supplier_invoice_draft(
     expense_account_id: uuid.UUID,
     actor_id: uuid.UUID,
 ) -> PostInvoiceDraftOut:
-    """Confirm and post a trusted supplier invoice in one transaction."""
+    """Confirm and post a trusted invoice (supplier or commission) in one transaction."""
     _require_entity(session, entity_id)
 
     draft = _get_draft_row(session, entity_id, draft_id)
     with entity_context(session, entity_id):
-        expense_suggestion = (
-            suggest_supplier_expense_account(session, entity_id, draft.supplier_id)
-            if draft.supplier_id is not None
-            else None
-        )
+        if draft.supplier_id is not None:
+            expense_suggestion = suggest_supplier_expense_account(
+                session, entity_id, draft.supplier_id
+            )
+        elif InvoiceKind(draft.invoice_kind) == InvoiceKind.DELIVERY_COMMISSION:
+            expense_suggestion = suggest_commission_expense_account(session)
+        else:
+            expense_suggestion = None
         classification_confidence = _draft_classification_confidence(draft)
+        payload = draft.extraction_payload or {}
+        classification_learned = bool(payload.get("classification_learned"))
         if not is_one_click_post_eligible(
             draft,
             classification_confidence=classification_confidence,
             expense_suggestion=expense_suggestion,
+            classification_learned=classification_learned,
         ):
             raise DraftConfirmError("Invoice is not eligible for one-click post")
 
@@ -1146,6 +1206,35 @@ def confirm_and_post_supplier_invoice_draft(
             )
 
         assert expense_suggestion is not None
+
+        kind = InvoiceKind(draft.invoice_kind)
+
+        if kind == InvoiceKind.DELIVERY_COMMISSION:
+            require_delivery_enabled(session, entity_id)
+            draft.status = InvoiceDraftStatus.CONFIRMED.value
+            draft.confirmed_at = utcnow()
+            draft.confirmed_by = actor_id
+            draft.review_reason = None
+            _learn_from_draft_classification(session, draft)
+            _recompute_confidence_on_confirm(session, draft)
+            session.flush()
+
+            commission_result = post_delivery_commission_draft(
+                session,
+                entity_id,
+                draft.id,
+                expense_account_id=expense_account_id,
+                actor_id=actor_id,
+            )
+            draft = _get_draft_row(session, entity_id, draft_id)
+            return PostInvoiceDraftOut(
+                draft=_draft_out(session, entity_id, draft),
+                journal_entry_id=commission_result.journal_entry.id,
+                journal_entry_date=commission_result.journal_entry.entry_date,
+                journal_entry_description=commission_result.journal_entry.description,
+                journal_entry_source=commission_result.journal_entry.source,
+                delivery_platform_id=commission_result.delivery_platform_id,
+            )
 
         result = confirm_and_post_trusted_supplier_draft(
             session,

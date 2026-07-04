@@ -16,14 +16,17 @@ class InvoiceClassificationRule(EntityScopedMixin, Base):
     __table_args__ = (
         UniqueConstraint(
             "entity_id",
+            "seller_vkn",
             "match_token",
-            name="uq_invoice_classification_rules_entity_token",
+            name="uq_invoice_classification_rules_entity_vkn_token",
         ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     match_token: Mapped[str] = mapped_column(String(512), nullable=False)
-    seller_vkn: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    seller_vkn: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="", server_default="", index=True
+    )
     invoice_kind: Mapped[str] = mapped_column(String(32), nullable=False)
     delivery_platform_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),

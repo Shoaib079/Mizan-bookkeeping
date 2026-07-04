@@ -59,6 +59,29 @@ def derive_invoice_match_token(
     return normalize_expense_item_text(extraction.supplier_name or "")
 
 
+def get_classification_confidence(
+    session: Session,
+    *,
+    seller_vkn: str | None,
+    pdf_text: str | None = None,
+) -> str:
+    """Return the best learned confidence label for this seller, or "medium" default."""
+    vkn = (seller_vkn or "").strip()
+    if not vkn:
+        return "medium"
+    rules = list(
+        session.scalars(
+            select(InvoiceClassificationRule).where(
+                InvoiceClassificationRule.seller_vkn == vkn,
+            )
+        )
+    )
+    if not rules:
+        return "medium"
+    best = max(rules, key=lambda r: (r.confirmation_count, r.confirmations_since_correction))
+    return confidence_label(best.confirmation_count, best.confirmations_since_correction)
+
+
 def _matching_rules(
     session: Session,
     *,
@@ -175,7 +198,7 @@ def learn_invoice_classification_rule(
     if not token:
         return
 
-    seller_vkn = (extraction.supplier_vkn or "").strip() or None
+    seller_vkn = (extraction.supplier_vkn or "").strip()
     platform_id = (
         delivery_platform_id
         if invoice_kind == InvoiceKind.DELIVERY_COMMISSION.value
@@ -185,18 +208,17 @@ def learn_invoice_classification_rule(
     now = utcnow()
     existing = session.scalar(
         select(InvoiceClassificationRule).where(
-            InvoiceClassificationRule.match_token == token
+            InvoiceClassificationRule.match_token == token,
+            InvoiceClassificationRule.seller_vkn == seller_vkn,
         )
     )
     if existing is not None:
         mapping_changed = (
             existing.invoice_kind != invoice_kind
             or existing.delivery_platform_id != platform_id
-            or existing.seller_vkn != seller_vkn
         )
         existing.invoice_kind = invoice_kind
         existing.delivery_platform_id = platform_id
-        existing.seller_vkn = seller_vkn
         if mapping_changed:
             existing.confirmation_count = 1
             existing.confirmations_since_correction = 1

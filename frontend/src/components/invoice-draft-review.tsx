@@ -431,8 +431,9 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
   const canOneClickPost =
     draft.one_click_post_eligible &&
     canLink &&
-    !isCommission &&
-    Boolean(draft.supplier_id);
+    (isCommission
+      ? Boolean(draft.delivery_platform_id)
+      : Boolean(draft.supplier_id));
   const canUnconfirm = canUnconfirmInvoiceDraft(draft.status);
   const canReject = canDiscardInvoiceDraft(draft.status);
   const isTerminal =
@@ -702,9 +703,13 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
           onSubmit={onConfirmAndPost}
           className="rounded-lg border border-border bg-card p-4"
         >
-          <h2 className="mb-2 text-sm font-semibold">Post to ledger</h2>
+          <h2 className="mb-2 text-sm font-semibold">
+            {isCommission ? "Post commission to clearing" : "Post to ledger"}
+          </h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            Trusted supplier invoice — confirm and post in one step.
+            {isCommission
+              ? "Trusted commission invoice — confirm and post in one step."
+              : "Trusted supplier invoice — confirm and post in one step."}
           </p>
           <div className="mb-3">
             <Label htmlFor="one-click-exp-account">Expense account</Label>
@@ -721,7 +726,11 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
             </Select>
           </div>
           <Button type="submit" disabled={posting || !expenseAccountId}>
-            {posting ? "Posting…" : "Post invoice & payable"}
+            {posting
+              ? "Posting…"
+              : isCommission
+                ? "Post commission e-Fatura"
+                : "Post invoice & payable"}
           </Button>
         </form>
       )}

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.chart_of_accounts.default_chart import DELIVERY_COMMISSION_EXPENSE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountType
 from app.core.learning import LearningDomain, confidence_label, record_learning_correction
@@ -36,6 +37,22 @@ def _validate_expense_account(
     ):
         return None
     return account
+
+
+def suggest_commission_expense_account(
+    session: Session,
+) -> SupplierExpenseAccountSuggestion | None:
+    """Commission invoices always use the seeded 5500 account."""
+    account = session.scalar(
+        select(Account).where(Account.code == DELIVERY_COMMISSION_EXPENSE_CODE)
+    )
+    if account is None or not account.is_active:
+        return None
+    return SupplierExpenseAccountSuggestion(
+        account_id=account.id,
+        confidence="high",
+        learned=False,
+    )
 
 
 def suggest_supplier_expense_account(

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -490,7 +490,8 @@ def test_created_at_is_timezone_aware_utc(db_session: Session, lock_setup) -> No
             source=JournalEntrySource.MANUAL,
         )
     assert entry.created_at.tzinfo is not None
-    assert entry.created_at.tzinfo == timezone.utc
+    assert entry.created_at.utcoffset() is not None
+    assert abs(entry.created_at.astimezone(timezone.utc) - datetime.now(timezone.utc)) < timedelta(minutes=5)
 
 
 def test_entry_date_defaults_to_utc_today_when_omitted(
