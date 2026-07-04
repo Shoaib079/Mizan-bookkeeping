@@ -251,6 +251,7 @@ def _to_out(
         invoice_date=draft.invoice_date,
         net_kurus=draft.net_kurus,
         gross_kurus=draft.gross_kurus,
+        other_taxes_kurus=draft.other_taxes_kurus,
         vat_breakdown=draft.vat_breakdown,
         currency=draft.currency,
         extraction_payload=draft.extraction_payload,
@@ -400,7 +401,10 @@ def _extract_and_store_efatura(
         try:
             extraction = extract_efatura_xml(content)
             validate_invoice_totals(
-                extraction.net_kurus, extraction.gross_kurus, extraction.vat_breakdown
+                extraction.net_kurus,
+                extraction.gross_kurus,
+                extraction.vat_breakdown,
+                other_taxes_kurus=extraction.other_taxes_kurus,
             )
         except (EfaturaExtractionError, InvoiceTotalsError) as exc:
             raise ValueError(str(exc)) from exc
@@ -453,6 +457,7 @@ def _draft_extraction(draft: InvoiceDraft) -> EInvoiceExtraction:
         gross_kurus=draft.gross_kurus,
         vat_breakdown=draft.vat_breakdown or [],
         currency=draft.currency,
+        other_taxes_kurus=draft.other_taxes_kurus,
         invoice_type_code=(draft.extraction_payload or {}).get("invoice_type_code"),
         referenced_invoice_number=draft.referenced_invoice_number,
         referenced_invoice_date=draft.referenced_invoice_date,
@@ -695,6 +700,7 @@ def create_efatura_draft_from_upload(
             invoice_date=extraction.invoice_date,
             net_kurus=extraction.net_kurus,
             gross_kurus=extraction.gross_kurus,
+            other_taxes_kurus=extraction.other_taxes_kurus,
             vat_breakdown=extraction.vat_breakdown,
             currency=extraction.currency,
             extraction_payload=payload,

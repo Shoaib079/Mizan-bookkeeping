@@ -16,11 +16,17 @@ class InvoiceTotalsError(ValueError):
 
 
 def validate_invoice_totals(
-    net_kurus: int, gross_kurus: int, vat_breakdown: list[VatBreakdownLine]
+    net_kurus: int,
+    gross_kurus: int,
+    vat_breakdown: list[VatBreakdownLine],
+    *,
+    other_taxes_kurus: int = 0,
 ) -> None:
-    """Require sum(vat) + net == gross with zero tolerance (integer kuruş)."""
+    """Require net + sum(vat) + other_taxes == gross with zero tolerance (integer kuruş)."""
     vat_sum = sum(int(line["vat_kurus"]) for line in vat_breakdown)
-    if net_kurus + vat_sum != gross_kurus:
+    expected = net_kurus + vat_sum + other_taxes_kurus
+    if expected != gross_kurus:
         raise InvoiceTotalsError(
-            f"net_kurus ({net_kurus}) + vat ({vat_sum}) != gross_kurus ({gross_kurus})"
+            f"net_kurus ({net_kurus}) + vat ({vat_sum})"
+            f" + other_taxes ({other_taxes_kurus}) != gross_kurus ({gross_kurus})"
         )

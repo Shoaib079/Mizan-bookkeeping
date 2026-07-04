@@ -72,6 +72,9 @@ class InvoiceDraft(EntityScopedMixin, Base):
     invoice_date: Mapped[date] = mapped_column(Date, nullable=False)
     net_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
     gross_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
+    other_taxes_kurus: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     vat_breakdown: Mapped[list] = mapped_column(JSONB, nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="TRY")
     extraction_payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)

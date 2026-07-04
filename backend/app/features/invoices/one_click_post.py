@@ -76,6 +76,7 @@ def is_one_click_post_eligible(
             draft.net_kurus,
             draft.gross_kurus,
             draft.vat_breakdown or [],
+            other_taxes_kurus=draft.other_taxes_kurus,
         )
     except InvoiceTotalsError:
         return False

@@ -43,6 +43,7 @@ class EInvoiceExtraction:
     gross_kurus: int
     vat_breakdown: list[VatBreakdownLine]
     currency: str = "TRY"
+    other_taxes_kurus: int = 0
     invoice_type_code: str | None = None
     referenced_invoice_number: str | None = None
     referenced_invoice_date: date | None = None
@@ -255,7 +256,10 @@ def _extract_pdf_from_registry(content: bytes) -> EInvoiceExtraction | None:
     if fields is None:
         return None
     vat_breakdown = list(fields["vat_breakdown"])
-    validate_invoice_totals(fields["net_kurus"], fields["gross_kurus"], vat_breakdown)
+    ot = fields.get("other_taxes_kurus", 0)
+    validate_invoice_totals(
+        fields["net_kurus"], fields["gross_kurus"], vat_breakdown, other_taxes_kurus=ot
+    )
     return EInvoiceExtraction(
         supplier_name=fields.get("supplier_name"),
         supplier_vkn=fields.get("supplier_vkn"),
@@ -265,6 +269,7 @@ def _extract_pdf_from_registry(content: bytes) -> EInvoiceExtraction | None:
         gross_kurus=fields["gross_kurus"],
         vat_breakdown=vat_breakdown,
         currency=fields.get("currency", "TRY"),
+        other_taxes_kurus=ot,
         invoice_type_code=fields.get("invoice_type_code"),
         referenced_invoice_number=fields.get("referenced_invoice_number"),
         referenced_invoice_date=fields.get("referenced_invoice_date"),
@@ -566,9 +571,14 @@ def _supplier_vkn_from_pdf(text: str, *, buyer_vkn: str | None = None) -> str | 
     if not buyer:
         buyer = _buyer_vkn_from_pdf(text)
     if buyer:
-        others = [tax_id for tax_id in _collect_tax_ids(text) if tax_id != buyer]
+        all_ids = _collect_tax_ids(text)
+        others = [tax_id for tax_id in all_ids if tax_id != buyer]
         if len(others) == 1:
             return others[0]
+        if len(others) > 1 and len(others) < len(all_ids):
+            valid = [v for v in others if is_valid_vkn_or_tckn(v)]
+            if valid:
+                return valid[0]
 
     header_limit = 2500
     sayin_pos = text.upper().find("SAYIN")
@@ -668,10 +678,38 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
             net_match = matrah_match
 
     gross_match = _find_labeled_amount(text, _PDF_GROSS_LABELS)
-    if not net_match or not gross_match:
+
+    # KDV %<rate> (Matrah <base>) <vat> — telecom/utility format
+    kdv_matrah_vat: list[VatBreakdownLine] = []
+    for m in re.finditer(
+        r"KDV\s*%\s*(\d+(?:[.,]\d+)?)\s*\(\s*Matrah\s+([\d.,]+)\s*\)\s*([\d.,]+)",
+        text,
+        re.IGNORECASE,
+    ):
+        rate = float(m.group(1).replace(",", "."))
+        base = _amount_to_kurus(_normalize_tr_amount(m.group(2)))
+        vat = _amount_to_kurus(_normalize_tr_amount(m.group(3)))
+        kdv_matrah_vat.append(
+            {"rate_percent": rate, "base_kurus": base, "vat_kurus": vat}
+        )
+
+    # ÖİV %<rate> (Matrah <base>) <oiv> — telecom special consumption tax
+    other_taxes_kurus = 0
+    for m in re.finditer(
+        r"[ÖO][İI]V\s*%\s*(\d+(?:[.,]\d+)?)\s*\(\s*Matrah\s+([\d.,]+)\s*\)\s*([\d.,]+)",
+        text,
+        re.IGNORECASE,
+    ):
+        other_taxes_kurus += _amount_to_kurus(_normalize_tr_amount(m.group(3)))
+
+    has_net = net_match is not None or bool(kdv_matrah_vat)
+    if not has_net or not gross_match:
         raise EfaturaPdfUnsupportedError("Could not find net/gross totals in PDF text")
 
-    net_kurus = _amount_to_kurus(_normalize_tr_amount(net_match.group(1)))
+    if net_match:
+        net_kurus = _amount_to_kurus(_normalize_tr_amount(net_match.group(1)))
+    else:
+        net_kurus = kdv_matrah_vat[0]["base_kurus"]
     gross_kurus = _amount_to_kurus(_normalize_tr_amount(gross_match.group(1)))
 
     vat_breakdown: list[VatBreakdownLine] = []
@@ -729,23 +767,30 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
                     }
                 )
 
+    # KDV Matrah lines as VAT breakdown fallback (telecom/utility)
+    if not vat_breakdown and kdv_matrah_vat:
+        vat_breakdown = list(kdv_matrah_vat)
+
     raw_flags: dict[str, Any] = {}
+    if other_taxes_kurus:
+        raw_flags["other_taxes_kurus"] = other_taxes_kurus
     if not vat_breakdown:
-        vat_total = gross_kurus - net_kurus
+        vat_total = gross_kurus - net_kurus - other_taxes_kurus
         vat_breakdown = [{"rate_percent": 20, "base_kurus": net_kurus, "vat_kurus": vat_total}]
         raw_flags["assumed_vat"] = True
     else:
         vat_sum = sum(line["vat_kurus"] for line in vat_breakdown)
-        if net_kurus + vat_sum != gross_kurus:
-            # Pre-discount Mal Hizmet total or multi-fee utility bill — align net to VAT.
-            net_kurus = gross_kurus - vat_sum
+        if net_kurus + vat_sum + other_taxes_kurus != gross_kurus:
+            net_kurus = gross_kurus - vat_sum - other_taxes_kurus
             for line in vat_breakdown:
                 rate = line["rate_percent"]
                 if rate > 0:
                     line["base_kurus"] = round(line["vat_kurus"] * 100 / rate)
             raw_flags["net_adjusted"] = True
 
-    validate_invoice_totals(net_kurus, gross_kurus, vat_breakdown)
+    validate_invoice_totals(
+        net_kurus, gross_kurus, vat_breakdown, other_taxes_kurus=other_taxes_kurus
+    )
 
     invoice_type_code = _parse_invoice_type_code_pdf(text)
     referenced_invoice_number, referenced_invoice_date = _parse_referenced_invoice_pdf(text)
@@ -765,6 +810,7 @@ def _parse_pdf_heuristics(text: str, *, buyer_vkn: str | None = None) -> EInvoic
         gross_kurus=gross_kurus,
         vat_breakdown=vat_breakdown,
         currency="TRY",
+        other_taxes_kurus=other_taxes_kurus,
         invoice_type_code=invoice_type_code,
         referenced_invoice_number=referenced_invoice_number,
         referenced_invoice_date=referenced_invoice_date,
@@ -1102,6 +1148,7 @@ def _vision_intake_review_reason(
             extraction.net_kurus,
             extraction.gross_kurus,
             extraction.vat_breakdown,
+            other_taxes_kurus=extraction.other_taxes_kurus,
         )
     except InvoiceTotalsError:
         return "vision_totals_mismatch"

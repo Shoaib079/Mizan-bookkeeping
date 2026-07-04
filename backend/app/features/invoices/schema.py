@@ -85,6 +85,7 @@ class InvoiceDraftOut(BaseModel):
     invoice_date: date
     net_kurus: int
     gross_kurus: int
+    other_taxes_kurus: int = 0
     vat_breakdown: list[VatBreakdownOut]
     currency: str
     extraction_payload: dict[str, Any]

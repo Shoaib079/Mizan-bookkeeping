@@ -60,13 +60,17 @@ def build_invoice_posting_lines(
     net_kurus: int,
     gross_kurus: int,
     vat_breakdown: list,
+    other_taxes_kurus: int = 0,
 ) -> list[PostingLine]:
     """GL pattern: debit expense + input VAT; credit AP for gross.
 
     Expense is gross minus all VAT lines (equals net when totals validate). Negative
     VAT lines (e.g. Getir line discounts) credit input VAT so debits equal credits.
+    ÖİV and other non-deductible taxes are included in the expense (not input VAT).
     """
-    validate_invoice_totals(net_kurus, gross_kurus, vat_breakdown)
+    validate_invoice_totals(
+        net_kurus, gross_kurus, vat_breakdown, other_taxes_kurus=other_taxes_kurus
+    )
 
     if vat_breakdown:
         vat_sum = sum(int(entry["vat_kurus"]) for entry in vat_breakdown)
@@ -130,6 +134,7 @@ def build_supplier_credit_posting_lines(
     net_kurus: int,
     gross_kurus: int,
     vat_breakdown: list,
+    other_taxes_kurus: int = 0,
 ) -> list[PostingLine]:
     """Reverse supplier invoice pattern: credit expense + input VAT; debit AP."""
     lines = build_invoice_posting_lines(
@@ -139,6 +144,7 @@ def build_supplier_credit_posting_lines(
         net_kurus=net_kurus,
         gross_kurus=gross_kurus,
         vat_breakdown=vat_breakdown,
+        other_taxes_kurus=other_taxes_kurus,
     )
     reversed_lines = [
         PostingLine(
@@ -275,6 +281,7 @@ def post_supplier_credit_draft_to_ledger(
             net_kurus=draft.net_kurus,
             gross_kurus=draft.gross_kurus,
             vat_breakdown=draft.vat_breakdown,
+            other_taxes_kurus=draft.other_taxes_kurus,
         )
     except InvoiceTotalsError as exc:
         raise DraftPostError(str(exc)) from exc
@@ -407,6 +414,7 @@ def post_supplier_invoice_draft_to_ledger(
             net_kurus=draft.net_kurus,
             gross_kurus=draft.gross_kurus,
             vat_breakdown=draft.vat_breakdown,
+            other_taxes_kurus=draft.other_taxes_kurus,
         )
     except InvoiceTotalsError as exc:
         raise DraftPostError(str(exc)) from exc
