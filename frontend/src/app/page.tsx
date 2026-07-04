@@ -11,7 +11,10 @@ import {
   SalesMixChart,
   SalesExpensesNetChart,
 } from "@/components/dashboard/dashboard-charts";
-import { WeeklyChart } from "@/components/dashboard/weekly-chart";
+import {
+  WeeklyChart,
+  type WeeklyChartStatus,
+} from "@/components/dashboard/weekly-chart";
 import { RecentEntriesCard } from "@/components/dashboard/recent-entries-card";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
@@ -55,6 +58,8 @@ function DashboardBody() {
   const [range, setRange] = useState(currentMonthRange);
   const [data, setData] = useState<DashboardRead | null>(null);
   const [timeSeries, setTimeSeries] = useState<TimeSeriesRead | null>(null);
+  const [timeSeriesStatus, setTimeSeriesStatus] =
+    useState<WeeklyChartStatus>("loading");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,25 +67,38 @@ function DashboardBody() {
     if (!entityId) {
       setData(null);
       setTimeSeries(null);
+      setTimeSeriesStatus("loading");
       return;
     }
     setLoading(true);
+    setTimeSeriesStatus("loading");
     setError(null);
-    try {
-      const [dashRes, tsRes] = await Promise.all([
-        apiFetch<DashboardRead>(
-          `/entities/${entityId}/dashboard?from=${range.from}&to=${range.to}`,
-        ),
-        apiFetch<TimeSeriesRead>(
+
+    const tsFetch = (async () => {
+      try {
+        const tsRes = await apiFetch<TimeSeriesRead>(
           `/entities/${entityId}/reports/time-series?from=${range.from}&to=${range.to}`,
-        ).catch(() => null),
-      ]);
+        );
+        setTimeSeries(tsRes);
+        setTimeSeriesStatus("loaded");
+      } catch (err) {
+        console.warn("Failed to load trend data:", err);
+        setTimeSeries(null);
+        setTimeSeriesStatus("error");
+      }
+    })();
+
+    try {
+      const dashRes = await apiFetch<DashboardRead>(
+        `/entities/${entityId}/dashboard?from=${range.from}&to=${range.to}`,
+      );
       setData(dashRes);
-      setTimeSeries(tsRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
       setData(null);
       setTimeSeries(null);
+      setTimeSeriesStatus("loading");
+      await tsFetch;
     } finally {
       setLoading(false);
     }
@@ -262,9 +280,12 @@ function DashboardBody() {
             </div>
           )}
 
-          {canReadFinancialReports && timeSeries && timeSeries.daily.length > 0 && (
+          {canReadFinancialReports && (
             <div className="mt-6">
-              <WeeklyChart daily={timeSeries.daily} />
+              <WeeklyChart
+                status={timeSeriesStatus}
+                daily={timeSeries?.daily ?? []}
+              />
             </div>
           )}
 

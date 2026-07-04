@@ -6,11 +6,36 @@ describe("WeeklyChart", () => {
     expect(typeof mod.WeeklyChart).toBe("function");
   });
 
-  it("returns null when daily array is empty", async () => {
+  it("always renders card frame (never returns null)", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./weekly-chart.tsx", import.meta.url), "utf8"),
     );
-    expect(source).toContain("if (daily.length === 0) return null");
+    expect(source).not.toContain("return null");
+    expect(source).toContain("Last 7 days");
+  });
+
+  it("shows loading skeleton when status is loading", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(new URL("./weekly-chart.tsx", import.meta.url), "utf8"),
+    );
+    expect(source).toContain('status === "loading"');
+    expect(source).toContain("<Skeleton");
+  });
+
+  it("shows empty state when loaded with no daily data", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(new URL("./weekly-chart.tsx", import.meta.url), "utf8"),
+    );
+    expect(source).toContain('status === "loaded" && daily.length === 0');
+    expect(source).toContain("No sales or expenses recorded for this period");
+  });
+
+  it("shows error state when status is error", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(new URL("./weekly-chart.tsx", import.meta.url), "utf8"),
+    );
+    expect(source).toContain('status === "error"');
+    expect(source).toContain("Couldn&apos;t load trend data");
   });
 
   it("slices last 7 entries from daily data", async () => {
@@ -74,15 +99,39 @@ describe("dashboard weekly chart wiring", () => {
     expect(source).not.toContain("DailyTrendChart");
   });
 
-  it("fetches time-series endpoint in parallel with dashboard", async () => {
+  it("tracks time-series fetch status separately", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../../app/page.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("reports/time-series");
-    expect(source).toContain("Promise.all");
+    expect(source).toContain("timeSeriesStatus");
+    expect(source).toContain('setTimeSeriesStatus("loaded")');
+    expect(source).toContain('setTimeSeriesStatus("error")');
+  });
+
+  it("warns on time-series failure instead of swallowing", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../../app/page.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain('console.warn("Failed to load trend data:"');
+    expect(source).not.toContain(".catch(() => null)");
+  });
+
+  it("always renders WeeklyChart when canReadFinancialReports (not gated on data length)", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../../app/page.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("canReadFinancialReports && (");
+    expect(source).toContain("status={timeSeriesStatus}");
+    expect(source).not.toContain("timeSeries.daily.length > 0");
   });
 
   it("gates weekly chart behind canReadFinancialReports", async () => {
@@ -92,6 +141,6 @@ describe("dashboard weekly chart wiring", () => {
         "utf8",
       ),
     );
-    expect(source).toContain("canReadFinancialReports && timeSeries");
+    expect(source).toContain("canReadFinancialReports");
   });
 });
