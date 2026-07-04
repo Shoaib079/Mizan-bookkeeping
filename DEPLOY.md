@@ -6,12 +6,12 @@ Plain-English steps to provision and go live with Mizan. **Staging first** — r
 
 | Layer | Provider | Notes |
 |-------|----------|-------|
-| Frontend | **Netlify** | Next.js 15 in `frontend/` — see `netlify.toml` |
+| Frontend | **Vercel** | Next.js 15 in `frontend/` — see `vercel.json` + `next.config.ts` |
 | API + workers | **Render** (or Railway) | FastAPI web + Celery worker + Celery beat — see `render.yaml` |
 | Postgres | **Neon**, Supabase, or managed Postgres | `DATABASE_URL` + `DATABASE_ADMIN_URL` |
 | Redis | **Upstash** or managed Redis | Celery broker + result backend |
 | Off-site backups | **Cloudflare R2** or S3 | `BACKUP_S3_*` env vars |
-| Uploads | **Persistent disk** on API host | `/app/data/uploads` — not Netlify |
+| Uploads | **Persistent disk** on API host | `/app/data/uploads` — API host only |
 
 ---
 
@@ -19,7 +19,7 @@ Plain-English steps to provision and go live with Mizan. **Staging first** — r
 
 1. **Staging dry-run first.** Deploy a prod-like **staging** environment and run migrate + verify + smoke there before touching production.
 2. Copy `.env.production.example` into your host secret stores — **never commit real secrets**.
-3. Accounts needed: Netlify, Render (or Railway), managed Postgres, Redis, S3-compatible storage, Clerk.
+3. Accounts needed: Vercel, Render (or Railway), managed Postgres, Redis, S3-compatible storage, Clerk.
 
 ---
 
@@ -82,8 +82,8 @@ Use `rediss://` if your provider requires TLS.
    - **mizan-celery-beat** — `celery -A app.workers.celery_app beat --loglevel=info`
 3. Attach a **persistent disk** (10 GB+) mounted at `/app/data` on **api** and **worker** (uploads + local backup cache).
 4. Paste env vars from `.env.production.example`. Mark secrets as **sync: false** in Render.
-5. Set `CORS_ORIGINS` to your Netlify URL(s), comma-separated — **not** the localhost default, e.g.  
-   `https://app.example.com,https://staging--mizan.netlify.app`
+5. Set `CORS_ORIGINS` to your Vercel URL(s), comma-separated — **not** the localhost default, e.g.  
+   `https://app.example.com,https://mizan.vercel.app`
 6. Deploy **staging** first; note the public API URL (e.g. `https://mizan-api.onrender.com`).
 
 **Production boot guards (fail fast):**
@@ -99,19 +99,17 @@ Use `rediss://` if your provider requires TLS.
 
 ---
 
-## 5. Frontend (Netlify)
+## 5. Frontend (Vercel)
 
-1. Import the repo in Netlify.
-2. Build settings are in `netlify.toml`:
-   - Base directory: `frontend`
-   - Build: `npm run build`
-   - Publish: `.next` (Netlify Next.js runtime handles SSR)
-3. Set environment variables:
+1. Import the repo in Vercel.
+2. Set **Root Directory** to `frontend` in the Vercel dashboard (or via `vercel.json`).
+3. Build command: `npm run build` (auto-detected from Next.js).
+4. Set environment variables:
    - `NEXT_PUBLIC_API_URL` → your Render API URL (HTTPS)
    - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` → Clerk publishable key (**live** for production)
-4. Deploy staging; confirm HTTPS on the `*.netlify.app` URL.
+5. Deploy staging; confirm HTTPS on the `*.vercel.app` URL.
 
-**Optional same-origin API proxy:** Uncomment the `[[redirects]]` block in `netlify.toml` and set `BACKEND_URL` in Netlify if you prefer `/api/*` on the frontend domain. Default is direct `NEXT_PUBLIC_API_URL` calls (requires correct `CORS_ORIGINS` on the API).
+**Security headers** are configured in `next.config.ts` `headers()` — X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy, and immutable cache for `/_next/static/`. Verify after deploy: `curl -I https://<vercel-domain>` should show `x-frame-options: DENY`.
 
 ---
 
@@ -198,17 +196,17 @@ Download the latest `mizan-backup-*.tar.gz` from the bucket and follow `OPS_REST
 
 ## 8. Custom domain + HTTPS
 
-**Netlify (frontend)**
+**Vercel (frontend)**
 
-1. Domain → Add custom domain → follow DNS instructions.
-2. Netlify provisions SSL automatically (Let's Encrypt).
+1. Settings → Domains → add custom domain → follow DNS instructions.
+2. Vercel provisions SSL automatically.
 
 **Render (API)**
 
 1. Settings → Custom Domain → add `api.example.com`.
 2. Render provisions SSL; point CNAME to Render.
 
-Update `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL` to the final HTTPS URLs before production cutover.
+Update `CORS_ORIGINS` on Render and `NEXT_PUBLIC_API_URL` on Vercel to the final HTTPS URLs before production cutover.
 
 ---
 
@@ -218,7 +216,7 @@ After migrate + verify + deploy:
 
 ```bash
 export API_URL='https://your-staging-api.onrender.com'
-export FRONTEND_ORIGIN='https://your-staging.netlify.app'
+export FRONTEND_ORIGIN='https://your-staging.vercel.app'
 ./scripts/smoke_staging.sh
 ```
 
@@ -276,7 +274,7 @@ Production (`APP_ENV=production`) emits **JSON logs** on stderr (level, message,
 |-------|-------|-------|
 | **Render (API)** | `GET /health/ready` | Already configured in `render.yaml` (`healthCheckPath`). Render restarts the service when readiness fails (DB down). |
 | **External uptime** | `GET /health/ready` on your public API URL | Optional but recommended — UptimeRobot, Better Stack, Pingdom, etc. Alert when non-200 or timeout. Interval 1–5 min. |
-| **Netlify (frontend)** | — | Static SPA — no API health check needed on Netlify. |
+| **Vercel (frontend)** | — | Next.js SSR — Vercel handles infrastructure monitoring. |
 
 Liveness (`GET /health`) is for quick “process up” checks; **use `/health/ready` for deploy and uptime monitors** (includes DB ping).
 
@@ -319,7 +317,7 @@ Scans **git-tracked** files for likely hardcoded secrets (long Clerk keys, AWS `
 
 | Check | Action |
 |-------|--------|
-| No secrets in git | Real keys only in Render / Netlify secret stores — never commit `.env` |
+| No secrets in git | Real keys only in Render / Vercel secret stores — never commit `.env` |
 | Rotate if leaked | If a key ever appeared in git history, rotate in Clerk/AWS and update host env |
 | Templates only in repo | `.env.example` / `.env.production.example` use placeholders only |
 | Backup keys separate | S3/R2 backup credentials in worker env only — not in frontend |
@@ -368,7 +366,7 @@ This is an **owner sign-off item**, not fully automatable in CI.
 2. **Security pass (§14):** `security_dependency_scan.sh`, `security_secrets_audit.sh`, `security_production_pytest.sh` all green.
 3. **KVKK sign-off (§14):** encryption at rest, backup bucket access, data-deletion path accepted before real people's data.
 4. Production Postgres: `migrate_production.sh` + `verify_production_db.sh`.
-5. Flip Clerk to **live** keys on production API + Netlify.
+5. Flip Clerk to **live** keys on production API + Vercel.
 6. Set production `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL`.
 7. Deploy API (pre-deploy migrate runs automatically on Render).
 8. Run `./scripts/smoke_staging.sh` against production URLs.
@@ -390,7 +388,7 @@ Use this on **staging first**, then repeat on production after cutover. Chart + 
 
 ### Walkthrough (first restaurant)
 
-1. **Sign in** — open the Netlify URL in a private window; complete Clerk sign-up or sign-in. If API returns 403 “invited”, ask the operator to provision your email first.
+1. **Sign in** — open the Vercel URL in a private window; complete Clerk sign-up or sign-in. If API returns 403 “invited”, ask the operator to provision your email first.
 2. **Create restaurant** — Settings → Restaurant & toggles → enter name → Create restaurant. Confirm chart count appears (auto-seeded). Save feature toggles → you land on the Dashboard setup checklist.
 3. **Opening balances** — Dashboard checklist → Post opening balances (or Settings → Opening balances). Enter go-live date and at least one cash/bank line + balancing equity/AP line → Validate → Post.
 4. **Invite staff** — Settings → Members → add by email (cashier or partner). They must be provisioned before they can sign in with Clerk.
@@ -425,7 +423,8 @@ Steps verified: `POST /entities` (chart + cash drawer) → opening balances vali
 
 | File | Purpose |
 |------|---------|
-| `netlify.toml` | Next.js build, security headers, optional API proxy |
+| `frontend/vercel.json` | Vercel framework + build config |
+| `frontend/next.config.ts` | Next.js config: security headers, redirects, cache rules |
 | `backend/Dockerfile` | Production uvicorn image; non-root `app` user; `postgresql-client` |
 | `render.yaml` | Web + Celery worker + beat; pre-deploy migrate + verify |
 | `.env.production.example` | Full env catalog |

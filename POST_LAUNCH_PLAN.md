@@ -2,7 +2,7 @@
 
 Actionable companion to `ROADMAP.md`. **Done** items are recorded so they are never rebuilt. **To-build** items are written as slices — each has a ready-to-paste **Cursor prompt**. Build one slice at a time; commit + push after each.
 
-Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `mizan-api-production-e574.up.railway.app` · DB Neon (PG18) · Auth Clerk (dev keys) · Backups → Cloudflare R2 (nightly).
+Live app (staging-mode): Frontend **Vercel** (migrated from Netlify) · API **Render** (`render.yaml`) · DB Neon (PG18) · Auth Clerk (dev keys) · Backups → Cloudflare R2 (nightly).
 
 ---
 
@@ -39,17 +39,57 @@ Live app (staging-mode): Frontend `jovial-licorice-be572c.netlify.app` · API `m
 
 | Priority | ID | Slice | Status |
 |----------|-----|-------|--------|
-| **1** | **IC-A → IC-D** | **Invoice classification & e-Fatura routing** (below) | **IC-C done** — IC-D deferred |
-| 2 | FP | Partner advance / drawing | **Done** (`v0.73.23`) |
-| 3 | FS | Salary period + auto-clear advance | **Done** (`v0.73.24`) |
-| 4 | **IE-A → IE-C** | **Invoice PDF extraction** (never reject + vision fallback + PyMuPDF hardening) | **Done** — IE-A `v0.74.0`, IE-B `v0.74.1`, IE-C `v0.74.2` |
-| 5 | P3 | Off-site backup of uploads | Queued |
-| 6 | P5 | Delete company UI | Queued |
-| 7 | P6 | Production cutover (ops) | Owner |
-| 8 | P8 | Groceries / no-invoice card spend | Design TBD |
+| — | IC-A→D | Invoice classification & e-Fatura routing | **Done** (`v0.73.20`–`.26`) |
+| — | FP / FS | Partner advance / drawing · Salary period | **Done** (`v0.73.23` / `.24`) |
+| — | IE-A→C | Invoice PDF never-reject + vision + hardening | **Done** (`v0.74.0`–`.2`) |
+| — | SEC-1→4 | Security audit fixes (POS guards, /users, actor, entity-switch, +4) | **Done** (`v0.75.0`–`.3`) |
+| — | Telecom | KDV Matrah + ÖİV extraction | **Done** (`v0.76.0`) |
+| — | Learning | Invoice learning pipeline + commission one-click | **Done** |
+| **0** | **DEPLOY** | **Deploy catch-up: ship 72 commits + Netlify→Vercel cleanup** | **Config done** — owner: env vars + deploy + smoke |
+| **1** | **UX-A** | Retire "New" menu, rename Record → "Add", unify dashboard shortcuts | Phase 13 |
+| **2** | **UX-B** | Data-first global search (suppliers + commodities, names only) | Phase 13 |
+| **3** | **DASH-A** | Dashboard composition charts (free — existing data) | Phase 13 |
+| **4** | **UX-C** | Unified "Add document" upload (auto-detect + confirm) | Phase 13 |
+| **5** | **DASH-B** | Time-series aggregation endpoint + trend charts | Phase 13 |
+| **6** | **SRCH-B** | Spend totals in search (reuses DASH-B) | Phase 13 |
+| **7** | **UX-D** | Self-curating "Most used" in Add | Phase 13 |
+| — | P3 / P5 / P8 | Upload backup · Delete company UI · Groceries path | Queued |
 | — | P4, P7 | Backup prune, lint | Optional |
 
-**Rule:** Finish **IC-A through IC-C** before FP/FS. **IC-D** (learning) only after IC-C is stable in production for a few weeks.
+**Rule:** one slice at a time, in the numbered order. Phase 13 slices assume the app is LIVE — every backend addition must be entity-scoped (RLS) and date-range bounded like the rest.
+
+---
+
+## 🚀 Phase 13 — Post-launch UX & insights
+
+**Context:** App is live. Goal is to make it feel professionally built and easy to navigate — one place to record, one place to find, a dashboard that shows how the business is doing. Follow the UX GLOBAL RULES (reuse forms/handlers/APIs, ONE action source, redirects, NO accounting changes, keep auth/role/toggle gates, update nav tests). One slice at a time. Cursor writes tests but does NOT run them — owner runs locally.
+
+**Sequencing logic:** UX-A and UX-B both touch the top bar / command-palette → sequential, never parallel. DASH-B builds a by-day/by-category aggregation endpoint ONCE; it powers both the trend charts AND the SRCH-B search spend-totals — do not build that aggregation twice. UX-A is the quick win that resolves the "New vs Record" redundancy.
+
+**Decisions locked (owner):** create surface stays in the sidebar (renamed from "Record" — working name **"Add"**; owner may rename). "New" menu is retired (it's a strict subset of Record — verified). Top search bar = data-first FIND (suppliers + commodities), separate from Add. Active restaurant name stays visible (sidebar top + top-right switcher — unchanged). Dashboard is the post-login landing page and keeps its daily shortcut buttons.
+
+### UX-A — Retire "New", rename Record → "Add", unify dashboard shortcuts
+Frontend only, no backend. Remove the sidebar "New" dropdown (`new-menu.tsx`) + `NEW_COMMAND_QUICK_ACTIONS` + the `quickAction` duplicate entries in `app-routes.ts` — every item already exists in `RECORD_ACTIONS` (verified: New = strict subset). Rename the "Record" sidebar hub + surface to "Add" (owner to confirm label). Keep the dashboard's Daily sales / Add expense / Close day buttons but point ALL of them at the same `openRecordAction` source (today "Close day" is a `<Link>`, the other two are dialogs — unify). Keep the entity switcher untouched. Tests: no orphaned New refs; dashboard buttons + Add surface share one action source; gated actions still hidden for view-only.
+
+### UX-B — Data-first global search
+Frontend; uses EXISTING endpoints. Rewrite the top-bar search (`command-palette.tsx`) as one box, ranked: **Suppliers** (GET `.../suppliers?q=` — already searches name+VKN) → **Items/commodities** (expense-items `?q=` — already normalized, so "milk"/"süt" tolerance works) → **Pages** (appRoutes) → **Actions** (RECORD_ACTIONS, role-gated). Empty query = pages+actions only. Placeholder "Search suppliers, items, pages…". Debounce ~250ms, entity-scoped, discard stale responses on keystroke/entity switch (reuse the SEC-3 stale-guard pattern). NO spend totals yet — leave a subtitle slot on result rows for SRCH-B. Tests: supplier by name; "milk"/"süt" finds the item; stale entity results don't render; role-gated actions hidden.
+
+### DASH-A — Dashboard composition charts (free)
+Frontend only; data already in the dashboard payload. Add: **Sales mix** (cash/POS card/delivery/other — donut or bar), **Sales vs expenses vs net** (3-bar), **Owed/owing** (payables/receivables/TRY position). Use the frontend chart lib already in the stack. Keep the dashboard as landing page. No backend change. Tests: charts render from the existing DashboardRead fields; empty/zero states clean.
+
+### UX-C — Unified "Add document" upload
+Backend + frontend. Backend: extend `detect_source_type` into a shared `detect_document_type(content, filename, content_type) → (type, confidence)` classifying invoice (XML/PDF) / bank_statement (CSV/XLS/XLSX) / expense_receipt (image) / pos_daily_summary; reuse `resolve_statement_format` and the invoice detector — don't duplicate. New thin dispatch endpoint. Frontend: ONE "Add document" drop zone replacing the per-type upload cards; on drop → detect → "We read this as **<type>** — Confirm or change"; low confidence → type picker (never fail). Route to the EXISTING upload/review forms via `initialFile` passthrough. **Bank statements:** thread the dropped file through to the import page (don't make the user re-upload) — if the column-mapping step blocks true passthrough, state it as a known tradeoff. Manual posting actions stay OUT (files only). Redirects for removed upload routes. Tests: each type routes right; ambiguous shows picker; wrong guess correctable; existing upload tests green.
+
+### DASH-B — Time-series aggregation + trend charts
+Backend + frontend. New entity-scoped, date-range-bounded endpoint returning sales and expenses grouped by day (and expenses by category) over the selected range. Frontend: sales/expenses/net trend line(s) on the dashboard. **This aggregation is the shared foundation for SRCH-B — build it to also answer "total per expense item/commodity over range."** Tests: aggregation is RLS-scoped (entity A can't see B), sums match the totals DASH-A shows, empty range clean.
+
+### SRCH-B — Spend totals in search
+Small backend (reuse DASH-B aggregation) + frontend. Fill the result-row subtitle slot from UX-B: "Peynir — ₺4,200 this period", supplier spend likewise. Type "cheese"/"peynir" → see the number. Tests: totals match the by-category aggregation; entity-scoped; period-aware.
+
+### UX-D — Self-curating "Most used" in Add
+Frontend polish (small usage tracking — localStorage per entity, or a light backend count). Top of the Add surface shows the owner's most-used/most-recent actions automatically (Close day, expense, sales, Add document typically), full grouped list below. Replaces the value the old "New" curated list gave, without manual upkeep. Tests: ordering reflects recorded usage; falls back to a sensible default set when no history.
+
+---
 
 ---
 

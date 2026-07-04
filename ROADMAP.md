@@ -13,11 +13,13 @@
 
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| **Active phase**         | Phase 12.5 — Nav cleanup, bank import (Turkish) & statement learning (owner-driven, pre-launch)              |
-| **Active slice**         | — (awaiting next slice) |
-| **Last completed slice** | IE-C — Extraction hardening: PyMuPDF, VKN checksum, stage telemetry (`v0.74.2-invoice-extraction-hardening`) |
-| **Last commit/tag**      | `v0.74.2-invoice-extraction-hardening` — PyMuPDF text extraction (lazy, pypdf fallback); VKN checksum blocks invalid supplier auto-creation on heuristic PDFs; structured telemetry log on draft creation |
-| **Next up**              | **P3** — off-site upload backup; then P5/P6 |
+| **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
+| **Active slice**         | **DEPLOY CATCH-UP** — Netlify→Vercel config cleanup + ship 72 commits |
+| **Last completed slice** | Review smart redirect — `/review` lands on first tab with pending items (`v0.review-smart-redirect`) |
+| **Last commit/tag**      | `v0.review-smart-redirect` (after SEC-1→4, telecom/ÖİV `v0.76.0`, invoice learning pipeline + commission one-click) |
+| **Next up**              | Finish deploy catch-up (owner: env vars, push, smoke), then **Phase 13 UX/insights sequence** — `POST_LAUNCH_PLAN.md` § Phase 13 |
+
+> **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 
 
 ### Next plan (pre-launch, owner-driven)
@@ -72,6 +74,15 @@
 | Partner advance / drawing (FP)                                                 | `v0.73.23-partner-advance-drawing`                  | done           | Drawing + repayment movements; bidirectional partner balance UX |
 | Salary period + advance UX at pay (FS)                                         | `v0.73.24-salary-period-advance-ux`                  | done           | Re-add period on accrual only; re-wire auto-clear preview — posting already applied advance |
 | Per-entity invoice classification learning (IC-D)                              | `v0.73.26-unified-document-learning`                | done           | Learn on confirm/override; shared correction audit with bank + expenses |
+| Invoice PDF never-reject + AI vision fallback + hardening (IE-A→C)              | `v0.74.0`–`v0.74.2`                                 | done           | Re-reject unreadable PDFs; failures → needs_review with stored file; vision fallback off unless key set |
+| Global audit — fixtures→regression, checksum-valid VKNs                         | `v0.74.3-global-audit-fixture-rename`               | done           | Re-add spice_corner fixtures; hardcoded/invalid VKNs |
+| **SEC-1 — POS route guards + /users auth**                                      | `v0.75.0-sec1-auth-guard-holes`                     | done           | Re-open the 5 POS GET routes or /users endpoints; keep member_read_guard |
+| **SEC-2 — actor_id from token, sign-out storage clear**                         | `v0.75.1-sec2-actor-hygiene`                        | done           | Re-add DEFAULT_ACTOR client fallback; backend derives actor from token |
+| **SEC-3 — entity-switch state reset (no cross-company leak)**                   | `v0.75.2-sec3-entity-switch-reset`                  | done           | Remove key={entityId} reset; stale-entity responses must not render |
+| **SEC-4 — role default, FX parser, idempotency, prod API-URL guard**           | `v0.75.3-sec4-medium-fixes`                         | done           | Re-default role to owner; re-break FX dot-decimal; drop prod API-URL hard-fail |
+| Telecom/utility e-Fatura — KDV Matrah + ÖİV, other_taxes                        | `v0.76.0-telecom-oiv-extraction`                    | done           | Re-assume 20% KDV; other_taxes_kurus + validation are required for telecom |
+| Invoice learning pipeline fix + commission one-click                            | (tagged after v0.76.0)                              | done           | Rule key = (entity, seller_vkn, token); commission one-click needs learned-HIGH + platform |
+| Review smart redirect                                                          | `v0.review-smart-redirect`                          | done           | `/review` must land on first tab with pending items, not always Bank |
 
 
 **Owner sign-off ✓ (2026-06-28)** on Phase 12.5 statement-learning arc through clearance auto-pick (`v0.72.0-clearance-auto-pick`) — rule auto-post (bank fee + supplier payment), review hub, match_token trim, POS/delivery link-only auto-clear.
