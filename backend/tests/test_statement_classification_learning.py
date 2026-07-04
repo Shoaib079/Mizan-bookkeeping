@@ -15,8 +15,13 @@ from app.db.session import entity_context
 from app.features.banking import service as banking_service
 from app.features.banking import statements as statement_service
 from app.features.banking.classification_learning import (
+    derive_stable_bank_description_token,
+    derive_statement_match_token,
+    evaluate_rule_match,
+    is_high_confidence,
     learn_classification_rule,
     suggest_classification,
+    _bank_match_key,
 )
 from app.features.banking.classification_rule_models import StatementClassificationRule
 from app.features.banking.models import MoneyAccountKind
@@ -254,7 +259,7 @@ def test_classify_with_match_token_keys_rule_on_trimmed_token(
         rule = db_session.scalar(select(StatementClassificationRule))
         suggestion = suggest_classification(db_session, "HAVALE MIGROS TIC AS ODEME")
     assert rule is not None
-    assert rule.match_token == normalize_expense_item_text("MIGROS")
+    assert rule.match_token == _bank_match_key("MIGROS")
     assert suggestion is not None
     assert suggestion.classification == StatementLineClassification.BANK_FEE
 
@@ -294,3 +299,86 @@ def test_correct_with_match_token_relearns_on_trimmed_token(
     assert rule.classification == StatementLineClassification.UNKNOWN
     assert suggestion is not None
     assert suggestion.classification == StatementLineClassification.UNKNOWN
+
+
+def test_derive_stable_token_strips_dates_refs_and_bank_noise() -> None:
+    desc = "HAVALE EFT METRO GIDA SAN TIC ODEME 28.02.2026 REF12345678 1500,00 TL"
+    token = derive_stable_bank_description_token(desc)
+    assert token == "metro gida san tic"
+    assert "12345678" not in token
+    assert "2026" not in token
+    assert "odeme" not in token
+
+
+def test_supplier_payments_with_different_refs_share_one_rule_and_reach_high(
+    db_session, restaurant_a
+) -> None:
+    supplier = _supplier(
+        db_session,
+        restaurant_a.id,
+        name="Metro Gida San Tic Ltd",
+    )
+    descriptions = [
+        "HAVALE EFT METRO GIDA SAN TIC ODEME 20260215 REF12345678",
+        "HAVALE EFT METRO GIDA SAN TIC ODEME 20260301 REF87654321",
+        "FAST METRO GIDA SAN TIC 20260401 REF11112222",
+    ]
+    with entity_context(db_session, restaurant_a.id):
+        for desc in descriptions:
+            learn_classification_rule(
+                db_session,
+                description=desc,
+                classification=StatementLineClassification.SUPPLIER_PAYMENT,
+                supplier_id=supplier.id,
+                counterparty_name=supplier.name,
+            )
+        rule = db_session.scalar(select(StatementClassificationRule))
+        assert rule is not None
+        assert rule.confirmation_count == 3
+        assert is_high_confidence(rule)
+        assert "12345678" not in rule.match_token
+        assert "metro gida" in rule.match_token
+
+        fourth = "EFT METRO GIDA SAN TIC ODEME 20260501 REF99998888"
+        evaluation = evaluate_rule_match(db_session, fourth)
+        assert evaluation.high_confidence is True
+        assert evaluation.suggestion is not None
+        assert evaluation.suggestion.supplier_id == supplier.id
+
+
+def test_delivery_platform_payments_share_stable_token(
+    db_session, restaurant_a
+) -> None:
+    from tests.delivery_helpers import create_platform, delivery_setup
+
+    delivery_setup(db_session, restaurant_a.id)
+    platform = create_platform(db_session, restaurant_a.id, "Getir Yemek")
+    descriptions = [
+        "HAVALE GETIR YEMEK ODEME 20260215 REF11111111",
+        "EFT GETIR YEMEK TRANSFER 20260301 REF22222222",
+        "FAST GETIR YEMEK 20260401 REF33333333",
+    ]
+    with entity_context(db_session, restaurant_a.id):
+        for desc in descriptions:
+            learn_classification_rule(
+                db_session,
+                description=desc,
+                classification=StatementLineClassification.DELIVERY_SETTLEMENT,
+                match_token=None,
+                counterparty_name=platform.name,
+            )
+        rule = db_session.scalar(select(StatementClassificationRule))
+        assert rule is not None
+        assert rule.confirmation_count == 3
+        assert is_high_confidence(rule)
+        assert "getir yemek" in rule.match_token
+
+
+def test_manual_match_token_override_not_replaced_by_stable_derivation() -> None:
+    desc = "HAVALE EFT METRO GIDA SAN TIC ODEME 20260215 REF12345678"
+    token = derive_statement_match_token(
+        desc,
+        match_token="MIGROS",
+        counterparty_name="Metro Gida San Tic Ltd",
+    )
+    assert token == _bank_match_key("MIGROS").replace("ı", "i")

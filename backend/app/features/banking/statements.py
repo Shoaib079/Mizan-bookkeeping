@@ -208,6 +208,7 @@ def _record_classification_learning(
     classification: StatementLineClassification,
     *,
     supplier_id: uuid.UUID | None = None,
+    delivery_platform_id: uuid.UUID | None = None,
     match_token: str | None = None,
 ) -> None:
     """Persist a learned rule after successful user classification (never auto-posts)."""
@@ -216,14 +217,30 @@ def _record_classification_learning(
         supplier_id if supplier_id is not None else line.supplier_id
     )
     learned_match_token = match_token.strip() if match_token and match_token.strip() else None
+    counterparty_name: str | None = None
     with entity_context(session, entity_id):
         require_entity_context()
+        if learned_supplier_id is not None:
+            supplier = session.get(Supplier, learned_supplier_id)
+            if supplier is not None:
+                counterparty_name = supplier.name
+        elif delivery_platform_id is not None:
+            from app.features.delivery import platform_service as delivery_platform_service
+
+            try:
+                platform = delivery_platform_service.get_delivery_platform_row(
+                    session, entity_id, delivery_platform_id
+                )
+                counterparty_name = platform.name
+            except LookupError:
+                counterparty_name = None
         learn_classification_rule(
             session,
             description=description,
             classification=classification,
             supplier_id=learned_supplier_id,
             match_token=learned_match_token,
+            counterparty_name=counterparty_name,
         )
         session.commit()
 
@@ -1715,6 +1732,7 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.DELIVERY_SETTLEMENT,
+            delivery_platform_id=delivery_platform_id,
             match_token=match_token,
         )
         return ClassifyStatementLineResult(
