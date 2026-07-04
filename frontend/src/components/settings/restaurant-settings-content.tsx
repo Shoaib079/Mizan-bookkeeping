@@ -231,9 +231,10 @@ export function RestaurantSettingsContent() {
         <EntityFeatureToggles
           settings={settings}
           checkedFor={settingValue}
-          onChange={(key, enabled) => void onToggleSetting(key, enabled)}
+          onChange={(key, enabled) => onToggleSetting(key, enabled)}
           disabled={settingsLoading}
           savingKey={savingKey}
+          refreshDeliveryNavAfterSave
         />
       </section>
 

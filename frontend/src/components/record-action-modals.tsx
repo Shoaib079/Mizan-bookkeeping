@@ -2,7 +2,7 @@
 
 /** All record-action modals — shared by New menu, command palette, and Record hub. */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { BankAccountPickerDialog } from "@/components/record/bank-account-picker-dialog";
 import { FxWalletActionDialog } from "@/components/record/fx-wallet-action-dialog";
@@ -26,8 +26,7 @@ import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
 import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
 import { SupplierForm } from "@/components/forms/supplier-form";
 import { TransferForm } from "@/components/forms/transfer-form";
-import { isEntitySettingEnabled } from "@/lib/entity-settings";
-import { useEntity } from "@/lib/entity-context";
+import { useQuickActions } from "@/components/quick-actions";
 import {
   PERSON_PICKER_ACTIONS,
   recordActionById,
@@ -41,23 +40,12 @@ type Props = {
 };
 
 export function RecordActionModals({ active, onClose }: Props) {
-  const { entityId } = useEntity();
   const { canWriteOperations } = useEntityAccess();
-  const [deliveryEnabled, setDeliveryEnabled] = useState(false);
+  const { deliveryEnabled } = useQuickActions();
 
   // UX-C: file passthrough from AddDocumentDialog → specific form
   const [routedFile, setRoutedFile] = useState<File | null>(null);
   const [routedTo, setRoutedTo] = useState<RecordActionKey | null>(null);
-
-  useEffect(() => {
-    if (!entityId) {
-      setDeliveryEnabled(false);
-      return;
-    }
-    void isEntitySettingEnabled(entityId, "delivery_enabled")
-      .then(setDeliveryEnabled)
-      .catch(() => setDeliveryEnabled(false));
-  }, [entityId]);
 
   const closeAll = useCallback(() => {
     setRoutedFile(null);

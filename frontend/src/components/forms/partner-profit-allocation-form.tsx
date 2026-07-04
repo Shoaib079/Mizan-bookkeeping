@@ -222,9 +222,7 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
                 <DataTableRow>
                   <DataTableHeaderCell>Partner</DataTableHeaderCell>
                   <DataTableHeaderCell>Share</DataTableHeaderCell>
-                  <DataTableHeaderCell className="text-right">
-                    Amount
-                  </DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
                 </DataTableRow>
               </DataTableHead>
               <DataTableBody>
@@ -232,16 +230,15 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
                   <DataTableRow key={line.partner_id}>
                     <DataTableCell>{line.partner_name}</DataTableCell>
                     <DataTableCell>{line.ownership_share_pct}%</DataTableCell>
-                    <DataTableCell className="text-right tabular-nums">
+                    <DataTableCell align="right" className="tabular-nums">
                       {formatTry(line.amount_kurus)}
                     </DataTableCell>
                   </DataTableRow>
                 ))}
                 <DataTableRow>
-                  <DataTableCell colSpan={2} className="font-medium">
-                    Total
-                  </DataTableCell>
-                  <DataTableCell className="text-right font-medium tabular-nums">
+                  <DataTableCell className="font-medium">Total</DataTableCell>
+                  <DataTableCell>{""}</DataTableCell>
+                  <DataTableCell align="right" className="font-medium tabular-nums">
                     {formatTry(preview.total_profit_kurus)}
                   </DataTableCell>
                 </DataTableRow>

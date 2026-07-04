@@ -13,8 +13,13 @@ import {
 
 import { RecordActionModals } from "@/components/record-action-modals";
 import { recordActionUsage } from "@/lib/action-usage";
-import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
+import {
+  DELIVERY_ENABLED_CHANGED_EVENT,
+  fetchDeliveryEnabled,
+  getCachedDeliveryEnabled,
+  refreshDeliveryEnabledForEntity,
+} from "@/lib/delivery-enabled-cache";
 import {
   type QuickActionKey,
   type RecordActionKey,
@@ -23,6 +28,11 @@ import { useEntityAccess } from "@/lib/use-entity-access";
 
 export type { QuickActionKey, RecordActionKey } from "@/lib/record-actions";
 export { isQuickActionKey } from "@/lib/record-actions";
+export {
+  DELIVERY_ENABLED_CHANGED_EVENT,
+  invalidateDeliveryEnabled,
+  refreshDeliveryEnabledForEntity,
+} from "@/lib/delivery-enabled-cache";
 
 type QuickActionsContextValue = {
   active: RecordActionKey | null;
@@ -30,12 +40,10 @@ type QuickActionsContextValue = {
   openQuickAction: (key: QuickActionKey) => void;
   closeQuickAction: () => void;
   deliveryEnabled: boolean;
+  refreshDeliveryEnabled: () => Promise<void>;
 };
 
 const QuickActionsContext = createContext<QuickActionsContextValue | null>(null);
-
-/** Per-entity cache so delivery nav does not flash false on remount. */
-const deliveryEnabledCache = new Map<string, boolean>();
 
 export function QuickActionsProvider({ children }: { children: React.ReactNode }) {
   const { entityId } = useEntity();
@@ -43,30 +51,51 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   const [active, setActive] = useState<RecordActionKey | null>(null);
   const [deliveryEnabled, setDeliveryEnabled] = useState(() => {
     if (!entityId) return false;
-    return deliveryEnabledCache.get(entityId) ?? false;
+    return getCachedDeliveryEnabled(entityId) ?? false;
   });
+
+  const refreshDeliveryEnabled = useCallback(async () => {
+    if (!entityId) {
+      setDeliveryEnabled(false);
+      return;
+    }
+    const enabled = await refreshDeliveryEnabledForEntity(entityId);
+    setDeliveryEnabled(enabled);
+  }, [entityId]);
 
   useEffect(() => {
     if (!entityId) {
       setDeliveryEnabled(false);
       return;
     }
-    const cached = deliveryEnabledCache.get(entityId);
-    if (cached !== undefined) {
-      setDeliveryEnabled(cached);
-      return;
-    }
-    setDeliveryEnabled(false);
-    void isEntitySettingEnabled(entityId, "delivery_enabled")
-      .then((enabled) => {
-        deliveryEnabledCache.set(entityId, enabled);
-        setDeliveryEnabled(enabled);
-      })
-      .catch(() => {
-        deliveryEnabledCache.set(entityId, false);
-        setDeliveryEnabled(false);
-      });
+
+    let cancelled = false;
+    const cached = getCachedDeliveryEnabled(entityId);
+    setDeliveryEnabled(cached ?? false);
+
+    void fetchDeliveryEnabled(entityId).then((enabled) => {
+      if (!cancelled) setDeliveryEnabled(enabled);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [entityId]);
+
+  useEffect(() => {
+    if (!entityId) return;
+
+    const onChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ entityId: string }>).detail;
+      if (detail.entityId !== entityId) return;
+      void refreshDeliveryEnabled();
+    };
+
+    window.addEventListener(DELIVERY_ENABLED_CHANGED_EVENT, onChanged);
+    return () => {
+      window.removeEventListener(DELIVERY_ENABLED_CHANGED_EVENT, onChanged);
+    };
+  }, [entityId, refreshDeliveryEnabled]);
 
   const openRecordAction = useCallback(
     (key: RecordActionKey) => {
@@ -94,8 +123,16 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
       openQuickAction,
       closeQuickAction: closeQuickAction,
       deliveryEnabled,
+      refreshDeliveryEnabled,
     }),
-    [active, openRecordAction, openQuickAction, closeQuickAction, deliveryEnabled],
+    [
+      active,
+      openRecordAction,
+      openQuickAction,
+      closeQuickAction,
+      deliveryEnabled,
+      refreshDeliveryEnabled,
+    ],
   );
 
   return (
