@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-07 — Frontend hosting moved Netlify → Vercel (supersedes 2026-06-27 hosting stack)
+
+**Choice:** Frontend now deploys on **Vercel** (was Netlify). Backend stays **Render** (FastAPI web + Celery worker + beat). This SUPERSEDES the "Production hosting stack (Phase 12 Slice 12.1)" entry below wherever it says Netlify.
+
+**Consequences (do not re-add Netlify):**
+- `netlify.toml` is retired — Vercel does NOT read it. Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) and static cache rules must live in `frontend/next.config.ts` `headers()`, not `netlify.toml`. (Tracked as the Vercel-cleanup slice, `POST_LAUNCH_PLAN.md` § Phase 13 / DEPLOY.)
+- `CORS_ORIGINS` on Render must be the Vercel production origin; `NEXT_PUBLIC_API_URL` on Vercel must point at the Render API (SEC-4 makes a missing value hard-fail the prod build — intended).
+- Render services are `autoDeploy: false` → API deploys are MANUAL. A GitHub push runs CI only, not a deploy.
+- The stale "Railway CORS_ORIGINS" hint in `frontend/src/lib/api.ts` should read Render.
+
+**Deploy reality (2026-07):** last successful prod deploy is `68a262a` (old Netlify build) — ~72 commits behind `main`. All work since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed but unshipped pending a working deploy path + credits. See `PRE_DEPLOY_CHECKLIST.md`.
+
 ## 2026-06-25 — Delivery monthly gross sales + platform-linked commission (Decisions §9; migration `059`)
 
 **Choice:** Simplify delivery intake to **one posted monthly gross sales entry per platform per calendar month** (KDV dahil). Same workflow for **all** platforms (Getir, Yemeksepeti, Trendyol, etc.) — owner enters gross only; no per-report commission/net split on the sales row.

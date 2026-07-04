@@ -2,6 +2,8 @@
 
 **Status:** NOT for the current build slice unless promoted into `Restaurant_Bookkeeping_App_Decisions.md` first. Parking lot so good ideas don't get lost. Cautionary lessons from the previous app live in `ARCHITECTURE.md` — not repeated here.
 
+> **Promoted → Phase 13 (`POST_LAUNCH_PLAN.md`):** dashboard "view as chart" (→ DASH-A/DASH-B), unified searchable document archive (→ UX-C "Add document" + UX-B data-first search), spend-by-commodity insight (→ SRCH-B). These are now active plan, not loose backlog.
+
 ---
 
 ## Reports & insights

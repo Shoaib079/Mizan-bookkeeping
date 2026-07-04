@@ -8,11 +8,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 12.5 — pre-launch ops + delivery UX |
+| **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | — (awaiting next slice) |
-| **Last completed slice** | IE-C — Extraction hardening: PyMuPDF, VKN checksum, stage telemetry (`v0.74.2-invoice-extraction-hardening`) |
-| **Last tag** | `v0.74.2-invoice-extraction-hardening` |
-| **Next up** | **P3** — off-site upload backup; then P5/P6 |
+| **Last completed slice** | Review smart redirect — `/review` lands on first tab with pending items (`v0.review-smart-redirect`) |
+| **Last tag** | `v0.review-smart-redirect` (after SEC-1→4 `v0.75.x`, telecom/ÖİV `v0.76.0`, invoice learning pipeline + commission one-click) |
+| **Next up** | **DEPLOY CATCH-UP + Vercel cleanup** (72 commits unshipped; `PRE_DEPLOY_CHECKLIST.md`), then **Phase 13** sequence in `POST_LAUNCH_PLAN.md` |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 
