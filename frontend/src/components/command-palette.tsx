@@ -106,7 +106,10 @@ export function CommandPalette({ deliveryEnabled }: Props) {
   const actions = useMemo(
     () =>
       canWriteOperations(role)
-        ? filterRecordActions(RECORD_ACTIONS, { deliveryEnabled })
+        ? filterRecordActions(
+            RECORD_ACTIONS.filter((a) => !a.hidden),
+            { deliveryEnabled },
+          )
         : [],
     [role, deliveryEnabled],
   );
@@ -203,7 +206,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
           router.push(`/suppliers/${row.supplier.id}`);
           break;
         case "item":
-          router.push("/expenses/items");
+          router.push(`/expenses/items#item-${row.item.id}`);
           break;
         case "page":
           router.push(row.href);

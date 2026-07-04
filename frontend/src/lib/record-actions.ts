@@ -73,6 +73,8 @@ export type RecordActionDef = {
   requiresDelivery?: boolean;
   /** Opens person picker before the form. */
   personKind?: PersonPickerKind;
+  /** Hidden from hub grid and palette action list (still routable by key). */
+  hidden?: boolean;
 };
 
 export const RECORD_SECTION_LABELS: Record<RecordSectionId, string> = {
@@ -119,6 +121,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     description: "Upload a Z report photo for OCR review.",
     icon: ShoppingBag,
     section: "upload",
+    hidden: true,
   },
   {
     id: "receipt",
@@ -126,6 +129,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     description: "Upload a receipt photo for OCR review.",
     icon: Receipt,
     section: "upload",
+    hidden: true,
   },
   {
     id: "efatura",
@@ -133,6 +137,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     description: "Upload an e-Fatura PDF into a draft invoice.",
     icon: FileText,
     section: "upload",
+    hidden: true,
   },
   {
     id: "deliveryReport",
@@ -148,6 +153,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     description: "Import a CSV bank export for line review.",
     icon: Landmark,
     section: "upload",
+    hidden: true,
   },
   {
     id: "cashMovement",
@@ -336,7 +342,7 @@ export function recordActionsBySection(
   opts: { deliveryEnabled: boolean },
 ): RecordActionDef[] {
   return filterRecordActions(
-    RECORD_ACTIONS.filter((action) => action.section === section),
+    RECORD_ACTIONS.filter((action) => action.section === section && !action.hidden),
     opts,
   );
 }

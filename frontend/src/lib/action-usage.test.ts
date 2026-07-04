@@ -115,13 +115,20 @@ describe("RecordHub integration", () => {
     expect(source).toContain("lg:grid-cols-4");
   });
 
-  it("filters top actions through delivery gating", async () => {
+  it("filters top actions through delivery gating and excludes hidden", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/record/record-hub.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("filterRecordActions(RECORD_ACTIONS, { deliveryEnabled })");
+    expect(source).toContain("!a.hidden");
+    expect(source).toContain("filterRecordActions");
+  });
+
+  it("always shows Most used when entity selected (defaults fill it)", () => {
+    const top = getTopActions(ENTITY_A, 4);
+    expect(top.length).toBe(4);
+    expect(top).toEqual(DEFAULT_TOP_ACTIONS);
   });
 });

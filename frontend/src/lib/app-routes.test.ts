@@ -117,7 +117,7 @@ describe("app shell header", () => {
         "utf8",
       ),
     );
-    expect(source).not.toContain("NewMenu");
+    expect(source).not.toMatch(/<NewMenu/);
     expect(source).not.toContain("new-menu");
     expect(source).not.toMatch(/Daily sales/);
     expect(source).not.toMatch(/Add expense/);
@@ -396,5 +396,41 @@ describe("command palette (UX-B data-first search)", () => {
     );
     expect(source).toContain('spend ? formatTry(spend) : "Supplier"');
     expect(source).toContain('spend ? formatTry(spend) : "Item"');
+  });
+
+  it("filters hidden actions from palette action list", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("!a.hidden");
+  });
+
+  it("routes item click to /expenses/items#item-{id}", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("/expenses/items#item-${row.item.id}");
+  });
+});
+
+describe("top-bar Add button", () => {
+  it("renders a + Add link to /record gated by shouldShowNewMenu", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/app-shell.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("shouldShowNewMenu(role)");
+    expect(source).toContain('href="/record"');
+    expect(source).toContain("Plus");
+    expect(source).toContain("bg-primary");
+    expect(source).toMatch(/Plus.*Add/s);
   });
 });

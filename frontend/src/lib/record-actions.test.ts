@@ -5,6 +5,7 @@ import {
   isQuickActionKey,
   PERSON_PICKER_ACTIONS,
   RECORD_ACTIONS,
+  recordActionById,
   recordActionsBySection,
 } from "@/lib/record-actions";
 
@@ -62,5 +63,33 @@ describe("record-actions", () => {
     expect(off.some((action) => action.id === "deliveryReport")).toBe(false);
     const on = filterRecordActions(RECORD_ACTIONS, { deliveryEnabled: true });
     expect(on.some((action) => action.id === "deliveryReport")).toBe(true);
+  });
+
+  it("marks posPhoto, receipt, efatura, bankStatement as hidden", () => {
+    const hiddenIds = RECORD_ACTIONS.filter((a) => a.hidden).map((a) => a.id);
+    expect(hiddenIds).toContain("posPhoto");
+    expect(hiddenIds).toContain("receipt");
+    expect(hiddenIds).toContain("efatura");
+    expect(hiddenIds).toContain("bankStatement");
+    expect(hiddenIds).not.toContain("addDocument");
+    expect(hiddenIds).not.toContain("deliveryReport");
+  });
+
+  it("hides hidden actions from recordActionsBySection hub grid", () => {
+    const uploadCards = recordActionsBySection("upload", { deliveryEnabled: true });
+    const ids = uploadCards.map((a) => a.id);
+    expect(ids).toContain("addDocument");
+    expect(ids).toContain("deliveryReport");
+    expect(ids).not.toContain("posPhoto");
+    expect(ids).not.toContain("receipt");
+    expect(ids).not.toContain("efatura");
+    expect(ids).not.toContain("bankStatement");
+  });
+
+  it("still resolves hidden actions by key via recordActionById", () => {
+    expect(recordActionById("posPhoto").id).toBe("posPhoto");
+    expect(recordActionById("receipt").id).toBe("receipt");
+    expect(recordActionById("efatura").id).toBe("efatura");
+    expect(recordActionById("bankStatement").id).toBe("bankStatement");
   });
 });

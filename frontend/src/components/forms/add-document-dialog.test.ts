@@ -124,6 +124,18 @@ describe("initialFile prop on upload forms", () => {
   });
 });
 
+describe("bank statement path (UX-C stated step)", () => {
+  it("shows explicit note about continuing on the import page", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../../components/record/bank-account-picker-dialog.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("Continue on the import page to upload your file and map columns");
+  });
+});
+
 describe("record-actions addDocument entry", () => {
   it("has addDocument in RecordActionKey", async () => {
     const source = await import("fs/promises").then((fs) =>

@@ -3,7 +3,7 @@
 /** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6). */
 
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { AccountMenu } from "@/components/layout/account-menu";
@@ -15,7 +15,9 @@ import { useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { Label } from "@/components/ui/input";
+import { shouldShowNewMenu } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { ReviewCountsProvider } from "@/lib/review-counts-context";
 import { useReviewCounts } from "@/lib/use-review-counts";
 
@@ -39,6 +41,7 @@ function AppShellInner({
   const pathname = usePathname();
   const { deliveryEnabled } = useQuickActions();
   const { entityId, entities, entitiesLoading } = useEntity();
+  const { role } = useEntityAccess();
   const { counts: reviewCounts, loading: reviewLoading } = useReviewCounts(entityId);
 
   const navSettings = { deliveryEnabled };
@@ -89,6 +92,15 @@ function AppShellInner({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {shouldShowNewMenu(role) && (
+              <Link
+                href="/record"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <Plus className="size-4" />
+                Add
+              </Link>
+            )}
             <Button
               type="button"
               variant="secondary"

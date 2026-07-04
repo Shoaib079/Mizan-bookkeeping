@@ -37,7 +37,10 @@ export function RecordHub() {
   const topActions = useMemo(() => {
     if (!entityId) return [];
     const topIds = getTopActions(entityId, 4);
-    const available = filterRecordActions(RECORD_ACTIONS, { deliveryEnabled });
+    const available = filterRecordActions(
+      RECORD_ACTIONS.filter((a) => !a.hidden),
+      { deliveryEnabled },
+    );
     return topIds
       .map((id) => available.find((a) => a.id === id))
       .filter((a): a is RecordActionDef => a !== undefined);

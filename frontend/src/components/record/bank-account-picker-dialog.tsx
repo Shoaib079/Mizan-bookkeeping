@@ -130,8 +130,8 @@ export function BankAccountPickerDialog({ open, onClose }: Props) {
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            You will upload and map columns on a full page with an Excel-style
-            preview (columns A, B, C…).
+            Continue on the import page to upload your file and map columns
+            (Excel-style preview with columns A, B, C…).
           </p>
           <Button type="button" disabled={!selectedId} onClick={openImportPage}>
             Continue to import
