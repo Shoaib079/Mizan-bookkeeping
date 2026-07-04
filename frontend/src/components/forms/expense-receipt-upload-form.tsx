@@ -25,9 +25,10 @@ type ExpenseReceiptRead = {
 type Props = {
   open: boolean;
   onClose: () => void;
+  initialFile?: File;
 };
 
-export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
+export function ExpenseReceiptUploadForm({ open, onClose, initialFile }: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -38,7 +39,11 @@ export function ExpenseReceiptUploadForm({ open, onClose }: Props) {
   }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [moneyAccountId, setMoneyAccountId] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
+
+  useEffect(() => {
+    if (initialFile) setFile(initialFile);
+  }, [initialFile]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 

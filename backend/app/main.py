@@ -49,6 +49,7 @@ from app.features.dashboard.api import router as dashboard_router
 from app.features.review_counts.api import router as review_counts_router
 from app.features.auth.api import members_router as auth_members_router
 from app.features.auth.api import users_router as auth_users_router
+from app.features.documents.api import router as documents_router
 from app.adapters.storage.local import ensure_storage_roots
 from app.config import settings
 from app.core.idempotency.middleware import IdempotencyMiddleware
@@ -119,6 +120,7 @@ app.include_router(dashboard_router)
 app.include_router(review_counts_router)
 app.include_router(auth_users_router)
 app.include_router(auth_members_router)
+app.include_router(documents_router)
 
 
 @app.get("/health")

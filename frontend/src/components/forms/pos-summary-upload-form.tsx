@@ -18,9 +18,10 @@ import type { PosDailySummary } from "@/lib/pos-delivery-types";
 type Props = {
   open: boolean;
   onClose: () => void;
+  initialFile?: File;
 };
 
-export function PosSummaryUploadForm({ open, onClose }: Props) {
+export function PosSummaryUploadForm({ open, onClose, initialFile }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
   const { toast } = useToast();
@@ -29,7 +30,11 @@ export function PosSummaryUploadForm({ open, onClose }: Props) {
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
+
+  useEffect(() => {
+    if (initialFile) setFile(initialFile);
+  }, [initialFile]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 

@@ -7,6 +7,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BankAccountPickerDialog } from "@/components/record/bank-account-picker-dialog";
 import { FxWalletActionDialog } from "@/components/record/fx-wallet-action-dialog";
 import { PeopleRecordDialog } from "@/components/record/people-record-dialog";
+import {
+  AddDocumentDialog,
+  type DetectedDocumentType,
+} from "@/components/forms/add-document-dialog";
 import { CardSalesForm } from "@/components/forms/card-sales-form";
 import { CashDrawerCloseDayForm } from "@/components/forms/cash-drawer-close-day-form";
 import { CashMovementForm } from "@/components/forms/cash-movement-form";
@@ -40,6 +44,10 @@ export function RecordActionModals({ active, onClose }: Props) {
   const { canWriteOperations } = useEntityAccess();
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
 
+  // UX-C: file passthrough from AddDocumentDialog → specific form
+  const [routedFile, setRoutedFile] = useState<File | null>(null);
+  const [routedTo, setRoutedTo] = useState<RecordActionKey | null>(null);
+
   useEffect(() => {
     if (!entityId) {
       setDeliveryEnabled(false);
@@ -51,8 +59,24 @@ export function RecordActionModals({ active, onClose }: Props) {
   }, [entityId]);
 
   const closeAll = useCallback(() => {
+    setRoutedFile(null);
+    setRoutedTo(null);
     onClose();
   }, [onClose]);
+
+  const handleDocumentConfirm = useCallback(
+    (type: DetectedDocumentType, file: File) => {
+      const actionMap: Record<DetectedDocumentType, RecordActionKey> = {
+        invoice: "efatura",
+        bank_statement: "bankStatement",
+        expense_receipt: "receipt",
+        pos_daily_summary: "posPhoto",
+      };
+      setRoutedFile(file);
+      setRoutedTo(actionMap[type]);
+    },
+    [],
+  );
 
   const personAction = useMemo((): RecordActionKey | null => {
     if (!active || !PERSON_PICKER_ACTIONS.has(active)) return null;
@@ -63,6 +87,8 @@ export function RecordActionModals({ active, onClose }: Props) {
     if (!active || PERSON_PICKER_ACTIONS.has(active)) return null;
     return active;
   }, [active]);
+
+  const effectiveModal = routedTo ?? modalAction;
 
   if (!canWriteOperations) return null;
 
@@ -78,42 +104,60 @@ export function RecordActionModals({ active, onClose }: Props) {
         />
       )}
 
-      <ManualExpenseForm open={modalAction === "expense"} onClose={closeAll} />
-      <ManualDailySalesForm open={modalAction === "sales"} onClose={closeAll} />
-      <FxPurchaseQuickAction open={modalAction === "buyFx"} onClose={closeAll} />
-      <PosSummaryUploadForm open={modalAction === "posPhoto"} onClose={closeAll} />
+      <AddDocumentDialog
+        open={modalAction === "addDocument"}
+        onClose={closeAll}
+        onConfirm={handleDocumentConfirm}
+      />
+
+      <ManualExpenseForm open={effectiveModal === "expense"} onClose={closeAll} />
+      <ManualDailySalesForm open={effectiveModal === "sales"} onClose={closeAll} />
+      <FxPurchaseQuickAction open={effectiveModal === "buyFx"} onClose={closeAll} />
+      <PosSummaryUploadForm
+        open={effectiveModal === "posPhoto"}
+        onClose={closeAll}
+        initialFile={routedTo === "posPhoto" ? routedFile ?? undefined : undefined}
+      />
       {deliveryEnabled && (
         <DeliveryReportForm
-          open={modalAction === "deliveryReport"}
+          open={effectiveModal === "deliveryReport"}
           onClose={closeAll}
         />
       )}
-      <ExpenseReceiptUploadForm open={modalAction === "receipt"} onClose={closeAll} />
-      <SupplierForm open={modalAction === "supplier"} onClose={closeAll} />
-      <EfaturaUploadForm open={modalAction === "efatura"} onClose={closeAll} />
+      <ExpenseReceiptUploadForm
+        open={effectiveModal === "receipt"}
+        onClose={closeAll}
+        initialFile={routedTo === "receipt" ? routedFile ?? undefined : undefined}
+      />
+      <SupplierForm open={effectiveModal === "supplier"} onClose={closeAll} />
+      <EfaturaUploadForm
+        open={effectiveModal === "efatura"}
+        onClose={closeAll}
+        initialFile={routedTo === "efatura" ? routedFile ?? undefined : undefined}
+      />
 
-      <CashDrawerCloseDayForm open={modalAction === "closeDay"} onClose={closeAll} />
-      <CashMovementForm open={modalAction === "cashMovement"} onClose={closeAll} />
-      <TransferForm open={modalAction === "transfer"} onClose={closeAll} />
+      <CashDrawerCloseDayForm open={effectiveModal === "closeDay"} onClose={closeAll} />
+      <CashMovementForm open={effectiveModal === "cashMovement"} onClose={closeAll} />
+      <TransferForm open={effectiveModal === "transfer"} onClose={closeAll} />
       <FxWalletActionDialog
-        open={modalAction === "fxConvert"}
+        open={effectiveModal === "fxConvert"}
         mode="convert"
         onClose={closeAll}
       />
       <FxWalletActionDialog
-        open={modalAction === "fxSpend"}
+        open={effectiveModal === "fxSpend"}
         mode="spend"
         onClose={closeAll}
       />
       <BankAccountPickerDialog
-        open={modalAction === "bankStatement"}
+        open={effectiveModal === "bankStatement"}
         onClose={closeAll}
       />
 
-      <CardSalesForm open={modalAction === "cardSalesBatch"} onClose={closeAll} />
-      <PosSettlementForm open={modalAction === "posSettlement"} onClose={closeAll} />
+      <CardSalesForm open={effectiveModal === "cardSalesBatch"} onClose={closeAll} />
+      <PosSettlementForm open={effectiveModal === "posSettlement"} onClose={closeAll} />
       <ClearCommissionForm
-        open={modalAction === "clearCommission"}
+        open={effectiveModal === "clearCommission"}
         onClose={closeAll}
       />
     </>

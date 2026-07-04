@@ -12,7 +12,7 @@ describe("FX purchase Add hub", () => {
     const modals = await readSource("../components/record-action-modals.tsx");
     expect(registry).toContain('"buyFx"');
     expect(modals).toContain("FxPurchaseQuickAction");
-    expect(modals).toContain('modalAction === "buyFx"');
+    expect(modals).toContain('effectiveModal === "buyFx"');
   });
 
   it("lists Buy foreign currency in record actions (Add hub)", async () => {

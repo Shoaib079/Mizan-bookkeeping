@@ -25,9 +25,10 @@ type Props = {
   open: boolean;
   onClose: () => void;
   supplierId?: string;
+  initialFile?: File;
 };
 
-export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
+export function EfaturaUploadForm({ open, onClose, supplierId, initialFile }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
   const { toast } = useToast();
@@ -36,7 +37,11 @@ export function EfaturaUploadForm({ open, onClose, supplierId }: Props) {
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
+
+  useEffect(() => {
+    if (initialFile) setFile(initialFile);
+  }, [initialFile]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 

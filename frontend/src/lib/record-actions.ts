@@ -31,6 +31,7 @@ export type QuickActionKey =
 
 export type RecordActionKey =
   | QuickActionKey
+  | "addDocument"
   | "closeDay"
   | "cashMovement"
   | "transfer"
@@ -104,6 +105,13 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     description: "Pay from cash or record a partner-fronted expense.",
     icon: Wallet,
     section: "today",
+  },
+  {
+    id: "addDocument",
+    label: "Add document",
+    description: "Drop any file — auto-detected and routed to the right form.",
+    icon: Upload,
+    section: "upload",
   },
   {
     id: "posPhoto",
