@@ -364,14 +364,32 @@ def test_delivery_platform_payments_share_stable_token(
                 db_session,
                 description=desc,
                 classification=StatementLineClassification.DELIVERY_SETTLEMENT,
-                match_token=None,
+                delivery_platform_id=platform.id,
                 counterparty_name=platform.name,
             )
         rule = db_session.scalar(select(StatementClassificationRule))
         assert rule is not None
         assert rule.confirmation_count == 3
+        assert rule.delivery_platform_id == platform.id
         assert is_high_confidence(rule)
         assert "getir yemek" in rule.match_token
+
+
+def test_learn_and_match_use_same_token_for_supplier_payments() -> None:
+    descriptions = [
+        "HAVALE EFT METRO GIDA SAN TIC ODEME 20260215 REF12345678",
+        "FAST METRO GIDA SAN TIC 20260401 REF11112222",
+    ]
+    tokens = [
+        derive_statement_match_token(
+            desc,
+            counterparty_name="Metro Gida San Tic Ltd",
+        )
+        for desc in descriptions
+    ]
+    assert tokens[0] == tokens[1]
+    assert tokens[0] is not None
+    assert "metro gida" in tokens[0]
 
 
 def test_manual_match_token_override_not_replaced_by_stable_derivation() -> None:

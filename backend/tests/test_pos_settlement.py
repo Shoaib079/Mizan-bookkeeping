@@ -267,6 +267,10 @@ def test_classify_pos_settlement_rejects_outflow(
         original_filename="outflow.csv",
     )
 
+    line = statement.lines[0]
+    assert line.amount_kurus == -50_000
+    assert line.status != StatementLineStatus.NEEDS_REVIEW
+
     with pytest.raises(statement_service.InvalidClassificationError, match="inflow"):
         statement_service.classify_statement_line(
             db_session,

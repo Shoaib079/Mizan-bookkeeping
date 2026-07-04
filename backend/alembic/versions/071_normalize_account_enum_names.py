@@ -26,12 +26,20 @@ def upgrade() -> None:
            OR normal_balance <> UPPER(normal_balance)
         """
     )
+    # journal_entry_lines_immutable blocks every UPDATE; disable briefly so
+    # lowercase legacy side values ('debit'/'credit') can be normalized safely.
+    op.execute(
+        "ALTER TABLE journal_entry_lines DISABLE TRIGGER journal_entry_lines_immutable"
+    )
     op.execute(
         """
         UPDATE journal_entry_lines
         SET side = UPPER(side)
         WHERE side <> UPPER(side)
         """
+    )
+    op.execute(
+        "ALTER TABLE journal_entry_lines ENABLE TRIGGER journal_entry_lines_immutable"
     )
 
 

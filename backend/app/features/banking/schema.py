@@ -100,6 +100,7 @@ class MoneyAccountTree(BaseModel):
 class ClassificationSuggestion(BaseModel):
     classification: StatementLineClassification
     supplier_id: uuid.UUID | None = None
+    delivery_platform_id: uuid.UUID | None = None
     reason: str
     confidence: str
 

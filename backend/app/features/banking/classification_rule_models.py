@@ -39,6 +39,12 @@ class StatementClassificationRule(EntityScopedMixin, Base):
         nullable=True,
         index=True,
     )
+    delivery_platform_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("delivery_platforms.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     confirmation_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     correction_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     confirmations_since_correction: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

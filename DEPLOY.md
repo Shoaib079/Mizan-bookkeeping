@@ -1,5 +1,13 @@
 # Deploy Mizan — owner guide
 
+> **⚠️ STACK CORRECTION (2026-07):** This doc predates the current hosting and says
+> "Render" in many places. The **actual production stack is Neon (DB) + Railway
+> (backend API, `mizan-api`) + Vercel (frontend) + Cloudflare R2 (backups)** — see
+> the authoritative entry in `DECISIONS.md` (2026-07) and `PRE_DEPLOY_CHECKLIST.md`.
+> Wherever this doc says "Render (API)" read **Railway**; `render.yaml` is stale.
+> Railway runs `alembic upgrade head` as its pre-deploy command; migrations reach
+> Neon automatically on deploy.
+
 Plain-English steps to provision and go live with Mizan. **Staging first** — run the full migrate + verify + smoke path on staging before production.
 
 **Recommended stack**

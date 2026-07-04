@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-07 — Production stack of record: Neon + Railway + Vercel + R2 (supersedes ALL "Render" references)
+
+**Authoritative stack (verified 2026-07):**
+- **Database:** Neon (managed Postgres). `DATABASE_URL` on Railway points here.
+- **Backend API + worker:** **Railway** (`mizan-api` service). Auto-deploys from GitHub `main`; runs `alembic upgrade head` (via `scripts/migrate_production.sh`) as its **pre-deploy command**, so each deploy migrates Neon automatically. The Docker entrypoint runs uvicorn only — migrations are the Railway pre-deploy step, not the entrypoint (single migration path).
+- **Frontend:** **Vercel** (Next.js). Netlify → Render → Vercel; only Vercel is current.
+- **Auth:** Clerk. **Backups:** Cloudflare R2 (nightly `pg_dump`).
+
+**History:** Backend was briefly targeted at Render (`render.yaml`, the "Render API" language in DEPLOY.md / GO_LIVE_RUNBOOK.md / older DECISIONS entries) — that is **stale**. `render.yaml` is a leftover and is NOT the deploy path. The frontend moved off Render to Vercel when Render credits ran out. Wherever any doc says "Render (API)" or "Render pre-deploy," read **Railway**.
+
+**Prod status (2026-07):** Neon at migration `072` (head) — backend fully current. Take a fresh R2 backup before any future in-place data migration (e.g. the 071 enum-normalize pattern that rewrites `accounts` + `journal_entry_lines`).
+
 ## 2026-07 — Frontend hosting moved Netlify → Vercel (supersedes 2026-06-27 hosting stack)
 
 **Choice:** Frontend now deploys on **Vercel** (was Netlify). Backend stays **Render** (FastAPI web + Celery worker + beat). This SUPERSEDES the "Production hosting stack (Phase 12 Slice 12.1)" entry below wherever it says Netlify.

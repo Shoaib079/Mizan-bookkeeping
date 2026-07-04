@@ -151,8 +151,12 @@ def _description_matches_token(description: str, token: str) -> bool:
 
 def _rule_signature(
     rule: StatementClassificationRule,
-) -> tuple[StatementLineClassification, uuid.UUID | None]:
-    return (rule.classification, rule.supplier_id)
+) -> tuple[
+    StatementLineClassification,
+    uuid.UUID | None,
+    uuid.UUID | None,
+]:
+    return (rule.classification, rule.supplier_id, rule.delivery_platform_id)
 
 
 def is_high_confidence(rule: StatementClassificationRule) -> bool:
@@ -210,6 +214,7 @@ def evaluate_rule_match(session: Session, description: str) -> RuleMatchEvaluati
     suggestion = ClassificationSuggestion(
         classification=best.classification,
         supplier_id=best.supplier_id,
+        delivery_platform_id=best.delivery_platform_id,
         reason=(
             f"Matched learned token {best.match_token!r} "
             f"({best.confirmation_count} prior confirmation"
@@ -242,10 +247,24 @@ def learn_classification_rule(
     description: str,
     classification: StatementLineClassification,
     supplier_id: uuid.UUID | None = None,
+    delivery_platform_id: uuid.UUID | None = None,
     match_token: str | None = None,
     counterparty_name: str | None = None,
 ) -> None:
     """Upsert a learned rule after successful user classification."""
+    if counterparty_name is None and supplier_id is not None:
+        from app.features.suppliers.models import Supplier
+
+        supplier = session.get(Supplier, supplier_id)
+        if supplier is not None:
+            counterparty_name = supplier.name
+    elif counterparty_name is None and delivery_platform_id is not None:
+        from app.features.delivery.models import DeliveryPlatform
+
+        platform = session.get(DeliveryPlatform, delivery_platform_id)
+        if platform is not None:
+            counterparty_name = platform.name
+
     token = derive_statement_match_token(
         description,
         match_token=match_token,
@@ -258,6 +277,10 @@ def learn_classification_rule(
     if classification == StatementLineClassification.SUPPLIER_PAYMENT:
         rule_supplier_id = supplier_id
 
+    rule_platform_id: uuid.UUID | None = None
+    if classification == StatementLineClassification.DELIVERY_SETTLEMENT:
+        rule_platform_id = delivery_platform_id
+
     now = utcnow()
     existing = session.scalar(
         select(StatementClassificationRule).where(
@@ -268,9 +291,11 @@ def learn_classification_rule(
         mapping_changed = (
             existing.classification != classification
             or existing.supplier_id != rule_supplier_id
+            or existing.delivery_platform_id != rule_platform_id
         )
         existing.classification = classification
         existing.supplier_id = rule_supplier_id
+        existing.delivery_platform_id = rule_platform_id
         if mapping_changed:
             existing.confirmation_count = 1
             existing.confirmations_since_correction = 1
@@ -287,6 +312,7 @@ def learn_classification_rule(
             match_token=token,
             classification=classification,
             supplier_id=rule_supplier_id,
+            delivery_platform_id=rule_platform_id,
             confirmation_count=1,
             confirmations_since_correction=1,
             correction_count=0,
@@ -302,10 +328,11 @@ def record_rule_correction(
     description: str,
     corrected_classification: StatementLineClassification,
     corrected_supplier_id: uuid.UUID | None = None,
+    corrected_delivery_platform_id: uuid.UUID | None = None,
     match_token: str | None = None,
 ) -> None:
     """Downgrade offending rules and learn the corrected mapping."""
-    token = normalize_expense_item_text(match_token) if match_token else None
+    token = _bank_match_key(match_token) if match_token else None
     matches = _matching_rules(session, description)
     if token is not None:
         matches = [rule for rule in matches if rule.match_token == token]
@@ -327,12 +354,19 @@ def record_rule_correction(
         supplier = session.get(Supplier, corrected_supplier_id)
         if supplier is not None:
             counterparty_name = supplier.name
+    elif corrected_delivery_platform_id is not None:
+        from app.features.delivery.models import DeliveryPlatform
+
+        platform = session.get(DeliveryPlatform, corrected_delivery_platform_id)
+        if platform is not None:
+            counterparty_name = platform.name
 
     learn_classification_rule(
         session,
         description=description,
         classification=corrected_classification,
         supplier_id=corrected_supplier_id,
+        delivery_platform_id=corrected_delivery_platform_id,
         match_token=forced_token,
         counterparty_name=counterparty_name,
     )
@@ -357,6 +391,23 @@ def record_rule_correction(
             field_name="supplier_id",
             before_value=str(matches[0].supplier_id) if matches[0].supplier_id else None,
             after_value=str(corrected_supplier_id) if corrected_supplier_id else None,
+            match_token=learn_token,
+        )
+    if matches and matches[0].delivery_platform_id != corrected_delivery_platform_id:
+        record_learning_correction(
+            session,
+            domain=LearningDomain.BANK_STATEMENT,
+            field_name="delivery_platform_id",
+            before_value=(
+                str(matches[0].delivery_platform_id)
+                if matches[0].delivery_platform_id
+                else None
+            ),
+            after_value=(
+                str(corrected_delivery_platform_id)
+                if corrected_delivery_platform_id
+                else None
+            ),
             match_token=learn_token,
         )
 

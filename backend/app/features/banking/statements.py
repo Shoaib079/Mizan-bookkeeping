@@ -239,6 +239,7 @@ def _record_classification_learning(
             description=description,
             classification=classification,
             supplier_id=learned_supplier_id,
+            delivery_platform_id=delivery_platform_id,
             match_token=learned_match_token,
             counterparty_name=counterparty_name,
         )
@@ -341,6 +342,7 @@ def create_supplier_from_statement_line(
             classification=StatementLineClassification.SUPPLIER_PAYMENT,
             supplier_id=supplier_id,
             match_token=match_token,
+            counterparty_name=supplier_display_name,
         )
         session.commit()
         session.refresh(line)
@@ -1093,6 +1095,7 @@ def classify_statement_line(
             *,
             learned_classification: StatementLineClassification | None = None,
             learned_supplier_id: uuid.UUID | None = None,
+            learned_delivery_platform_id: uuid.UUID | None = None,
             **result_fields,
         ) -> ClassifyStatementLineResult:
             if learned_classification is not None:
@@ -1102,6 +1105,7 @@ def classify_statement_line(
                     current_line,
                     learned_classification,
                     supplier_id=learned_supplier_id,
+                    delivery_platform_id=learned_delivery_platform_id,
                     match_token=match_token,
                 )
             return ClassifyStatementLineResult(
@@ -1387,6 +1391,7 @@ def classify_statement_line(
                 return classified_result(
                     line,
                     learned_classification=StatementLineClassification.DELIVERY_SETTLEMENT,
+                    learned_delivery_platform_id=delivery_platform_id,
                     linked_existing_payment=False,
                     linked_existing_transfer=False,
                     linked_existing_settlement=True,
@@ -2378,6 +2383,7 @@ def correct_statement_line(
             description=original_description,
             corrected_classification=classification,
             corrected_supplier_id=supplier_id,
+            corrected_delivery_platform_id=delivery_platform_id,
             match_token=match_token.strip() if match_token and match_token.strip() else None,
         )
         session.commit()

@@ -10,6 +10,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.adapters.bank_parsers.sign_hints import import_sign_review_reason
 from app.core.expenses.normalize import normalize_expense_item_text
 from app.features.banking.statement_models import BankStatement, BankStatementLine
 
@@ -115,6 +116,11 @@ def plan_statement_line_imports(
                 "Same date and amount as an existing statement line with a different "
                 "description — confirm this is not a duplicate"
             )
+        else:
+            sign_reason = import_sign_review_reason(description, amount_kurus)
+            if sign_reason is not None:
+                needs_review = True
+                review_reason = sign_reason
 
         plans.append(
             LineImportPlan(

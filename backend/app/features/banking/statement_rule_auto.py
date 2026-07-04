@@ -75,6 +75,7 @@ def _auto_link_settlement(
     statement: BankStatement,
     line: BankStatementLine,
     classification: StatementLineClassification,
+    delivery_platform_id: uuid.UUID | None = None,
 ) -> bool:
     """Link an inflow line to an existing settlement record. Never creates settlements."""
     from app.features.banking.statements import (
@@ -138,12 +139,18 @@ def _auto_link_settlement(
             )
             return False
 
-        platforms, _ = platform_service.list_delivery_platforms(session, entity_id)
+        platform_ids: list[uuid.UUID]
+        if delivery_platform_id is not None:
+            platform_ids = [delivery_platform_id]
+        else:
+            platforms, _ = platform_service.list_delivery_platforms(session, entity_id)
+            platform_ids = [platform.id for platform in platforms]
+
         matches = []
-        for platform in platforms:
+        for platform_id in platform_ids:
             settlement = _find_matching_delivery_settlement(
                 session,
-                delivery_platform_id=platform.id,
+                delivery_platform_id=platform_id,
                 money_account_id=statement.money_account_id,
                 amount_kurus=line.amount_kurus,
                 settlement_date=line.transaction_date,
@@ -344,6 +351,7 @@ def try_auto_apply_line(
             statement=statement,
             line=line,
             classification=rule.classification,
+            delivery_platform_id=rule.delivery_platform_id,
         )
 
     if rule.classification not in _AUTO_POST_CLASSIFICATIONS:

@@ -1,10 +1,15 @@
-# Pre-Deploy Checklist — Render API + Vercel Frontend
+# Deploy Checklist — Railway API + Neon DB + Vercel Frontend
 
-One-time checklist to get all local work live safely. Work top to bottom. The
+One-time checklist to get local work live safely. Work top to bottom. The
 items marked **BLOCKER** will break the live site if skipped.
 
-Stack now: **Render** (FastAPI API + Postgres + worker) · **Vercel** (Next.js
-frontend) · Clerk auth · R2 backups. (Netlify is retired — see step 3.)
+**CURRENT STACK (2026-07 — authoritative; ignore any "Render" references below/in other docs):**
+- **Database:** Neon (managed Postgres).
+- **Backend API + worker:** Railway (`mizan-api` service). Auto-deploys from GitHub `main`; runs Alembic migrations as its **pre-deploy command** (so a deploy migrates Neon automatically).
+- **Frontend:** Vercel (Next.js). Auto-deploys from `main` once the build compiles. (Was Render, was Netlify — both retired.)
+- **Auth:** Clerk. **Backups:** Cloudflare R2 (nightly `pg_dump`).
+
+**STATUS (2026-07):** Production DB is at migration `072` (head) — backend + Neon fully current; all backend fixes are live. Frontend on Vercel builds green again (was frozen at `b259d22` on a failed build). Remaining items below are per-deploy hygiene, not a backlog.
 
 ---
 
@@ -65,16 +70,16 @@ site has NO security headers live.
 
 ## 4. Environment variables (BLOCKERS — most common launch failure)
 
-Backend (Render dashboard):
+Backend (Railway dashboard → `mizan-api` → Variables):
 - [ ] `CORS_ORIGINS` = exact Vercel production origin, e.g.
       `https://<your-app>.vercel.app` (add custom domain later if you buy one).
       Wrong/old value → browser blocks EVERY API call from the live site.
 - [ ] `APP_ENV=production`, `AUTH_ENFORCEMENT=true` (the launch guard enforces
       this; also what makes the auth model real).
-- [ ] Clerk live keys present (`CLERK_*`), R2 backup vars, `DATABASE_URL`.
+- [ ] Clerk live keys present (`CLERK_*`), R2 backup vars, `DATABASE_URL` (the Neon connection string).
 
 Frontend (Vercel dashboard):
-- [ ] `NEXT_PUBLIC_API_URL` = Render API URL (e.g. `https://mizan-api-....onrender.com`).
+- [ ] `NEXT_PUBLIC_API_URL` = Railway API URL (e.g. `https://mizan-api-....up.railway.app`).
       ⚠️ The SEC-4 fix makes production **hard-fail** if this is unset — good,
       but it means a missing var = white-screen. Set it before promoting.
 - [ ] `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` = live `pk_live_...`.
@@ -86,28 +91,29 @@ Cross-check: no env var referenced in code is missing from the dashboard
 
 ## 5. Database migrations
 
-- [ ] Render pre-deploy runs `alembic upgrade head` (via
-      `scripts/migrate_production.sh`) — confirm the command is wired in the
-      Render service, so 068/069 apply automatically on deploy.
-- [ ] After deploy: `alembic current` on prod shows `069_classification_rule_vkn_key`.
-- [ ] Migration 069 backfills NULL seller_vkn — verify no crash on existing
-      classification rules (you have prod data now).
+- [x] Railway `mizan-api` runs `alembic upgrade head` (via
+      `scripts/migrate_production.sh`) as its **pre-deploy command** — confirmed;
+      migrations apply to Neon automatically on each deploy.
+- [x] `alembic current` against Neon shows `072_statement_rule_delivery_platform (head)` — prod is fully migrated.
+- [ ] Before any future in-place data migration (like 071), take a fresh R2 backup first.
+- Note: the container entrypoint (`docker-entrypoint.sh`) runs uvicorn only — migrations are the Railway pre-deploy step, NOT the entrypoint. Keep it that way (single migration path).
 
 ---
 
 ## 6. Infra decision still open (decide before real invoice volume)
 
-- [ ] **H3 — render.yaml shared disk.** Web + worker declare the same disk but
-      Render gives each its own; uploaded receipts won't be visible to the
-      backup worker. Choose: move uploads to R2 (vars already exist) OR run
-      backup on the web service. Not a hard blocker for launch, but decide.
+- [ ] **H3 — uploaded files persistence.** On Railway, uploaded receipt/invoice
+      files stored on the API's local/ephemeral filesystem can be lost on redeploy
+      and aren't in the nightly DB backup. Decide: mirror `UPLOAD_DIR` to R2 (vars
+      exist) so uploads survive redeploys and are backed up. (This is the old "H3
+      shared disk" concern, restated for Railway; `render.yaml` is stale — ignore it.)
 
 ---
 
 ## 7. Deploy + smoke (in order)
 
 - [ ] Push: `git push` (all local commits).
-- [ ] Backend deploys on Render (migrations run in pre-deploy). Watch logs green.
+- [ ] Backend auto-deploys on Railway (migrations run in pre-deploy). Watch logs green.
 - [ ] Frontend deploys on Vercel. Build succeeds (no missing-env hard-fail).
 - [ ] Smoke on the LIVE site:
   - [ ] Sign in (Clerk live).
@@ -123,7 +129,7 @@ Cross-check: no env var referenced in code is missing from the dashboard
 
 ## 8. Rollback readiness
 
-- [ ] Note the previous Render deploy + Vercel deployment (both platforms keep
+- [ ] Note the previous Railway deploy + Vercel deployment (both platforms keep
       instant-rollback). Know where the button is before you need it.
 - [ ] Latest DB backup in R2 is recent (nightly cron) — or run one manually
       before migrating prod.

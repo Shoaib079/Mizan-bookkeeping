@@ -11,6 +11,8 @@ from sqlalchemy import func, select
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.delivery import posting as delivery_posting
 from app.core.ledger.models import JournalEntry, JournalEntrySource, JournalEntryStatus
+from app.core.payables.models import SupplierLedgerEntry
+from app.core.payables.types import SupplierMovementType
 from app.core.pos import posting as pos_posting
 from app.core.subledger.control_account_tie import assert_entity_control_accounts_tied
 from app.db.session import entity_context
@@ -30,13 +32,91 @@ from app.features.banking.statement_models import (
     StatementLineStatus,
 )
 from app.features.delivery.models import DeliverySettlement
+from app.features.payables import service as payables_service
 from app.features.pos.models import PosSettlement
+from app.features.suppliers.models import Supplier
 from tests.delivery_helpers import delivery_setup as build_delivery_setup
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 FEE_TOKEN = "bank service fee"
 POS_TOKEN = "POS DEPOSIT"
 DELIVERY_TOKEN = "GETIR ODEME"
+SUPPLIER_TOKEN = "metro gida san tic"
+METRO_DESCRIPTIONS = [
+    "HAVALE EFT METRO GIDA SAN TIC ODEME 20260215 REF12345678",
+    "HAVALE EFT METRO GIDA SAN TIC ODEME 20260301 REF87654321",
+    "FAST METRO GIDA SAN TIC 20260401 REF11112222",
+]
+FOURTH_METRO_DESCRIPTION = "EFT METRO GIDA SAN TIC ODEME 20260501 REF99998888"
+
+
+def _supplier_with_payable(
+    db_session,
+    entity_id,
+    *,
+    balance_kurus: int = 5_000_000,
+) -> uuid.UUID:
+    with entity_context(db_session, entity_id):
+        vkn = f"9{uuid.uuid4().int % 10**9:09d}"
+        supplier = Supplier(name="Metro Gida San Tic Ltd", vkn=vkn)
+        db_session.add(supplier)
+        db_session.commit()
+        db_session.refresh(supplier)
+        supplier_id = supplier.id
+
+    payables_service.record_movement(
+        db_session,
+        entity_id,
+        supplier_id,
+        movement_date=date(2026, 1, 1),
+        movement_type=SupplierMovementType.OPENING_BALANCE,
+        amount_kurus=balance_kurus,
+        description="Opening balance",
+        actor_id=ACTOR_ID,
+    )
+    return supplier_id
+
+
+def _learn_supplier_rule(
+    db_session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    *,
+    descriptions: list[str] | None = None,
+) -> None:
+    with entity_context(db_session, entity_id):
+        for desc in descriptions or METRO_DESCRIPTIONS:
+            learn_classification_rule(
+                db_session,
+                description=desc,
+                classification=StatementLineClassification.SUPPLIER_PAYMENT,
+                supplier_id=supplier_id,
+                counterparty_name="Metro Gida San Tic Ltd",
+            )
+        db_session.commit()
+
+
+def _import_supplier_outflow_csv(
+    db_session,
+    entity_id: uuid.UUID,
+    bank_id: uuid.UUID,
+    *,
+    tx_date: str,
+    amount_lira: str,
+    description: str,
+    reference: str,
+):
+    csv = (
+        "transaction_date,amount,description,reference\n"
+        f'{tx_date},"{amount_lira}",{description},{reference}\n'
+    ).encode()
+    return statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank_id,
+        csv,
+        original_filename=f"supplier-{reference}.csv",
+    )
 
 
 def _fee_csv(*, tx_date: str = "2026-03-01", description: str = "Bank service fee") -> bytes:
@@ -421,7 +501,8 @@ def test_pos_settlement_outflow_routes_to_needs_review(db_session, bank_setup) -
         line = db_session.get(BankStatementLine, statement.lines[0].id)
         assert line is not None
         assert line.status == StatementLineStatus.NEEDS_REVIEW
-        assert line.review_reason == "settlement requires an inflow"
+        assert line.review_reason is not None
+        assert "inflow" in line.review_reason.lower()
         assert line.pos_settlement_id is None
 
 
@@ -569,3 +650,170 @@ def test_delivery_settlement_no_match_routes_to_needs_review(
         assert line.status == StatementLineStatus.NEEDS_REVIEW
         assert line.delivery_settlement_id is None
         assert line.review_reason == "no matching delivery settlement on file"
+
+
+def test_supplier_payment_fourth_import_auto_posts_to_same_supplier(
+    db_session, bank_setup
+) -> None:
+    entity_id = bank_setup["entity_id"]
+    bank_id = bank_setup["bank"].id
+    supplier_id = _supplier_with_payable(db_session, entity_id)
+
+    _learn_supplier_rule(db_session, entity_id, supplier_id)
+    with entity_context(db_session, entity_id):
+        rule = db_session.scalar(select(StatementClassificationRule))
+        assert rule is not None
+        assert rule.confirmation_count == 3
+        assert rule.supplier_id == supplier_id
+
+    statement = _import_supplier_outflow_csv(
+        db_session,
+        entity_id,
+        bank_id,
+        tx_date="2026-05-01",
+        amount_lira="-1.000,00",
+        description=FOURTH_METRO_DESCRIPTION,
+        reference="METRO-4",
+    )
+    line_id = statement.lines[0].id
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, line_id)
+        assert line is not None
+        assert line.status == StatementLineStatus.POSTED
+        assert line.supplier_id == supplier_id
+        assert line.classification == StatementLineClassification.SUPPLIER_PAYMENT
+        assert line.classification_source == StatementLineClassificationSource.RULE_AUTO.value
+        assert line.journal_entry_id is not None
+        payment = db_session.scalar(
+            select(SupplierLedgerEntry).where(
+                SupplierLedgerEntry.supplier_id == supplier_id,
+                SupplierLedgerEntry.movement_type == SupplierMovementType.PAYMENT,
+            )
+        )
+        assert payment is not None
+        assert payment.journal_entry_id == line.journal_entry_id
+
+
+def test_delivery_settlement_auto_links_learned_platform_only(
+    db_session, delivery_bank_setup
+) -> None:
+    entity_id = delivery_bank_setup["entity_id"]
+    bank_id = delivery_bank_setup["bank"].id
+    getir = delivery_bank_setup["getir"]
+    yemek = delivery_bank_setup["yemek"]
+
+    delivery_posting.post_delivery_settlement(
+        db_session,
+        entity_id,
+        delivery_platform_id=getir.id,
+        money_account_id=bank_id,
+        settlement_date=date(2026, 3, 20),
+        amount_kurus=150_000,
+        description="Getir payout",
+        actor_id=ACTOR_ID,
+    )
+    delivery_posting.post_delivery_settlement(
+        db_session,
+        entity_id,
+        delivery_platform_id=yemek.id,
+        money_account_id=bank_id,
+        settlement_date=date(2026, 3, 20),
+        amount_kurus=150_000,
+        description="Yemek payout",
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, entity_id):
+        for _ in range(HIGH_CONFIDENCE_THRESHOLD):
+            learn_classification_rule(
+                db_session,
+                description="GETIR YEMEK HAVALE ODEME",
+                classification=StatementLineClassification.DELIVERY_SETTLEMENT,
+                delivery_platform_id=getir.id,
+                counterparty_name=getir.name,
+            )
+        db_session.commit()
+        rule = db_session.scalar(select(StatementClassificationRule))
+        assert rule is not None
+        assert rule.delivery_platform_id == getir.id
+
+    statement = _import_inflow_csv(
+        db_session,
+        entity_id,
+        bank_id,
+        tx_date="2026-03-20",
+        amount_lira="1.500,00",
+        description="GETIR YEMEK HAVALE ODEME",
+        reference="DLV-GETIR",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, statement.lines[0].id)
+        assert line is not None
+        assert line.status == StatementLineStatus.LINKED
+        assert line.delivery_settlement_id is not None
+        settlement = db_session.get(DeliverySettlement, line.delivery_settlement_id)
+        assert settlement is not None
+        assert settlement.delivery_platform_id == getir.id
+
+
+def test_correction_relearns_supplier_and_blocks_wrong_auto_apply(
+    db_session, bank_setup
+) -> None:
+    entity_id = bank_setup["entity_id"]
+    bank_id = bank_setup["bank"].id
+    wrong_supplier_id = _supplier_with_payable(db_session, entity_id)
+    right_supplier_id = _supplier_with_payable(db_session, entity_id)
+
+    _learn_supplier_rule(db_session, entity_id, wrong_supplier_id)
+    statement = _import_supplier_outflow_csv(
+        db_session,
+        entity_id,
+        bank_id,
+        tx_date="2026-05-10",
+        amount_lira="-500,00",
+        description=FOURTH_METRO_DESCRIPTION,
+        reference="METRO-WRONG",
+    )
+    line_id = statement.lines[0].id
+    statement_id = statement.id
+
+    with entity_context(db_session, entity_id):
+        posted = db_session.get(BankStatementLine, line_id)
+        assert posted is not None
+        assert posted.status == StatementLineStatus.POSTED
+        assert posted.supplier_id == wrong_supplier_id
+
+    statement_service.correct_statement_line(
+        db_session,
+        entity_id,
+        statement_id,
+        line_id,
+        actor_id=ACTOR_ID,
+        classification=StatementLineClassification.SUPPLIER_PAYMENT,
+        supplier_id=right_supplier_id,
+        reason="Wrong supplier learned",
+    )
+
+    with entity_context(db_session, entity_id):
+        rule = db_session.scalar(select(StatementClassificationRule))
+        assert rule is not None
+        assert rule.supplier_id == right_supplier_id
+        assert rule.confirmations_since_correction < HIGH_CONFIDENCE_THRESHOLD
+
+    statement2 = _import_supplier_outflow_csv(
+        db_session,
+        entity_id,
+        bank_id,
+        tx_date="2026-05-11",
+        amount_lira="-500,00",
+        description=FOURTH_METRO_DESCRIPTION,
+        reference="METRO-RETRY",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, statement2.lines[0].id)
+        assert line is not None
+        assert line.status == StatementLineStatus.NEEDS_REVIEW
+        assert line.journal_entry_id is None
