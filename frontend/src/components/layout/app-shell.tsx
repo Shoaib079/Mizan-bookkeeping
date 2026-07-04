@@ -98,7 +98,7 @@ function AppShellInner({
               }
             >
               <Search className="size-4" />
-              <span className="text-muted-foreground">Search</span>
+              <span className="text-muted-foreground">Search…</span>
               <kbd className="rounded border border-border px-1 text-[10px] text-muted-foreground">
                 ⌘K
               </kbd>

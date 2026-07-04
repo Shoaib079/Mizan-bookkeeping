@@ -9,10 +9,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | UX-A — Retire "New", rename Record → "Add" (awaiting tests + commit) |
-| **Last completed slice** | Deploy catch-up — Netlify→Vercel cleanup (`v0.deploy-vercel-cleanup`) |
-| **Last tag** | `v0.deploy-vercel-cleanup` |
-| **Next up** | UX-B (data-first global search), then remaining Phase 13 sequence in `POST_LAUNCH_PLAN.md` |
+| **Active slice** | (none — ready for next) |
+| **Last completed slice** | UX-B — Data-first global search (`v0.uxb-global-search`) |
+| **Last tag** | `v0.uxb-global-search` |
+| **Next up** | DASH-A (dashboard composition charts), then remaining Phase 13 sequence in `POST_LAUNCH_PLAN.md` |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 

@@ -293,16 +293,71 @@ describe("delivery gating", () => {
   });
 });
 
-describe("command palette", () => {
-  it("navigates via router.push, no quickAction modal routing", async () => {
+describe("command palette (UX-B data-first search)", () => {
+  it("searches suppliers, expense items, pages, and actions", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/command-palette.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("router.push(route.href)");
-    expect(source).not.toContain("quickAction");
-    expect(source).not.toContain("openRecordAction");
+    expect(source).toContain("searchSuppliers");
+    expect(source).toContain("searchExpenseItems");
+    expect(source).toContain("appRoutes");
+    expect(source).toContain("RECORD_ACTIONS");
+  });
+
+  it("has debounce + stale entity guard", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("PALETTE_SEARCH_DEBOUNCE_MS");
+    expect(source).toContain("nextSearchGeneration");
+    expect(source).toContain("isStale");
+    expect(source).toContain("prevEntityRef");
+  });
+
+  it("gates actions behind canWriteOperations", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("canWriteOperations(role)");
+    expect(source).toContain("filterRecordActions");
+  });
+
+  it("navigates to supplier detail on supplier select", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("router.push(`/suppliers/${row.supplier.id}`)");
+  });
+
+  it("opens action via openRecordAction on action select", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("openRecordAction(row.action.id)");
+  });
+
+  it("has subtitle slot reserved for SRCH-B spend totals", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/command-palette.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("SRCH-B");
   });
 });

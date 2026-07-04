@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | **UX-A** — Retire "New" menu, rename Record → "Add", unify dashboard shortcuts |
-| **Last completed slice** | Review smart redirect — `/review` lands on first tab with pending items (`v0.review-smart-redirect`) |
-| **Last commit/tag**      | `v0.review-smart-redirect` (after SEC-1→4, telecom/ÖİV `v0.76.0`, invoice learning pipeline + commission one-click) |
-| **Next up**              | UX-B (data-first global search), then remaining Phase 13 sequence — `POST_LAUNCH_PLAN.md` § Phase 13 |
+| **Active slice**         | (none — ready for next) |
+| **Last completed slice** | UX-B — Data-first global search (`v0.uxb-global-search`) |
+| **Last commit/tag**      | `v0.uxb-global-search` |
+| **Next up**              | DASH-A (dashboard composition charts), then remaining Phase 13 sequence — `POST_LAUNCH_PLAN.md` § Phase 13 |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 

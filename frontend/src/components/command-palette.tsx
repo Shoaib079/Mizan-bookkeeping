@@ -1,22 +1,50 @@
 "use client";
 
-/** Global Cmd/Ctrl-K navigation search (DESIGN_SYSTEM §10). */
+/** Global ⌘K data-first search — suppliers, items, pages, actions (UX-B). */
 
-import { Search } from "lucide-react";
+import { Search, Users, Tags, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useQuickActions } from "@/components/quick-actions";
 import { Input } from "@/components/ui/input";
 import { appRoutes, filterRoutesByEntitySettings } from "@/lib/app-routes";
+import { useEntity } from "@/lib/entity-context";
+import {
+  RECORD_ACTIONS,
+  filterRecordActions,
+  type RecordActionDef,
+} from "@/lib/record-actions";
+import {
+  PALETTE_SEARCH_DEBOUNCE_MS,
+  PALETTE_SEARCH_MIN_CHARS,
+  nextSearchGeneration,
+  isStale,
+  searchSuppliers,
+  searchExpenseItems,
+  type PaletteSupplier,
+  type PaletteExpenseItem,
+} from "@/lib/palette-search";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
+import { useEntityAccess } from "@/lib/use-entity-access";
+import { canWriteOperations } from "@/lib/entity-access";
 import { cn } from "@/lib/utils";
 
 type Props = {
   deliveryEnabled: boolean;
 };
 
+type PaletteRow =
+  | { kind: "supplier"; supplier: PaletteSupplier }
+  | { kind: "item"; item: PaletteExpenseItem }
+  | { kind: "page"; label: string; href: string; icon: React.ComponentType<{ className?: string }>; group: string }
+  | { kind: "action"; action: RecordActionDef };
+
 export function CommandPalette({ deliveryEnabled }: Props) {
   const router = useRouter();
+  const { entityId } = useEntity();
+  const { role } = useEntityAccess();
+  const { openRecordAction } = useQuickActions();
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -24,39 +52,137 @@ export function CommandPalette({ deliveryEnabled }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const [suppliers, setSuppliers] = useState<PaletteSupplier[]>([]);
+  const [items, setItems] = useState<PaletteExpenseItem[]>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const prevEntityRef = useRef(entityId);
+
+  // Stale guard: reset search results on entity switch
+  useEffect(() => {
+    if (prevEntityRef.current !== entityId) {
+      prevEntityRef.current = entityId;
+      setSuppliers([]);
+      setItems([]);
+      nextSearchGeneration();
+    }
+  }, [entityId]);
+
   const routes = useMemo(
     () => filterRoutesByEntitySettings(appRoutes, { deliveryEnabled }),
     [deliveryEnabled],
   );
 
-  const filtered = useMemo(() => {
+  const actions = useMemo(
+    () =>
+      canWriteOperations(role)
+        ? filterRecordActions(RECORD_ACTIONS, { deliveryEnabled })
+        : [],
+    [role, deliveryEnabled],
+  );
+
+  // Debounced API search
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < PALETTE_SEARCH_MIN_CHARS || !entityId) {
+      setSuppliers([]);
+      setItems([]);
+      return;
+    }
+
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const gen = nextSearchGeneration();
+      void searchSuppliers(entityId, q, gen).then((res) => {
+        if (!isStale(gen)) setSuppliers(res);
+      });
+      void searchExpenseItems(entityId, q, gen).then((res) => {
+        if (!isStale(gen)) setItems(res);
+      });
+    }, PALETTE_SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(debounceRef.current);
+  }, [query, entityId]);
+
+  const rows = useMemo((): PaletteRow[] => {
     const q = query.trim().toLowerCase();
-    if (!q) return routes;
-    return routes.filter(
-      (route) =>
-        route.label.toLowerCase().includes(q) ||
-        route.href.toLowerCase().includes(q) ||
-        route.keywords?.toLowerCase().includes(q) ||
-        route.group.toLowerCase().includes(q),
-    );
-  }, [query, routes]);
+    const result: PaletteRow[] = [];
+
+    // Data results first (only when typing)
+    for (const s of suppliers) {
+      result.push({ kind: "supplier", supplier: s });
+    }
+    for (const i of items) {
+      result.push({ kind: "item", item: i });
+    }
+
+    // Pages (always, filtered by query)
+    const filteredRoutes = q
+      ? routes.filter(
+          (route) =>
+            route.label.toLowerCase().includes(q) ||
+            route.href.toLowerCase().includes(q) ||
+            route.keywords?.toLowerCase().includes(q) ||
+            route.group.toLowerCase().includes(q),
+        )
+      : routes;
+
+    for (const route of filteredRoutes) {
+      result.push({
+        kind: "page",
+        label: route.label,
+        href: route.href,
+        icon: route.icon,
+        group: route.group,
+      });
+    }
+
+    // Actions (only when typing, role-gated)
+    if (q) {
+      const filteredActions = actions.filter(
+        (a) =>
+          a.label.toLowerCase().includes(q) ||
+          a.description.toLowerCase().includes(q),
+      );
+      for (const action of filteredActions) {
+        result.push({ kind: "action", action });
+      }
+    }
+
+    return result;
+  }, [query, suppliers, items, routes, actions]);
 
   const close = useCallback(() => {
     setOpen(false);
     setQuery("");
     setActiveIndex(0);
+    setSuppliers([]);
+    setItems([]);
+    nextSearchGeneration();
   }, []);
 
   useDismissOnOutsideClick(panelRef, open, close, { escape: false });
 
   const select = useCallback(
     (index: number) => {
-      const route = filtered[index];
-      if (!route) return;
+      const row = rows[index];
+      if (!row) return;
       close();
-      router.push(route.href);
+      switch (row.kind) {
+        case "supplier":
+          router.push(`/suppliers/${row.supplier.id}`);
+          break;
+        case "item":
+          router.push("/expenses/items");
+          break;
+        case "page":
+          router.push(row.href);
+          break;
+        case "action":
+          openRecordAction(row.action.id);
+          break;
+      }
     },
-    [close, filtered, router],
+    [close, rows, router, openRecordAction],
   );
 
   useEffect(() => {
@@ -74,21 +200,21 @@ export function CommandPalette({ deliveryEnabled }: Props) {
       }
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setActiveIndex((i) => Math.min(i + 1, Math.max(filtered.length - 1, 0)));
+        setActiveIndex((i) => Math.min(i + 1, Math.max(rows.length - 1, 0)));
         return;
       }
       if (event.key === "ArrowUp") {
         event.preventDefault();
         setActiveIndex((i) => Math.max(i - 1, 0));
       }
-      if (event.key === "Enter" && filtered[activeIndex]) {
+      if (event.key === "Enter" && rows[activeIndex]) {
         event.preventDefault();
         select(activeIndex);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, close, filtered, activeIndex, select]);
+  }, [open, close, rows, activeIndex, select]);
 
   useEffect(() => {
     function onOpenPalette() {
@@ -109,7 +235,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
   useEffect(() => {
     setActiveIndex(0);
     listRef.current?.scrollTo({ top: 0 });
-  }, [query]);
+  }, [query, suppliers, items]);
 
   useEffect(() => {
     if (open) {
@@ -131,31 +257,31 @@ export function CommandPalette({ deliveryEnabled }: Props) {
         className="w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-xl"
         role="dialog"
         aria-modal
-        aria-label="Command palette"
+        aria-label="Search"
       >
         <div className="flex items-center gap-2 border-b border-border px-3">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <Input
             ref={inputRef}
             className="border-0 shadow-none focus-visible:ring-0"
-            placeholder="Search pages…"
+            placeholder="Search suppliers, items, pages…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search pages"
+            aria-label="Search suppliers, items, pages"
           />
           <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground sm:inline">
             Esc
           </kbd>
         </div>
         <div ref={listRef} className="max-h-80 overflow-y-auto py-1" role="listbox">
-          {filtered.length === 0 ? (
+          {rows.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-muted-foreground">
               No matches
             </p>
           ) : (
-            filtered.map((route, index) => (
+            rows.map((row, index) => (
               <button
-                key={`${route.href}-${route.label}`}
+                key={rowKey(row, index)}
                 type="button"
                 role="option"
                 aria-selected={index === activeIndex}
@@ -166,9 +292,12 @@ export function CommandPalette({ deliveryEnabled }: Props) {
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => select(index)}
               >
-                <route.icon className="size-4 shrink-0" />
-                <span className="flex-1">{route.label}</span>
-                <span className="text-xs text-muted-foreground">{route.group}</span>
+                <RowIcon row={row} />
+                <span className="min-w-0 flex-1 truncate">{rowLabel(row)}</span>
+                {/* Subtitle slot — reserved for SRCH-B spend totals */}
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {rowBadge(row)}
+                </span>
               </button>
             ))
           )}
@@ -176,4 +305,58 @@ export function CommandPalette({ deliveryEnabled }: Props) {
       </div>
     </div>
   );
+}
+
+function rowKey(row: PaletteRow, index: number): string {
+  switch (row.kind) {
+    case "supplier":
+      return `s-${row.supplier.id}`;
+    case "item":
+      return `i-${row.item.id}`;
+    case "page":
+      return `p-${row.href}`;
+    case "action":
+      return `a-${row.action.id}`;
+    default:
+      return `r-${index}`;
+  }
+}
+
+function RowIcon({ row }: { row: PaletteRow }) {
+  switch (row.kind) {
+    case "supplier":
+      return <Users className="size-4 shrink-0 text-blue-500" />;
+    case "item":
+      return <Tags className="size-4 shrink-0 text-emerald-500" />;
+    case "page":
+      return <row.icon className="size-4 shrink-0" />;
+    case "action":
+      return <row.action.icon className="size-4 shrink-0 text-primary" />;
+  }
+}
+
+function rowLabel(row: PaletteRow): string {
+  switch (row.kind) {
+    case "supplier":
+      return row.supplier.name;
+    case "item":
+      return row.item.canonical_name;
+    case "page":
+      return row.label;
+    case "action":
+      return row.action.label;
+  }
+}
+
+function rowBadge(row: PaletteRow): string {
+  switch (row.kind) {
+    case "supplier":
+      return "Supplier";
+    case "item":
+      return "Item";
+    case "page":
+      return row.group;
+    case "action":
+      return "Add";
+  }
 }
