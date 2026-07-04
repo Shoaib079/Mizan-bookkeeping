@@ -109,6 +109,7 @@ function DashboardBody() {
             key: "needs_review",
             label: "Needs review",
             value: String(data.needs_review.total),
+            href: "/review",
           },
         ],
         role,
@@ -201,17 +202,32 @@ function DashboardBody() {
       {data && (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {kpis.map((kpi) => (
-              <div
-                key={kpi.key}
-                className="rounded-lg border border-border bg-card p-4"
-              >
-                <p className="text-sm text-muted-foreground">{kpi.label}</p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {kpi.value}
-                </p>
-              </div>
-            ))}
+            {kpis.map((kpi) => {
+              const inner = (
+                <>
+                  <p className="text-sm text-muted-foreground">{kpi.label}</p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums">
+                    {kpi.value}
+                  </p>
+                </>
+              );
+              return kpi.href ? (
+                <Link
+                  key={kpi.key}
+                  href={kpi.href}
+                  className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
+                >
+                  {inner}
+                </Link>
+              ) : (
+                <div
+                  key={kpi.key}
+                  className="rounded-lg border border-border bg-card p-4"
+                >
+                  {inner}
+                </div>
+              );
+            })}
           </div>
 
           {data.fx_balances.length > 0 && (
@@ -296,7 +312,11 @@ function DashboardBody() {
 
           {data.needs_review.total > 0 && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
-              <h2 className="text-sm font-semibold">Needs review</h2>
+              <h2 className="text-sm font-semibold">
+                <Link href="/review" className="hover:underline">
+                  Needs review
+                </Link>
+              </h2>
               <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 {data.needs_review.invoice_drafts > 0 && (
                   <div>

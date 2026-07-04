@@ -13,11 +13,12 @@ const POLL_MS = 30_000;
 
 export function useReviewCounts(entityId: string) {
   const [counts, setCounts] = useState<ReviewCounts>(EMPTY_REVIEW_COUNTS);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     if (!entityId) {
       setCounts(EMPTY_REVIEW_COUNTS);
+      setLoading(false);
       return;
     }
     setLoading(true);

@@ -40,7 +40,7 @@ function AppShellInner({
   const pathname = usePathname();
   const { deliveryEnabled } = useQuickActions();
   const { entityId, entities, entitiesLoading } = useEntity();
-  const { counts: reviewCounts } = useReviewCounts(entityId);
+  const { counts: reviewCounts, loading: reviewLoading } = useReviewCounts(entityId);
 
   const navSettings = { deliveryEnabled };
   const activeEntity = entities.find((entity) => entity.id === entityId);
@@ -110,7 +110,7 @@ function AppShellInner({
         </header>
         <main className="flex-1 p-6" key={entityId}>
           <PageBackLink />
-          <ReviewCountsProvider counts={reviewCounts}>
+          <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>
             {children}
           </ReviewCountsProvider>
         </main>

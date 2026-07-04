@@ -9,21 +9,25 @@ import {
 
 type ReviewCountsContextValue = {
   counts: ReviewCounts;
+  loading: boolean;
 };
 
 const ReviewCountsContext = createContext<ReviewCountsContextValue>({
   counts: EMPTY_REVIEW_COUNTS,
+  loading: true,
 });
 
 export function ReviewCountsProvider({
   counts,
+  loading,
   children,
 }: {
   counts: ReviewCounts;
+  loading: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <ReviewCountsContext.Provider value={{ counts }}>
+    <ReviewCountsContext.Provider value={{ counts, loading }}>
       {children}
     </ReviewCountsContext.Provider>
   );
