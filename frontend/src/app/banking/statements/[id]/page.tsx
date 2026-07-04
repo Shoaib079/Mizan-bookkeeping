@@ -14,7 +14,7 @@ import { apiFetch } from "@/lib/api";
 import type { BankStatementRead } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate } from "@/lib/money";
-import { canDiscardStatement, queueLines } from "@/lib/statement-line-filters";
+import { canDiscardStatement, defaultStatementLineFilter, queueLines } from "@/lib/statement-line-filters";
 import { useStatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 
@@ -66,6 +66,11 @@ export default function StatementDetailPage() {
 
   const queue = useMemo(
     () => (statement ? queueLines(statement.lines) : []),
+    [statement],
+  );
+
+  const ledgerDefaultFilter = useMemo(
+    () => (statement ? defaultStatementLineFilter(statement.lines) : "queue"),
     [statement],
   );
 
@@ -229,9 +234,11 @@ export default function StatementDetailPage() {
           />
 
           <StatementLinesLedger
+            key={statementId}
             lines={statement.lines}
             selectedLineId={barLine?.id ?? null}
             skippedDuplicateCount={statement.skipped_duplicate_count}
+            defaultFilter={ledgerDefaultFilter}
             onSelectLine={setSelectedLineId}
           />
         </>

@@ -30,6 +30,7 @@ type Props = {
   lines: BankStatementLine[];
   selectedLineId: string | null;
   skippedDuplicateCount?: number;
+  defaultFilter?: StatementLineFilter;
   onSelectLine: (lineId: string) => void;
 };
 
@@ -37,9 +38,10 @@ export function StatementLinesLedger({
   lines,
   selectedLineId,
   skippedDuplicateCount = 0,
+  defaultFilter = "queue",
   onSelectLine,
 }: Props) {
-  const [filter, setFilter] = useState<StatementLineFilter>("all");
+  const [filter, setFilter] = useState<StatementLineFilter>(defaultFilter);
   const [search, setSearch] = useState("");
 
   const summary = useMemo(() => summarizeStatementLines(lines), [lines]);

@@ -8,6 +8,7 @@ import {
   isSkippedLine,
   queueLines,
   summarizeStatementLines,
+  defaultStatementLineFilter,
 } from "@/lib/statement-line-filters";
 
 function line(
@@ -88,6 +89,18 @@ describe("statement-line-filters", () => {
     expect(
       filterStatementLines(lines, "all", "trendyol").map((row) => row.id),
     ).toEqual(["in"]);
+  });
+
+  it("defaults to queue when unposted lines remain, else all", () => {
+    const withQueue = [
+      line({ id: "1", status: "imported" }),
+      line({ id: "2", status: "posted", journal_entry_id: "je-1" }),
+    ];
+    expect(defaultStatementLineFilter(withQueue)).toBe("queue");
+    const allPosted = [
+      line({ id: "2", status: "posted", journal_entry_id: "je-1" }),
+    ];
+    expect(defaultStatementLineFilter(allPosted)).toBe("all");
   });
 
   it("allows discard when no ledger-linked lines", () => {

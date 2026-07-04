@@ -15,8 +15,8 @@ export const STATEMENT_LINE_FILTERS: {
   id: StatementLineFilter;
   label: string;
 }[] = [
-  { id: "all", label: "All" },
   { id: "queue", label: "To post" },
+  { id: "all", label: "All lines" },
   { id: "posted", label: "Posted" },
   { id: "skipped", label: "Skipped (no GL)" },
   { id: "needs_review", label: "Needs review" },
@@ -66,6 +66,13 @@ export function sortStatementLines(lines: BankStatementLine[]): BankStatementLin
 
 export function queueLines(lines: BankStatementLine[]): BankStatementLine[] {
   return sortStatementLines(lines.filter(isQueueLine));
+}
+
+/** Default ledger filter after import: unposted queue when work remains, else full statement. */
+export function defaultStatementLineFilter(
+  lines: BankStatementLine[],
+): StatementLineFilter {
+  return queueLines(lines).length > 0 ? "queue" : "all";
 }
 
 export type StatementLineSummary = {
