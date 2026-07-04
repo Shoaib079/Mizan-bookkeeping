@@ -24,8 +24,8 @@ def upgrade() -> None:
             '3300',
             'Partner Capital',
             'Ortak Sermaye Hesabı',
-            'equity',
-            'credit',
+            'EQUITY',
+            'CREDIT',
             false,
             true,
             now()
