@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { RecordActionModals } from "@/components/record-action-modals";
+import { recordActionUsage } from "@/lib/action-usage";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
 import {
@@ -72,8 +73,9 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
       if (!canWriteOperations) return;
       if (key === "deliveryReport" && !deliveryEnabled) return;
       setActive(key);
+      if (entityId) recordActionUsage(entityId, key);
     },
-    [canWriteOperations, deliveryEnabled],
+    [canWriteOperations, deliveryEnabled, entityId],
   );
 
   const openQuickAction = useCallback(

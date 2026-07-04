@@ -1,13 +1,16 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, Star } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { useRecordActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
+import { getTopActions } from "@/lib/action-usage";
 import { shouldShowNewMenu } from "@/lib/entity-access";
+import { useEntity } from "@/lib/entity-context";
 import {
   filterRecordActions,
+  RECORD_ACTIONS,
   RECORD_SECTION_LABELS,
   recordActionsBySection,
   type RecordActionDef,
@@ -27,8 +30,18 @@ const SECTION_ORDER: RecordSectionId[] = [
 
 export function RecordHub() {
   const { openRecordAction, deliveryEnabled } = useRecordActions();
+  const { entityId } = useEntity();
   const { role } = useEntityAccess();
   const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  const topActions = useMemo(() => {
+    if (!entityId) return [];
+    const topIds = getTopActions(entityId, 4);
+    const available = filterRecordActions(RECORD_ACTIONS, { deliveryEnabled });
+    return topIds
+      .map((id) => available.find((a) => a.id === id))
+      .filter((a): a is RecordActionDef => a !== undefined);
+  }, [entityId, deliveryEnabled]);
 
   if (!shouldShowNewMenu(role)) {
     return (
@@ -41,6 +54,24 @@ export function RecordHub() {
 
   return (
     <div className="space-y-8">
+      {topActions.length > 0 && (
+        <section>
+          <h2 className="mb-3 flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+            <Star className="size-3.5" />
+            Most used
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {topActions.map((action) => (
+              <RecordCard
+                key={action.id}
+                action={action}
+                onOpen={() => openRecordAction(action.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {SECTION_ORDER.map((section) => {
         const actions = recordActionsBySection(section, { deliveryEnabled });
         if (actions.length === 0) return null;

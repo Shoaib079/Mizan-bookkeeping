@@ -15,9 +15,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none — ready for next) |
-| **Last completed slice** | SRCH-B — Spend totals in search (`v0.srchb-spend-search`) |
-| **Last commit/tag**      | `v0.srchb-spend-search` |
-| **Next up**              | UX-D (self-curating "Most used" in Add), then remaining Phase 13 sequence — `POST_LAUNCH_PLAN.md` § Phase 13 |
+| **Last completed slice** | UX-D — Self-curating "Most used" in Add (`v0.uxd-most-used`) |
+| **Last commit/tag**      | `v0.uxd-most-used` |
+| **Next up**              | Phase 13 build queue — IC (invoice classification), then remaining sequence — `POST_LAUNCH_PLAN.md` § Build queue |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 

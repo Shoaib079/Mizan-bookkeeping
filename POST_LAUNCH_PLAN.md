@@ -86,7 +86,7 @@ Backend + frontend. New entity-scoped, date-range-bounded endpoint returning sal
 ### SRCH-B — Spend totals in search ✅ `v0.srchb-spend-search`
 Small backend (reuse DASH-B aggregation) + frontend. Fill the result-row subtitle slot from UX-B: "Peynir — ₺4,200 this period", supplier spend likewise. Type "cheese"/"peynir" → see the number. Tests: totals match the by-category aggregation; entity-scoped; period-aware.
 
-### UX-D — Self-curating "Most used" in Add
+### UX-D — Self-curating "Most used" in Add ✅ `v0.uxd-most-used`
 Frontend polish (small usage tracking — localStorage per entity, or a light backend count). Top of the Add surface shows the owner's most-used/most-recent actions automatically (Close day, expense, sales, Add document typically), full grouped list below. Replaces the value the old "New" curated list gave, without manual upkeep. Tests: ordering reflects recorded usage; falls back to a sensible default set when no history.
 
 ---

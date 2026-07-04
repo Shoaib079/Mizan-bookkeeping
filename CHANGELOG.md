@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-04
 
+**UX-D — Self-curating "Most used" in Add (`v0.uxd-most-used`):** New `action-usage.ts` module tracks per-entity action usage in localStorage (count-based, keyed by entity ID). `openRecordAction` in `QuickActionsProvider` records every action open. `RecordHub` now shows a "Most used" section (Star icon, 4-col grid) at the top of the Add page — top 4 actions ranked by usage count. Falls back to sensible defaults (Close day, Manual expense, Daily sales, Add document) when no history. Actions filtered through `filterRecordActions` for delivery gating. 11 tests: ranking, entity isolation, corrupted localStorage resilience, clear/reset, integration.
+
 **SRCH-B — Spend totals in search (`v0.srchb-spend-search`):** Backend: added `spend_by_supplier` (posted invoice gross totals grouped by supplier) to `TimeSeriesRead` / `get_time_series` — reuses existing DASH-B time-series endpoint. Frontend: command palette fetches time-series on open (current month range), builds supplier/item spend lookup maps, and shows formatted TRY spend in the badge slot (e.g. "₺4,200.00 ₺" instead of "Supplier"). Falls back to type label when no spend data. 4 new frontend tests (spend in badge, lookup maps, fallback, time-series fetch). Backend schema test updated with `SpendBySupplier`.
 
 **Deploy catch-up — Netlify→Vercel (`v0.deploy-vercel-cleanup`):** Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) and static asset cache moved from `netlify.toml` into `next.config.ts` `headers()`. `netlify.toml` deleted; `frontend/vercel.json` added. `DEPLOY.md`, `ROADMAP.md`, `POST_LAUNCH_PLAN.md`, `PRE_DEPLOY_CHECKLIST.md` updated for Vercel.
