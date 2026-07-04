@@ -29,6 +29,7 @@ from app.features.reports.schema import (
     ProfitAndLossRead,
 )
 from app.features.reports.service import InvalidDateRangeError
+from app.features.reports.time_series import TimeSeriesRead, get_time_series
 
 router = APIRouter(prefix="/entities/{entity_id}/reports", tags=["reports"])
 
@@ -57,6 +58,22 @@ def get_delivery_sales_report(
     except DeliveryNotEnabledError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidDateRangeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/time-series", response_model=TimeSeriesRead)
+def get_time_series_report(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    session: Session = Depends(get_session),
+    _: None = Depends(reports_read_guard),
+) -> TimeSeriesRead:
+    try:
+        return get_time_series(session, entity_id, from_date, to_date)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

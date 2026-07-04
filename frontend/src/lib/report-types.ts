@@ -153,6 +153,31 @@ export type PeriodComparisonRead = {
   }[];
 };
 
+export type TimeSeriesDailyPoint = {
+  date: string;
+  sales_kurus: number;
+  expenses_kurus: number;
+  net_kurus: number;
+};
+
+export type TimeSeriesRead = {
+  entity_id: string;
+  from_date: string;
+  to_date: string;
+  daily: TimeSeriesDailyPoint[];
+  expenses_by_account: {
+    account_id: string;
+    account_code: string;
+    account_name: string;
+    total_kurus: number;
+  }[];
+  expenses_by_item: {
+    expense_item_id: string;
+    canonical_name: string;
+    total_kurus: number;
+  }[];
+};
+
 export type ReportSlug =
   | "profit-and-loss"
   | "balance-sheet"

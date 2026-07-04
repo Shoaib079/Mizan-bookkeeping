@@ -12,6 +12,7 @@ import {
   SalesExpensesNetChart,
   OwedOwingChart,
 } from "@/components/dashboard/dashboard-charts";
+import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
 import { RecentEntriesCard } from "@/components/dashboard/recent-entries-card";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
@@ -27,7 +28,7 @@ import {
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
-import type { DashboardRead } from "@/lib/report-types";
+import type { DashboardRead, TimeSeriesRead } from "@/lib/report-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { reviewHrefForNeedsReviewKey } from "@/lib/review-routes";
 import { Button } from "@/components/ui/button";
@@ -54,24 +55,33 @@ function DashboardBody() {
   const showWriteChrome = shouldShowWriteChrome(role);
   const [range, setRange] = useState(currentMonthRange);
   const [data, setData] = useState<DashboardRead | null>(null);
+  const [timeSeries, setTimeSeries] = useState<TimeSeriesRead | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!entityId) {
       setData(null);
+      setTimeSeries(null);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch<DashboardRead>(
-        `/entities/${entityId}/dashboard?from=${range.from}&to=${range.to}`,
-      );
-      setData(res);
+      const [dashRes, tsRes] = await Promise.all([
+        apiFetch<DashboardRead>(
+          `/entities/${entityId}/dashboard?from=${range.from}&to=${range.to}`,
+        ),
+        apiFetch<TimeSeriesRead>(
+          `/entities/${entityId}/reports/time-series?from=${range.from}&to=${range.to}`,
+        ).catch(() => null),
+      ]);
+      setData(dashRes);
+      setTimeSeries(tsRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
       setData(null);
+      setTimeSeries(null);
     } finally {
       setLoading(false);
     }
@@ -255,6 +265,12 @@ function DashboardBody() {
                 receivablesKurus={data.total_receivables_kurus}
                 tryPositionKurus={data.total_try_position_kurus}
               />
+            </div>
+          )}
+
+          {canReadFinancialReports && timeSeries && timeSeries.daily.length > 0 && (
+            <div className="mt-6">
+              <DailyTrendChart daily={timeSeries.daily} />
             </div>
           )}
 
