@@ -27,6 +27,20 @@ describe("delivery enabled cache", () => {
     mockedSetting.mockReset();
   });
 
+  it("does not cache false when fetch fails (pre-auth / network)", async () => {
+    mockedSetting.mockRejectedValueOnce(new Error("401 Unauthorized"));
+    const result = await fetchDeliveryEnabled("entity-a");
+    expect(result).toBeNull();
+    expect(getCachedDeliveryEnabled("entity-a")).toBeUndefined();
+  });
+
+  it("caches authenticated false — delivery really off", async () => {
+    mockedSetting.mockResolvedValueOnce(false);
+    const result = await fetchDeliveryEnabled("entity-a");
+    expect(result).toBe(false);
+    expect(getCachedDeliveryEnabled("entity-a")).toBe(false);
+  });
+
   it("refetches after invalidate so deliveryEnabled updates without stale cache", async () => {
     mockedSetting.mockResolvedValueOnce(true);
     await fetchDeliveryEnabled("entity-a");
@@ -37,6 +51,18 @@ describe("delivery enabled cache", () => {
     expect(enabled).toBe(false);
     expect(getCachedDeliveryEnabled("entity-a")).toBe(false);
     expect(mockedSetting).toHaveBeenLastCalledWith("entity-a", "delivery_enabled");
+  });
+
+  it("retries after failed fetch once auth succeeds", async () => {
+    mockedSetting.mockRejectedValueOnce(new Error("401 Unauthorized"));
+    const first = await fetchDeliveryEnabled("entity-a");
+    expect(first).toBeNull();
+    expect(getCachedDeliveryEnabled("entity-a")).toBeUndefined();
+
+    mockedSetting.mockResolvedValueOnce(true);
+    const second = await fetchDeliveryEnabled("entity-a");
+    expect(second).toBe(true);
+    expect(getCachedDeliveryEnabled("entity-a")).toBe(true);
   });
 
   it("does not leak delivery state across entities", async () => {
@@ -101,6 +127,20 @@ describe("delivery nav visibility", () => {
       deliveryEnabled: false,
     });
     expect(items.some((item) => item.href === "/delivery")).toBe(false);
+  });
+});
+
+describe("QuickActionsProvider auth gating", () => {
+  it("waits for isAuthReady before fetching delivery_enabled", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/quick-actions.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("isAuthReady");
+    expect(source).toContain("if (!isAuthReady) return");
+    expect(source).toContain("enabled !== null");
   });
 });
 

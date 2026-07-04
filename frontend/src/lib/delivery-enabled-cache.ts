@@ -23,14 +23,20 @@ export function clearDeliveryEnabledCache(entityId: string): void {
   deliveryEnabledCache.delete(entityId);
 }
 
-export async function fetchDeliveryEnabled(entityId: string): Promise<boolean> {
+/**
+ * Fetch delivery_enabled for one entity.
+ * Returns null on fetch failure (pre-auth / network) — does NOT cache false.
+ * Only successful responses update the cache.
+ */
+export async function fetchDeliveryEnabled(
+  entityId: string,
+): Promise<boolean | null> {
   try {
     const enabled = await isEntitySettingEnabled(entityId, "delivery_enabled");
     deliveryEnabledCache.set(entityId, enabled);
     return enabled;
   } catch {
-    deliveryEnabledCache.set(entityId, false);
-    return false;
+    return null;
   }
 }
 
@@ -45,7 +51,7 @@ export function invalidateDeliveryEnabled(entityId: string): void {
 
 export async function refreshDeliveryEnabledForEntity(
   entityId: string,
-): Promise<boolean> {
+): Promise<boolean | null> {
   deliveryEnabledCache.delete(entityId);
   return fetchDeliveryEnabled(entityId);
 }

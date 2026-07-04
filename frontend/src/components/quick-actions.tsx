@@ -13,6 +13,7 @@ import {
 
 import { RecordActionModals } from "@/components/record-action-modals";
 import { recordActionUsage } from "@/lib/action-usage";
+import { useApiAuth } from "@/lib/api-auth";
 import { useEntity } from "@/lib/entity-context";
 import {
   DELIVERY_ENABLED_CHANGED_EVENT,
@@ -47,6 +48,7 @@ const QuickActionsContext = createContext<QuickActionsContextValue | null>(null)
 
 export function QuickActionsProvider({ children }: { children: React.ReactNode }) {
   const { entityId } = useEntity();
+  const { isAuthReady } = useApiAuth();
   const { canWriteOperations } = useEntityAccess();
   const [active, setActive] = useState<RecordActionKey | null>(null);
   const [deliveryEnabled, setDeliveryEnabled] = useState(() => {
@@ -55,13 +57,10 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   });
 
   const refreshDeliveryEnabled = useCallback(async () => {
-    if (!entityId) {
-      setDeliveryEnabled(false);
-      return;
-    }
+    if (!entityId || !isAuthReady) return;
     const enabled = await refreshDeliveryEnabledForEntity(entityId);
-    setDeliveryEnabled(enabled);
-  }, [entityId]);
+    if (enabled !== null) setDeliveryEnabled(enabled);
+  }, [entityId, isAuthReady]);
 
   useEffect(() => {
     if (!entityId) {
@@ -69,18 +68,22 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    let cancelled = false;
     const cached = getCachedDeliveryEnabled(entityId);
-    setDeliveryEnabled(cached ?? false);
+    if (cached !== undefined) {
+      setDeliveryEnabled(cached);
+    }
 
+    if (!isAuthReady) return;
+
+    let cancelled = false;
     void fetchDeliveryEnabled(entityId).then((enabled) => {
-      if (!cancelled) setDeliveryEnabled(enabled);
+      if (!cancelled && enabled !== null) setDeliveryEnabled(enabled);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [entityId]);
+  }, [entityId, isAuthReady]);
 
   useEffect(() => {
     if (!entityId) return;
