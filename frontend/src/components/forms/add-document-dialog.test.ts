@@ -11,7 +11,15 @@ describe("AddDocumentDialog (UX-C)", () => {
       fs.readFile(new URL("./add-document-dialog.tsx", import.meta.url), "utf8"),
     );
     expect(source).toContain("detect-document-type");
-    expect(source).toContain("method: \"POST\"");
+    expect(source).toContain('method: "POST"');
+  });
+
+  it("sends Idempotency-Key on detect POST", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(new URL("./add-document-dialog.tsx", import.meta.url), "utf8"),
+    );
+    expect(source).toContain("newIdempotencyKey");
+    expect(source).toMatch(/idempotencyKey:\s*newIdempotencyKey\(\)/);
   });
 
   it("shows confidence-based UI: confirm for high/medium, picker for low", async () => {

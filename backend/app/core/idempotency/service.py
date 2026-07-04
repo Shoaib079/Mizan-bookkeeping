@@ -18,7 +18,7 @@ from app.core.idempotency.models import IdempotencyRecord
 ANONYMOUS_SCOPE = "__anonymous__"
 MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 SKIP_PATH_PREFIXES = ("/docs", "/redoc", "/openapi.json")
-SKIP_PATH_SUFFIXES = ("/statements/preview",)
+SKIP_PATH_SUFFIXES = ("/statements/preview", "/detect-document-type")
 SKIP_EXACT_PATHS = frozenset({"/", "/health", "/health/ready"})
 
 

@@ -14,6 +14,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 
 export type DetectedDocumentType =
   | "invoice"
@@ -84,7 +85,7 @@ export function AddDocumentDialog({ open, onClose, onConfirm }: Props) {
         body.append("file", f);
         const res = await apiFetch<DetectResult>(
           `/entities/${entityId}/detect-document-type`,
-          { method: "POST", body },
+          { method: "POST", body, idempotencyKey: newIdempotencyKey() },
         );
         setResult(res);
         setSelectedType(res.document_type);

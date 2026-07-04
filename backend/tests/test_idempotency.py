@@ -190,6 +190,30 @@ def test_statement_preview_skips_idempotency(
     assert response.json()["rows"]
 
 
+def test_detect_document_type_skips_idempotency(
+    client: TestClient,
+    idempotency_setup,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "idempotency_enforcement", True)
+    entity_id = idempotency_setup["entity_id"]
+    xml = b'<?xml version="1.0"?><Invoice></Invoice>'
+    response = client.post(
+        f"/entities/{entity_id}/detect-document-type",
+        files={"file": ("invoice.xml", xml, "application/xml")},
+    )
+    assert response.status_code == 200
+    assert "document_type" in response.json()
+
+
+def test_should_skip_idempotency_for_detect_document_type() -> None:
+    from app.core.idempotency.service import should_skip_idempotency
+
+    path = f"/entities/{uuid.uuid4()}/detect-document-type"
+    assert should_skip_idempotency("POST", path) is True
+    assert should_skip_idempotency("GET", path) is True
+
+
 def test_optional_key_dedup_when_enforcement_off(
     db_session,
     client: TestClient,
