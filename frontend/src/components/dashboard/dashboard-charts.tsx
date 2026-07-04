@@ -32,9 +32,6 @@ const COLORS = {
   sales: "#2563eb",
   expenses: "#dc2626",
   net: "#16a34a",
-  payables: "#dc2626",
-  receivables: "#2563eb",
-  tryPosition: "#16a34a",
 } as const;
 
 function kurusToLira(kurus: number): number {
@@ -135,11 +132,11 @@ export function SalesExpensesNetChart({
   return (
     <ChartCard title="Sales vs expenses">
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <BarChart data={data} barCategoryGap="20%">
+        <BarChart data={data} barCategoryGap="15%">
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => tryLabel(v)} width={90} />
           <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
-          <Bar dataKey="amount" maxBarSize={96} radius={[4, 4, 0, 0]}>
+          <Bar dataKey="amount" barSize={110} radius={[4, 4, 0, 0]}>
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.fill} />
             ))}
@@ -150,42 +147,3 @@ export function SalesExpensesNetChart({
   );
 }
 
-/* ── Owed / owing (payables, receivables, TRY position) ── */
-
-type OwedOwingProps = {
-  payablesKurus: number;
-  receivablesKurus: number;
-  tryPositionKurus: number;
-};
-
-export function OwedOwingChart({
-  payablesKurus,
-  receivablesKurus,
-  tryPositionKurus,
-}: OwedOwingProps) {
-  if (payablesKurus === 0 && receivablesKurus === 0 && tryPositionKurus === 0)
-    return null;
-
-  const data = [
-    { name: "Payables", amount: kurusToLira(payablesKurus), fill: COLORS.payables },
-    { name: "Receivables", amount: kurusToLira(receivablesKurus), fill: COLORS.receivables },
-    { name: "TRY position", amount: kurusToLira(tryPositionKurus), fill: COLORS.tryPosition },
-  ];
-
-  return (
-    <ChartCard title="Owed / owing">
-      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <BarChart data={data} barCategoryGap="20%">
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => tryLabel(v)} width={90} />
-          <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
-          <Bar dataKey="amount" maxBarSize={96} radius={[4, 4, 0, 0]}>
-            {data.map((entry) => (
-              <Cell key={entry.name} fill={entry.fill} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartCard>
-  );
-}

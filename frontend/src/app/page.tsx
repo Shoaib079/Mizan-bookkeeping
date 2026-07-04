@@ -10,9 +10,8 @@ import { useQuickActions } from "@/components/quick-actions";
 import {
   SalesMixChart,
   SalesExpensesNetChart,
-  OwedOwingChart,
 } from "@/components/dashboard/dashboard-charts";
-import { DailyTrendChart } from "@/components/dashboard/daily-trend-chart";
+import { WeeklyChart } from "@/components/dashboard/weekly-chart";
 import { RecentEntriesCard } from "@/components/dashboard/recent-entries-card";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
@@ -248,7 +247,7 @@ function DashboardBody() {
           </div>
 
           {canReadFinancialReports && (
-            <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
               <SalesMixChart
                 cashKurus={data.sales.cash_sales_kurus}
                 posCardKurus={data.sales.pos_card_sales_kurus}
@@ -260,17 +259,12 @@ function DashboardBody() {
                 expensesKurus={data.total_expenses_kurus}
                 netKurus={data.net_result_kurus}
               />
-              <OwedOwingChart
-                payablesKurus={data.total_payables_kurus}
-                receivablesKurus={data.total_receivables_kurus}
-                tryPositionKurus={data.total_try_position_kurus}
-              />
             </div>
           )}
 
           {canReadFinancialReports && timeSeries && timeSeries.daily.length > 0 && (
             <div className="mt-6">
-              <DailyTrendChart daily={timeSeries.daily} />
+              <WeeklyChart daily={timeSeries.daily} />
             </div>
           )}
 

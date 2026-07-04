@@ -46,24 +46,22 @@ describe("SalesExpensesNetChart", () => {
   });
 });
 
-describe("OwedOwingChart", () => {
-  it("exports OwedOwingChart component", async () => {
+describe("OwedOwingChart removed", () => {
+  it("does not export OwedOwingChart", async () => {
     const mod = await import("./dashboard-charts");
-    expect(typeof mod.OwedOwingChart).toBe("function");
+    expect((mod as Record<string, unknown>).OwedOwingChart).toBeUndefined();
   });
 
-  it("returns null when all values are zero (source check)", async () => {
+  it("source does not contain OwedOwingChart", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./dashboard-charts.tsx", import.meta.url), "utf8"),
     );
-    expect(source).toContain(
-      "if (payablesKurus === 0 && receivablesKurus === 0 && tryPositionKurus === 0)",
-    );
+    expect(source).not.toContain("OwedOwingChart");
   });
 });
 
-describe("dashboard page wiring (DASH-A)", () => {
-  it("imports all three chart components", async () => {
+describe("dashboard page wiring", () => {
+  it("imports SalesMixChart and SalesExpensesNetChart (not OwedOwingChart)", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../../app/page.tsx", import.meta.url),
@@ -72,7 +70,7 @@ describe("dashboard page wiring (DASH-A)", () => {
     );
     expect(source).toContain("SalesMixChart");
     expect(source).toContain("SalesExpensesNetChart");
-    expect(source).toContain("OwedOwingChart");
+    expect(source).not.toContain("OwedOwingChart");
   });
 
   it("gates charts behind canReadFinancialReports", async () => {
@@ -110,16 +108,14 @@ describe("dashboard page wiring (DASH-A)", () => {
     expect(source).toContain("netKurus={data.net_result_kurus}");
   });
 
-  it("passes balance fields to OwedOwingChart", async () => {
+  it("uses 2-column grid for composition charts", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../../app/page.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("payablesKurus={data.total_payables_kurus}");
-    expect(source).toContain("receivablesKurus={data.total_receivables_kurus}");
-    expect(source).toContain("tryPositionKurus={data.total_try_position_kurus}");
+    expect(source).toContain("lg:grid-cols-2");
   });
 });
 
