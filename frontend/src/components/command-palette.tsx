@@ -58,7 +58,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
 
   const [suppliers, setSuppliers] = useState<PaletteSupplier[]>([]);
   const [items, setItems] = useState<PaletteExpenseItem[]>([]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const prevEntityRef = useRef(entityId);
 
   // SRCH-B: spend lookup maps (fetched once per palette open)

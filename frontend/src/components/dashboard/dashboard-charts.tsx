@@ -103,7 +103,7 @@ export function SalesMixChart({
               <Cell key={entry.name} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip formatter={(v: number) => tryLabel(v)} />
+          <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
           <Legend />
         </PieChart>
       </ResponsiveContainer>
@@ -138,7 +138,7 @@ export function SalesExpensesNetChart({
         <BarChart data={data} barCategoryGap="30%">
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => tryLabel(v)} width={90} />
-          <Tooltip formatter={(v: number) => tryLabel(v)} />
+          <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
           <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.fill} />
@@ -178,7 +178,7 @@ export function OwedOwingChart({
         <BarChart data={data} barCategoryGap="30%">
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => tryLabel(v)} width={90} />
-          <Tooltip formatter={(v: number) => tryLabel(v)} />
+          <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
           <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.fill} />

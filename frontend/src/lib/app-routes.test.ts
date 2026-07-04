@@ -431,6 +431,6 @@ describe("top-bar Add button", () => {
     expect(source).toContain('href="/record"');
     expect(source).toContain("Plus");
     expect(source).toContain("bg-primary");
-    expect(source).toMatch(/Plus.*Add/s);
+    expect(source).toMatch(/Plus[\s\S]*Add/);
   });
 });

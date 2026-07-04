@@ -76,7 +76,7 @@ export function DailyTrendChart({ daily }: Props) {
             tickFormatter={(v: number) => tryLabel(v)}
             width={90}
           />
-          <Tooltip formatter={(v: number) => tryLabel(v)} />
+          <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
           <Legend />
           <Line
             type="monotone"
