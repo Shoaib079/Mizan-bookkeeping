@@ -75,6 +75,7 @@ describe("WeeklyChart", () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./weekly-chart.tsx", import.meta.url), "utf8"),
     );
+    expect(source).toContain('toLocaleDateString("en-US"');
     expect(source).toContain('weekday: "short"');
     expect(source).toContain("formatWeekdayLabel");
   });

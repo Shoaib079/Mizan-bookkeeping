@@ -72,7 +72,7 @@ export function buildLast7CalendarDays(endDate: Date = new Date()): string[] {
 
 export function formatWeekdayLabel(iso: string): string {
   const d = new Date(iso + "T00:00:00");
-  const weekday = d.toLocaleDateString("tr-TR", { weekday: "short" });
+  const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
   const day = d.getDate();
   return `${weekday} ${day}`;
 }
