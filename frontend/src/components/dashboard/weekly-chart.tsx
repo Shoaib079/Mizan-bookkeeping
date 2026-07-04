@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * Weekly day-by-day bar chart — last 7 days of sales vs expenses.
- * Data comes from the existing time-series daily points (client-side slice).
- * Always renders the card frame — loading, empty, error, or chart inside.
+ * Weekly day-by-day bar chart — last 7 calendar days ending today.
+ * Backend time-series only returns days with data; we zero-fill missing days
+ * client-side so the axis always shows a full week.
  */
 
 import {
@@ -35,7 +35,8 @@ type Props = {
   daily: TimeSeriesDailyPoint[];
 };
 
-type ChartRow = {
+export type ChartRow = {
+  date: string;
   label: string;
   sales: number;
   expenses: number;
@@ -49,20 +50,52 @@ function tryLabel(value: number): string {
   return formatTry(Math.round(value * 100));
 }
 
-function formatWeekdayLabel(iso: string): string {
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Last 7 calendar days ending on `endDate` (inclusive), oldest first. */
+export function buildLast7CalendarDays(endDate: Date = new Date()): string[] {
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+  const days: string[] = [];
+  for (let offset = 6; offset >= 0; offset--) {
+    const d = new Date(end);
+    d.setDate(end.getDate() - offset);
+    days.push(toIsoDate(d));
+  }
+  return days;
+}
+
+export function formatWeekdayLabel(iso: string): string {
   const d = new Date(iso + "T00:00:00");
   const weekday = d.toLocaleDateString("tr-TR", { weekday: "short" });
   const day = d.getDate();
   return `${weekday} ${day}`;
 }
 
+/** Map sparse daily points onto a fixed 7-day calendar axis (zero-fill gaps). */
+export function buildWeeklyChartData(
+  daily: TimeSeriesDailyPoint[],
+  endDate: Date = new Date(),
+): ChartRow[] {
+  const byDate = new Map(daily.map((p) => [p.date, p]));
+  return buildLast7CalendarDays(endDate).map((date) => {
+    const point = byDate.get(date);
+    return {
+      date,
+      label: formatWeekdayLabel(date),
+      sales: kurusToLira(point?.sales_kurus ?? 0),
+      expenses: kurusToLira(point?.expenses_kurus ?? 0),
+    };
+  });
+}
+
 export function WeeklyChart({ status, daily }: Props) {
-  const last7 = daily.slice(-7);
-  const data: ChartRow[] = last7.map((p) => ({
-    label: formatWeekdayLabel(p.date),
-    sales: kurusToLira(p.sales_kurus),
-    expenses: kurusToLira(p.expenses_kurus),
-  }));
+  const data = buildWeeklyChartData(daily);
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -78,13 +111,7 @@ export function WeeklyChart({ status, daily }: Props) {
         </p>
       )}
 
-      {status === "loaded" && daily.length === 0 && (
-        <p className="flex items-center text-sm text-muted-foreground" style={{ height: CHART_HEIGHT }}>
-          No sales or expenses recorded for this period
-        </p>
-      )}
-
-      {status === "loaded" && daily.length > 0 && (
+      {status === "loaded" && (
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <BarChart data={data} barCategoryGap="15%">
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
