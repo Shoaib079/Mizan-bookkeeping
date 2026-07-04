@@ -135,11 +135,11 @@ export function SalesExpensesNetChart({
   return (
     <ChartCard title="Sales vs expenses">
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <BarChart data={data} barCategoryGap="30%">
+        <BarChart data={data} barCategoryGap="20%">
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => tryLabel(v)} width={90} />
           <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
-          <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+          <Bar dataKey="amount" maxBarSize={96} radius={[4, 4, 0, 0]}>
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.fill} />
             ))}
@@ -175,11 +175,11 @@ export function OwedOwingChart({
   return (
     <ChartCard title="Owed / owing">
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <BarChart data={data} barCategoryGap="30%">
+        <BarChart data={data} barCategoryGap="20%">
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => tryLabel(v)} width={90} />
           <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
-          <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+          <Bar dataKey="amount" maxBarSize={96} radius={[4, 4, 0, 0]}>
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.fill} />
             ))}
