@@ -54,6 +54,7 @@ Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) ·
 | **6** | **SRCH-B** | Spend totals in search (reuses DASH-B) | Phase 13 |
 | **7** | **UX-D** | Self-curating "Most used" in Add | Phase 13 |
 | — | P3 | Upload backup (S3/R2) | **Done** |
+| — | **BSF-1→3** | **Bank-statement-first workflow** (fees auto-post · pay-first advances · supplier suggestion) | **Queued — owner priority** |
 | — | P5 / P8 | Delete company UI · Groceries path | Queued |
 | — | P4, P7 | Backup prune, lint | Optional |
 
@@ -219,6 +220,30 @@ Remove ESLint "defined but never used" warnings across frontend/src (unused impo
 ### P8 — Groceries / no-invoice card spend (Migros, BİM, etc.)  *(future)*
 **Why:** daily purchases paid by card/bank with no e-Fatura — not supplier payables.
 **Spec:** petty-cash / expense-only path (not auto-supplier from bank). Design slice TBD.
+**Note:** the accounting machinery already exists (bank `rent_utility` classification = Dr expense / Cr bank; manual expense takes `money_account_id`). Build = generalize the bank "store purchase" expense classification (learnable, e.g. Migros → Groceries) + a manual "card/store purchase" entry paying from a bank/card account + a "Groceries/food cost" default expense account. **Owner + accountant decision:** KDV on no-invoice purchases — default = post GROSS (no input-VAT reclaim). Fits naturally AFTER BSF (below).
+
+---
+
+## 🏦 BSF — Bank-statement-first workflow  *(owner-driven; money-critical)*
+
+**Owner's real workflow (2026-07):** records payments from the bank statement as they land — often **before** the invoice is uploaded, in **partial** amounts, **days/weeks** later. Suppliers run on a **cari hesap** (running balance): invoices increase what's owed, payments decrease it — no payment-to-invoice matching. Bank charges should just post themselves.
+
+**What already works (verified — do NOT rebuild):** running supplier balance; partial payments of any amount/date post via `post_supplier_payment` and reduce the balance; a learned supplier rule auto-posts future payments; invoice posting nets against payments automatically. Auto-apply already POSTS a new payment when none pre-exists (not link-only).
+
+**The three gaps BSF closes (build in order):**
+
+#### BSF-1 — Auto-post bank charges on import (deterministic, no learning)
+Bank fees (havale/EFT ücreti, BSMV, periyodik bakım, hesap işletim ücreti, komisyon, kart aidatı, işlem/ekstre ücreti) are small, recurring, always Dr Bank Charges `5300` / Cr bank. Today they only auto-post after ~3 manual confirmations (learned rule); the fee keywords in `classification_learning.py` are only a token **stoplist**, not a detector. **Build:** a deterministic `bank_fee_detect` (FEE-specific terms — require ücret/masraf/BSMV/aidat/bakım context, NOT bare "havale"/"eft"/"komisyon" which appear in real payments) → on import, OUTFLOW lines matching + under a per-entity **amount ceiling** (default ~₺500) auto-post via `post_bank_fee` (RULE_AUTO), no review. Over the ceiling / ambiguous → needs_review (still learns). Full prompt in chat.
+
+#### BSF-2 — Allow supplier advances (pay-first, invoice-later)
+`post_supplier_payment` (`app/core/payables/posting.py:~302`) HARD-BLOCKS any payment that pushes the balance negative (`OverpaymentError`); auto-apply routes such lines to needs_review. This stops recording a bank payment before its invoice exists. **Build:** remove the hard block — allow negative payable = **supplier advance / prepayment** (double-entry unchanged: Dr AP / Cr bank). Auto-apply then posts these. **Surface clearly:** negative balances read as "Advance / invoice pending", not a bug/credit, in supplier activity + Balances → Suppliers. **Keep safety:** a *soft* confirmation for an unusually large overpayment (likely a typo) — allow, don't hard-block. Invoice posted later nets automatically (test: pay ₺2,000 no invoice → −2,000 advance; post ₺5,000 invoice → +3,000 owed). **Owner + accountant decision:** a negative AP is technically a supplier-advance *asset*; this keeps it in AP labeled "advance" (simple, fine for a restaurant) rather than reclassifying to a separate account.
+
+#### BSF-3 — Suggest supplier from bank description (first-time = one-click)
+First few payments per supplier are a blind manual pick (no rule learned yet). **Build:** fuzzy-match the bank line's counterparty text against the entity's supplier names (same trick already used for delivery platforms) → present the best supplier as a one-click suggestion on the classify screen. Owner confirms → posts + learns → subsequent payments auto-apply. Optional **BSF-4:** a per-supplier "auto-post payments from now on" toggle so trusted recurring suppliers post hands-free like fees.
+
+**Sequence:** BSF-1 (fees, self-contained, immediate value) → BSF-2 (advances, money-critical) → BSF-3 (supplier suggestion) → BSF-4 (optional). Each money-critical: review-first where posting, full pytest green, owner runs tests, accountant nod on BSF-2. Then **P8** (groceries/card spend) reuses the same bank-expense path.
+
+---
 
 ### Decisions (no build, your call)
 - **Neon 7-day instant restore** (~$5/mo) — upgrade for finer point-in-time DB recovery on top of nightly off-site backups. Optional.
