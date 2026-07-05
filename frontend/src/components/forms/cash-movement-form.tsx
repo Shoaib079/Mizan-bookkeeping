@@ -4,6 +4,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
@@ -18,10 +19,12 @@ import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
+import {
+  filterExpenseAccounts,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
-
-type ChartAccount = { id: string; code: string; name_en: string };
 
 type Props = {
   open: boolean;
@@ -66,10 +69,11 @@ export function CashMovementForm({
       ),
     ]);
     setCashAccounts(cashRes.items.filter((a) => a.is_active));
-    setOffsetAccounts(chartRes.items.filter((a) => a.code.startsWith("5")));
+    const pickable = filterExpenseAccounts(chartRes.items);
+    setOffsetAccounts(pickable);
     if (defaultCashAccountId) setMoneyAccountId(defaultCashAccountId);
     else if (cashRes.items[0]) setMoneyAccountId(cashRes.items[0].id);
-    if (chartRes.items[0]) setOffsetAccountId(chartRes.items[0].id);
+    if (pickable[0]) setOffsetAccountId(pickable[0].id);
   }, [entityId, defaultCashAccountId]);
 
   useEffect(() => {
@@ -171,7 +175,22 @@ export function CashMovementForm({
             </Select>
           </div>
           <div>
-            <Label htmlFor="cash-offset">Offset account (expense)</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="cash-offset">Offset account (expense)</Label>
+              {entityId && (
+                <AddExpenseCategoryButton
+                  entityId={entityId}
+                  onCreated={async (account) => {
+                    const chartRes = await apiFetch<{ items: ChartAccount[] }>(
+                      `/entities/${entityId}/chart-of-accounts?limit=200`,
+                    );
+                    const pickable = filterExpenseAccounts(chartRes.items);
+                    setOffsetAccounts(pickable);
+                    setOffsetAccountId(account.id);
+                  }}
+                />
+              )}
+            </div>
             <Combobox
               id="cash-offset"
               value={offsetAccountId}

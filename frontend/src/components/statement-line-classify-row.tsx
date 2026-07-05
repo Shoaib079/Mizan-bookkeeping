@@ -5,6 +5,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
 import { Combobox } from "@/components/ui/combobox";
 import { DataTableCell } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/input";
@@ -223,17 +224,29 @@ export function StatementLineClassifyRow({
     }
     if (targetKind === "expense") {
       return (
-        <Combobox
-          id={`exp-${line.id}`}
-          value={expenseAccountId}
-          onValueChange={setExpenseAccountId}
-          options={pickers.expenseAccounts.map((a) => ({
-            value: a.id,
-            label: `${a.code} — ${a.name_en}`,
-          }))}
-          placeholder="Expense GL…"
-          className="h-8 min-w-[10rem] text-xs"
-        />
+        <div className="flex min-w-0 items-end gap-1">
+          <Combobox
+            id={`exp-${line.id}`}
+            value={expenseAccountId}
+            onValueChange={setExpenseAccountId}
+            options={pickers.expenseAccounts.map((a) => ({
+              value: a.id,
+              label: `${a.code} — ${a.name_en}`,
+            }))}
+            placeholder="Expense GL…"
+            className="h-8 min-w-[10rem] flex-1 text-xs"
+          />
+          {entityId && (
+            <AddExpenseCategoryButton
+              entityId={entityId}
+              className="shrink-0 px-1 text-[11px]"
+              onCreated={async (account) => {
+                await pickers.reload();
+                setExpenseAccountId(account.id);
+              }}
+            />
+          )}
+        </div>
       );
     }
     if (targetKind === "delivery_platform") {

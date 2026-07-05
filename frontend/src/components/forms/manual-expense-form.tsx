@@ -12,6 +12,7 @@ import { Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
+import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
 import { ExpenseItemTypeahead } from "@/components/forms/expense-item-typeahead";
 import { type PartnerRow } from "@/components/forms/partner-form";
 import { apiFetch } from "@/lib/api";
@@ -488,7 +489,25 @@ export function ManualExpenseForm({
           />
         </div>
         <div>
-          <Label htmlFor="exp-account">Expense account</Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="exp-account">Expense account</Label>
+            {entityId && (
+              <AddExpenseCategoryButton
+                entityId={entityId}
+                onCreated={async (account) => {
+                  const chartRes = await apiFetch<{ items: ChartAccount[] }>(
+                    `/entities/${entityId}/chart-of-accounts?limit=200`,
+                  );
+                  const pickable = filterExpenseAccounts(chartRes.items);
+                  setExpenseAccounts(pickable);
+                  setExpenseAccountId(account.id);
+                  userPickedAccountRef.current = true;
+                  setSuggestedAccountId(null);
+                  setSuggestedSource(null);
+                }}
+              />
+            )}
+          </div>
           <Select
             id="exp-account"
             value={expenseAccountId}

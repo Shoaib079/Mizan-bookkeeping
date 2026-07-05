@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
+import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog } from "@/components/ui/dialog";
@@ -357,17 +358,31 @@ export function StatementClassifyBar({
     }
     if (targetKind === "expense") {
       return (
-        <Combobox
-          id="classify-expense"
-          value={expenseAccountId}
-          onValueChange={setExpenseAccountId}
-          options={pickers.expenseAccounts.map((a) => ({
-            value: a.id,
-            label: `${a.code} — ${a.name_en}`,
-          }))}
-          placeholder="Expense GL — rent, utilities, repairs…"
-          className="h-9 w-full min-w-0 text-xs"
-        />
+        <div className="flex min-w-0 flex-1 items-end gap-1">
+          <div className="min-w-0 flex-1">
+            <Combobox
+              id="classify-expense"
+              value={expenseAccountId}
+              onValueChange={setExpenseAccountId}
+              options={pickers.expenseAccounts.map((a) => ({
+                value: a.id,
+                label: `${a.code} — ${a.name_en}`,
+              }))}
+              placeholder="Expense GL — rent, utilities, repairs…"
+              className="h-9 w-full min-w-0 text-xs"
+            />
+          </div>
+          {entityId && (
+            <AddExpenseCategoryButton
+              entityId={entityId}
+              className="shrink-0 px-2 text-xs"
+              onCreated={async (account) => {
+                await pickers.reload();
+                setExpenseAccountId(account.id);
+              }}
+            />
+          )}
+        </div>
       );
     }
     if (targetKind === "delivery_platform") {

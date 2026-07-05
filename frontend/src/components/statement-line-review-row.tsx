@@ -5,6 +5,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
@@ -465,7 +466,18 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
 
                 {classification === "rent_utility" || classification === "store_purchase" ? (
                   <div>
-                    <Label htmlFor={`exp-${line.id}`}>Expense account</Label>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label htmlFor={`exp-${line.id}`}>Expense account</Label>
+                      {entityId && (
+                        <AddExpenseCategoryButton
+                          entityId={entityId}
+                          onCreated={async (account) => {
+                            await loadPickers();
+                            setExpenseAccountId(account.id);
+                          }}
+                        />
+                      )}
+                    </div>
                     <Combobox
                       id={`exp-${line.id}`}
                       value={expenseAccountId}

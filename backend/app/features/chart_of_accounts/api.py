@@ -11,7 +11,16 @@ from app.core.listing import ListParams, PaginatedListOut, list_params_dependenc
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.chart_of_accounts import service
-from app.features.chart_of_accounts.schema import AccountRead, SeedChartResponse
+from app.features.chart_of_accounts.schema import (
+    AccountRead,
+    CreateExpenseCategoryIn,
+    SeedChartResponse,
+)
+from app.features.chart_of_accounts.errors import (
+    CustomExpenseCategoryLimitError,
+    DuplicateExpenseCategoryNameError,
+    EmptyExpenseCategoryNameError,
+)
 from app.core.chart_of_accounts.seed import ChartAlreadySeededError
 
 router = APIRouter(prefix="/entities/{entity_id}/chart-of-accounts", tags=["chart-of-accounts"])
@@ -35,6 +44,28 @@ def seed_chart(
         accounts_created=len(accounts),
         accounts=[AccountRead.model_validate(a) for a in accounts],
     )
+
+
+@router.post("", response_model=AccountRead, status_code=201)
+def create_expense_category(
+    entity_id: uuid.UUID,
+    payload: CreateExpenseCategoryIn,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> AccountRead:
+    try:
+        account = service.create_custom_expense_account(
+            session, entity_id, payload.name
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except EmptyExpenseCategoryNameError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DuplicateExpenseCategoryNameError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except CustomExpenseCategoryLimitError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return AccountRead.model_validate(account)
 
 
 @router.get("", response_model=PaginatedListOut[AccountRead])

@@ -5,9 +5,15 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
+
+
+class CreateExpenseCategoryIn(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+
+    model_config = {"extra": "forbid"}
 
 
 class AccountRead(BaseModel):

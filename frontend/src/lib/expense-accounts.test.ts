@@ -57,9 +57,16 @@ describe("filterExpenseAccounts", () => {
     ]);
   });
 
-  it("excludes retired 5700 when absent from chart", () => {
-    expect(filterExpenseAccounts(SAMPLE).some((a) => a.code === "5700")).toBe(
-      false,
+  it("includes custom owner categories in the 5900 band", () => {
+    const custom: ChartAccount = {
+      id: "9",
+      code: "5900",
+      name_en: "Packaging",
+      name_tr: "Packaging",
+      account_type: "expense",
+    };
+    expect(filterExpenseAccounts([...SAMPLE, custom]).map((a) => a.code)).toContain(
+      "5900",
     );
   });
 });
