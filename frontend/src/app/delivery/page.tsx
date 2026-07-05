@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { DeliveryCommissionInvoices } from "@/components/delivery/delivery-commission-invoices";
 import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { DeliverySettlementForm } from "@/components/forms/delivery-settlement-form";
 import { Button } from "@/components/ui/button";
@@ -131,6 +132,13 @@ export default function DeliveryPage() {
                   </dd>
                 </div>
               </dl>
+              <div className="mt-4 border-t border-border pt-4">
+                <DeliveryCommissionInvoices
+                  entityId={entityId}
+                  platformId={p.delivery_platform_id}
+                  platformName={p.platform_name}
+                />
+              </div>
             </section>
           ))}
         </div>

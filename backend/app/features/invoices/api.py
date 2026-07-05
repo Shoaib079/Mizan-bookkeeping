@@ -14,7 +14,7 @@ from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
 from app.features.auth.models import User
 from app.features.invoices import service
-from app.features.invoices.models import InvoiceDraftStatus
+from app.features.invoices.models import InvoiceDraftStatus, InvoiceKind
 from app.core.invoices.posting import DraftPostError
 from app.core.ledger.errors import PostingError
 from app.core.ledger.posting import InvalidAccountError
@@ -73,6 +73,8 @@ async def upload_efatura_draft(
 def list_invoice_drafts(
     entity_id: uuid.UUID,
     status: InvoiceDraftStatus | None = Query(default=None),
+    invoice_kind: InvoiceKind | None = Query(default=None),
+    delivery_platform_id: uuid.UUID | None = Query(default=None),
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
     q: str | None = Query(default=None, max_length=256),
@@ -88,6 +90,8 @@ def list_invoice_drafts(
             session,
             entity_id,
             status=status,
+            invoice_kind=invoice_kind,
+            delivery_platform_id=delivery_platform_id,
             from_date=from_date,
             to_date=to_date,
             q=q,

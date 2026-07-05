@@ -814,6 +814,8 @@ def list_invoice_drafts(
     entity_id: uuid.UUID,
     *,
     status: InvoiceDraftStatus | None = None,
+    invoice_kind: InvoiceKind | None = None,
+    delivery_platform_id: uuid.UUID | None = None,
     from_date: date | None = None,
     to_date: date | None = None,
     q: str | None = None,
@@ -828,7 +830,11 @@ def list_invoice_drafts(
     with entity_context(session, entity_id):
         filters = []
         if status is not None:
-            filters.append(InvoiceDraft.status == status)
+            filters.append(InvoiceDraft.status == status.value)
+        if invoice_kind is not None:
+            filters.append(InvoiceDraft.invoice_kind == invoice_kind.value)
+        if delivery_platform_id is not None:
+            filters.append(InvoiceDraft.delivery_platform_id == delivery_platform_id)
         if supplier_id is not None:
             filters.append(InvoiceDraft.supplier_id == supplier_id)
         filters.extend(

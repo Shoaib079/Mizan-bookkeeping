@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
 import { InvoiceDocumentPreview } from "@/components/invoice-document-preview";
+import { ReportDateRange } from "@/components/reports/report-date-range";
 import {
   DataTable,
   DataTableBody,
@@ -17,109 +18,104 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
+import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { invalidateReviewCounts } from "@/lib/review-counts-types";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { invoiceKindLabel } from "@/lib/invoice-classification";
 import {
-  isInvoiceWorkbenchStatus,
-  isPendingReviewStatus,
-  isReadyToPostInvoiceStatus,
-} from "@/lib/review-status";
+  filterInvoicesByTab,
+  INVOICE_REVIEW_TABS,
+  invoiceCounterpartyLabel,
+  invoiceDraftsListPath,
+  invoiceReviewEmptyState,
+  postedInvoicesListPath,
+  type InvoiceDraftListRow,
+  type InvoiceReviewTab,
+} from "@/lib/invoice-draft-list";
 import { useEntityList } from "@/lib/use-entity-list";
-
-type InvoiceDraftRow = {
-  id: string;
-  status: string;
-  invoice_kind: string;
-  classification_confidence: "high" | "medium" | "low" | null;
-  invoice_number: string;
-  invoice_date: string;
-  supplier_name: string | null;
-  linked_platform_name: string | null;
-  gross_kurus: number;
-  review_reason: string | null;
-  has_stored_document: boolean;
-  source_type: string;
-};
+import { useEntitySwitchReset } from "@/lib/use-entity-reset";
+import { cn } from "@/lib/utils";
 
 function InvoiceDraftTable({
   rows,
   expandedDraftId,
   onToggleExpand,
   onUpdated,
+  readOnly = false,
 }: {
-  rows: InvoiceDraftRow[];
+  rows: InvoiceDraftListRow[];
   expandedDraftId: string | null;
   onToggleExpand: (id: string) => void;
   onUpdated: (outcome?: "removed" | "updated") => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className="space-y-3">
       <DataTable>
         <DataTableHead>
           <tr>
-            <DataTableHeaderCell>Invoice</DataTableHeaderCell>
             <DataTableHeaderCell>Date</DataTableHeaderCell>
+            <DataTableHeaderCell>Invoice</DataTableHeaderCell>
             <DataTableHeaderCell>Counterparty</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
+            <DataTableHeaderCell>Kind</DataTableHeaderCell>
+            <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
             <DataTableHeaderCell>Status</DataTableHeaderCell>
-            <DataTableHeaderCell>Doc</DataTableHeaderCell>
-            <DataTableHeaderCell>Review</DataTableHeaderCell>
+            {!readOnly && <DataTableHeaderCell>Doc</DataTableHeaderCell>}
+            <DataTableHeaderCell> </DataTableHeaderCell>
           </tr>
         </DataTableHead>
         <DataTableBody>
           {rows.map((row) => {
             const isCommission = row.invoice_kind === "delivery_commission";
-            const counterparty = isCommission
-              ? row.linked_platform_name ?? row.supplier_name ?? "—"
-              : row.supplier_name ?? "—";
             const expanded = expandedDraftId === row.id;
 
             return (
               <DataTableRow key={row.id}>
-                <DataTableCell>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{row.invoice_number}</span>
-                    <span
-                      className={
-                        isCommission
-                          ? "text-xs text-primary"
-                          : "text-xs text-muted-foreground"
-                      }
-                    >
-                      {invoiceKindLabel(row.invoice_kind)}
-                    </span>
-                  </div>
-                </DataTableCell>
                 <DataTableCell>{formatTrDate(row.invoice_date)}</DataTableCell>
-                <DataTableCell>{counterparty}</DataTableCell>
+                <DataTableCell>
+                  <span className="font-medium">{row.invoice_number}</span>
+                </DataTableCell>
+                <DataTableCell>{invoiceCounterpartyLabel(row)}</DataTableCell>
+                <DataTableCell>
+                  <span
+                    className={
+                      isCommission
+                        ? "text-xs text-primary"
+                        : "text-xs text-muted-foreground"
+                    }
+                  >
+                    {invoiceKindLabel(row.invoice_kind)}
+                  </span>
+                </DataTableCell>
                 <DataTableCell align="right">
                   {formatTry(row.gross_kurus)}
                 </DataTableCell>
                 <DataTableCell>
                   <StatusBadge status={row.status} />
-                  {row.review_reason && (
+                  {!readOnly && row.review_reason && (
                     <p className="mt-1 max-w-xs truncate text-xs text-warning">
                       {row.review_reason}
                     </p>
                   )}
                 </DataTableCell>
-                <DataTableCell>
-                  {row.has_stored_document ? (
-                    <InvoiceDocumentPreview
-                      draftId={row.id}
-                      sourceType={
-                        row.source_type === "efatura_xml"
-                          ? "efatura_xml"
-                          : "efatura_pdf"
-                      }
-                      compact
-                    />
-                  ) : (
-                    "—"
-                  )}
-                </DataTableCell>
+                {!readOnly && (
+                  <DataTableCell>
+                    {row.has_stored_document ? (
+                      <InvoiceDocumentPreview
+                        draftId={row.id}
+                        sourceType={
+                          row.source_type === "efatura_xml"
+                            ? "efatura_xml"
+                            : "efatura_pdf"
+                        }
+                        compact
+                      />
+                    ) : (
+                      "—"
+                    )}
+                  </DataTableCell>
+                )}
                 <DataTableCell>
                   <Button
                     type="button"
@@ -127,7 +123,7 @@ function InvoiceDraftTable({
                     className="h-8 px-2 text-xs"
                     onClick={() => onToggleExpand(row.id)}
                   >
-                    {expanded ? "Hide" : "Review"}
+                    {expanded ? "Hide" : readOnly ? "View" : "Review"}
                   </Button>
                 </DataTableCell>
               </DataTableRow>
@@ -142,6 +138,7 @@ function InvoiceDraftTable({
             key={expandedDraftId}
             draftId={expandedDraftId}
             embedded
+            readOnly={readOnly}
             onUpdated={onUpdated}
           />
         </div>
@@ -152,16 +149,38 @@ function InvoiceDraftTable({
 
 export function InvoicesReviewPanel() {
   const { entityId } = useEntity();
+  const [activeTab, setActiveTab] = useState<InvoiceReviewTab>("pending");
   const [expandedDraftId, setExpandedDraftId] = useState<string | null>(null);
-  const { items, loading, error, reload } = useEntityList<InvoiceDraftRow>(
-    "/invoices/drafts",
+  const [dateRange, setDateRange] = useState(currentMonthRange);
+
+  useEntitySwitchReset(entityId, () => {
+    setActiveTab("pending");
+    setExpandedDraftId(null);
+    setDateRange(currentMonthRange());
+  });
+
+  const listPath = useMemo(() => {
+    switch (activeTab) {
+      case "ready":
+        return invoiceDraftsListPath({ status: "confirmed", limit: 100 });
+      case "posted":
+        return postedInvoicesListPath(dateRange.from, dateRange.to);
+      case "all":
+        return invoiceDraftsListPath({ limit: 100 });
+      default:
+        return invoiceDraftsListPath({ limit: 100 });
+    }
+  }, [activeTab, dateRange.from, dateRange.to]);
+
+  const { items, loading, error, reload } = useEntityList<InvoiceDraftListRow>(
+    listPath,
     entityId,
   );
-  const workbench = items.filter((row) => isInvoiceWorkbenchStatus(row.status));
-  const readyToPost = workbench.filter((row) =>
-    isReadyToPostInvoiceStatus(row.status),
+
+  const visibleRows = useMemo(
+    () => filterInvoicesByTab(items, activeTab),
+    [items, activeTab],
   );
-  const pending = workbench.filter((row) => isPendingReviewStatus(row.status));
 
   function toggleExpand(id: string) {
     setExpandedDraftId((current) => (current === id ? null : id));
@@ -175,6 +194,11 @@ export function InvoicesReviewPanel() {
     }
   }
 
+  function onTabChange(tab: InvoiceReviewTab) {
+    setActiveTab(tab);
+    setExpandedDraftId(null);
+  }
+
   if (!entityId) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -183,52 +207,72 @@ export function InvoicesReviewPanel() {
     );
   }
 
+  const emptyCopy = invoiceReviewEmptyState(activeTab);
+  const isPostedTab = activeTab === "posted";
+
   return (
     <>
       <p className="mb-4 text-sm text-muted-foreground">
-        Uploaded supplier invoices stay here until posted to the ledger.
-        Confirmed invoices must still be posted before they appear in payables.
-        Click Review on a row to expand actions — post, send back to review,
-        discard, or reclassify.
+        {isPostedTab
+          ? "Browse posted supplier and commission e-Faturas. These are read-only — open a row to preview the document and jump to the ledger entry."
+          : "Uploaded supplier invoices stay here until posted to the ledger. Confirmed invoices must still be posted before they appear in payables. Click Review on a row to expand actions — post, send back to review, discard, or reclassify."}
       </p>
+
+      <div
+        className="mb-6 flex flex-wrap gap-2 border-b border-border pb-2"
+        role="tablist"
+        aria-label="Invoice status filters"
+      >
+        {INVOICE_REVIEW_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              activeTab === tab.id
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+            onClick={() => onTabChange(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {isPostedTab && (
+        <div className="mb-6">
+          <ReportDateRange
+            from={dateRange.from}
+            to={dateRange.to}
+            disabled={loading}
+            onChange={(from, to) => {
+              setDateRange({ from, to });
+              setExpandedDraftId(null);
+            }}
+          />
+        </div>
+      )}
+
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={7} />}
-      {!loading && workbench.length === 0 && (
+      {loading && <TableSkeleton columns={isPostedTab ? 7 : 8} />}
+      {!loading && visibleRows.length === 0 && (
         <EmptyState
           icon={FileText}
-          title="No supplier invoices in progress"
-          hint="Upload e-Fatura files from Record or a supplier page. They appear here for review, then post to ledger to update payables."
+          title={emptyCopy.title}
+          hint={emptyCopy.hint}
         />
       )}
-      {!loading && readyToPost.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-1 text-sm font-semibold">Ready to post</h2>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Confirmed — expand the row for Post, Send back to review, or Discard.
-            Balances update only after posting.
-          </p>
-          <InvoiceDraftTable
-            rows={readyToPost}
-            expandedDraftId={expandedDraftId}
-            onToggleExpand={toggleExpand}
-            onUpdated={onDraftUpdated}
-          />
-        </section>
-      )}
-      {!loading && pending.length > 0 && (
-        <section>
-          <h2 className="mb-1 text-sm font-semibold">Needs review</h2>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Link the supplier or delivery platform and confirm totals before
-            posting.
-          </p>
-          <InvoiceDraftTable
-            rows={pending}
-            expandedDraftId={expandedDraftId}
-            onToggleExpand={toggleExpand}
-            onUpdated={onDraftUpdated}
-          />
-        </section>
+      {!loading && visibleRows.length > 0 && (
+        <InvoiceDraftTable
+          rows={visibleRows}
+          expandedDraftId={expandedDraftId}
+          onToggleExpand={toggleExpand}
+          onUpdated={onDraftUpdated}
+          readOnly={isPostedTab}
+        />
       )}
     </>
   );

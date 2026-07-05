@@ -33,6 +33,10 @@ import {
   needsClassificationReview,
   needsDeliveryPlatformLink,
 } from "@/lib/invoice-classification";
+import {
+  isInvoiceDraftReadOnly,
+  journalEntryLedgerHref,
+} from "@/lib/invoice-draft-list";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
 
 type VatLine = {
@@ -72,6 +76,7 @@ type InvoiceDraft = {
   expense_account_confidence: "high" | "medium" | "low" | null;
   one_click_post_eligible: boolean;
   posted_by_rule_auto: boolean;
+  journal_entry_id: string | null;
 };
 
 type SupplierOption = { id: string; name: string; vkn: string };
@@ -80,11 +85,18 @@ type Account = ChartAccount;
 type Props = {
   draftId: string;
   embedded?: boolean;
+  /** Read-only view for posted/rejected invoices — no mutate actions. */
+  readOnly?: boolean;
   /** `removed` when the draft leaves the workbench (reject/post); else keep panel open. */
   onUpdated?: (outcome?: "removed" | "updated") => void;
 };
 
-export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Props) {
+export function InvoiceDraftReview({
+  draftId,
+  embedded = false,
+  readOnly = false,
+  onUpdated,
+}: Props) {
   const router = useRouter();
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -109,10 +121,14 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
 
   const load = useCallback(async () => {
     if (!entityId) return;
-    const [draftRes, supRes, chartRes, platformRes] = await Promise.all([
-      apiFetch<InvoiceDraft>(
-        `/entities/${entityId}/invoices/drafts/${draftId}`,
-      ),
+    const draftRes = await apiFetch<InvoiceDraft>(
+      `/entities/${entityId}/invoices/drafts/${draftId}`,
+    );
+    setDraft(draftRes);
+    if (readOnly || isInvoiceDraftReadOnly(draftRes.status)) {
+      return;
+    }
+    const [supRes, chartRes, platformRes] = await Promise.all([
       apiFetch<{ items: SupplierOption[] }>(
         `/entities/${entityId}/suppliers?include_inactive=false&limit=100`,
       ),
@@ -123,7 +139,6 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         `/entities/${entityId}/delivery/platforms?include_inactive=false&limit=50`,
       ),
     ]);
-    setDraft(draftRes);
     setSuppliers(supRes.items);
     setPlatforms(platformRes.items.filter((p) => p.is_active));
     const isCommission = draftRes.invoice_kind === "delivery_commission";
@@ -144,7 +159,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
     if (draftRes.delivery_platform_id) {
       setSelectedPlatformId(draftRes.delivery_platform_id);
     }
-  }, [entityId, draftId]);
+  }, [entityId, draftId, readOnly]);
 
   useEffect(() => {
     void load().catch((err) =>
@@ -438,6 +453,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
       : Boolean(draft.supplier_id));
   const canUnconfirm = canUnconfirmInvoiceDraft(draft.status);
   const canReject = canDiscardInvoiceDraft(draft.status);
+  const viewOnly = isInvoiceDraftReadOnly(draft.status, readOnly);
   const isTerminal =
     draft.status === "posted" || draft.status === "rejected";
   const invoiceNumberLabel = draft.invoice_number.trim() || "—";
@@ -522,6 +538,21 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </div>
       )}
 
+      {viewOnly && draft.journal_entry_id && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-2 text-sm font-semibold">Ledger entry</h2>
+          <p className="text-sm text-muted-foreground">
+            This invoice is booked in the general ledger.
+          </p>
+          <Link
+            href={journalEntryLedgerHref(draft.journal_entry_id)}
+            className="mt-2 inline-block text-sm text-primary hover:underline"
+          >
+            View journal entry
+          </Link>
+        </div>
+      )}
+
       {(isCommission || needsPlatformLink || draft.delivery_platform_id) && (
         <div className="rounded-lg border border-border bg-card p-4">
           <h2 className="mb-2 text-sm font-semibold">Delivery platform</h2>
@@ -561,7 +592,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         )}
       </div>
 
-      {canLink && classificationReview && !showChangeType && (
+      {!viewOnly && canLink && classificationReview && !showChangeType && (
         <div className="rounded-lg border border-border bg-card p-4">
           <h2 className="mb-1 text-sm font-semibold">Suggested type</h2>
           <p className="mb-3 text-sm">{invoiceKindLabel(draft.invoice_kind)}</p>
@@ -593,7 +624,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </div>
       )}
 
-      {canLink && classificationReview && showChangeType && (
+      {!viewOnly && canLink && classificationReview && showChangeType && (
         <div className="rounded-lg border border-border bg-card p-4">
           <h2 className="mb-2 text-sm font-semibold">Change invoice type</h2>
           <p className="mb-3 text-xs text-muted-foreground">
@@ -628,7 +659,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </div>
       )}
 
-      {canLink && needsPlatformLink && (
+      {!viewOnly && canLink && needsPlatformLink && (
         <form
           onSubmit={onLinkPlatform}
           className="rounded-lg border border-border bg-card p-4"
@@ -667,7 +698,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </form>
       )}
 
-      {canLink && !isCommission && (
+      {!viewOnly && canLink && !isCommission && (
         <form
           onSubmit={onLinkSupplier}
           className="rounded-lg border border-border bg-card p-4"
@@ -701,7 +732,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </form>
       )}
 
-      {canOneClickPost && (
+      {!viewOnly && canOneClickPost && (
         <form
           onSubmit={onConfirmAndPost}
           className="rounded-lg border border-border bg-card p-4"
@@ -738,7 +769,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </form>
       )}
 
-      {canPost && (
+      {!viewOnly && canPost && (
         <form
           onSubmit={onPost}
           className="rounded-lg border border-border bg-card p-4"
@@ -778,7 +809,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </form>
       )}
 
-      {!isTerminal && (
+      {!viewOnly && !isTerminal && (
         <div className="flex flex-wrap gap-2">
           {canUnconfirm && (
             <form onSubmit={onUnconfirm}>
