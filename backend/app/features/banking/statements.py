@@ -1587,6 +1587,7 @@ def classify_statement_line(
             payment_account_id=money_account.gl_account_id,
             reference_type=BANK_STATEMENT_LINE_REF,
             reference_id=line.id,
+            skip_advance_confirm=True,
         )
         journal_id = result.journal_entry.id
         supplier_ledger_id = result.supplier_ledger_entry.id

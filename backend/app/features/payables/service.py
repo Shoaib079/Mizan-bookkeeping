@@ -130,6 +130,7 @@ def record_payment(
     actor_id: uuid.UUID,
     payment_account_id: uuid.UUID,
     reference: str | None = None,
+    confirm_advance: bool = False,
 ):
     return payables_posting.post_supplier_payment(
         session,
@@ -141,6 +142,7 @@ def record_payment(
         actor_id=actor_id,
         payment_account_id=payment_account_id,
         reference_type=reference,
+        confirm_advance=confirm_advance,
     )
 
 
@@ -159,6 +161,7 @@ def correct_supplier_payment_entry(
     reason: str | None = None,
     void_date=None,
     period_unlock_reason: str | None = None,
+    confirm_advance: bool = False,
 ):
     with entity_context(session, entity_id):
         row = session.scalar(
@@ -182,6 +185,7 @@ def correct_supplier_payment_entry(
         void_date=void_date,
         period_unlock_reason=period_unlock_reason,
         reference_type=reference,
+        confirm_advance=confirm_advance,
     )
     balance = payables_ledger.current_balance_kurus(session, entity_id, supplier_id)
     with entity_context(session, entity_id):

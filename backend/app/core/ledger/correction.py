@@ -29,8 +29,12 @@ from app.core.ledger.posting import (
 )
 from app.core.payables import ledger as payables_ledger
 from app.core.payables import posting as payables_posting
+from app.core.payables.advance import supplier_advance_kurus
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
+from app.features.payables.advance_settings import (
+    get_supplier_advance_confirm_threshold_kurus,
+)
 from app.core.receivables import ledger as receivables_ledger
 from app.core.receivables import posting as receivables_posting
 from app.core.receivables.models import CustomerLedgerEntry
@@ -460,6 +464,8 @@ def correct_supplier_payment(
     period_unlock_reason: str | None = None,
     reference_type: str | None = None,
     reference_id: uuid.UUID | None = None,
+    confirm_advance: bool = False,
+    skip_advance_confirm: bool = False,
 ) -> SubledgerCorrectionResult:
     if amount_kurus <= 0:
         raise ValueError("Payment amount_kurus must be positive")
@@ -474,15 +480,23 @@ def correct_supplier_payment(
             raise CorrectionNotFoundError("journal entry is not a supplier payment")
         supplier_id = original_row.supplier_id
         old_payment = -original_row.amount_kurus
-        current = session.scalar(
-            select(func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0)).where(
-                SupplierLedgerEntry.supplier_id == supplier_id
+        current = int(
+            session.scalar(
+                select(func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0)).where(
+                    SupplierLedgerEntry.supplier_id == supplier_id
+                )
             )
+            or 0
         )
-        if int(current or 0) + old_payment - amount_kurus < 0:
-            raise payables_ledger.OverpaymentError(
-                f"Payment of {amount_kurus} kuruş exceeds payable balance"
-            )
+        balance_without_payment = current + old_payment
+        advance = supplier_advance_kurus(balance_without_payment, amount_kurus)
+        if advance > 0 and not skip_advance_confirm:
+            threshold = get_supplier_advance_confirm_threshold_kurus(session, entity_id)
+            if advance > threshold and not confirm_advance:
+                raise payables_ledger.AdvanceConfirmationRequiredError(
+                    f"Corrected payment creates a supplier advance of {advance} kuruş — "
+                    "confirm_advance is required for advances above the threshold"
+                )
 
     def after_gl(
         sess: Session,

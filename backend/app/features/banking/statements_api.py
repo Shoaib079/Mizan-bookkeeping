@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig
 from app.adapters.bank_parsers.types import BankParseError
+from app.core.payables.ledger import AdvanceConfirmationRequiredError
 from app.core.receivables.ledger import OverpaymentError
-from app.core.payables.ledger import OverpaymentError as SupplierOverpaymentError
 from app.core.banking.posting import InvalidTransferError
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
@@ -343,7 +343,7 @@ def classify_statement_line(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except statement_service.LineAlreadyResolvedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except SupplierOverpaymentError as exc:
+    except AdvanceConfirmationRequiredError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverpaymentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -394,7 +394,7 @@ def correct_statement_line(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except statement_service.LineAlreadyResolvedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except SupplierOverpaymentError as exc:
+    except AdvanceConfirmationRequiredError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverpaymentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

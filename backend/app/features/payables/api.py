@@ -18,8 +18,8 @@ from app.core.ledger.posting import (
     PostingError,
 )
 from app.core.payables.ledger import (
+    AdvanceConfirmationRequiredError,
     DisallowedMovementTypeError,
-    OverpaymentError,
     ZeroMovementError,
 )
 from app.db.session import get_session
@@ -217,12 +217,13 @@ def post_supplier_payment(
             actor_id=actor_id,
             payment_account_id=payload.payment_account_id,
             reference=payload.reference,
+            confirm_advance=payload.confirm_advance,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (ZeroMovementError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except OverpaymentError as exc:
+    except AdvanceConfirmationRequiredError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -266,6 +267,7 @@ def correct_supplier_payment(
             reason=payload.reason,
             void_date=payload.void_date,
             period_unlock_reason=payload.period_unlock_reason,
+            confirm_advance=payload.confirm_advance,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -273,7 +275,7 @@ def correct_supplier_payment(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (ZeroMovementError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except OverpaymentError as exc:
+    except AdvanceConfirmationRequiredError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

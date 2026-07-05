@@ -12,7 +12,6 @@ from app.core.banking import statement_posting
 from app.core.banking.bank_fee_detect import is_bank_fee_description
 from app.core.ledger.models import JournalEntrySource
 from app.features.banking.bank_fee_settings import get_bank_fee_auto_post_ceiling_kurus
-from app.core.payables.ledger import OverpaymentError
 from app.core.payables import posting as payables_posting
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.classification_learning import evaluate_rule_match
@@ -311,29 +310,20 @@ def _auto_apply_supplier_payment(
         return False
 
     payment_amount = abs(line.amount_kurus)
-    try:
-        result = payables_posting.post_supplier_payment(
-            session,
-            entity_id,
-            supplier_id,
-            payment_date=line.transaction_date,
-            amount_kurus=payment_amount,
-            description=line.description,
-            actor_id=actor_id,
-            payment_account_id=money_account_gl_id,
-            reference_type=BANK_STATEMENT_LINE_REF,
-            reference_id=line.id,
-            source=JournalEntrySource.RULE_AUTO,
-        )
-    except OverpaymentError:
-        _route_rule_needs_review(
-            line,
-            classification=StatementLineClassification.SUPPLIER_PAYMENT,
-            supplier_id=supplier_id,
-            review_reason="Learned supplier payment exceeds payable balance",
-        )
-        return False
-
+    result = payables_posting.post_supplier_payment(
+        session,
+        entity_id,
+        supplier_id,
+        payment_date=line.transaction_date,
+        amount_kurus=payment_amount,
+        description=line.description,
+        actor_id=actor_id,
+        payment_account_id=money_account_gl_id,
+        reference_type=BANK_STATEMENT_LINE_REF,
+        reference_id=line.id,
+        source=JournalEntrySource.RULE_AUTO,
+        skip_advance_confirm=True,
+    )
     line.classification = StatementLineClassification.SUPPLIER_PAYMENT
     line.status = StatementLineStatus.POSTED
     line.supplier_id = supplier_id

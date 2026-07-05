@@ -18,6 +18,7 @@ class SupplierPaymentCreate(BaseModel):
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
     reference: str | None = Field(default=None, max_length=64)
+    confirm_advance: bool = False
 
     @field_validator("amount_kurus")
     @classmethod

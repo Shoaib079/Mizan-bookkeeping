@@ -34,6 +34,10 @@ class OverpaymentError(PayablesLedgerError):
     """Payment would exceed current payable balance."""
 
 
+class AdvanceConfirmationRequiredError(PayablesLedgerError):
+    """Large supplier advance requires explicit owner confirmation."""
+
+
 def persist_supplier_opening_entry(
     session: Session,
     supplier_id: uuid.UUID,

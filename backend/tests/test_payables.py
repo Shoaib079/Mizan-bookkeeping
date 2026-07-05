@@ -14,7 +14,6 @@ from app.core.payables import ledger as payables_ledger
 from app.core.payables import posting as payables_posting
 from app.core.payables.ledger import (
     DisallowedMovementTypeError,
-    OverpaymentError,
     ZeroMovementError,
 )
 from app.core.payables.models import SupplierLedgerEntry
@@ -399,27 +398,30 @@ def test_payment_zero_amount_rejected(db_session, restaurant_a, seeded_accounts)
         )
 
 
-def test_overpayment_rejected(db_session, restaurant_a, seeded_accounts) -> None:
-    supplier = _supplier(db_session, restaurant_a)
-    supplier_id = supplier.id
-    _record(
+def test_advance_partial_over_balance_allowed(db_session, restaurant_a, seeded_accounts) -> None:
+    supplier_id = _supplier(db_session, restaurant_a).id
+    payables_service.record_movement(
         db_session,
-        restaurant_a,
+        restaurant_a.id,
         supplier_id,
-        amount_kurus=50_000,
+        movement_date=date(2026, 1, 1),
         movement_type=SupplierMovementType.OPENING_BALANCE,
+        amount_kurus=50_000,
+        description="Opening",
+        actor_id=ACTOR_ID,
     )
-    with pytest.raises(OverpaymentError):
-        payables_posting.post_supplier_payment(
-            db_session,
-            restaurant_a.id,
-            supplier_id,
-            payment_date=date(2026, 2, 1),
-            amount_kurus=60_000,
-            description="Too much",
-            actor_id=ACTOR_ID,
-            payment_account_id=seeded_accounts["1100"],
-        )
+    result = payables_posting.post_supplier_payment(
+        db_session,
+        restaurant_a.id,
+        supplier_id,
+        payment_date=date(2026, 2, 1),
+        amount_kurus=60_000,
+        description="Slight overpay",
+        actor_id=ACTOR_ID,
+        payment_account_id=seeded_accounts["1100"],
+        skip_advance_confirm=True,
+    )
+    assert result.payable_balance_kurus == -10_000
 
 
 def test_api_payment_reduces_payables_list(
@@ -489,7 +491,7 @@ def test_api_payment_zero_returns_422(
     assert response.status_code == 422
 
 
-def test_api_overpayment_returns_422(
+def test_api_large_advance_requires_confirm(
     client: TestClient, restaurant_a, seeded_accounts
 ) -> None:
     create = client.post(
@@ -498,25 +500,15 @@ def test_api_overpayment_returns_422(
     )
     supplier_id = create.json()["id"]
 
-    client.post(
-        f"/entities/{restaurant_a.id}/suppliers/{supplier_id}/ledger/movements",
-        json={
-            "movement_date": "2026-01-01",
-            "movement_type": "opening_balance",
-            "amount_kurus": 10000,
-            "description": "OB",
-            "actor_id": str(ACTOR_ID),
-        },
-    )
-
     response = client.post(
         f"/entities/{restaurant_a.id}/suppliers/{supplier_id}/payments",
         json={
             "payment_date": "2026-01-15",
-            "amount_kurus": 20000,
-            "description": "Too much",
+            "amount_kurus": 200000,
+            "description": "Large advance",
             "actor_id": str(ACTOR_ID),
             "payment_account_id": str(seeded_accounts["1100"]),
         },
     )
     assert response.status_code == 422
+    assert "confirm_advance" in response.json()["detail"].lower()

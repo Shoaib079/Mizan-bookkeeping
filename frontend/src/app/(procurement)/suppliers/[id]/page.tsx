@@ -24,6 +24,10 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
+import {
+  formatSupplierPayableBalance,
+  isSupplierAdvanceBalance,
+} from "@/lib/supplier-balance";
 import { isInvoiceWorkbenchStatus, isReadyToPostInvoiceStatus } from "@/lib/review-status";
 
 type LedgerEntry = {
@@ -190,9 +194,13 @@ export default function SupplierDetailPage() {
           </div>
 
           <div className="mb-6 rounded-lg border border-border bg-card p-4">
-            <p className="text-sm text-muted-foreground">Payable balance</p>
+            <p className="text-sm text-muted-foreground">
+              {isSupplierAdvanceBalance(ledger.balance_kurus)
+                ? "Supplier advance"
+                : "Payable balance"}
+            </p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">
-              {formatTry(ledger.balance_kurus)}
+              {formatSupplierPayableBalance(ledger.balance_kurus)}
             </p>
             {ledger.balance_kurus === 0 &&
               drafts.some((d) => isReadyToPostInvoiceStatus(d.status)) && (

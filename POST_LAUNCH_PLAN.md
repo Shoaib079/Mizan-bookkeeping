@@ -55,7 +55,8 @@ Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) ·
 | **7** | **UX-D** | Self-curating "Most used" in Add | Phase 13 |
 | — | P3 | Upload backup (S3/R2) | **Done** |
 | — | **BSF-1** | Bank fee auto-post on import | **Done** |
-| — | **BSF-2→3** | Pay-first advances · supplier suggestion | **Queued — owner priority** |
+| — | **BSF-2** | Pay-first supplier advances | **Done** |
+| — | **BSF-3** | Supplier suggestion from bank description | **Queued — owner priority** |
 | — | P5 / P8 | Delete company UI · Groceries path | Queued |
 | — | P4, P7 | Backup prune, lint | Optional |
 
@@ -236,8 +237,8 @@ Remove ESLint "defined but never used" warnings across frontend/src (unused impo
 #### BSF-1 — Auto-post bank charges on import (deterministic, no learning) — **DONE**
 Bank fees (havale/EFT ücreti, BSMV, periyodik bakım, hesap işletim ücreti, komisyon, kart aidatı, işlem/ekstre ücreti) are small, recurring, always Dr Bank Charges `5300` / Cr bank. **Shipped:** `bank_fee_detect.py` (Turkish fee patterns, not bare havale/eft/komisyon) runs on import before learned rules; outflows under per-entity ceiling (`bank_fee_auto_post_ceiling_kurus`, default ₺500) auto-post via `post_bank_fee` (`RULE_AUTO`); over ceiling → `needs_review` (manual confirm still learns).
 
-#### BSF-2 — Allow supplier advances (pay-first, invoice-later)
-`post_supplier_payment` (`app/core/payables/posting.py:~302`) HARD-BLOCKS any payment that pushes the balance negative (`OverpaymentError`); auto-apply routes such lines to needs_review. This stops recording a bank payment before its invoice exists. **Build:** remove the hard block — allow negative payable = **supplier advance / prepayment** (double-entry unchanged: Dr AP / Cr bank). Auto-apply then posts these. **Surface clearly:** negative balances read as "Advance / invoice pending", not a bug/credit, in supplier activity + Balances → Suppliers. **Keep safety:** a *soft* confirmation for an unusually large overpayment (likely a typo) — allow, don't hard-block. Invoice posted later nets automatically (test: pay ₺2,000 no invoice → −2,000 advance; post ₺5,000 invoice → +3,000 owed). **Owner + accountant decision:** a negative AP is technically a supplier-advance *asset*; this keeps it in AP labeled "advance" (simple, fine for a restaurant) rather than reclassifying to a separate account.
+#### BSF-2 — Allow supplier advances (pay-first, invoice-later) — **DONE**
+**Shipped:** `post_supplier_payment` allows negative AP (supplier advance); bank auto-apply and statement classify skip advance confirm; manual/API payments above `supplier_advance_confirm_threshold_kurus` (default ₺1,000) require `confirm_advance`. UI shows negative balances as "advance (invoice pending)" on supplier detail, activity, and Balances → Suppliers.
 
 #### BSF-3 — Suggest supplier from bank description (first-time = one-click)
 First few payments per supplier are a blind manual pick (no rule learned yet). **Build:** fuzzy-match the bank line's counterparty text against the entity's supplier names (same trick already used for delivery platforms) → present the best supplier as a one-click suggestion on the classify screen. Owner confirms → posts + learns → subsequent payments auto-apply. Optional **BSF-4:** a per-supplier "auto-post payments from now on" toggle so trusted recurring suppliers post hands-free like fees.

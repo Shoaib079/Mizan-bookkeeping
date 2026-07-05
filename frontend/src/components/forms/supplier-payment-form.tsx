@@ -1,6 +1,6 @@
 "use client";
 
-/** Record supplier payment — Phase 9 Slice 3. */
+/** Record supplier payment — Phase 9 Slice 3; BSF-2 advances. */
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
@@ -20,6 +20,12 @@ import {
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import {
+  computeSupplierAdvanceKurus,
+  formatSupplierPayableBalance,
+  isSupplierAdvanceBalance,
+  SUPPLIER_ADVANCE_CONFIRM_THRESHOLD_KURUS,
+} from "@/lib/supplier-balance";
 import { todayTrDate } from "@/lib/dates";
 
 type Props = {
@@ -52,6 +58,7 @@ export function SupplierPaymentForm({
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("Supplier payment");
   const [reference, setReference] = useState("");
+  const [confirmAdvance, setConfirmAdvance] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,6 +72,7 @@ export function SupplierPaymentForm({
   useEffect(() => {
     if (open) {
       setDateText(todayTrDate());
+      setConfirmAdvance(false);
       void loadAccounts().catch(() => undefined);
     }
   }, [open, loadAccounts]);
@@ -73,13 +81,17 @@ export function SupplierPaymentForm({
   const amountInvalid =
     amountText.trim() !== "" &&
     (amountKurus === null || amountKurus <= 0);
-  const overBalance =
-    balanceKurus !== undefined &&
-    balanceKurus > 0 &&
-    amountKurus !== null &&
-    amountKurus > balanceKurus;
+  const currentBalance = balanceKurus ?? 0;
+  const advanceKurus =
+    amountKurus !== null
+      ? computeSupplierAdvanceKurus(currentBalance, amountKurus)
+      : 0;
+  const needsAdvanceConfirm =
+    advanceKurus > SUPPLIER_ADVANCE_CONFIRM_THRESHOLD_KURUS;
   const submitBlocked =
-    amountKurus === null || amountKurus <= 0 || overBalance;
+    amountKurus === null ||
+    amountKurus <= 0 ||
+    (needsAdvanceConfirm && !confirmAdvance);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -118,6 +130,7 @@ export function SupplierPaymentForm({
             actor_id: actorId,
             payment_account_id: paymentGlAccountId,
             reference: reference || null,
+            confirm_advance: needsAdvanceConfirm && confirmAdvance,
           }),
         },
       );
@@ -127,6 +140,7 @@ export function SupplierPaymentForm({
       onClose();
       setAmountText("");
       setReference("");
+      setConfirmAdvance(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment failed");
     } finally {
@@ -137,9 +151,14 @@ export function SupplierPaymentForm({
   return (
     <FormDialogShell embedded={embedded} open={open} title="Record payment" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        {balanceKurus !== undefined && balanceKurus > 0 && (
+        {balanceKurus !== undefined && (
           <p className="text-sm text-muted-foreground">
-            Outstanding balance: {formatTry(balanceKurus)}
+            {isSupplierAdvanceBalance(balanceKurus)
+              ? "Current advance: "
+              : balanceKurus > 0
+                ? "Outstanding balance: "
+                : "Balance: "}
+            {formatSupplierPayableBalance(balanceKurus)}
           </p>
         )}
         <div>
@@ -165,12 +184,27 @@ export function SupplierPaymentForm({
           {amountInvalid && (
             <ValidationHint>Enter an amount greater than zero.</ValidationHint>
           )}
-          {overBalance && balanceKurus !== undefined && (
-            <ValidationHint>
-              Amount cannot exceed outstanding balance ({formatTry(balanceKurus)}).
-            </ValidationHint>
+          {advanceKurus > 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Creates a supplier advance of {formatTry(advanceKurus)} (invoice can
+              be uploaded later).
+            </p>
           )}
         </div>
+        {needsAdvanceConfirm && (
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={confirmAdvance}
+              onChange={(e) => setConfirmAdvance(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              Confirm this large advance — the payment exceeds the usual threshold
+              and no matching invoice is on file yet.
+            </span>
+          </label>
+        )}
         <div>
           <Label htmlFor="pay-desc">Description</Label>
           <Input

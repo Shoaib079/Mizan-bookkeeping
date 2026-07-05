@@ -17,6 +17,10 @@ import {
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
+import {
+  formatSupplierPayableBalance,
+  isSupplierAdvanceBalance,
+} from "@/lib/supplier-balance";
 
 type PayableRow = {
   supplier_id: string;
@@ -153,7 +157,15 @@ export function PayablesTable() {
                 </DataTableCell>
                 <DataTableCell>{row.vkn}</DataTableCell>
                 <DataTableCell align="right">
-                  {formatTry(row.balance_kurus)}
+                  <span
+                    className={
+                      isSupplierAdvanceBalance(row.balance_kurus)
+                        ? "text-muted-foreground"
+                        : undefined
+                    }
+                  >
+                    {formatSupplierPayableBalance(row.balance_kurus)}
+                  </span>
                 </DataTableCell>
               </DataTableRow>
             ))}

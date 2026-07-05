@@ -17,7 +17,14 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 from app.core.ledger.models import JournalEntry, JournalEntrySource
 from app.core.ledger.posting import InvalidAccountError, PostingLine, prepare_journal_entry
-from app.core.payables.ledger import OverpaymentError, current_balance_kurus
+from app.core.payables.advance import supplier_advance_kurus
+from app.core.payables.ledger import (
+    AdvanceConfirmationRequiredError,
+    current_balance_kurus,
+)
+from app.features.payables.advance_settings import (
+    get_supplier_advance_confirm_threshold_kurus,
+)
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
 from app.db.session import entity_context, require_entity_context
@@ -289,6 +296,8 @@ def post_supplier_payment(
     reference_type: str | None = None,
     reference_id: uuid.UUID | None = None,
     source: JournalEntrySource = JournalEntrySource.PAYMENT,
+    confirm_advance: bool = False,
+    skip_advance_confirm: bool = False,
 ) -> SupplierPaymentPostResult:
     """Post supplier payment to GL and payables subledger in one transaction."""
     if amount_kurus <= 0:
@@ -298,10 +307,14 @@ def post_supplier_payment(
         raise LookupError("Entity not found")
 
     current = current_balance_kurus(session, entity_id, supplier_id)
-    if current - amount_kurus < 0:
-        raise OverpaymentError(
-            f"Payment of {amount_kurus} kuruş exceeds payable balance of {current} kuruş"
-        )
+    advance = supplier_advance_kurus(current, amount_kurus)
+    if advance > 0 and not skip_advance_confirm:
+        threshold = get_supplier_advance_confirm_threshold_kurus(session, entity_id)
+        if advance > threshold and not confirm_advance:
+            raise AdvanceConfirmationRequiredError(
+                f"Payment creates a supplier advance of {advance} kuruş — "
+                "confirm_advance is required for advances above the threshold"
+            )
 
     with entity_context(session, entity_id):
         require_entity_context()

@@ -25,6 +25,7 @@ import {
 import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { formatSupplierPayableBalance } from "@/lib/supplier-balance";
 
 export type SupplierActivityRow = {
   movement_date: string;
@@ -222,7 +223,7 @@ export function SupplierActivityPanel({
                   <DataTableCell>{row.bank_name ?? "—"}</DataTableCell>
                   <DataTableCell>{row.dekont_ref ?? "—"}</DataTableCell>
                   <DataTableCell align="right">
-                    {formatTry(row.balance_kurus)}
+                    {formatSupplierPayableBalance(row.balance_kurus)}
                   </DataTableCell>
                   <DataTableCell>
                     {row.has_document && row.invoice_draft_id ? (
