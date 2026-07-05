@@ -26,6 +26,23 @@ describe("StatementDetailPage", () => {
     );
     expect(source).toContain("key={statementId}");
   });
+
+  it("patches one line after post instead of full reload with loading flash", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(new URL("./page.tsx", import.meta.url), "utf8"),
+    );
+    const barSource = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../../../../components/statement-classify-bar.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("replaceStatementLine");
+    expect(source).toContain("handlePosted");
+    expect(source).not.toMatch(/handlePosted[\s\S]*void reload\(\)/);
+    expect(barSource).toContain("onPosted(result)");
+    expect(barSource).toContain("ClassifyStatementLineResult");
+  });
 });
 
 describe("StatementLinesLedger default view", () => {

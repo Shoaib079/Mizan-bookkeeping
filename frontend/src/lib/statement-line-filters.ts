@@ -68,6 +68,18 @@ export function queueLines(lines: BankStatementLine[]): BankStatementLine[] {
   return sortStatementLines(lines.filter(isQueueLine));
 }
 
+/** Swap one line after classify/correct — avoids full-statement refetch on post. */
+export function replaceStatementLine(
+  lines: BankStatementLine[],
+  updated: BankStatementLine,
+): BankStatementLine[] {
+  const index = lines.findIndex((line) => line.id === updated.id);
+  if (index < 0) return lines;
+  const next = [...lines];
+  next[index] = updated;
+  return next;
+}
+
 /** Default ledger filter after import: unposted queue when work remains, else full statement. */
 export function defaultStatementLineFilter(
   lines: BankStatementLine[],

@@ -11,10 +11,10 @@ import { StatementLinesLedger } from "@/components/statement-lines-ledger";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
-import type { BankStatementRead } from "@/lib/banking-types";
+import type { BankStatementRead, ClassifyStatementLineResult } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate } from "@/lib/money";
-import { canDiscardStatement, defaultStatementLineFilter, queueLines } from "@/lib/statement-line-filters";
+import { canDiscardStatement, defaultStatementLineFilter, queueLines, replaceStatementLine } from "@/lib/statement-line-filters";
 import { useStatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 
@@ -84,10 +84,16 @@ export default function StatementDetailPage() {
 
   const queueIndex = barLine ? queue.findIndex((line) => line.id === barLine.id) : -1;
 
-  const handlePosted = useCallback(() => {
+  const handlePosted = useCallback((result: ClassifyStatementLineResult) => {
     setSelectedLineId(null);
-    void reload();
-  }, [reload]);
+    setStatement((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        lines: replaceStatementLine(prev.lines, result.line),
+      };
+    });
+  }, []);
 
   const discardAllowed = useMemo(
     () => (statement ? canDiscardStatement(statement.lines) : false),

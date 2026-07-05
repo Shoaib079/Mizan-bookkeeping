@@ -13,6 +13,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type {
   BankStatementLine,
+  ClassifyStatementLineResult,
   StatementLineClassification,
 } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
@@ -49,7 +50,7 @@ type Props = {
   queueIndex: number;
   queueTotal: number;
   pickers: StatementClassificationPickers;
-  onPosted: () => void;
+  onPosted: (result: ClassifyStatementLineResult) => void;
 };
 
 export function StatementClassifyBar({
@@ -212,7 +213,7 @@ export function StatementClassifyBar({
         toast("Line classified");
       }
       setSalaryDialogOpen(false);
-      onPosted();
+      onPosted(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
     } finally {
@@ -250,7 +251,7 @@ export function StatementClassifyBar({
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      await correctStatementLine(
+      const result = await correctStatementLine(
         entityId,
         statementId,
         line.id,
@@ -265,7 +266,7 @@ export function StatementClassifyBar({
       submitIdempotency.completeSubmit();
       toast("Line corrected and re-posted");
       setCorrectOpen(false);
-      onPosted();
+      onPosted(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Correction failed");
     } finally {

@@ -7,6 +7,7 @@ import {
   isQueueLine,
   isSkippedLine,
   queueLines,
+  replaceStatementLine,
   summarizeStatementLines,
   defaultStatementLineFilter,
 } from "@/lib/statement-line-filters";
@@ -125,5 +126,21 @@ describe("statement-line-filters", () => {
     expect(canDiscardStatement([line({ id: "1", status: "linked" })])).toBe(
       false,
     );
+  });
+
+  it("replaceStatementLine swaps one row without reloading the list", () => {
+    const imported = line({ id: "a", status: "imported" });
+    const other = line({ id: "b", status: "imported" });
+    const posted = line({
+      id: "a",
+      status: "posted",
+      classification: "supplier_payment",
+      journal_entry_id: "je-1",
+    });
+    const next = replaceStatementLine([imported, other], posted);
+    expect(next).toHaveLength(2);
+    expect(next[0]).toEqual(posted);
+    expect(next[1]).toEqual(other);
+    expect(queueLines(next).map((row) => row.id)).toEqual(["b"]);
   });
 });
