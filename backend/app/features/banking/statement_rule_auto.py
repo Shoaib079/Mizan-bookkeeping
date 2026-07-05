@@ -9,7 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.banking import statement_posting
+from app.core.banking.bank_fee_detect import is_bank_fee_description
 from app.core.ledger.models import JournalEntrySource
+from app.features.banking.bank_fee_settings import get_bank_fee_auto_post_ceiling_kurus
 from app.core.payables.ledger import OverpaymentError
 from app.core.payables import posting as payables_posting
 from app.db.session import entity_context, require_entity_context
@@ -341,6 +343,43 @@ def _auto_apply_supplier_payment(
     return True
 
 
+def try_auto_post_detected_bank_fee(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    statement: BankStatement,
+    line: BankStatementLine,
+    money_account_gl_id: uuid.UUID,
+    actor_id: uuid.UUID,
+) -> bool:
+    """Deterministic fee detect on import — no learned rule required."""
+    if line.amount_kurus >= 0:
+        return False
+    if not is_bank_fee_description(line.description):
+        return False
+
+    fee_amount = abs(line.amount_kurus)
+    ceiling = get_bank_fee_auto_post_ceiling_kurus(session, entity_id)
+    if fee_amount > ceiling:
+        _route_rule_needs_review(
+            line,
+            classification=StatementLineClassification.BANK_FEE,
+            supplier_id=None,
+            review_reason="Bank charge exceeds auto-post ceiling",
+        )
+        return True
+
+    _auto_post_bank_fee(
+        session,
+        entity_id,
+        statement=statement,
+        line=line,
+        money_account_gl_id=money_account_gl_id,
+        actor_id=actor_id,
+    )
+    return True
+
+
 def try_auto_apply_line(
     session: Session,
     entity_id: uuid.UUID,
@@ -473,6 +512,15 @@ def apply_import_rule_auto(
             return
 
         for line in lines:
+            if try_auto_post_detected_bank_fee(
+                session,
+                entity_id,
+                statement=statement,
+                line=line,
+                money_account_gl_id=money_account.gl_account_id,
+                actor_id=actor_id,
+            ):
+                continue
             try_auto_apply_line(
                 session,
                 entity_id,
