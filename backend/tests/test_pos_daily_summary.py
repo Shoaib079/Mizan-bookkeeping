@@ -490,3 +490,58 @@ def test_reject_summary(client, restaurant_a, pos_summary_setup) -> None:
         },
     )
     assert confirm.status_code == 404
+
+
+def test_list_daily_summaries_by_date_and_review_filter(
+    client, restaurant_a, pos_summary_setup
+) -> None:
+    content = SAMPLE_SUMMARY.read_bytes()
+    create = client.post(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries",
+        files={"file": ("summary.txt", content, "text/plain")},
+    )
+    assert create.status_code == 201
+    summary_date = create.json()["summary_date"]
+
+    in_range = client.get(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries",
+        params={"from": summary_date, "to": summary_date, "review": "pending"},
+    )
+    assert in_range.status_code == 200
+    assert in_range.json()["total"] == 1
+
+    posted = client.get(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries",
+        params={"from": summary_date, "to": summary_date, "review": "posted"},
+    )
+    assert posted.status_code == 200
+    assert posted.json()["total"] == 0
+
+    outside = client.get(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries",
+        params={"from": "2020-01-01", "to": "2020-01-31"},
+    )
+    assert outside.status_code == 200
+    assert outside.json()["total"] == 0
+
+
+def test_export_daily_summaries_xlsx(client, restaurant_a, pos_summary_setup) -> None:
+    content = SAMPLE_SUMMARY.read_bytes()
+    create = client.post(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries",
+        files={"file": ("summary.txt", content, "text/plain")},
+    )
+    assert create.status_code == 201
+    summary_date = create.json()["summary_date"]
+
+    export_resp = client.get(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries/export",
+        params={"from": summary_date, "to": summary_date, "review": "pending"},
+    )
+    assert export_resp.status_code == 200
+    assert (
+        export_resp.headers["content-type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert "attachment" in export_resp.headers.get("content-disposition", "")
+    assert len(export_resp.content) > 500

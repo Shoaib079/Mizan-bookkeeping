@@ -105,3 +105,8 @@ def fetch_paginated_rows(
     total = count_rows(session, stmt)
     rows = list(session.execute(apply_list_window(stmt, params)).all())
     return rows, total
+
+
+def fetch_all_scalars(session: Session, stmt: Select[Any]) -> list[Any]:
+    """Return every row for export queries — no pagination cap."""
+    return list(session.scalars(stmt).all())

@@ -19,6 +19,7 @@ from app.core.delivery.posting import (
 )
 from app.db.session import entity_context, require_entity_context
 from app.core.listing import (
+    MAX_LIST_LIMIT,
     ListParams,
     amount_range_filters,
     date_range_filters,
@@ -550,6 +551,26 @@ def get_delivery_clearing_reconciliation(
     return DeliveryClearingReconciliationRead(platforms=platforms)
 
 
+def _fetch_all_paginated(
+    fetch_page,
+    *,
+    list_kwargs: dict,
+) -> list:
+    """Walk every page — exports must not stop at MAX_LIST_LIMIT."""
+    items: list = []
+    offset = 0
+    while True:
+        batch, total = fetch_page(
+            **list_kwargs,
+            list_params=ListParams(limit=MAX_LIST_LIMIT, offset=offset),
+        )
+        items.extend(batch)
+        offset += len(batch)
+        if offset >= total or not batch:
+            break
+    return items
+
+
 def export_delivery_activity(
     session: Session,
     entity_id: uuid.UUID,
@@ -565,22 +586,16 @@ def export_delivery_activity(
     if delivery_platform_id is not None:
         platform_label = _platform_name(session, delivery_platform_id)
 
-    list_params = ListParams(limit=500, offset=0)
-    sales, _ = list_delivery_reports(
-        session,
-        entity_id,
-        delivery_platform_id=delivery_platform_id,
-        from_date=from_date,
-        to_date=to_date,
-        list_params=list_params,
-    )
-    settlements, _ = list_delivery_settlements(
-        session,
-        entity_id,
-        delivery_platform_id=delivery_platform_id,
-        from_date=from_date,
-        to_date=to_date,
-        list_params=list_params,
+    list_kwargs = {
+        "session": session,
+        "entity_id": entity_id,
+        "delivery_platform_id": delivery_platform_id,
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+    sales = _fetch_all_paginated(list_delivery_reports, list_kwargs=list_kwargs)
+    settlements = _fetch_all_paginated(
+        list_delivery_settlements, list_kwargs=list_kwargs
     )
 
     from app.features.delivery import excel_export

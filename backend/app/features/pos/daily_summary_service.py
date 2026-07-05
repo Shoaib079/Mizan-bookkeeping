@@ -23,7 +23,12 @@ from app.core.pos.daily_summary_posting import (
     confirm_pos_daily_summary,
 )
 from app.db.session import entity_context
-from app.core.listing import ListParams, date_range_filters, fetch_paginated
+from app.core.listing import (
+    ListParams,
+    date_range_filters,
+    fetch_all_scalars,
+    fetch_paginated,
+)
 from app.features.entities import service as entity_service
 from app.features.pos.models import PosDailySummary, PosDailySummaryStatus
 from app.features.pos.schema import (
@@ -232,6 +237,54 @@ def create_pos_daily_summary_from_upload(
     return _to_read(summary)
 
 
+_PENDING_REVIEW_STATUSES = (
+    PosDailySummaryStatus.DRAFT.value,
+    PosDailySummaryStatus.NEEDS_REVIEW.value,
+)
+
+_REVIEW_FILTER_LABELS = {
+    "all": "All",
+    "pending": "Needs review",
+    "posted": "Posted",
+}
+
+
+def _review_filter_clause(review: str | None):
+    if review == "pending":
+        return PosDailySummary.status.in_(_PENDING_REVIEW_STATUSES)
+    if review == "posted":
+        return PosDailySummary.status == PosDailySummaryStatus.POSTED.value
+    return None
+
+
+def _daily_summary_list_stmt(
+    *,
+    status: PosDailySummaryStatus | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    review: str | None = None,
+):
+    filters = []
+    review_clause = _review_filter_clause(review)
+    if review_clause is not None:
+        filters.append(review_clause)
+    elif status is not None:
+        filters.append(PosDailySummary.status == status.value)
+    filters.extend(
+        date_range_filters(
+            PosDailySummary.summary_date, from_date=from_date, to_date=to_date
+        )
+    )
+    return (
+        select(PosDailySummary)
+        .where(*filters)
+        .order_by(
+            PosDailySummary.summary_date.desc(),
+            PosDailySummary.created_at.desc(),
+        )
+    )
+
+
 def list_pos_daily_summaries(
     session: Session,
     entity_id: uuid.UUID,
@@ -239,31 +292,64 @@ def list_pos_daily_summaries(
     status: PosDailySummaryStatus | None = None,
     from_date: date | None = None,
     to_date: date | None = None,
+    review: str | None = None,
     list_params: ListParams | None = None,
 ) -> tuple[list[PosDailySummaryRead], int]:
     _require_entity(session, entity_id)
     params = list_params or ListParams()
 
     with entity_context(session, entity_id):
-        filters = []
-        if status is not None:
-            filters.append(PosDailySummary.status == status)
-        filters.extend(
-            date_range_filters(
-                PosDailySummary.summary_date, from_date=from_date, to_date=to_date
-            )
-        )
-        stmt = (
-            select(PosDailySummary)
-            .where(*filters)
-            .order_by(
-                PosDailySummary.created_at.desc(),
-                PosDailySummary.summary_date.desc(),
-            )
+        stmt = _daily_summary_list_stmt(
+            status=status,
+            from_date=from_date,
+            to_date=to_date,
+            review=review,
         )
         summaries, total = fetch_paginated(session, stmt, params)
 
     return [_to_read(summary) for summary in summaries], total
+
+
+def export_pos_daily_summaries(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    from_date: date,
+    to_date: date,
+    review: str | None = None,
+) -> tuple[bytes, str]:
+    if from_date > to_date:
+        raise ValueError("from must be on or before to")
+
+    _require_entity(session, entity_id)
+    review_key = review or "all"
+    review_label = _REVIEW_FILTER_LABELS.get(review_key, review_key)
+
+    with entity_context(session, entity_id):
+        stmt = _daily_summary_list_stmt(
+            from_date=from_date,
+            to_date=to_date,
+            review=review if review != "all" else None,
+        )
+        summaries = fetch_all_scalars(session, stmt)
+
+    from app.features.pos import excel_export
+    from app.features.reports.excel_export import export_filename
+
+    reads = [_to_read(summary) for summary in summaries]
+    data = excel_export.build_pos_daily_summaries_xlsx(
+        entity_id=entity_id,
+        from_date=from_date,
+        to_date=to_date,
+        review_label=review_label,
+        summaries=reads,
+    )
+    filename = export_filename(
+        "pos-sales",
+        from_date=from_date,
+        to_date=to_date,
+    )
+    return data, filename
 
 
 def get_pos_daily_summary(

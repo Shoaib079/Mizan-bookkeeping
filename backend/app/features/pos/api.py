@@ -6,6 +6,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
@@ -239,6 +240,7 @@ def list_pos_daily_summaries(
     status: PosDailySummaryStatus | None = Query(default=None),
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
+    review: str | None = Query(default=None, pattern="^(all|pending|posted)$"),
     list_params: ListParams = Depends(list_params_dependency),
 ) -> PosDailySummaryListOut:
     try:
@@ -248,6 +250,7 @@ def list_pos_daily_summaries(
             status=status,
             from_date=from_date,
             to_date=to_date,
+            review=None if review == "all" else review,
             list_params=list_params,
         )
     except LookupError as exc:
@@ -258,6 +261,32 @@ def list_pos_daily_summaries(
         limit=list_params.limit,
         offset=list_params.offset,
     )
+
+
+@daily_summaries_router.get("/export")
+def export_pos_daily_summaries(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    review: str | None = Query(default="all", pattern="^(all|pending|posted)$"),
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> StreamingResponse:
+    from app.features.reports.excel_export import xlsx_response
+
+    try:
+        data, filename = daily_summary_service.export_pos_daily_summaries(
+            session,
+            entity_id,
+            from_date=from_date,
+            to_date=to_date,
+            review=review,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return xlsx_response(data, filename)
 
 
 @daily_summaries_router.get("/{summary_id}", response_model=PosDailySummaryRead)
