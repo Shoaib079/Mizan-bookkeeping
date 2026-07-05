@@ -6,6 +6,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Reduce parallel static generation — avoids ENFILE on macOS with low maxfiles.
+  experimental: {
+    cpus: 1,
+    workerThreads: false,
+  },
   turbopack: {
     root: join(__dirname),
   },
