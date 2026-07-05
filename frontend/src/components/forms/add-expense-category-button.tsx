@@ -3,6 +3,7 @@
 /** Inline control to add an owner-defined expense category (5900–5999 band). */
 
 import { FormEvent, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -24,9 +25,14 @@ export function AddExpenseCategoryButton({
 }: Props) {
   const submitIdempotency = useSubmitIdempotency();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -41,6 +47,7 @@ export function AddExpenseCategoryButton({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    event.stopPropagation();
     if (!entityId || submitting) return;
     setSubmitting(true);
     setError(null);
@@ -78,19 +85,14 @@ export function AddExpenseCategoryButton({
     }
   }
 
-  return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        className={className ?? "text-sm"}
-        disabled={!entityId}
-        onClick={() => setOpen(true)}
-      >
-        + Add category
-      </Button>
-      <Dialog open={open} title="Add expense category" onClose={handleClose}>
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
+  const dialog =
+    open && mounted ? (
+      <Dialog open title="Add expense category" onClose={handleClose}>
+        <form
+          onSubmit={(e) => void handleSubmit(e)}
+          className="space-y-3"
+          onClick={(e) => e.stopPropagation()}
+        >
           <p className="text-xs text-muted-foreground">
             New categories appear in manual expense, bank statement, and cash
             movement pickers for this restaurant.
@@ -122,6 +124,23 @@ export function AddExpenseCategoryButton({
           </div>
         </form>
       </Dialog>
+    ) : null;
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        className={className ?? "text-sm"}
+        disabled={!entityId}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+      >
+        + Add category
+      </Button>
+      {dialog && createPortal(dialog, document.body)}
     </>
   );
 }

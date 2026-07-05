@@ -44,6 +44,18 @@ export function filterExpenseAccounts(accounts: ChartAccount[]): ChartAccount[] 
   );
 }
 
+/** Merge a newly created category into a picker list (no refetch). */
+export function mergeExpenseAccounts(
+  existing: ChartAccount[],
+  ...added: ChartAccount[]
+): ChartAccount[] {
+  const byId = new Map<string, ChartAccount>();
+  for (const account of filterExpenseAccounts([...existing, ...added])) {
+    byId.set(account.id, account);
+  }
+  return [...byId.values()].sort((a, b) => a.code.localeCompare(b.code));
+}
+
 export function findExpenseAccountByCode(
   accounts: ChartAccount[],
   code: string,

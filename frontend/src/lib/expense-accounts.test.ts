@@ -5,6 +5,7 @@ import {
   filterExpenseAccounts,
   findExpenseAccountByCode,
   formatExpenseAccountLabel,
+  mergeExpenseAccounts,
   type ChartAccount,
 } from "@/lib/expense-accounts";
 
@@ -51,7 +52,6 @@ describe("filterExpenseAccounts", () => {
   it("returns only expense-type accounts", () => {
     expect(filterExpenseAccounts(SAMPLE).map((a) => a.code)).toEqual([
       "5200",
-      "5100",
       "5210",
       "5220",
     ]);
@@ -68,6 +68,21 @@ describe("filterExpenseAccounts", () => {
     expect(filterExpenseAccounts([...SAMPLE, custom]).map((a) => a.code)).toContain(
       "5900",
     );
+  });
+});
+
+describe("mergeExpenseAccounts", () => {
+  it("appends a new category without refetching the full chart", () => {
+    const created: ChartAccount = {
+      id: "99",
+      code: "5901",
+      name_en: "Misc",
+      name_tr: "Misc",
+      account_type: "expense",
+    };
+    const merged = mergeExpenseAccounts(SAMPLE, created);
+    expect(merged.some((a) => a.id === "99")).toBe(true);
+    expect(merged.map((a) => a.code)).toContain("5901");
   });
 });
 

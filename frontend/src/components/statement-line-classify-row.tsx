@@ -241,7 +241,7 @@ export function StatementLineClassifyRow({
               entityId={entityId}
               className="shrink-0 px-1 text-[11px]"
               onCreated={async (account) => {
-                await pickers.reload();
+                pickers.appendExpenseAccount(account);
                 setExpenseAccountId(account.id);
               }}
             />

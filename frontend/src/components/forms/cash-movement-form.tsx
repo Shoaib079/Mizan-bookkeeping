@@ -21,6 +21,7 @@ import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import {
   filterExpenseAccounts,
+  mergeExpenseAccounts,
   type ChartAccount,
 } from "@/lib/expense-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -181,11 +182,7 @@ export function CashMovementForm({
                 <AddExpenseCategoryButton
                   entityId={entityId}
                   onCreated={async (account) => {
-                    const chartRes = await apiFetch<{ items: ChartAccount[] }>(
-                      `/entities/${entityId}/chart-of-accounts?limit=200`,
-                    );
-                    const pickable = filterExpenseAccounts(chartRes.items);
-                    setOffsetAccounts(pickable);
+                    setOffsetAccounts((prev) => mergeExpenseAccounts(prev, account));
                     setOffsetAccountId(account.id);
                   }}
                 />

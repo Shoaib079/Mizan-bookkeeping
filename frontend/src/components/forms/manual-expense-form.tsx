@@ -22,6 +22,7 @@ import {
   filterExpenseAccounts,
   findExpenseAccountByCode,
   formatExpenseAccountLabel,
+  mergeExpenseAccounts,
   type ChartAccount,
 } from "@/lib/expense-accounts";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
@@ -495,11 +496,7 @@ export function ManualExpenseForm({
               <AddExpenseCategoryButton
                 entityId={entityId}
                 onCreated={async (account) => {
-                  const chartRes = await apiFetch<{ items: ChartAccount[] }>(
-                    `/entities/${entityId}/chart-of-accounts?limit=200`,
-                  );
-                  const pickable = filterExpenseAccounts(chartRes.items);
-                  setExpenseAccounts(pickable);
+                  setExpenseAccounts((prev) => mergeExpenseAccounts(prev, account));
                   setExpenseAccountId(account.id);
                   userPickedAccountRef.current = true;
                   setSuggestedAccountId(null);

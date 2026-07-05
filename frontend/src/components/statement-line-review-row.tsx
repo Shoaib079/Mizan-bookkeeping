@@ -17,6 +17,7 @@ import type {
 import { useEntity } from "@/lib/entity-context";
 import {
   filterExpenseAccounts,
+  mergeExpenseAccounts,
   type ChartAccount,
 } from "@/lib/expense-accounts";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -472,7 +473,9 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
                         <AddExpenseCategoryButton
                           entityId={entityId}
                           onCreated={async (account) => {
-                            await loadPickers();
+                            setExpenseAccounts((prev) =>
+                              mergeExpenseAccounts(prev, account),
+                            );
                             setExpenseAccountId(account.id);
                           }}
                         />

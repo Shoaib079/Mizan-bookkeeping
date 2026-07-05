@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
 import {
   filterExpenseAccounts,
+  mergeExpenseAccounts,
   type ChartAccount,
 } from "@/lib/expense-accounts";
 
@@ -28,6 +29,7 @@ export type StatementClassificationPickers = {
   loading: boolean;
   error: string | null;
   reload: () => Promise<void>;
+  appendExpenseAccount: (account: ChartAccount) => void;
 };
 
 export function deliveryPlatformComboboxOptions(
@@ -118,6 +120,10 @@ export function useStatementClassificationPickers(
     void reload();
   }, [reload]);
 
+  const appendExpenseAccount = useCallback((account: ChartAccount) => {
+    setExpenseAccounts((prev) => mergeExpenseAccounts(prev, account));
+  }, []);
+
   return {
     suppliers,
     customers,
@@ -131,5 +137,6 @@ export function useStatementClassificationPickers(
     loading,
     error,
     reload,
+    appendExpenseAccount,
   };
 }

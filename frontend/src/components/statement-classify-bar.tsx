@@ -377,7 +377,7 @@ export function StatementClassifyBar({
               entityId={entityId}
               className="shrink-0 px-2 text-xs"
               onCreated={async (account) => {
-                await pickers.reload();
+                pickers.appendExpenseAccount(account);
                 setExpenseAccountId(account.id);
               }}
             />
