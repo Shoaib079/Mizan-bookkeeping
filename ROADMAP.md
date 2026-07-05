@@ -17,7 +17,7 @@
 | **Active slice**         | (none — ready for next) |
 | **Next up**              | BSF-3 — Supplier suggestion from bank description · then P5 delete company UI |
 | **Last completed slice** | BSF-2 — Supplier advances (pay-first, invoice-later) |
-| **Last commit/tag**      | (pending) — BSF-2 supplier advances |
+| **Last commit/tag**      | `77f9311` — BSF-2 supplier advances |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 
@@ -59,7 +59,7 @@
 | Statement classification learning (per-entity rules, suggest + learn on confirm) | `v0.71.14`                                        | done           | Build a **global/shared** rule store — rules are per-entity (RLS), never cross-user                                        |
 | Statement rule auto-apply (high-confidence, correction-reset, reversible)        | `v0.71.15`                                        | done           | Auto-post outside BANK_FEE/SUPPLIER_PAYMENT, or without the void/relearn correction path                                   |
 | BSF-1 deterministic bank fee auto-post on import (no learning)                   | `673d380`                                         | done           | Re-require ~3 manual confirmations for obvious fees (BSMV, hesap işletim ücreti); duplicate `bank_fee_detect`            |
-| BSF-2 supplier advances (pay-first, negative AP)                                 | (pending)                                         | done           | Re-block overpayment in `post_supplier_payment`; duplicate advance confirm threshold                                     |
+| BSF-2 supplier advances (pay-first, negative AP)                                 | `77f9311`                                         | done           | Re-block overpayment in `post_supplier_payment`; duplicate advance confirm threshold                                     |
 | Unified statement review hub (frontend)                                          | `v0.71.16`                                        | done           | Re-build per-statement-only review; `/banking/review` is the canonical hub                                                 |
 | Learned-token trim on classify/correct (`match_token`)                           | `v0.71.17`                                        | done           | Re-wire token trim only on create-supplier; blank token must keep full-description learn behavior                          |
 | Clearance auto-pick (POS/delivery settlement link-only)                          | `v0.72.0-clearance-auto-pick`                     | done           | Re-auto-create settlements on import; auto-link without HIGH rule + unique match; delivery without platform disambiguation |
