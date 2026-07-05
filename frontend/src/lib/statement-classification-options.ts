@@ -268,6 +268,34 @@ export function suggestDeliveryPlatformId(
   return null;
 }
 
+/** Match supplier name from statement description (e.g. METRO GIDA → Metro Gida). */
+export function suggestSupplierId(
+  description: string,
+  suppliers: { id: string; name: string }[],
+): string | null {
+  const normDesc = description.toLocaleLowerCase("tr-TR");
+  let best: { id: string; score: number } | null = null;
+
+  for (const supplier of suppliers) {
+    const normName = supplier.name.toLocaleLowerCase("tr-TR");
+    if (normName.length >= 3 && normDesc.includes(normName)) {
+      return supplier.id;
+    }
+    const tokens = normName.split(/\s+/).filter((token) => token.length >= 3);
+    if (tokens.length >= 2) {
+      const matched = tokens.filter((token) => normDesc.includes(token));
+      if (matched.length >= 2) {
+        const score = matched.length;
+        if (!best || score > best.score) {
+          best = { id: supplier.id, score };
+        }
+      }
+    }
+  }
+
+  return best?.id ?? null;
+}
+
 /** Best-effort brand label from bank description (for picker hints). */
 export function likelyDeliveryBrandInDescription(description: string): string | null {
   const upper = description.toUpperCase();

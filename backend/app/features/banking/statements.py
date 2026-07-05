@@ -49,8 +49,8 @@ from app.features.banking.schema import (
 from app.features.banking.classification_learning import (
     learn_classification_rule,
     record_rule_correction,
-    suggest_classification,
 )
+from app.features.banking.supplier_suggest_service import suggest_line_classification
 from app.features.banking.statement_rule_auto import apply_import_rule_auto
 from app.features.banking.statement_models import (
     BankStatement,
@@ -134,8 +134,20 @@ def _to_line_read(
     session: Session | None = None,
 ) -> BankStatementLineRead:
     suggestion = None
-    if session is not None and line.status == StatementLineStatus.NEEDS_REVIEW:
-        suggestion = suggest_classification(session, line.description)
+    if session is not None and line.status in (
+        StatementLineStatus.NEEDS_REVIEW,
+        StatementLineStatus.IMPORTED,
+    ):
+        try:
+            entity_id = require_entity_context()
+            suggestion = suggest_line_classification(
+                session,
+                entity_id,
+                line.description,
+                amount_kurus=line.amount_kurus,
+            )
+        except RuntimeError:
+            suggestion = None
     return BankStatementLineRead(
         id=line.id,
         statement_id=line.statement_id,

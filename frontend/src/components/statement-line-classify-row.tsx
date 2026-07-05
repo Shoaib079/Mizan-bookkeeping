@@ -22,6 +22,7 @@ import {
   deliveryPlatformPickerHint,
   suggestClassificationForLine,
   suggestDeliveryPlatformId,
+  suggestSupplierId,
   truncateStatementText,
 } from "@/lib/statement-classification-options";
 import {
@@ -88,11 +89,19 @@ export function StatementLineClassifyRow({
       );
       if (suggested) setDeliveryPlatformId(suggested);
     }
+    if (classification === "supplier_payment") {
+      const suggested =
+        line.suggestion?.supplier_id ??
+        suggestSupplierId(line.description, pickers.suppliers);
+      if (suggested) setSupplierId(suggested);
+    }
   }, [
     classification,
     deliveryPlatformId,
     line.description,
+    line.suggestion?.supplier_id,
     pickers.deliveryPlatforms,
+    pickers.suppliers,
   ]);
 
   useEffect(() => {

@@ -7,6 +7,7 @@ import {
   deliveryPlatformPickerHint,
   suggestClassificationForLine,
   suggestDeliveryPlatformId,
+  suggestSupplierId,
 } from "@/lib/statement-classification-options";
 
 describe("classificationOptionGroups", () => {
@@ -80,6 +81,16 @@ describe("suggestDeliveryPlatformId", () => {
       [{ id: "p-getir", name: "Getir" }],
     );
     expect(id).toBeNull();
+  });
+});
+
+describe("suggestSupplierId", () => {
+  it("matches metro from havale description", () => {
+    const id = suggestSupplierId(
+      "HAVALE EFT METRO GIDA SAN TIC ODEME",
+      [{ id: "sup-metro", name: "Metro Gida San Tic Ltd" }],
+    );
+    expect(id).toBe("sup-metro");
   });
 });
 

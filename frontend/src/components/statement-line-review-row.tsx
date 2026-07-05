@@ -37,6 +37,7 @@ import {
   classificationOptionsForAmount,
   STATEMENT_CLASSIFICATION_OPTIONS,
   suggestClassificationForLine,
+  suggestSupplierId,
 } from "@/lib/statement-classification-options";
 
 type Props = {
@@ -103,11 +104,15 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
     const expenses = chartRes.items.filter((account) => account.code.startsWith("5"));
     setExpenseAccounts(expenses);
     if (!supplierId && supRes.items[0]) setSupplierId(supRes.items[0].id);
+    const suggested =
+      line.suggestion?.supplier_id ??
+      suggestSupplierId(line.description, supRes.items);
+    if (suggested) setSupplierId(suggested);
     if (custRes.items[0]) setCustomerId(custRes.items[0].id);
     if (acctRes.items[0]) setCounterpartId(acctRes.items[0].id);
     if (ccRes.items[0]) setCreditCardId(ccRes.items[0].id);
     if (expenses[0]) setExpenseAccountId(expenses[0].id);
-  }, [entityId, supplierId]);
+  }, [entityId, line.description, line.suggestion?.supplier_id, supplierId]);
 
   useEffect(() => {
     if (!expanded) return;

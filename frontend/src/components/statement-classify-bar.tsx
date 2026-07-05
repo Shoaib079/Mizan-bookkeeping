@@ -25,6 +25,7 @@ import {
   deliveryPlatformPickerHint,
   suggestClassificationForLine,
   suggestDeliveryPlatformId,
+  suggestSupplierId,
 } from "@/lib/statement-classification-options";
 import {
   deliveryPlatformComboboxOptions,
@@ -109,6 +110,14 @@ export function StatementClassifyBar({
       pickers.deliveryPlatforms,
     );
     setDeliveryPlatformId(suggestedPlatform ?? "");
+    const suggestedSupplier =
+      line.suggestion?.supplier_id ??
+      suggestSupplierId(line.description, pickers.suppliers);
+    if (suggestedSupplier) {
+      setSupplierId(suggestedSupplier);
+    } else if (pickers.suppliers[0]) {
+      setSupplierId(pickers.suppliers[0].id);
+    }
   }, [line, pickers]);
 
   const deliveryPlatformHint =
