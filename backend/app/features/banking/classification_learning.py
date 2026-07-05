@@ -155,8 +155,14 @@ def _rule_signature(
     StatementLineClassification,
     uuid.UUID | None,
     uuid.UUID | None,
+    uuid.UUID | None,
 ]:
-    return (rule.classification, rule.supplier_id, rule.delivery_platform_id)
+    return (
+        rule.classification,
+        rule.supplier_id,
+        rule.delivery_platform_id,
+        rule.expense_account_id,
+    )
 
 
 def is_high_confidence(rule: StatementClassificationRule) -> bool:
@@ -215,6 +221,7 @@ def evaluate_rule_match(session: Session, description: str) -> RuleMatchEvaluati
         classification=best.classification,
         supplier_id=best.supplier_id,
         delivery_platform_id=best.delivery_platform_id,
+        expense_account_id=best.expense_account_id,
         reason=(
             f"Matched learned token {best.match_token!r} "
             f"({best.confirmation_count} prior confirmation"
@@ -248,6 +255,7 @@ def learn_classification_rule(
     classification: StatementLineClassification,
     supplier_id: uuid.UUID | None = None,
     delivery_platform_id: uuid.UUID | None = None,
+    expense_account_id: uuid.UUID | None = None,
     match_token: str | None = None,
     counterparty_name: str | None = None,
 ) -> None:
@@ -281,6 +289,13 @@ def learn_classification_rule(
     if classification == StatementLineClassification.DELIVERY_SETTLEMENT:
         rule_platform_id = delivery_platform_id
 
+    rule_expense_account_id: uuid.UUID | None = None
+    if classification in (
+        StatementLineClassification.RENT_UTILITY,
+        StatementLineClassification.STORE_PURCHASE,
+    ):
+        rule_expense_account_id = expense_account_id
+
     now = utcnow()
     existing = session.scalar(
         select(StatementClassificationRule).where(
@@ -292,10 +307,12 @@ def learn_classification_rule(
             existing.classification != classification
             or existing.supplier_id != rule_supplier_id
             or existing.delivery_platform_id != rule_platform_id
+            or existing.expense_account_id != rule_expense_account_id
         )
         existing.classification = classification
         existing.supplier_id = rule_supplier_id
         existing.delivery_platform_id = rule_platform_id
+        existing.expense_account_id = rule_expense_account_id
         if mapping_changed:
             existing.confirmation_count = 1
             existing.confirmations_since_correction = 1
@@ -313,6 +330,7 @@ def learn_classification_rule(
             classification=classification,
             supplier_id=rule_supplier_id,
             delivery_platform_id=rule_platform_id,
+            expense_account_id=rule_expense_account_id,
             confirmation_count=1,
             confirmations_since_correction=1,
             correction_count=0,
@@ -329,6 +347,7 @@ def record_rule_correction(
     corrected_classification: StatementLineClassification,
     corrected_supplier_id: uuid.UUID | None = None,
     corrected_delivery_platform_id: uuid.UUID | None = None,
+    corrected_expense_account_id: uuid.UUID | None = None,
     match_token: str | None = None,
 ) -> None:
     """Downgrade offending rules and learn the corrected mapping."""
@@ -367,6 +386,7 @@ def record_rule_correction(
         classification=corrected_classification,
         supplier_id=corrected_supplier_id,
         delivery_platform_id=corrected_delivery_platform_id,
+        expense_account_id=corrected_expense_account_id,
         match_token=forced_token,
         counterparty_name=counterparty_name,
     )
@@ -406,6 +426,23 @@ def record_rule_correction(
             after_value=(
                 str(corrected_delivery_platform_id)
                 if corrected_delivery_platform_id
+                else None
+            ),
+            match_token=learn_token,
+        )
+    if matches and matches[0].expense_account_id != corrected_expense_account_id:
+        record_learning_correction(
+            session,
+            domain=LearningDomain.BANK_STATEMENT,
+            field_name="expense_account_id",
+            before_value=(
+                str(matches[0].expense_account_id)
+                if matches[0].expense_account_id
+                else None
+            ),
+            after_value=(
+                str(corrected_expense_account_id)
+                if corrected_expense_account_id
                 else None
             ),
             match_token=learn_token,

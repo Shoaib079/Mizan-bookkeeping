@@ -125,7 +125,7 @@ export function StatementLineClassifyRow({
     if (classification === "credit_card_payment")
       body.credit_card_money_account_id = creditCardId;
     if (classification === "customer_payment") body.customer_id = customerId;
-    if (classification === "rent_utility")
+    if (classification === "rent_utility" || classification === "store_purchase")
       body.expense_account_id = expenseAccountId;
     if (classification === "delivery_settlement")
       body.delivery_platform_id = deliveryPlatformId;

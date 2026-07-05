@@ -58,7 +58,7 @@ Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) ·
 | — | **BSF-2** | Pay-first supplier advances | **Done** |
 | — | **BSF-3** | Supplier suggestion from bank description | **Done** |
 | — | **BSF-4** | Per-supplier auto-post toggle | **Done** |
-| — | P5 / P8 | Delete company UI · Groceries path | Queued |
+| — | P5 / ~~P8~~ | Delete company UI · ~~Groceries path~~ | P8 done; P5 queued |
 | — | P4, P7 | Backup prune, lint | Optional |
 
 **Rule:** one slice at a time, in the numbered order. Phase 13 slices assume the app is LIVE — every backend addition must be entity-scoped (RLS) and date-range bounded like the rest.
@@ -220,10 +220,8 @@ Entity setting `invoice_supplier_auto_post` (Set up → Restaurant, off by defau
 Remove ESLint "defined but never used" warnings across frontend/src (unused imports/vars, e.g. entity-access.test.ts). No runtime behavior change. Run frontend lint + tests green. Commit: "chore(frontend): remove unused imports".
 ```
 
-### P8 — Groceries / no-invoice card spend (Migros, BİM, etc.)  *(future)*
-**Why:** daily purchases paid by card/bank with no e-Fatura — not supplier payables.
-**Spec:** petty-cash / expense-only path (not auto-supplier from bank). Design slice TBD.
-**Note:** the accounting machinery already exists (bank `rent_utility` classification = Dr expense / Cr bank; manual expense takes `money_account_id`). Build = generalize the bank "store purchase" expense classification (learnable, e.g. Migros → Groceries) + a manual "card/store purchase" entry paying from a bank/card account + a "Groceries/food cost" default expense account. **Owner + accountant decision:** KDV on no-invoice purchases — default = post GROSS (no input-VAT reclaim). Fits naturally AFTER BSF (below).
+### P8 — Groceries / no-invoice card spend (Migros, BİM, etc.) — **DONE**
+**Shipped:** `store_purchase` bank classification (Dr `5220` supplies / Cr bank, gross, no input VAT); retail chain detect (Migros, BİM, A101, Şok, Carrefour, File, Happy Center); import suggestion + learned HIGH-confidence auto-post; sign-hint exempt for retail POS outflows; New → **Store / card purchase** manual entry from bank/card; migration `074` (`expense_account_id` on learned rules).
 
 ---
 
@@ -247,7 +245,7 @@ Bank fees (havale/EFT ücreti, BSMV, periyodik bakım, hesap işletim ücreti, k
 #### BSF-4 — Per-supplier auto-post toggle — **DONE**
 **Shipped:** `suppliers.auto_post_payments` (migration `073`); trusted suppliers auto-post matching outflows on import via `try_auto_post_trusted_supplier_payment` (after fee detect, before learned rules). Toggle in supplier edit form + badge on supplier detail.
 
-**Sequence:** BSF-1 → BSF-4 complete. **Next:** P5 delete company UI, then P8 groceries path.
+**Sequence:** BSF-1 → BSF-4 complete. P8 done. **Next:** P5 delete company UI.
 
 ---
 

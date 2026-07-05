@@ -122,6 +122,13 @@ export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
     target: "credit_card",
   },
   {
+    value: "store_purchase",
+    label: "Store / grocery purchase",
+    hint: "Migros, BİM, A101… — Dr supplies / Cr bank (no supplier invoice)",
+    direction: "outflow",
+    target: "expense",
+  },
+  {
     value: "rent_utility",
     label: "Expense from bank",
     hint: "Pick GL account: 5000 rent, 5210 utilities, 5230 repairs, 5220 supplies, 5240 advertising…",
@@ -209,6 +216,8 @@ const DELIVERY_HINT =
 const POS_HINT =
   /POS|KART|CARD|ÖKC|BKM|SANAL|VISA|MASTERCARD|NET\s*SAT/i;
 const BANK_FEE_HINT = /KOMISYON|BANKA|MASRAF|ÜCRET|EFT|HAVALE|BSM|BSMV/i;
+const STORE_PURCHASE_HINT =
+  /\bMIGROS\b|\bBIM\b|\bBİM\b|\bA101\b|\bSOK\b|\bŞOK\b|\bCARREFOUR\b|\bFILE\b|\bHAPPY\s*CENTER\b/i;
 const SALARY_HINT = /MAAŞ|MAAS|SALARY|ÜCRET\s*ÖD|UCRET\s*OD/i;
 const LOAN_HINT = /KREDI|LOAN|FAIZ|FAİZ|TAKSIT|TAKSİT/i;
 
@@ -226,6 +235,7 @@ export function suggestClassificationForLine(line: {
   }
   if (line.amount_kurus < 0) {
     if (BANK_FEE_HINT.test(text)) return "bank_fee";
+    if (STORE_PURCHASE_HINT.test(text)) return "store_purchase";
     if (SALARY_HINT.test(text)) return "staff_payment";
     if (LOAN_HINT.test(text)) return "loan_payment";
     return "supplier_payment";

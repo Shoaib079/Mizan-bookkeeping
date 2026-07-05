@@ -111,8 +111,13 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
     if (custRes.items[0]) setCustomerId(custRes.items[0].id);
     if (acctRes.items[0]) setCounterpartId(acctRes.items[0].id);
     if (ccRes.items[0]) setCreditCardId(ccRes.items[0].id);
-    if (expenses[0]) setExpenseAccountId(expenses[0].id);
-  }, [entityId, line.description, line.suggestion?.supplier_id, supplierId]);
+    if (expenses[0] && !line.suggestion?.expense_account_id) {
+      setExpenseAccountId(expenses[0].id);
+    }
+    if (line.suggestion?.expense_account_id) {
+      setExpenseAccountId(line.suggestion.expense_account_id);
+    }
+  }, [entityId, line.description, line.suggestion?.supplier_id, line.suggestion?.expense_account_id, supplierId]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -127,6 +132,9 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
     if (line.suggestion) {
       setClassification(line.suggestion.classification);
       if (line.suggestion.supplier_id) setSupplierId(line.suggestion.supplier_id);
+      if (line.suggestion.expense_account_id) {
+        setExpenseAccountId(line.suggestion.expense_account_id);
+      }
     }
     setLearnAs(line.description);
   }, [line.id, line.suggestion, line.description]);
@@ -154,7 +162,7 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
     if (targetClassification === "credit_card_payment")
       body.credit_card_money_account_id = creditCardId;
     if (targetClassification === "customer_payment") body.customer_id = customerId;
-    if (targetClassification === "rent_utility")
+    if (targetClassification === "rent_utility" || targetClassification === "store_purchase")
       body.expense_account_id = expenseAccountId;
     return body;
   }
@@ -167,6 +175,12 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
     const body = buildClassifyBody(target);
     if (target === "supplier_payment" && line.suggestion?.supplier_id) {
       body.supplier_id = line.suggestion.supplier_id;
+    }
+    if (
+      (target === "store_purchase" || target === "rent_utility") &&
+      line.suggestion?.expense_account_id
+    ) {
+      body.expense_account_id = line.suggestion.expense_account_id;
     }
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
@@ -446,7 +460,7 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
                   </div>
                 )}
 
-                {classification === "rent_utility" && (
+                {classification === "rent_utility" || classification === "store_purchase" ? (
                   <div>
                     <Label htmlFor={`exp-${line.id}`}>Expense account</Label>
                     <Combobox
@@ -460,7 +474,7 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
                       placeholder="Expense account…"
                     />
                   </div>
-                )}
+                ) : null}
 
                 <Button type="submit" variant="secondary" disabled={submitting}>
                   {submitting ? "Posting…" : "Classify & post"}

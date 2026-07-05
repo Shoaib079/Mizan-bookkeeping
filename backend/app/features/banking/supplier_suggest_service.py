@@ -90,10 +90,16 @@ def suggest_line_classification(
     *,
     amount_kurus: int,
 ) -> ClassificationSuggestion | None:
-    """Learned rule first; fuzzy supplier name for unmatched outflows."""
+    """Learned rule first; retail store heuristic; fuzzy supplier for other outflows."""
     learned = suggest_classification(session, description)
     if learned is not None:
         return learned
     if amount_kurus >= 0:
         return None
+
+    from app.features.banking.store_purchase_service import suggest_store_purchase
+
+    store = suggest_store_purchase(session, entity_id, description)
+    if store is not None:
+        return store
     return suggest_supplier_payment(session, entity_id, description)

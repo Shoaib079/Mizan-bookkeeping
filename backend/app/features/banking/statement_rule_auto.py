@@ -10,10 +10,12 @@ from sqlalchemy.orm import Session
 
 from app.core.banking import statement_posting
 from app.core.banking.bank_fee_detect import is_bank_fee_description
+from app.core.expenses.posting import InvalidExpensePostingError, post_expense_entry
 from app.core.ledger.models import JournalEntrySource
 from app.features.banking.bank_fee_settings import get_bank_fee_auto_post_ceiling_kurus
 from app.core.payables import posting as payables_posting
 from app.core.payables.ledger import AdvanceConfirmationRequiredError
+from app.features.banking.store_purchase_service import default_supplies_expense_account_id
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.classification_learning import evaluate_rule_match
 from app.features.banking.statement_models import (
@@ -34,6 +36,7 @@ _AUTO_POST_CLASSIFICATIONS = frozenset(
     {
         StatementLineClassification.BANK_FEE,
         StatementLineClassification.SUPPLIER_PAYMENT,
+        StatementLineClassification.STORE_PURCHASE,
     }
 )
 
@@ -342,6 +345,68 @@ def _auto_apply_supplier_payment(
     return True
 
 
+def _auto_post_store_purchase(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    statement: BankStatement,
+    line: BankStatementLine,
+    expense_account_id: uuid.UUID | None,
+    actor_id: uuid.UUID,
+) -> bool:
+    if line.amount_kurus >= 0:
+        _route_rule_needs_review(
+            line,
+            classification=StatementLineClassification.STORE_PURCHASE,
+            supplier_id=None,
+            review_reason="store_purchase requires an outflow",
+        )
+        return False
+
+    account_id = expense_account_id or default_supplies_expense_account_id(
+        session, entity_id
+    )
+    if account_id is None:
+        _route_rule_needs_review(
+            line,
+            classification=StatementLineClassification.STORE_PURCHASE,
+            supplier_id=None,
+            review_reason="Store purchase rule has no expense account",
+        )
+        return True
+
+    expense_amount = abs(line.amount_kurus)
+    try:
+        result = post_expense_entry(
+            session,
+            entity_id,
+            expense_date=line.transaction_date,
+            amount_kurus=expense_amount,
+            expense_account_id=account_id,
+            money_account_id=statement.money_account_id,
+            description=line.description,
+            actor_id=actor_id,
+            bank_statement_line_id=line.id,
+            has_source_document=False,
+        )
+    except (InvalidExpensePostingError, ValueError) as exc:
+        _route_rule_needs_review(
+            line,
+            classification=StatementLineClassification.STORE_PURCHASE,
+            supplier_id=None,
+            review_reason=str(exc),
+        )
+        return True
+
+    line.classification = StatementLineClassification.STORE_PURCHASE
+    line.status = StatementLineStatus.POSTED
+    line.journal_entry_id = result.journal_entry.id
+    line.expense_entry_id = result.expense_entry.id
+    line.classification_source = StatementLineClassificationSource.RULE_AUTO.value
+    line.review_reason = None
+    return True
+
+
 def try_auto_post_detected_bank_fee(
     session: Session,
     entity_id: uuid.UUID,
@@ -512,6 +577,16 @@ def try_auto_apply_line(
             link_payment_to_line=link_payment_to_line,
             route_payment_needs_review=route_payment_needs_review,
             find_near_matching_payments=find_near_matching_payments,
+        )
+
+    if rule.classification == StatementLineClassification.STORE_PURCHASE:
+        return _auto_post_store_purchase(
+            session,
+            entity_id,
+            statement=statement,
+            line=line,
+            expense_account_id=rule.expense_account_id,
+            actor_id=actor_id,
         )
 
     return False

@@ -55,6 +55,13 @@ def test_import_sign_review_reason_flags_outflow_text_on_positive_amount() -> No
     assert "inverted" in reason.lower()
 
 
+def test_import_sign_review_reason_ignores_retail_store_card_spend() -> None:
+    assert (
+        import_sign_review_reason("POS MIGROS SANAL MARKET ISTANBUL", -45_000)
+        is None
+    )
+
+
 def test_import_sign_review_reason_ignores_consistent_signs() -> None:
     assert import_sign_review_reason("NET SATIS POS", 100_00) is None
     assert import_sign_review_reason("HAVALE TEDARIKCI ODEME", -100_00) is None

@@ -93,31 +93,41 @@ export function StatementClassifyBar({
 
   useEffect(() => {
     if (!line) return;
-    setClassification(suggestClassificationForLine(line));
     setLearnAs(line.description);
     setError(null);
     setCorrectOpen(false);
     setCorrectReason("");
-    if (pickers.suppliers[0]) setSupplierId(pickers.suppliers[0].id);
+
+    if (line.suggestion) {
+      setClassification(line.suggestion.classification);
+      if (line.suggestion.supplier_id) {
+        setSupplierId(line.suggestion.supplier_id);
+      } else if (pickers.suppliers[0]) {
+        setSupplierId(pickers.suppliers[0].id);
+      }
+      if (line.suggestion.expense_account_id) {
+        setExpenseAccountId(line.suggestion.expense_account_id);
+      } else if (pickers.expenseAccounts[0]) {
+        setExpenseAccountId(pickers.expenseAccounts[0].id);
+      }
+    } else {
+      setClassification(suggestClassificationForLine(line));
+      if (pickers.suppliers[0]) setSupplierId(pickers.suppliers[0].id);
+      if (pickers.expenseAccounts[0]) setExpenseAccountId(pickers.expenseAccounts[0].id);
+      const suggestedSupplier = suggestSupplierId(line.description, pickers.suppliers);
+      if (suggestedSupplier) setSupplierId(suggestedSupplier);
+    }
+
     if (pickers.customers[0]) setCustomerId(pickers.customers[0].id);
     if (pickers.employees[0]) setEmployeeId(pickers.employees[0].id);
     if (pickers.partners[0]) setPartnerId(pickers.partners[0].id);
     if (pickers.moneyAccounts[0]) setCounterpartId(pickers.moneyAccounts[0].id);
     if (pickers.creditCards[0]) setCreditCardId(pickers.creditCards[0].id);
-    if (pickers.expenseAccounts[0]) setExpenseAccountId(pickers.expenseAccounts[0].id);
     const suggestedPlatform = suggestDeliveryPlatformId(
       line.description,
       pickers.deliveryPlatforms,
     );
     setDeliveryPlatformId(suggestedPlatform ?? "");
-    const suggestedSupplier =
-      line.suggestion?.supplier_id ??
-      suggestSupplierId(line.description, pickers.suppliers);
-    if (suggestedSupplier) {
-      setSupplierId(suggestedSupplier);
-    } else if (pickers.suppliers[0]) {
-      setSupplierId(pickers.suppliers[0].id);
-    }
   }, [line, pickers]);
 
   const deliveryPlatformHint =
@@ -149,7 +159,8 @@ export function StatementClassifyBar({
     if (target === "credit_card_payment")
       body.credit_card_money_account_id = creditCardId;
     if (target === "customer_payment") body.customer_id = customerId;
-    if (target === "rent_utility") body.expense_account_id = expenseAccountId;
+    if (target === "rent_utility" || target === "store_purchase")
+      body.expense_account_id = expenseAccountId;
     if (target === "delivery_settlement")
       body.delivery_platform_id = deliveryPlatformId;
     if (target === "staff_payment" || target === "staff_advance" || target === "staff_incentive")

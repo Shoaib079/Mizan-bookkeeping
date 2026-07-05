@@ -20,6 +20,7 @@ class StatementLineClassification(str, enum.Enum):
     DELIVERY_SETTLEMENT = "delivery_settlement"
     BANK_FEE = "bank_fee"
     RENT_UTILITY = "rent_utility"
+    STORE_PURCHASE = "store_purchase"
     CREDIT_CARD_PAYMENT = "credit_card_payment"
     CUSTOMER_PAYMENT = "customer_payment"
     STAFF_PAYMENT = "staff_payment"

@@ -102,6 +102,7 @@ class ClassificationSuggestion(BaseModel):
     classification: StatementLineClassification
     supplier_id: uuid.UUID | None = None
     delivery_platform_id: uuid.UUID | None = None
+    expense_account_id: uuid.UUID | None = None
     reason: str
     confidence: str
 
@@ -251,7 +252,7 @@ class ClassifyStatementLineRequest(BaseModel):
     confirm_account_transfer_id: uuid.UUID | None = None
     expense_account_id: uuid.UUID | None = Field(
         default=None,
-        description="Required for rent_utility — owner picks expense GL account (e.g. 5000 rent)",
+        description="Required for rent_utility and store_purchase — expense GL account",
     )
     employee_id: uuid.UUID | None = Field(
         default=None,

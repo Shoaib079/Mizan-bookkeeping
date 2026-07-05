@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none — ready for next) |
 | **Next up**              | P5 — Delete company UI |
-| **Last completed slice** | BSF-4 — Per-supplier auto-post toggle |
-| **Last commit/tag**      | `v0.bsf-2-advance-import-guard` / `3555006` |
+| **Last completed slice** | P8 — Store / grocery card spend |
+| **Last commit/tag**      | (pending) — P8 |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 
@@ -30,7 +30,7 @@
 4. **Phase 12 owner sign-off** — record first real restaurant on production (provision Postgres, secrets, backup-restore drill, walk a day).
 5. ~~**Feature gaps FP/FS**~~ **DONE** — FP (`v0.73.23` partner drawing/repayment); FS (`v0.73.24` salary period + advance UX at pay time).
 6. **P3/P5/P6** — upload backup, delete company UI, production cutover (`POST_LAUNCH_PLAN.md`).
-7. **P8** — groceries / no-invoice card spend (design only until promoted).
+7. ~~**P8** — groceries / no-invoice card spend~~ **DONE** — `store_purchase` classification, retail detect, learned auto-post, manual bank/card entry.
 8. *Optional later:* generic global "starter phrasebook" of non-private TR type-patterns for day-one defaults (personal rules always override).
 
 **2b — Unified statement review hub (frontend) — DONE (`v0.71.16`).** `/banking/review`: status tabs (needs review · auto-posted · posted · linked), inline confirm/classify/correct/create-supplier, suggestion display, token trim, `rule_auto` highlighting.
@@ -220,6 +220,7 @@ Every statement-line classification that represents a **real GL event** must pos
 | `pos_settlement` / card deposit | Dr bank / Cr card clearing `1400`                                | done (Phase 4 Slice 1)        |
 | `delivery_settlement`           | Dr bank / Cr platform clearing                                   | done (Phase 6 Slice 2)        |
 | `rent_utility`                  | Dr expense / Cr bank                                             | done (Phase 6 Slice 6)        |
+| `store_purchase`                | Dr supplies (5220) / Cr bank — retail, no invoice                | done (P8)                     |
 | `tax_payment`                   | Dr tax liability / Cr bank                                       | **Phase 5/7** (tax module)    |
 | `owner_draw`                    | Dr equity / Cr bank                                              | **Phase 5** (owner movements) |
 | `customer_payment`              | Dr bank / Cr AR                                                  | **done** (Phase 5 Slice 5)    |
@@ -1859,6 +1860,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-05 | P8 — Store / grocery card spend                 | (pending)                                              | `store_purchase` classify + learn; retail chain detect; import suggestion; HIGH-confidence auto-post; sign-hint exempt; manual bank/card entry; migration `074`; 6 pytest |
 | 2026-07-05 | BSF-2 — Import auto-apply advance guard         | `v0.bsf-2-advance-import-guard` / `3555006`            | Remove `skip_advance_confirm` from import auto-apply; large advances → needs_review; small advances still auto-post; learned + trusted paths; 3 pytest |
 | 2026-07-05 | BSF-4 — Per-supplier auto-post toggle           | `v0.bsf-4-supplier-auto-post` / `f7cc13e`              | `suppliers.auto_post_payments`; import auto-post for trusted suppliers; supplier edit UI; migration `073`; 3 pytest |
 | 2026-07-05 | BSF-3 — Supplier suggestion from bank description | `v0.bsf-3-supplier-suggest` / `9524ede`                | Fuzzy match description→supplier on IMPORTED/needs_review lines; classify UI preselect + Confirm suggestion; learned rules win; 5 pytest |

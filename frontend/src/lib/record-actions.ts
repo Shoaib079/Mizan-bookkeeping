@@ -21,6 +21,7 @@ import {
 /** Modal shortcuts wired from New menu and command palette. */
 export type QuickActionKey =
   | "expense"
+  | "storePurchase"
   | "sales"
   | "buyFx"
   | "posPhoto"
@@ -107,6 +108,13 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     label: "Manual expense",
     description: "Pay from cash or record a partner-fronted expense.",
     icon: Wallet,
+    section: "today",
+  },
+  {
+    id: "storePurchase",
+    label: "Store / card purchase",
+    description: "Groceries or retail paid by bank or card — no supplier invoice.",
+    icon: ShoppingBag,
     section: "today",
   },
   {
@@ -313,6 +321,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
 
 export const QUICK_ACTION_KEYS = new Set<QuickActionKey>([
   "expense",
+  "storePurchase",
   "sales",
   "buyFx",
   "posPhoto",

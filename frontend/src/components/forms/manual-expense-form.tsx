@@ -64,14 +64,19 @@ function isExpenseDraftEmpty(draft: ExpenseFormDraft): boolean {
 type Props = {
   open: boolean;
   onClose: () => void;
-  /** Pre-select expense account by chart code (e.g. `5200`). */
+  /** Pre-select expense account by chart code (e.g. `5220`). */
   defaultExpenseAccountCode?: string;
+  /** Cash drawer (default) or bank/card accounts for card retail spend. */
+  paymentSource?: "cash" | "bank_card";
+  title?: string;
 };
 
 export function ManualExpenseForm({
   open,
   onClose,
   defaultExpenseAccountCode,
+  paymentSource = "cash",
+  title = "Manual expense",
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -103,8 +108,8 @@ export function ManualExpenseForm({
   const userPickedAccountRef = useRef(false);
 
   const draftFormKey = defaultExpenseAccountCode
-    ? `manual-expense:${defaultExpenseAccountCode}`
-    : "manual-expense";
+    ? `manual-expense:${defaultExpenseAccountCode}:${paymentSource}`
+    : `manual-expense:${paymentSource}`;
 
   const formDraft = useMemo<ExpenseFormDraft>(
     () => ({
@@ -147,10 +152,25 @@ export function ManualExpenseForm({
 
   const loadOptions = useCallback(async () => {
     if (!entityId) return;
+    const accountRequests =
+      paymentSource === "bank_card"
+        ? [
+            apiFetch<{ items: MoneyAccount[] }>(
+              `/entities/${entityId}/banking/accounts?account_kind=bank&limit=50`,
+            ),
+            apiFetch<{ items: MoneyAccount[] }>(
+              `/entities/${entityId}/banking/accounts?account_kind=credit_card&limit=50`,
+            ),
+          ]
+        : [
+            apiFetch<{ items: MoneyAccount[] }>(
+              `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
+            ),
+          ];
     const [accountsRes, chartRes, partnersRes] = await Promise.all([
-      apiFetch<{ items: MoneyAccount[] }>(
-        `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
-      ),
+      Promise.all(accountRequests).then((responses) => ({
+        items: responses.flatMap((response) => response.items),
+      })),
       apiFetch<{ items: ChartAccount[] }>(
         `/entities/${entityId}/chart-of-accounts?limit=200`,
       ),
@@ -169,20 +189,24 @@ export function ManualExpenseForm({
       ? findExpenseAccountByCode(chartRes.items, defaultExpenseAccountCode)
       : undefined;
     if (preferred) setExpenseAccountId(preferred.id);
-    const drawerId = defaultMainDrawerId(
-      accountsRes.items.map((a) => ({
-        id: a.id,
-        gl_account_id: "",
-        name: a.name,
-        account_kind: "cash",
-      })),
-    );
-    if (drawerId) setMoneyAccountId(drawerId);
-    else if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
+    if (paymentSource === "bank_card") {
+      if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
+    } else {
+      const drawerId = defaultMainDrawerId(
+        accountsRes.items.map((a) => ({
+          id: a.id,
+          gl_account_id: "",
+          name: a.name,
+          account_kind: "cash",
+        })),
+      );
+      if (drawerId) setMoneyAccountId(drawerId);
+      else if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
+    }
     const activePartners = partnersRes.items.filter((p) => p.is_active);
     if (activePartners[0]) setPartnerId(activePartners[0].id);
     setOptionsLoaded(true);
-  }, [entityId, defaultExpenseAccountCode]);
+  }, [entityId, defaultExpenseAccountCode, paymentSource]);
 
   useEffect(() => {
     if (!open) {
@@ -336,8 +360,12 @@ export function ManualExpenseForm({
       setError("Choose an expense account.");
       return;
     }
-    if (paymentMode === "cash" && !moneyAccountId) {
+    if (paymentSource === "cash" && paymentMode === "cash" && !moneyAccountId) {
       setError("Choose a cash drawer.");
+      return;
+    }
+    if (paymentSource === "bank_card" && !moneyAccountId) {
+      setError("Choose a bank or card account.");
       return;
     }
     if (paymentMode === "partner" && !partnerId) {
@@ -420,7 +448,7 @@ export function ManualExpenseForm({
   return (
     <Dialog
       open={open}
-      title="Manual expense"
+      title={title}
       onClose={onClose}
       dirty={dirty}
       onDiscard={handleDiscard}
@@ -487,19 +515,37 @@ export function ManualExpenseForm({
           )}
         </div>
         <div>
-          <Label htmlFor="exp-payment">Payment</Label>
-          <Select
-            id="exp-payment"
-            value={paymentMode}
-            onChange={(e) =>
-              setPaymentMode(e.target.value as PaymentMode)
-            }
-          >
-            <option value="cash">Cash drawer</option>
-            <option value="partner">Partner paid (owe partner)</option>
-          </Select>
+          {paymentSource === "bank_card" ? (
+            <div>
+              <Label htmlFor="exp-bank">Bank or card account</Label>
+              <Combobox
+                id="exp-bank"
+                value={moneyAccountId}
+                onValueChange={setMoneyAccountId}
+                options={cashAccounts.map((a) => ({
+                  value: a.id,
+                  label: a.name,
+                }))}
+                placeholder="Bank or card…"
+              />
+            </div>
+          ) : (
+            <>
+              <Label htmlFor="exp-payment">Payment</Label>
+              <Select
+                id="exp-payment"
+                value={paymentMode}
+                onChange={(e) =>
+                  setPaymentMode(e.target.value as PaymentMode)
+                }
+              >
+                <option value="cash">Cash drawer</option>
+                <option value="partner">Partner paid (owe partner)</option>
+              </Select>
+            </>
+          )}
         </div>
-        {paymentMode === "cash" ? (
+        {paymentSource === "cash" && paymentMode === "cash" ? (
           <div>
             <Label htmlFor="exp-cash">Cash drawer</Label>
             <Combobox
@@ -513,7 +559,7 @@ export function ManualExpenseForm({
               placeholder="Cash drawer…"
             />
           </div>
-        ) : (
+        ) : paymentSource === "cash" && paymentMode === "partner" ? (
           <div>
             <Label htmlFor="exp-partner">Partner</Label>
             <Combobox
@@ -527,7 +573,7 @@ export function ManualExpenseForm({
               placeholder="Partner…"
             />
           </div>
-        )}
+        ) : null}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Saving…" : "Save expense"}

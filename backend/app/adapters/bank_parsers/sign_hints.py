@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from app.core.banking.store_purchase_detect import is_store_purchase_description
+
 _INFLOW_HINTS = re.compile(
     r"POS|NET\s*SAT|KART|TAHSILAT|TAHSİLAT|GELEN|YATIR|DEPOSIT|"
     r"TRENDYOL|GETIR|YEMEK|MIGROS|MARKETPLACE|SETTLEMENT|ODEME\s*AL",
@@ -50,6 +52,8 @@ def import_sign_review_reason(description: str, amount_kurus: int) -> str | None
         return None
 
     if amount_kurus < 0:
+        if is_store_purchase_description(description):
+            return None
         if _has_unnegated_hint(_LOAN_INFLOW_HINTS, text):
             return (
                 "Amount sign may be inverted — description looks like loan proceeds "

@@ -218,6 +218,7 @@ def _record_classification_learning(
     supplier_id: uuid.UUID | None = None,
     delivery_platform_id: uuid.UUID | None = None,
     match_token: str | None = None,
+    expense_account_id: uuid.UUID | None = None,
 ) -> None:
     """Persist a learned rule after successful user classification (never auto-posts)."""
     description = line.description
@@ -248,6 +249,7 @@ def _record_classification_learning(
             classification=classification,
             supplier_id=learned_supplier_id,
             delivery_platform_id=delivery_platform_id,
+            expense_account_id=expense_account_id,
             match_token=learned_match_token,
             counterparty_name=counterparty_name,
         )
@@ -1436,6 +1438,18 @@ def classify_statement_line(
                     "expense_account_id is required for rent_utility"
                 )
 
+        elif classification == StatementLineClassification.STORE_PURCHASE:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "store_purchase classification requires an outflow (negative amount_kurus)"
+                )
+            if actor_id is None:
+                raise InvalidClassificationError("actor_id is required for store_purchase")
+            if expense_account_id is None:
+                raise InvalidClassificationError(
+                    "expense_account_id is required for store_purchase"
+                )
+
         elif classification == StatementLineClassification.CREDIT_CARD_PAYMENT:
             if line.amount_kurus >= 0:
                 raise InvalidClassificationError(
@@ -1885,6 +1899,56 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.RENT_UTILITY,
+            expense_account_id=expense_account_id,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.STORE_PURCHASE:
+        expense_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        assert expense_account_id is not None
+        try:
+            result = post_expense_entry(
+                session,
+                entity_id,
+                expense_date=line.transaction_date,
+                amount_kurus=expense_amount,
+                expense_account_id=expense_account_id,
+                money_account_id=statement.money_account_id,
+                description=line.description,
+                actor_id=actor_id,
+                bank_statement_line_id=line.id,
+                has_source_document=False,
+            )
+        except (InvalidExpensePostingError, ValueError) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+
+        journal_id = result.journal_entry.id
+        expense_id = result.expense_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.STORE_PURCHASE
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            line.expense_entry_id = expense_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.STORE_PURCHASE,
+            expense_account_id=expense_account_id,
             match_token=match_token,
         )
         return ClassifyStatementLineResult(
@@ -2402,6 +2466,7 @@ def correct_statement_line(
             corrected_classification=classification,
             corrected_supplier_id=supplier_id,
             corrected_delivery_platform_id=delivery_platform_id,
+            corrected_expense_account_id=expense_account_id,
             match_token=match_token.strip() if match_token and match_token.strip() else None,
         )
         session.commit()

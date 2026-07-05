@@ -61,6 +61,7 @@ export type StatementLineClassification =
   | "delivery_settlement"
   | "bank_fee"
   | "rent_utility"
+  | "store_purchase"
   | "credit_card_payment"
   | "customer_payment"
   | "staff_payment"
@@ -94,6 +95,8 @@ export type BankStatementLine = {
 export type ClassificationSuggestion = {
   classification: StatementLineClassification;
   supplier_id: string | null;
+  delivery_platform_id?: string | null;
+  expense_account_id?: string | null;
   reason: string;
   confidence: string;
 };
