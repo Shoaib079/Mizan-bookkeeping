@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from app.adapters.backup.postgres import (
     run_pg_restore,
     scratch_database_name,
 )
+from app.adapters.storage import prepare_uploads_for_backup
 from app.adapters.backup.storage import get_backup_storage
 from app.config import settings
 from app.features.backups.integrity import verify_restored_database
@@ -62,11 +64,17 @@ def run_backup(*, timestamp: str | None = None) -> BackupRunResult:
 
     with tempfile.TemporaryDirectory(prefix="mizan-backup-run-") as workdir:
         work = Path(workdir)
+        staging_uploads = work / "uploads"
+        if uploads_root.exists() and any(uploads_root.iterdir()):
+            shutil.copytree(uploads_root, staging_uploads, dirs_exist_ok=True)
+        else:
+            staging_uploads.mkdir(parents=True, exist_ok=True)
+        prepare_uploads_for_backup(staging_uploads)
         dump_path = work / DATABASE_DUMP_NAME
         run_pg_dump(backup_url, str(dump_path))
         artifact_path, manifest = create_backup_bundle(
             dump_path=dump_path,
-            uploads_root=uploads_root,
+            uploads_root=staging_uploads,
             git_tag=git_tag,
             row_counts=row_counts,
             output_dir=work,

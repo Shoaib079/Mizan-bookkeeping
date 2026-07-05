@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     test_database_url: str = "postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan_test"
     database_admin_url: str = "postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres"
     upload_dir: str = "data/uploads"
+    upload_storage: str = "local"
+    upload_s3_prefix: str = "uploads"
     auth_enforcement: bool = True
     self_signup_enabled: bool = True
     idempotency_enforcement: bool = True

@@ -7,9 +7,10 @@ from datetime import date
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
+from app.adapters.storage import load_upload_document, upload_exists
 from app.adapters.ocr_ai.expense_receipt import ExpenseReceiptExtractionError
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.expenses.items import InvalidExpenseItemError
@@ -338,21 +339,26 @@ def reject_expense_receipt(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.get("/expense-receipts/{intake_id}/document")
+@router.get("/expense-receipts/{intake_id}/document", response_model=None)
 def get_expense_receipt_document(
     entity_id: uuid.UUID,
     intake_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
-) -> FileResponse:
+):
     try:
         intake = receipt_service.get_expense_receipt(session, entity_id, intake_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    path = Path(intake.source_document_path)
-    if not path.is_file():
+    stored = intake.source_document_path
+    if not stored or not upload_exists(stored):
         raise HTTPException(status_code=404, detail="Receipt document not found on disk")
-    return FileResponse(path)
+    document = load_upload_document(stored, media_type="image/jpeg")
+    local_path, content, media_type = document.as_file_response_args()
+    if local_path is not None:
+        return FileResponse(local_path, media_type=media_type)
+    assert content is not None
+    return Response(content=content, media_type=media_type)
 
 
 @router.post("/expenses/tip-photos/{expense_id}/confirm", response_model=ExpenseRead)

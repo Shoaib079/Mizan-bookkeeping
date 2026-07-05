@@ -101,7 +101,7 @@ Use `rediss://` if your provider requires TLS.
 - `CLERK_JWKS_URL`, `CLERK_ISSUER`, `CLERK_AUDIENCE` required when auth is on
 - `CORS_ORIGINS` must not be the localhost default
 
-**Uploads:** Files stay on the API host disk (`UPLOAD_DIR=/app/data/uploads`). Off-site backups (below) cover DB + upload archive bundles.
+**Uploads:** Set `UPLOAD_STORAGE=s3` on the API (and Celery worker for nightly backup bundling) to write receipt/invoice files directly to the same R2/S3 bucket as backups (`BACKUP_S3_*`, prefix `UPLOAD_S3_PREFIX=uploads`). Files survive Railway redeploys and are included in nightly `mizan-backup-*.tar.gz` artifacts via S3 sync before bundling. For local dev, omit `UPLOAD_STORAGE` (defaults to `local` under `UPLOAD_DIR`).
 
 **Railway alternative:** Same Dockerfile; run three processes (web, worker, beat) with a volume on `/app/data`.
 

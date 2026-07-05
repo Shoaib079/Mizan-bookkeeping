@@ -10,6 +10,7 @@ from pathlib import Path
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.adapters.storage import upload_exists as stored_upload_exists
 from app.core.chart_of_accounts.default_chart import (
     ACCOUNTS_PAYABLE_CODE,
     ACCOUNTS_RECEIVABLE_CODE,
@@ -155,6 +156,8 @@ def _upload_references_exist(session: Session, uploads_root: Path, report: Integ
 
 
 def _upload_exists(stored_path: str, uploads_root: Path) -> bool:
+    if stored_upload_exists(stored_path):
+        return True
     path = Path(stored_path)
     uploads_root = uploads_root.resolve()
     if path.exists():

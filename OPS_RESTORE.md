@@ -7,7 +7,7 @@ Short operator guide for database + upload recovery from automated backups (Phas
 Each artifact is `mizan-backup-<UTC-timestamp>.tar.gz` with:
 
 - `database.dump` — PostgreSQL custom format (`pg_dump -Fc`)
-- `uploads/` — copy of the app upload tree (`data/uploads` by default)
+- `uploads/` — copy of all upload files (local disk, or synced from S3 when `UPLOAD_STORAGE=s3`)
 - `manifest.json` — timestamp, git tag, row counts, SHA256 content checksum
 
 Artifacts are stored locally (`BACKUP_LOCAL_DIR`) or in an S3-compatible bucket (`BACKUP_S3_*`) with SSE (`AES256`).

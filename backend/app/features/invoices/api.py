@@ -6,7 +6,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from app.core.listing import ListParams, list_params_dependency, paginated_list
@@ -123,20 +123,24 @@ def get_invoice_draft(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/drafts/{draft_id}/document")
+@router.get("/drafts/{draft_id}/document", response_model=None)
 def get_invoice_draft_document(
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
-) -> FileResponse:
+):
     try:
-        path, media_type = service.get_invoice_draft_document_path(
+        document = service.get_invoice_draft_document(
             session, entity_id, draft_id
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return FileResponse(path, media_type=media_type)
+    local_path, content, media_type = document.as_file_response_args()
+    if local_path is not None:
+        return FileResponse(local_path, media_type=media_type)
+    assert content is not None
+    return Response(content=content, media_type=media_type)
 
 
 @router.post("/drafts/{draft_id}/link-supplier", response_model=InvoiceDraftOut)

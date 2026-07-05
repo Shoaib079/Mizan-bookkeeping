@@ -27,7 +27,7 @@ from app.adapters.backup.postgres import (
     scratch_database_name,
 )
 from app.adapters.backup.storage import LocalBackupStorage, retention_keys_to_keep
-from app.adapters.storage.local import save_upload
+from app.adapters.storage import save_upload
 from app.config import settings
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance

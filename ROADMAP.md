@@ -15,9 +15,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none — ready for next) |
-| **Last completed slice** | Posted invoices browse view + delivery commission list |
-| **Last commit/tag**      | `v0.posted-invoices-browse` (`d9815cd`) |
-| **Next up**              | Phase 13 build queue — IC (invoice classification), then remaining sequence — `POST_LAUNCH_PLAN.md` § Build queue |
+| **Next up**              | P5 — Delete company UI (`POST_LAUNCH_PLAN.md`) |
+| **Last completed slice** | P3 — Off-site upload storage (S3/R2) |
+| **Last commit/tag**      | (pending — P3 upload backup) |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 
@@ -86,6 +86,7 @@
 | Deploy catch-up — Netlify→Vercel config cleanup                               | `v0.deploy-vercel-cleanup`                          | done           | Headers in next.config.ts; netlify.toml deleted; vercel.json added; DEPLOY.md updated |
 | **UX-A — Retire "New", rename Record → "Add"**                                | `v0.uxa-retire-new`                                 | done           | NewMenu deleted; NEW_COMMAND_QUICK_ACTIONS removed; "Record" → "Add"; dashboard Close day unified |
 | Posted invoices browse + delivery commission list                             | `v0.posted-invoices-browse`                         | done           | Re-hide posted invoices from Review; duplicate list API filters; read-only detail without journal link |
+| Off-site upload storage (S3/R2)                                             | (this commit)                                         | done           | Re-store uploads only on ephemeral disk; omit UPLOAD_STORAGE=s3 on Railway |
 
 
 **Owner sign-off ✓ (2026-06-28)** on Phase 12.5 statement-learning arc through clearance auto-pick (`v0.72.0-clearance-auto-pick`) — rule auto-post (bank fee + supplier payment), review hub, match_token trim, POS/delivery link-only auto-clear.

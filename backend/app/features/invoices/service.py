@@ -22,7 +22,7 @@ from app.adapters.ocr_ai.efatura import (
 )
 from app.core.content_fingerprint import file_fingerprint
 from app.core.turkish_vkn import is_valid_vkn_or_tckn
-from app.adapters.storage.local import delete_stored_upload, save_upload
+from app.adapters.storage import StoredUploadDocument, delete_stored_upload, load_upload_document, save_upload, upload_exists
 from app.db.base import utcnow
 from app.db.session import entity_context
 from app.core.listing import (
@@ -152,12 +152,16 @@ def extract_document(
     return extract_efatura_pdf_for_intake(content, buyer_vkn=buyer_vkn).extraction
 
 
-def _stored_document_path(draft: InvoiceDraft) -> Path | None:
+def _stored_path_ref(draft: InvoiceDraft) -> str | None:
     stored = (draft.extraction_payload or {}).get("stored_path")
     if not isinstance(stored, str) or not stored.strip():
         return None
-    path = Path(stored).expanduser()
-    return path if path.is_file() else None
+    return stored
+
+
+def _has_stored_document(draft: InvoiceDraft) -> bool:
+    stored = _stored_path_ref(draft)
+    return bool(stored and upload_exists(stored))
 
 
 def _is_classification_review_reason(reason: str | None) -> bool:
@@ -299,7 +303,7 @@ def _to_out(
         posted_by=draft.posted_by,
         journal_entry_id=draft.journal_entry_id,
         created_at=draft.created_at,
-        has_stored_document=_stored_document_path(draft) is not None,
+        has_stored_document=_has_stored_document(draft),
         suggested_expense_account_id=suggested_expense_account_id,
         expense_account_confidence=expense_account_confidence,
         one_click_post_eligible=one_click_post_eligible,
@@ -792,21 +796,21 @@ def create_efatura_draft_from_upload(
     return _draft_out(session, entity_id, draft)
 
 
-def get_invoice_draft_document_path(
+def get_invoice_draft_document(
     session: Session,
     entity_id: uuid.UUID,
     draft_id: uuid.UUID,
-) -> tuple[Path, str]:
+) -> StoredUploadDocument:
     draft = _get_draft_row(session, entity_id, draft_id)
-    path = _stored_document_path(draft)
-    if path is None:
+    stored = _stored_path_ref(draft)
+    if stored is None or not upload_exists(stored):
         raise LookupError("Invoice document not found")
     media = (
         "application/xml"
         if draft.source_type == InvoiceSourceType.EFATURA_XML
         else "application/pdf"
     )
-    return path, media
+    return load_upload_document(stored, media_type=media)
 
 
 def list_invoice_drafts(

@@ -17,7 +17,7 @@ from app.adapters.ocr_ai.expense_receipt import (
     extract_expense_receipt,
     extraction_to_payload,
 )
-from app.adapters.storage.local import delete_stored_upload, save_upload
+from app.adapters.storage import delete_stored_upload, save_upload
 from app.core.chart_of_accounts.default_chart import GENERAL_EXPENSE_CODE
 from app.core.chart_of_accounts.seed import get_account_by_code
 from app.core.listing import ListParams, fetch_paginated

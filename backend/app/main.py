@@ -50,7 +50,7 @@ from app.features.review_counts.api import router as review_counts_router
 from app.features.auth.api import members_router as auth_members_router
 from app.features.auth.api import users_router as auth_users_router
 from app.features.documents.api import router as documents_router
-from app.adapters.storage.local import ensure_storage_roots
+from app.adapters.storage import ensure_storage_roots
 from app.config import settings
 from app.core.idempotency.middleware import IdempotencyMiddleware
 from app.core.observability.logging_config import configure_logging

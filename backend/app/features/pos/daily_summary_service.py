@@ -16,7 +16,7 @@ from app.adapters.ocr_ai.pos_summary import (
     extraction_to_payload,
     math_valid,
 )
-from app.adapters.storage.local import delete_stored_upload, save_upload
+from app.adapters.storage import delete_stored_upload, save_upload
 from app.core.content_fingerprint import file_fingerprint
 from app.core.pos.daily_summary_posting import (
     PosDailySummaryPostError,

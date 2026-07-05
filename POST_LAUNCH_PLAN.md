@@ -53,7 +53,8 @@ Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) ·
 | **5** | **DASH-B** | Time-series aggregation endpoint + trend charts | Phase 13 |
 | **6** | **SRCH-B** | Spend totals in search (reuses DASH-B) | Phase 13 |
 | **7** | **UX-D** | Self-curating "Most used" in Add | Phase 13 |
-| — | P3 / P5 / P8 | Upload backup · Delete company UI · Groceries path | Queued |
+| — | P3 | Upload backup (S3/R2) | **Done** |
+| — | P5 / P8 | Delete company UI · Groceries path | Queued |
 | — | P4, P7 | Backup prune, lint | Optional |
 
 **Rule:** one slice at a time, in the numbered order. Phase 13 slices assume the app is LIVE — every backend addition must be entity-scoped (RLS) and date-range bounded like the rest.
@@ -191,9 +192,11 @@ Entity setting `invoice_supplier_auto_post` (Set up → Restaurant, off by defau
 
 ### ~~P2 — Auto-categorize manual expenses (AI + learning)~~ **DONE**
 
-### P3 — Off-site backup of uploads (receipt images)  *(backup gap)*
-**Why:** nightly backup covers the DB only; uploaded receipt files live on the API disk and aren't backed up.
-**Spec:** add upload-file sync to R2 — simplest is to have the API periodically (or on upload) mirror `UPLOAD_DIR` to the R2 bucket under an `uploads/` prefix, or attach the uploads volume to the `mizan-backup` job so its tar includes them. Confirm restore path. (Ask me for a full Cursor prompt when ready.)
+### P3 — Off-site backup of uploads (receipt images)  ✅ *(this slice)*
+
+**Why:** On Railway, API disk is ephemeral; uploads were lost on redeploy and weren't reliably in backup bundles when the worker lacked shared disk.
+
+**Shipped:** `UPLOAD_STORAGE=s3` writes invoice/receipt/POS uploads to R2/S3 (`BACKUP_S3_*`, key prefix `uploads/`). Nightly backup syncs S3 uploads into the tar artifact; document endpoints stream from S3 or local. Set on API + Celery worker in production.
 
 ### P4 — Backup retention / pruning  *(housekeeping)*
 **Why:** the cron only runs `cli run`; old backups accumulate in R2 forever.
@@ -312,6 +315,6 @@ Now that the hubs exist, collapse the sidebar to the 6 intents (Dashboard, Recor
 
 ---
 
-**How to use:** pick a slice from the **Master build order** → build + test + commit/tag → push → deploy → test live. **Next:** **P3** (upload backup). UX reorg **UX1–UX7 done** — do not rebuild.
+**How to use:** pick a slice from the **Master build order** → build + test + commit/tag → push → deploy → test live. **Next:** **P5** (delete company UI). UX reorg **UX1–UX7 done** — do not rebuild.
 
 **Session recovery:** read `ROADMAP.md` **Current status** + `PROGRESS.md` **Current** + this file **Master build order** — git tag wins over stale doc lines.

@@ -102,11 +102,7 @@ Cross-check: no env var referenced in code is missing from the dashboard
 
 ## 6. Infra decision still open (decide before real invoice volume)
 
-- [ ] **H3 — uploaded files persistence.** On Railway, uploaded receipt/invoice
-      files stored on the API's local/ephemeral filesystem can be lost on redeploy
-      and aren't in the nightly DB backup. Decide: mirror `UPLOAD_DIR` to R2 (vars
-      exist) so uploads survive redeploys and are backed up. (This is the old "H3
-      shared disk" concern, restated for Railway; `render.yaml` is stale — ignore it.)
+- [x] **H3 — uploaded files persistence.** Set `UPLOAD_STORAGE=s3` on Railway API + Celery worker (reuses `BACKUP_S3_*`). Uploads go to R2 under `{BACKUP_S3_PREFIX}/uploads/` and are bundled in nightly backups.
 
 ---
 

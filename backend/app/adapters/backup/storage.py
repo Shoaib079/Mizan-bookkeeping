@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from app.adapters.backup.archive import artifact_filename
+from app.adapters.backup.s3_client import build_s3_client
 from app.config import settings
 
 _BACKUP_KEY_RE = re.compile(r"mizan-backup-(\d{8}T\d{6}Z)\.tar\.gz$")
@@ -139,22 +140,11 @@ class LocalBackupStorage(BackupStorage):
 
 class S3BackupStorage(BackupStorage):
     def __init__(self) -> None:
-        import boto3
-
         if not settings.backup_s3_bucket:
             raise RuntimeError("backup_s3_bucket is required for S3 storage")
         self._bucket = settings.backup_s3_bucket
         self._prefix = settings.backup_s3_prefix.strip("/")
-        client_kwargs: dict = {}
-        if settings.backup_s3_endpoint_url:
-            client_kwargs["endpoint_url"] = settings.backup_s3_endpoint_url
-        if settings.backup_s3_region:
-            client_kwargs["region_name"] = settings.backup_s3_region
-        if settings.backup_s3_access_key_id:
-            client_kwargs["aws_access_key_id"] = settings.backup_s3_access_key_id
-        if settings.backup_s3_secret_access_key:
-            client_kwargs["aws_secret_access_key"] = settings.backup_s3_secret_access_key
-        self._client = boto3.client("s3", **client_kwargs)
+        self._client = build_s3_client()
 
     def _object_key(self, key: str) -> str:
         if self._prefix:
