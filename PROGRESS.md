@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none — ready for next) |
-| **Last completed slice** | UX-D — Self-curating "Most used" in Add (`v0.uxd-most-used`) |
-| **Last tag** | `v0.uxd-most-used` |
+| **Last completed slice** | Unify expense picker (manual + bank single source) |
+| **Last tag** | `v0.expense-picker-unify` |
 | **Next up** | Phase 13 build queue — IC (invoice classification), then remaining sequence in `POST_LAUNCH_PLAN.md` |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)

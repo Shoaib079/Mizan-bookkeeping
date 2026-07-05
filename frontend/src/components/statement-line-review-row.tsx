@@ -14,6 +14,10 @@ import type {
   StatementLineReview,
 } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
+import {
+  filterExpenseAccounts,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
   classifyStatementLine,
@@ -30,7 +34,6 @@ import { apiFetch } from "@/lib/api";
 type MoneyAccount = { id: string; name: string; account_kind: string };
 type Supplier = { id: string; name: string };
 type Customer = { id: string; name: string };
-type ChartAccount = { id: string; code: string; name_en: string };
 
 import {
   classificationLabel,
@@ -101,7 +104,7 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
     setCustomers(custRes.items);
     setMoneyAccounts(acctRes.items);
     setCreditCards(ccRes.items);
-    const expenses = chartRes.items.filter((account) => account.code.startsWith("5"));
+    const expenses = filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(expenses);
     if (!supplierId && supRes.items[0]) setSupplierId(supRes.items[0].id);
     const suggested =

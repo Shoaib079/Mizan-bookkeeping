@@ -4,13 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
+import {
+  filterExpenseAccounts,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 
 export type MoneyAccountOption = { id: string; name: string; account_kind: string };
 export type SupplierOption = { id: string; name: string };
 export type CustomerOption = { id: string; name: string };
 export type EmployeeOption = { id: string; name: string };
 export type PartnerOption = { id: string; name: string };
-export type ChartAccountOption = { id: string; code: string; name_en: string };
 
 export type StatementClassificationPickers = {
   suppliers: SupplierOption[];
@@ -19,7 +22,7 @@ export type StatementClassificationPickers = {
   partners: PartnerOption[];
   moneyAccounts: MoneyAccountOption[];
   creditCards: MoneyAccountOption[];
-  expenseAccounts: ChartAccountOption[];
+  expenseAccounts: ChartAccount[];
   deliveryPlatforms: DeliveryPlatform[];
   deliveryPlatformsError: string | null;
   loading: boolean;
@@ -45,7 +48,7 @@ export function useStatementClassificationPickers(
   const [partners, setPartners] = useState<PartnerOption[]>([]);
   const [moneyAccounts, setMoneyAccounts] = useState<MoneyAccountOption[]>([]);
   const [creditCards, setCreditCards] = useState<MoneyAccountOption[]>([]);
-  const [expenseAccounts, setExpenseAccounts] = useState<ChartAccountOption[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
   const [deliveryPlatforms, setDeliveryPlatforms] = useState<DeliveryPlatform[]>([]);
   const [deliveryPlatformsError, setDeliveryPlatformsError] = useState<string | null>(
     null,
@@ -79,7 +82,7 @@ export function useStatementClassificationPickers(
           apiFetch<{ items: MoneyAccountOption[] }>(
             `/entities/${entityId}/banking/accounts?account_kind=credit_card&limit=50`,
           ),
-          apiFetch<{ items: ChartAccountOption[] }>(
+          apiFetch<{ items: ChartAccount[] }>(
             `/entities/${entityId}/chart-of-accounts?limit=200`,
           ),
         ]);
@@ -89,7 +92,7 @@ export function useStatementClassificationPickers(
       setPartners(partRes.items);
       setMoneyAccounts(acctRes.items);
       setCreditCards(ccRes.items);
-      setExpenseAccounts(chartRes.items.filter((a) => a.code.startsWith("5")));
+      setExpenseAccounts(filterExpenseAccounts(chartRes.items));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load pickers");
       setLoading(false);
