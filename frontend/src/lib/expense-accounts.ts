@@ -29,8 +29,19 @@ export function formatExpenseAccountLabel(
   return `${account.code} — ${expenseAccountDisplayName(account)}`;
 }
 
+/**
+ * Control / special-flow expense accounts that must NOT be picked in a free-form
+ * manual expense — they require a dedicated flow or are system-managed:
+ *  - 5100 Salaries & Wages → use Staff → Pay salary (attributes to an employee + staff ledger)
+ *  - 5400 Cash Over/Short  → set automatically by the day-close reconciliation, never manual
+ *  - 5500 Delivery Commission → posted via the delivery commission flow
+ */
+const NON_MANUAL_EXPENSE_CODES = new Set(["5100", "5400", "5500"]);
+
 export function filterExpenseAccounts(accounts: ChartAccount[]): ChartAccount[] {
-  return accounts.filter((a) => a.account_type === "expense");
+  return accounts.filter(
+    (a) => a.account_type === "expense" && !NON_MANUAL_EXPENSE_CODES.has(a.code),
+  );
 }
 
 export function findExpenseAccountByCode(
