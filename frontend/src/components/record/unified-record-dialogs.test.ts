@@ -38,6 +38,35 @@ describe("unified record dialogs", () => {
     expect(people).not.toContain("onContinue");
   });
 
+  it("routes staff salary payment through the rich dialog with a picked employee", () => {
+    const people = read("record/people-record-dialog.tsx");
+    const salaryDialog = read("forms/staff-salary-payment-dialog.tsx");
+    const cashForm = read("forms/staff-cash-movement-form.tsx");
+    const staffPage = read("../app/staff/[id]/page.tsx");
+    const actions = read("../lib/record-actions.ts");
+
+    expect(actions).toContain('id: "staffPayment"');
+    expect(actions).toContain('personKind: "staff"');
+    expect(people).toContain('case "staffPayment"');
+    expect(people).toContain("StaffSalaryPaymentDialog");
+    expect(people).toContain("employeeId={person.id}");
+    expect(people).toContain("employeeName={person.name}");
+    expect(people).toContain("/staff/employees");
+    expect(salaryDialog).toContain("isValidStaffSalaryEmployee");
+    expect(salaryDialog).not.toContain('employeeName = "Employee"');
+    expect(cashForm).not.toContain("StaffSalaryPaymentDialog");
+    expect(cashForm).not.toContain('employeeName = "Employee"');
+    expect(staffPage).toContain("StaffSalaryPaymentDialog");
+    expect(staffPage).toContain("employeeName={employee.name}");
+    expect(salaryDialog).toContain(
+      "/staff/employees/${employeeId}/payments",
+    );
+
+    const classifyBar = read("statement-classify-bar.tsx");
+    expect(classifyBar).toContain("selectedEmployee");
+    expect(classifyBar).not.toContain('?? "Employee"');
+  });
+
   it("opens invoice and receipt review in a dialog on the record page", () => {
     const panel = read("record/record-review-panel.tsx");
     const efatura = read("forms/efatura-upload-form.tsx");

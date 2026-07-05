@@ -13,6 +13,7 @@ import type { PartnerRow } from "@/components/forms/partner-form";
 import { PartnerReimbursementForm } from "@/components/forms/partner-reimbursement-form";
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
 import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
+import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import { SupplierPaymentForm } from "@/components/forms/supplier-payment-form";
 import type { SupplierRow } from "@/components/forms/supplier-form";
 import { Combobox } from "@/components/ui/combobox";
@@ -241,6 +242,7 @@ export function PeopleRecordDialog({
                 selected,
                 balanceKurus,
                 capitalBalanceKurus,
+                entityId,
                 handleClose,
               )}
             </div>
@@ -256,6 +258,7 @@ function renderEmbeddedForm(
   person: PersonPickerResult,
   balanceKurus: number | undefined,
   capitalBalanceKurus: number | undefined,
+  entityId: string,
   onClose: () => void,
 ) {
   const payCurrency = person.payCurrency ?? "TRY";
@@ -275,17 +278,18 @@ function renderEmbeddedForm(
         <StaffCashMovementForm
           {...formProps}
           employeeId={person.id}
-          kind="advance"
           payCurrency={payCurrency}
         />
       );
     case "staffPayment":
       return (
-        <StaffCashMovementForm
+        <StaffSalaryPaymentDialog
           {...formProps}
+          entityId={entityId}
           employeeId={person.id}
-          kind="payment"
+          employeeName={person.name}
           payCurrency={payCurrency}
+          source="staff"
         />
       );
     case "partnerExpenseFronted":

@@ -84,6 +84,10 @@ export function StatementClassifyBar({
   const [correctReason, setCorrectReason] = useState("");
   const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
 
+  const selectedEmployee = useMemo(
+    () => pickers.employees.find((e) => e.id === employeeId) ?? null,
+    [employeeId, pickers.employees],
+  );
   const inQueue = line != null && isQueueLine(line);
   const correctable = line != null && isCorrectableLine(line) && !inQueue;
 
@@ -615,15 +619,13 @@ export function StatementClassifyBar({
         </form>
       </Dialog>
 
-      {line && entityId && (
+      {line && entityId && selectedEmployee && (
         <StaffSalaryPaymentDialog
           open={salaryDialogOpen}
           onClose={() => setSalaryDialogOpen(false)}
           entityId={entityId}
-          employeeId={employeeId}
-          employeeName={
-            pickers.employees.find((e) => e.id === employeeId)?.name ?? "Employee"
-          }
+          employeeId={selectedEmployee.id}
+          employeeName={selectedEmployee.name}
           payCurrency="TRY"
           source="statement"
           paymentDate={line.transaction_date}

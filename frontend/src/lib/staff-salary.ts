@@ -1,5 +1,19 @@
 /** Salary payment advance + period preview (mirrors backend posting). */
 
+/** Generic picker placeholder — not a real employee name. */
+export const STAFF_SALARY_EMPLOYEE_PLACEHOLDER = "Employee";
+
+export function isValidStaffSalaryEmployee(
+  employeeId: string | undefined,
+  employeeName: string | undefined,
+): boolean {
+  const id = employeeId?.trim() ?? "";
+  const name = employeeName?.trim() ?? "";
+  if (!id || !name) return false;
+  if (name === STAFF_SALARY_EMPLOYEE_PLACEHOLDER) return false;
+  return true;
+}
+
 export type SalaryPeriodStatus = {
   employee_id: string;
   period_year: number;

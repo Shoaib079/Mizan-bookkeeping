@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form";
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
 import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
+import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import {
   CorrectStaffLedgerForm,
   type CorrectableStaffLedgerRow,
@@ -262,7 +263,7 @@ export default function StaffDetailPage() {
         </>
       )}
 
-      {employee && (
+      {employee && entityId && (
         <>
           <EmployeeForm
             open={editOpen}
@@ -279,19 +280,19 @@ export default function StaffDetailPage() {
           />
           <StaffCashMovementForm
             open={advanceOpen}
-            kind="advance"
             employeeId={employeeId}
             payCurrency={employee.pay_currency}
             onClose={() => setAdvanceOpen(false)}
             onSaved={() => void reload()}
           />
-          <StaffCashMovementForm
+          <StaffSalaryPaymentDialog
             open={paymentOpen}
-            kind="payment"
+            onClose={() => setPaymentOpen(false)}
+            entityId={entityId}
             employeeId={employeeId}
             employeeName={employee.name}
             payCurrency={employee.pay_currency}
-            onClose={() => setPaymentOpen(false)}
+            source="staff"
             onSaved={() => void reload()}
           />
           <CorrectStaffLedgerForm

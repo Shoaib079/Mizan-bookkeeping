@@ -2,7 +2,6 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
-import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { FormDialogShell } from "@/components/ui/form-dialog-shell";
@@ -26,8 +25,6 @@ type Props = {
   open: boolean;
   onClose: () => void;
   employeeId: string;
-  employeeName?: string;
-  kind: "advance" | "payment";
   payCurrency: string;
   embedded?: boolean;
   onSaved?: () => void;
@@ -37,8 +34,6 @@ export function StaffCashMovementForm({
   open,
   onClose,
   employeeId,
-  employeeName = "Employee",
-  kind,
   payCurrency,
   embedded,
   onSaved,
@@ -50,22 +45,6 @@ export function StaffCashMovementForm({
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
-
-  if (kind === "payment") {
-    if (!entityId) return null;
-    return (
-      <StaffSalaryPaymentDialog
-        open={open}
-        onClose={onClose}
-        entityId={entityId}
-        employeeId={employeeId}
-        employeeName={employeeName}
-        payCurrency={payCurrency}
-        source="staff"
-        onSaved={onSaved}
-      />
-    );
-  }
 
   return (
     <StaffAdvanceForm

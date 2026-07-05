@@ -2,8 +2,24 @@ import { describe, expect, it } from "vitest";
 
 import {
   advanceAppliedPreview,
+  isValidStaffSalaryEmployee,
   payableClearedPreview,
+  STAFF_SALARY_EMPLOYEE_PLACEHOLDER,
 } from "@/lib/staff-salary";
+
+describe("isValidStaffSalaryEmployee", () => {
+  it("requires a real id and name", () => {
+    expect(isValidStaffSalaryEmployee("emp-1", "Ayşe")).toBe(true);
+    expect(isValidStaffSalaryEmployee("", "Ayşe")).toBe(false);
+    expect(isValidStaffSalaryEmployee("emp-1", "")).toBe(false);
+  });
+
+  it("rejects the generic Employee placeholder", () => {
+    expect(isValidStaffSalaryEmployee("emp-1", STAFF_SALARY_EMPLOYEE_PLACEHOLDER)).toBe(
+      false,
+    );
+  });
+});
 
 describe("advanceAppliedPreview", () => {
   it("applies advance up to remaining accrual minus cash", () => {

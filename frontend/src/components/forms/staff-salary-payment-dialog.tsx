@@ -24,6 +24,7 @@ import {
   advanceAppliedPreview,
   defaultPeriodFromDate,
   excessAdvancePreview,
+  isValidStaffSalaryEmployee,
   payableClearedPreview,
   type SalaryPeriodStatus,
 } from "@/lib/staff-salary";
@@ -61,6 +62,8 @@ type Props = {
   payCurrency: string;
   /** Staff page: date + account in dialog. Statement: bank line only. */
   source?: "staff" | "statement";
+  /** Inline in PeopleRecordDialog — no nested modal. */
+  embedded?: boolean;
   /** ISO date — default for statement or initial staff date. */
   paymentDate?: string;
   defaultCashMinor?: number;
@@ -78,6 +81,7 @@ export function StaffSalaryPaymentDialog({
   employeeName,
   payCurrency,
   source = "staff",
+  embedded,
   paymentDate,
   defaultCashMinor,
   lockCashAmount = false,
@@ -109,6 +113,9 @@ export function StaffSalaryPaymentDialog({
   const [error, setError] = useState<string | null>(null);
 
   const confirming = confirmingProp || submitting;
+  const dialogOpen =
+    open && isValidStaffSalaryEmployee(employeeId, employeeName);
+  const dialogTitle = `Pay salary — ${employeeName}`;
 
   const paymentDateIso = useMemo(() => {
     if (isStatement && paymentDate) return paymentDate;
@@ -348,13 +355,9 @@ export function StaffSalaryPaymentDialog({
     await postStaffPayment(payload);
   }
 
-  return (
-    <Dialog
-      open={open}
-      title={`Pay salary — ${employeeName}`}
-      onClose={onClose}
-      className="max-w-lg"
-    >
+  if (!dialogOpen) return null;
+
+  const form = (
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
         <p className="text-xs text-muted-foreground">
           Mizan accrues this month&apos;s salary when needed — no separate accrual
@@ -557,6 +560,25 @@ export function StaffSalaryPaymentDialog({
           </Button>
         </div>
       </form>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-3">
+        <h3 className="text-base font-semibold">{dialogTitle}</h3>
+        {form}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog
+      open={dialogOpen}
+      title={dialogTitle}
+      onClose={onClose}
+      className="max-w-lg"
+    >
+      {form}
     </Dialog>
   );
 }
