@@ -23,6 +23,7 @@ class SupplierCreate(BaseModel):
     vkn: str = Field(min_length=10, max_length=11)
     iban: str | None = Field(default=None, max_length=34)
     notes: str | None = Field(default=None, max_length=2048)
+    auto_post_payments: bool = False
 
     @field_validator("vkn")
     @classmethod
@@ -35,6 +36,7 @@ class SupplierUpdate(BaseModel):
     iban: str | None = Field(default=None, max_length=34)
     notes: str | None = Field(default=None, max_length=2048)
     is_active: bool | None = None
+    auto_post_payments: bool | None = None
 
 
 class SupplierRead(BaseModel):
@@ -43,6 +45,7 @@ class SupplierRead(BaseModel):
     name: str
     vkn: str
     is_active: bool
+    auto_post_payments: bool
     iban: str | None
     notes: str | None
     created_at: datetime

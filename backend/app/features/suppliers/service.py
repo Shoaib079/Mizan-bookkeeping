@@ -39,6 +39,7 @@ def create_supplier(
             vkn=payload.vkn,
             iban=payload.iban,
             notes=payload.notes,
+            auto_post_payments=payload.auto_post_payments,
         )
         session.add(supplier)
         try:
@@ -111,6 +112,8 @@ def update_supplier(
             supplier.notes = payload.notes
         if payload.is_active is not None:
             supplier.is_active = payload.is_active
+        if payload.auto_post_payments is not None:
+            supplier.auto_post_payments = payload.auto_post_payments
 
         session.commit()
         session.refresh(supplier)

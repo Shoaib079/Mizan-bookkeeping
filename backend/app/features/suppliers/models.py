@@ -21,6 +21,9 @@ class Supplier(EntityScopedMixin, Base):
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     vkn: Mapped[str] = mapped_column(String(11), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    auto_post_payments: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
     notes: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

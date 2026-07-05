@@ -15,9 +15,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none — ready for next) |
-| **Next up**              | BSF-4 (optional) · P5 delete company UI |
-| **Last completed slice** | BSF-3 — Supplier suggestion from bank description |
-| **Last commit/tag**      | `9524ede` / `v0.bsf-3-supplier-suggest` |
+| **Next up**              | P5 — Delete company UI |
+| **Last completed slice** | BSF-4 — Per-supplier auto-post toggle |
+| **Last commit/tag**      | (pending) — BSF-4 |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 
@@ -61,6 +61,7 @@
 | BSF-1 deterministic bank fee auto-post on import (no learning)                   | `673d380`                                         | done           | Re-require ~3 manual confirmations for obvious fees (BSMV, hesap işletim ücreti); duplicate `bank_fee_detect`            |
 | BSF-2 supplier advances (pay-first, negative AP)                                 | `77f9311`                                         | done           | Re-block overpayment in `post_supplier_payment`; duplicate advance confirm threshold                                     |
 | BSF-3 supplier name suggestion on import/classify                                | `v0.bsf-3-supplier-suggest`                       | done           | Re-build fuzzy supplier match; duplicate `supplier_suggest.py`                                                           |
+| BSF-4 per-supplier auto-post payments toggle                                     | (pending)                                         | done           | Re-add `auto_post_payments` column; duplicate trusted import auto-post hook                                              |
 | Unified statement review hub (frontend)                                          | `v0.71.16`                                        | done           | Re-build per-statement-only review; `/banking/review` is the canonical hub                                                 |
 | Learned-token trim on classify/correct (`match_token`)                           | `v0.71.17`                                        | done           | Re-wire token trim only on create-supplier; blank token must keep full-description learn behavior                          |
 | Clearance auto-pick (POS/delivery settlement link-only)                          | `v0.72.0-clearance-auto-pick`                     | done           | Re-auto-create settlements on import; auto-link without HIGH rule + unique match; delivery without platform disambiguation |
@@ -1858,7 +1859,8 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-07-05 | BSF-3 — Supplier suggestion from bank description | (pending)                                              | Fuzzy match description→supplier on IMPORTED/needs_review lines; classify UI preselect + Confirm suggestion; learned rules win; 5 pytest |
+| 2026-07-05 | BSF-4 — Per-supplier auto-post toggle           | (pending)                                              | `suppliers.auto_post_payments`; import auto-post for trusted suppliers; supplier edit UI; migration `073`; 3 pytest |
+| 2026-07-05 | BSF-3 — Supplier suggestion from bank description | `v0.bsf-3-supplier-suggest` / `9524ede`                | Fuzzy match description→supplier on IMPORTED/needs_review lines; classify UI preselect + Confirm suggestion; learned rules win; 5 pytest |
 | 2026-07-05 | BSF-2 — Supplier advances (pay-first)           | `77f9311`                                              | Allow negative AP = advance; soft confirm above threshold (`supplier_advance_confirm_threshold_kurus`, default ₺1k); auto-apply + classify skip confirm; UI labels; 10+ pytest (+1003 green; 7 pre-existing unrelated failures) |
 | 2026-07-05 | BSF-1 — Deterministic bank fee auto-post        | `673d380`                                              | `bank_fee_detect.py` Turkish fee patterns; import hook before learned rules; entity ceiling `bank_fee_auto_post_ceiling_kurus` (default ₺500); RULE_AUTO Dr 5300 / Cr bank; 20 new pytest (+995 green; 7 pre-existing unrelated failures)                  |
 | 2026-07-04 | Partner profit allocation (ownership share)     | `v0.partner-profit-allocation`                         | `3300` Partner Capital; Dr `3100`/Cr `3300` by share %; preview + void; drawings → `3200`; split reimbursement/capital balances; migration `070`; 933 pytest (+5 new; 7 pre-existing unrelated failures) |

@@ -370,6 +370,46 @@ def try_auto_post_detected_bank_fee(
     return True
 
 
+def try_auto_post_trusted_supplier_payment(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    statement: BankStatement,
+    line: BankStatementLine,
+    money_account_gl_id: uuid.UUID,
+    actor_id: uuid.UUID,
+    find_matching_payment,
+    link_payment_to_line,
+    route_payment_needs_review,
+    find_near_matching_payments,
+) -> bool:
+    """Auto-post outflows for suppliers with auto_post_payments enabled."""
+    if line.amount_kurus >= 0:
+        return False
+
+    from app.features.banking.supplier_suggest_service import (
+        suggest_trusted_supplier_payment,
+    )
+
+    suggestion = suggest_trusted_supplier_payment(session, entity_id, line.description)
+    if suggestion is None or suggestion.supplier_id is None:
+        return False
+
+    return _auto_apply_supplier_payment(
+        session,
+        entity_id,
+        statement=statement,
+        line=line,
+        money_account_gl_id=money_account_gl_id,
+        supplier_id=suggestion.supplier_id,
+        actor_id=actor_id,
+        find_matching_payment=find_matching_payment,
+        link_payment_to_line=link_payment_to_line,
+        route_payment_needs_review=route_payment_needs_review,
+        find_near_matching_payments=find_near_matching_payments,
+    )
+
+
 def try_auto_apply_line(
     session: Session,
     entity_id: uuid.UUID,
@@ -509,6 +549,19 @@ def apply_import_rule_auto(
                 line=line,
                 money_account_gl_id=money_account.gl_account_id,
                 actor_id=actor_id,
+            ):
+                continue
+            if try_auto_post_trusted_supplier_payment(
+                session,
+                entity_id,
+                statement=statement,
+                line=line,
+                money_account_gl_id=money_account.gl_account_id,
+                actor_id=actor_id,
+                find_matching_payment=find_matching_payment,
+                link_payment_to_line=link_payment_to_line,
+                route_payment_needs_review=route_payment_needs_review,
+                find_near_matching_payments=find_near_matching_payments,
             ):
                 continue
             try_auto_apply_line(

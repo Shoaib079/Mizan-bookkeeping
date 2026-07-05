@@ -57,7 +57,7 @@ Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) ·
 | — | **BSF-1** | Bank fee auto-post on import | **Done** |
 | — | **BSF-2** | Pay-first supplier advances | **Done** |
 | — | **BSF-3** | Supplier suggestion from bank description | **Done** |
-| — | **BSF-4** | Per-supplier auto-post toggle (optional) | Queued |
+| — | **BSF-4** | Per-supplier auto-post toggle | **Done** |
 | — | P5 / P8 | Delete company UI · Groceries path | Queued |
 | — | P4, P7 | Backup prune, lint | Optional |
 
@@ -244,9 +244,10 @@ Bank fees (havale/EFT ücreti, BSMV, periyodik bakım, hesap işletim ücreti, k
 #### BSF-3 — Suggest supplier from bank description (first-time = one-click) — **DONE**
 **Shipped:** `supplier_suggest.py` fuzzy-matches bank line text to entity supplier names; `suggest_line_classification` attaches suggestion on IMPORTED/needs_review outflows (learned rules take priority). Classify bar, review hub, and dense table preselect supplier + one-click Confirm suggestion.
 
-#### BSF-4 — Per-supplier auto-post toggle (optional)
+#### BSF-4 — Per-supplier auto-post toggle — **DONE**
+**Shipped:** `suppliers.auto_post_payments` (migration `073`); trusted suppliers auto-post matching outflows on import via `try_auto_post_trusted_supplier_payment` (after fee detect, before learned rules). Toggle in supplier edit form + badge on supplier detail.
 
-**Sequence:** BSF-1 (fees, self-contained, immediate value) → BSF-2 (advances, money-critical) → BSF-3 (supplier suggestion) → BSF-4 (optional). Each money-critical: review-first where posting, full pytest green, owner runs tests, accountant nod on BSF-2. Then **P8** (groceries/card spend) reuses the same bank-expense path.
+**Sequence:** BSF-1 → BSF-4 complete. **Next:** P5 delete company UI, then P8 groceries path.
 
 ---
 

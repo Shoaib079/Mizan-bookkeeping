@@ -1,4 +1,4 @@
-"""Entity-scoped supplier suggestion for bank statement lines (BSF-3)."""
+"""Entity-scoped supplier suggestion for bank statement lines (BSF-3/4)."""
 
 from __future__ import annotations
 
@@ -43,6 +43,43 @@ def suggest_supplier_payment(
             delivery_platform_id=None,
             reason=match.reason,
             confidence=confidence,
+        )
+
+
+def suggest_trusted_supplier_payment(
+    session: Session,
+    entity_id: uuid.UUID,
+    description: str,
+) -> ClassificationSuggestion | None:
+    """Suggest supplier_payment when description matches a trusted auto-post supplier."""
+    with entity_context(session, entity_id):
+        require_entity_context()
+        suppliers = list(
+            session.scalars(
+                select(Supplier)
+                .where(
+                    Supplier.is_active.is_(True),
+                    Supplier.auto_post_payments.is_(True),
+                )
+                .order_by(Supplier.name)
+            ).all()
+        )
+        if not suppliers:
+            return None
+
+        match = suggest_supplier_from_description(
+            description,
+            [(supplier.id, supplier.name) for supplier in suppliers],
+        )
+        if match is None:
+            return None
+
+        return ClassificationSuggestion(
+            classification=StatementLineClassification.SUPPLIER_PAYMENT,
+            supplier_id=match.supplier_id,
+            delivery_platform_id=None,
+            reason=f"Trusted supplier {match.supplier_name!r} — auto-post enabled",
+            confidence="high",
         )
 
 

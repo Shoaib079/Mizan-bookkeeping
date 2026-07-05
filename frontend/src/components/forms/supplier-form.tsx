@@ -21,6 +21,7 @@ export type SupplierRow = {
   iban: string | null;
   notes: string | null;
   is_active: boolean;
+  auto_post_payments: boolean;
 };
 
 type Props = {
@@ -44,6 +45,7 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
   const [iban, setIban] = useState("");
   const [notes, setNotes] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [autoPostPayments, setAutoPostPayments] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -64,6 +66,7 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
     setIban(supplier?.iban ?? "");
     setNotes(supplier?.notes ?? "");
     setIsActive(supplier?.is_active ?? true);
+    setAutoPostPayments(supplier?.auto_post_payments ?? false);
     setError(null);
   }, [open, supplier]);
 
@@ -87,6 +90,7 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
             iban: iban || null,
             notes: notes || null,
             is_active: isActive,
+            auto_post_payments: autoPostPayments,
           }),
         });
         submitIdempotency.completeSubmit();
@@ -160,6 +164,22 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
+        {editing && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={autoPostPayments}
+              onChange={(e) => setAutoPostPayments(e.target.checked)}
+            />
+            Auto-post bank payments (trusted supplier)
+          </label>
+        )}
+        {editing && autoPostPayments && (
+          <p className="text-xs text-muted-foreground">
+            Matching outflows on statement import post automatically — like bank
+            fees — without waiting for learned rules.
+          </p>
+        )}
         {editing && (
           <label className="flex items-center gap-2 text-sm">
             <input
