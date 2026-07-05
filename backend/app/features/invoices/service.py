@@ -952,7 +952,20 @@ def link_delivery_platform_to_draft(
         draft.delivery_platform_id = delivery_platform_id
         if _draft_status(draft) == InvoiceDraftStatus.NEEDS_REVIEW:
             draft.status = InvoiceDraftStatus.DRAFT.value
-        if draft.invoice_kind == InvoiceKind.DELIVERY_COMMISSION.value:
+
+        from app.core.delivery.commission_detect import (
+            canonical_brand_for_vkn,
+            platform_matches_brand,
+        )
+
+        seller_brand = canonical_brand_for_vkn((draft.supplier_vkn or "").strip())
+        if (
+            seller_brand is not None
+            and platform_matches_brand(platform, seller_brand)
+        ):
+            draft.invoice_kind = InvoiceKind.DELIVERY_COMMISSION.value
+            draft.review_reason = None
+        elif draft.invoice_kind == InvoiceKind.DELIVERY_COMMISSION.value:
             draft.review_reason = None
         _learn_from_draft_classification(session, draft)
 

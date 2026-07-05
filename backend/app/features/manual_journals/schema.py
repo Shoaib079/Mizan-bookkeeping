@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field
+from app.core.schema_types import OptionalActorId
 
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.listing.schema import PaginatedListOut
@@ -17,7 +18,7 @@ class CreateManualJournalRequest(BaseModel):
     entry_date: date | None = None
     description: str = Field(max_length=512)
     lines: list[PostingLineIn] = Field(min_length=2)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 

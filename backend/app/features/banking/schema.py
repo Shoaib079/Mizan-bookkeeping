@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.core.schema_types import OptionalActorId
 
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.statement_models import (
@@ -240,7 +241,7 @@ class ClassifyStatementLineRequest(BaseModel):
     supplier_id: uuid.UUID | None = None
     counterpart_money_account_id: uuid.UUID | None = None
     credit_card_money_account_id: uuid.UUID | None = None
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     customer_id: uuid.UUID | None = None
     delivery_platform_id: uuid.UUID | None = Field(
         default=None,
@@ -289,7 +290,7 @@ class CorrectStatementLineRequest(BaseModel):
     supplier_id: uuid.UUID | None = None
     counterpart_money_account_id: uuid.UUID | None = None
     credit_card_money_account_id: uuid.UUID | None = None
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     customer_id: uuid.UUID | None = None
     delivery_platform_id: uuid.UUID | None = None
     expense_account_id: uuid.UUID | None = None
@@ -321,7 +322,7 @@ class AccountTransferCreate(BaseModel):
     transfer_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
 
 
 class AccountTransferRead(BaseModel):

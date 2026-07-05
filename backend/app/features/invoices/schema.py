@@ -7,6 +7,7 @@ from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+from app.core.schema_types import OptionalActorId
 
 from app.core.listing.schema import PaginatedListOut
 from app.features.invoices.models import InvoiceDraftStatus, InvoiceKind, InvoiceSourceType
@@ -28,7 +29,7 @@ class LinkDeliveryPlatformRequest(BaseModel):
 
 
 class ConfirmDraftRequest(BaseModel):
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
 
 
 class RejectDraftRequest(BaseModel):
@@ -36,7 +37,7 @@ class RejectDraftRequest(BaseModel):
 
 
 class UnconfirmDraftRequest(BaseModel):
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     reason: str | None = Field(default=None, max_length=512)
 
 
@@ -45,12 +46,12 @@ class SetInvoiceKindRequest(BaseModel):
 
 
 class PostInvoiceDraftRequest(BaseModel):
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     expense_account_id: uuid.UUID
 
 
 class ConfirmAndPostInvoiceDraftRequest(BaseModel):
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     expense_account_id: uuid.UUID
 
 

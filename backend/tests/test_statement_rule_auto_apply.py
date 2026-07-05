@@ -472,7 +472,7 @@ def test_pos_settlement_auto_link_no_match_routes_to_needs_review(
         assert line is not None
         assert line.status == StatementLineStatus.NEEDS_REVIEW
         assert line.pos_settlement_id is None
-        assert line.review_reason == "no matching POS settlement on file"
+        assert "classify manually" in (line.review_reason or "").lower()
 
 
 def test_pos_settlement_outflow_routes_to_needs_review(db_session, bank_setup) -> None:
@@ -619,7 +619,9 @@ def test_delivery_settlement_multiple_matches_routes_to_needs_review(
         assert line is not None
         assert line.status == StatementLineStatus.NEEDS_REVIEW
         assert line.delivery_settlement_id is None
-        assert line.review_reason == "multiple delivery settlements match — confirm manually"
+        assert line.review_reason == (
+            "Multiple delivery platforms match this deposit — pick the platform manually"
+        )
 
 
 def test_delivery_settlement_no_match_routes_to_needs_review(
@@ -649,7 +651,8 @@ def test_delivery_settlement_no_match_routes_to_needs_review(
         assert line is not None
         assert line.status == StatementLineStatus.NEEDS_REVIEW
         assert line.delivery_settlement_id is None
-        assert line.review_reason == "no matching delivery settlement on file"
+        assert "classify manually" in (line.review_reason or "").lower()
+        assert "platform" in (line.review_reason or "").lower()
 
 
 def test_supplier_payment_fourth_import_auto_posts_to_same_supplier(

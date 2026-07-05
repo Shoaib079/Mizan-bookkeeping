@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.core.schema_types import OptionalActorId
 
 from app.core.fx.types import FxMovementType
 from app.core.ledger.models import JournalEntrySource
@@ -18,7 +19,7 @@ class FxPurchaseCreate(BaseModel):
     try_cost_kurus: int = Field(gt=0, description="TRY paid in kuruş")
     purchase_date: date
     description: str | None = Field(default=None, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
 
 
 class FxLedgerEntryRead(BaseModel):
@@ -32,7 +33,7 @@ class FxLedgerEntryRead(BaseModel):
     native_quantity: int
     try_cost_kurus: int
     description: str
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID
     journal_source: JournalEntrySource | None = None
     created_at: datetime
@@ -63,7 +64,7 @@ class FxConversionCreate(BaseModel):
     try_received_kurus: int = Field(gt=0, description="TRY received in kuruş (owner-entered)")
     conversion_date: date
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
 
 
 class FxConversionResponse(BaseModel):
@@ -79,7 +80,7 @@ class FxExpenseSpendCreate(BaseModel):
     native_quantity: int = Field(gt=0)
     spend_date: date
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
 
 
 class FxExpenseSpendResponse(BaseModel):
@@ -99,7 +100,7 @@ class FxBalanceRead(BaseModel):
 class FxLedgerEntryCorrect(BaseModel):
     entry_date: date
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     native_quantity: int = Field(gt=0)
     try_received_kurus: int | None = Field(default=None, gt=0)
     expense_account_id: uuid.UUID | None = None

@@ -1163,10 +1163,19 @@ def classify_statement_line(
                     routed_to_needs_review=False,
                     journal_entry_id=transfer.journal_entry_id,
                 )
-            raise InvalidClassificationError(
-                "needs_review line requires confirm_supplier_ledger_entry_id or "
-                "confirm_account_transfer_id to complete linking"
-            )
+            if (
+                line.candidate_supplier_ledger_entry_id is not None
+                or line.candidate_account_transfer_id is not None
+            ):
+                raise InvalidClassificationError(
+                    "needs_review line requires confirm_supplier_ledger_entry_id or "
+                    "confirm_account_transfer_id to complete linking"
+                )
+            # Delivery/POS review or owner re-classification — proceed with full classify.
+            line.status = StatementLineStatus.IMPORTED
+            line.review_reason = None
+            line.classification_source = None
+            session.flush()
 
         if classification == StatementLineClassification.SUPPLIER_PAYMENT:
             if line.amount_kurus >= 0:

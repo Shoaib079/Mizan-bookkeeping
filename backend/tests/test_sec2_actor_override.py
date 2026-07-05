@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 import pytest
 from fastapi import HTTPException
@@ -11,12 +12,15 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.auth.deps import resolve_actor_id
+from app.core.schema_types import DEV_ACTOR_ID, coerce_optional_uuid
 from app.db.session import entity_context
 from app.features.auth import service as auth_service
 from app.features.auth.models import User
 from app.features.auth.schema import UserCreate
+from app.features.delivery.schema import DeliveryReportCreate
 from app.features.entities.models import Entity
 from tests.auth_helpers import auth_headers
+from tests.delivery_helpers import delivery_setup as build_delivery_setup
 
 
 @pytest.fixture
@@ -49,7 +53,58 @@ def _setup_user_and_entity(db_session: Session) -> tuple[User, Entity]:
     return user, entity
 
 
-# --- resolve_actor_id unit tests ---
+# --- coercion + resolve_actor_id unit tests ---
+
+
+def test_coerce_optional_uuid_empty_string_becomes_none() -> None:
+    assert coerce_optional_uuid("") is None
+    assert coerce_optional_uuid("   ") is None
+    assert coerce_optional_uuid(None) is None
+
+
+def test_coerce_optional_uuid_parses_valid_string() -> None:
+    uid = uuid.uuid4()
+    assert coerce_optional_uuid(str(uid)) == uid
+
+
+def test_request_schema_accepts_empty_actor_id_string() -> None:
+    from app.features.invoices.schema import ConfirmDraftRequest
+    from app.features.payables.schema import SupplierPaymentCreate
+    from app.features.staff.schema import StaffPaymentCreate
+
+    assert ConfirmDraftRequest.model_validate({"actor_id": ""}).actor_id is None
+    assert DeliveryReportCreate.model_validate(
+        {
+            "delivery_platform_id": str(uuid.uuid4()),
+            "period_start": "2026-01-01",
+            "period_end": "2026-01-31",
+            "gross_kurus": 1000,
+            "description": "Getir sales",
+            "actor_id": "",
+        }
+    ).actor_id is None
+
+    req = SupplierPaymentCreate.model_validate(
+        {
+            "payment_date": "2026-01-01",
+            "amount_kurus": 5000,
+            "description": "test",
+            "payment_account_id": str(uuid.uuid4()),
+            "actor_id": "",
+        }
+    )
+    assert req.actor_id is None
+
+    staff = StaffPaymentCreate.model_validate(
+        {
+            "payment_date": "2026-01-01",
+            "amount_minor": 5000,
+            "description": "salary",
+            "payment_account_id": str(uuid.uuid4()),
+            "actor_id": " ",
+        }
+    )
+    assert staff.actor_id is None
 
 
 def test_resolve_actor_id_prefers_auth_user() -> None:
@@ -64,7 +119,12 @@ def test_resolve_actor_id_falls_back_to_body() -> None:
     assert resolve_actor_id(None, body_id) == body_id
 
 
-def test_resolve_actor_id_raises_when_both_none() -> None:
+def test_resolve_actor_id_dev_fallback_when_auth_off() -> None:
+    assert settings.auth_enforcement is False
+    assert resolve_actor_id(None, None) == DEV_ACTOR_ID
+
+
+def test_resolve_actor_id_raises_when_auth_on_and_both_none(auth_enforced) -> None:
     with pytest.raises(HTTPException) as exc_info:
         resolve_actor_id(None, None)
     assert exc_info.value.status_code == 422
@@ -84,19 +144,28 @@ def test_invoice_confirm_uses_auth_actor(
         json={"actor_id": str(bogus_actor)},
         headers=auth_headers(user),
     )
-    # 404 is expected (no draft exists), but the key assertion is: it didn't
-    # fail with 422 "actor_id required" — the guard resolved the actor.
     assert resp.status_code == 404
 
 
 def test_invoice_confirm_works_without_body_actor(
     client: TestClient, db_session: Session, auth_enforced
 ) -> None:
-    """POST /confirm with no body actor_id — should still work (auth resolves it)."""
     user, entity = _setup_user_and_entity(db_session)
     resp = client.post(
         f"/entities/{entity.id}/invoices/drafts/{uuid.uuid4()}/confirm",
         json={},
+        headers=auth_headers(user),
+    )
+    assert resp.status_code == 404
+
+
+def test_invoice_confirm_empty_actor_id_does_not_422(
+    client: TestClient, db_session: Session, auth_enforced
+) -> None:
+    user, entity = _setup_user_and_entity(db_session)
+    resp = client.post(
+        f"/entities/{entity.id}/invoices/drafts/{uuid.uuid4()}/confirm",
+        json={"actor_id": ""},
         headers=auth_headers(user),
     )
     assert resp.status_code == 404
@@ -120,7 +189,6 @@ def test_cash_movement_uses_auth_actor(
         },
         headers=auth_headers(user),
     )
-    # 404 expected (money account doesn't exist), but not 422 for actor_id
     assert resp.status_code in (404, 422)
     if resp.status_code == 422:
         detail = resp.json().get("detail", "")
@@ -138,6 +206,7 @@ def test_supplier_payment_uses_auth_actor(
             "amount_kurus": 5000,
             "description": "test payment",
             "payment_account_id": str(uuid.uuid4()),
+            "actor_id": "",
         },
         headers=auth_headers(user),
     )
@@ -147,18 +216,47 @@ def test_supplier_payment_uses_auth_actor(
         assert "actor_id" not in str(detail).lower()
 
 
-def test_actor_id_schema_optional() -> None:
-    """Request schemas should accept payloads without actor_id."""
-    from app.features.invoices.schema import ConfirmDraftRequest
-    from app.features.payables.schema import SupplierPaymentCreate
+def test_delivery_report_create_with_empty_actor_id_auth_off(
+    client: TestClient, db_session: Session, restaurant_a
+) -> None:
+    """Localhost (auth off): actor_id=\"\" coerces to None then dev actor."""
+    assert settings.auth_enforcement is False
+    setup = build_delivery_setup(db_session, restaurant_a.id)
+    entity_id = setup["entity_id"]
+    platform_id = setup["platforms"]["Getir"].id
 
-    req = ConfirmDraftRequest()
-    assert req.actor_id is None
-
-    req2 = SupplierPaymentCreate(
-        payment_date="2026-01-01",
-        amount_kurus=5000,
-        description="test",
-        payment_account_id=uuid.uuid4(),
+    resp = client.post(
+        f"/entities/{entity_id}/delivery/reports",
+        json={
+            "delivery_platform_id": str(platform_id),
+            "period_start": "2026-03-01",
+            "period_end": "2026-03-31",
+            "gross_kurus": 500_000,
+            "description": "Getir March sales",
+            "actor_id": "",
+        },
     )
-    assert req2.actor_id is None
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["gross_kurus"] == 500_000
+
+
+def test_delivery_report_create_empty_actor_id_uses_auth_user(
+    client: TestClient, db_session: Session, auth_enforced, restaurant_a
+) -> None:
+    user, entity = _setup_user_and_entity(db_session)
+    setup = build_delivery_setup(db_session, entity.id)
+    platform_id = setup["platforms"]["Getir"].id
+
+    resp = client.post(
+        f"/entities/{entity.id}/delivery/reports",
+        json={
+            "delivery_platform_id": str(platform_id),
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
+            "gross_kurus": 400_000,
+            "description": "Getir April sales",
+            "actor_id": "",
+        },
+        headers=auth_headers(user),
+    )
+    assert resp.status_code == 201, resp.text

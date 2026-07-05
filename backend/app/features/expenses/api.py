@@ -18,6 +18,7 @@ from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.errors import PostingError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
+from app.core.schema_types import coerce_optional_uuid
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
 from app.features.auth.models import User
 from app.features.expenses import service as expenses_service
@@ -187,11 +188,11 @@ async def upload_tip_photo(
     entity_id: uuid.UUID,
     file: UploadFile = File(...),
     money_account_id: uuid.UUID = Form(...),
-    actor_id: uuid.UUID | None = Form(None),
+    actor_id: str | None = Form(None),
     session: Session = Depends(get_session),
     _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseRead:
-    resolved_actor = resolve_actor_id(_guard, actor_id)
+    resolved_actor = resolve_actor_id(_guard, coerce_optional_uuid(actor_id))
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
@@ -226,11 +227,11 @@ async def upload_expense_receipt(
     entity_id: uuid.UUID,
     file: UploadFile = File(...),
     money_account_id: uuid.UUID = Form(...),
-    actor_id: uuid.UUID | None = Form(None),
+    actor_id: str | None = Form(None),
     session: Session = Depends(get_session),
     _guard: User | None = Depends(operations_write_guard),
 ) -> ExpenseReceiptRead:
-    resolved_actor = resolve_actor_id(_guard, actor_id)
+    resolved_actor = resolve_actor_id(_guard, coerce_optional_uuid(actor_id))
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")

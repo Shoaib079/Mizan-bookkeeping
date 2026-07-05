@@ -2,6 +2,36 @@
 
 export type ClassificationConfidence = "high" | "medium" | "low";
 
+/** Known platform commission seller VKNs (Getir / Yemeksepeti). */
+export const KNOWN_DELIVERY_COMMISSION_SELLER_VKNS = new Set([
+  "3940482658",
+  "9470457468",
+]);
+
+export function isKnownCommissionSellerVkn(
+  vkn: string | null | undefined,
+): boolean {
+  const normalized = (vkn ?? "").trim();
+  return (
+    normalized.length > 0 &&
+    KNOWN_DELIVERY_COMMISSION_SELLER_VKNS.has(normalized)
+  );
+}
+
+export function needsDeliveryPlatformLink(draft: {
+  invoice_kind: string;
+  delivery_platform_id: string | null;
+  supplier_vkn?: string | null;
+}): boolean {
+  if (draft.delivery_platform_id) {
+    return false;
+  }
+  if (draft.invoice_kind === "delivery_commission") {
+    return true;
+  }
+  return isKnownCommissionSellerVkn(draft.supplier_vkn);
+}
+
 export function invoiceKindLabel(kind: string): string {
   if (kind === "delivery_commission") {
     return "Delivery commission";

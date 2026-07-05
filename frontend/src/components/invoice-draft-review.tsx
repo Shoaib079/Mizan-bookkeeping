@@ -31,6 +31,7 @@ import {
   confirmDraftLabel,
   invoiceKindLabel,
   needsClassificationReview,
+  needsDeliveryPlatformLink,
 } from "@/lib/invoice-classification";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
 
@@ -413,6 +414,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
   }
 
   const isCommission = draft.invoice_kind === "delivery_commission";
+  const needsPlatformLink = needsDeliveryPlatformLink(draft);
   const isCreditNote = draft.invoice_kind === "supplier_credit";
   const classificationReview = needsClassificationReview(
     draft.classification_confidence,
@@ -520,7 +522,7 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </div>
       )}
 
-      {isCommission && (
+      {(isCommission || needsPlatformLink || draft.delivery_platform_id) && (
         <div className="rounded-lg border border-border bg-card p-4">
           <h2 className="mb-2 text-sm font-semibold">Delivery platform</h2>
           {draft.linked_platform_name ? (
@@ -626,15 +628,16 @@ export function InvoiceDraftReview({ draftId, embedded = false, onUpdated }: Pro
         </div>
       )}
 
-      {canLink && isCommission && !draft.delivery_platform_id && (
+      {canLink && needsPlatformLink && (
         <form
           onSubmit={onLinkPlatform}
           className="rounded-lg border border-border bg-card p-4"
         >
           <h2 className="mb-2 text-sm font-semibold">Link delivery platform</h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            Commission posts to this platform&apos;s clearing account (not
-            payables).
+            {isCommission
+              ? "Commission posts to this platform's clearing account (not payables)."
+              : "This seller is a delivery platform — link the platform to post as commission."}
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[200px] flex-1">

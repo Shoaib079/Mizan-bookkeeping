@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field, field_validator
+from app.core.schema_types import OptionalActorId
 
 from app.core.payables.types import SupplierMovementType
 
@@ -14,7 +15,7 @@ class SupplierPaymentCreate(BaseModel):
     payment_date: date
     amount_kurus: int
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
     reference: str | None = Field(default=None, max_length=64)
 
@@ -37,7 +38,7 @@ class SupplierMovementCreate(BaseModel):
     movement_type: SupplierMovementType
     amount_kurus: int
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
 
     @field_validator("amount_kurus")
     @classmethod
@@ -55,7 +56,7 @@ class SupplierLedgerEntryRead(BaseModel):
     movement_type: SupplierMovementType
     amount_kurus: int
     description: str
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     reference_type: str | None
     reference_id: uuid.UUID | None
     journal_entry_id: uuid.UUID | None
@@ -100,7 +101,7 @@ class VatBreakdownIn(BaseModel):
 class SupplierInvoiceCorrect(BaseModel):
     invoice_date: date
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     expense_account_id: uuid.UUID
     net_kurus: int = Field(gt=0)
     gross_kurus: int = Field(gt=0)

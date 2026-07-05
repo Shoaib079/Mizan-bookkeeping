@@ -75,9 +75,11 @@ def _auto_link_settlement(
     statement: BankStatement,
     line: BankStatementLine,
     classification: StatementLineClassification,
+    actor_id: uuid.UUID,
     delivery_platform_id: uuid.UUID | None = None,
 ) -> bool:
-    """Link an inflow line to an existing settlement record. Never creates settlements."""
+    """Link an inflow to an existing settlement, or create one when platform is known."""
+    from app.core.delivery import posting as delivery_posting
     from app.features.banking.statements import (
         _find_matching_delivery_settlement,
         _find_matching_pos_settlement,
@@ -115,9 +117,10 @@ def _auto_link_settlement(
             line.classification_source = StatementLineClassificationSource.RULE_AUTO.value
             return True
         reason = (
-            "no matching POS settlement on file"
+            "No POS settlement on file for this amount and date — "
+            "classify manually to record the card deposit"
             if not matches
-            else "multiple POS settlements match — confirm manually"
+            else "Multiple POS settlements match — pick the correct one manually"
         )
         _route_rule_needs_review(
             line,
@@ -163,10 +166,37 @@ def _auto_link_settlement(
             _link_delivery_settlement_to_line(line, settlement=matches[0])
             line.classification_source = StatementLineClassificationSource.RULE_AUTO.value
             return True
+
+        if delivery_platform_id is not None and not matches:
+            platform_service.get_delivery_platform_row(
+                session, entity_id, delivery_platform_id
+            )
+            result = delivery_posting.post_delivery_settlement(
+                session,
+                entity_id,
+                delivery_platform_id=delivery_platform_id,
+                money_account_id=statement.money_account_id,
+                settlement_date=line.transaction_date,
+                amount_kurus=line.amount_kurus,
+                description=line.description,
+                actor_id=actor_id,
+                reference_type=BANK_STATEMENT_LINE_REF,
+                reference_id=line.id,
+                bank_statement_line_id=line.id,
+            )
+            line.classification = StatementLineClassification.DELIVERY_SETTLEMENT
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = result.journal_entry.id
+            line.delivery_settlement_id = result.delivery_settlement.id
+            line.classification_source = StatementLineClassificationSource.RULE_AUTO.value
+            line.review_reason = None
+            return True
+
         reason = (
-            "no matching delivery settlement on file"
+            "No delivery settlement on file for this platform, amount, and date — "
+            "classify manually and pick the delivery platform to record the deposit"
             if not matches
-            else "multiple delivery settlements match — confirm manually"
+            else "Multiple delivery platforms match this deposit — pick the platform manually"
         )
         _route_rule_needs_review(
             line,
@@ -351,6 +381,7 @@ def try_auto_apply_line(
             statement=statement,
             line=line,
             classification=rule.classification,
+            actor_id=actor_id,
             delivery_platform_id=rule.delivery_platform_id,
         )
 

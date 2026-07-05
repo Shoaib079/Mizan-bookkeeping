@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.core.schema_types import OptionalActorId
 
 from app.core.listing.schema import PaginatedListOut
 
@@ -14,7 +15,7 @@ class CardSalesBatchCreate(BaseModel):
     sales_date: date
     gross_amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
 
 
 class CardSalesBatchRead(BaseModel):
@@ -25,7 +26,7 @@ class CardSalesBatchRead(BaseModel):
     sales_date: date
     gross_amount_kurus: int
     description: str
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID
     created_at: datetime
 
@@ -35,7 +36,7 @@ class PosSettlementCreate(BaseModel):
     settlement_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     commission_kurus: int | None = Field(default=None, ge=0)
     card_sales_batch_id: uuid.UUID | None = None
 
@@ -49,7 +50,7 @@ class PosSettlementRead(BaseModel):
     settlement_date: date
     amount_kurus: int
     description: str
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID
     reference_type: str | None
     reference_id: uuid.UUID | None
@@ -70,7 +71,7 @@ class ClearingReconciliationRead(BaseModel):
 
 
 class CardCommissionClearanceRequest(BaseModel):
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     clearance_date: date | None = None
     description: str | None = Field(default=None, max_length=512)
 
@@ -115,7 +116,7 @@ class PosDailySummaryListOut(PaginatedListOut[PosDailySummaryRead]):
 
 class ConfirmPosDailySummaryRequest(BaseModel):
     money_account_id: uuid.UUID
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     cash_kurus: int | None = Field(default=None, ge=0)
     card_kurus: int | None = Field(default=None, ge=0)
     summary_date: date | None = None
@@ -140,6 +141,6 @@ class ManualDailySalesRequest(BaseModel):
     cash_kurus: int = Field(ge=0)
     card_kurus: int = Field(ge=0)
     money_account_id: uuid.UUID
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     description: str | None = Field(default=None, max_length=512)
     z_report_kurus: int | None = Field(default=None, ge=0)

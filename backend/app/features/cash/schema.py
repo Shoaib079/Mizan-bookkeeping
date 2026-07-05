@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field
+from app.core.schema_types import OptionalActorId
 
 from app.features.cash.models import CashDrawerSessionStatus, CashMovementDirection
 
@@ -17,7 +18,7 @@ class CashMovementCreate(BaseModel):
     amount_kurus: int = Field(gt=0)
     offset_account_id: uuid.UUID
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
@@ -31,7 +32,7 @@ class CashMovementRead(BaseModel):
     amount_kurus: int
     offset_account_id: uuid.UUID
     description: str
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID
     created_at: datetime
 
@@ -64,7 +65,7 @@ class CashDrawerSessionDetail(CashDrawerSessionRead):
 
 class CashDrawerCloseRequest(BaseModel):
     counted_balance_kurus: int = Field(ge=0)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     description: str = Field(default="Cash drawer EOD close", max_length=512)
 
 
@@ -72,7 +73,7 @@ class CashDrawerCloseDayRequest(BaseModel):
     money_account_id: uuid.UUID
     session_date: date
     counted_balance_kurus: int = Field(ge=0)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     description: str = Field(default="Cash drawer EOD close", max_length=512)
 
 
@@ -83,4 +84,4 @@ class CashDrawerCloseResponse(BaseModel):
 
 class CashDrawerReopenRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None

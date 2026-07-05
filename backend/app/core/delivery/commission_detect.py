@@ -56,6 +56,28 @@ def _normalize_name(value: str | None) -> str:
     return (value or "").casefold()
 
 
+def canonical_brand_for_vkn(vkn: str) -> str | None:
+    """Map a known platform seller VKN to its canonical brand key."""
+    normalized = (vkn or "").strip()
+    if not normalized:
+        return None
+    for brand, known_vkns in _KNOWN_PLATFORM_VKNS.items():
+        if normalized in known_vkns:
+            return brand
+    return None
+
+
+def platform_matches_brand(platform: OwnedDeliveryPlatform, brand: str) -> bool:
+    """True when the entity platform name/aliases belong to a canonical brand."""
+    key = _normalize_name(platform.name)
+    if key == brand:
+        return True
+    for alias in _PLATFORM_ALIASES.get(brand, (brand,)):
+        if alias in key or (key and key in alias):
+            return True
+    return False
+
+
 def _pdf_text(extraction: EInvoiceExtraction, pdf_text: str | None) -> str:
     if pdf_text:
         return pdf_text
@@ -207,10 +229,10 @@ def match_delivery_platform(
         return None
 
     if vkn:
-        for platform in platforms:
-            key = _normalize_name(platform.name)
-            for known in _KNOWN_PLATFORM_VKNS.get(key, ()):
-                if vkn == known:
+        brand = canonical_brand_for_vkn(vkn)
+        if brand is not None:
+            for platform in platforms:
+                if platform_matches_brand(platform, brand):
                     return platform
 
     for platform in platforms:

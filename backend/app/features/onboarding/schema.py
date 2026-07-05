@@ -7,6 +7,7 @@ from datetime import date
 from enum import Enum
 
 from pydantic import BaseModel, Field, model_validator
+from app.core.schema_types import OptionalActorId
 
 from app.core.chart_of_accounts.types import AccountNormalBalance
 
@@ -84,7 +85,7 @@ class OpeningBalanceValidateResponse(BaseModel):
 
 class OpeningBalancePostRequest(BaseModel):
     go_live_date: date
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     lines: list[OpeningBalanceLineIn] = Field(min_length=1)
 
 

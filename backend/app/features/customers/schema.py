@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.core.schema_types import OptionalActorId
 
 from app.core.receivables.types import CustomerMovementType
 
@@ -44,7 +45,7 @@ class CustomerLedgerEntryRead(BaseModel):
     movement_type: CustomerMovementType
     amount_kurus: int
     description: str
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID | None
     created_at: datetime
 
@@ -59,7 +60,7 @@ class CreditSaleCreate(BaseModel):
     sale_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     revenue_account_id: uuid.UUID | None = None
 
 
@@ -67,7 +68,7 @@ class CustomerPaymentCreate(BaseModel):
     payment_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
 

@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from app.core.schema_types import OptionalActorId
 
 from app.core.staff.types import PayCurrency, StaffMovementType
 
@@ -44,7 +45,7 @@ class StaffLedgerEntryRead(BaseModel):
     amount_minor: int
     try_cost_kurus: int | None
     description: str
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID | None
     period_year: int | None = None
     period_month: int | None = None
@@ -63,7 +64,7 @@ class StaffAccrualCreate(BaseModel):
     accrual_date: date
     amount_minor: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     period_year: int = Field(ge=2000, le=2100)
     period_month: int = Field(ge=1, le=12)
 
@@ -79,7 +80,7 @@ class StaffAdvanceCreate(BaseModel):
     payment_date: date
     amount_minor: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID | None = None
     fx_money_account_id: uuid.UUID | None = None
     try_cost_kurus: int | None = Field(default=None, gt=0)
@@ -89,7 +90,7 @@ class StaffPaymentCreate(BaseModel):
     payment_date: date
     amount_minor: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID | None = None
     fx_money_account_id: uuid.UUID | None = None
     try_cost_kurus: int | None = Field(default=None, gt=0)
@@ -136,7 +137,7 @@ class StaffPaymentResponse(BaseModel):
 class StaffJournalEntryCorrect(BaseModel):
     entry_date: date
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     amount_minor: int | None = Field(default=None, gt=0)
     try_cost_kurus: int | None = Field(default=None, gt=0)
     payment_account_id: uuid.UUID | None = None

@@ -12,6 +12,7 @@ from app.config import settings
 from app.core.auth.clerk import ClerkTokenError, verify_clerk_token
 from app.core.auth.permissions import Permission, user_has_permission
 from app.core.auth.types import EntityRole
+from app.core.schema_types import DEV_ACTOR_ID
 from app.db.session import entity_context, get_session
 from app.features.auth import service as auth_service
 from app.features.auth.audit import AuthAuditAction, record_auth_event
@@ -175,11 +176,13 @@ def operations_write_guard(
 
 
 def resolve_actor_id(auth_user: User | None, body_actor_id: uuid.UUID | None) -> uuid.UUID:
-    """Return the authenticated user's ID when auth is enforced, else the body value."""
+    """Return the authenticated user's ID when auth is enforced, else body or dev actor."""
     if auth_user is not None:
         return auth_user.id
     if body_actor_id is not None:
         return body_actor_id
+    if not settings.auth_enforcement:
+        return DEV_ACTOR_ID
     raise HTTPException(status_code=422, detail="actor_id is required")
 
 

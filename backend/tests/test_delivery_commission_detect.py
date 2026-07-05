@@ -78,3 +78,17 @@ def test_match_platform_by_supplier_name(db_session, restaurant_a) -> None:
     )
     assert platform is not None
     assert platform.name == "Getir"
+
+
+def test_match_platform_by_vkn_with_custom_display_name(db_session, restaurant_a) -> None:
+    setup = build_delivery_setup(
+        db_session, restaurant_a.id, platform_names=("Getir Yemek",)
+    )
+    platform = match_delivery_platform(
+        db_session,
+        setup["entity_id"],
+        supplier_name="Getir Perakende Ticaret A.S.",
+        supplier_vkn="3940482658",
+    )
+    assert platform is not None
+    assert platform.name == "Getir Yemek"

@@ -7,6 +7,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.core.schema_types import OptionalActorId
 
 from app.core.partners.types import PartnerMovementType
 
@@ -61,7 +62,7 @@ class PartnerLedgerEntryRead(BaseModel):
     movement_type: PartnerMovementType
     amount_kurus: int
     description: str
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID | None
     created_at: datetime
 
@@ -77,7 +78,7 @@ class ExpenseFrontedCreate(BaseModel):
     expense_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     expense_account_id: uuid.UUID
 
 
@@ -85,7 +86,7 @@ class ReimbursementPaidCreate(BaseModel):
     payment_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
 
@@ -105,7 +106,7 @@ class DrawingCreate(BaseModel):
     drawing_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
 
@@ -113,7 +114,7 @@ class DrawingRepaymentCreate(BaseModel):
     payment_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
 
@@ -132,7 +133,7 @@ class DrawingRepaymentResponse(BaseModel):
 class PartnerJournalEntryCorrect(BaseModel):
     entry_date: date
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     amount_kurus: int | None = Field(default=None, gt=0)
     expense_account_id: uuid.UUID | None = None
     payment_account_id: uuid.UUID | None = None
@@ -173,7 +174,7 @@ class ProfitAllocationPost(BaseModel):
     period_from: date | None = None
     period_to: date | None = None
     description: str = Field(min_length=1, max_length=512)
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
 
 
 class ProfitAllocationPostOut(BaseModel):
@@ -183,7 +184,7 @@ class ProfitAllocationPostOut(BaseModel):
 
 
 class ProfitAllocationVoid(BaseModel):
-    actor_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
     reason: str | None = Field(default=None, max_length=512)
     void_date: date | None = None
     period_unlock_reason: str | None = Field(default=None, max_length=512)
