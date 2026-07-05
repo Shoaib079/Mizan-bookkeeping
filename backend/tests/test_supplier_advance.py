@@ -214,7 +214,7 @@ def test_api_large_advance_requires_confirm(
     assert ok.json()["payable_balance_kurus"] == -200_000
 
 
-def test_auto_apply_posts_advance_when_no_payable(db_session, restaurant_a) -> None:
+def test_auto_apply_small_advance_posts(db_session, restaurant_a) -> None:
     entity_id = restaurant_a.id
     bank = banking_service.create_money_account(
         db_session,
@@ -234,14 +234,14 @@ def test_auto_apply_posts_advance_when_no_payable(db_session, restaurant_a) -> N
 
     csv = (
         "transaction_date,amount,description,reference\n"
-        f'2026-05-05,"-2.000,00",{FOURTH_METRO_DESCRIPTION},ADV-AUTO\n'
+        f'2026-05-05,"-500,00",{FOURTH_METRO_DESCRIPTION},ADV-SMALL\n'
     ).encode()
     statement = statement_service.import_bank_statement(
         db_session,
         entity_id,
         bank.id,
         csv,
-        original_filename="advance-auto.csv",
+        original_filename="advance-auto-small.csv",
     )
 
     with entity_context(db_session, entity_id):
@@ -250,4 +250,44 @@ def test_auto_apply_posts_advance_when_no_payable(db_session, restaurant_a) -> N
         assert line.status == StatementLineStatus.POSTED
         assert line.classification_source == StatementLineClassificationSource.RULE_AUTO.value
         assert line.supplier_id == supplier_id
-        assert payables_ledger.current_balance_kurus(db_session, entity_id, supplier_id) == -200_000
+        assert payables_ledger.current_balance_kurus(db_session, entity_id, supplier_id) == -50_000
+
+
+def test_auto_apply_large_advance_needs_review(db_session, restaurant_a) -> None:
+    entity_id = restaurant_a.id
+    bank = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.BANK,
+            name="Advance Auto Bank",
+            bank_name="Test",
+        ),
+    )
+    supplier_id = supplier_service.create_supplier(
+        db_session,
+        entity_id,
+        SupplierCreate(name="Metro Gida San Tic Ltd", vkn="1234567891"),
+    ).id
+    _learn_supplier_rule(db_session, entity_id, supplier_id, descriptions=METRO_DESCRIPTIONS)
+
+    csv = (
+        "transaction_date,amount,description,reference\n"
+        f'2026-05-05,"-2.000,00",{FOURTH_METRO_DESCRIPTION},ADV-LARGE\n'
+    ).encode()
+    statement = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank.id,
+        csv,
+        original_filename="advance-auto-large.csv",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, statement.lines[0].id)
+        assert line is not None
+        assert line.status == StatementLineStatus.NEEDS_REVIEW
+        assert line.supplier_id == supplier_id
+        assert line.review_reason == "Large supplier advance — confirm"
+        assert line.journal_entry_id is None
+        assert payables_ledger.current_balance_kurus(db_session, entity_id, supplier_id) == 0

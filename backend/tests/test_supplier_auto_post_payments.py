@@ -103,6 +103,38 @@ def test_toggle_off_leaves_line_imported(db_session, bank_setup) -> None:
         assert line.journal_entry_id is None
 
 
+def test_trusted_supplier_large_advance_needs_review(db_session, bank_setup) -> None:
+    entity_id = bank_setup["entity_id"]
+    supplier_id = bank_setup["supplier"].id
+
+    supplier_service.update_supplier(
+        db_session,
+        entity_id,
+        supplier_id,
+        SupplierUpdate(auto_post_payments=True),
+    )
+
+    csv = (
+        "transaction_date,amount,description,reference\n"
+        f'2026-07-01,"-2.000,00",{METRO_DESCRIPTION},TRUST-LARGE\n'
+    ).encode()
+    statement = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank_setup["bank"].id,
+        csv,
+        original_filename="trusted-large-advance.csv",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, statement.lines[0].id)
+        assert line is not None
+        assert line.status == StatementLineStatus.NEEDS_REVIEW
+        assert line.supplier_id == supplier_id
+        assert line.review_reason == "Large supplier advance — confirm"
+        assert line.journal_entry_id is None
+
+
 def test_api_can_set_auto_post_toggle(client, restaurant_a, bank_setup) -> None:
     supplier_id = bank_setup["supplier"].id
     response = client.patch(
