@@ -17,7 +17,7 @@
 | **Active slice**         | (none — ready for next) |
 | **Next up**              | P5 — Delete company UI |
 | **Last completed slice** | Unify expense picker (manual + bank single source) |
-| **Last commit/tag**      | `v0.expense-picker-unify` / (pending) |
+| **Last commit/tag**      | `v0.expense-picker-unify` / `4241410` |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 
