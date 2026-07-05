@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none — ready for next) |
 | **Next up**              | P5 — Delete company UI |
-| **Last completed slice** | Self-service expense categories (owner-added, band 5900–5999) |
-| **Last commit/tag**      | `v0.expense-categories` / `0388e4e` |
+| **Last completed slice** | Expense category add — no form flicker, in-place picker merge |
+| **Last commit/tag**      | `v0.expense-category-inplace-add` / `d998e3c` |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 
@@ -45,6 +45,7 @@
 | P8 — Store / grocery card spend (store_purchase)                                 | `v0.p8-store-purchase`                            | done           | Re-build store_purchase classify/detect; duplicate migration `074`                                                         |
 | Expense picker unified (manual + bank one source)                                | `v0.expense-picker-unify`                         | done           | Re-add `code.startsWith("5")` filter on bank side; both pickers must use `filterExpenseAccounts` (single source)           |
 | Self-service expense categories                                                  | `v0.expense-categories`                           | done           | Re-hardcode chart to defaults only; accept client `account_type`/`code` on create; categories are EXPENSE-only, band 5900–5999, entity-scoped |
+| Expense category add in-place (no nested-form submit)                            | `v0.expense-category-inplace-add`                 | done           | Re-nest Add category dialog inside expense form; re-refetch chart on create (`pickers.reload` / full COA GET)                                              |
 | Tips = cash expense (`5700`), gross sales, no `2260`                             | `v0.48.0-tips-expense-slice-a`                    | done           | Re-add tips payable pot, POS carve-out, or `2260`                                                                          |
 | Card commission total-clearance sweep                                            | `v0.50.0-pos-commission-total-clearance-slice-b2` | done           | Re-add `commission_recognition` setting or per-deposit commission UI                                                       |
 | Tip photo OCR stub                                                               | `v0.51.0-expense-photo-tip-ocr-slice-c`           | done           | New tip-only pipeline — use unified `expense-receipts`                                                                     |
@@ -1863,6 +1864,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-05 | Expense category add in-place (no flicker)      | `v0.expense-category-inplace-add` / `d998e3c`          | Portal Add category dialog out of parent form; stopPropagation; `mergeExpenseAccounts` + `appendExpenseAccount` instead of chart refetch; vitest |
 | 2026-07-05 | Self-service expense categories (5900–5999)     | `v0.expense-categories` / `0388e4e`                    | POST `/chart-of-accounts` owner name only; band 5900–5999; `AddExpenseCategoryButton` in manual/bank/cash pickers; 9 pytest; `filterExpenseAccounts` single source |
 | 2026-07-05 | Unify expense picker (manual + bank single source) | `v0.expense-picker-unify` / `4241410`                | Bank statement + review pickers use `filterExpenseAccounts` (not `code.startsWith("5")`); `ChartAccount` with `account_type`; excludes 5100/5400/5500; `tsc --noEmit` clean |
 | 2026-07-05 | Statement classify post without page flash      | `v0.statement-classify-inplace-post` / `6a12dcd`       | Patch classified line in place via API response; no `loading` refetch on post/correct; classify bar + ledger stay mounted; vitest |
