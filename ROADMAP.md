@@ -17,7 +17,7 @@
 | **Active slice**         | (none — ready for next) |
 | **Next up**              | P5 — Delete company UI |
 | **Last completed slice** | Self-service expense categories (owner-added, band 5900–5999) |
-| **Last commit/tag**      | `v0.expense-categories` / (pending) |
+| **Last commit/tag**      | `v0.expense-categories` / `0388e4e` |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 
@@ -1863,7 +1863,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-07-05 | Self-service expense categories (5900–5999)     | (pending)                                              | POST `/chart-of-accounts` owner name only; band 5900–5999; `AddExpenseCategoryButton` in manual/bank/cash pickers; 9 pytest; `filterExpenseAccounts` single source |
+| 2026-07-05 | Self-service expense categories (5900–5999)     | `v0.expense-categories` / `0388e4e`                    | POST `/chart-of-accounts` owner name only; band 5900–5999; `AddExpenseCategoryButton` in manual/bank/cash pickers; 9 pytest; `filterExpenseAccounts` single source |
 | 2026-07-05 | Unify expense picker (manual + bank single source) | `v0.expense-picker-unify` / `4241410`                | Bank statement + review pickers use `filterExpenseAccounts` (not `code.startsWith("5")`); `ChartAccount` with `account_type`; excludes 5100/5400/5500; `tsc --noEmit` clean |
 | 2026-07-05 | Statement classify post without page flash      | `v0.statement-classify-inplace-post` / `6a12dcd`       | Patch classified line in place via API response; no `loading` refetch on post/correct; classify bar + ledger stay mounted; vitest |
 | 2026-07-05 | Staff salary payment Add hub picker             | `v0.staff-salary-payment-picker-fix` / `e1390e7`       | Route `staffPayment` through staff picker → `StaffSalaryPaymentDialog` with real employee; guard `isValidStaffSalaryEmployee`; remove `"Employee"` placeholder leak; statement classify resolves name; vitest + 1026 pytest |
