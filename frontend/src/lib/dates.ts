@@ -10,6 +10,20 @@ export function todayTrDate(): string {
   return `${day}.${month}.${year}`;
 }
 
+/** Calendar month for salary period pickers (month is 1–12). */
+export function calendarMonth(
+  reference = new Date(),
+): { year: number; month: number } {
+  return { year: reference.getFullYear(), month: reference.getMonth() + 1 };
+}
+
+export function priorCalendarMonth(
+  reference = new Date(),
+): { year: number; month: number } {
+  const prior = new Date(reference.getFullYear(), reference.getMonth() - 1, 1);
+  return { year: prior.getFullYear(), month: prior.getMonth() + 1 };
+}
+
 export function parseDisplayToDate(display: string): Date | null {
   const iso = parseTrDate(display.trim());
   if (!iso) return null;

@@ -512,6 +512,15 @@ export function ManualExpenseForm({
             the salary month separately from the payment date.
           </p>
           <div className="mb-3">
+            <Label htmlFor="exp-salary-date">Date (DD.MM.YYYY)</Label>
+            <DateInput
+              id="exp-salary-date"
+              value={dateText}
+              onChange={setDateText}
+              required
+            />
+          </div>
+          <div className="mb-3">
             <Label htmlFor="exp-salary-employee">Employee</Label>
             <Combobox
               id="exp-salary-employee"
@@ -526,7 +535,6 @@ export function ManualExpenseForm({
           </div>
           {entityId && selectedEmployee && (
             <StaffSalaryPaymentDialog
-              key={selectedEmployee.id}
               embedded
               open
               entityId={entityId}
@@ -534,6 +542,8 @@ export function ManualExpenseForm({
               employeeName={selectedEmployee.name}
               payCurrency={selectedEmployee.pay_currency}
               source="staff"
+              hidePaymentDate
+              paymentDate={parseTrDate(dateText) ?? undefined}
               closeOnSuccess={false}
               onClose={onClose}
               onSaved={onSaved}

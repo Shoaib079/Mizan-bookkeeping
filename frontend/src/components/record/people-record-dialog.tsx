@@ -17,10 +17,13 @@ import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-paymen
 import { SupplierPaymentForm } from "@/components/forms/supplier-payment-form";
 import type { SupplierRow } from "@/components/forms/supplier-form";
 import { Combobox } from "@/components/ui/combobox";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
+import { parseTrDate } from "@/lib/money";
 import type { PersonPickerKind, RecordActionKey } from "@/lib/record-actions";
 
 type CustomerRow = { id: string; name: string };
@@ -55,6 +58,12 @@ const LEDGER_PATH: Partial<Record<PersonPickerKind, (id: string) => string>> = {
   supplier: (id) => `/suppliers/${id}/ledger`,
 };
 
+const STAFF_DATE_ACTIONS = new Set<RecordActionKey>([
+  "staffAccrual",
+  "staffAdvance",
+  "staffPayment",
+]);
+
 const NEEDS_LEDGER_BALANCE = new Set<RecordActionKey>([
   "partnerReimbursement",
   "partnerDrawing",
@@ -83,6 +92,10 @@ export function PeopleRecordDialog({
   >(undefined);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
+  const [dateText, setDateText] = useState("");
+
+  const showStaffDate = kind === "staff" && STAFF_DATE_ACTIONS.has(action);
+  const paymentDateIso = parseTrDate(dateText) ?? undefined;
 
   const reset = useCallback(() => {
     setItems([]);
@@ -93,6 +106,7 @@ export function PeopleRecordDialog({
     setCapitalBalanceKurus(undefined);
     setBalanceLoading(false);
     setBalanceError(null);
+    setDateText("");
   }, []);
 
   useEffect(() => {
@@ -102,6 +116,7 @@ export function PeopleRecordDialog({
     }
     if (!entityId) return;
 
+    setDateText(todayTrDate());
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
@@ -218,6 +233,17 @@ export function PeopleRecordDialog({
 
       {entityId && !loading && items.length > 0 && (
         <div className="space-y-4">
+          {showStaffDate && (
+            <div>
+              <Label htmlFor="people-record-date">Date (DD.MM.YYYY)</Label>
+              <DateInput
+                id="people-record-date"
+                value={dateText}
+                onChange={setDateText}
+                required
+              />
+            </div>
+          )}
           <div>
             <Label>{pickerLabel(kind)}</Label>
             <Combobox
@@ -236,7 +262,7 @@ export function PeopleRecordDialog({
           )}
 
           {formReady && selected && (
-            <div key={selected.id} className="border-t border-border pt-4">
+            <div className="border-t border-border pt-4">
               {renderEmbeddedForm(
                 action,
                 selected,
@@ -244,6 +270,7 @@ export function PeopleRecordDialog({
                 capitalBalanceKurus,
                 entityId,
                 handleClose,
+                paymentDateIso,
               )}
             </div>
           )}
@@ -260,6 +287,7 @@ function renderEmbeddedForm(
   capitalBalanceKurus: number | undefined,
   entityId: string,
   onClose: () => void,
+  paymentDateIso?: string,
 ) {
   const payCurrency = person.payCurrency ?? "TRY";
   const formProps = { embedded: true as const, open: true, onClose };
@@ -290,6 +318,8 @@ function renderEmbeddedForm(
           employeeName={person.name}
           payCurrency={payCurrency}
           source="staff"
+          hidePaymentDate
+          paymentDate={paymentDateIso}
         />
       );
     case "partnerExpenseFronted":

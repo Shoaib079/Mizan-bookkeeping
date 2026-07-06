@@ -50,6 +50,7 @@ class StaffLedgerEntry(EntityScopedMixin, Base):
     )
     period_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     period_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    extra_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 

@@ -23,6 +23,7 @@ from app.core.staff.types import PayCurrency, StaffMovementType
 from app.core.ledger.correction import CorrectionNotFoundError, correct_staff_journal_entry
 from app.core.ledger.posting import PostingLine
 from app.core.ledger.subledger_display import enrich_entry_models
+from app.core.staff.ledger_effective import collapse_accrual_entry_reads
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.staff.models import Employee
@@ -33,6 +34,8 @@ from app.features.staff.schema import (
     StaffAccrualResponse,
     StaffAdvanceCreate,
     StaffAdvanceResponse,
+    StaffExtraDaysPaidCreate,
+    StaffExtraDaysPaidResponse,
     StaffLedgerEntryRead,
     StaffLedgerRead,
     StaffPaymentCreate,
@@ -48,13 +51,14 @@ def _staff_entry_reads(
 ) -> list[StaffLedgerEntryRead]:
     if not entries:
         return []
-    return enrich_entry_models(
+    reads = enrich_entry_models(
         session,
         StaffLedgerEntryRead,
         entries,
         journal_entry_id=lambda entry: entry.journal_entry_id,
         description=lambda entry: entry.description,
     )
+    return collapse_accrual_entry_reads(reads)
 
 
 def _staff_entry_read(session: Session, entry: StaffLedgerEntry) -> StaffLedgerEntryRead:
@@ -250,12 +254,64 @@ def get_salary_period_status(
     )
 
 
+def _format_extra_days_description(extra_days: int, per_day_minor: int) -> str:
+    per_day = per_day_minor / 100
+    return f"Extra days ({extra_days} × {per_day:,.2f} ₺/day)"
+
+
+def record_extra_days_paid(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    payload: StaffExtraDaysPaidCreate,
+) -> StaffExtraDaysPaidResponse:
+    employee = get_employee(session, entity_id, employee_id)
+    if employee.pay_currency != PayCurrency.TRY:
+        raise ValueError("Extra days pay is recorded in TRY — use Advance for FX employees")
+
+    description = payload.description
+    if not description or not description.strip():
+        description = _format_extra_days_description(
+            payload.extra_days, payload.per_day_minor
+        )
+
+    total_minor = payload.extra_days * payload.per_day_minor
+    result = staff_posting.post_extra_days_paid(
+        session,
+        entity_id,
+        employee_id,
+        payment_date=payload.payment_date,
+        extra_days=payload.extra_days,
+        per_day_minor=payload.per_day_minor,
+        description=description,
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+    )
+    journal_id = result.journal_entry.id if result.journal_entry else None
+    if journal_id is None:
+        raise ValueError("Extra days record did not produce a journal entry")
+    return StaffExtraDaysPaidResponse(
+        journal_entry_id=journal_id,
+        staff_ledger_entry=_staff_entry_read(session, result.staff_ledger_entry),
+        balance_minor=result.balance_minor,
+        total_minor=total_minor,
+    )
+
+
 def record_payment(
     session: Session,
     entity_id: uuid.UUID,
     employee_id: uuid.UUID,
     payload: StaffPaymentCreate,
 ) -> StaffPaymentResponse:
+    if payload.amount_minor == 0 and (
+        payload.period_year is None
+        or payload.period_month is None
+        or payload.period_salary_minor is None
+    ):
+        raise ValueError(
+            "amount_minor 0 requires period_year, period_month, and period_salary_minor"
+        )
     if (
         payload.period_year is not None
         and payload.period_month is not None

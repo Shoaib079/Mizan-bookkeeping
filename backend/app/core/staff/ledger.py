@@ -49,6 +49,7 @@ def persist_staff_ledger_entry(
     reference_id: uuid.UUID | None = None,
     period_year: int | None = None,
     period_month: int | None = None,
+    extra_days: int | None = None,
 ) -> StaffLedgerEntry:
     """Persist one staff subledger row — caller must hold entity_context."""
     if amount_minor == 0:
@@ -71,6 +72,7 @@ def persist_staff_ledger_entry(
         reference_id=reference_id,
         period_year=period_year,
         period_month=period_month,
+        extra_days=extra_days,
     )
     session.add(entry)
     session.flush()
@@ -177,30 +179,22 @@ def remaining_accrual_minor(session: Session, employee_id: uuid.UUID) -> int:
 def period_accrued_minor(
     session: Session, employee_id: uuid.UUID, *, period_year: int, period_month: int
 ) -> int:
-    total = session.scalar(
-        select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
-            StaffLedgerEntry.employee_id == employee_id,
-            StaffLedgerEntry.movement_type == StaffMovementType.SALARY_ACCRUED,
-            StaffLedgerEntry.period_year == period_year,
-            StaffLedgerEntry.period_month == period_month,
-        )
+    from app.core.staff.ledger_effective import period_accrued_minor_effective
+
+    return period_accrued_minor_effective(
+        session, employee_id, period_year=period_year, period_month=period_month
     )
-    return int(total or 0)
 
 
 def period_paid_minor(
     session: Session, employee_id: uuid.UUID, *, period_year: int, period_month: int
 ) -> int:
     """Cash + advance-applied salary settled for one pay period (positive kuruş)."""
-    total = session.scalar(
-        select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
-            StaffLedgerEntry.employee_id == employee_id,
-            StaffLedgerEntry.movement_type == StaffMovementType.SALARY_PAYMENT,
-            StaffLedgerEntry.period_year == period_year,
-            StaffLedgerEntry.period_month == period_month,
-        )
+    from app.core.staff.ledger_effective import period_paid_minor_effective
+
+    return period_paid_minor_effective(
+        session, employee_id, period_year=period_year, period_month=period_month
     )
-    return -int(total or 0)
 
 
 def period_remaining_minor(

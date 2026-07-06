@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatMonthYear, weekdayLabels } from "@/lib/dates";
+import { formatMonthYear, priorCalendarMonth, weekdayLabels } from "@/lib/dates";
 
 describe("calendar labels", () => {
   it("uses English month names in the DateInput popup", () => {
@@ -11,5 +11,16 @@ describe("calendar labels", () => {
 
   it("uses English weekday abbreviations", () => {
     expect(weekdayLabels()).toEqual(["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]);
+  });
+
+  it("returns the prior calendar month for salary period defaults", () => {
+    expect(priorCalendarMonth(new Date(2026, 6, 6))).toEqual({
+      year: 2026,
+      month: 6,
+    });
+    expect(priorCalendarMonth(new Date(2026, 0, 15))).toEqual({
+      year: 2025,
+      month: 12,
+    });
   });
 });

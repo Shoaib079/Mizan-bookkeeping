@@ -50,6 +50,7 @@ class StaffLedgerEntryRead(BaseModel):
     journal_entry_id: uuid.UUID | None
     period_year: int | None = None
     period_month: int | None = None
+    extra_days: int | None = None
     created_at: datetime
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
     was_corrected: bool = False
@@ -89,9 +90,25 @@ class StaffAdvanceCreate(BaseModel):
     try_cost_kurus: int | None = Field(default=None, gt=0)
 
 
+class StaffExtraDaysPaidCreate(BaseModel):
+    payment_date: date
+    extra_days: int = Field(gt=0, le=31)
+    per_day_minor: int = Field(gt=0)
+    description: str | None = Field(default=None, max_length=512)
+    actor_id: OptionalActorId = None
+    payment_account_id: uuid.UUID | None = None
+
+
+class StaffExtraDaysPaidResponse(BaseModel):
+    journal_entry_id: uuid.UUID
+    staff_ledger_entry: StaffLedgerEntryRead
+    balance_minor: int
+    total_minor: int
+
+
 class StaffPaymentCreate(BaseModel):
     payment_date: date
-    amount_minor: int = Field(gt=0)
+    amount_minor: int = Field(ge=0)
     description: str = Field(min_length=1, max_length=512)
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID | None = None

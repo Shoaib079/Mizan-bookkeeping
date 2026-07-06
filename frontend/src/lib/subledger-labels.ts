@@ -5,6 +5,8 @@ export const staffMovementLabels: Record<string, string> = {
   advance_applied: "Advance applied",
   salary_payment: "Salary payment",
   incentive_paid: "Incentive / company expense",
+  extra_days_accrued: "Extra days accrued",
+  extra_days_paid: "Extra days pay",
 };
 
 export const partnerMovementLabels: Record<string, string> = {

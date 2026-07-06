@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form";
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
 import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
+import { StaffExtraDaysForm } from "@/components/forms/staff-extra-days-form";
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import {
   CorrectStaffLedgerForm,
@@ -45,6 +46,7 @@ type LedgerEntry = {
   journal_entry_id: string | null;
   period_year?: number | null;
   period_month?: number | null;
+  extra_days?: number | null;
   display_kind: SubledgerDisplayKind;
   was_corrected?: boolean;
 };
@@ -78,6 +80,17 @@ const correctableStaffTypes = new Set([
   "salary_payment",
 ]);
 
+function extraDaysLabel(entry: LedgerEntry): string | null {
+  if (
+    entry.movement_type !== "extra_days_paid" &&
+    entry.movement_type !== "extra_days_accrued"
+  ) {
+    return null;
+  }
+  if (!entry.extra_days) return null;
+  return `${entry.extra_days} day${entry.extra_days === 1 ? "" : "s"}`;
+}
+
 function salaryPeriodLabel(entry: LedgerEntry): string | null {
   if (entry.movement_type !== "salary_accrued") return null;
   if (!entry.period_year || !entry.period_month) return null;
@@ -97,6 +110,7 @@ export default function StaffDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [accrualOpen, setAccrualOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
+  const [extraDaysOpen, setExtraDaysOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectableStaffLedgerRow | null>(null);
 
@@ -108,6 +122,7 @@ export default function StaffDetailPage() {
     setEditOpen(false);
     setAccrualOpen(false);
     setAdvanceOpen(false);
+    setExtraDaysOpen(false);
     setPaymentOpen(false);
     setCorrectEntry(null);
   }, []);
@@ -211,6 +226,15 @@ export default function StaffDetailPage() {
             <Button type="button" variant="secondary" onClick={() => setAdvanceOpen(true)}>
               Advance
             </Button>
+            {employee.pay_currency === "TRY" && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setExtraDaysOpen(true)}
+              >
+                Extra days pay
+              </Button>
+            )}
             <Button type="button" variant="secondary" onClick={() => setPaymentOpen(true)}>
               Salary payment
             </Button>
@@ -258,6 +282,11 @@ export default function StaffDetailPage() {
                       {salaryPeriodLabel(entry) && (
                         <span className="ml-1 text-muted-foreground">
                           ({salaryPeriodLabel(entry)})
+                        </span>
+                      )}
+                      {extraDaysLabel(entry) && (
+                        <span className="ml-1 text-muted-foreground">
+                          ({extraDaysLabel(entry)})
                         </span>
                       )}
                     </DataTableCell>
@@ -315,6 +344,7 @@ export default function StaffDetailPage() {
             open={accrualOpen}
             employeeId={employeeId}
             payCurrency={employee.pay_currency}
+            defaultSalaryPeriod="prior"
             onClose={() => setAccrualOpen(false)}
             onSaved={() => void reload()}
           />
@@ -323,6 +353,12 @@ export default function StaffDetailPage() {
             employeeId={employeeId}
             payCurrency={employee.pay_currency}
             onClose={() => setAdvanceOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <StaffExtraDaysForm
+            open={extraDaysOpen}
+            employeeId={employeeId}
+            onClose={() => setExtraDaysOpen(false)}
             onSaved={() => void reload()}
           />
           <StaffSalaryPaymentDialog

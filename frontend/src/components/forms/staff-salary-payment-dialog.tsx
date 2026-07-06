@@ -66,6 +66,8 @@ type Props = {
   embedded?: boolean;
   /** ISO date — default for statement or initial staff date. */
   paymentDate?: string;
+  /** Parent owns date (e.g. Expenses salary mode) — field hidden, date not reset on employee change. */
+  hidePaymentDate?: boolean;
   defaultCashMinor?: number;
   lockCashAmount?: boolean;
   onConfirm?: (payload: PeriodPayload) => void | Promise<void>;
@@ -85,6 +87,7 @@ export function StaffSalaryPaymentDialog({
   source = "staff",
   embedded,
   paymentDate,
+  hidePaymentDate = false,
   defaultCashMinor,
   lockCashAmount = false,
   onConfirm,
@@ -110,6 +113,8 @@ export function StaffSalaryPaymentDialog({
   const [periodMonth, setPeriodMonth] = useState("");
   const [salaryText, setSalaryText] = useState("");
   const [cashText, setCashText] = useState("");
+  const [extraDaysText, setExtraDaysText] = useState("");
+  const [extraDayRateText, setExtraDayRateText] = useState("");
   const [status, setStatus] = useState<SalaryPeriodStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -128,10 +133,35 @@ export function StaffSalaryPaymentDialog({
   }, [isTry, salaryText]);
 
   const cashMinor = useMemo(() => {
+    if (!cashText.trim()) return 0;
     if (defaultCashMinor != null && !cashText.trim()) return defaultCashMinor;
     if (isTry) return parseTryToKurus(cashText);
     return parseFxNative(cashText);
   }, [cashText, defaultCashMinor, isTry]);
+
+  const extraDays = useMemo(() => {
+    const parsed = Number.parseInt(extraDaysText, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  }, [extraDaysText]);
+
+  const extraDayRateMinor = useMemo(
+    () => parseTryToKurus(extraDayRateText),
+    [extraDayRateText],
+  );
+
+  const extraDaysTotalMinor = useMemo(() => {
+    if (extraDays <= 0 || extraDayRateMinor === null || extraDayRateMinor <= 0) {
+      return null;
+    }
+    return extraDays * extraDayRateMinor;
+  }, [extraDays, extraDayRateMinor]);
+
+  const resolvedDateText = useMemo(() => {
+    if (hidePaymentDate && paymentDate) {
+      return paymentDate.split("-").reverse().join(".");
+    }
+    return dateText;
+  }, [dateText, hidePaymentDate, paymentDate]);
 
   const loadAccounts = useCallback(async () => {
     if (!entityId || isStatement) return;
@@ -198,18 +228,20 @@ export function StaffSalaryPaymentDialog({
   useEffect(() => {
     if (!open) return;
     submitIdempotency.resetSubmit();
-    const initialDateText = paymentDate
-      ? paymentDate.split("-").reverse().join(".")
-      : todayTrDate();
-    const initialIso =
-      paymentDate ?? parseTrDate(initialDateText) ?? "";
-    const period = defaultPeriodFromDate(
-      initialIso || new Date().toISOString().slice(0, 10),
-    );
-    setDateText(initialDateText);
+    if (!hidePaymentDate) {
+      const initialDateText = paymentDate
+        ? paymentDate.split("-").reverse().join(".")
+        : todayTrDate();
+      const initialIso =
+        paymentDate ?? parseTrDate(initialDateText) ?? "";
+      const period = defaultPeriodFromDate(
+        initialIso || new Date().toISOString().slice(0, 10),
+      );
+      setDateText(initialDateText);
+      setPeriodYear(String(period.year));
+      setPeriodMonth(String(period.month));
+    }
     setDescription("Salary payment");
-    setPeriodYear(String(period.year));
-    setPeriodMonth(String(period.month));
     setSalaryText("");
     setCashText(
       defaultCashMinor != null && isTry
@@ -218,6 +250,8 @@ export function StaffSalaryPaymentDialog({
           ? (defaultCashMinor / 100).toFixed(2)
           : "",
     );
+    setExtraDaysText("");
+    setExtraDayRateText("");
     setTryCostText("");
     setError(null);
     void loadAccounts().catch(() => undefined);
@@ -225,11 +259,28 @@ export function StaffSalaryPaymentDialog({
   }, [
     open,
     defaultCashMinor,
+    hidePaymentDate,
     isTry,
     loadAccounts,
     paymentDate,
     submitIdempotency,
   ]);
+
+  useEffect(() => {
+    if (!open || hidePaymentDate || !dateText) return;
+    const iso = parseTrDate(dateText);
+    if (!iso) return;
+    const period = defaultPeriodFromDate(iso);
+    setPeriodYear(String(period.year));
+    setPeriodMonth(String(period.month));
+  }, [dateText, hidePaymentDate, open]);
+
+  useEffect(() => {
+    if (!open || !hidePaymentDate || !paymentDate) return;
+    const period = defaultPeriodFromDate(paymentDate);
+    setPeriodYear(String(period.year));
+    setPeriodMonth(String(period.month));
+  }, [hidePaymentDate, open, paymentDate]);
 
   // Switching employee or salary period must not keep the previous amounts.
   useEffect(() => {
@@ -259,6 +310,8 @@ export function StaffSalaryPaymentDialog({
           ? (defaultCashMinor / 100).toFixed(2)
           : "",
     );
+    setExtraDaysText("");
+    setExtraDayRateText("");
     setStatus(null);
     setTryCostText("");
     setError(null);
@@ -299,17 +352,55 @@ export function StaffSalaryPaymentDialog({
     return `${(minor / 100).toFixed(2)} ${payCurrency}`;
   }
 
+  async function postExtraDaysAccrual() {
+    const paymentDateParsed = parseTrDate(resolvedDateText);
+    if (!paymentDateParsed) {
+      setError("Date must be DD.MM.YYYY.");
+      return false;
+    }
+    if (extraDays <= 0 || extraDays > 31) {
+      setError("Enter extra days (1–31).");
+      return false;
+    }
+    if (extraDayRateMinor === null || extraDayRateMinor <= 0) {
+      setError("Enter a valid per-day pay for extra days.");
+      return false;
+    }
+
+    const idempotencyKey = submitIdempotency.beginSubmit();
+    try {
+      await apiFetch(
+        `/entities/${entityId}/staff/employees/${employeeId}/extra-days`,
+        {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            payment_date: paymentDateParsed,
+            extra_days: extraDays,
+            per_day_minor: extraDayRateMinor,
+            actor_id: actorId,
+          }),
+        },
+      );
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Extra days save failed");
+      return false;
+    }
+  }
+
   async function postStaffPayment(payload: PeriodPayload) {
-    const paymentDateParsed = parseTrDate(dateText);
+    const paymentDateParsed = parseTrDate(resolvedDateText);
     if (!paymentDateParsed) {
       setError("Date must be DD.MM.YYYY.");
       return;
     }
-    if (isTry && !paymentGlAccountId) {
+    if (payload.amount_minor > 0 && isTry && !paymentGlAccountId) {
       setError("Choose a cash or bank account.");
       return;
     }
-    if (!isTry && !fxWalletId) {
+    if (payload.amount_minor > 0 && !isTry && !fxWalletId) {
       setError(`No ${payCurrency} wallet found.`);
       return;
     }
@@ -323,9 +414,9 @@ export function StaffSalaryPaymentDialog({
       period_month: payload.period_month,
       period_salary_minor: payload.period_salary_minor,
     };
-    if (isTry) {
+    if (isTry && payload.amount_minor > 0) {
       body.payment_account_id = paymentGlAccountId;
-    } else {
+    } else if (payload.amount_minor > 0) {
       const tryCostKurus = parseTryToKurus(tryCostText);
       if (tryCostKurus === null || tryCostKurus <= 0) {
         setError("Enter a valid TRY cost for this payment.");
@@ -335,7 +426,6 @@ export function StaffSalaryPaymentDialog({
       body.try_cost_kurus = tryCostKurus;
     }
 
-    setSubmitting(true);
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
@@ -348,19 +438,10 @@ export function StaffSalaryPaymentDialog({
           body: JSON.stringify(body),
         },
       );
-      submitIdempotency.completeSubmit();
-      toast("Payment recorded");
-      onSaved?.();
-      setCashText("");
-      if (!closeOnSuccess) {
-        void loadStatus();
-      } else {
-        onClose();
-      }
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSubmitting(false);
+      return false;
     }
   }
 
@@ -368,36 +449,88 @@ export function StaffSalaryPaymentDialog({
     event.preventDefault();
     const year = Number.parseInt(periodYear, 10);
     const month = Number.parseInt(periodMonth, 10);
-    if (salaryMinor == null || salaryMinor <= 0) {
-      setError("Enter the salary amount for this month.");
-      return;
-    }
-    if (cashMinor == null || cashMinor <= 0) {
-      setError("Enter how much you are paying now.");
-      return;
-    }
-    if (!Number.isFinite(year) || year < 2000) {
-      setError("Enter a valid salary year.");
-      return;
-    }
-    if (!Number.isFinite(month) || month < 1 || month > 12) {
-      setError("Choose a salary month.");
-      return;
-    }
+    const cash = cashMinor ?? 0;
+    const hasSalary = salaryMinor != null && salaryMinor > 0;
+    const hasExtra =
+      isTry &&
+      extraDays > 0 &&
+      extraDayRateMinor !== null &&
+      extraDayRateMinor > 0;
 
-    const payload: PeriodPayload = {
-      period_year: year,
-      period_month: month,
-      period_salary_minor: salaryMinor,
-      amount_minor: cashMinor,
-    };
+    if (!hasSalary && !hasExtra) {
+      setError("Enter salary for this month and/or extra days.");
+      return;
+    }
+    if (hasSalary) {
+      if (!Number.isFinite(year) || year < 2000) {
+        setError("Enter a valid salary year.");
+        return;
+      }
+      if (!Number.isFinite(month) || month < 1 || month > 12) {
+        setError("Choose a salary month.");
+        return;
+      }
+      if (cash > 0 && isTry && !paymentGlAccountId) {
+        setError("Choose a cash or bank account.");
+        return;
+      }
+      if (cash > 0 && !isTry && !fxWalletId) {
+        setError(`No ${payCurrency} wallet found.`);
+        return;
+      }
+    } else if (cash > 0) {
+      setError("Enter salary for this month when paying cash.");
+      return;
+    }
 
     setError(null);
-    if (isStatement && onConfirm) {
-      await onConfirm(payload);
+    if (isStatement && onConfirm && hasSalary) {
+      await onConfirm({
+        period_year: year,
+        period_month: month,
+        period_salary_minor: salaryMinor!,
+        amount_minor: cash,
+      });
       return;
     }
-    await postStaffPayment(payload);
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      if (hasSalary) {
+        const salaryOk = await postStaffPayment({
+          period_year: year,
+          period_month: month,
+          period_salary_minor: salaryMinor!,
+          amount_minor: cash,
+        });
+        if (!salaryOk) return;
+        submitIdempotency.completeSubmit();
+      }
+      if (hasExtra) {
+        const extraOk = await postExtraDaysAccrual();
+        if (!extraOk) return;
+        submitIdempotency.completeSubmit();
+      }
+      toast(
+        cash > 0 || !hasSalary
+          ? hasExtra && !hasSalary
+            ? "Extra days recorded"
+            : "Payment recorded"
+          : "Salary recorded",
+      );
+      onSaved?.();
+      setCashText("");
+      setExtraDaysText("");
+      setExtraDayRateText("");
+      if (!closeOnSuccess) {
+        void loadStatus();
+      } else {
+        onClose();
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (!dialogOpen) return null;
@@ -410,7 +543,7 @@ export function StaffSalaryPaymentDialog({
           advance.
         </p>
 
-        {!isStatement && (
+        {!isStatement && !hidePaymentDate && (
           <>
             <div>
               <Label htmlFor="pay-date">Payment date (DD.MM.YYYY)</Label>
@@ -432,7 +565,9 @@ export function StaffSalaryPaymentDialog({
             </div>
             {isTry ? (
               <div>
-                <Label htmlFor="pay-account">Pay from</Label>
+                <Label htmlFor="pay-account">
+                  Pay from{cashPreview <= 0 ? " (only if paying now)" : ""}
+                </Label>
                 <Combobox
                   id="pay-account"
                   value={paymentGlAccountId}
@@ -529,14 +664,15 @@ export function StaffSalaryPaymentDialog({
           )}
         </div>
         <div>
-          <Label htmlFor="pay-cash-amount">Paying now ({payCurrency})</Label>
+          <Label htmlFor="pay-cash-amount">
+            Paying now ({payCurrency}) — optional
+          </Label>
           {isTry ? (
             <MoneyInput
               id="pay-cash-amount"
               placeholder="5.000,00"
               value={cashText}
               onChange={setCashText}
-              required
               disabled={lockCashAmount}
             />
           ) : (
@@ -544,11 +680,47 @@ export function StaffSalaryPaymentDialog({
               id="pay-cash-amount"
               value={cashText}
               onChange={(e) => setCashText(e.target.value)}
-              required
               disabled={lockCashAmount}
             />
           )}
+          <p className="mt-1 text-xs text-muted-foreground">
+            Leave empty to record salary accrual only — pay cash later.
+          </p>
         </div>
+        {isTry && (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="pay-extra-days">Extra days worked</Label>
+                <Input
+                  id="pay-extra-days"
+                  type="number"
+                  min={1}
+                  max={31}
+                  step={1}
+                  value={extraDaysText}
+                  onChange={(e) => setExtraDaysText(e.target.value)}
+                  placeholder="e.g. 3"
+                />
+              </div>
+              <div>
+                <Label htmlFor="pay-extra-day-rate">Extra day pay (₺)</Label>
+                <MoneyInput
+                  id="pay-extra-day-rate"
+                  value={extraDayRateText}
+                  onChange={setExtraDayRateText}
+                  placeholder="1.500,00"
+                />
+              </div>
+            </div>
+            {extraDaysTotalMinor !== null && (
+              <p className="text-sm font-medium tabular-nums">
+                Extra days total: {formatTry(extraDaysTotalMinor)} (accrued —
+                no cash needed now)
+              </p>
+            )}
+          </>
+        )}
         {status && (
           <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
             <p>
@@ -604,7 +776,11 @@ export function StaffSalaryPaymentDialog({
             Cancel
           </Button>
           <Button type="submit" disabled={confirming || loading}>
-            {confirming ? "Posting…" : "Post salary payment"}
+            {confirming
+              ? "Posting…"
+              : cashPreview > 0
+                ? "Post salary payment"
+                : "Record"}
           </Button>
         </div>
       </form>

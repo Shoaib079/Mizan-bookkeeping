@@ -718,23 +718,74 @@ def _ensure_period_accrual_up_to(
     period_salary_minor: int,
     actor_id: uuid.UUID,
 ) -> None:
+    from app.core.staff.ledger_effective import effective_accrual_rows_for_period
+
     current = staff_ledger.period_accrued_minor(
         session, employee_id, period_year=period_year, period_month=period_month
     )
+    if period_salary_minor == current:
+        return
     if period_salary_minor < current:
         raise InvalidStaffPostingError(
             f"Salary for {period_month:02d}/{period_year} is already accrued at "
             f"{current} minor units — correct the accrual to lower it."
         )
-    delta = period_salary_minor - current
-    if delta <= 0:
+
+    effective_rows = effective_accrual_rows_for_period(
+        session,
+        employee_id,
+        period_year=period_year,
+        period_month=period_month,
+    )
+    if effective_rows:
+        primary = max(effective_rows, key=lambda row: row.created_at)
+        others_sum = current - primary.amount_minor
+        new_primary_amount = period_salary_minor - others_sum
+        if new_primary_amount == primary.amount_minor:
+            return
+        if new_primary_amount <= 0:
+            raise InvalidStaffPostingError(
+                f"Multiple accruals exist for {period_month:02d}/{period_year} — "
+                "use Correct on the ledger row to consolidate before changing salary."
+            )
+        if primary.journal_entry_id is None:
+            raise InvalidStaffPostingError(
+                "FX salary accrual for this period cannot be adjusted via payment — "
+                "use Adjust accrual."
+            )
+        employee = _get_employee(session, entity_id, employee_id)
+        if employee.pay_currency != PayCurrency.TRY:
+            raise InvalidStaffPostingError(
+                "FX salary accrual adjustment via payment is not supported — "
+                "use Adjust accrual."
+            )
+        salary_expense = _chart_account(session, SALARY_EXPENSE_CODE)
+        salaries_payable = _chart_account(session, SALARIES_PAYABLE_CODE)
+        lines = build_try_salary_accrual_lines(
+            salary_expense_id=salary_expense.id,
+            salaries_payable_id=salaries_payable.id,
+            amount_kurus=new_primary_amount,
+        )
+        from app.core.ledger.correction import correct_staff_journal_entry
+
+        correct_staff_journal_entry(
+            session,
+            entity_id,
+            primary.journal_entry_id,
+            accrual_date,
+            f"Salary {period_year}-{period_month:02d}",
+            lines,
+            actor_id=actor_id,
+            amount_minor=new_primary_amount,
+        )
         return
+
     post_salary_accrual(
         session,
         entity_id,
         employee_id,
         accrual_date=accrual_date,
-        amount_minor=delta,
+        amount_minor=period_salary_minor,
         description=f"Salary {period_year}-{period_month:02d}",
         actor_id=actor_id,
         period_year=period_year,
@@ -759,8 +810,8 @@ def post_period_salary_payment(
     try_cost_kurus: int | None = None,
 ) -> StaffPaymentPostResult:
     """Accrue-at-pay salary for one month — partial pay, prior months, excess → advance."""
-    if cash_minor <= 0:
-        raise ValueError("cash_minor must be positive")
+    if cash_minor < 0:
+        raise ValueError("cash_minor cannot be negative")
     if period_salary_minor <= 0:
         raise ValueError("period_salary_minor must be positive")
 
@@ -770,6 +821,54 @@ def post_period_salary_payment(
     with entity_context(session, entity_id):
         require_entity_context()
         employee = _get_employee(session, entity_id, employee_id)
+
+        if cash_minor == 0:
+            if employee.pay_currency != PayCurrency.TRY:
+                raise InvalidStaffPostingError(
+                    "FX accrual-only — use Adjust accrual on the staff ledger"
+                )
+            _ensure_period_accrual_up_to(
+                session,
+                entity_id,
+                employee_id,
+                accrual_date=payment_date,
+                period_year=period_year,
+                period_month=period_month,
+                period_salary_minor=period_salary_minor,
+                actor_id=actor_id,
+            )
+            from app.core.staff.ledger_effective import effective_accrual_rows_for_period
+
+            effective_rows = effective_accrual_rows_for_period(
+                session,
+                employee_id,
+                period_year=period_year,
+                period_month=period_month,
+            )
+            if not effective_rows:
+                raise InvalidStaffPostingError(
+                    "Could not record salary accrual for this period"
+                )
+            primary = max(effective_rows, key=lambda row: row.created_at)
+            journal_entry = session.get(JournalEntry, primary.journal_entry_id)
+            if journal_entry is None:
+                raise InvalidStaffPostingError(
+                    "Salary accrual journal entry missing for this period"
+                )
+            session.commit()
+            session.refresh(journal_entry)
+            session.refresh(primary)
+            balance = session.scalar(
+                select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
+                    StaffLedgerEntry.employee_id == employee_id
+                )
+            )
+            return StaffPaymentPostResult(
+                journal_entry=journal_entry,
+                staff_ledger_entry=primary,
+                balance_minor=int(balance or 0),
+                advance_applied_minor=0,
+            )
 
         if employee.pay_currency != PayCurrency.TRY:
             _ensure_period_accrual_up_to(
@@ -934,8 +1033,120 @@ def post_incentive_paid(
     payment_account_id: uuid.UUID,
 ) -> StaffAdvancePostResult:
     """Company-covered staff expense / incentive — Dr 5100 / Cr cash (no salary payable)."""
+    return _post_try_direct_staff_expense(
+        session,
+        entity_id,
+        employee_id,
+        payment_date=payment_date,
+        amount_minor=amount_minor,
+        description=description,
+        actor_id=actor_id,
+        payment_account_id=payment_account_id,
+        movement_type=StaffMovementType.INCENTIVE_PAID,
+    )
+
+
+def post_extra_days_paid(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    *,
+    payment_date: date,
+    extra_days: int,
+    per_day_minor: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID | None = None,
+) -> StaffAdvancePostResult | StaffAccrualPostResult:
+    """Record extra work days — pay from cash now or accrue to salaries payable."""
+    if extra_days <= 0:
+        raise ValueError("extra_days must be positive")
+    if per_day_minor <= 0:
+        raise ValueError("per_day_minor must be positive")
+    amount_minor = extra_days * per_day_minor
+    if payment_account_id is not None:
+        return _post_try_direct_staff_expense(
+            session,
+            entity_id,
+            employee_id,
+            payment_date=payment_date,
+            amount_minor=amount_minor,
+            description=description,
+            actor_id=actor_id,
+            payment_account_id=payment_account_id,
+            movement_type=StaffMovementType.EXTRA_DAYS_PAID,
+            extra_days=extra_days,
+        )
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        employee = _get_employee(session, entity_id, employee_id)
+        if employee.pay_currency != PayCurrency.TRY:
+            raise InvalidStaffPostingError(
+                "FX extra days accrual is not supported — use Advance"
+            )
+        salary_expense = _chart_account(session, SALARY_EXPENSE_CODE)
+        salaries_payable = _chart_account(session, SALARIES_PAYABLE_CODE)
+        lines = build_try_salary_accrual_lines(
+            salary_expense_id=salary_expense.id,
+            salaries_payable_id=salaries_payable.id,
+            amount_kurus=amount_minor,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            payment_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.STAFF_ACCRUAL,
+        )
+        staff_entry = staff_ledger.persist_staff_ledger_entry(
+            session,
+            employee_id,
+            movement_date=payment_date,
+            movement_type=StaffMovementType.EXTRA_DAYS_ACCRUED,
+            amount_minor=amount_minor,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+            extra_days=extra_days,
+        )
+        session.commit()
+        session.refresh(journal_entry)
+        session.refresh(staff_entry)
+        _ = list(journal_entry.lines)
+        balance = session.scalar(
+            select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
+                StaffLedgerEntry.employee_id == employee_id
+            )
+        )
+        return StaffAccrualPostResult(
+            journal_entry=journal_entry,
+            staff_ledger_entry=staff_entry,
+            balance_minor=int(balance or 0),
+        )
+
+
+def _post_try_direct_staff_expense(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    *,
+    payment_date: date,
+    amount_minor: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+    movement_type: StaffMovementType,
+    extra_days: int | None = None,
+) -> StaffAdvancePostResult:
+    """Direct salary expense paid from cash — no salaries payable (incentive, extra days)."""
     if amount_minor <= 0:
-        raise ValueError("Incentive amount_minor must be positive")
+        raise ValueError("amount_minor must be positive")
 
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -963,11 +1174,12 @@ def post_incentive_paid(
             session,
             employee_id,
             movement_date=payment_date,
-            movement_type=StaffMovementType.INCENTIVE_PAID,
+            movement_type=movement_type,
             amount_minor=-amount_minor,
             description=description,
             actor_id=actor_id,
             journal_entry_id=journal_entry.id,
+            extra_days=extra_days,
         )
         session.commit()
         session.refresh(journal_entry)

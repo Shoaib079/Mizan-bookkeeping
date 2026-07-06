@@ -1108,6 +1108,8 @@ def correct_staff_journal_entry(
                 journal_entry_id=corrected.id,
                 reference_type=staff_row.reference_type,
                 reference_id=staff_row.reference_id,
+                period_year=staff_row.period_year,
+                period_month=staff_row.period_month,
             )
 
         def new_fx(sess: Session, corrected: JournalEntry) -> None:

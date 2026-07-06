@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | (none — owner sign-off pending on agency group sales v2) |
+| **Active slice**         | (none — owner sign-off pending on staff extra days + accrual) |
 | **Next up**              | P5 — Delete company UI |
-| **Last completed slice** | Agency group sales v2 — frontend (menus, itemized FX/TRY sale, edit/void, payment) |
-| **Last commit/tag**      | `v0.agency-group-sales-fe` |
+| **Last completed slice** | Staff extra days + global accrual consolidation |
+| **Last commit/tag**      | `v0.staff-extra-days-accrual` |
 
 **Owner sign-off required** — agency group sales v2 touches FX receivable/payment paths (money-critical). **Follow-up (not in v2):** per-menu period report for group/agency sales.
 
@@ -1869,6 +1869,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-06 | Staff extra days + accrual consolidation        | `v0.staff-extra-days-accrual`                          | Global one-accrual-per-period (effective rows + pay-time correction); migration `077` `extra_days`; `EXTRA_DAYS_ACCRUED`/`PAID`; accrual-only salary (`amount_minor=0`); extra days in pay-salary dialog without paying now; date before employee (Expenses + Add hub); accrual form month reset fix; 4+ pytest |
 | 2026-07-06 | Operational ledger — effective entries only     | `v0.operational-ledger-effective`                      | `subledger_display.py`: classify effective / void_reversal / superseded; `display_kind` + `was_corrected` on staff/customer/partner/supplier/FX APIs; supplier activity aligned; dashboard recent entries `effective_only`; UI history toggle + Corrected badge on all operational ledgers; GL report unchanged |
 | 2026-07-06 | Review sales date filter + Excel export         | `v0.review-sales-date-export` / `efd1c99`              | `ReportDateRange` + All/Needs review/Posted tabs on `/review/sales`; GET export uncapped; delivery activity export paginates through all rows; pytest + vitest |
 | 2026-07-05 | Expense category add in-place (no flicker)      | `v0.expense-category-inplace-add` / `d998e3c`          | Portal Add category dialog out of parent form; stopPropagation; `mergeExpenseAccounts` + `appendExpenseAccount` instead of chart refetch; vitest |

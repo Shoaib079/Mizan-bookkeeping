@@ -13,7 +13,7 @@ import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
-import { todayTrDate } from "@/lib/dates";
+import { todayTrDate, calendarMonth, priorCalendarMonth } from "@/lib/dates";
 
 const MONTHS = [
   { value: "1", label: "January" },
@@ -36,6 +36,8 @@ type Props = {
   employeeId: string;
   payCurrency: string;
   embedded?: boolean;
+  /** Adjust-accrual flows usually target the prior salary month. */
+  defaultSalaryPeriod?: "current" | "prior";
   onSaved?: () => void;
 };
 
@@ -45,32 +47,38 @@ export function StaffAccrualForm({
   employeeId,
   payCurrency,
   embedded,
+  defaultSalaryPeriod = "current",
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
-  const now = new Date();
-
-  useEffect(() => {
-    if (open) submitIdempotency.resetSubmit();
-  }, [open, submitIdempotency]);
   const isTry = payCurrency === "TRY";
   const [dateText, setDateText] = useState("");
-  const [periodYear, setPeriodYear] = useState(String(now.getFullYear()));
-  const [periodMonth, setPeriodMonth] = useState(String(now.getMonth() + 1));
+  const [periodYear, setPeriodYear] = useState("");
+  const [periodMonth, setPeriodMonth] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("Salary accrual");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setDateText(todayTrDate());
-      setPeriodYear(String(now.getFullYear()));
-      setPeriodMonth(String(now.getMonth() + 1));
-    }
-  }, [open, now]);
+    if (!open) return;
+    const period =
+      defaultSalaryPeriod === "prior"
+        ? priorCalendarMonth()
+        : calendarMonth();
+    setDateText(todayTrDate());
+    setPeriodYear(String(period.year));
+    setPeriodMonth(String(period.month));
+    setAmountText("");
+    setDescription("Salary accrual");
+    setError(null);
+  }, [open, defaultSalaryPeriod]);
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
