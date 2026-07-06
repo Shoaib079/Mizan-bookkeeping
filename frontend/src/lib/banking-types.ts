@@ -84,6 +84,9 @@ export type BankStatementLine = {
   classification: StatementLineClassification;
   status: StatementLineStatus;
   supplier_id: string | null;
+  employee_id?: string | null;
+  partner_id?: string | null;
+  customer_id?: string | null;
   review_reason: string | null;
   journal_entry_id: string | null;
   candidate_supplier_ledger_entry_id?: string | null;

@@ -6,6 +6,7 @@ import {
   classificationOptionsForAmount,
   deliveryPlatformPickerHint,
   suggestClassificationForLine,
+  initialClassificationForLine,
   suggestDeliveryPlatformId,
   suggestSupplierId,
 } from "@/lib/statement-classification-options";
@@ -63,6 +64,39 @@ describe("suggestClassificationForLine", () => {
         description: "NET SATIŞ TUTARI INDIA GATE RESTAURANT",
       }),
     ).toBe("pos_settlement");
+  });
+
+  it("suggests bank fee for HAVALE outflows", () => {
+    expect(
+      suggestClassificationForLine({
+        amount_kurus: -768_500,
+        description: "GIDEN HAVALE -CA***** TA***** AN*****",
+      }),
+    ).toBe("bank_fee");
+  });
+});
+
+describe("initialClassificationForLine", () => {
+  it("keeps posted classification instead of HAVALE bank-fee heuristic", () => {
+    expect(
+      initialClassificationForLine({
+        amount_kurus: -768_500,
+        description: "GIDEN HAVALE -CA***** TA***** AN*****",
+        classification: "partner_drawing_repayment",
+        status: "posted",
+      }),
+    ).toBe("partner_drawing_repayment");
+  });
+
+  it("still suggests for unposted queue lines", () => {
+    expect(
+      initialClassificationForLine({
+        amount_kurus: -768_500,
+        description: "GIDEN HAVALE -CA***** TA***** AN*****",
+        classification: "unclassified",
+        status: "imported",
+      }),
+    ).toBe("bank_fee");
   });
 });
 

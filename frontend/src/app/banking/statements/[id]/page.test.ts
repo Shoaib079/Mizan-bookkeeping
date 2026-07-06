@@ -43,6 +43,20 @@ describe("StatementDetailPage", () => {
     expect(barSource).toContain("onPosted(result)");
     expect(barSource).toContain("ClassifyStatementLineResult");
   });
+
+  it("opens salary period dialog when correcting staff_payment lines", async () => {
+    const barSource = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../../../../components/statement-classify-bar.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(barSource).toContain('setSalaryDialogPurpose("correct")');
+    expect(barSource).toContain("executeCorrect(periodFields)");
+    expect(barSource).toContain("openCorrectDialog");
+    expect(barSource).toContain("postedLineTargetSummary");
+    expect(barSource).toContain("hydrateStatementLineFormState");
+  });
 });
 
 describe("StatementLinesLedger default view", () => {

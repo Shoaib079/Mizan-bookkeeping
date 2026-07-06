@@ -119,6 +119,8 @@ class BankStatementLineRead(BaseModel):
     classification: StatementLineClassification
     status: StatementLineStatus
     supplier_id: uuid.UUID | None
+    employee_id: uuid.UUID | None = None
+    partner_id: uuid.UUID | None = None
     journal_entry_id: uuid.UUID | None
     supplier_ledger_entry_id: uuid.UUID | None
     account_transfer_id: uuid.UUID | None

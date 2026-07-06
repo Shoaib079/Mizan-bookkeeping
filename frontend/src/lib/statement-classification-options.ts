@@ -1,6 +1,10 @@
 /** Bank statement line classification — shared labels and amount-aware filtering. */
 
-import type { StatementLineClassification } from "@/lib/banking-types";
+import type {
+  StatementLineClassification,
+  StatementLineStatus,
+} from "@/lib/banking-types";
+import { isQueueLine } from "@/lib/statement-line-filters";
 
 export type ClassificationTarget =
   | "supplier"
@@ -241,6 +245,23 @@ export function suggestClassificationForLine(line: {
     return "supplier_payment";
   }
   return "unknown";
+}
+
+/** Queue lines: suggestion/heuristic. Resolved lines: keep posted classification. */
+export function initialClassificationForLine(line: {
+  amount_kurus: number;
+  description: string;
+  classification: StatementLineClassification;
+  status: StatementLineStatus;
+  suggestion?: { classification: StatementLineClassification } | null;
+}): StatementLineClassification {
+  if (!isQueueLine(line) && line.classification !== "unclassified") {
+    return line.classification;
+  }
+  if (line.suggestion?.classification) {
+    return line.suggestion.classification;
+  }
+  return suggestClassificationForLine(line);
 }
 
 /** Match delivery platform name from statement description (e.g. TRENDYOL → Trendyol). */

@@ -25,9 +25,6 @@ import {
   classificationOption,
   classificationOptionGroups,
   deliveryPlatformPickerHint,
-  suggestClassificationForLine,
-  suggestDeliveryPlatformId,
-  suggestSupplierId,
 } from "@/lib/statement-classification-options";
 import {
   deliveryPlatformComboboxOptions,
@@ -41,6 +38,11 @@ import {
   isCorrectableLine,
   isQueueLine,
 } from "@/lib/statement-line-filters";
+import {
+  hydrateStatementLineFormState,
+  postedLineTargetSummary,
+  type StatementLineFormTargets,
+} from "@/lib/statement-line-form-state";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -85,6 +87,9 @@ export function StatementClassifyBar({
   const [correctOpen, setCorrectOpen] = useState(false);
   const [correctReason, setCorrectReason] = useState("");
   const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
+  const [salaryDialogPurpose, setSalaryDialogPurpose] = useState<
+    "post" | "correct" | null
+  >(null);
 
   const selectedEmployee = useMemo(
     () => pickers.employees.find((e) => e.id === employeeId) ?? null,
@@ -92,6 +97,43 @@ export function StatementClassifyBar({
   );
   const inQueue = line != null && isQueueLine(line);
   const correctable = line != null && isCorrectableLine(line) && !inQueue;
+  const postedTargetSummary =
+    line != null && correctable
+      ? postedLineTargetSummary(line, pickers)
+      : null;
+
+  function applyFormTargets(targets: StatementLineFormTargets) {
+    setClassification(targets.classification);
+    setSupplierId(targets.supplierId);
+    setCustomerId(targets.customerId);
+    setEmployeeId(targets.employeeId);
+    setPartnerId(targets.partnerId);
+    setCounterpartId(targets.counterpartId);
+    setCreditCardId(targets.creditCardId);
+    setExpenseAccountId(targets.expenseAccountId);
+    setDeliveryPlatformId(targets.deliveryPlatformId);
+  }
+
+  function openCorrectDialog() {
+    if (!line) return;
+    applyFormTargets(hydrateStatementLineFormState(line, pickers, "correct"));
+    setCorrectOpen(true);
+  }
+
+  function targetRequiredForClassification(
+    target: StatementLineClassification,
+  ): boolean {
+    const kind = classificationOption(target)?.target;
+    if (kind === "supplier" && !supplierId) return true;
+    if (kind === "customer" && !customerId) return true;
+    if (kind === "employee" && !employeeId) return true;
+    if (kind === "partner" && !partnerId) return true;
+    if (kind === "transfer" && !counterpartId) return true;
+    if (kind === "credit_card" && !creditCardId) return true;
+    if (kind === "expense" && !expenseAccountId) return true;
+    if (kind === "delivery_platform" && !deliveryPlatformId) return true;
+    return false;
+  }
 
   useEffect(() => {
     submitIdempotency.resetSubmit();
@@ -104,36 +146,9 @@ export function StatementClassifyBar({
     setCorrectOpen(false);
     setCorrectReason("");
 
-    if (line.suggestion) {
-      setClassification(line.suggestion.classification);
-      if (line.suggestion.supplier_id) {
-        setSupplierId(line.suggestion.supplier_id);
-      } else if (pickers.suppliers[0]) {
-        setSupplierId(pickers.suppliers[0].id);
-      }
-      if (line.suggestion.expense_account_id) {
-        setExpenseAccountId(line.suggestion.expense_account_id);
-      } else if (pickers.expenseAccounts[0]) {
-        setExpenseAccountId(pickers.expenseAccounts[0].id);
-      }
-    } else {
-      setClassification(suggestClassificationForLine(line));
-      if (pickers.suppliers[0]) setSupplierId(pickers.suppliers[0].id);
-      if (pickers.expenseAccounts[0]) setExpenseAccountId(pickers.expenseAccounts[0].id);
-      const suggestedSupplier = suggestSupplierId(line.description, pickers.suppliers);
-      if (suggestedSupplier) setSupplierId(suggestedSupplier);
+    if (isQueueLine(line)) {
+      applyFormTargets(hydrateStatementLineFormState(line, pickers, "post"));
     }
-
-    if (pickers.customers[0]) setCustomerId(pickers.customers[0].id);
-    if (pickers.employees[0]) setEmployeeId(pickers.employees[0].id);
-    if (pickers.partners[0]) setPartnerId(pickers.partners[0].id);
-    if (pickers.moneyAccounts[0]) setCounterpartId(pickers.moneyAccounts[0].id);
-    if (pickers.creditCards[0]) setCreditCardId(pickers.creditCards[0].id);
-    const suggestedPlatform = suggestDeliveryPlatformId(
-      line.description,
-      pickers.deliveryPlatforms,
-    );
-    setDeliveryPlatformId(suggestedPlatform ?? "");
   }, [line, pickers]);
 
   const deliveryPlatformHint =
@@ -236,18 +251,15 @@ export function StatementClassifyBar({
         setError("Choose an employee.");
         return;
       }
+      setSalaryDialogPurpose("post");
       setSalaryDialogOpen(true);
       return;
     }
     await executePost();
   }
 
-  async function handleCorrect(event: FormEvent) {
-    event.preventDefault();
-    if (!entityId || !line || !correctReason.trim()) {
-      setError("Correction reason is required.");
-      return;
-    }
+  async function executeCorrect(extra?: Record<string, unknown>) {
+    if (!entityId || !line || !correctReason.trim()) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -261,12 +273,15 @@ export function StatementClassifyBar({
             typeof correctStatementLine
           >[3]),
           reason: correctReason.trim(),
+          ...extra,
         },
         idempotencyKey,
       );
       submitIdempotency.completeSubmit();
       toast("Line corrected and re-posted");
       setCorrectOpen(false);
+      setSalaryDialogOpen(false);
+      setSalaryDialogPurpose(null);
       onPosted(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Correction failed");
@@ -275,13 +290,41 @@ export function StatementClassifyBar({
     }
   }
 
+  async function handleCorrect(event: FormEvent) {
+    event.preventDefault();
+    if (!entityId || !line || !correctReason.trim()) {
+      setError("Correction reason is required.");
+      return;
+    }
+    if (amountMismatch) {
+      setError(
+        "This classification does not match the line direction (inflow vs outflow).",
+      );
+      return;
+    }
+    if (targetRequiredForClassification(classification)) {
+      setError("Choose the linked account, supplier, or other target before correcting.");
+      return;
+    }
+    if (classification === "staff_payment") {
+      if (!employeeId) {
+        setError("Choose an employee.");
+        return;
+      }
+      setSalaryDialogPurpose("correct");
+      setSalaryDialogOpen(true);
+      return;
+    }
+    await executeCorrect();
+  }
+
   const targetKind = classificationOption(classification)?.target;
 
-  function targetControl() {
+  function targetControl(idPrefix = "classify") {
     if (targetKind === "supplier") {
       return (
         <Combobox
-          id="classify-supplier"
+          id={`${idPrefix}-supplier`}
           value={supplierId}
           onValueChange={setSupplierId}
           options={pickers.suppliers.map((s) => ({ value: s.id, label: s.name }))}
@@ -293,7 +336,7 @@ export function StatementClassifyBar({
     if (targetKind === "customer") {
       return (
         <Combobox
-          id="classify-customer"
+          id={`${idPrefix}-customer`}
           value={customerId}
           onValueChange={setCustomerId}
           options={pickers.customers.map((c) => ({ value: c.id, label: c.name }))}
@@ -305,7 +348,7 @@ export function StatementClassifyBar({
     if (targetKind === "employee") {
       return (
         <Combobox
-          id="classify-employee"
+          id={`${idPrefix}-employee`}
           value={employeeId}
           onValueChange={setEmployeeId}
           options={pickers.employees.map((e) => ({ value: e.id, label: e.name }))}
@@ -317,7 +360,7 @@ export function StatementClassifyBar({
     if (targetKind === "partner") {
       return (
         <Combobox
-          id="classify-partner"
+          id={`${idPrefix}-partner`}
           value={partnerId}
           onValueChange={setPartnerId}
           options={pickers.partners.map((p) => ({ value: p.id, label: p.name }))}
@@ -329,7 +372,7 @@ export function StatementClassifyBar({
     if (targetKind === "transfer") {
       return (
         <Combobox
-          id="classify-transfer"
+          id={`${idPrefix}-transfer`}
           value={counterpartId}
           onValueChange={setCounterpartId}
           options={pickers.moneyAccounts.map((a) => ({
@@ -344,7 +387,7 @@ export function StatementClassifyBar({
     if (targetKind === "credit_card") {
       return (
         <Combobox
-          id="classify-card"
+          id={`${idPrefix}-card`}
           value={creditCardId}
           onValueChange={setCreditCardId}
           options={pickers.creditCards.map((a) => ({
@@ -361,7 +404,7 @@ export function StatementClassifyBar({
         <div className="flex min-w-0 flex-1 items-end gap-1">
           <div className="min-w-0 flex-1">
             <Combobox
-              id="classify-expense"
+              id={`${idPrefix}-expense`}
               value={expenseAccountId}
               onValueChange={setExpenseAccountId}
               options={pickers.expenseAccounts.map((a) => ({
@@ -389,7 +432,7 @@ export function StatementClassifyBar({
       return (
         <div className="space-y-1">
           <Combobox
-            id="classify-platform"
+            id={`${idPrefix}-platform`}
             value={deliveryPlatformId}
             onValueChange={setDeliveryPlatformId}
             options={deliveryPlatformComboboxOptions(pickers.deliveryPlatforms)}
@@ -517,13 +560,32 @@ export function StatementClassifyBar({
             {formatTry(line.amount_kurus)}
           </span>
 
-          <div className="min-w-0 flex-[1_1_12rem] basis-[12rem]">
-            {renderClassificationSelect("classify-type", !inQueue && !correctOpen)}
-          </div>
-
-          <div className="min-w-0 flex-[2_1_10rem] basis-[10rem]">
-            {targetControl()}
-          </div>
+          {inQueue ? (
+            <>
+              <div className="min-w-0 flex-[1_1_12rem] basis-[12rem]">
+                {renderClassificationSelect("classify-type", false)}
+              </div>
+              <div className="min-w-0 flex-[2_1_10rem] basis-[10rem]">
+                {targetControl("classify")}
+              </div>
+            </>
+          ) : correctable ? (
+            <div className="min-w-0 flex-1 text-sm leading-snug">
+              <span className="font-medium text-foreground">
+                {classificationLabel(line.classification)}
+              </span>
+              {postedTargetSummary ? (
+                <>
+                  {" · "}
+                  <span className="text-muted-foreground">{postedTargetSummary}</span>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {classificationLabel(line.classification)}
+            </p>
+          )}
 
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             {inQueue && (
@@ -542,7 +604,7 @@ export function StatementClassifyBar({
                 type="button"
                 variant="secondary"
                 className="h-9 text-xs"
-                onClick={() => setCorrectOpen(true)}
+                onClick={openCorrectDialog}
               >
                 Correct…
               </Button>
@@ -550,7 +612,7 @@ export function StatementClassifyBar({
           </div>
         </div>
 
-        {selectedOption && (
+        {inQueue && selectedOption && (
           <p
             className={cn(
               "mt-2 text-[11px] leading-snug",
@@ -560,6 +622,13 @@ export function StatementClassifyBar({
             {selectedOption.hint}
             {amountMismatch &&
               " — this line is the wrong direction for this type."}
+          </p>
+        )}
+
+        {correctable && (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Posted to ledger — use Correct to void and re-classify. Pickers are not
+            editable here so a wrong supplier cannot be saved by accident.
           </p>
         )}
       </form>
@@ -623,13 +692,23 @@ export function StatementClassifyBar({
               {renderClassificationSelect("correct-classification", false)}
             </div>
           </div>
-          {targetControl()}
+          {targetControl("correct")}
+          {classification === "staff_payment" && (
+            <p className="text-xs text-muted-foreground">
+              Salary month and amount are chosen on the next step — same as when
+              posting from the queue.
+            </p>
+          )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setCorrectOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Correcting…" : "Correct & re-post"}
+              {submitting
+                ? "Correcting…"
+                : classification === "staff_payment"
+                  ? "Next: salary period…"
+                  : "Correct & re-post"}
             </Button>
           </div>
         </form>
@@ -638,7 +717,10 @@ export function StatementClassifyBar({
       {line && entityId && selectedEmployee && (
         <StaffSalaryPaymentDialog
           open={salaryDialogOpen}
-          onClose={() => setSalaryDialogOpen(false)}
+          onClose={() => {
+            setSalaryDialogOpen(false);
+            setSalaryDialogPurpose(null);
+          }}
           entityId={entityId}
           employeeId={selectedEmployee.id}
           employeeName={selectedEmployee.name}
@@ -653,11 +735,16 @@ export function StatementClassifyBar({
               setError("Bank line amount must match the payment.");
               return;
             }
-            await executePost({
+            const periodFields = {
               period_year: payload.period_year,
               period_month: payload.period_month,
               period_salary_minor: payload.period_salary_minor,
-            });
+            };
+            if (salaryDialogPurpose === "correct") {
+              await executeCorrect(periodFields);
+              return;
+            }
+            await executePost(periodFields);
           }}
         />
       )}

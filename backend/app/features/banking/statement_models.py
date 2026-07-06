@@ -188,4 +188,16 @@ class BankStatementLine(EntityScopedMixin, Base):
         nullable=True,
         index=True,
     )
+    employee_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("employees.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    partner_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("partners.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     classification_source: Mapped[str | None] = mapped_column(String(16), nullable=True)

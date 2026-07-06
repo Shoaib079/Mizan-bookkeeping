@@ -66,6 +66,10 @@ from app.features.banking.transfer_models import AccountTransfer
 from app.features.delivery.models import DeliverySettlement
 from app.features.pos.models import PosSettlement
 from app.features.customers.models import Customer
+from app.core.partners.models import PartnerLedgerEntry
+from app.core.partners.types import PartnerMovementType
+from app.core.staff.models import StaffLedgerEntry
+from app.core.staff.types import StaffMovementType
 from app.features.partners.models import Partner
 from app.features.staff.models import Employee
 from app.features.suppliers.models import Supplier
@@ -73,6 +77,77 @@ from app.features.suppliers.schema import SupplierCreate
 from app.features.suppliers.service import DuplicateSupplierError, create_supplier
 
 BANK_STATEMENT_LINE_REF = "bank_statement_line"
+
+_STAFF_LINE_CLASSIFICATIONS = frozenset(
+    {
+        StatementLineClassification.STAFF_PAYMENT,
+        StatementLineClassification.STAFF_ADVANCE,
+        StatementLineClassification.STAFF_INCENTIVE,
+    }
+)
+
+_PARTNER_LINE_CLASSIFICATIONS = frozenset(
+    {
+        StatementLineClassification.PARTNER_DRAWING,
+        StatementLineClassification.PARTNER_REIMBURSEMENT,
+        StatementLineClassification.PARTNER_DRAWING_REPAYMENT,
+    }
+)
+
+
+def _resolve_employee_id_for_line(
+    session: Session,
+    line: BankStatementLine,
+) -> uuid.UUID | None:
+    if line.employee_id is not None:
+        return line.employee_id
+    if line.journal_entry_id is None or line.classification not in _STAFF_LINE_CLASSIFICATIONS:
+        return None
+    preferred = session.scalar(
+        select(StaffLedgerEntry.employee_id)
+        .where(StaffLedgerEntry.journal_entry_id == line.journal_entry_id)
+        .where(
+            StaffLedgerEntry.movement_type.in_(
+                (
+                    StaffMovementType.SALARY_PAYMENT,
+                    StaffMovementType.ADVANCE_PAID,
+                    StaffMovementType.INCENTIVE_PAID,
+                )
+            )
+        )
+        .limit(1)
+    )
+    if preferred is not None:
+        return preferred
+    return session.scalar(
+        select(StaffLedgerEntry.employee_id)
+        .where(StaffLedgerEntry.journal_entry_id == line.journal_entry_id)
+        .limit(1)
+    )
+
+
+def _resolve_partner_id_for_line(
+    session: Session,
+    line: BankStatementLine,
+) -> uuid.UUID | None:
+    if line.partner_id is not None:
+        return line.partner_id
+    if line.journal_entry_id is None or line.classification not in _PARTNER_LINE_CLASSIFICATIONS:
+        return None
+    return session.scalar(
+        select(PartnerLedgerEntry.partner_id)
+        .where(PartnerLedgerEntry.journal_entry_id == line.journal_entry_id)
+        .where(
+            PartnerLedgerEntry.movement_type.in_(
+                (
+                    PartnerMovementType.DRAWING,
+                    PartnerMovementType.REIMBURSEMENT_PAID,
+                    PartnerMovementType.DRAWING_REPAYMENT,
+                )
+            )
+        )
+        .limit(1)
+    )
 
 
 class DuplicateStatementError(Exception):
@@ -148,6 +223,11 @@ def _to_line_read(
             )
         except RuntimeError:
             suggestion = None
+    employee_id = line.employee_id
+    partner_id = line.partner_id
+    if session is not None:
+        employee_id = _resolve_employee_id_for_line(session, line)
+        partner_id = _resolve_partner_id_for_line(session, line)
     return BankStatementLineRead(
         id=line.id,
         statement_id=line.statement_id,
@@ -158,6 +238,8 @@ def _to_line_read(
         classification=line.classification,
         status=line.status,
         supplier_id=line.supplier_id,
+        employee_id=employee_id,
+        partner_id=partner_id,
         journal_entry_id=line.journal_entry_id,
         supplier_ledger_entry_id=line.supplier_ledger_entry_id,
         account_transfer_id=line.account_transfer_id,
@@ -1990,6 +2072,7 @@ def classify_statement_line(
             line.classification = StatementLineClassification.STAFF_PAYMENT
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
+            line.employee_id = employee_id
             session.commit()
             session.refresh(line)
 
@@ -2033,6 +2116,7 @@ def classify_statement_line(
             line.classification = StatementLineClassification.STAFF_INCENTIVE
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
+            line.employee_id = employee_id
             session.commit()
             session.refresh(line)
 
@@ -2076,6 +2160,7 @@ def classify_statement_line(
             line.classification = StatementLineClassification.STAFF_ADVANCE
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
+            line.employee_id = employee_id
             session.commit()
             session.refresh(line)
 
@@ -2119,6 +2204,7 @@ def classify_statement_line(
             line.classification = StatementLineClassification.PARTNER_DRAWING
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
+            line.partner_id = partner_id
             session.commit()
             session.refresh(line)
 
@@ -2166,6 +2252,7 @@ def classify_statement_line(
             line.classification = StatementLineClassification.PARTNER_REIMBURSEMENT
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
+            line.partner_id = partner_id
             session.commit()
             session.refresh(line)
 
@@ -2213,6 +2300,7 @@ def classify_statement_line(
             line.classification = StatementLineClassification.PARTNER_DRAWING_REPAYMENT
             line.status = StatementLineStatus.POSTED
             line.journal_entry_id = journal_id
+            line.partner_id = partner_id
             session.commit()
             session.refresh(line)
 
@@ -2389,6 +2477,8 @@ def _reset_line_for_correction(line: BankStatementLine) -> None:
     line.credit_card_payment_id = None
     line.customer_id = None
     line.customer_ledger_entry_id = None
+    line.employee_id = None
+    line.partner_id = None
     line.expense_entry_id = None
     line.review_reason = None
     line.candidate_supplier_ledger_entry_id = None
