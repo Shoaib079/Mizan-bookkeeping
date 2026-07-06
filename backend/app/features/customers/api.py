@@ -15,6 +15,7 @@ from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
 from app.features.auth.models import User
 from app.features.customers import service
+from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.features.customers.schema import (
     CreditSaleCreate,
     CreditSaleResponse,
@@ -259,3 +260,67 @@ def correct_credit_sale(
         customer_ledger_entry=CustomerLedgerEntryRead.model_validate(new_row),
         balance_kurus=balance,
     )
+
+
+@router.post(
+    "/{customer_id}/payments/{journal_entry_id}/void",
+    response_model=SubledgerVoidOut,
+)
+def void_customer_payment(
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.void_customer_payment_entry(
+            session,
+            entity_id,
+            customer_id,
+            journal_entry_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{customer_id}/credit-sales/{journal_entry_id}/void",
+    response_model=SubledgerVoidOut,
+)
+def void_credit_sale(
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.void_credit_sale_entry(
+            session,
+            entity_id,
+            customer_id,
+            journal_entry_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

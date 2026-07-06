@@ -31,16 +31,27 @@ export function countHiddenLedgerHistory<T extends SubledgerDisplayRow>(
   return rows.filter((row) => !isEffectiveLedgerRow(row)).length;
 }
 
+export function canCorrectSubledgerRow(
+  row: SubledgerDisplayRow & { journal_entry_id?: string | null },
+): boolean {
+  return canEditSubledgerRow(row);
+}
+
+export function canEditSubledgerRow(
+  row: SubledgerDisplayRow & { journal_entry_id?: string | null },
+): boolean {
+  return isEffectiveLedgerRow(row) && Boolean(row.journal_entry_id);
+}
+
 export function subledgerRowClassName(
   kind: SubledgerDisplayKind | undefined,
   showHistory: boolean,
 ): string {
-  if (!showHistory || !kind || kind === "effective") return "";
+  if (!kind || kind === "effective") return "";
   return "text-muted-foreground line-through opacity-70";
 }
 
-export function canCorrectSubledgerRow(
-  row: SubledgerDisplayRow & { journal_entry_id?: string | null },
-): boolean {
-  return isEffectiveLedgerRow(row) && Boolean(row.journal_entry_id);
+export function journalEntryRowClassName(status: string): string {
+  if (status === "voided") return "text-muted-foreground line-through opacity-70";
+  return "";
 }

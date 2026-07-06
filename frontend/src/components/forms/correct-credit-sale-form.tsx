@@ -115,7 +115,7 @@ export function CorrectCreditSaleForm({
 
   return (
     <>
-      <Dialog open={open} title="Correct credit sale" onClose={onClose}>
+      <Dialog open={open} title="Edit credit sale" onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <Label htmlFor="ccs-date">Sale date</Label>
@@ -135,7 +135,7 @@ export function CorrectCreditSaleForm({
             />
           </div>
           <div>
-            <Label htmlFor="ccs-reason">Correction reason (optional)</Label>
+            <Label htmlFor="ccs-reason">Edit reason (optional)</Label>
             <Input id="ccs-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

@@ -3,7 +3,9 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { EditedBadge } from "@/components/ledger/corrected-badge";
+import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import {
   CorrectCustomerPaymentForm,
@@ -29,7 +31,6 @@ import { formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
 import {
-  canCorrectSubledgerRow,
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
@@ -102,6 +103,10 @@ export default function CustomerDetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableCustomerPaymentRow | null>(null);
+  const [voidTarget, setVoidTarget] = useState<{
+    journal_entry_id: string;
+    description: string;
+  } | null>(null);
 
   const resetDetailState = useCallback(() => {
     setCustomer(null);
@@ -112,6 +117,7 @@ export default function CustomerDetailPage() {
     setSaleOpen(false);
     setPaymentOpen(false);
     setCorrectPayment(null);
+    setVoidTarget(null);
   }, []);
 
   useEntitySwitchReset(entityId, resetDetailState);
@@ -258,7 +264,7 @@ export default function CustomerDetailPage() {
                       {entry.description}
                       {entry.was_corrected && (
                         <span className="ml-2">
-                          <CorrectedBadge />
+                          <EditedBadge />
                         </span>
                       )}
                     </DataTableCell>
@@ -269,24 +275,25 @@ export default function CustomerDetailPage() {
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell align="right">
-                      {entry.movement_type === "payment" &&
-                        canCorrectSubledgerRow(entry) && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="h-8 px-2"
-                            onClick={() =>
-                              setCorrectPayment({
-                                journal_entry_id: entry.journal_entry_id!,
-                                movement_date: entry.movement_date,
-                                amount_kurus: entry.amount_kurus,
-                                description: entry.description,
-                              })
-                            }
-                          >
-                            Correct
-                          </Button>
-                        )}
+                      {entry.movement_type === "payment" && (
+                        <SubledgerRowActions
+                          row={entry}
+                          onEdit={() =>
+                            setCorrectPayment({
+                              journal_entry_id: entry.journal_entry_id!,
+                              movement_date: entry.movement_date,
+                              amount_kurus: entry.amount_kurus,
+                              description: entry.description,
+                            })
+                          }
+                          onVoid={() =>
+                            setVoidTarget({
+                              journal_entry_id: entry.journal_entry_id!,
+                              description: entry.description,
+                            })
+                          }
+                        />
+                      )}
                     </DataTableCell>
                   </DataTableRow>
                 ))}
@@ -322,6 +329,18 @@ export default function CustomerDetailPage() {
             customerId={customerId}
             payment={correctPayment}
             onClose={() => setCorrectPayment(null)}
+            onSaved={() => void reload()}
+          />
+          <VoidSubledgerDialog
+            open={voidTarget !== null}
+            title="Void customer payment"
+            description={voidTarget?.description}
+            voidPath={
+              entityId && voidTarget
+                ? `/entities/${entityId}/customers/${customerId}/payments/${voidTarget.journal_entry_id}/void`
+                : null
+            }
+            onClose={() => setVoidTarget(null)}
             onSaved={() => void reload()}
           />
         </>

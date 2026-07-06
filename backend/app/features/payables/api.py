@@ -27,6 +27,7 @@ from app.core.auth.deps import member_read_guard, operations_write_guard, resolv
 from app.features.auth.models import User
 from app.features.payables import activity_excel
 from app.features.payables import supplier_activity
+from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.features.payables import service
 from app.features.payables.schema import (
     PayablesSummaryRead,
@@ -343,3 +344,67 @@ def correct_supplier_invoice(
         supplier_ledger_entry=SupplierLedgerEntryRead.model_validate(new_row),
         payable_balance_kurus=balance,
     )
+
+
+@router.post(
+    "/suppliers/{supplier_id}/payments/{journal_entry_id}/void",
+    response_model=SubledgerVoidOut,
+)
+def void_supplier_payment(
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.void_supplier_payment_entry(
+            session,
+            entity_id,
+            supplier_id,
+            journal_entry_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/suppliers/{supplier_id}/invoices/{journal_entry_id}/void",
+    response_model=SubledgerVoidOut,
+)
+def void_supplier_invoice(
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.void_supplier_invoice_entry(
+            session,
+            entity_id,
+            supplier_id,
+            journal_entry_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

@@ -229,7 +229,7 @@ export function SalesReviewPanel() {
                       className="h-8 px-3 text-xs"
                       onClick={() => setCorrectSummary(row)}
                     >
-                      Correct
+                      Edit
                     </Button>
                   ) : isPendingReviewStatus(row.status) ? (
                     <Link

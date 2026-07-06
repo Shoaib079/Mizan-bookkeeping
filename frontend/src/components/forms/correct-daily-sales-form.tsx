@@ -163,7 +163,7 @@ export function CorrectDailySalesForm({
 
   return (
     <>
-    <Dialog open={open} title="Correct daily sales" onClose={onClose}>
+    <Dialog open={open} title="Edit daily sales" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="correct-sales-date">Date (DD.MM.YYYY)</Label>

@@ -5,7 +5,9 @@ import { useCallback, useEffect, useState } from "react";
 
 import { PartnerExpenseFrontedForm } from "@/components/forms/partner-expense-fronted-form";
 import { PartnerCashMovementForm } from "@/components/forms/partner-cash-movement-form";
-import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { EditedBadge } from "@/components/ledger/corrected-badge";
+import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import {
   CorrectPartnerLedgerForm,
@@ -36,7 +38,6 @@ import {
 } from "@/lib/partner-balance";
 import { partnerMovementLabels } from "@/lib/subledger-labels";
 import {
-  canCorrectSubledgerRow,
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
@@ -77,6 +78,10 @@ export default function PartnerDetailPage() {
   const [repaymentOpen, setRepaymentOpen] = useState(false);
   const [allocateOpen, setAllocateOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
+  const [voidTarget, setVoidTarget] = useState<{
+    journal_entry_id: string;
+    description: string;
+  } | null>(null);
 
   const resetDetailState = useCallback(() => {
     setPartner(null);
@@ -90,6 +95,7 @@ export default function PartnerDetailPage() {
     setRepaymentOpen(false);
     setAllocateOpen(false);
     setCorrectEntry(null);
+    setVoidTarget(null);
   }, []);
 
   useEntitySwitchReset(entityId, resetDetailState);
@@ -242,7 +248,7 @@ export default function PartnerDetailPage() {
                       {entry.description}
                       {entry.was_corrected && (
                         <span className="ml-2">
-                          <CorrectedBadge />
+                          <EditedBadge />
                         </span>
                       )}
                     </DataTableCell>
@@ -250,25 +256,26 @@ export default function PartnerDetailPage() {
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell align="right">
-                      {correctablePartnerTypes.has(entry.movement_type) &&
-                        canCorrectSubledgerRow(entry) && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="h-8 px-2"
-                            onClick={() =>
-                              setCorrectEntry({
-                                journal_entry_id: entry.journal_entry_id!,
-                                movement_date: entry.movement_date,
-                                movement_type: entry.movement_type,
-                                amount_kurus: entry.amount_kurus,
-                                description: entry.description,
-                              })
-                            }
-                          >
-                            Correct
-                          </Button>
-                        )}
+                      {correctablePartnerTypes.has(entry.movement_type) && (
+                        <SubledgerRowActions
+                          row={entry}
+                          onEdit={() =>
+                            setCorrectEntry({
+                              journal_entry_id: entry.journal_entry_id!,
+                              movement_date: entry.movement_date,
+                              movement_type: entry.movement_type,
+                              amount_kurus: entry.amount_kurus,
+                              description: entry.description,
+                            })
+                          }
+                          onVoid={() =>
+                            setVoidTarget({
+                              journal_entry_id: entry.journal_entry_id!,
+                              description: entry.description,
+                            })
+                          }
+                        />
+                      )}
                     </DataTableCell>
                   </DataTableRow>
                 ))}
@@ -325,6 +332,18 @@ export default function PartnerDetailPage() {
             partnerId={partnerId}
             entry={correctEntry}
             onClose={() => setCorrectEntry(null)}
+            onSaved={() => void reload()}
+          />
+          <VoidSubledgerDialog
+            open={voidTarget !== null}
+            title="Void partner movement"
+            description={voidTarget?.description}
+            voidPath={
+              entityId && voidTarget
+                ? `/entities/${entityId}/partners/${partnerId}/ledger/${voidTarget.journal_entry_id}/void`
+                : null
+            }
+            onClose={() => setVoidTarget(null)}
             onSaved={() => void reload()}
           />
         </>

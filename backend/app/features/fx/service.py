@@ -17,7 +17,13 @@ from app.core.fx.spend_posting import (
     post_fx_conversion,
     post_fx_expense_spend,
 )
-from app.core.ledger.correction import CorrectionNotFoundError, correct_fx_conversion_or_spend, correct_fx_purchase
+from app.core.ledger.correction import (
+    CorrectionNotFoundError,
+    correct_fx_conversion_or_spend,
+    correct_fx_purchase,
+    void_fx_conversion_or_spend,
+    void_fx_purchase,
+)
 from app.core.ledger.models import JournalEntry, JournalEntrySource
 from app.core.ledger.subledger_display import (
     SubledgerDisplayKind,
@@ -351,4 +357,58 @@ def correct_fx_conversion_or_spend_entry(
         corrected_journal_entry_id=result.corrected.id,
         fx_ledger_entry=_to_ledger_read(session, new_row),
         try_cost_kurus=try_cost_kurus,
+    )
+
+
+def void_fx_purchase_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+):
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    result = void_fx_purchase(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )
+
+
+def void_fx_conversion_or_spend_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+):
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    result = void_fx_conversion_or_spend(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
     )

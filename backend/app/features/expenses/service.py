@@ -33,7 +33,11 @@ from app.adapters.ocr_ai.expense_account_suggest import (
     suggest_expense_account_via_ai,
 )
 from app.core.expenses.items import InvalidExpenseItemError, merge_expense_items, resolve_expense_item
-from app.core.ledger.correction import CorrectionNotFoundError, correct_expense_entry
+from app.core.ledger.correction import (
+    CorrectionNotFoundError,
+    correct_expense_entry,
+    void_expense_entry,
+)
 from app.core.expenses.posting import (
     InvalidExpensePostingError,
     post_expense_entry,
@@ -533,6 +537,49 @@ def correct_expense_by_id(
         reversal_journal_entry_id=result.reversal.id,
         corrected_journal_entry_id=result.corrected.id,
         expense=_to_expense_read(entry),
+    )
+
+
+def void_expense_by_id(
+    session: Session,
+    entity_id: uuid.UUID,
+    expense_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+):
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        entry = session.get(ExpenseEntry, expense_id)
+        if entry is None:
+            raise LookupError("Expense not found")
+        if entry.status != ExpenseEntryStatus.POSTED:
+            raise ExpenseNotCorrectableError(
+                f"expense status {entry.status.value!r} cannot be voided"
+            )
+        if entry.journal_entry_id is None:
+            raise ExpenseNotCorrectableError("expense has no journal entry to void")
+        journal_entry_id = entry.journal_entry_id
+
+    result = void_expense_entry(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
     )
 
 

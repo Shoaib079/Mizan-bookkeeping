@@ -46,6 +46,7 @@ from app.features.expenses.service import (
     ExpenseNotReviewableError,
     NotATipPhotoError,
 )
+from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.features.expenses.receipt_service import (
     DuplicateExpenseReceiptError,
     ExpenseReceiptNotReviewableError,
@@ -408,6 +409,35 @@ def correct_expense(
     except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/expenses/{expense_id}/void", response_model=SubledgerVoidOut)
+def void_expense(
+    entity_id: uuid.UUID,
+    expense_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return expenses_service.void_expense_by_id(
+            session,
+            entity_id,
+            expense_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ExpenseNotCorrectableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

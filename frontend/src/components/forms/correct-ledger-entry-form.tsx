@@ -170,7 +170,7 @@ export function CorrectLedgerEntryForm({
 
   return (
     <>
-      <Dialog open={open} title="Correct ledger entry" onClose={onClose}>
+      <Dialog open={open} title="Edit ledger entry" onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <Label htmlFor="cle-date">New entry date (DD.MM.YYYY)</Label>
@@ -226,7 +226,7 @@ export function CorrectLedgerEntryForm({
             </p>
           )}
           <div>
-            <Label htmlFor="cle-reason">Correction reason (optional)</Label>
+            <Label htmlFor="cle-reason">Edit reason (optional)</Label>
             <Input
               id="cle-reason"
               value={reason}

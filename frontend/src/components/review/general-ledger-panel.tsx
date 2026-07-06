@@ -18,6 +18,8 @@ import {
   CorrectLedgerEntryForm,
   type CorrectableLedgerEntry,
 } from "@/components/forms/correct-ledger-entry-form";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import {
   ForbiddenMessage,
   isForbiddenError,
@@ -39,6 +41,8 @@ import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { journalEntryRowClassName } from "@/lib/ledger-display";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 50;
 
@@ -247,6 +251,10 @@ function LedgerPanelContent() {
   const [correctTarget, setCorrectTarget] = useState<CorrectableLedgerEntry | null>(
     null,
   );
+  const [voidTarget, setVoidTarget] = useState<{
+    entry_id: string;
+    description: string;
+  } | null>(null);
   const [accounts, setAccounts] = useState<Record<string, ChartAccount>>({});
 
   useEffect(() => {
@@ -337,6 +345,7 @@ function LedgerPanelContent() {
     setTotal(0);
     setExpandedId(null);
     setCorrectTarget(null);
+    setVoidTarget(null);
     void reload();
   }, [entityId, reload]);
 
@@ -387,7 +396,7 @@ function LedgerPanelContent() {
       <p className="mb-6 max-w-3xl text-sm text-muted-foreground">
         Every journal entry for this restaurant — posted and voided. This is the
         general ledger, not the deferred audit-events log (immutable change
-        history). Correct posted manual journals and bank charges here; void manual
+        history). Edit posted manual journals and bank charges here; void manual
         journals on{" "}
         <Link href="/review/manual-journals" className="text-primary hover:underline">
           Manual journals
@@ -539,11 +548,12 @@ function LedgerPanelContent() {
                     <Fragment key={row.id}>
                       <tr
                         id={`ledger-entry-${row.id}`}
-                        className={
+                        className={cn(
                           row.id === focusId
                             ? "bg-primary/5 hover:bg-muted/20"
-                            : "hover:bg-muted/20"
-                        }
+                            : "hover:bg-muted/20",
+                          journalEntryRowClassName(row.status),
+                        )}
                       >
                         <DataTableCell>
                           <button
@@ -576,11 +586,12 @@ function LedgerPanelContent() {
                         <DataTableCell align="right">
                           {row.status === "posted" &&
                             CORRECTABLE_SOURCES.has(row.source) && (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                className="h-8 px-2"
-                                onClick={() =>
+                              <SubledgerRowActions
+                                row={{
+                                  display_kind: "effective",
+                                  journal_entry_id: row.id,
+                                }}
+                                onEdit={() =>
                                   setCorrectTarget({
                                     id: row.id,
                                     entry_date: row.entry_date,
@@ -589,9 +600,13 @@ function LedgerPanelContent() {
                                     lines: row.lines,
                                   })
                                 }
-                              >
-                                Correct
-                              </Button>
+                                onVoid={() =>
+                                  setVoidTarget({
+                                    entry_id: row.id,
+                                    description: row.description,
+                                  })
+                                }
+                              />
                             )}
                         </DataTableCell>
                       </tr>
@@ -619,6 +634,18 @@ function LedgerPanelContent() {
         open={correctTarget !== null}
         entry={correctTarget}
         onClose={() => setCorrectTarget(null)}
+        onSaved={() => void reload()}
+      />
+      <VoidSubledgerDialog
+        open={voidTarget !== null}
+        title="Void ledger entry"
+        description={voidTarget?.description}
+        voidPath={
+          entityId && voidTarget
+            ? `/entities/${entityId}/ledger/entries/${voidTarget.entry_id}/void`
+            : null
+        }
+        onClose={() => setVoidTarget(null)}
         onSaved={() => void reload()}
       />
     </>

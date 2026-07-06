@@ -19,7 +19,11 @@ from app.core.partners.ledger import (
 )
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import PartnerMovementType
-from app.core.ledger.correction import CorrectionNotFoundError, correct_partner_journal_entry
+from app.core.ledger.correction import (
+    CorrectionNotFoundError,
+    correct_partner_journal_entry,
+    void_partner_journal_entry,
+)
 from app.core.ledger.posting import PostingLine
 from app.core.ledger.subledger_display import enrich_entry_models
 from app.core.chart_of_accounts.default_chart import (
@@ -451,6 +455,52 @@ def correct_partner_journal_entry_http(
         corrected_journal_entry_id=result.corrected.id,
         partner_ledger_entry=_partner_entry_read(session, new_row),
         balance_kurus=balance,
+    )
+
+
+def void_partner_journal_entry_http(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+):
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        partner_row = session.scalar(
+            select(PartnerLedgerEntry).where(
+                PartnerLedgerEntry.journal_entry_id == journal_entry_id,
+                PartnerLedgerEntry.partner_id == partner_id,
+            )
+        )
+        if partner_row is None:
+            raise CorrectionNotFoundError("partner ledger entry not found for journal entry")
+        if partner_row.movement_type.value == "profit_allocation":
+            raise CorrectionNotFoundError(
+                "profit allocation must be voided at entity level, not per-partner void"
+            )
+
+    result = void_partner_journal_entry(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
     )
 
 

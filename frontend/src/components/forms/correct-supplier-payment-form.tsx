@@ -142,7 +142,7 @@ export function CorrectSupplierPaymentForm({
 
   return (
     <>
-      <Dialog open={open} title="Correct supplier payment" onClose={onClose}>
+      <Dialog open={open} title="Edit supplier payment" onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <Label htmlFor="csp-date">Payment date (DD.MM.YYYY)</Label>
@@ -193,7 +193,7 @@ export function CorrectSupplierPaymentForm({
             />
           </div>
           <div>
-            <Label htmlFor="csp-reason">Correction reason (optional)</Label>
+            <Label htmlFor="csp-reason">Edit reason (optional)</Label>
             <Input
               id="csp-reason"
               value={reason}

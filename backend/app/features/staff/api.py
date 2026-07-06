@@ -16,6 +16,7 @@ from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
 from app.features.auth.models import User
 from app.features.staff import service
+from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.features.staff.schema import (
     EmployeeCreate,
     EmployeeRead,
@@ -273,5 +274,37 @@ def correct_staff_journal_entry(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/employees/{employee_id}/ledger/{journal_entry_id}/void",
+    response_model=SubledgerVoidOut,
+)
+def void_staff_journal_entry(
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.void_staff_journal_entry_http(
+            session,
+            entity_id,
+            employee_id,
+            journal_entry_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

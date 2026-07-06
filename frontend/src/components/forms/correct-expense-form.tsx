@@ -33,6 +33,7 @@ export type CorrectableExpenseRow = {
   expense_account_id: string;
   money_account_id: string;
   status: string;
+  journal_entry_id?: string | null;
 };
 
 type Props = {
@@ -174,7 +175,7 @@ export function CorrectExpenseForm({
 
   return (
     <>
-    <Dialog open={open} title="Correct expense" onClose={onClose}>
+    <Dialog open={open} title="Edit expense" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="correct-exp-date">Date (DD.MM.YYYY)</Label>

@@ -146,7 +146,7 @@ export function CorrectPartnerLedgerForm({
 
   return (
     <>
-      <Dialog open={open} title="Correct partner entry" onClose={onClose}>
+      <Dialog open={open} title="Edit partner entry" onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <Label htmlFor="cpl-date">Date</Label>
@@ -195,7 +195,7 @@ export function CorrectPartnerLedgerForm({
             />
           </div>
           <div>
-            <Label htmlFor="cpl-reason">Correction reason (optional)</Label>
+            <Label htmlFor="cpl-reason">Edit reason (optional)</Label>
             <Input id="cpl-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

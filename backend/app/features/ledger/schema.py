@@ -77,6 +77,11 @@ class VoidJournalEntryOut(BaseModel):
     reversal: JournalEntryOut
 
 
+class SubledgerVoidOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+
+
 class CorrectJournalEntryOut(BaseModel):
     original: JournalEntryOut
     reversal: JournalEntryOut

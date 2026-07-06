@@ -1256,6 +1256,389 @@ class PosDailySummaryCorrectionError(ValueError):
     """Posted POS daily summary cannot be corrected."""
 
 
+@dataclass(frozen=True, slots=True)
+class SubledgerVoidResult:
+    original: JournalEntry
+    reversal: JournalEntry
+
+
+def _run_subledger_void(
+    session: Session,
+    entity_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None,
+    void_date: date | None,
+    period_unlock_reason: str | None = None,
+    after_gl: Callable[[Session, JournalEntry, JournalEntry], None] | None = None,
+) -> SubledgerVoidResult:
+    from app.core.ledger.models import journal_void_update_allowed
+    from app.core.period_locks.guards import mark_periods_dirty_for_dates
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        with journal_void_update_allowed(session):
+            original, reversal = _void_journal_entry_in_transaction(
+                session,
+                entity_id,
+                entry_id,
+                actor_id=actor_id,
+                reason=reason,
+                void_date=void_date,
+                period_unlock_reason=period_unlock_reason,
+            )
+            if after_gl is not None:
+                after_gl(session, original, reversal)
+            mark_periods_dirty_for_dates(
+                session,
+                entity_id,
+                [original.entry_date, reversal.entry_date],
+            )
+            session.flush()
+        session.commit()
+        session.refresh(original)
+        session.refresh(reversal)
+        return SubledgerVoidResult(original=original, reversal=reversal)
+
+
+def void_gl_with_subledger_rows(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+    supplier_row: SupplierLedgerEntry | None = None,
+    customer_row: CustomerLedgerEntry | None = None,
+    fx_row: FxLedgerEntry | None = None,
+    staff_row: StaffLedgerEntry | None = None,
+    partner_row: PartnerLedgerEntry | None = None,
+    after_gl: Callable[[Session, JournalEntry, JournalEntry], None] | None = None,
+) -> SubledgerVoidResult:
+    def combined_after_gl(
+        sess: Session,
+        _original: JournalEntry,
+        reversal: JournalEntry,
+    ) -> None:
+        if supplier_row is not None:
+            _append_supplier_reversal(
+                sess, supplier_row, reversal, actor_id=actor_id, void_date=void_date
+            )
+        if customer_row is not None:
+            _append_customer_reversal(
+                sess, customer_row, reversal, actor_id=actor_id, void_date=void_date
+            )
+        if fx_row is not None:
+            _append_fx_reversal(
+                sess, fx_row, reversal, actor_id=actor_id, void_date=void_date
+            )
+        if staff_row is not None:
+            _append_staff_reversal(
+                sess, staff_row, reversal, actor_id=actor_id, void_date=void_date
+            )
+        if partner_row is not None:
+            _append_partner_reversal(
+                sess, partner_row, reversal, actor_id=actor_id, void_date=void_date
+            )
+        if after_gl is not None:
+            after_gl(sess, _original, reversal)
+
+    return _run_subledger_void(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        after_gl=combined_after_gl,
+    )
+
+
+def void_expense_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+
+
+def void_staff_journal_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        staff_row = session.scalar(
+            select(StaffLedgerEntry).where(
+                StaffLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if staff_row is None:
+            raise CorrectionNotFoundError("staff ledger entry not found for journal entry")
+        fx_row = session.scalar(
+            select(FxLedgerEntry).where(FxLedgerEntry.journal_entry_id == journal_entry_id)
+        )
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        staff_row=staff_row,
+        fx_row=fx_row,
+    )
+
+
+def void_partner_journal_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        partner_row = session.scalar(
+            select(PartnerLedgerEntry).where(
+                PartnerLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if partner_row is None:
+            raise CorrectionNotFoundError("partner ledger entry not found for journal entry")
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        partner_row=partner_row,
+    )
+
+
+def void_supplier_payment(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        original_row = _get_supplier_ledger_row(session, journal_entry_id)
+        if original_row.movement_type != SupplierMovementType.PAYMENT:
+            raise CorrectionNotFoundError("journal entry is not a supplier payment")
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        supplier_row=original_row,
+    )
+
+
+def void_supplier_invoice(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        original_row = _get_supplier_ledger_row(session, journal_entry_id)
+        if original_row.movement_type != SupplierMovementType.INVOICE:
+            raise CorrectionNotFoundError("journal entry is not a supplier invoice")
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        supplier_row=original_row,
+    )
+
+
+def void_customer_payment(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        original_row = _get_customer_ledger_row(session, journal_entry_id)
+        if original_row.movement_type != CustomerMovementType.PAYMENT_RECEIVED:
+            raise CorrectionNotFoundError("journal entry is not a customer payment")
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        customer_row=original_row,
+    )
+
+
+def void_credit_sale(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        original_row = _get_customer_ledger_row(session, journal_entry_id)
+        if original_row.movement_type != CustomerMovementType.CREDIT_SALE:
+            raise CorrectionNotFoundError("journal entry is not a credit sale")
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        customer_row=original_row,
+    )
+
+
+def void_fx_purchase(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        original_row = _get_fx_ledger_row(session, journal_entry_id)
+        if original_row.movement_type != FxMovementType.PURCHASE:
+            raise CorrectionNotFoundError("journal entry is not an FX purchase")
+
+    def after_cash(
+        sess: Session,
+        _original: JournalEntry,
+        reversal: JournalEntry,
+    ) -> None:
+        original_cash = _get_cash_movement_for_journal(sess, journal_entry_id)
+        if original_cash is not None:
+            _append_cash_movement_reversal(
+                sess,
+                entity_id,
+                original_cash,
+                reversal,
+                actor_id=actor_id,
+                void_date=void_date,
+                period_unlock_reason=period_unlock_reason,
+            )
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        fx_row=original_row,
+        after_gl=after_cash,
+    )
+
+
+def void_fx_conversion_or_spend(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        original_row = _get_fx_ledger_row(session, journal_entry_id)
+        if original_row.movement_type not in (
+            FxMovementType.CONVERSION,
+            FxMovementType.EXPENSE_SPEND,
+        ):
+            raise CorrectionNotFoundError("journal entry is not FX conversion or spend")
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        fx_row=original_row,
+    )
+
+
 def _void_journal_entry_in_transaction(
     session: Session,
     entity_id: uuid.UUID,

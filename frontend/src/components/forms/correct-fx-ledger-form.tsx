@@ -161,7 +161,7 @@ export function CorrectFxLedgerForm({
 
   return (
     <>
-      <Dialog open={open} title="Correct FX entry" onClose={onClose}>
+      <Dialog open={open} title="Edit FX entry" onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <Label htmlFor="cfx-date">Date</Label>
@@ -226,7 +226,7 @@ export function CorrectFxLedgerForm({
             />
           </div>
           <div>
-            <Label htmlFor="cfx-reason">Correction reason (optional)</Label>
+            <Label htmlFor="cfx-reason">Edit reason (optional)</Label>
             <Input id="cfx-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

@@ -12,6 +12,8 @@ from app.core.ledger.correction import (
     CorrectionNotFoundError,
     correct_credit_sale,
     correct_customer_payment,
+    void_credit_sale,
+    void_customer_payment,
 )
 from app.core.ledger.subledger_display import enrich_entry_models
 from app.core.receivables import ledger as receivables_ledger
@@ -394,3 +396,80 @@ def correct_credit_sale_entry(
             )
         )
     return result, balance, new_row
+
+
+def void_customer_payment_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date=None,
+    period_unlock_reason: str | None = None,
+):
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    with entity_context(session, entity_id):
+        row = session.scalar(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if row is None or row.customer_id != customer_id:
+            raise CorrectionNotFoundError("customer payment not found")
+
+    result = void_customer_payment(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )
+
+
+def void_credit_sale_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date=None,
+    period_unlock_reason: str | None = None,
+):
+    from app.core.receivables.types import CustomerMovementType
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    with entity_context(session, entity_id):
+        row = session.scalar(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if row is None or row.customer_id != customer_id:
+            raise CorrectionNotFoundError("credit sale not found")
+        if row.movement_type != CustomerMovementType.CREDIT_SALE:
+            raise CorrectionNotFoundError("journal entry is not a credit sale")
+
+    result = void_credit_sale(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )

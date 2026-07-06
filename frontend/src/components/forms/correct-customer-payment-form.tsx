@@ -166,7 +166,7 @@ export function CorrectCustomerPaymentForm({
 
   return (
     <>
-      <Dialog open={open} title="Correct customer payment" onClose={onClose}>
+      <Dialog open={open} title="Edit customer payment" onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <Label htmlFor="ccp-date">Payment date (DD.MM.YYYY)</Label>
@@ -225,7 +225,7 @@ export function CorrectCustomerPaymentForm({
             />
           </div>
           <div>
-            <Label htmlFor="ccp-reason">Correction reason (optional)</Label>
+            <Label htmlFor="ccp-reason">Edit reason (optional)</Label>
             <Input
               id="ccp-reason"
               value={reason}

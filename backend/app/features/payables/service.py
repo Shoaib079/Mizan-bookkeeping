@@ -13,6 +13,8 @@ from app.core.ledger.correction import (
     CorrectionNotFoundError,
     correct_supplier_invoice,
     correct_supplier_payment,
+    void_supplier_invoice,
+    void_supplier_payment,
 )
 from app.core.ledger.subledger_display import enrich_entry_models
 from app.core.ledger.posting import (
@@ -267,3 +269,82 @@ def correct_supplier_invoice_entry(
             )
         )
     return result, balance, new_row
+
+
+def void_supplier_payment_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date=None,
+    period_unlock_reason: str | None = None,
+):
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    with entity_context(session, entity_id):
+        row = session.scalar(
+            select(SupplierLedgerEntry).where(
+                SupplierLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if row is None or row.supplier_id != supplier_id:
+            raise CorrectionNotFoundError("supplier payment not found")
+
+    result = void_supplier_payment(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )
+
+
+def void_supplier_invoice_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date=None,
+    period_unlock_reason: str | None = None,
+):
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    with entity_context(session, entity_id):
+        target_id = invoice_edit.resolve_supplier_invoice_edit_target(
+            session, journal_entry_id
+        )
+        row = session.scalar(
+            select(SupplierLedgerEntry).where(
+                SupplierLedgerEntry.journal_entry_id == target_id
+            )
+        )
+        if row is None or row.supplier_id != supplier_id:
+            raise CorrectionNotFoundError("supplier invoice not found")
+        if row.movement_type != SupplierMovementType.INVOICE:
+            raise CorrectionNotFoundError("journal entry is not a supplier invoice")
+
+    result = void_supplier_invoice(
+        session,
+        entity_id,
+        target_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )

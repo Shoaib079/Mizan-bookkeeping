@@ -146,7 +146,7 @@ export function CorrectFxPurchaseForm({
 
   return (
     <>
-      <Dialog open={open} title={`Correct ${currency} purchase`} onClose={onClose}>
+      <Dialog open={open} title={`Edit ${currency} purchase`} onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <Label htmlFor="cfp-native">{currency} amount</Label>
@@ -198,7 +198,7 @@ export function CorrectFxPurchaseForm({
             />
           </div>
           <div>
-            <Label htmlFor="cfp-reason">Correction reason (optional)</Label>
+            <Label htmlFor="cfp-reason">Edit reason (optional)</Label>
             <Input
               id="cfp-reason"
               value={reason}

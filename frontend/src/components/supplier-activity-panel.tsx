@@ -4,7 +4,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { EditedBadge } from "@/components/ledger/corrected-badge";
+import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
@@ -30,7 +32,6 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { formatSupplierPayableBalance } from "@/lib/supplier-balance";
 import {
-  canCorrectSubledgerRow,
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
@@ -102,6 +103,11 @@ export function SupplierActivityPanel({
   const [error, setError] = useState<string | null>(null);
   const [previewDraftId, setPreviewDraftId] = useState<string | null>(null);
   const [reviewDraftId, setReviewDraftId] = useState<string | null>(null);
+  const [voidTarget, setVoidTarget] = useState<{
+    journal_entry_id: string;
+    description: string;
+    kind: "payment" | "invoice";
+  } | null>(null);
 
   const alwaysShowActivityRow = useCallback(
     (row: SupplierActivityRow) =>
@@ -253,7 +259,7 @@ export function SupplierActivityPanel({
                     {row.detail}
                     {row.was_corrected && (
                       <span className="ml-2 not-italic">
-                        <CorrectedBadge />
+                        <EditedBadge />
                       </span>
                     )}
                   </DataTableCell>
@@ -294,34 +300,32 @@ export function SupplierActivityPanel({
                     )}
                   </DataTableCell>
                   <DataTableCell align="right">
-                    {row.movement_kind === "payment" &&
-                      canCorrectSubledgerRow(row) &&
-                      onCorrectPayment && (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="h-8 px-2"
-                          onClick={() =>
-                            onCorrectPayment({
-                              journal_entry_id: row.journal_entry_id!,
-                              movement_date: row.movement_date,
-                              amount_kurus: row.amount_kurus ?? 0,
-                              description: row.detail,
-                            })
-                          }
-                        >
-                          Correct
-                        </Button>
-                      )}
+                    {row.movement_kind === "payment" && onCorrectPayment && (
+                      <SubledgerRowActions
+                        row={row}
+                        onEdit={() =>
+                          onCorrectPayment({
+                            journal_entry_id: row.journal_entry_id!,
+                            movement_date: row.movement_date,
+                            amount_kurus: row.amount_kurus ?? 0,
+                            description: row.detail,
+                          })
+                        }
+                        onVoid={() =>
+                          setVoidTarget({
+                            journal_entry_id: row.journal_entry_id!,
+                            description: row.detail,
+                            kind: "payment",
+                          })
+                        }
+                      />
+                    )}
                     {row.movement_kind === "invoice" &&
-                      canCorrectSubledgerRow(row) &&
                       row.can_edit &&
                       onEditInvoice && (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="h-8 px-2"
-                          onClick={() =>
+                        <SubledgerRowActions
+                          row={row}
+                          onEdit={() =>
                             onEditInvoice({
                               journal_entry_id: row.journal_entry_id!,
                               movement_date: row.movement_date,
@@ -330,9 +334,14 @@ export function SupplierActivityPanel({
                               expense_account_id: row.expense_account_id,
                             })
                           }
-                        >
-                          Edit
-                        </Button>
+                          onVoid={() =>
+                            setVoidTarget({
+                              journal_entry_id: row.journal_entry_id!,
+                              description: row.detail,
+                              kind: "invoice",
+                            })
+                          }
+                        />
                       )}
                     {row.invoice_draft_id &&
                       row.movement_kind === "unposted_invoice" && (
@@ -380,6 +389,25 @@ export function SupplierActivityPanel({
               />
             </div>
           )}
+
+          <VoidSubledgerDialog
+            open={voidTarget !== null}
+            title={
+              voidTarget?.kind === "invoice"
+                ? "Void supplier invoice"
+                : "Void supplier payment"
+            }
+            description={voidTarget?.description}
+            voidPath={
+              entityId && voidTarget
+                ? voidTarget.kind === "invoice"
+                  ? `/entities/${entityId}/suppliers/${supplierId}/invoices/${voidTarget.journal_entry_id}/void`
+                  : `/entities/${entityId}/suppliers/${supplierId}/payments/${voidTarget.journal_entry_id}/void`
+                : null
+            }
+            onClose={() => setVoidTarget(null)}
+            onSaved={() => void reload()}
+          />
         </>
       )}
     </section>

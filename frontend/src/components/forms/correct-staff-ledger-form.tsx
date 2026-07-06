@@ -136,7 +136,7 @@ export function CorrectStaffLedgerForm({
 
   return (
     <>
-      <Dialog open={open} title="Correct staff entry" onClose={onClose}>
+      <Dialog open={open} title="Edit staff entry" onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <Label htmlFor="csl-date">Date</Label>
@@ -171,7 +171,7 @@ export function CorrectStaffLedgerForm({
             />
           </div>
           <div>
-            <Label htmlFor="csl-reason">Correction reason (optional)</Label>
+            <Label htmlFor="csl-reason">Edit reason (optional)</Label>
             <Input id="csl-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

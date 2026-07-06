@@ -5,7 +5,9 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { EditedBadge } from "@/components/ledger/corrected-badge";
+import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import { FxConversionForm } from "@/components/forms/fx-conversion-form";
 import {
@@ -38,7 +40,6 @@ import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
-  canCorrectSubledgerRow,
   subledgerRowClassName,
 } from "@/lib/ledger-display";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
@@ -58,6 +59,11 @@ export default function FxWalletPage() {
   const [correctPurchase, setCorrectPurchase] =
     useState<CorrectableFxPurchaseRow | null>(null);
   const [correctSpend, setCorrectSpend] = useState<CorrectableFxSpendRow | null>(null);
+  const [voidTarget, setVoidTarget] = useState<{
+    journal_entry_id: string;
+    description: string;
+    kind: "purchase" | "ledger";
+  } | null>(null);
 
   const resetDetailState = useCallback(() => {
     setAccount(null);
@@ -70,6 +76,7 @@ export default function FxWalletPage() {
     setSpendOpen(false);
     setCorrectPurchase(null);
     setCorrectSpend(null);
+    setVoidTarget(null);
   }, []);
 
   useEntitySwitchReset(entityId, resetDetailState);
@@ -202,7 +209,7 @@ export default function FxWalletPage() {
                         {row.description}
                         {row.was_corrected && (
                           <span className="ml-2">
-                            <CorrectedBadge />
+                            <EditedBadge />
                           </span>
                         )}
                       </DataTableCell>
@@ -217,14 +224,11 @@ export default function FxWalletPage() {
                       </DataTableCell>
                       <DataTableCell align="right">
                         {row.movement_type === "spend" &&
-                          canCorrectSubledgerRow(row) &&
                           row.journal_source &&
                           row.journal_source !== "fx_purchase" && (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-8 px-2"
-                              onClick={() =>
+                            <SubledgerRowActions
+                              row={row}
+                              onEdit={() =>
                                 setCorrectSpend({
                                   journal_entry_id: row.journal_entry_id,
                                   movement_date: row.movement_date,
@@ -236,29 +240,36 @@ export default function FxWalletPage() {
                                   fx_money_account_id: row.fx_money_account_id,
                                 })
                               }
-                            >
-                              Correct
-                            </Button>
-                          )}
-                        {row.movement_type === "purchase" &&
-                          canCorrectSubledgerRow(row) && (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-8 px-2"
-                              onClick={() =>
-                                setCorrectPurchase({
+                              onVoid={() =>
+                                setVoidTarget({
                                   journal_entry_id: row.journal_entry_id,
-                                  movement_date: row.movement_date,
-                                  native_quantity: row.native_quantity,
-                                  try_cost_kurus: row.try_cost_kurus,
                                   description: row.description,
+                                  kind: "ledger",
                                 })
                               }
-                            >
-                              Correct
-                            </Button>
+                            />
                           )}
+                        {row.movement_type === "purchase" && (
+                          <SubledgerRowActions
+                            row={row}
+                            onEdit={() =>
+                              setCorrectPurchase({
+                                journal_entry_id: row.journal_entry_id,
+                                movement_date: row.movement_date,
+                                native_quantity: row.native_quantity,
+                                try_cost_kurus: row.try_cost_kurus,
+                                description: row.description,
+                              })
+                            }
+                            onVoid={() =>
+                              setVoidTarget({
+                                journal_entry_id: row.journal_entry_id,
+                                description: row.description,
+                                kind: "purchase",
+                              })
+                            }
+                          />
+                        )}
                       </DataTableCell>
                     </DataTableRow>
                   ))}
@@ -303,6 +314,24 @@ export default function FxWalletPage() {
         currency={currency}
         entry={correctSpend}
         onClose={() => setCorrectSpend(null)}
+        onSaved={() => void reload()}
+      />
+      <VoidSubledgerDialog
+        open={voidTarget !== null}
+        title={
+          voidTarget?.kind === "purchase"
+            ? `Void ${currency} purchase`
+            : "Void FX movement"
+        }
+        description={voidTarget?.description}
+        voidPath={
+          entityId && voidTarget
+            ? voidTarget.kind === "purchase"
+              ? `/entities/${entityId}/fx/purchases/${voidTarget.journal_entry_id}/void`
+              : `/entities/${entityId}/fx/ledger/${voidTarget.journal_entry_id}/void`
+            : null
+        }
+        onClose={() => setVoidTarget(null)}
         onSaved={() => void reload()}
       />
     </>

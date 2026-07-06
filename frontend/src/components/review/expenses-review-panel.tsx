@@ -7,7 +7,9 @@ import {
   CorrectExpenseForm,
   type CorrectableExpenseRow,
 } from "@/components/forms/correct-expense-form";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
+import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +49,10 @@ export function ExpensesReviewPanel() {
   const [recordOpen, setRecordOpen] = useState(false);
   const [correctExpense, setCorrectExpense] =
     useState<CorrectableExpenseRow | null>(null);
+  const [voidTarget, setVoidTarget] = useState<{
+    expense_id: string;
+    description: string;
+  } | null>(null);
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -182,14 +188,20 @@ export function ExpensesReviewPanel() {
                 </DataTableCell>
                 <DataTableCell align="right">
                   {row.status === "posted" ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-8 px-3 text-xs"
-                      onClick={() => setCorrectExpense(row)}
-                    >
-                      Correct
-                    </Button>
+                    <SubledgerRowActions
+                      row={{
+                        display_kind: "effective",
+                        journal_entry_id: row.journal_entry_id,
+                      }}
+                      onEdit={() => setCorrectExpense(row)}
+                      onVoid={() =>
+                        setVoidTarget({
+                          expense_id: row.id,
+                          description:
+                            row.written_item_description || row.description,
+                        })
+                      }
+                    />
                   ) : isPendingReviewStatus(row.status) ? (
                     <span className="text-xs text-muted-foreground">
                       Confirm via Add
@@ -213,6 +225,19 @@ export function ExpensesReviewPanel() {
         open={correctExpense !== null}
         expense={correctExpense}
         onClose={() => setCorrectExpense(null)}
+        onSaved={onSaved}
+      />
+
+      <VoidSubledgerDialog
+        open={voidTarget !== null}
+        title="Void expense"
+        description={voidTarget?.description}
+        voidPath={
+          entityId && voidTarget
+            ? `/entities/${entityId}/expenses/${voidTarget.expense_id}/void`
+            : null
+        }
+        onClose={() => setVoidTarget(null)}
         onSaved={onSaved}
       />
     </>

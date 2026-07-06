@@ -12,7 +12,9 @@ import {
   CorrectStaffLedgerForm,
   type CorrectableStaffLedgerRow,
 } from "@/components/forms/correct-staff-ledger-form";
-import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -31,7 +33,7 @@ import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { staffMovementLabels } from "@/lib/subledger-labels";
 import {
-  canCorrectSubledgerRow,
+  canEditSubledgerRow,
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
@@ -113,6 +115,10 @@ export default function StaffDetailPage() {
   const [extraDaysOpen, setExtraDaysOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectableStaffLedgerRow | null>(null);
+  const [voidTarget, setVoidTarget] = useState<{
+    journal_entry_id: string;
+    description: string;
+  } | null>(null);
 
   const resetDetailState = useCallback(() => {
     setEmployee(null);
@@ -125,6 +131,7 @@ export default function StaffDetailPage() {
     setExtraDaysOpen(false);
     setPaymentOpen(false);
     setCorrectEntry(null);
+    setVoidTarget(null);
   }, []);
 
   useEntitySwitchReset(entityId, resetDetailState);
@@ -294,7 +301,7 @@ export default function StaffDetailPage() {
                       {entry.description}
                       {entry.was_corrected && (
                         <span className="ml-2">
-                          <CorrectedBadge />
+                          <EditedBadge />
                         </span>
                       )}
                     </DataTableCell>
@@ -304,25 +311,26 @@ export default function StaffDetailPage() {
                         : `${(entry.amount_minor / 100).toFixed(2)} ${employee.pay_currency}`}
                     </DataTableCell>
                     <DataTableCell align="right">
-                      {correctableStaffTypes.has(entry.movement_type) &&
-                        canCorrectSubledgerRow(entry) && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="h-8 px-2"
-                            onClick={() =>
-                              setCorrectEntry({
-                                journal_entry_id: entry.journal_entry_id!,
-                                movement_date: entry.movement_date,
-                                movement_type: entry.movement_type,
-                                amount_minor: entry.amount_minor,
-                                description: entry.description,
-                              })
-                            }
-                          >
-                            Correct
-                          </Button>
-                        )}
+                      {correctableStaffTypes.has(entry.movement_type) && (
+                        <SubledgerRowActions
+                          row={entry}
+                          onEdit={() =>
+                            setCorrectEntry({
+                              journal_entry_id: entry.journal_entry_id!,
+                              movement_date: entry.movement_date,
+                              movement_type: entry.movement_type,
+                              amount_minor: entry.amount_minor,
+                              description: entry.description,
+                            })
+                          }
+                          onVoid={() =>
+                            setVoidTarget({
+                              journal_entry_id: entry.journal_entry_id!,
+                              description: entry.description,
+                            })
+                          }
+                        />
+                      )}
                     </DataTableCell>
                   </DataTableRow>
                 ))}
@@ -376,6 +384,18 @@ export default function StaffDetailPage() {
             employeeId={employeeId}
             entry={correctEntry}
             onClose={() => setCorrectEntry(null)}
+            onSaved={() => void reload()}
+          />
+          <VoidSubledgerDialog
+            open={voidTarget !== null}
+            title="Void staff movement"
+            description={voidTarget?.description}
+            voidPath={
+              entityId && voidTarget
+                ? `/entities/${entityId}/staff/employees/${employeeId}/ledger/${voidTarget.journal_entry_id}/void`
+                : null
+            }
+            onClose={() => setVoidTarget(null)}
             onSaved={() => void reload()}
           />
         </>
