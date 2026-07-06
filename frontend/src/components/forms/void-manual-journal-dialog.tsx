@@ -15,6 +15,8 @@ import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
+import { VoidWarningBanner } from "@/components/ledger/void-warning-banner";
+
 export type VoidableManualJournal = {
   id: string;
   entry_date: string;
@@ -110,6 +112,9 @@ export function VoidManualJournalDialog({
               {journal.description}
             </p>
           )}
+          <div className="mt-3">
+            <VoidWarningBanner />
+          </div>
           <div>
             <Label htmlFor="vmj-void-date">Void date (DD.MM.YYYY)</Label>
             <DateInput

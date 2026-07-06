@@ -15,6 +15,8 @@ import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
+import { VoidWarningBanner } from "@/components/ledger/void-warning-banner";
+
 type Props = {
   open: boolean;
   title?: string;
@@ -103,10 +105,9 @@ export function VoidSubledgerDialog({
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
-          <p className="text-sm">
-            This reverses the posting in the ledger. The original stays visible
-            with a strikethrough when you show history.
-          </p>
+          <div className="mt-3">
+            <VoidWarningBanner />
+          </div>
           <div>
             <Label htmlFor="void-sub-date">Void date (DD.MM.YYYY)</Label>
             <DateInput

@@ -6,7 +6,7 @@ import {
   VoidManualJournalDialog,
   type VoidableManualJournal,
 } from "@/components/forms/void-manual-journal-dialog";
-import { Button } from "@/components/ui/button";
+import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import {
   DataTable,
   DataTableBody,
@@ -121,20 +121,17 @@ export function ManualJournalsPanel() {
                 </DataTableCell>
                 <DataTableCell align="right">
                   {row.status === "posted" && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-8 px-2"
-                      onClick={() =>
+                    <VoidTriggerButton
+                      className="h-8 px-2 text-foreground hover:text-destructive"
+                      confirmDetail={row.description}
+                      onContinue={() =>
                         setVoidTarget({
                           id: row.id,
                           entry_date: row.entry_date,
                           description: row.description,
                         })
                       }
-                    >
-                      Void
-                    </Button>
+                    />
                   )}
                 </DataTableCell>
               </DataTableRow>

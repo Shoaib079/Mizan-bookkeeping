@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
+import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -232,15 +233,18 @@ export default function GroupSaleDetailPage() {
                 >
                   Edit
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                  disabled={voiding}
-                  onClick={() => void onVoid()}
-                >
-                  {voiding ? "Voiding…" : "Void"}
-                </Button>
+                <VoidTriggerButton
+                  className="h-9 border border-destructive/40 px-4 hover:bg-destructive/10"
+                  confirmTitle="Void this group sale?"
+                  confirmDetail={
+                    customer
+                      ? `${customer.name} · ${formatTry(sale.total_kurus)}`
+                      : formatTry(sale.total_kurus)
+                  }
+                  confirmLabel="Void group sale"
+                  confirming={voiding}
+                  onContinue={() => void onVoid()}
+                />
               </>
             ) : (
               <>

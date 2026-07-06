@@ -6,6 +6,8 @@ import {
   type SubledgerDisplayRow,
 } from "@/lib/ledger-display";
 
+import { VoidTriggerButton } from "./void-trigger-button";
+
 type Props = {
   row: SubledgerDisplayRow & { journal_entry_id?: string | null };
   onEdit: () => void;
@@ -24,14 +26,7 @@ export function SubledgerRowActions({ row, onEdit, onVoid }: Props) {
       >
         Edit
       </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        className="h-8 px-2 text-destructive hover:text-destructive"
-        onClick={onVoid}
-      >
-        Void
-      </Button>
+      <VoidTriggerButton onContinue={onVoid} />
     </div>
   );
 }
