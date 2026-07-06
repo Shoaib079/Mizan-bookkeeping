@@ -1,6 +1,6 @@
 /** Statement line queue, filters, and summary stats for classify + ledger UI. */
 
-import type { BankStatementLine } from "@/lib/banking-types";
+import type { BankStatementLine, StatementLineStatus } from "@/lib/banking-types";
 
 export type StatementLineFilter =
   | "all"
@@ -25,7 +25,7 @@ export const STATEMENT_LINE_FILTERS: {
 ];
 
 /** Lines waiting for owner classification in the posting bar. */
-export function isQueueLine(line: BankStatementLine): boolean {
+export function isQueueLine(line: { status: StatementLineStatus }): boolean {
   return line.status === "imported" || line.status === "needs_review";
 }
 
