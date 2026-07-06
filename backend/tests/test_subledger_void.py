@@ -2,7 +2,6 @@ from datetime import date
 
 from tests.test_expenses import RENT_EXPENSE_CODE, expense_setup
 from tests.test_staff import ACTOR_ID, staff_setup
-
 from app.features.expenses.schema import ExpenseCreate
 from app.features.expenses.service import create_expense, void_expense_by_id
 from app.features.staff.schema import StaffPaymentCreate
@@ -71,3 +70,72 @@ def test_void_staff_payment(db_session, staff_setup) -> None:
         actor_id=ACTOR_ID,
     )
     assert result.reversal_journal_entry_id
+
+
+def test_void_period_salary_with_advance_applied_reverses_all_staff_rows(
+    db_session, staff_setup
+) -> None:
+    from app.core.staff import posting as staff_posting
+    from app.core.staff.models import StaffLedgerEntry
+    from app.core.staff.types import StaffMovementType
+    from sqlalchemy import func, select
+
+    entity_id = staff_setup["entity_id"]
+    employee_id = staff_setup["employee_id"]
+    drawer = staff_setup["drawer"]
+
+    staff_posting.post_advance_paid(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 5, 5),
+        amount_minor=200_000,
+        description="Avans",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    payment = staff_posting.post_period_salary_payment(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 5, 31),
+        cash_minor=800_000,
+        period_year=2026,
+        period_month=5,
+        period_salary_minor=1_000_000,
+        description="May salary",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    assert payment.advance_applied_minor == 200_000
+    journal_id = payment.journal_entry.id
+
+    with entity_context(db_session, entity_id):
+        types = set(
+            db_session.scalars(
+                select(StaffLedgerEntry.movement_type).where(
+                    StaffLedgerEntry.journal_entry_id == journal_id
+                )
+            ).all()
+        )
+    assert StaffMovementType.SALARY_PAYMENT in types
+    assert StaffMovementType.ADVANCE_APPLIED in types
+
+    void_staff_journal_entry_http(
+        db_session,
+        entity_id,
+        employee_id,
+        journal_id,
+        actor_id=ACTOR_ID,
+        reason="Undo combined salary payment",
+    )
+
+    with entity_context(db_session, entity_id):
+        effective_count = db_session.scalar(
+            select(func.count())
+            .select_from(StaffLedgerEntry)
+            .where(
+                StaffLedgerEntry.journal_entry_id == journal_id,
+            )
+        )
+    assert effective_count == 2

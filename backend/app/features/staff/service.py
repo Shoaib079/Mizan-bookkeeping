@@ -662,6 +662,21 @@ def correct_staff_journal_entry_http(
     )
 
 
+def _assert_staff_journal_for_employee(
+    session: Session,
+    journal_entry_id: uuid.UUID,
+    employee_id: uuid.UUID,
+) -> None:
+    row = session.scalar(
+        select(StaffLedgerEntry.id).where(
+            StaffLedgerEntry.journal_entry_id == journal_entry_id,
+            StaffLedgerEntry.employee_id == employee_id,
+        )
+    )
+    if row is None:
+        raise CorrectionNotFoundError("staff ledger entry not found for journal entry")
+
+
 def void_staff_journal_entry_http(
     session: Session,
     entity_id: uuid.UUID,
@@ -680,7 +695,7 @@ def void_staff_journal_entry_http(
 
     with entity_context(session, entity_id):
         require_entity_context()
-        _staff_row_for_correction(session, journal_entry_id, employee_id)
+        _assert_staff_journal_for_employee(session, journal_entry_id, employee_id)
 
     result = void_staff_journal_entry(
         session,

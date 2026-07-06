@@ -82,6 +82,9 @@ const correctableStaffTypes = new Set([
   "salary_payment",
 ]);
 
+/** Companion rows (advance applied) void the whole journal — edit stays on primary types only. */
+const staffVoidCompanionTypes = new Set(["advance_applied"]);
+
 function extraDaysLabel(entry: LedgerEntry): string | null {
   if (
     entry.movement_type !== "extra_days_paid" &&
@@ -311,9 +314,11 @@ export default function StaffDetailPage() {
                         : `${(entry.amount_minor / 100).toFixed(2)} ${employee.pay_currency}`}
                     </DataTableCell>
                     <DataTableCell align="right">
-                      {correctableStaffTypes.has(entry.movement_type) && (
+                      {(correctableStaffTypes.has(entry.movement_type) ||
+                        staffVoidCompanionTypes.has(entry.movement_type)) && (
                         <SubledgerRowActions
                           row={entry}
+                          showEdit={correctableStaffTypes.has(entry.movement_type)}
                           onEdit={() =>
                             setCorrectEntry({
                               journal_entry_id: entry.journal_entry_id!,

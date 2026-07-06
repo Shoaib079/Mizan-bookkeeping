@@ -1397,16 +1397,28 @@ def void_staff_journal_entry(
 ) -> SubledgerVoidResult:
     with entity_context(session, entity_id):
         require_entity_context()
-        staff_row = session.scalar(
-            select(StaffLedgerEntry).where(
-                StaffLedgerEntry.journal_entry_id == journal_entry_id
+        staff_rows = list(
+            session.scalars(
+                select(StaffLedgerEntry).where(
+                    StaffLedgerEntry.journal_entry_id == journal_entry_id
+                )
             )
         )
-        if staff_row is None:
+        if not staff_rows:
             raise CorrectionNotFoundError("staff ledger entry not found for journal entry")
         fx_row = session.scalar(
             select(FxLedgerEntry).where(FxLedgerEntry.journal_entry_id == journal_entry_id)
         )
+
+    def reverse_all_staff_rows(
+        sess: Session,
+        _original: JournalEntry,
+        reversal: JournalEntry,
+    ) -> None:
+        for staff_row in staff_rows:
+            _append_staff_reversal(
+                sess, staff_row, reversal, actor_id=actor_id, void_date=void_date
+            )
 
     return void_gl_with_subledger_rows(
         session,
@@ -1416,8 +1428,8 @@ def void_staff_journal_entry(
         reason=reason,
         void_date=void_date,
         period_unlock_reason=period_unlock_reason,
-        staff_row=staff_row,
         fx_row=fx_row,
+        after_gl=reverse_all_staff_rows,
     )
 
 
