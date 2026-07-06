@@ -46,8 +46,8 @@ def idempotency_setup(db_session, restaurant_a):
     }
 
 
-def _expense_payload(setup: dict) -> dict:
-    return {
+def _expense_payload(setup: dict, *, acknowledge_duplicate: bool = False) -> dict:
+    payload = {
         "expense_date": "2026-06-01",
         "amount_kurus": 50_000,
         "expense_account_id": str(setup["accounts"][RENT_EXPENSE_CODE]),
@@ -57,6 +57,9 @@ def _expense_payload(setup: dict) -> dict:
         "description": "Market alışverişi",
         "actor_id": str(ACTOR_ID),
     }
+    if acknowledge_duplicate:
+        payload["acknowledge_duplicate"] = True
+    return payload
 
 
 def _expense_count(db_session, entity_id: uuid.UUID) -> int:
@@ -109,7 +112,7 @@ def test_different_keys_same_payload_both_succeed(
     )
     second = client.post(
         url,
-        json=payload,
+        json=_expense_payload(idempotency_setup, acknowledge_duplicate=True),
         headers={"Idempotency-Key": str(uuid.uuid4())},
     )
 
@@ -260,7 +263,7 @@ def test_auth_scopes_idempotency_per_user(
     )
     partner_resp = client.post(
         url,
-        json=payload,
+        json=_expense_payload(idempotency_setup, acknowledge_duplicate=True),
         headers={**auth_headers(partner), "Idempotency-Key": key},
     )
 
@@ -325,7 +328,7 @@ def test_client_retry_contract_reuses_one_key_not_two(
     retry_two = client.post(url, json=payload, headers=headers)
     fresh_key = client.post(
         url,
-        json=payload,
+        json=_expense_payload(idempotency_setup, acknowledge_duplicate=True),
         headers={"Idempotency-Key": str(uuid.uuid4())},
     )
 

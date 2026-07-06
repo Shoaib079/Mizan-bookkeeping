@@ -168,6 +168,7 @@ def test_alias_remembers_spelling(db_session, client: TestClient, expense_setup)
             **base_payload,
             "written_item_description": "peyir",
             "confirm_expense_item_id": first_item_id,
+            "acknowledge_duplicate": True,
         },
     )
     assert second.status_code == 201
@@ -175,7 +176,11 @@ def test_alias_remembers_spelling(db_session, client: TestClient, expense_setup)
 
     third = client.post(
         f"/entities/{entity_id}/expenses",
-        json={**base_payload, "written_item_description": "peyir"},
+        json={
+            **base_payload,
+            "written_item_description": "peyir",
+            "acknowledge_duplicate": True,
+        },
     )
     assert third.status_code == 201
     assert third.json()["expense_item_id"] == first_item_id
@@ -313,7 +318,12 @@ def test_merge_items_groups_entries(db_session, client: TestClient, expense_setu
     )
     client.post(
         f"/entities/{entity_id}/expenses",
-        json={**payload_base, "written_item_description": "yoğurt", "confirm_expense_item_id": yogurt_id},
+        json={
+            **payload_base,
+            "written_item_description": "yoğurt",
+            "confirm_expense_item_id": yogurt_id,
+            "acknowledge_duplicate": True,
+        },
     )
 
     merged = client.post(
@@ -475,6 +485,7 @@ def test_list_expense_items_matches_alias_spelling(
             **base_payload,
             "written_item_description": "peyir",
             "confirm_expense_item_id": first_item_id,
+            "acknowledge_duplicate": True,
         },
     )
     assert linked.status_code == 201
@@ -515,6 +526,7 @@ def test_confirm_expense_item_id_reuses_item_without_duplicate(
             **base_payload,
             "written_item_description": "peynir",
             "confirm_expense_item_id": first_item_id,
+            "acknowledge_duplicate": True,
         },
     )
     assert second.status_code == 201
@@ -522,7 +534,11 @@ def test_confirm_expense_item_id_reuses_item_without_duplicate(
 
     third = client.post(
         f"/entities/{entity_id}/expenses",
-        json={**base_payload, "written_item_description": "yeni ürün"},
+        json={
+            **base_payload,
+            "written_item_description": "yeni ürün",
+            "acknowledge_duplicate": True,
+        },
     )
     assert third.status_code == 201
     assert third.json()["expense_item_id"] != first_item_id

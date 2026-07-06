@@ -97,7 +97,10 @@ def test_variant_spellings_share_one_learned_account(
     )
     client.post(
         f"/entities/{entity_id}/expenses",
-        json=_expense_payload(expense_setup, item="paneer", account_id=str(rent_id)),
+        json={
+            **_expense_payload(expense_setup, item="paneer", account_id=str(rent_id)),
+            "acknowledge_duplicate": True,
+        },
     )
 
     with entity_context(db_session, entity_id):
