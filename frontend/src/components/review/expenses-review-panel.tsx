@@ -8,6 +8,7 @@ import {
   type CorrectableExpenseRow,
 } from "@/components/forms/correct-expense-form";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
+import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -27,21 +28,18 @@ import { formatTrDate, formatTry } from "@/lib/money";
 import { invalidateReviewCounts } from "@/lib/review-counts-types";
 import { isPendingReviewStatus } from "@/lib/review-status";
 import { REVIEW_TAB_HREFS } from "@/lib/review-routes";
+import {
+  EXPENSE_REVIEW_FILTERS,
+  useExpensesReviewUrl,
+} from "@/lib/use-expenses-review-url";
 import { cn } from "@/lib/utils";
-
-type ExpenseFilter = "all" | "needs_review" | "posted";
-
-const EXPENSE_FILTERS: { id: ExpenseFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "needs_review", label: "Needs review" },
-  { id: "posted", label: "Posted" },
-];
 
 type PaginatedResponse<T> = { items: T[]; total: number };
 
 export function ExpensesReviewPanel() {
   const { entityId } = useEntity();
-  const [filter, setFilter] = useState<ExpenseFilter>("all");
+  const { from, to, filter, setRange, setFilter, listQuery } =
+    useExpensesReviewUrl();
   const [items, setItems] = useState<CorrectableExpenseRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -60,10 +58,8 @@ export function ExpensesReviewPanel() {
     setLoading(true);
     setError(null);
     try {
-      const statusQuery =
-        filter === "all" ? "" : `&status=${filter}`;
       const res = await apiFetch<PaginatedResponse<CorrectableExpenseRow>>(
-        `/entities/${entityId}/expenses?limit=50${statusQuery}`,
+        `/entities/${entityId}/expenses?${listQuery}`,
       );
       setItems(res.items);
       setTotal(res.total);
@@ -74,7 +70,7 @@ export function ExpensesReviewPanel() {
     } finally {
       setLoading(false);
     }
-  }, [entityId, filter]);
+  }, [entityId, listQuery]);
 
   useEffect(() => {
     void reload();
@@ -112,31 +108,42 @@ export function ExpensesReviewPanel() {
         </Button>
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-1">
-        {EXPENSE_FILTERS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm",
-              filter === tab.id
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80",
-            )}
-            onClick={() => setFilter(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="mb-4 space-y-3">
+        <ReportDateRange
+          from={from}
+          to={to}
+          disabled={loading}
+          onChange={setRange}
+        />
 
-      <p className="mb-4 text-sm text-muted-foreground">
-        {loading
-          ? "Loading…"
-          : `${total} expense${total === 1 ? "" : "s"}${
-              filter === "all" ? "" : ` (${EXPENSE_FILTERS.find((t) => t.id === filter)?.label ?? filter})`
-            }`}
-      </p>
+        <div className="flex flex-wrap gap-1">
+          {EXPENSE_REVIEW_FILTERS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm",
+                filter === tab.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80",
+              )}
+              onClick={() => setFilter(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="text-sm text-muted-foreground">
+          {loading
+            ? "Loading…"
+            : `${total} expense${total === 1 ? "" : "s"} in this period${
+                filter === "all"
+                  ? ""
+                  : ` (${EXPENSE_REVIEW_FILTERS.find((t) => t.id === filter)?.label ?? filter})`
+              }`}
+        </p>
+      </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <TableSkeleton columns={5} />}
@@ -145,7 +152,7 @@ export function ExpensesReviewPanel() {
         <EmptyState
           icon={Wallet}
           title="No expenses in this view"
-          hint="Record a manual expense or upload a receipt photo from Add."
+          hint="Change the dates or filter, or record a manual expense from Add."
         />
       )}
 
