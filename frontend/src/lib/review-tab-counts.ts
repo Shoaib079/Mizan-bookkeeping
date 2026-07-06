@@ -7,6 +7,7 @@ const TAB_PRIORITY: readonly ReviewTabId[] = [
   "invoices",
   "sales",
   "receipts",
+  "expenses",
   "delivery",
 ] as const;
 
@@ -24,6 +25,8 @@ export function reviewTabCount(
       return byTab.receipts;
     case "/review/invoices":
       return byTab.invoices;
+    case "/review/expenses":
+      return byTab.expenses;
     case "/review/delivery":
       return byTab.delivery;
     default:

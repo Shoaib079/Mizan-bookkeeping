@@ -228,6 +228,11 @@ export const NAV_SECTIONS: NavSection[] = [
           path === "/review/invoices" || path.startsWith("/review/invoices/"),
       },
       {
+        href: "/review/expenses",
+        label: "Expenses",
+        match: (path) => path === "/review/expenses",
+      },
+      {
         href: "/review/delivery",
         label: "Delivery",
         requiresDelivery: true,
@@ -261,6 +266,7 @@ export const SIDEBAR_HIDDEN_HREFS = new Set([
   "/review/sales",
   "/review/receipts",
   "/review/invoices",
+  "/review/expenses",
   "/review/delivery",
   "/review/manual-journals",
   "/banking/transfers",
@@ -305,6 +311,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/review/sales", kind: "tab" },
   { pattern: "/review/receipts", kind: "tab" },
   { pattern: "/review/invoices", kind: "tab" },
+  { pattern: "/review/expenses", kind: "tab" },
   { pattern: "/review/delivery", kind: "tab" },
   { pattern: "/review/posted", kind: "redirect" },
   { pattern: "/review/manual-journals", kind: "tab" },
@@ -323,7 +330,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/delivery/reports", kind: "tab" },
   { pattern: "/delivery/reports/[id]", kind: "drill-down" },
   { pattern: "/delivery/settlements", kind: "tab" },
-  { pattern: "/expenses", kind: "page" },
+  { pattern: "/expenses", kind: "redirect" },
   { pattern: "/expenses/items", kind: "page" },
   { pattern: "/uploads", kind: "redirect" },
   { pattern: "/suppliers", kind: "tab" },
@@ -443,6 +450,7 @@ export function pageTitleForPathname(pathname: string): string {
     "/review/sales": "Review",
     "/review/receipts": "Review",
     "/review/invoices": "Review",
+    "/review/expenses": "Expenses",
     "/review/delivery": "Review",
     "/review/manual-journals": "Manual journals",
     "/reports/ledger": "General ledger",
@@ -573,7 +581,7 @@ export function backLinkForPathname(pathname: string): PageBackLink | null {
     },
     {
       test: (path) => path === "/expenses/items",
-      href: "/expenses",
+      href: "/review/expenses",
       label: "Expenses",
     },
   ];

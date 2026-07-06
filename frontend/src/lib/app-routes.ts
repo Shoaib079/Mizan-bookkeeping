@@ -56,7 +56,7 @@ export const appRoutes: AppRoute[] = [
   {
     href: "/review",
     label: "Review",
-    keywords: "needs review bank statements receipts invoices sales delivery ledger",
+    keywords: "needs review bank statements receipts invoices sales delivery expenses ledger",
     icon: ScanSearch,
     group: "Overview",
   },
@@ -142,7 +142,7 @@ export const appRoutes: AppRoute[] = [
     group: "Sales",
     nestedUnder: "/delivery",
   },
-  { href: "/expenses", label: "Expenses", icon: Wallet, group: "Expenses & suppliers" },
+  { href: "/review/expenses", label: "Expenses", icon: Wallet, group: "Expenses & suppliers" },
   {
     href: "/uploads",
     label: "Documents",
@@ -214,7 +214,7 @@ export const appRoutes: AppRoute[] = [
     keywords: "merge duplicate items",
     icon: Tags,
     group: "Expenses & suppliers",
-    nestedUnder: "/expenses",
+    nestedUnder: "/review/expenses",
   },
 ];
 

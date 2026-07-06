@@ -71,7 +71,7 @@ describe("navGroups", () => {
       "/delivery/platforms",
       "/delivery/reports",
       "/delivery/settlements",
-      "/expenses",
+      "/review/expenses",
       "/uploads",
       "/suppliers",
       "/balances/suppliers",

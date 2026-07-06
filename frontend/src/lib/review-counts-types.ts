@@ -3,6 +3,7 @@ export type ReviewTabCounts = {
   sales: number;
   receipts: number;
   invoices: number;
+  expenses: number;
   delivery: number;
 };
 
@@ -20,6 +21,7 @@ export const EMPTY_REVIEW_COUNTS: ReviewCounts = {
     sales: 0,
     receipts: 0,
     invoices: 0,
+    expenses: 0,
     delivery: 0,
   },
   invoices_pending: 0,

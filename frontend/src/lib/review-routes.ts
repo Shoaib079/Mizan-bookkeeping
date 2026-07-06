@@ -5,6 +5,7 @@ export type ReviewTabId =
   | "sales"
   | "receipts"
   | "invoices"
+  | "expenses"
   | "delivery";
 
 export const REVIEW_TAB_HREFS: Record<ReviewTabId, string> = {
@@ -12,6 +13,7 @@ export const REVIEW_TAB_HREFS: Record<ReviewTabId, string> = {
   sales: "/review/sales",
   receipts: "/review/receipts",
   invoices: "/review/invoices",
+  expenses: "/review/expenses",
   delivery: "/review/delivery",
 };
 
@@ -19,6 +21,7 @@ export const REVIEW_TAB_HREFS: Record<ReviewTabId, string> = {
 export const LEGACY_REVIEW_REDIRECTS: Record<string, string> = {
   "/banking/review": "/review/bank",
   "/review/posted": "/reports/ledger",
+  "/expenses": "/review/expenses",
 };
 
 export function reviewHrefForNeedsReviewKey(
@@ -39,6 +42,6 @@ export function reviewHrefForNeedsReviewKey(
     case "delivery_reports":
       return REVIEW_TAB_HREFS.delivery;
     case "expense_entries":
-      return REVIEW_TAB_HREFS.receipts;
+      return REVIEW_TAB_HREFS.expenses;
   }
 }

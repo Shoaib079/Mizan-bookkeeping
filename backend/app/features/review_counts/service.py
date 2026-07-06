@@ -12,7 +12,12 @@ from app.features.banking.statement_models import BankStatementLine, StatementLi
 from app.features.delivery.models import DeliveryReport, DeliveryReportStatus
 from app.features.delivery.settings import is_delivery_enabled
 from app.features.entities import service as entity_service
-from app.features.expenses.models import ExpenseReceiptIntake, ExpenseReceiptIntakeStatus
+from app.features.expenses.models import (
+    ExpenseEntry,
+    ExpenseEntryStatus,
+    ExpenseReceiptIntake,
+    ExpenseReceiptIntakeStatus,
+)
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus
 from app.features.pos.models import PosDailySummary, PosDailySummaryStatus
 from app.features.review_counts.schema import ReviewCountsRead, ReviewTabCounts
@@ -79,6 +84,12 @@ def get_review_counts(session: Session, entity_id: uuid.UUID) -> ReviewCountsRea
             .select_from(InvoiceDraft)
             .where(InvoiceDraft.status == InvoiceDraftStatus.CONFIRMED.value),
         )
+        expenses = _scalar_count(
+            session,
+            select(func.count())
+            .select_from(ExpenseEntry)
+            .where(ExpenseEntry.status == ExpenseEntryStatus.NEEDS_REVIEW),
+        )
         delivery = 0
         if delivery_enabled:
             delivery = _scalar_count(
@@ -93,9 +104,10 @@ def get_review_counts(session: Session, entity_id: uuid.UUID) -> ReviewCountsRea
         sales=sales,
         receipts=receipts,
         invoices=invoices_pending + invoices_ready,
+        expenses=expenses,
         delivery=delivery,
     )
-    total = bank + sales + receipts + invoices_pending + invoices_ready + delivery
+    total = bank + sales + receipts + invoices_pending + invoices_ready + expenses + delivery
     return ReviewCountsRead(
         total=total,
         by_tab=by_tab,

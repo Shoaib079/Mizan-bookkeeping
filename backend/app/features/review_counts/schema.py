@@ -10,6 +10,7 @@ class ReviewTabCounts(BaseModel):
     sales: int = 0
     receipts: int = 0
     invoices: int = 0
+    expenses: int = 0
     delivery: int = 0
 
 

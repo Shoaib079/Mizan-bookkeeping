@@ -14,6 +14,7 @@ describe("review hub navigation", () => {
   it("maps legacy review URLs to hub tabs or reports", () => {
     expect(LEGACY_REVIEW_REDIRECTS["/banking/review"]).toBe("/review/bank");
     expect(LEGACY_REVIEW_REDIRECTS["/review/posted"]).toBe("/reports/ledger");
+    expect(LEGACY_REVIEW_REDIRECTS["/expenses"]).toBe("/review/expenses");
   });
 
   it("highlights Review sidebar on hub and tab routes", () => {
@@ -22,13 +23,14 @@ describe("review hub navigation", () => {
     expect(sidebarHrefActiveForPathname("/review", "/review/receipts/abc")).toBe(
       true,
     );
+    expect(sidebarHrefActiveForPathname("/review", "/review/expenses")).toBe(true);
   });
 
-  it("resolves review section tabs", () => {
-    const section = navSectionForPathname("/review/invoices");
+  it("resolves review section tabs including expenses", () => {
+    const section = navSectionForPathname("/review/expenses");
     expect(section?.id).toBe("review");
-    expect(section?.tabs.find((tab) => tab.match("/review/invoices"))?.label).toBe(
-      "Invoices",
+    expect(section?.tabs.find((tab) => tab.match("/review/expenses"))?.label).toBe(
+      "Expenses",
     );
   });
 
@@ -46,7 +48,7 @@ describe("review hub navigation", () => {
       REVIEW_TAB_HREFS.delivery,
     );
     expect(reviewHrefForNeedsReviewKey("expense_entries")).toBe(
-      REVIEW_TAB_HREFS.receipts,
+      REVIEW_TAB_HREFS.expenses,
     );
   });
 });

@@ -9,7 +9,14 @@ import { describe, expect, it } from "vitest";
 import type { ReviewTabCounts } from "@/lib/review-counts-types";
 import { firstNonZeroReviewHref } from "@/lib/review-tab-counts";
 
-const ZERO: ReviewTabCounts = { bank: 0, invoices: 0, sales: 0, receipts: 0, delivery: 0 };
+const ZERO: ReviewTabCounts = {
+  bank: 0,
+  invoices: 0,
+  sales: 0,
+  receipts: 0,
+  expenses: 0,
+  delivery: 0,
+};
 
 type RedirectState = {
   loading: boolean;

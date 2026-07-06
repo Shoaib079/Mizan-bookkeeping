@@ -12,12 +12,20 @@ describe("reviewTabCount", () => {
     };
     expect(reviewTabCount(byTab, "/review/bank")).toBe(2);
     expect(reviewTabCount(byTab, "/review/invoices")).toBe(5);
+    expect(reviewTabCount(byTab, "/review/expenses")).toBe(0);
     expect(reviewTabCount(byTab, "/review/manual-journals")).toBe(0);
   });
 });
 
 describe("firstNonZeroReviewHref", () => {
-  const zero: ReviewTabCounts = { bank: 0, invoices: 0, sales: 0, receipts: 0, delivery: 0 };
+  const zero: ReviewTabCounts = {
+    bank: 0,
+    invoices: 0,
+    sales: 0,
+    receipts: 0,
+    expenses: 0,
+    delivery: 0,
+  };
 
   it("returns /review/bank when all counts are zero", () => {
     expect(firstNonZeroReviewHref(zero)).toBe("/review/bank");
@@ -28,13 +36,29 @@ describe("firstNonZeroReviewHref", () => {
   });
 
   it("returns /review/bank when bank has items (highest priority)", () => {
-    expect(firstNonZeroReviewHref({ bank: 1, invoices: 3, sales: 0, receipts: 0, delivery: 0 }))
-      .toBe("/review/bank");
+    expect(
+      firstNonZeroReviewHref({
+        bank: 1,
+        invoices: 3,
+        sales: 0,
+        receipts: 0,
+        expenses: 0,
+        delivery: 0,
+      }),
+    ).toBe("/review/bank");
   });
 
   it("prefers invoices over sales when bank is zero", () => {
-    expect(firstNonZeroReviewHref({ bank: 0, invoices: 2, sales: 5, receipts: 0, delivery: 0 }))
-      .toBe("/review/invoices");
+    expect(
+      firstNonZeroReviewHref({
+        bank: 0,
+        invoices: 2,
+        sales: 5,
+        receipts: 0,
+        expenses: 0,
+        delivery: 0,
+      }),
+    ).toBe("/review/invoices");
   });
 
   it("falls through to delivery when only delivery has items", () => {
@@ -49,13 +73,40 @@ describe("firstNonZeroReviewHref", () => {
     expect(firstNonZeroReviewHref({ ...zero, receipts: 7 })).toBe("/review/receipts");
   });
 
-  it("priority order: bank > invoices > sales > receipts > delivery", () => {
-    const all: ReviewTabCounts = { bank: 1, invoices: 2, sales: 3, receipts: 4, delivery: 5 };
+  it("priority order: bank > invoices > sales > receipts > expenses > delivery", () => {
+    const all: ReviewTabCounts = {
+      bank: 1,
+      invoices: 2,
+      sales: 3,
+      receipts: 4,
+      expenses: 5,
+      delivery: 6,
+    };
     expect(firstNonZeroReviewHref(all)).toBe("/review/bank");
 
     expect(firstNonZeroReviewHref({ ...all, bank: 0 })).toBe("/review/invoices");
     expect(firstNonZeroReviewHref({ ...all, bank: 0, invoices: 0 })).toBe("/review/sales");
-    expect(firstNonZeroReviewHref({ ...all, bank: 0, invoices: 0, sales: 0 })).toBe("/review/receipts");
-    expect(firstNonZeroReviewHref({ ...all, bank: 0, invoices: 0, sales: 0, receipts: 0 })).toBe("/review/delivery");
+    expect(firstNonZeroReviewHref({ ...all, bank: 0, invoices: 0, sales: 0 })).toBe(
+      "/review/receipts",
+    );
+    expect(
+      firstNonZeroReviewHref({
+        ...all,
+        bank: 0,
+        invoices: 0,
+        sales: 0,
+        receipts: 0,
+      }),
+    ).toBe("/review/expenses");
+    expect(
+      firstNonZeroReviewHref({
+        ...all,
+        bank: 0,
+        invoices: 0,
+        sales: 0,
+        receipts: 0,
+        expenses: 0,
+      }),
+    ).toBe("/review/delivery");
   });
 });

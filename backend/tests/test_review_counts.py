@@ -85,5 +85,6 @@ def test_review_counts_api(client: TestClient, review_counts_setup) -> None:
         "sales",
         "receipts",
         "invoices",
+        "expenses",
         "delivery",
     }
