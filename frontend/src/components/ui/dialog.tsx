@@ -4,6 +4,7 @@
 
 import { X } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -105,7 +106,7 @@ export function Dialog({
 
   if (!open) return null;
 
-  return (
+  const overlay = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
       onMouseDown={(e) => {
@@ -171,4 +172,7 @@ export function Dialog({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(overlay, document.body);
 }

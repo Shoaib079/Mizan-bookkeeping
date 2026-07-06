@@ -485,11 +485,16 @@ export function StaffSalaryPaymentDialog({
         setError("Choose a salary month.");
         return;
       }
-      if (cash > 0 && isTry && !paymentGlAccountId) {
+      if (
+        !isStatement &&
+        cash > 0 &&
+        isTry &&
+        !paymentGlAccountId
+      ) {
         setError("Choose a cash or bank account.");
         return;
       }
-      if (cash > 0 && !isTry && !fxWalletId) {
+      if (!isStatement && cash > 0 && !isTry && !fxWalletId) {
         setError(`No ${payCurrency} wallet found.`);
         return;
       }
@@ -627,6 +632,12 @@ export function StaffSalaryPaymentDialog({
               </>
             )}
           </>
+        )}
+
+        {isStatement && cashPreview > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Payment posts from this bank statement — no cash or bank pick needed.
+          </p>
         )}
 
         <div className="grid gap-3 sm:grid-cols-2">

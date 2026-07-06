@@ -67,6 +67,16 @@ describe("unified record dialogs", () => {
     const classifyBar = read("statement-classify-bar.tsx");
     expect(classifyBar).toContain("selectedEmployee");
     expect(classifyBar).not.toContain('?? "Employee"');
+    expect(salaryDialog).toContain("!isStatement &&");
+    expect(salaryDialog).toContain(
+      "Payment posts from this bank statement",
+    );
+  });
+
+  it("renders dialogs in a portal so sticky headers do not cover modals", () => {
+    const dialog = read("ui/dialog.tsx");
+    expect(dialog).toContain("createPortal");
+    expect(dialog).toContain("document.body");
   });
 
   it("manual expense can record salary payments", () => {
