@@ -50,17 +50,17 @@ export function invoiceReviewEmptyState(tab: InvoiceReviewTab): {
     case "ready":
       return {
         title: "Nothing ready to post",
-        hint: "Confirmed invoices waiting for post-to-ledger will appear here.",
+        hint: "No confirmed invoices in this period. Change the dates or confirm drafts from Pending review.",
       };
     case "all":
       return {
         title: "No invoices",
-        hint: "Upload e-Fatura files from Record or a supplier page.",
+        hint: "Nothing in this period. Change the dates or upload e-Fatura from Record.",
       };
     default:
       return {
         title: "No supplier invoices in progress",
-        hint: "Upload e-Fatura files from Record or a supplier page. They appear here for review, then post to ledger to update payables.",
+        hint: "Nothing in this period for pending review. Change the dates or upload e-Fatura from Record.",
       };
   }
 }
@@ -109,6 +109,25 @@ export function postedInvoicesListPath(from: string, to: string): string {
     to,
     limit: 100,
   });
+}
+
+/** Review hub list query — date range applies to every tab. */
+export function invoiceReviewListPath(
+  tab: InvoiceReviewTab,
+  from: string,
+  to: string,
+): string {
+  const range = { from, to, limit: 100 };
+  switch (tab) {
+    case "ready":
+      return invoiceDraftsListPath({ ...range, status: "confirmed" });
+    case "posted":
+      return invoiceDraftsListPath({ ...range, status: "posted" });
+    case "all":
+      return invoiceDraftsListPath(range);
+    default:
+      return invoiceDraftsListPath(range);
+  }
 }
 
 export function postedCommissionInvoicesListPath(from?: string, to?: string): string {

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 
 import { TableSkeleton } from "@/components/ui/skeleton";
 
@@ -13,5 +14,9 @@ const InvoicesReviewPanel = dynamic(
 );
 
 export default function ReviewInvoicesPage() {
-  return <InvoicesReviewPanel />;
+  return (
+    <Suspense fallback={<TableSkeleton columns={5} />}>
+      <InvoicesReviewPanel />
+    </Suspense>
+  );
 }

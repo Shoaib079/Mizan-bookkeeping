@@ -18,7 +18,6 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
-import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { invalidateReviewCounts } from "@/lib/review-counts-types";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -27,14 +26,13 @@ import {
   filterInvoicesByTab,
   INVOICE_REVIEW_TABS,
   invoiceCounterpartyLabel,
-  invoiceDraftsListPath,
   invoiceReviewEmptyState,
-  postedInvoicesListPath,
   type InvoiceDraftListRow,
   type InvoiceReviewTab,
 } from "@/lib/invoice-draft-list";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
+import { useInvoicesReviewUrl } from "@/lib/use-invoices-review-url";
 import { cn } from "@/lib/utils";
 
 function InvoiceDraftTable({
@@ -149,28 +147,13 @@ function InvoiceDraftTable({
 
 export function InvoicesReviewPanel() {
   const { entityId } = useEntity();
-  const [activeTab, setActiveTab] = useState<InvoiceReviewTab>("pending");
+  const { from, to, activeTab, setRange, setActiveTab, listPath } =
+    useInvoicesReviewUrl();
   const [expandedDraftId, setExpandedDraftId] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState(currentMonthRange);
 
   useEntitySwitchReset(entityId, () => {
-    setActiveTab("pending");
     setExpandedDraftId(null);
-    setDateRange(currentMonthRange());
   });
-
-  const listPath = useMemo(() => {
-    switch (activeTab) {
-      case "ready":
-        return invoiceDraftsListPath({ status: "confirmed", limit: 100 });
-      case "posted":
-        return postedInvoicesListPath(dateRange.from, dateRange.to);
-      case "all":
-        return invoiceDraftsListPath({ limit: 100 });
-      default:
-        return invoiceDraftsListPath({ limit: 100 });
-    }
-  }, [activeTab, dateRange.from, dateRange.to]);
 
   const { items, loading, error, reload } = useEntityList<InvoiceDraftListRow>(
     listPath,
@@ -199,6 +182,11 @@ export function InvoicesReviewPanel() {
     setExpandedDraftId(null);
   }
 
+  function onRangeChange(nextFrom: string, nextTo: string) {
+    setRange(nextFrom, nextTo);
+    setExpandedDraftId(null);
+  }
+
   if (!entityId) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -218,43 +206,38 @@ export function InvoicesReviewPanel() {
           : "Uploaded supplier invoices stay here until posted to the ledger. Confirmed invoices must still be posted before they appear in payables. Click Review on a row to expand actions — post, send back to review, discard, or reclassify."}
       </p>
 
-      <div
-        className="mb-6 flex flex-wrap gap-2 border-b border-border pb-2"
-        role="tablist"
-        aria-label="Invoice status filters"
-      >
-        {INVOICE_REVIEW_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              activeTab === tab.id
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-            onClick={() => onTabChange(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="mb-6 space-y-3">
+        <ReportDateRange
+          from={from}
+          to={to}
+          disabled={loading}
+          onChange={onRangeChange}
+        />
 
-      {isPostedTab && (
-        <div className="mb-6">
-          <ReportDateRange
-            from={dateRange.from}
-            to={dateRange.to}
-            disabled={loading}
-            onChange={(from, to) => {
-              setDateRange({ from, to });
-              setExpandedDraftId(null);
-            }}
-          />
+        <div
+          className="flex flex-wrap gap-2 border-b border-border pb-2"
+          role="tablist"
+          aria-label="Invoice status filters"
+        >
+          {INVOICE_REVIEW_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                activeTab === tab.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+              onClick={() => onTabChange(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <TableSkeleton columns={isPostedTab ? 7 : 8} />}
