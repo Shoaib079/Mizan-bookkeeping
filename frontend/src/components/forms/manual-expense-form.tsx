@@ -526,6 +526,7 @@ export function ManualExpenseForm({
           </div>
           {entityId && selectedEmployee && (
             <StaffSalaryPaymentDialog
+              key={selectedEmployee.id}
               embedded
               open
               entityId={entityId}

@@ -2,7 +2,7 @@
 
 /** Pay salary for a month — one dialog: date, account, period, amounts. */
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
@@ -114,6 +114,8 @@ export function StaffSalaryPaymentDialog({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadedContextRef = useRef("");
 
   const confirming = confirmingProp || submitting;
   const dialogOpen =
@@ -227,6 +229,47 @@ export function StaffSalaryPaymentDialog({
     loadAccounts,
     paymentDate,
     submitIdempotency,
+  ]);
+
+  // Switching employee or salary period must not keep the previous amounts.
+  useEffect(() => {
+    if (!open) {
+      loadedContextRef.current = "";
+      return;
+    }
+    const year = Number.parseInt(periodYear, 10);
+    const month = Number.parseInt(periodMonth, 10);
+    if (
+      !Number.isFinite(year) ||
+      year < 2000 ||
+      !Number.isFinite(month) ||
+      month < 1 ||
+      month > 12
+    ) {
+      return;
+    }
+    const contextKey = `${employeeId}:${payCurrency}:${year}:${month}`;
+    if (loadedContextRef.current === contextKey) return;
+    loadedContextRef.current = contextKey;
+    setSalaryText("");
+    setCashText(
+      defaultCashMinor != null && isTry
+        ? formatTry(defaultCashMinor).replace(" TL", "")
+        : defaultCashMinor != null
+          ? (defaultCashMinor / 100).toFixed(2)
+          : "",
+    );
+    setStatus(null);
+    setTryCostText("");
+    setError(null);
+  }, [
+    employeeId,
+    payCurrency,
+    periodYear,
+    periodMonth,
+    open,
+    defaultCashMinor,
+    isTry,
   ]);
 
   useEffect(() => {
