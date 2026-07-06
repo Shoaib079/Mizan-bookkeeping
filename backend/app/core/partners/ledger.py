@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.partners.models import PartnerLedgerEntry
@@ -166,14 +166,22 @@ def _sum_balance(
     partner_id: uuid.UUID | None,
     movement_types: frozenset[PartnerMovementType] | None = None,
 ) -> int:
+    from app.core.ledger.subledger_effective import effective_total_for_scalars
+
     require_entity_context()
-    stmt = select(func.coalesce(func.sum(PartnerLedgerEntry.amount_kurus), 0))
+    stmt = select(PartnerLedgerEntry)
     if partner_id is not None:
         stmt = stmt.where(PartnerLedgerEntry.partner_id == partner_id)
     if movement_types is not None:
         stmt = stmt.where(PartnerLedgerEntry.movement_type.in_(movement_types))
-    total = session.scalar(stmt)
-    return int(total or 0)
+    rows = session.scalars(stmt)
+    return effective_total_for_scalars(
+        session,
+        rows,
+        amount=lambda row: row.amount_kurus,
+        journal_entry_id=lambda row: row.journal_entry_id,
+        description=lambda row: row.description,
+    )
 
 
 def _balance_kurus_in_context(session: Session, partner_id: uuid.UUID) -> int:

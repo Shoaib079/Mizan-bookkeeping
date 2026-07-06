@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.payables.models import SupplierLedgerEntry
@@ -206,12 +206,21 @@ def current_balance_kurus(
         if supplier is None:
             raise LookupError("Supplier not found")
 
-        total = session.scalar(
-            select(func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0)).where(
+        from app.core.ledger.subledger_effective import effective_total_for_scalars
+
+        require_entity_context()
+        rows = session.scalars(
+            select(SupplierLedgerEntry).where(
                 SupplierLedgerEntry.supplier_id == supplier_id
             )
         )
-        return int(total or 0)
+        return effective_total_for_scalars(
+            session,
+            rows,
+            amount=lambda row: row.amount_kurus,
+            journal_entry_id=lambda row: row.journal_entry_id,
+            description=lambda row: row.description,
+        )
 
 
 def list_ledger_entries(

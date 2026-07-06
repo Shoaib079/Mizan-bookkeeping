@@ -523,3 +523,79 @@ def test_api_customer_optional_tax_id(client: TestClient, receivables_setup) -> 
     assert sale_body["customer_ledger_entry"]["pax"] == 20
     assert sale_body["customer_ledger_entry"]["forex_currency"] == "EUR"
     assert sale_body["balance_kurus"] == 200_000
+
+
+def test_void_credit_sale_excluded_from_balance(db_session, receivables_setup) -> None:
+    """Voided credit sale must not inflate customer balance — use effective rows only."""
+    from app.core.ledger.subledger_display import SubledgerDisplayKind
+    from app.core.receivables.types import CustomerMovementType
+    from app.features.customers.service import get_customer_ledger, void_credit_sale_entry
+
+    entity_id = receivables_setup["entity_id"]
+    customer_id = receivables_setup["customer_id"]
+    revenue_id = receivables_setup["accounts"][SALES_REVENUE_CODE]
+
+    receivables_posting.post_credit_sale(
+        db_session,
+        entity_id,
+        customer_id,
+        sale_date=date(2026, 5, 5),
+        amount_kurus=100_000,
+        description="May catering",
+        actor_id=ACTOR_ID,
+        revenue_account_id=revenue_id,
+    )
+    receivables_posting.post_credit_sale(
+        db_session,
+        entity_id,
+        customer_id,
+        sale_date=date(2026, 7, 6),
+        amount_kurus=50_000,
+        description="Duplicate May catering",
+        actor_id=ACTOR_ID,
+        revenue_account_id=revenue_id,
+    )
+
+    assert receivables_ledger.current_balance_kurus(
+        db_session, entity_id, customer_id
+    ) == 150_000
+
+    with entity_context(db_session, entity_id):
+        rows = receivables_ledger.list_ledger_entries(
+            db_session, entity_id, customer_id
+        )
+        second = next(row for row in rows if row.amount_kurus == 50_000)
+        assert second.journal_entry_id is not None
+
+    void_credit_sale_entry(
+        db_session,
+        entity_id,
+        customer_id,
+        second.journal_entry_id,
+        actor_id=ACTOR_ID,
+        reason="Duplicate sale",
+    )
+
+    assert receivables_ledger.current_balance_kurus(
+        db_session, entity_id, customer_id
+    ) == 100_000
+
+    ledger = get_customer_ledger(db_session, entity_id, customer_id)
+    assert ledger.balance_kurus == 100_000
+    effective_sales = [
+        entry
+        for entry in ledger.entries
+        if entry.movement_type == CustomerMovementType.CREDIT_SALE
+        and entry.display_kind == SubledgerDisplayKind.EFFECTIVE
+    ]
+    assert len(effective_sales) == 1
+    assert effective_sales[0].amount_kurus == 100_000
+
+    superseded = [
+        entry
+        for entry in ledger.entries
+        if entry.movement_type == CustomerMovementType.CREDIT_SALE
+        and entry.display_kind == SubledgerDisplayKind.SUPERSEDED
+    ]
+    assert len(superseded) == 1
+    assert superseded[0].amount_kurus == 50_000

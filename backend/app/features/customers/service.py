@@ -59,9 +59,11 @@ def _customer_entry_reads(
 
 
 def _customer_entry_read(
-    session: Session, entry: CustomerLedgerEntry
+    session: Session, entry: CustomerLedgerEntry, *, entity_id: uuid.UUID
 ) -> CustomerLedgerEntryRead:
-    return _customer_entry_reads(session, [entry])[0]
+    with entity_context(session, entity_id):
+        require_entity_context()
+        return _customer_entry_reads(session, [entry])[0]
 
 
 def create_customer(
@@ -166,12 +168,15 @@ def update_customer(
 def get_customer_ledger(
     session: Session, entity_id: uuid.UUID, customer_id: uuid.UUID
 ) -> CustomerLedgerRead:
-    balance = receivables_ledger.current_balance_kurus(session, entity_id, customer_id)
-    entries = receivables_ledger.list_ledger_entries(session, entity_id, customer_id)
+    with entity_context(session, entity_id):
+        require_entity_context()
+        balance = receivables_ledger.current_balance_kurus(session, entity_id, customer_id)
+        entries = receivables_ledger.list_ledger_entries(session, entity_id, customer_id)
+        reads = _customer_entry_reads(session, entries)
     return CustomerLedgerRead(
         customer_id=customer_id,
         balance_kurus=balance,
-        entries=_customer_entry_reads(session, entries),
+        entries=reads,
     )
 
 
@@ -213,7 +218,7 @@ def record_credit_sale(
     return CreditSaleResponse(
         journal_entry_id=result.journal_entry.id,
         customer_ledger_entry=_customer_entry_read(
-            session, result.customer_ledger_entry
+            session, result.customer_ledger_entry, entity_id=entity_id
         ),
         balance_kurus=result.balance_kurus,
     )
@@ -244,7 +249,7 @@ def record_customer_payment(
     return CustomerPaymentResponse(
         journal_entry_id=result.journal_entry.id,
         customer_ledger_entry=_customer_entry_read(
-            session, result.customer_ledger_entry
+            session, result.customer_ledger_entry, entity_id=entity_id
         ),
         balance_kurus=result.balance_kurus,
     )

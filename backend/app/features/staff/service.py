@@ -69,8 +69,12 @@ def _staff_entry_reads(
     return collapse_accrual_entry_reads(reads)
 
 
-def _staff_entry_read(session: Session, entry: StaffLedgerEntry) -> StaffLedgerEntryRead:
-    return _staff_entry_reads(session, [entry])[0]
+def _staff_entry_read(
+    session: Session, entry: StaffLedgerEntry, *, entity_id: uuid.UUID
+) -> StaffLedgerEntryRead:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        return _staff_entry_reads(session, [entry])[0]
 
 
 def create_employee(
@@ -157,18 +161,19 @@ def update_employee(
 def get_staff_ledger(
     session: Session, entity_id: uuid.UUID, employee_id: uuid.UUID
 ) -> StaffLedgerRead:
-    balance = current_balance_minor(session, entity_id, employee_id)
-    entries = list_ledger_entries(session, entity_id, employee_id)
     with entity_context(session, entity_id):
         require_entity_context()
+        balance = current_balance_minor(session, entity_id, employee_id)
+        entries = list_ledger_entries(session, entity_id, employee_id)
         remaining = remaining_accrual_minor(session, employee_id)
         advance = outstanding_advance_minor(session, employee_id)
+        reads = _staff_entry_reads(session, entries)
     return StaffLedgerRead(
         employee_id=employee_id,
         balance_minor=balance,
         remaining_accrual_minor=remaining,
         outstanding_advance_minor=advance,
-        entries=_staff_entry_reads(session, entries),
+        entries=reads,
     )
 
 
@@ -205,7 +210,9 @@ def record_accrual(
     )
     return StaffAccrualResponse(
         journal_entry_id=result.journal_entry.id if result.journal_entry else None,
-        staff_ledger_entry=_staff_entry_read(session, result.staff_ledger_entry),
+        staff_ledger_entry=_staff_entry_read(
+            session, result.staff_ledger_entry, entity_id=entity_id
+        ),
         balance_minor=result.balance_minor,
     )
 
@@ -242,7 +249,9 @@ def record_advance(
     )
     return StaffAdvanceResponse(
         journal_entry_id=result.journal_entry.id,
-        staff_ledger_entry=_staff_entry_read(session, result.staff_ledger_entry),
+        staff_ledger_entry=_staff_entry_read(
+            session, result.staff_ledger_entry, entity_id=entity_id
+        ),
         balance_minor=result.balance_minor,
         fx_ledger_entry_id=(
             result.fx_ledger_entry.id if result.fx_ledger_entry else None
@@ -347,7 +356,9 @@ def record_extra_days_paid(
         raise ValueError("Extra days record did not produce a journal entry")
     return StaffExtraDaysPaidResponse(
         journal_entry_id=journal_id,
-        staff_ledger_entry=_staff_entry_read(session, result.staff_ledger_entry),
+        staff_ledger_entry=_staff_entry_read(
+            session, result.staff_ledger_entry, entity_id=entity_id
+        ),
         balance_minor=result.balance_minor,
         total_minor=total_minor,
     )
@@ -448,7 +459,9 @@ def record_payment(
         )
     return StaffPaymentResponse(
         journal_entry_id=result.journal_entry.id,
-        staff_ledger_entry=_staff_entry_read(session, result.staff_ledger_entry),
+        staff_ledger_entry=_staff_entry_read(
+            session, result.staff_ledger_entry, entity_id=entity_id
+        ),
         balance_minor=result.balance_minor,
         advance_applied_minor=result.advance_applied_minor,
         fx_ledger_entry_id=(
@@ -644,7 +657,7 @@ def correct_staff_journal_entry_http(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
         corrected_journal_entry_id=result.corrected.id,
-        staff_ledger_entry=_staff_entry_read(session, new_row),
+        staff_ledger_entry=_staff_entry_read(session, new_row, entity_id=entity_id),
         balance_minor=balance,
     )
 

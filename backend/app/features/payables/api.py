@@ -22,7 +22,7 @@ from app.core.payables.ledger import (
     DisallowedMovementTypeError,
     ZeroMovementError,
 )
-from app.db.session import get_session
+from app.db.session import entity_context, get_session, require_entity_context
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
 from app.features.auth.models import User
 from app.features.payables import activity_excel
@@ -91,10 +91,13 @@ def get_supplier_ledger(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    with entity_context(session, entity_id):
+        require_entity_context()
+        reads = service.supplier_entry_reads(session, entries)
     return SupplierLedgerRead(
         supplier_id=supplier_id,
         balance_kurus=balance,
-        entries=service.supplier_entry_reads(session, entries),
+        entries=reads,
     )
 
 

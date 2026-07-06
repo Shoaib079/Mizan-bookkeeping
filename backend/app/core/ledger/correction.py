@@ -338,6 +338,9 @@ def _append_staff_reversal(
         journal_entry_id=reversal.id,
         reference_type=original.reference_type,
         reference_id=original.reference_id,
+        period_year=original.period_year,
+        period_month=original.period_month,
+        extra_days=original.extra_days,
     )
     session.add(entry)
     session.flush()

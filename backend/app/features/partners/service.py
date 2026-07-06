@@ -82,8 +82,12 @@ def _partner_entry_reads(
     )
 
 
-def _partner_entry_read(session: Session, entry: PartnerLedgerEntry) -> PartnerLedgerEntryRead:
-    return _partner_entry_reads(session, [entry])[0]
+def _partner_entry_read(
+    session: Session, entry: PartnerLedgerEntry, *, entity_id: uuid.UUID
+) -> PartnerLedgerEntryRead:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        return _partner_entry_reads(session, [entry])[0]
 
 
 def ownership_share_summary(
@@ -202,14 +206,17 @@ def update_partner(
 def get_partner_ledger(
     session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
 ) -> PartnerLedgerRead:
-    reimbursement = reimbursement_balance_kurus(session, entity_id, partner_id)
-    capital = capital_balance_kurus(session, entity_id, partner_id)
-    entries = list_ledger_entries(session, entity_id, partner_id)
+    with entity_context(session, entity_id):
+        require_entity_context()
+        reimbursement = reimbursement_balance_kurus(session, entity_id, partner_id)
+        capital = capital_balance_kurus(session, entity_id, partner_id)
+        entries = list_ledger_entries(session, entity_id, partner_id)
+        reads = _partner_entry_reads(session, entries)
     return PartnerLedgerRead(
         partner_id=partner_id,
         balance_kurus=reimbursement,
         capital_balance_kurus=capital,
-        entries=_partner_entry_reads(session, entries),
+        entries=reads,
     )
 
 
@@ -243,7 +250,9 @@ def record_expense_fronted(
     )
     return ExpenseFrontedResponse(
         journal_entry_id=result.journal_entry.id,
-        partner_ledger_entry=_partner_entry_read(session, result.partner_ledger_entry),
+        partner_ledger_entry=_partner_entry_read(
+            session, result.partner_ledger_entry, entity_id=entity_id
+        ),
         balance_kurus=result.balance_kurus,
     )
 
@@ -266,7 +275,9 @@ def record_reimbursement_paid(
     )
     return ReimbursementPaidResponse(
         journal_entry_id=result.journal_entry.id,
-        partner_ledger_entry=_partner_entry_read(session, result.partner_ledger_entry),
+        partner_ledger_entry=_partner_entry_read(
+            session, result.partner_ledger_entry, entity_id=entity_id
+        ),
         balance_kurus=result.balance_kurus,
     )
 
@@ -289,7 +300,9 @@ def record_drawing(
     )
     return DrawingResponse(
         journal_entry_id=result.journal_entry.id,
-        partner_ledger_entry=_partner_entry_read(session, result.partner_ledger_entry),
+        partner_ledger_entry=_partner_entry_read(
+            session, result.partner_ledger_entry, entity_id=entity_id
+        ),
         balance_kurus=result.balance_kurus,
     )
 
@@ -312,7 +325,9 @@ def record_drawing_repayment(
     )
     return DrawingRepaymentResponse(
         journal_entry_id=result.journal_entry.id,
-        partner_ledger_entry=_partner_entry_read(session, result.partner_ledger_entry),
+        partner_ledger_entry=_partner_entry_read(
+            session, result.partner_ledger_entry, entity_id=entity_id
+        ),
         balance_kurus=result.balance_kurus,
     )
 
@@ -453,7 +468,7 @@ def correct_partner_journal_entry_http(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
         corrected_journal_entry_id=result.corrected.id,
-        partner_ledger_entry=_partner_entry_read(session, new_row),
+        partner_ledger_entry=_partner_entry_read(session, new_row, entity_id=entity_id),
         balance_kurus=balance,
     )
 
@@ -571,12 +586,15 @@ def post_profit_allocation(
         description=payload.description,
         actor_id=payload.actor_id,
     )
+    with entity_context(session, entity_id):
+        require_entity_context()
+        partner_reads = _partner_entry_reads(
+            session, list(result.partner_ledger_entries)
+        )
     return ProfitAllocationPostOut(
         journal_entry_id=result.journal_entry.id,
         total_profit_kurus=profit_kurus,
-        partner_ledger_entries=_partner_entry_reads(
-            session, list(result.partner_ledger_entries)
-        ),
+        partner_ledger_entries=partner_reads,
     )
 
 

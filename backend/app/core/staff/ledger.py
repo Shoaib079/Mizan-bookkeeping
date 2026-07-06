@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.staff.models import StaffLedgerEntry
@@ -130,12 +130,9 @@ def record_staff_movement(
 
 def _balance_minor_in_context(session: Session, employee_id: uuid.UUID) -> int:
     require_entity_context()
-    total = session.scalar(
-        select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
-            StaffLedgerEntry.employee_id == employee_id
-        )
-    )
-    return int(total or 0)
+    from app.core.staff.ledger_effective import effective_balance_minor
+
+    return effective_balance_minor(session, employee_id)
 
 
 def current_balance_minor(
@@ -160,13 +157,9 @@ def current_balance_minor(
 def _sum_by_type(
     session: Session, employee_id: uuid.UUID, movement_type: StaffMovementType
 ) -> int:
-    total = session.scalar(
-        select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
-            StaffLedgerEntry.employee_id == employee_id,
-            StaffLedgerEntry.movement_type == movement_type,
-        )
-    )
-    return int(total or 0)
+    from app.core.staff.ledger_effective import effective_sum_by_type
+
+    return effective_sum_by_type(session, employee_id, movement_type)
 
 
 def remaining_accrual_minor(session: Session, employee_id: uuid.UUID) -> int:
@@ -221,6 +214,9 @@ def outstanding_advance_minor(session: Session, employee_id: uuid.UUID) -> int:
 
 def outstanding_advance_try_kurus(session: Session, employee_id: uuid.UUID) -> int:
     """TRY book cost of unapplied advances (FX workers store try_cost on advance rows)."""
+    from app.core.ledger.subledger_display import load_journals_for_rows
+    from app.core.staff.ledger_effective import effective_amount_minor
+
     rows = session.scalars(
         select(StaffLedgerEntry).where(
             StaffLedgerEntry.employee_id == employee_id,
@@ -232,8 +228,13 @@ def outstanding_advance_try_kurus(session: Session, employee_id: uuid.UUID) -> i
             ),
         )
     ).all()
+    if not rows:
+        return 0
+    journals = load_journals_for_rows(session, [r.journal_entry_id for r in rows])
     total = 0
     for row in rows:
+        if effective_amount_minor(session, row, journals=journals) == 0:
+            continue
         if row.movement_type == StaffMovementType.ADVANCE_PAID:
             if row.try_cost_kurus is not None:
                 total += row.try_cost_kurus

@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.ledger.models import JournalEntry, JournalEntryStatus
+from app.db.session import require_entity_context
 
 VOID_DESCRIPTION_PREFIX = "Void:"
 
@@ -119,6 +120,7 @@ def enrich_entry_models(
     journal_entry_id: Callable[[Any], uuid.UUID | None],
     description: Callable[[Any], str],
 ) -> list[TEntryModel]:
+    require_entity_context()
     displays = batch_subledger_display(
         session,
         rows,

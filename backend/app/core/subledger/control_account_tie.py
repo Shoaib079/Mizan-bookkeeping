@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.default_chart import (
@@ -81,50 +81,83 @@ def _gl_balance(
 
 
 def supplier_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:
+    from app.core.ledger.subledger_effective import effective_total_for_scalars
+
     with entity_context(db_session, entity_id):
-        total = db_session.scalar(
-            select(func.coalesce(func.sum(SupplierLedgerEntry.amount_kurus), 0))
+        require_entity_context()
+        rows = db_session.scalars(select(SupplierLedgerEntry))
+        return effective_total_for_scalars(
+            db_session,
+            rows,
+            amount=lambda row: row.amount_kurus,
+            journal_entry_id=lambda row: row.journal_entry_id,
+            description=lambda row: row.description,
         )
-        return int(total or 0)
 
 
 def customer_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:
+    from app.core.ledger.subledger_effective import effective_total_for_scalars
+
     with entity_context(db_session, entity_id):
-        total = db_session.scalar(
-            select(func.coalesce(func.sum(CustomerLedgerEntry.amount_kurus), 0))
+        require_entity_context()
+        rows = db_session.scalars(select(CustomerLedgerEntry))
+        return effective_total_for_scalars(
+            db_session,
+            rows,
+            amount=lambda row: row.amount_kurus,
+            journal_entry_id=lambda row: row.journal_entry_id,
+            description=lambda row: row.description,
         )
-        return int(total or 0)
 
 
 def staff_salaries_payable_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:
     """Subledger movements that post to 2250 salaries payable."""
+    from app.core.ledger.subledger_effective import effective_total_for_scalars
+
     payable_types = (
         StaffMovementType.OPENING_BALANCE,
         StaffMovementType.SALARY_ACCRUED,
         StaffMovementType.SALARY_PAYMENT,
     )
     with entity_context(db_session, entity_id):
-        total = db_session.scalar(
-            select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
+        require_entity_context()
+        rows = db_session.scalars(
+            select(StaffLedgerEntry).where(
                 StaffLedgerEntry.movement_type.in_(payable_types)
             )
         )
-        return int(total or 0)
+        return effective_total_for_scalars(
+            db_session,
+            rows,
+            amount=lambda row: row.amount_minor,
+            journal_entry_id=lambda row: row.journal_entry_id,
+            description=lambda row: row.description,
+        )
 
 
 def staff_employee_advances_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:
     """Net employee advances in subledger (positive = outstanding asset)."""
+    from app.core.ledger.subledger_effective import effective_total_for_scalars
+
     advance_types = (
         StaffMovementType.ADVANCE_PAID,
         StaffMovementType.ADVANCE_APPLIED,
     )
     with entity_context(db_session, entity_id):
-        total = db_session.scalar(
-            select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
+        require_entity_context()
+        rows = db_session.scalars(
+            select(StaffLedgerEntry).where(
                 StaffLedgerEntry.movement_type.in_(advance_types)
             )
         )
-        return -int(total or 0)
+        total = effective_total_for_scalars(
+            db_session,
+            rows,
+            amount=lambda row: row.amount_minor,
+            journal_entry_id=lambda row: row.journal_entry_id,
+            description=lambda row: row.description,
+        )
+        return -total
 
 
 def partner_reimbursement_subledger_total(db_session: Session, entity_id: uuid.UUID) -> int:

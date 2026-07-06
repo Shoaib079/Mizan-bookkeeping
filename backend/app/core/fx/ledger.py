@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.fx.models import FxLedgerEntry
@@ -89,25 +89,41 @@ def record_fx_movement(
 def _native_quantity_balance_in_context(
     session: Session, fx_money_account_id: uuid.UUID
 ) -> int:
+    from app.core.ledger.subledger_effective import effective_total_for_scalars
+
     require_entity_context()
-    total = session.scalar(
-        select(func.coalesce(func.sum(FxLedgerEntry.native_quantity), 0)).where(
+    rows = session.scalars(
+        select(FxLedgerEntry).where(
             FxLedgerEntry.fx_money_account_id == fx_money_account_id
         )
     )
-    return int(total or 0)
+    return effective_total_for_scalars(
+        session,
+        rows,
+        amount=lambda row: row.native_quantity,
+        journal_entry_id=lambda row: row.journal_entry_id,
+        description=lambda row: row.description,
+    )
 
 
 def _try_cost_balance_kurus_in_context(
     session: Session, fx_money_account_id: uuid.UUID
 ) -> int:
+    from app.core.ledger.subledger_effective import effective_total_for_scalars
+
     require_entity_context()
-    total = session.scalar(
-        select(func.coalesce(func.sum(FxLedgerEntry.try_cost_kurus), 0)).where(
+    rows = session.scalars(
+        select(FxLedgerEntry).where(
             FxLedgerEntry.fx_money_account_id == fx_money_account_id
         )
     )
-    return int(total or 0)
+    return effective_total_for_scalars(
+        session,
+        rows,
+        amount=lambda row: row.try_cost_kurus,
+        journal_entry_id=lambda row: row.journal_entry_id,
+        description=lambda row: row.description,
+    )
 
 
 def native_quantity_balance(

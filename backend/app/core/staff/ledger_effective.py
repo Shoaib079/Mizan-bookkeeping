@@ -16,6 +16,7 @@ from app.core.ledger.subledger_display import (
 )
 from app.core.staff.models import StaffLedgerEntry
 from app.core.staff.types import StaffMovementType
+from app.db.session import require_entity_context
 from app.features.staff.schema import StaffLedgerEntryRead
 
 
@@ -41,9 +42,57 @@ def effective_amount_minor(
     *,
     journals: dict[uuid.UUID, JournalEntry] | None = None,
 ) -> int:
-    if staff_row_display_kind(session, row, journals=journals) != SubledgerDisplayKind.EFFECTIVE:
-        return 0
-    return row.amount_minor
+    from app.core.ledger.subledger_effective import effective_amount
+
+    if journals is None and row.journal_entry_id is not None:
+        journals = load_journals_for_rows(session, [row.journal_entry_id])
+    return effective_amount(
+        session,
+        journal_entry_id=row.journal_entry_id,
+        description=row.description,
+        amount=row.amount_minor,
+        journals=journals,
+    )
+
+
+def effective_balance_minor(session: Session, employee_id: uuid.UUID) -> int:
+    """Staff subledger balance — effective rows only (excludes voided / superseded)."""
+    from sqlalchemy import select
+
+    from app.core.ledger.subledger_effective import effective_total_for_scalars
+
+    require_entity_context()
+    rows = session.scalars(
+        select(StaffLedgerEntry).where(StaffLedgerEntry.employee_id == employee_id)
+    )
+    return effective_total_for_scalars(
+        session,
+        rows,
+        amount=lambda row: row.amount_minor,
+        journal_entry_id=lambda row: row.journal_entry_id,
+        description=lambda row: row.description,
+    )
+
+
+def effective_sum_by_type(
+    session: Session, employee_id: uuid.UUID, movement_type: StaffMovementType
+) -> int:
+    from app.core.ledger.subledger_effective import effective_total_for_scalars
+
+    require_entity_context()
+    rows = session.scalars(
+        select(StaffLedgerEntry).where(
+            StaffLedgerEntry.employee_id == employee_id,
+            StaffLedgerEntry.movement_type == movement_type,
+        )
+    )
+    return effective_total_for_scalars(
+        session,
+        rows,
+        amount=lambda row: row.amount_minor,
+        journal_entry_id=lambda row: row.journal_entry_id,
+        description=lambda row: row.description,
+    )
 
 
 def period_paid_minor_effective(
