@@ -117,15 +117,6 @@ export function StaffSalaryPaymentDialog({
     open && isValidStaffSalaryEmployee(employeeId, employeeName);
   const dialogTitle = `Pay salary — ${employeeName}`;
 
-  const paymentDateIso = useMemo(() => {
-    if (isStatement && paymentDate) return paymentDate;
-    return parseTrDate(dateText) ?? paymentDate ?? "";
-  }, [dateText, isStatement, paymentDate]);
-
-  const defaultPeriod = defaultPeriodFromDate(
-    paymentDateIso || todayTrDate().split(".").reverse().join("-"),
-  );
-
   const salaryMinor = useMemo(() => {
     if (isTry) return parseTryToKurus(salaryText);
     return parseFxNative(salaryText);
@@ -202,14 +193,18 @@ export function StaffSalaryPaymentDialog({
   useEffect(() => {
     if (!open) return;
     submitIdempotency.resetSubmit();
-    setDateText(
-      paymentDate
-        ? paymentDate.split("-").reverse().join(".")
-        : todayTrDate(),
+    const initialDateText = paymentDate
+      ? paymentDate.split("-").reverse().join(".")
+      : todayTrDate();
+    const initialIso =
+      paymentDate ?? parseTrDate(initialDateText) ?? "";
+    const period = defaultPeriodFromDate(
+      initialIso || new Date().toISOString().slice(0, 10),
     );
+    setDateText(initialDateText);
     setDescription("Salary payment");
-    setPeriodYear(String(defaultPeriod.year));
-    setPeriodMonth(String(defaultPeriod.month));
+    setPeriodYear(String(period.year));
+    setPeriodMonth(String(period.month));
     setSalaryText("");
     setCashText(
       defaultCashMinor != null && isTry
@@ -221,10 +216,9 @@ export function StaffSalaryPaymentDialog({
     setTryCostText("");
     setError(null);
     void loadAccounts().catch(() => undefined);
+    // Initialize once per open — do not reset when payment date or period edits change.
   }, [
     open,
-    defaultPeriod.year,
-    defaultPeriod.month,
     defaultCashMinor,
     isTry,
     loadAccounts,
@@ -446,7 +440,7 @@ export function StaffSalaryPaymentDialog({
             />
           </div>
           <div>
-            <Label htmlFor="pay-period-month">Salary month</Label>
+            <Label htmlFor="pay-period-month">Salary month (which month you are paying for)</Label>
             <Select
               id="pay-period-month"
               value={periodMonth}
@@ -459,6 +453,9 @@ export function StaffSalaryPaymentDialog({
                 </option>
               ))}
             </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Can differ from payment date — e.g. pay June salary in July.
+            </p>
           </div>
         </div>
         <div>

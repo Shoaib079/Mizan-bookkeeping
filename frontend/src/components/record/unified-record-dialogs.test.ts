@@ -61,10 +61,19 @@ describe("unified record dialogs", () => {
     expect(salaryDialog).toContain(
       "/staff/employees/${employeeId}/payments",
     );
+    expect(salaryDialog).not.toContain("defaultPeriod.year");
+    expect(salaryDialog).not.toContain("defaultPeriod.month");
 
     const classifyBar = read("statement-classify-bar.tsx");
     expect(classifyBar).toContain("selectedEmployee");
     expect(classifyBar).not.toContain('?? "Employee"');
+  });
+
+  it("manual expense can record salary payments", () => {
+    const form = read("forms/manual-expense-form.tsx");
+    expect(form).toContain('value="salary"');
+    expect(form).toContain("StaffSalaryPaymentDialog");
+    expect(form).toContain("Record salary payment");
   });
 
   it("opens invoice and receipt review in a dialog on the record page", () => {

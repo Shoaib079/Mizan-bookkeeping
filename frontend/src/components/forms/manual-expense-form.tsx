@@ -14,7 +14,9 @@ import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
 import { ExpenseItemTypeahead } from "@/components/forms/expense-item-typeahead";
+import { type EmployeeRow } from "@/components/forms/employee-form";
 import { type PartnerRow } from "@/components/forms/partner-form";
+import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
@@ -44,6 +46,8 @@ import {
 type MoneyAccount = { id: string; name: string };
 
 type PaymentMode = "cash" | "partner";
+
+type RecordKind = "expense" | "salary";
 
 type ExpenseFormDraft = {
   expenseAccountId: string;
@@ -89,6 +93,9 @@ export function ManualExpenseForm({
   }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [partners, setPartners] = useState<PartnerRow[]>([]);
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
+  const [recordKind, setRecordKind] = useState<RecordKind>("expense");
+  const [employeeId, setEmployeeId] = useState("");
   const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [moneyAccountId, setMoneyAccountId] = useState("");
@@ -110,8 +117,8 @@ export function ManualExpenseForm({
   const userPickedAccountRef = useRef(false);
 
   const draftFormKey = defaultExpenseAccountCode
-    ? `manual-expense:${defaultExpenseAccountCode}:${paymentSource}`
-    : `manual-expense:${paymentSource}`;
+    ? `manual-expense:${recordKind}:${defaultExpenseAccountCode}:${paymentSource}`
+    : `manual-expense:${recordKind}:${paymentSource}`;
 
   const formDraft = useMemo<ExpenseFormDraft>(
     () => ({
@@ -143,14 +150,16 @@ export function ManualExpenseForm({
     entityId,
     formKey: draftFormKey,
     value: formDraft,
-    enabled: open,
+    enabled: open && recordKind === "expense",
     isEmpty: isExpenseDraftEmpty,
   });
 
   const dirty =
-    baseline !== null && statesDiffer(baseline, formDraft);
+    recordKind === "expense" &&
+    baseline !== null &&
+    statesDiffer(baseline, formDraft);
 
-  useRegisterUnsaved("manual-expense", dirty, open);
+  useRegisterUnsaved("manual-expense", dirty, open && recordKind === "expense");
 
   const loadOptions = useCallback(async () => {
     if (!entityId) return;
@@ -169,7 +178,7 @@ export function ManualExpenseForm({
               `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
             ),
           ];
-    const [accountsRes, chartRes, partnersRes] = await Promise.all([
+    const [accountsRes, chartRes, partnersRes, employeesRes] = await Promise.all([
       Promise.all(accountRequests).then((responses) => ({
         items: responses.flatMap((response) => response.items),
       })),
@@ -179,9 +188,15 @@ export function ManualExpenseForm({
       apiFetch<{ items: PartnerRow[] }>(
         `/entities/${entityId}/partners?limit=50`,
       ),
+      apiFetch<{ items: EmployeeRow[] }>(
+        `/entities/${entityId}/staff/employees?include_inactive=false&limit=100`,
+      ),
     ]);
     setCashAccounts(accountsRes.items);
     setPartners(partnersRes.items.filter((p) => p.is_active));
+    const activeEmployees = employeesRes.items.filter((e) => e.is_active);
+    setEmployees(activeEmployees);
+    if (activeEmployees[0]) setEmployeeId(activeEmployees[0].id);
     const pickable = filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(pickable);
     // No lazy default (e.g. 5200): the category stays empty until the user
@@ -224,6 +239,8 @@ export function ManualExpenseForm({
     setAmountText("");
     setPaymentMode("cash");
     setPartnerId("");
+    setRecordKind("expense");
+    setEmployeeId("");
     setError(null);
     userPickedAccountRef.current = false;
     setSuggestedAccountId(null);
@@ -447,21 +464,71 @@ export function ManualExpenseForm({
     }
   }
 
+  const selectedEmployee = employees.find((e) => e.id === employeeId);
+  const dialogTitle =
+    recordKind === "salary" ? "Record salary payment" : title;
+
   return (
     <Dialog
       open={open}
-      title={title}
+      title={dialogTitle}
       onClose={onClose}
-      dirty={dirty}
-      onDiscard={handleDiscard}
+      dirty={recordKind === "expense" ? dirty : false}
+      onDiscard={recordKind === "expense" ? handleDiscard : undefined}
     >
       <RecordingForBanner />
-      {resumeDraft && (
+      {recordKind === "expense" && resumeDraft && (
         <ResumeDraftBanner
           onResume={handleResume}
           onDismiss={handleDeclineResume}
         />
       )}
+      <div className="mb-3">
+        <Label htmlFor="exp-record-kind">What are you recording?</Label>
+        <Select
+          id="exp-record-kind"
+          value={recordKind}
+          onChange={(e) => setRecordKind(e.target.value as RecordKind)}
+        >
+          <option value="expense">Business expense</option>
+          <option value="salary">Salary payment</option>
+        </Select>
+      </div>
+
+      {recordKind === "salary" ? (
+        <>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Posts through staff salary payable (same as Staff → Pay salary). Pick
+            the salary month separately from the payment date.
+          </p>
+          <div className="mb-3">
+            <Label htmlFor="exp-salary-employee">Employee</Label>
+            <Combobox
+              id="exp-salary-employee"
+              value={employeeId}
+              onValueChange={setEmployeeId}
+              options={employees.map((e) => ({
+                value: e.id,
+                label: e.name,
+              }))}
+              placeholder="Choose employee…"
+            />
+          </div>
+          {entityId && selectedEmployee && (
+            <StaffSalaryPaymentDialog
+              embedded
+              open
+              entityId={entityId}
+              employeeId={selectedEmployee.id}
+              employeeName={selectedEmployee.name}
+              payCurrency={selectedEmployee.pay_currency}
+              source="staff"
+              onClose={onClose}
+              onSaved={onClose}
+            />
+          )}
+        </>
+      ) : (
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="exp-date">Date (DD.MM.YYYY)</Label>
@@ -595,6 +662,7 @@ export function ManualExpenseForm({
           {submitting ? "Saving…" : "Save expense"}
         </Button>
       </form>
+      )}
     </Dialog>
   );
 }
