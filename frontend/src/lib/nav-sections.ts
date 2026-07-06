@@ -130,8 +130,21 @@ export const NAV_SECTIONS: NavSection[] = [
     tabs: [
       {
         href: "/customers",
-        label: "Customers",
-        match: (path) => path === "/customers" || path.startsWith("/customers/"),
+        label: "Agencies",
+        match: (path) =>
+          path === "/customers" ||
+          (/^\/customers\/[0-9a-f-]{36}$/i.test(path) &&
+            !path.startsWith("/customers/group-")),
+      },
+      {
+        href: "/customers/group-menus",
+        label: "Group menus",
+        match: (path) => path.startsWith("/customers/group-menus"),
+      },
+      {
+        href: "/customers/group-sales",
+        label: "Group sales",
+        match: (path) => path.startsWith("/customers/group-sales"),
       },
     ],
   },
@@ -277,7 +290,7 @@ export type RouteEntryKind =
   | "redirect"
   | "page";
 
-/** Static page routes (45 app pages) — used by reachability guard test. */
+/** Static page routes — used by reachability guard test. */
 /** Old bookmark URLs that redirect into the Balances hub (UX2). */
 export const LEGACY_BALANCE_REDIRECTS: Record<string, string> = {
   "/payables": "/balances/suppliers",
@@ -322,6 +335,9 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/partners/[id]", kind: "drill-down" },
   { pattern: "/customers", kind: "tab" },
   { pattern: "/customers/[id]", kind: "drill-down" },
+  { pattern: "/customers/group-menus", kind: "tab" },
+  { pattern: "/customers/group-sales", kind: "tab" },
+  { pattern: "/customers/group-sales/[id]", kind: "drill-down" },
   { pattern: "/receivables", kind: "redirect" },
   { pattern: "/banking", kind: "tab" },
   { pattern: "/banking/review", kind: "redirect" },
@@ -440,7 +456,9 @@ export function pageTitleForPathname(pathname: string): string {
     "/expenses/items": "Expense items",
     "/uploads": "Documents",
     "/suppliers": "Suppliers",
-    "/customers": "Customers",
+    "/customers": "Agencies",
+    "/customers/group-menus": "Group menus",
+    "/customers/group-sales": "Group sales",
     "/staff": "Staff",
     "/partners": "Partners",
     "/banking": "Banking",
@@ -456,7 +474,10 @@ export function pageTitleForPathname(pathname: string): string {
   if (pathname.startsWith("/staff/")) return "Staff member";
   if (pathname.startsWith("/partners/")) return "Partner";
   if (pathname.startsWith("/suppliers/")) return "Supplier";
-  if (pathname.startsWith("/customers/")) return "Customer";
+  if (pathname.startsWith("/customers/group-sales/") && pathname !== "/customers/group-sales") {
+    return "Group sale";
+  }
+  if (pathname.startsWith("/customers/")) return "Agency";
   if (pathname.startsWith("/banking/accounts/") && pathname.endsWith("/import")) {
     return "Import statement";
   }
@@ -524,9 +545,16 @@ export function backLinkForPathname(pathname: string): PageBackLink | null {
       label: "Partners",
     },
     {
-      test: (path) => /^\/customers\/[^/]+$/.test(path),
+      test: (path) =>
+        /^\/customers\/[0-9a-f-]{36}$/i.test(path) &&
+        !path.startsWith("/customers/group-"),
       href: "/customers",
-      label: "Customers",
+      label: "Agencies",
+    },
+    {
+      test: (path) => /^\/customers\/group-sales\/[^/]+$/.test(path),
+      href: "/customers/group-sales",
+      label: "Group sales",
     },
     {
       test: (path) => /^\/banking\/accounts\/[^/]+$/.test(path),

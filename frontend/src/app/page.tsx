@@ -270,6 +270,7 @@ function DashboardBody() {
                 cashKurus={data.sales.cash_sales_kurus}
                 posCardKurus={data.sales.pos_card_sales_kurus}
                 deliveryKurus={data.sales.delivery_sales_kurus}
+                groupSalesKurus={data.sales.group_sales_kurus}
                 otherKurus={data.sales.other_sales_kurus}
               />
               <SalesExpensesNetChart
@@ -323,7 +324,7 @@ function DashboardBody() {
           {data.sales.total_sales_kurus > 0 && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold">Sales breakdown</h2>
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-5">
                 <div>
                   <dt className="text-muted-foreground">Cash</dt>
                   <dd className="tabular-nums">
@@ -340,6 +341,12 @@ function DashboardBody() {
                   <dt className="text-muted-foreground">Delivery</dt>
                   <dd className="tabular-nums">
                     {formatTry(data.sales.delivery_sales_kurus)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Group / agency</dt>
+                  <dd className="tabular-nums">
+                    {formatTry(data.sales.group_sales_kurus)}
                   </dd>
                 </div>
                 <div>

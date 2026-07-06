@@ -3,17 +3,13 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { CustomerCreditSaleForm } from "@/components/forms/customer-credit-sale-form";
 import {
   CorrectCustomerPaymentForm,
   type CorrectableCustomerPaymentRow,
 } from "@/components/forms/correct-customer-payment-form";
-import {
-  CorrectCreditSaleForm,
-  type CorrectableCreditSaleRow,
-} from "@/components/forms/correct-credit-sale-form";
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
+import { GroupSaleForm } from "@/components/forms/group-sale-form";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -27,6 +23,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
+import { formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
 
@@ -36,6 +33,12 @@ type LedgerEntry = {
   movement_type: string;
   amount_kurus: number;
   description: string;
+  pax: number | null;
+  rate_per_person_kurus: number | null;
+  forex_currency: string | null;
+  rate_per_person_forex_minor: number | null;
+  total_forex_minor: number | null;
+  payment_native_quantity: number | null;
   journal_entry_id: string | null;
 };
 
@@ -43,6 +46,37 @@ type LedgerResponse = {
   balance_kurus: number;
   entries: LedgerEntry[];
 };
+
+function formatLedgerGroupMeta(entry: LedgerEntry): string | null {
+  const parts: string[] = [];
+  if (entry.pax != null) {
+    if (entry.rate_per_person_kurus != null) {
+      parts.push(
+        `${entry.pax} pax × ${formatTry(entry.rate_per_person_kurus)}`,
+      );
+    } else {
+      parts.push(`${entry.pax} pax`);
+    }
+  }
+  if (
+    entry.forex_currency &&
+    entry.rate_per_person_forex_minor != null &&
+    entry.pax != null
+  ) {
+    parts.push(
+      `${formatFxNative(entry.rate_per_person_forex_minor, entry.forex_currency)}/pax`,
+    );
+  }
+  if (entry.forex_currency && entry.total_forex_minor != null) {
+    parts.push(formatFxNative(entry.total_forex_minor, entry.forex_currency));
+  }
+  if (entry.forex_currency && entry.payment_native_quantity != null) {
+    parts.push(
+      `${formatFxNative(entry.payment_native_quantity, entry.forex_currency)} received`,
+    );
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
 
 export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -58,7 +92,6 @@ export default function CustomerDetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableCustomerPaymentRow | null>(null);
-  const [correctSale, setCorrectSale] = useState<CorrectableCreditSaleRow | null>(null);
 
   const resetDetailState = useCallback(() => {
     setCustomer(null);
@@ -69,7 +102,6 @@ export default function CustomerDetailPage() {
     setSaleOpen(false);
     setPaymentOpen(false);
     setCorrectPayment(null);
-    setCorrectSale(null);
   }, []);
 
   useEntitySwitchReset(entityId, resetDetailState);
@@ -122,8 +154,19 @@ export default function CustomerDetailPage() {
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
+              <h1 className="text-xl font-semibold">{customer.name}</h1>
+              {customer.tax_id && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  VKN/TCKN: {customer.tax_id}
+                </p>
+              )}
+              {(customer.contact_name || customer.phone) && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {[customer.contact_name, customer.phone].filter(Boolean).join(" · ")}
+                </p>
+              )}
               {customer.identifier && (
-                <p className="text-sm text-muted-foreground">
+                <p className="mt-1 text-sm text-muted-foreground">
                   ID: {customer.identifier}
                 </p>
               )}
@@ -147,7 +190,7 @@ export default function CustomerDetailPage() {
               Edit
             </Button>
             <Button type="button" onClick={() => setSaleOpen(true)}>
-              Credit sale
+              Group sale
             </Button>
             <Button type="button" variant="secondary" onClick={() => setPaymentOpen(true)}>
               Record payment
@@ -164,6 +207,7 @@ export default function CustomerDetailPage() {
                   <DataTableHeaderCell>Date</DataTableHeaderCell>
                   <DataTableHeaderCell>Type</DataTableHeaderCell>
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
+                  <DataTableHeaderCell>Pax / forex</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
                   <DataTableHeaderCell>Actions</DataTableHeaderCell>
                 </tr>
@@ -179,28 +223,13 @@ export default function CustomerDetailPage() {
                         entry.movement_type}
                     </DataTableCell>
                     <DataTableCell>{entry.description}</DataTableCell>
+                    <DataTableCell className="text-sm text-muted-foreground">
+                      {formatLedgerGroupMeta(entry) ?? "—"}
+                    </DataTableCell>
                     <DataTableCell align="right">
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell align="right">
-                      {entry.movement_type === "credit_sale" &&
-                        entry.journal_entry_id && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="h-8 px-2"
-                            onClick={() =>
-                              setCorrectSale({
-                                journal_entry_id: entry.journal_entry_id!,
-                                movement_date: entry.movement_date,
-                                amount_kurus: entry.amount_kurus,
-                                description: entry.description,
-                              })
-                            }
-                          >
-                            Correct
-                          </Button>
-                        )}
                       {entry.movement_type === "payment" &&
                         entry.journal_entry_id && (
                           <Button
@@ -236,7 +265,7 @@ export default function CustomerDetailPage() {
             onClose={() => setEditOpen(false)}
             onSaved={() => void reload()}
           />
-          <CustomerCreditSaleForm
+          <GroupSaleForm
             open={saleOpen}
             customerId={customerId}
             onClose={() => setSaleOpen(false)}
@@ -254,13 +283,6 @@ export default function CustomerDetailPage() {
             customerId={customerId}
             payment={correctPayment}
             onClose={() => setCorrectPayment(null)}
-            onSaved={() => void reload()}
-          />
-          <CorrectCreditSaleForm
-            open={correctSale !== null}
-            customerId={customerId}
-            sale={correctSale}
-            onClose={() => setCorrectSale(null)}
             onSaved={() => void reload()}
           />
         </>

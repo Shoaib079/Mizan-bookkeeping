@@ -9,10 +9,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | (none — ready for next) |
-| **Last completed slice** | Self-service expense categories (owner-added, band 5900–5999) |
-| **Last tag** | `v0.expense-categories` |
-| **Next up** | Phase 13 build queue — IC (invoice classification), then remaining sequence in `POST_LAUNCH_PLAN.md` |
+| **Active slice** | Agency group sales v2 — owner sign-off pending (money-critical) |
+| **Last completed slice** | Agency group sales v2 — backend + frontend (`v0.agency-group-sales-be` / `v0.agency-group-sales-fe`) |
+| **Last tag** | `v0.agency-group-sales-fe` |
+| **Next up** | P5 — Delete company UI; follow-up: per-menu group/agency period report |
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 

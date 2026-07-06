@@ -93,6 +93,7 @@ describe("dashboard page wiring", () => {
     expect(source).toContain("cashKurus={data.sales.cash_sales_kurus}");
     expect(source).toContain("posCardKurus={data.sales.pos_card_sales_kurus}");
     expect(source).toContain("deliveryKurus={data.sales.delivery_sales_kurus}");
+    expect(source).toContain("groupSalesKurus={data.sales.group_sales_kurus}");
     expect(source).toContain("otherKurus={data.sales.other_sales_kurus}");
   });
 

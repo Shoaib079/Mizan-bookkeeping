@@ -19,6 +19,6 @@ export const partnerMovementLabels: Record<string, string> = {
 export const customerMovementLabels: Record<string, string> = {
   opening_balance: "Opening balance",
   adjustment: "Adjustment",
-  credit_sale: "Credit sale",
+  credit_sale: "Group sale",
   payment_received: "Payment received",
 };

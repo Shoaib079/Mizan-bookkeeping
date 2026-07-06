@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CustomerCreditSaleForm } from "@/components/forms/customer-credit-sale-form";
+import { GroupSaleForm } from "@/components/forms/group-sale-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import type { EmployeeRow } from "@/components/forms/employee-form";
 import { PartnerExpenseFrontedForm } from "@/components/forms/partner-expense-fronted-form";
@@ -324,7 +324,7 @@ function renderEmbeddedForm(
       );
     case "customerCreditSale":
       return (
-        <CustomerCreditSaleForm {...formProps} customerId={person.id} />
+        <GroupSaleForm {...formProps} customerId={person.id} />
       );
     case "customerPayment":
       return (

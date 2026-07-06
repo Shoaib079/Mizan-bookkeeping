@@ -8,6 +8,7 @@ export type DashboardRead = {
     cash_sales_kurus: number;
     pos_card_sales_kurus: number;
     delivery_sales_kurus: number;
+    group_sales_kurus: number;
     other_sales_kurus: number;
     total_sales_kurus: number;
   };

@@ -55,6 +55,26 @@ export async function loadBankAndCashAccounts(
     .map(toOption);
 }
 
+/** Bank, cash, and FX wallets for customer payment receipts. */
+export async function loadPaymentReceiveAccounts(
+  entityId: string,
+): Promise<MoneyAccountOption[]> {
+  const [bankRes, cashRes, fxRes] = await Promise.all([
+    apiFetch<{ items: MoneyAccountApiRow[] }>(
+      `/entities/${entityId}/banking/accounts?account_kind=bank&limit=50`,
+    ),
+    apiFetch<{ items: MoneyAccountApiRow[] }>(
+      `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
+    ),
+    apiFetch<{ items: MoneyAccountApiRow[] }>(
+      `/entities/${entityId}/banking/accounts?account_kind=foreign_currency&limit=50`,
+    ),
+  ]);
+  return [...bankRes.items, ...cashRes.items, ...fxRes.items]
+    .filter((row) => row.is_active !== false)
+    .map(toOption);
+}
+
 /** FX wallet accounts for a given pay currency (USD, EUR, GBP). */
 export async function loadForeignCurrencyAccounts(
   entityId: string,

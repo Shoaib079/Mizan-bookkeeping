@@ -288,8 +288,8 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
   },
   {
     id: "customerCreditSale",
-    label: "Customer credit sale",
-    description: "Record a sale on customer account.",
+    label: "Customer group sale",
+    description: "Record a group or credit sale on customer account.",
     icon: UserCircle,
     section: "people",
     personKind: "customer",

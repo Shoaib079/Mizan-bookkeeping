@@ -28,6 +28,7 @@ const COLORS = {
   cash: "#2563eb",
   posCard: "#7c3aed",
   delivery: "#f59e0b",
+  groupSales: "#0d9488",
   other: "#64748b",
   sales: "#2563eb",
   expenses: "#dc2626",
@@ -63,6 +64,7 @@ type SalesMixProps = {
   cashKurus: number;
   posCardKurus: number;
   deliveryKurus: number;
+  groupSalesKurus: number;
   otherKurus: number;
 };
 
@@ -70,15 +72,22 @@ export function SalesMixChart({
   cashKurus,
   posCardKurus,
   deliveryKurus,
+  groupSalesKurus,
   otherKurus,
 }: SalesMixProps) {
-  const total = cashKurus + posCardKurus + deliveryKurus + otherKurus;
+  const total =
+    cashKurus + posCardKurus + deliveryKurus + groupSalesKurus + otherKurus;
   if (total === 0) return null;
 
   const data = [
     { name: "Cash", value: kurusToLira(cashKurus), color: COLORS.cash },
     { name: "POS card", value: kurusToLira(posCardKurus), color: COLORS.posCard },
     { name: "Delivery", value: kurusToLira(deliveryKurus), color: COLORS.delivery },
+    {
+      name: "Group / agency",
+      value: kurusToLira(groupSalesKurus),
+      color: COLORS.groupSales,
+    },
     { name: "Other", value: kurusToLira(otherKurus), color: COLORS.other },
   ].filter((d) => d.value > 0);
 

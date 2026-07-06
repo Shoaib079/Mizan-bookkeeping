@@ -9,11 +9,15 @@ import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { useToast } from "@/lib/toast";
+import { normalizeVknInput, optionalTaxIdValidationMessage } from "@/lib/vkn";
 
 export type CustomerRow = {
   id: string;
   name: string;
   identifier: string | null;
+  tax_id: string | null;
+  contact_name: string | null;
+  phone: string | null;
   is_active: boolean;
   notes: string | null;
 };
@@ -35,6 +39,9 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
   }, [open, submitIdempotency]);
   const editing = Boolean(customer);
   const [name, setName] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [phone, setPhone] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [notes, setNotes] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -44,6 +51,9 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
   useEffect(() => {
     if (!open) return;
     setName(customer?.name ?? "");
+    setTaxId(customer?.tax_id ?? "");
+    setContactName(customer?.contact_name ?? "");
+    setPhone(customer?.phone ?? "");
     setIdentifier(customer?.identifier ?? "");
     setNotes(customer?.notes ?? "");
     setIsActive(customer?.is_active ?? true);
@@ -56,8 +66,14 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
       setError("Select a restaurant in the sidebar first.");
       return;
     }
+    const taxError = optionalTaxIdValidationMessage(taxId);
+    if (taxError) {
+      setError(taxError);
+      return;
+    }
     setSubmitting(true);
     setError(null);
+    const tax_id = normalizeVknInput(taxId) || null;
     try {
       if (editing && customer) {
         const idempotencyKey = submitIdempotency.beginSubmit();
@@ -67,6 +83,9 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name,
+            tax_id,
+            contact_name: contactName.trim() || null,
+            phone: phone.trim() || null,
             identifier: identifier || null,
             notes: notes || null,
             is_active: isActive,
@@ -81,6 +100,9 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name,
+            tax_id,
+            contact_name: contactName.trim() || null,
+            phone: phone.trim() || null,
             identifier: identifier || null,
             notes: notes || null,
           }),
@@ -105,7 +127,7 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
     >
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
-          <Label htmlFor="cust-name">Name</Label>
+          <Label htmlFor="cust-name">Company / agency name</Label>
           <Input
             id="cust-name"
             value={name}
@@ -114,12 +136,38 @@ export function CustomerForm({ open, onClose, customer, onSaved }: Props) {
           />
         </div>
         <div>
-          <Label htmlFor="cust-id">Identifier (optional)</Label>
+          <Label htmlFor="cust-tax">VKN or TCKN (optional)</Label>
+          <Input
+            id="cust-tax"
+            value={taxId}
+            onChange={(e) => setTaxId(e.target.value)}
+            placeholder="10 or 11 digits"
+          />
+        </div>
+        <div>
+          <Label htmlFor="cust-contact">Contact person (optional)</Label>
+          <Input
+            id="cust-contact"
+            value={contactName}
+            onChange={(e) => setContactName(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="cust-phone">Phone (optional)</Label>
+          <Input
+            id="cust-phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+90 …"
+          />
+        </div>
+        <div>
+          <Label htmlFor="cust-id">Other reference (optional)</Label>
           <Input
             id="cust-id"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="Phone, room #, …"
+            placeholder="Contract #, room block, …"
           />
         </div>
         <div>
