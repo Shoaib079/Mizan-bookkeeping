@@ -370,49 +370,22 @@ def record_payment(
     employee_id: uuid.UUID,
     payload: StaffPaymentCreate,
 ) -> StaffPaymentResponse:
-    if payload.amount_minor == 0 and (
-        payload.period_year is None
-        or payload.period_month is None
-        or payload.period_salary_minor is None
-    ):
-        raise ValueError(
-            "amount_minor 0 requires period_year, period_month, and period_salary_minor"
-        )
-
     with entity_context(session, entity_id):
         require_entity_context()
-        if (
-            payload.period_year is not None
-            and payload.period_month is not None
-            and payload.period_salary_minor is not None
-        ):
-            if payload.amount_minor == 0:
-                ensure_not_duplicate(
-                    find_duplicate_staff_movement(
-                        session,
-                        employee_id=employee_id,
-                        movement_date=payload.payment_date,
-                        amount_minor=payload.period_salary_minor,
-                        movement_type=StaffMovementType.SALARY_ACCRUED,
-                        period_year=payload.period_year,
-                        period_month=payload.period_month,
-                    ),
-                    acknowledged=payload.acknowledge_duplicate,
-                )
-            elif payload.amount_minor > 0:
-                ensure_not_duplicate(
-                    find_duplicate_staff_movement(
-                        session,
-                        employee_id=employee_id,
-                        movement_date=payload.payment_date,
-                        amount_minor=-payload.amount_minor,
-                        movement_type=StaffMovementType.SALARY_PAYMENT,
-                        period_year=payload.period_year,
-                        period_month=payload.period_month,
-                    ),
-                    acknowledged=payload.acknowledge_duplicate,
-                )
-        elif payload.amount_minor > 0:
+        if payload.amount_minor == 0:
+            ensure_not_duplicate(
+                find_duplicate_staff_movement(
+                    session,
+                    employee_id=employee_id,
+                    movement_date=payload.payment_date,
+                    amount_minor=payload.period_salary_minor,
+                    movement_type=StaffMovementType.SALARY_ACCRUED,
+                    period_year=payload.period_year,
+                    period_month=payload.period_month,
+                ),
+                acknowledged=payload.acknowledge_duplicate,
+            )
+        else:
             ensure_not_duplicate(
                 find_duplicate_staff_movement(
                     session,
@@ -420,43 +393,27 @@ def record_payment(
                     movement_date=payload.payment_date,
                     amount_minor=-payload.amount_minor,
                     movement_type=StaffMovementType.SALARY_PAYMENT,
+                    period_year=payload.period_year,
+                    period_month=payload.period_month,
                 ),
                 acknowledged=payload.acknowledge_duplicate,
             )
 
-    if (
-        payload.period_year is not None
-        and payload.period_month is not None
-        and payload.period_salary_minor is not None
-    ):
-        result = staff_posting.post_period_salary_payment(
-            session,
-            entity_id,
-            employee_id,
-            payment_date=payload.payment_date,
-            cash_minor=payload.amount_minor,
-            period_year=payload.period_year,
-            period_month=payload.period_month,
-            period_salary_minor=payload.period_salary_minor,
-            description=payload.description,
-            actor_id=payload.actor_id,
-            payment_account_id=payload.payment_account_id,
-            fx_money_account_id=payload.fx_money_account_id,
-            try_cost_kurus=payload.try_cost_kurus,
-        )
-    else:
-        result = staff_posting.post_salary_payment(
-            session,
-            entity_id,
-            employee_id,
-            payment_date=payload.payment_date,
-            amount_minor=payload.amount_minor,
-            description=payload.description,
-            actor_id=payload.actor_id,
-            payment_account_id=payload.payment_account_id,
-            fx_money_account_id=payload.fx_money_account_id,
-            try_cost_kurus=payload.try_cost_kurus,
-        )
+    result = staff_posting.post_period_salary_payment(
+        session,
+        entity_id,
+        employee_id,
+        payment_date=payload.payment_date,
+        cash_minor=payload.amount_minor,
+        period_year=payload.period_year,
+        period_month=payload.period_month,
+        period_salary_minor=payload.period_salary_minor,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+        fx_money_account_id=payload.fx_money_account_id,
+        try_cost_kurus=payload.try_cost_kurus,
+    )
     return StaffPaymentResponse(
         journal_entry_id=result.journal_entry.id,
         staff_ledger_entry=_staff_entry_read(

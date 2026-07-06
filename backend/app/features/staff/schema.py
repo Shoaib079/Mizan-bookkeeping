@@ -114,13 +114,19 @@ class StaffPaymentCreate(AcknowledgeDuplicateMixin):
     payment_account_id: uuid.UUID | None = None
     fx_money_account_id: uuid.UUID | None = None
     try_cost_kurus: int | None = Field(default=None, gt=0)
-    period_year: int | None = Field(default=None, ge=2000, le=2100)
-    period_month: int | None = Field(default=None, ge=1, le=12)
-    period_salary_minor: int | None = Field(
-        default=None,
+    period_year: int = Field(ge=2000, le=2100)
+    period_month: int = Field(ge=1, le=12)
+    period_salary_minor: int = Field(
         gt=0,
         description="Month salary total — accrues at pay time if not already recorded",
     )
+
+    @field_validator("period_month")
+    @classmethod
+    def validate_period_month(cls, value: int) -> int:
+        if not 1 <= value <= 12:
+            raise ValueError("period_month must be 1–12")
+        return value
 
 
 class SalaryPeriodStatusRead(BaseModel):

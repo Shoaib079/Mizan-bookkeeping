@@ -573,6 +573,9 @@ def test_api_staff_flow(client: TestClient, staff_setup, db_session) -> None:
             "description": "Final pay",
             "actor_id": str(ACTOR_ID),
             "payment_account_id": str(drawer.gl_account_id),
+            "period_year": 2026,
+            "period_month": 6,
+            "period_salary_minor": 450000,
         },
     )
     assert payment.status_code == 201

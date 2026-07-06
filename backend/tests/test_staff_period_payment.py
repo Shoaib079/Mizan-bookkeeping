@@ -201,3 +201,21 @@ def test_api_period_payment_without_prior_accrual(
     body = status.json()
     assert body["period_paid_minor"] == 300_000
     assert body["period_remaining_minor"] == 1_200_000
+
+
+def test_api_rejects_payment_without_period(client, staff_setup, db_session) -> None:
+    entity_id = staff_setup["entity_id"]
+    employee_id = staff_setup["employee_id"]
+    drawer = staff_setup["drawer"]
+
+    resp = client.post(
+        f"/entities/{entity_id}/staff/employees/{employee_id}/payments",
+        json={
+            "payment_date": "2026-06-30",
+            "amount_minor": 300000,
+            "description": "Legacy no-period pay",
+            "actor_id": str(ACTOR_ID),
+            "payment_account_id": str(drawer.gl_account_id),
+        },
+    )
+    assert resp.status_code == 422

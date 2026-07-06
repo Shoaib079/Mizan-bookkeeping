@@ -102,6 +102,9 @@ def test_request_schema_accepts_empty_actor_id_string() -> None:
             "description": "salary",
             "payment_account_id": str(uuid.uuid4()),
             "actor_id": " ",
+            "period_year": 2026,
+            "period_month": 1,
+            "period_salary_minor": 5000,
         }
     )
     assert staff.actor_id is None
