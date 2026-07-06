@@ -13,6 +13,7 @@ from app.core.ledger.correction import (
     correct_credit_sale,
     correct_customer_payment,
 )
+from app.core.ledger.subledger_display import enrich_entry_models
 from app.core.receivables import ledger as receivables_ledger
 from app.core.receivables.models import CustomerLedgerEntry
 from app.core.receivables import posting as receivables_posting
@@ -35,6 +36,26 @@ from app.features.customers.schema import (
     CustomerUpdate,
 )
 from app.features.entities import service as entity_service
+
+
+def _customer_entry_reads(
+    session: Session, entries: list[CustomerLedgerEntry]
+) -> list[CustomerLedgerEntryRead]:
+    if not entries:
+        return []
+    return enrich_entry_models(
+        session,
+        CustomerLedgerEntryRead,
+        entries,
+        journal_entry_id=lambda entry: entry.journal_entry_id,
+        description=lambda entry: entry.description,
+    )
+
+
+def _customer_entry_read(
+    session: Session, entry: CustomerLedgerEntry
+) -> CustomerLedgerEntryRead:
+    return _customer_entry_reads(session, [entry])[0]
 
 
 def create_customer(
@@ -144,7 +165,7 @@ def get_customer_ledger(
     return CustomerLedgerRead(
         customer_id=customer_id,
         balance_kurus=balance,
-        entries=[CustomerLedgerEntryRead.model_validate(e) for e in entries],
+        entries=_customer_entry_reads(session, entries),
     )
 
 
@@ -174,8 +195,8 @@ def record_credit_sale(
     )
     return CreditSaleResponse(
         journal_entry_id=result.journal_entry.id,
-        customer_ledger_entry=CustomerLedgerEntryRead.model_validate(
-            result.customer_ledger_entry
+        customer_ledger_entry=_customer_entry_read(
+            session, result.customer_ledger_entry
         ),
         balance_kurus=result.balance_kurus,
     )
@@ -205,8 +226,8 @@ def record_customer_payment(
     )
     return CustomerPaymentResponse(
         journal_entry_id=result.journal_entry.id,
-        customer_ledger_entry=CustomerLedgerEntryRead.model_validate(
-            result.customer_ledger_entry
+        customer_ledger_entry=_customer_entry_read(
+            session, result.customer_ledger_entry
         ),
         balance_kurus=result.balance_kurus,
     )

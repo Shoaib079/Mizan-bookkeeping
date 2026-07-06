@@ -9,6 +9,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 from app.core.schema_types import OptionalActorId
 
+from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.partners.types import PartnerMovementType
 
 
@@ -65,6 +66,8 @@ class PartnerLedgerEntryRead(BaseModel):
     actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID | None
     created_at: datetime
+    display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
+    was_corrected: bool = False
 
 
 class PartnerLedgerRead(BaseModel):

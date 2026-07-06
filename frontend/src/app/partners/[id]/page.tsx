@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import { PartnerExpenseFrontedForm } from "@/components/forms/partner-expense-fronted-form";
 import { PartnerCashMovementForm } from "@/components/forms/partner-cash-movement-form";
+import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import {
   CorrectPartnerLedgerForm,
   type CorrectablePartnerLedgerRow,
@@ -33,6 +35,12 @@ import {
   partnerDrawingRepaymentAllowed,
 } from "@/lib/partner-balance";
 import { partnerMovementLabels } from "@/lib/subledger-labels";
+import {
+  canCorrectSubledgerRow,
+  subledgerRowClassName,
+  type SubledgerDisplayKind,
+} from "@/lib/ledger-display";
+import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 type LedgerEntry = {
   id: string;
@@ -41,6 +49,8 @@ type LedgerEntry = {
   amount_kurus: number;
   description: string;
   journal_entry_id: string | null;
+  display_kind: SubledgerDisplayKind;
+  was_corrected?: boolean;
 };
 
 const correctablePartnerTypes = new Set(["expense_fronted", "reimbursement_paid"]);
@@ -107,6 +117,13 @@ export default function PartnerDetailPage() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  const {
+    showHistory,
+    setShowHistory,
+    hiddenCount,
+    visibleRows,
+  } = useLedgerHistoryView(ledger?.entries ?? []);
 
   if (!entityId) {
     return (
@@ -183,8 +200,17 @@ export default function PartnerDetailPage() {
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
+          <LedgerHistoryToggle
+            hiddenCount={hiddenCount}
+            showHistory={showHistory}
+            onToggle={setShowHistory}
+          />
           {ledger.entries.length === 0 ? (
             <p className="text-sm text-muted-foreground">No movements yet.</p>
+          ) : visibleRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No current entries — show correction history to see voided rows.
+            </p>
           ) : (
             <DataTable>
               <DataTableHead>
@@ -197,8 +223,14 @@ export default function PartnerDetailPage() {
                 </tr>
               </DataTableHead>
               <DataTableBody>
-                {ledger.entries.map((entry) => (
-                  <DataTableRow key={entry.id}>
+                {visibleRows.map((entry) => (
+                  <DataTableRow
+                    key={entry.id}
+                    className={subledgerRowClassName(
+                      entry.display_kind,
+                      showHistory,
+                    )}
+                  >
                     <DataTableCell>
                       {formatTrDate(entry.movement_date)}
                     </DataTableCell>
@@ -206,13 +238,20 @@ export default function PartnerDetailPage() {
                       {partnerMovementLabels[entry.movement_type] ??
                         entry.movement_type}
                     </DataTableCell>
-                    <DataTableCell>{entry.description}</DataTableCell>
+                    <DataTableCell>
+                      {entry.description}
+                      {entry.was_corrected && (
+                        <span className="ml-2">
+                          <CorrectedBadge />
+                        </span>
+                      )}
+                    </DataTableCell>
                     <DataTableCell align="right">
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell align="right">
                       {correctablePartnerTypes.has(entry.movement_type) &&
-                        entry.journal_entry_id && (
+                        canCorrectSubledgerRow(entry) && (
                           <Button
                             type="button"
                             variant="secondary"

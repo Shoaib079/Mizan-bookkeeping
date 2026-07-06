@@ -239,4 +239,6 @@ export type FxLedgerEntryRead = {
   journal_entry_id: string;
   journal_source?: string | null;
   created_at: string;
+  display_kind?: "effective" | "void_reversal" | "superseded";
+  was_corrected?: boolean;
 };

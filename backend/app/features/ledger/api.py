@@ -40,6 +40,7 @@ def list_journal_entries(
     q: str | None = Query(default=None, max_length=256),
     min_amount: int | None = Query(default=None),
     max_amount: int | None = Query(default=None),
+    effective_only: bool = Query(default=False),
     list_params: ListParams = Depends(list_params_dependency),
 ) -> JournalEntryListOut:
     try:
@@ -53,6 +54,7 @@ def list_journal_entries(
             q=q,
             min_amount=min_amount,
             max_amount=max_amount,
+            effective_only=effective_only,
             list_params=list_params,
         )
     except LookupError as exc:

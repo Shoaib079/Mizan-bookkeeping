@@ -11,6 +11,8 @@ import {
   CorrectStaffLedgerForm,
   type CorrectableStaffLedgerRow,
 } from "@/components/forms/correct-staff-ledger-form";
+import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +29,12 @@ import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { staffMovementLabels } from "@/lib/subledger-labels";
+import {
+  canCorrectSubledgerRow,
+  subledgerRowClassName,
+  type SubledgerDisplayKind,
+} from "@/lib/ledger-display";
+import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 type LedgerEntry = {
   id: string;
@@ -37,6 +45,8 @@ type LedgerEntry = {
   journal_entry_id: string | null;
   period_year?: number | null;
   period_month?: number | null;
+  display_kind: SubledgerDisplayKind;
+  was_corrected?: boolean;
 };
 
 const MONTH_NAMES = [
@@ -130,6 +140,13 @@ export default function StaffDetailPage() {
     void reload();
   }, [reload]);
 
+  const {
+    showHistory,
+    setShowHistory,
+    hiddenCount,
+    visibleRows,
+  } = useLedgerHistoryView(ledger?.entries ?? []);
+
   const balanceLabel =
     employee?.pay_currency === "TRY"
       ? formatTry(ledger?.balance_minor ?? 0)
@@ -200,8 +217,18 @@ export default function StaffDetailPage() {
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
+          <LedgerHistoryToggle
+            hiddenCount={hiddenCount}
+            showHistory={showHistory}
+            onToggle={setShowHistory}
+          />
           {ledger.entries.length === 0 ? (
             <p className="text-sm text-muted-foreground">No movements yet.</p>
+          ) : visibleRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No current entries in this period — show correction history to see
+              voided rows.
+            </p>
           ) : (
             <DataTable>
               <DataTableHead>
@@ -214,8 +241,14 @@ export default function StaffDetailPage() {
                 </tr>
               </DataTableHead>
               <DataTableBody>
-                {ledger.entries.map((entry) => (
-                  <DataTableRow key={entry.id}>
+                {visibleRows.map((entry) => (
+                  <DataTableRow
+                    key={entry.id}
+                    className={subledgerRowClassName(
+                      entry.display_kind,
+                      showHistory,
+                    )}
+                  >
                     <DataTableCell>
                       {formatTrDate(entry.movement_date)}
                     </DataTableCell>
@@ -228,7 +261,14 @@ export default function StaffDetailPage() {
                         </span>
                       )}
                     </DataTableCell>
-                    <DataTableCell>{entry.description}</DataTableCell>
+                    <DataTableCell>
+                      {entry.description}
+                      {entry.was_corrected && (
+                        <span className="ml-2">
+                          <CorrectedBadge />
+                        </span>
+                      )}
+                    </DataTableCell>
                     <DataTableCell align="right">
                       {employee.pay_currency === "TRY"
                         ? formatTry(entry.amount_minor)
@@ -236,7 +276,7 @@ export default function StaffDetailPage() {
                     </DataTableCell>
                     <DataTableCell align="right">
                       {correctableStaffTypes.has(entry.movement_type) &&
-                        entry.journal_entry_id && (
+                        canCorrectSubledgerRow(entry) && (
                           <Button
                             type="button"
                             variant="secondary"

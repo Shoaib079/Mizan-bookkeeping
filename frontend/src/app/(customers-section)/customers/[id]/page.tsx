@@ -3,6 +3,8 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import {
   CorrectCustomerPaymentForm,
   type CorrectableCustomerPaymentRow,
@@ -26,6 +28,12 @@ import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
+import {
+  canCorrectSubledgerRow,
+  subledgerRowClassName,
+  type SubledgerDisplayKind,
+} from "@/lib/ledger-display";
+import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 type LedgerEntry = {
   id: string;
@@ -40,6 +48,8 @@ type LedgerEntry = {
   total_forex_minor: number | null;
   payment_native_quantity: number | null;
   journal_entry_id: string | null;
+  display_kind: SubledgerDisplayKind;
+  was_corrected?: boolean;
 };
 
 type LedgerResponse = {
@@ -133,6 +143,13 @@ export default function CustomerDetailPage() {
     void reload();
   }, [reload]);
 
+  const {
+    showHistory,
+    setShowHistory,
+    hiddenCount,
+    visibleRows,
+  } = useLedgerHistoryView(ledger?.entries ?? []);
+
   if (!entityId) {
     return (
       <>
@@ -198,8 +215,17 @@ export default function CustomerDetailPage() {
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
+          <LedgerHistoryToggle
+            hiddenCount={hiddenCount}
+            showHistory={showHistory}
+            onToggle={setShowHistory}
+          />
           {ledger.entries.length === 0 ? (
             <p className="text-sm text-muted-foreground">No movements yet.</p>
+          ) : visibleRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No current entries — show correction history to see voided rows.
+            </p>
           ) : (
             <DataTable>
               <DataTableHead>
@@ -213,8 +239,14 @@ export default function CustomerDetailPage() {
                 </tr>
               </DataTableHead>
               <DataTableBody>
-                {ledger.entries.map((entry) => (
-                  <DataTableRow key={entry.id}>
+                {visibleRows.map((entry) => (
+                  <DataTableRow
+                    key={entry.id}
+                    className={subledgerRowClassName(
+                      entry.display_kind,
+                      showHistory,
+                    )}
+                  >
                     <DataTableCell>
                       {formatTrDate(entry.movement_date)}
                     </DataTableCell>
@@ -222,7 +254,14 @@ export default function CustomerDetailPage() {
                       {customerMovementLabels[entry.movement_type] ??
                         entry.movement_type}
                     </DataTableCell>
-                    <DataTableCell>{entry.description}</DataTableCell>
+                    <DataTableCell>
+                      {entry.description}
+                      {entry.was_corrected && (
+                        <span className="ml-2">
+                          <CorrectedBadge />
+                        </span>
+                      )}
+                    </DataTableCell>
                     <DataTableCell className="text-sm text-muted-foreground">
                       {formatLedgerGroupMeta(entry) ?? "—"}
                     </DataTableCell>
@@ -231,7 +270,7 @@ export default function CustomerDetailPage() {
                     </DataTableCell>
                     <DataTableCell align="right">
                       {entry.movement_type === "payment" &&
-                        entry.journal_entry_id && (
+                        canCorrectSubledgerRow(entry) && (
                           <Button
                             type="button"
                             variant="secondary"

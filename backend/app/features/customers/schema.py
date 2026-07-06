@@ -8,6 +8,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.core.schema_types import OptionalActorId
 
+from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.receivables.types import CustomerMovementType
 from app.features.customers.validation import validate_optional_tax_id
 
@@ -76,6 +77,8 @@ class CustomerLedgerEntryRead(BaseModel):
     actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID | None
     created_at: datetime
+    display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
+    was_corrected: bool = False
 
 
 class CustomerLedgerRead(BaseModel):

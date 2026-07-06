@@ -8,6 +8,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, Field, field_validator
 from app.core.schema_types import OptionalActorId
 
+from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.payables.types import SupplierMovementType
 
 
@@ -62,6 +63,8 @@ class SupplierLedgerEntryRead(BaseModel):
     reference_id: uuid.UUID | None
     journal_entry_id: uuid.UUID | None
     created_at: datetime
+    display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
+    was_corrected: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -146,6 +149,8 @@ class SupplierActivityRow(BaseModel):
     has_document: bool = False
     can_edit: bool = False
     expense_account_id: uuid.UUID | None = None
+    display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
+    was_corrected: bool = False
 
 
 class SupplierActivityRead(BaseModel):

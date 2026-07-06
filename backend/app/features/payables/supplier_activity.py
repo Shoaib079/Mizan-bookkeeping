@@ -9,7 +9,8 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.ledger.models import JournalEntry, JournalEntryStatus
+from app.core.ledger.models import JournalEntry
+from app.core.ledger.subledger_display import SubledgerDisplayKind, classify_subledger_row
 from app.core.payables.ledger import list_ledger_entries
 from app.core.payables.models import SupplierLedgerEntry
 from app.core.payables.types import SupplierMovementType
@@ -146,6 +147,18 @@ def get_supplier_activity(
             if entry.movement_date < from_date or entry.movement_date > to_date:
                 continue
 
+            journal = (
+                session.get(JournalEntry, entry.journal_entry_id)
+                if entry.journal_entry_id is not None
+                else None
+            )
+            display_kind, was_corrected = classify_subledger_row(
+                description=entry.description,
+                journal=journal,
+            )
+            is_void_reversal = display_kind == SubledgerDisplayKind.VOID_REVERSAL
+            is_superseded = display_kind == SubledgerDisplayKind.SUPERSEDED
+
             net_kurus: int | None = None
             vat_kurus: int | None = None
             amount_kurus: int | None = None
@@ -164,17 +177,6 @@ def get_supplier_activity(
 
             if entry.movement_type == SupplierMovementType.INVOICE:
                 draft = _invoice_draft_for_entry(session, entry)
-                journal = (
-                    session.get(JournalEntry, entry.journal_entry_id)
-                    if entry.journal_entry_id is not None
-                    else None
-                )
-                is_void_reversal = entry.description.startswith("Void:")
-                is_superseded = (
-                    journal is not None
-                    and journal.status == JournalEntryStatus.VOIDED
-                    and not is_void_reversal
-                )
 
                 if draft is not None:
                     invoice_draft_id = draft.id
@@ -220,17 +222,6 @@ def get_supplier_activity(
                         )
             elif entry.movement_type == SupplierMovementType.CREDIT_NOTE:
                 draft = _invoice_draft_for_entry(session, entry)
-                journal = (
-                    session.get(JournalEntry, entry.journal_entry_id)
-                    if entry.journal_entry_id is not None
-                    else None
-                )
-                is_void_reversal = entry.description.startswith("Void:")
-                is_superseded = (
-                    journal is not None
-                    and journal.status == JournalEntryStatus.VOIDED
-                    and not is_void_reversal
-                )
 
                 if draft is not None:
                     invoice_draft_id = draft.id
@@ -273,6 +264,11 @@ def get_supplier_activity(
                 amount_kurus = abs(entry.amount_kurus) if entry.amount_kurus else None
                 document_ref = entry.description[:64] if entry.description else "—"
 
+            if is_void_reversal:
+                movement_label = "İptal"
+            if display_kind != SubledgerDisplayKind.EFFECTIVE:
+                can_edit = False
+
             running += entry.amount_kurus
             raw_rows.append(
                 (
@@ -296,6 +292,8 @@ def get_supplier_activity(
                         has_document=has_document,
                         can_edit=can_edit,
                         expense_account_id=expense_account_id,
+                        display_kind=display_kind,
+                        was_corrected=was_corrected,
                     ),
                 )
             )

@@ -27,6 +27,7 @@ export function recentEntriesListUrl(
   const params = new URLSearchParams({
     limit: String(limit),
     offset: "0",
+    effective_only: "true",
   });
   return `/entities/${entityId}/ledger/entries?${params.toString()}`;
 }

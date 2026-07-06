@@ -22,6 +22,7 @@ from app.core.staff.models import StaffLedgerEntry
 from app.core.staff.types import PayCurrency, StaffMovementType
 from app.core.ledger.correction import CorrectionNotFoundError, correct_staff_journal_entry
 from app.core.ledger.posting import PostingLine
+from app.core.ledger.subledger_display import enrich_entry_models
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.staff.models import Employee
@@ -40,6 +41,24 @@ from app.features.staff.schema import (
     StaffJournalEntryCorrect,
     StaffJournalEntryCorrectOut,
 )
+
+
+def _staff_entry_reads(
+    session: Session, entries: list[StaffLedgerEntry]
+) -> list[StaffLedgerEntryRead]:
+    if not entries:
+        return []
+    return enrich_entry_models(
+        session,
+        StaffLedgerEntryRead,
+        entries,
+        journal_entry_id=lambda entry: entry.journal_entry_id,
+        description=lambda entry: entry.description,
+    )
+
+
+def _staff_entry_read(session: Session, entry: StaffLedgerEntry) -> StaffLedgerEntryRead:
+    return _staff_entry_reads(session, [entry])[0]
 
 
 def create_employee(
@@ -137,7 +156,7 @@ def get_staff_ledger(
         balance_minor=balance,
         remaining_accrual_minor=remaining,
         outstanding_advance_minor=advance,
-        entries=[StaffLedgerEntryRead.model_validate(e) for e in entries],
+        entries=_staff_entry_reads(session, entries),
     )
 
 
@@ -160,7 +179,7 @@ def record_accrual(
     )
     return StaffAccrualResponse(
         journal_entry_id=result.journal_entry.id if result.journal_entry else None,
-        staff_ledger_entry=StaffLedgerEntryRead.model_validate(result.staff_ledger_entry),
+        staff_ledger_entry=_staff_entry_read(session, result.staff_ledger_entry),
         balance_minor=result.balance_minor,
     )
 
@@ -185,7 +204,7 @@ def record_advance(
     )
     return StaffAdvanceResponse(
         journal_entry_id=result.journal_entry.id,
-        staff_ledger_entry=StaffLedgerEntryRead.model_validate(result.staff_ledger_entry),
+        staff_ledger_entry=_staff_entry_read(session, result.staff_ledger_entry),
         balance_minor=result.balance_minor,
         fx_ledger_entry_id=(
             result.fx_ledger_entry.id if result.fx_ledger_entry else None
@@ -272,7 +291,7 @@ def record_payment(
         )
     return StaffPaymentResponse(
         journal_entry_id=result.journal_entry.id,
-        staff_ledger_entry=StaffLedgerEntryRead.model_validate(result.staff_ledger_entry),
+        staff_ledger_entry=_staff_entry_read(session, result.staff_ledger_entry),
         balance_minor=result.balance_minor,
         advance_applied_minor=result.advance_applied_minor,
         fx_ledger_entry_id=(
@@ -468,6 +487,6 @@ def correct_staff_journal_entry_http(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
         corrected_journal_entry_id=result.corrected.id,
-        staff_ledger_entry=StaffLedgerEntryRead.model_validate(new_row),
+        staff_ledger_entry=_staff_entry_read(session, new_row),
         balance_minor=balance,
     )

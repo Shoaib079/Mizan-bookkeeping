@@ -93,7 +93,7 @@ def get_supplier_ledger(
     return SupplierLedgerRead(
         supplier_id=supplier_id,
         balance_kurus=balance,
-        entries=[SupplierLedgerEntryRead.model_validate(e) for e in entries],
+        entries=service.supplier_entry_reads(session, entries),
     )
 
 

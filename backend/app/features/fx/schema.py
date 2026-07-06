@@ -8,6 +8,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field
 from app.core.schema_types import OptionalActorId
 
+from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.fx.types import FxMovementType
 from app.core.ledger.models import JournalEntrySource
 
@@ -37,6 +38,8 @@ class FxLedgerEntryRead(BaseModel):
     journal_entry_id: uuid.UUID
     journal_source: JournalEntrySource | None = None
     created_at: datetime
+    display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
+    was_corrected: bool = False
 
 
 class FxPurchaseResponse(BaseModel):

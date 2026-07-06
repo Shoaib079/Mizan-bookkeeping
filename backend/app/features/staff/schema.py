@@ -8,6 +8,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.core.schema_types import OptionalActorId
 
+from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.staff.types import PayCurrency, StaffMovementType
 
 
@@ -50,6 +51,8 @@ class StaffLedgerEntryRead(BaseModel):
     period_year: int | None = None
     period_month: int | None = None
     created_at: datetime
+    display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
+    was_corrected: bool = False
 
 
 class StaffLedgerRead(BaseModel):

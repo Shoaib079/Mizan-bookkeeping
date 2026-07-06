@@ -5,6 +5,8 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import { FxConversionForm } from "@/components/forms/fx-conversion-form";
 import {
   CorrectFxPurchaseForm,
@@ -35,6 +37,11 @@ import { formatFxNative } from "@/lib/fx-money";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
+import {
+  canCorrectSubledgerRow,
+  subledgerRowClassName,
+} from "@/lib/ledger-display";
+import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 export default function FxWalletPage() {
   const params = useParams<{ id: string }>();
@@ -99,6 +106,13 @@ export default function FxWalletPage() {
     void reload();
   }, [reload]);
 
+  const {
+    showHistory,
+    setShowHistory,
+    hiddenCount,
+    visibleRows,
+  } = useLedgerHistoryView(ledger);
+
   const currency = balance?.currency ?? account?.currency ?? "USD";
 
   if (!entityId) {
@@ -144,9 +158,18 @@ export default function FxWalletPage() {
 
           <section>
             <h2 className="mb-3 text-sm font-semibold">Ledger</h2>
+            <LedgerHistoryToggle
+              hiddenCount={hiddenCount}
+              showHistory={showHistory}
+              onToggle={setShowHistory}
+            />
             {ledger.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No FX movements yet.
+              </p>
+            ) : visibleRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No current entries — show correction history to see voided rows.
               </p>
             ) : (
               <DataTable>
@@ -163,13 +186,26 @@ export default function FxWalletPage() {
                   </tr>
                 </DataTableHead>
                 <DataTableBody>
-                  {ledger.map((row) => (
-                    <DataTableRow key={row.id}>
+                  {visibleRows.map((row) => (
+                    <DataTableRow
+                      key={row.id}
+                      className={subledgerRowClassName(
+                        row.display_kind,
+                        showHistory,
+                      )}
+                    >
                       <DataTableCell>
                         {formatTrDate(row.movement_date)}
                       </DataTableCell>
                       <DataTableCell>{row.movement_type}</DataTableCell>
-                      <DataTableCell>{row.description}</DataTableCell>
+                      <DataTableCell>
+                        {row.description}
+                        {row.was_corrected && (
+                          <span className="ml-2">
+                            <CorrectedBadge />
+                          </span>
+                        )}
+                      </DataTableCell>
                       <DataTableCell align="right">
                         {formatFxNative(
                           Math.abs(row.native_quantity),
@@ -181,7 +217,7 @@ export default function FxWalletPage() {
                       </DataTableCell>
                       <DataTableCell align="right">
                         {row.movement_type === "spend" &&
-                          row.journal_entry_id &&
+                          canCorrectSubledgerRow(row) &&
                           row.journal_source &&
                           row.journal_source !== "fx_purchase" && (
                             <Button
@@ -205,7 +241,7 @@ export default function FxWalletPage() {
                             </Button>
                           )}
                         {row.movement_type === "purchase" &&
-                          row.journal_entry_id && (
+                          canCorrectSubledgerRow(row) && (
                             <Button
                               type="button"
                               variant="secondary"

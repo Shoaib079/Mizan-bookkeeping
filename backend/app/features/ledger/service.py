@@ -62,6 +62,7 @@ def list_journal_entries(
     q: str | None = None,
     min_amount: int | None = None,
     max_amount: int | None = None,
+    effective_only: bool = False,
     list_params: ListParams | None = None,
 ) -> tuple[list[JournalEntryOut], int]:
     if entity_service.get_entity(session, entity_id) is None:
@@ -74,6 +75,9 @@ def list_journal_entries(
             filters.append(JournalEntry.status == status)
         if source is not None:
             filters.append(JournalEntry.source == source)
+        if effective_only:
+            filters.append(JournalEntry.status == JournalEntryStatus.POSTED)
+            filters.append(JournalEntry.reverses_entry_id.is_(None))
         filters.extend(
             date_range_filters(
                 JournalEntry.entry_date,

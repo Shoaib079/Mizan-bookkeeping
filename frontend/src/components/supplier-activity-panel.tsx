@@ -2,7 +2,10 @@
 
 /** Supplier chronological activity — one timeline + Excel export. */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { CorrectedBadge } from "@/components/ledger/corrected-badge";
+import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
 import { InvoiceDocumentPreview } from "@/components/invoice-document-preview";
@@ -26,6 +29,12 @@ import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { formatSupplierPayableBalance } from "@/lib/supplier-balance";
+import {
+  canCorrectSubledgerRow,
+  subledgerRowClassName,
+  type SubledgerDisplayKind,
+} from "@/lib/ledger-display";
+import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 export type SupplierActivityRow = {
   movement_date: string;
@@ -45,6 +54,8 @@ export type SupplierActivityRow = {
   has_document: boolean;
   can_edit: boolean;
   expense_account_id: string | null;
+  display_kind?: SubledgerDisplayKind;
+  was_corrected?: boolean;
 };
 
 type SupplierActivity = {
@@ -91,6 +102,24 @@ export function SupplierActivityPanel({
   const [error, setError] = useState<string | null>(null);
   const [previewDraftId, setPreviewDraftId] = useState<string | null>(null);
   const [reviewDraftId, setReviewDraftId] = useState<string | null>(null);
+
+  const alwaysShowActivityRow = useCallback(
+    (row: SupplierActivityRow) =>
+      row.movement_kind === "opening" ||
+      row.movement_kind === "closing" ||
+      row.movement_kind === "unposted_invoice",
+    [],
+  );
+  const historyOptions = useMemo(
+    () => ({ alwaysShow: alwaysShowActivityRow }),
+    [alwaysShowActivityRow],
+  );
+  const {
+    showHistory,
+    setShowHistory,
+    hiddenCount,
+    visibleRows,
+  } = useLedgerHistoryView(data?.rows ?? [], historyOptions);
 
   const reload = useCallback(async () => {
     if (!entityId) return;
@@ -179,6 +208,12 @@ export function SupplierActivityPanel({
             </div>
           </dl>
 
+          <LedgerHistoryToggle
+            hiddenCount={hiddenCount}
+            showHistory={showHistory}
+            onToggle={setShowHistory}
+          />
+
           <DataTable>
             <DataTableHead>
               <tr>
@@ -197,8 +232,14 @@ export function SupplierActivityPanel({
               </tr>
             </DataTableHead>
             <DataTableBody>
-              {data.rows.map((row, index) => (
-                <DataTableRow key={`${row.movement_date}-${row.movement_kind}-${index}`}>
+              {visibleRows.map((row, index) => (
+                <DataTableRow
+                  key={`${row.movement_date}-${row.movement_kind}-${index}`}
+                  className={subledgerRowClassName(
+                    row.display_kind,
+                    showHistory,
+                  )}
+                >
                   <DataTableCell>{formatTrDate(row.movement_date)}</DataTableCell>
                   <DataTableCell>{row.movement_label}</DataTableCell>
                   <DataTableCell>{row.document_ref}</DataTableCell>
@@ -210,6 +251,11 @@ export function SupplierActivityPanel({
                     }
                   >
                     {row.detail}
+                    {row.was_corrected && (
+                      <span className="ml-2 not-italic">
+                        <CorrectedBadge />
+                      </span>
+                    )}
                   </DataTableCell>
                   <DataTableCell align="right">
                     {row.net_kurus != null ? formatTry(row.net_kurus) : "—"}
@@ -249,7 +295,7 @@ export function SupplierActivityPanel({
                   </DataTableCell>
                   <DataTableCell align="right">
                     {row.movement_kind === "payment" &&
-                      row.journal_entry_id &&
+                      canCorrectSubledgerRow(row) &&
                       onCorrectPayment && (
                         <Button
                           type="button"
@@ -268,7 +314,7 @@ export function SupplierActivityPanel({
                         </Button>
                       )}
                     {row.movement_kind === "invoice" &&
-                      row.journal_entry_id &&
+                      canCorrectSubledgerRow(row) &&
                       row.can_edit &&
                       onEditInvoice && (
                         <Button

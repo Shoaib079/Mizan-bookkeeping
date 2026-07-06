@@ -14,6 +14,7 @@ from app.core.ledger.correction import (
     correct_supplier_invoice,
     correct_supplier_payment,
 )
+from app.core.ledger.subledger_display import enrich_entry_models
 from app.core.ledger.posting import (
     AlreadyVoidedError,
     InvalidAccountError,
@@ -26,7 +27,22 @@ from app.core.listing import ListParams, fetch_paginated_rows, text_search_filte
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.payables import invoice_edit
+from app.features.payables.schema import SupplierLedgerEntryRead
 from app.features.suppliers.models import Supplier
+
+
+def supplier_entry_reads(
+    session: Session, entries: list[SupplierLedgerEntry]
+) -> list[SupplierLedgerEntryRead]:
+    if not entries:
+        return []
+    return enrich_entry_models(
+        session,
+        SupplierLedgerEntryRead,
+        entries,
+        journal_entry_id=lambda entry: entry.journal_entry_id,
+        description=lambda entry: entry.description,
+    )
 
 
 def list_payables(

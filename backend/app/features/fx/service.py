@@ -19,6 +19,11 @@ from app.core.fx.spend_posting import (
 )
 from app.core.ledger.correction import CorrectionNotFoundError, correct_fx_conversion_or_spend, correct_fx_purchase
 from app.core.ledger.models import JournalEntry, JournalEntrySource
+from app.core.ledger.subledger_display import (
+    SubledgerDisplayKind,
+    classify_subledger_row,
+    enrich_entry_models,
+)
 from app.core.ledger.posting import PostingLine
 from app.db.session import entity_context, require_entity_context
 from app.core.chart_of_accounts.default_chart import FX_GAIN_CODE, FX_LOSS_CODE
@@ -45,11 +50,25 @@ from app.features.fx.schema import (
 )
 
 
-def _to_ledger_read(entry, *, journal_source: JournalEntrySource | None = None) -> FxLedgerEntryRead:
-    data = FxLedgerEntryRead.model_validate(entry)
-    if journal_source is not None:
-        return data.model_copy(update={"journal_source": journal_source})
-    return data
+def _to_ledger_read(
+    session: Session,
+    entry,
+    *,
+    journal: JournalEntry | None = None,
+) -> FxLedgerEntryRead:
+    if journal is None:
+        journal = session.get(JournalEntry, entry.journal_entry_id)
+    display_kind, was_corrected = classify_subledger_row(
+        description=entry.description,
+        journal=journal,
+    )
+    return FxLedgerEntryRead.model_validate(entry).model_copy(
+        update={
+            "journal_source": journal.source if journal is not None else None,
+            "display_kind": display_kind,
+            "was_corrected": was_corrected,
+        }
+    )
 
 
 def create_fx_purchase(
@@ -70,7 +89,7 @@ def create_fx_purchase(
     )
     return FxPurchaseResponse(
         journal_entry_id=result.journal_entry.id,
-        fx_ledger_entry=_to_ledger_read(result.fx_ledger_entry),
+        fx_ledger_entry=_to_ledger_read(session, result.fx_ledger_entry),
     )
 
 
@@ -107,7 +126,7 @@ def correct_fx_purchase_entry(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
         corrected_journal_entry_id=result.corrected.id,
-        fx_ledger_entry=_to_ledger_read(new_row),
+        fx_ledger_entry=_to_ledger_read(session, new_row),
     )
 
 
@@ -129,7 +148,7 @@ def create_fx_conversion(
     )
     return FxConversionResponse(
         journal_entry_id=result.journal_entry.id,
-        fx_ledger_entry=_to_ledger_read(result.fx_ledger_entry),
+        fx_ledger_entry=_to_ledger_read(session, result.fx_ledger_entry),
         try_cost_kurus=result.try_cost_kurus,
         realized_gain_kurus=result.realized_gain_kurus,
     )
@@ -152,7 +171,7 @@ def create_fx_expense_spend(
     )
     return FxExpenseSpendResponse(
         journal_entry_id=result.journal_entry.id,
-        fx_ledger_entry=_to_ledger_read(result.fx_ledger_entry),
+        fx_ledger_entry=_to_ledger_read(session, result.fx_ledger_entry),
         try_cost_kurus=result.try_cost_kurus,
     )
 
@@ -187,10 +206,7 @@ def get_fx_ledger(
         for entry in entries:
             journal = session.get(JournalEntry, entry.journal_entry_id)
             reads.append(
-                _to_ledger_read(
-                    entry,
-                    journal_source=journal.source if journal is not None else None,
-                )
+                _to_ledger_read(session, entry, journal=journal),
             )
     return reads, total
 
@@ -333,6 +349,6 @@ def correct_fx_conversion_or_spend_entry(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
         corrected_journal_entry_id=result.corrected.id,
-        fx_ledger_entry=_to_ledger_read(new_row),
+        fx_ledger_entry=_to_ledger_read(session, new_row),
         try_cost_kurus=try_cost_kurus,
     )

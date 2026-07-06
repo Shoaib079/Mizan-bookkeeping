@@ -21,6 +21,7 @@ from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import PartnerMovementType
 from app.core.ledger.correction import CorrectionNotFoundError, correct_partner_journal_entry
 from app.core.ledger.posting import PostingLine
+from app.core.ledger.subledger_display import enrich_entry_models
 from app.core.chart_of_accounts.default_chart import (
     OWNER_DRAWINGS_CODE,
     PARTNER_REIMBURSEMENT_PAYABLE_CODE,
@@ -57,6 +58,24 @@ from app.core.partners.profit_allocation import OwnershipShareError
 from app.features.reports.financial_statements import get_profit_and_loss
 
 HUNDRED = Decimal("100")
+
+
+def _partner_entry_reads(
+    session: Session, entries: list[PartnerLedgerEntry]
+) -> list[PartnerLedgerEntryRead]:
+    if not entries:
+        return []
+    return enrich_entry_models(
+        session,
+        PartnerLedgerEntryRead,
+        entries,
+        journal_entry_id=lambda entry: entry.journal_entry_id,
+        description=lambda entry: entry.description,
+    )
+
+
+def _partner_entry_read(session: Session, entry: PartnerLedgerEntry) -> PartnerLedgerEntryRead:
+    return _partner_entry_reads(session, [entry])[0]
 
 
 def ownership_share_summary(
@@ -182,7 +201,7 @@ def get_partner_ledger(
         partner_id=partner_id,
         balance_kurus=reimbursement,
         capital_balance_kurus=capital,
-        entries=[PartnerLedgerEntryRead.model_validate(e) for e in entries],
+        entries=_partner_entry_reads(session, entries),
     )
 
 
@@ -204,9 +223,7 @@ def record_expense_fronted(
     )
     return ExpenseFrontedResponse(
         journal_entry_id=result.journal_entry.id,
-        partner_ledger_entry=PartnerLedgerEntryRead.model_validate(
-            result.partner_ledger_entry
-        ),
+        partner_ledger_entry=_partner_entry_read(session, result.partner_ledger_entry),
         balance_kurus=result.balance_kurus,
     )
 
@@ -229,9 +246,7 @@ def record_reimbursement_paid(
     )
     return ReimbursementPaidResponse(
         journal_entry_id=result.journal_entry.id,
-        partner_ledger_entry=PartnerLedgerEntryRead.model_validate(
-            result.partner_ledger_entry
-        ),
+        partner_ledger_entry=_partner_entry_read(session, result.partner_ledger_entry),
         balance_kurus=result.balance_kurus,
     )
 
@@ -254,9 +269,7 @@ def record_drawing(
     )
     return DrawingResponse(
         journal_entry_id=result.journal_entry.id,
-        partner_ledger_entry=PartnerLedgerEntryRead.model_validate(
-            result.partner_ledger_entry
-        ),
+        partner_ledger_entry=_partner_entry_read(session, result.partner_ledger_entry),
         balance_kurus=result.balance_kurus,
     )
 
@@ -279,9 +292,7 @@ def record_drawing_repayment(
     )
     return DrawingRepaymentResponse(
         journal_entry_id=result.journal_entry.id,
-        partner_ledger_entry=PartnerLedgerEntryRead.model_validate(
-            result.partner_ledger_entry
-        ),
+        partner_ledger_entry=_partner_entry_read(session, result.partner_ledger_entry),
         balance_kurus=result.balance_kurus,
     )
 
@@ -422,7 +433,7 @@ def correct_partner_journal_entry_http(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
         corrected_journal_entry_id=result.corrected.id,
-        partner_ledger_entry=PartnerLedgerEntryRead.model_validate(new_row),
+        partner_ledger_entry=_partner_entry_read(session, new_row),
         balance_kurus=balance,
     )
 
@@ -497,10 +508,9 @@ def post_profit_allocation(
     return ProfitAllocationPostOut(
         journal_entry_id=result.journal_entry.id,
         total_profit_kurus=profit_kurus,
-        partner_ledger_entries=[
-            PartnerLedgerEntryRead.model_validate(entry)
-            for entry in result.partner_ledger_entries
-        ],
+        partner_ledger_entries=_partner_entry_reads(
+            session, list(result.partner_ledger_entries)
+        ),
     )
 
 
