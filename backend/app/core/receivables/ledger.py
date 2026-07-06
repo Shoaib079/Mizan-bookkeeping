@@ -83,6 +83,12 @@ def persist_customer_ledger_entry(
     journal_entry_id: uuid.UUID | None = None,
     reference_type: str | None = None,
     reference_id: uuid.UUID | None = None,
+    pax: int | None = None,
+    rate_per_person_kurus: int | None = None,
+    forex_currency: str | None = None,
+    rate_per_person_forex_minor: int | None = None,
+    total_forex_minor: int | None = None,
+    payment_native_quantity: int | None = None,
 ) -> CustomerLedgerEntry:
     """Persist one customer subledger row — caller must hold entity_context."""
     if amount_kurus == 0:
@@ -102,6 +108,12 @@ def persist_customer_ledger_entry(
         journal_entry_id=journal_entry_id,
         reference_type=reference_type,
         reference_id=reference_id,
+        pax=pax,
+        rate_per_person_kurus=rate_per_person_kurus,
+        forex_currency=forex_currency,
+        rate_per_person_forex_minor=rate_per_person_forex_minor,
+        total_forex_minor=total_forex_minor,
+        payment_native_quantity=payment_native_quantity,
     )
     session.add(entry)
     session.flush()

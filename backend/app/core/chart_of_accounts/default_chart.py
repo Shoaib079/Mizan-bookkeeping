@@ -24,6 +24,7 @@ EMPLOYEE_ADVANCES_CODE = "1300"
 CARD_SALES_CLEARING_CODE = "1400"
 DELIVERY_CLEARING_PARENT_CODE = "1450"
 SALES_REVENUE_CODE = "4000"
+GROUP_SALES_REVENUE_CODE = "4300"
 BANK_CHARGES_CODE = "5300"
 CASH_OVER_SHORT_CODE = "5400"
 FX_GAIN_CODE = "4200"
@@ -117,6 +118,14 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
     ),
     # Revenue
     DefaultAccount("4000", "Sales Revenue", "Satış Geliri", AccountType.REVENUE, AccountNormalBalance.CREDIT, False),
+    DefaultAccount(
+        GROUP_SALES_REVENUE_CODE,
+        "Group / Agency Sales",
+        "Grup / Acente Satışları",
+        AccountType.REVENUE,
+        AccountNormalBalance.CREDIT,
+        False,
+    ),
     DefaultAccount("4100", "Other Income", "Diğer Gelirler", AccountType.REVENUE, AccountNormalBalance.CREDIT, False),
     DefaultAccount(FX_GAIN_CODE, "FX Gain", "Kur Kazancı", AccountType.REVENUE, AccountNormalBalance.CREDIT, False),
     # Expenses

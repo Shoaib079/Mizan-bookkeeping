@@ -77,6 +77,7 @@ DEDICATED_CORRECTION_ROUTES: dict[JournalEntrySource, str] = {
     JournalEntrySource.PAYMENT: "supplier payment correction",
     JournalEntrySource.INVOICE: "supplier invoice correction",
     JournalEntrySource.CUSTOMER_CREDIT_SALE: "customer credit sale correction",
+    JournalEntrySource.GROUP_SALE: "group sale correction",
     JournalEntrySource.CUSTOMER_PAYMENT_RECEIVED: "customer payment correction",
     JournalEntrySource.FX_PURCHASE: "FX purchase correction",
     JournalEntrySource.FX_CONVERSION: "FX conversion correction",

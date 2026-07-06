@@ -51,7 +51,7 @@ def record_fx_movement(
     journal_entry_id: uuid.UUID,
 ) -> FxLedgerEntry:
     """Persist one FX subledger row — caller must hold entity_context and commit."""
-    if movement_type == FxMovementType.PURCHASE:
+    if movement_type in (FxMovementType.PURCHASE, FxMovementType.RECEIPT):
         if native_quantity <= 0:
             raise ZeroFxMovementError("purchase native_quantity must be positive")
         if try_cost_kurus <= 0:

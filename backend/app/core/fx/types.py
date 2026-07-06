@@ -8,3 +8,4 @@ import enum
 class FxMovementType(str, enum.Enum):
     PURCHASE = "purchase"
     SPEND = "spend"
+    RECEIPT = "receipt"

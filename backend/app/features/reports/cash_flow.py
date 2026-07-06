@@ -67,6 +67,7 @@ _NON_CASH_SOURCES = frozenset(
         JournalEntrySource.PARTNER_EXPENSE_FRONTED,
         JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
         JournalEntrySource.CUSTOMER_CREDIT_SALE,
+        JournalEntrySource.GROUP_SALE,
     }
 )
 

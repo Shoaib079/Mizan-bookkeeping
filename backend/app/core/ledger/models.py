@@ -67,6 +67,7 @@ class JournalEntrySource(str, enum.Enum):
     PARTNER_DRAWING_REPAYMENT = "partner_drawing_repayment"
     PARTNER_PROFIT_ALLOCATION = "partner_profit_allocation"
     CUSTOMER_CREDIT_SALE = "customer_credit_sale"
+    GROUP_SALE = "group_sale"
     CUSTOMER_PAYMENT_RECEIVED = "customer_payment_received"
     FX_CONVERSION = "fx_conversion"
     FX_EXPENSE_SPEND = "fx_expense_spend"

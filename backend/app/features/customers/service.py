@@ -17,6 +17,10 @@ from app.core.receivables import ledger as receivables_ledger
 from app.core.receivables.models import CustomerLedgerEntry
 from app.core.receivables import posting as receivables_posting
 from app.db.session import entity_context, require_entity_context
+from app.features.customers.group_sale import (
+    build_group_credit_sale_description,
+    resolve_credit_sale_amount_kurus,
+)
 from app.features.customers.models import Customer
 from app.features.customers.schema import (
     CreditSaleCreate,
@@ -43,6 +47,9 @@ def create_customer(
         customer = Customer(
             name=payload.name,
             identifier=payload.identifier,
+            tax_id=payload.tax_id,
+            contact_name=payload.contact_name,
+            phone=payload.phone,
             notes=payload.notes,
         )
         session.add(customer)
@@ -68,7 +75,14 @@ def list_customers(
         filters = []
         if not include_inactive:
             filters.append(Customer.is_active.is_(True))
-        search = text_search_filter(q, Customer.name, Customer.identifier)
+        search = text_search_filter(
+            q,
+            Customer.name,
+            Customer.identifier,
+            Customer.tax_id,
+            Customer.contact_name,
+            Customer.phone,
+        )
         if search is not None:
             filters.append(search)
         stmt = select(Customer).where(*filters).order_by(Customer.name)
@@ -106,6 +120,12 @@ def update_customer(
             customer.name = payload.name
         if payload.identifier is not None:
             customer.identifier = payload.identifier
+        if payload.tax_id is not None:
+            customer.tax_id = payload.tax_id or None
+        if payload.contact_name is not None:
+            customer.contact_name = payload.contact_name or None
+        if payload.phone is not None:
+            customer.phone = payload.phone or None
         if payload.notes is not None:
             customer.notes = payload.notes
         if payload.is_active is not None:
@@ -134,15 +154,23 @@ def record_credit_sale(
     customer_id: uuid.UUID,
     payload: CreditSaleCreate,
 ) -> CreditSaleResponse:
+    amount_kurus = resolve_credit_sale_amount_kurus(payload)
+    description = build_group_credit_sale_description(payload)
+    total_forex_minor = payload.total_forex_minor
     result = receivables_posting.post_credit_sale(
         session,
         entity_id,
         customer_id,
         sale_date=payload.sale_date,
-        amount_kurus=payload.amount_kurus,
-        description=payload.description,
+        amount_kurus=amount_kurus,
+        description=description,
         actor_id=payload.actor_id,
         revenue_account_id=payload.revenue_account_id,
+        pax=payload.pax,
+        rate_per_person_kurus=payload.rate_per_person_kurus,
+        forex_currency=payload.forex_currency,
+        rate_per_person_forex_minor=payload.rate_per_person_forex_minor,
+        total_forex_minor=total_forex_minor,
     )
     return CreditSaleResponse(
         journal_entry_id=result.journal_entry.id,
@@ -159,15 +187,21 @@ def record_customer_payment(
     customer_id: uuid.UUID,
     payload: CustomerPaymentCreate,
 ) -> CustomerPaymentResponse:
+    amount_kurus, reference_type, reference_id = _resolve_customer_payment(
+        session, entity_id, customer_id, payload
+    )
     result = receivables_posting.post_customer_payment(
         session,
         entity_id,
         customer_id,
         payment_date=payload.payment_date,
-        amount_kurus=payload.amount_kurus,
+        amount_kurus=amount_kurus,
         description=payload.description,
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
+        payment_native_quantity=payload.payment_native_quantity,
+        reference_type=reference_type,
+        reference_id=reference_id,
     )
     return CustomerPaymentResponse(
         journal_entry_id=result.journal_entry.id,
@@ -176,6 +210,52 @@ def record_customer_payment(
         ),
         balance_kurus=result.balance_kurus,
     )
+
+
+def _resolve_customer_payment(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    payload: CustomerPaymentCreate,
+) -> tuple[int, str | None, uuid.UUID | None]:
+    from app.features.banking.models import MoneyAccount, MoneyAccountKind
+    from app.features.group_sales.fx_receivable import compute_try_payment_from_native
+
+    reference_type = None
+    reference_id = None
+    if payload.group_sale_id is not None:
+        reference_type = "group_sale"
+        reference_id = payload.group_sale_id
+
+    with entity_context(session, entity_id):
+        money_account = session.scalar(
+            select(MoneyAccount).where(
+                MoneyAccount.gl_account_id == payload.payment_account_id,
+            )
+        )
+        is_fx_wallet = (
+            money_account is not None
+            and money_account.account_kind == MoneyAccountKind.FOREIGN_CURRENCY
+        )
+
+        if payload.amount_kurus is not None:
+            return payload.amount_kurus, reference_type, reference_id
+
+        if not is_fx_wallet or payload.payment_native_quantity is None:
+            raise ValueError("amount_kurus is required for TRY payments")
+
+        currency = money_account.currency if money_account else None
+        if not currency:
+            raise ValueError("FX wallet currency missing")
+
+        amount_kurus = compute_try_payment_from_native(
+            session,
+            customer_id,
+            currency,
+            payload.payment_native_quantity,
+            group_sale_id=payload.group_sale_id,
+        )
+        return amount_kurus, reference_type, reference_id
 
 
 def correct_customer_payment_entry(

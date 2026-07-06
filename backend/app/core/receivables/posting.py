@@ -23,6 +23,7 @@ from app.core.receivables.types import CustomerMovementType
 from app.db.session import entity_context, require_entity_context
 from app.features.customers.models import Customer
 from app.features.entities import service as entity_service
+from app.features.banking.models import MoneyAccount, MoneyAccountKind
 
 
 class InvalidReceivablePostingError(ValueError):
@@ -145,6 +146,14 @@ def post_credit_sale(
     description: str,
     actor_id: uuid.UUID,
     revenue_account_id: uuid.UUID | None = None,
+    pax: int | None = None,
+    rate_per_person_kurus: int | None = None,
+    forex_currency: str | None = None,
+    rate_per_person_forex_minor: int | None = None,
+    total_forex_minor: int | None = None,
+    reference_type: str | None = None,
+    reference_id: uuid.UUID | None = None,
+    journal_source: JournalEntrySource = JournalEntrySource.CUSTOMER_CREDIT_SALE,
 ) -> CreditSalePostResult:
     """Credit sale — Dr AR / Cr revenue; subledger +amount; revenue recorded once."""
     if amount_kurus <= 0:
@@ -174,7 +183,7 @@ def post_credit_sale(
             description,
             lines,
             actor_id=actor_id,
-            source=JournalEntrySource.CUSTOMER_CREDIT_SALE,
+            source=journal_source,
         )
 
         customer_entry = receivables_ledger.persist_customer_ledger_entry(
@@ -186,6 +195,13 @@ def post_credit_sale(
             description=description,
             actor_id=actor_id,
             journal_entry_id=journal_entry.id,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            pax=pax,
+            rate_per_person_kurus=rate_per_person_kurus,
+            forex_currency=forex_currency,
+            rate_per_person_forex_minor=rate_per_person_forex_minor,
+            total_forex_minor=total_forex_minor,
         )
 
         session.commit()
@@ -217,6 +233,7 @@ def post_customer_payment(
     payment_account_id: uuid.UUID,
     reference_type: str | None = None,
     reference_id: uuid.UUID | None = None,
+    payment_native_quantity: int | None = None,
 ) -> CustomerPaymentPostResult:
     """Customer payment — Dr bank/cash / Cr AR; subledger -amount; no revenue line."""
     if amount_kurus <= 0:
@@ -237,6 +254,26 @@ def post_customer_payment(
 
         payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
         ar_account = _chart_account(session, ACCOUNTS_RECEIVABLE_CODE)
+
+        money_account = session.scalar(
+            select(MoneyAccount).where(
+                MoneyAccount.entity_id == entity_id,
+                MoneyAccount.gl_account_id == payment_gl.id,
+            )
+        )
+        is_fx_wallet = (
+            money_account is not None
+            and money_account.account_kind == MoneyAccountKind.FOREIGN_CURRENCY
+        )
+        if is_fx_wallet:
+            if payment_native_quantity is None or payment_native_quantity <= 0:
+                raise InvalidReceivablePostingError(
+                    "FX wallet payment requires payment_native_quantity"
+                )
+        elif payment_native_quantity is not None:
+            raise InvalidReceivablePostingError(
+                "payment_native_quantity is only allowed for FX wallet receipts"
+            )
 
         lines = build_customer_payment_lines(
             ar_account_id=ar_account.id,
@@ -264,7 +301,25 @@ def post_customer_payment(
             journal_entry_id=journal_entry.id,
             reference_type=reference_type,
             reference_id=reference_id,
+            forex_currency=money_account.currency if is_fx_wallet else None,
+            payment_native_quantity=payment_native_quantity if is_fx_wallet else None,
         )
+
+        if is_fx_wallet and money_account is not None:
+            from app.core.fx.ledger import record_fx_movement
+            from app.core.fx.types import FxMovementType
+
+            record_fx_movement(
+                session,
+                money_account.id,
+                movement_date=payment_date,
+                movement_type=FxMovementType.RECEIPT,
+                native_quantity=payment_native_quantity,
+                try_cost_kurus=amount_kurus,
+                description=description,
+                actor_id=actor_id,
+                journal_entry_id=journal_entry.id,
+            )
 
         session.commit()
         session.refresh(journal_entry)

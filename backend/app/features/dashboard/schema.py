@@ -14,6 +14,7 @@ class PeriodSalesRead(BaseModel):
     cash_sales_kurus: int
     pos_card_sales_kurus: int
     delivery_sales_kurus: int
+    group_sales_kurus: int
     other_sales_kurus: int
     total_sales_kurus: int
 

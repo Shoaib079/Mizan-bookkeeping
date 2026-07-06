@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | (none — ready for next) |
+| **Active slice**         | Agency group sales v2 — frontend UI (backend committed) |
 | **Next up**              | P5 — Delete company UI |
-| **Last completed slice** | Review sales date filter + Excel export; delivery export uncapped |
-| **Last commit/tag**      | `v0.review-sales-date-export` / `efd1c99` |
+| **Last completed slice** | Agency group sales v2 — backend (menus, FX/TRY itemized sale, 4300, edit/void, dashboard) |
+| **Last commit/tag**      | `v0.agency-group-sales-be` |
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 
@@ -47,6 +47,8 @@
 | Self-service expense categories                                                  | `v0.expense-categories`                           | done           | Re-hardcode chart to defaults only; accept client `account_type`/`code` on create; categories are EXPENSE-only, band 5900–5999, entity-scoped |
 | Expense category add in-place (no nested-form submit)                            | `v0.expense-category-inplace-add`                 | done           | Re-nest Add category dialog inside expense form; re-refetch chart on create (`pickers.reload` / full COA GET)                                              |
 | Review sales date range + status filter + Excel export                           | `v0.review-sales-date-export`                     | done           | Re-add uncapped export; drop `from`/`to`/`review` query params; split pending/posted tables without filter tabs                                            |
+| Agency group sales v2 — backend: menus, itemized FX/TRY sale, 4300, edit/void, dashboard | `v0.agency-group-sales-be`                  | done           | Re-add 4000 for group revenue; duplicate migration `076`; bypass posting boundary for group sales; edit in-place instead of void-and-repost               |
+| Agency group sales v2 — frontend: menu catalog, itemized sale, edit/void, FX payment | (in progress)                                | in progress    | Re-build v1 credit-sale form only; omit group-menus/group-sales routes; skip native-amount FX payment path                                                 |
 | Tips = cash expense (`5700`), gross sales, no `2260`                             | `v0.48.0-tips-expense-slice-a`                    | done           | Re-add tips payable pot, POS carve-out, or `2260`                                                                          |
 | Card commission total-clearance sweep                                            | `v0.50.0-pos-commission-total-clearance-slice-b2` | done           | Re-add `commission_recognition` setting or per-deposit commission UI                                                       |
 | Tip photo OCR stub                                                               | `v0.51.0-expense-photo-tip-ocr-slice-c`           | done           | New tip-only pipeline — use unified `expense-receipts`                                                                     |

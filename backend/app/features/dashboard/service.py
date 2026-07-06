@@ -8,7 +8,7 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
+from app.core.chart_of_accounts.default_chart import GROUP_SALES_REVENUE_CODE, SALES_REVENUE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 from app.core.fx.ledger import native_quantity_balance, try_cost_balance_kurus
@@ -45,22 +45,27 @@ def _require_entity(session: Session, entity_id: uuid.UUID) -> None:
         raise LookupError("Entity not found")
 
 
-def _sales_revenue_account_id(session: Session) -> uuid.UUID:
-    account = session.scalar(
-        select(Account.id).where(Account.code == SALES_REVENUE_CODE)
-    )
-    if account is None:
+def _sales_revenue_account_ids(session: Session) -> tuple[uuid.UUID, uuid.UUID]:
+    rows = session.execute(
+        select(Account.id, Account.code).where(
+            Account.code.in_((SALES_REVENUE_CODE, GROUP_SALES_REVENUE_CODE))
+        )
+    ).all()
+    by_code = {code: account_id for account_id, code in rows}
+    if SALES_REVENUE_CODE not in by_code:
         raise LookupError("Sales revenue account not found")
-    return account
+    if GROUP_SALES_REVENUE_CODE not in by_code:
+        raise LookupError("Group sales revenue account not found")
+    return by_code[SALES_REVENUE_CODE], by_code[GROUP_SALES_REVENUE_CODE]
 
 
-def _period_sales_by_source(
+def _period_revenue_credits(
     session: Session,
     *,
+    account_id: uuid.UUID,
     from_date: date,
     to_date: date,
 ) -> dict[JournalEntrySource, int]:
-    sales_account_id = _sales_revenue_account_id(session)
     rows = session.execute(
         select(
             JournalEntry.source,
@@ -71,7 +76,7 @@ def _period_sales_by_source(
             JournalEntry.status == JournalEntryStatus.POSTED.value,
             JournalEntry.entry_date >= from_date,
             JournalEntry.entry_date <= to_date,
-            JournalEntryLine.account_id == sales_account_id,
+            JournalEntryLine.account_id == account_id,
             JournalEntryLine.side == AccountNormalBalance.CREDIT,
         )
         .group_by(JournalEntry.source)
@@ -85,7 +90,13 @@ def _build_period_sales(
     from_date: date,
     to_date: date,
 ) -> PeriodSalesRead:
-    by_source = _period_sales_by_source(session, from_date=from_date, to_date=to_date)
+    sales_account_id, group_account_id = _sales_revenue_account_ids(session)
+    by_source = _period_revenue_credits(
+        session, account_id=sales_account_id, from_date=from_date, to_date=to_date
+    )
+    group_by_source = _period_revenue_credits(
+        session, account_id=group_account_id, from_date=from_date, to_date=to_date
+    )
     cash_sales = by_source.get(JournalEntrySource.CASH_MOVEMENT, 0)
     card_sales = by_source.get(JournalEntrySource.CARD_SALES, 0)
     delivery_sales = by_source.get(JournalEntrySource.DELIVERY_REPORT, 0)
@@ -97,11 +108,13 @@ def _build_period_sales(
     other_sales = sum(
         amount for source, amount in by_source.items() if source not in classified
     )
-    total_sales = cash_sales + card_sales + delivery_sales + other_sales
+    group_sales = sum(group_by_source.values())
+    total_sales = cash_sales + card_sales + delivery_sales + other_sales + group_sales
     return PeriodSalesRead(
         cash_sales_kurus=cash_sales,
         pos_card_sales_kurus=card_sales,
         delivery_sales_kurus=delivery_sales,
+        group_sales_kurus=group_sales,
         other_sales_kurus=other_sales,
         total_sales_kurus=total_sales,
     )

@@ -400,3 +400,126 @@ def test_api_customers_and_receivables_summary(
     assert ledger_resp.status_code == 200
     assert ledger_resp.json()["balance_kurus"] == 70_000
     assert len(ledger_resp.json()["entries"]) == 2
+
+
+def test_group_credit_sale_pax_try_and_forex_metadata(
+    db_session, receivables_setup
+) -> None:
+    entity_id = receivables_setup["entity_id"]
+    customer_id = receivables_setup["customer_id"]
+
+    result = receivables_posting.post_credit_sale(
+        db_session,
+        entity_id,
+        customer_id,
+        sale_date=date(2026, 7, 1),
+        amount_kurus=450_000,
+        description="Agency lunch",
+        actor_id=ACTOR_ID,
+        pax=45,
+        rate_per_person_kurus=10_000,
+        forex_currency="USD",
+        rate_per_person_forex_minor=2_500,
+        total_forex_minor=112_500,
+    )
+
+    entry = result.customer_ledger_entry
+    assert entry.pax == 45
+    assert entry.rate_per_person_kurus == 10_000
+    assert entry.forex_currency == "USD"
+    assert entry.rate_per_person_forex_minor == 2_500
+    assert entry.total_forex_minor == 112_500
+    assert result.balance_kurus == 450_000
+
+
+def test_customer_payment_fx_wallet_receipt(db_session, receivables_setup) -> None:
+    entity_id = receivables_setup["entity_id"]
+    customer_id = receivables_setup["customer_id"]
+
+    fx_wallet = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.FOREIGN_CURRENCY,
+            currency="USD",
+            name="USD Agency Wallet",
+        ),
+    )
+
+    receivables_posting.post_credit_sale(
+        db_session,
+        entity_id,
+        customer_id,
+        sale_date=date(2026, 7, 1),
+        amount_kurus=350_000,
+        description="Group invoice",
+        actor_id=ACTOR_ID,
+    )
+
+    result = receivables_posting.post_customer_payment(
+        db_session,
+        entity_id,
+        customer_id,
+        payment_date=date(2026, 7, 10),
+        amount_kurus=350_000,
+        description="USD wire received",
+        actor_id=ACTOR_ID,
+        payment_account_id=fx_wallet.gl_account_id,
+        payment_native_quantity=10_000,
+    )
+
+    entry = result.customer_ledger_entry
+    assert entry.forex_currency == "USD"
+    assert entry.payment_native_quantity == 10_000
+    assert result.balance_kurus == 0
+
+    from app.core.fx.models import FxLedgerEntry
+    from app.core.fx.types import FxMovementType
+
+    with entity_context(db_session, entity_id):
+        fx_row = db_session.scalar(
+            select(FxLedgerEntry).where(
+                FxLedgerEntry.journal_entry_id == result.journal_entry.id
+            )
+        )
+        assert fx_row is not None
+        assert fx_row.movement_type == FxMovementType.RECEIPT
+        assert fx_row.native_quantity == 10_000
+
+
+def test_api_customer_optional_tax_id(client: TestClient, receivables_setup) -> None:
+    entity_id = receivables_setup["entity_id"]
+
+    create_resp = client.post(
+        f"/entities/{entity_id}/customers",
+        json={
+            "name": "Agency Tours Ltd",
+            "tax_id": "1234567890",
+            "contact_name": "Ayşe Kaya",
+            "phone": "+90 532 000 0000",
+        },
+    )
+    assert create_resp.status_code == 201
+    body = create_resp.json()
+    assert body["tax_id"] == "1234567890"
+    assert body["contact_name"] == "Ayşe Kaya"
+    assert body["phone"] == "+90 532 000 0000"
+
+    group_sale_resp = client.post(
+        f"/entities/{entity_id}/customers/{body['id']}/credit-sales",
+        json={
+            "sale_date": "2026-07-01",
+            "amount_kurus": 200_000,
+            "description": "Group sale",
+            "actor_id": str(ACTOR_ID),
+            "pax": 20,
+            "rate_per_person_kurus": 10_000,
+            "forex_currency": "EUR",
+            "rate_per_person_forex_minor": 2_000,
+        },
+    )
+    assert group_sale_resp.status_code == 201
+    sale_body = group_sale_resp.json()
+    assert sale_body["customer_ledger_entry"]["pax"] == 20
+    assert sale_body["customer_ledger_entry"]["forex_currency"] == "EUR"
+    assert sale_body["balance_kurus"] == 200_000
