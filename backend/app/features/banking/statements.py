@@ -2485,6 +2485,30 @@ def _reset_line_for_correction(line: BankStatementLine) -> None:
     line.candidate_account_transfer_id = None
 
 
+def reset_statement_lines_for_voided_journal(
+    session: Session,
+    journal_entry_id: uuid.UUID,
+) -> int:
+    """Unlink bank lines when their journal was voided outside the statement UI."""
+    lines = list(
+        session.scalars(
+            select(BankStatementLine).where(
+                BankStatementLine.journal_entry_id == journal_entry_id
+            )
+        )
+    )
+    reset_count = 0
+    for line in lines:
+        if line.status in (
+            StatementLineStatus.POSTED,
+            StatementLineStatus.LINKED,
+            StatementLineStatus.CLASSIFIED,
+        ):
+            _reset_line_for_correction(line)
+            reset_count += 1
+    return reset_count
+
+
 def correct_statement_line(
     session: Session,
     entity_id: uuid.UUID,
@@ -2508,6 +2532,7 @@ def correct_statement_line(
     match_token: str | None = None,
 ) -> ClassifyStatementLineResult:
     """Reverse a resolved line via void/unlink, learn from correction, re-classify manually."""
+    from app.core.ledger.models import JournalEntry, JournalEntryStatus
     from app.core.ledger.posting import void_journal_entry
 
     if entity_service.get_entity(session, entity_id) is None:
@@ -2536,13 +2561,15 @@ def correct_statement_line(
         journal_entry_id = line.journal_entry_id
 
         if line.status == StatementLineStatus.POSTED and journal_entry_id is not None:
-            void_journal_entry(
-                session,
-                entity_id,
-                journal_entry_id,
-                actor_id=actor_id,
-                reason=reason or "Statement line correction",
-            )
+            journal = session.get(JournalEntry, journal_entry_id)
+            if journal is not None and journal.status != JournalEntryStatus.VOIDED:
+                void_journal_entry(
+                    session,
+                    entity_id,
+                    journal_entry_id,
+                    actor_id=actor_id,
+                    reason=reason or "Statement line correction",
+                )
         elif was_linked and journal_entry_id is not None:
             pass
 

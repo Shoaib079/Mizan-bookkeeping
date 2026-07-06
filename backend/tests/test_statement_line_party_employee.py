@@ -134,3 +134,139 @@ def test_staff_advance_line_stores_employee_id(db_session, partner_setup) -> Non
         persisted = db_session.get(BankStatementLine, line_id)
         assert persisted is not None
         assert persisted.employee_id == employee_id
+
+
+def test_staff_void_resets_linked_statement_line(db_session, partner_setup) -> None:
+    from app.features.staff.service import void_staff_journal_entry_http
+
+    entity_id = partner_setup["entity_id"]
+    bank = _bank_with_balance(db_session, entity_id)
+
+    with entity_context(db_session, entity_id):
+        employee = Employee(name="Latif", pay_currency=PayCurrency.TRY)
+        db_session.add(employee)
+        db_session.commit()
+        db_session.refresh(employee)
+        employee_id = employee.id
+
+    csv = (
+        "transaction_date,amount,description,reference\n"
+        '2026-06-06,"-38.000,00",GİDEN FAST salary,REF-38000\n'
+    ).encode()
+    statement = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank.id,
+        csv,
+        original_filename="staff-salary.csv",
+    )
+    line_id = statement.lines[0].id
+
+    posted = statement_service.classify_statement_line(
+        db_session,
+        entity_id,
+        statement.id,
+        line_id,
+        classification=StatementLineClassification.STAFF_PAYMENT,
+        employee_id=employee_id,
+        actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=5,
+        period_salary_minor=3_800_000,
+    )
+    journal_id = posted.journal_entry_id
+    assert journal_id is not None
+
+    void_staff_journal_entry_http(
+        db_session,
+        entity_id,
+        employee_id,
+        journal_id,
+        actor_id=ACTOR_ID,
+        reason="Wrong month",
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, line_id)
+        assert line is not None
+        assert line.status == StatementLineStatus.IMPORTED
+        assert line.journal_entry_id is None
+        assert line.classification == StatementLineClassification.UNCLASSIFIED
+
+
+def test_correct_reposts_after_staff_void(db_session, partner_setup) -> None:
+    from app.features.staff.service import void_staff_journal_entry_http
+
+    entity_id = partner_setup["entity_id"]
+    bank = _bank_with_balance(db_session, entity_id)
+
+    with entity_context(db_session, entity_id):
+        employee = Employee(name="Latif", pay_currency=PayCurrency.TRY)
+        db_session.add(employee)
+        db_session.commit()
+        db_session.refresh(employee)
+        employee_id = employee.id
+
+    csv = (
+        "transaction_date,amount,description,reference\n"
+        '2026-06-06,"-38.000,00",GİDEN FAST salary,REF-38000\n'
+    ).encode()
+    statement = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank.id,
+        csv,
+        original_filename="staff-salary.csv",
+    )
+    line_id = statement.lines[0].id
+
+    posted = statement_service.classify_statement_line(
+        db_session,
+        entity_id,
+        statement.id,
+        line_id,
+        classification=StatementLineClassification.STAFF_PAYMENT,
+        employee_id=employee_id,
+        actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=5,
+        period_salary_minor=3_800_000,
+    )
+    journal_id = posted.journal_entry_id
+    assert journal_id is not None
+
+    void_staff_journal_entry_http(
+        db_session,
+        entity_id,
+        employee_id,
+        journal_id,
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.get(BankStatementLine, line_id)
+        assert line is not None
+        line.status = StatementLineStatus.POSTED
+        line.journal_entry_id = journal_id
+        line.classification = StatementLineClassification.STAFF_PAYMENT
+        line.employee_id = employee_id
+        db_session.commit()
+
+    corrected = statement_service.correct_statement_line(
+        db_session,
+        entity_id,
+        statement.id,
+        line_id,
+        actor_id=ACTOR_ID,
+        classification=StatementLineClassification.STAFF_PAYMENT,
+        employee_id=employee_id,
+        period_year=2026,
+        period_month=5,
+        period_salary_minor=3_800_000,
+        reason="Re-post May salary",
+    )
+
+    assert corrected.line.status == StatementLineStatus.POSTED
+    assert corrected.journal_entry_id is not None
+    assert corrected.journal_entry_id != journal_id
+    assert corrected.line.employee_id == employee_id

@@ -120,7 +120,7 @@ export async function apiFetch<T>(
       const hint =
         err instanceof Error ? err.message : "Request failed before a response";
       throw new ApiError(
-        `Could not reach the API (${API_BASE}). ${hint}. Check NEXT_PUBLIC_API_URL, Railway CORS_ORIGINS for this site, and the browser Network tab for the POST.`,
+        `Could not reach the API (${API_BASE}). ${hint}. Check NEXT_PUBLIC_API_URL, API CORS_ORIGINS for this site, and the browser Network tab for the POST.`,
         0,
       );
     }

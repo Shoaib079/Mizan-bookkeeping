@@ -15,6 +15,7 @@ from app.adapters.bank_parsers.types import BankParseError
 from app.core.payables.ledger import AdvanceConfirmationRequiredError
 from app.core.receivables.ledger import OverpaymentError
 from app.core.banking.posting import InvalidTransferError
+from app.core.ledger.posting import AlreadyVoidedError
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
@@ -402,3 +403,5 @@ def correct_statement_line(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except statement_service.InvalidClassificationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except AlreadyVoidedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
