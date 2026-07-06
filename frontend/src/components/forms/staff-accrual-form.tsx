@@ -8,7 +8,9 @@ import { FormDialogShell } from "@/components/ui/form-dialog-shell";
 import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { withAcknowledgeDuplicate } from "@/lib/duplicate-record";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
+import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
@@ -53,6 +55,8 @@ export function StaffAccrualForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const { submitWithDuplicateGuard, DuplicateRecordDialog } =
+    useDuplicateRecordSubmit();
   const isTry = payCurrency === "TRY";
   const [dateText, setDateText] = useState("");
   const [periodYear, setPeriodYear] = useState("");
@@ -112,21 +116,28 @@ export function StaffAccrualForm({
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(
-        `/entities/${entityId}/staff/employees/${employeeId}/accruals`,
-        {
-          method: "POST",
-          idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            accrual_date: accrualDate,
-            amount_minor: amountMinor,
-            description,
-            actor_id: actorId,
-            period_year: year,
-            period_month: month,
-          }),
-        },
+      await submitWithDuplicateGuard(async (acknowledgedDuplicate) =>
+        apiFetch(
+          `/entities/${entityId}/staff/employees/${employeeId}/accruals`,
+          {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              withAcknowledgeDuplicate(
+                {
+                  accrual_date: accrualDate,
+                  amount_minor: amountMinor,
+                  description,
+                  actor_id: actorId,
+                  period_year: year,
+                  period_month: month,
+                },
+                acknowledgedDuplicate,
+              ),
+            ),
+          },
+        ),
       );
       submitIdempotency.completeSubmit();
       onSaved?.();
@@ -141,6 +152,7 @@ export function StaffAccrualForm({
   }
 
   return (
+    <>
     <FormDialogShell
       embedded={embedded}
       open={open}
@@ -222,5 +234,7 @@ export function StaffAccrualForm({
         </Button>
       </form>
     </FormDialogShell>
+    <DuplicateRecordDialog />
+    </>
   );
 }

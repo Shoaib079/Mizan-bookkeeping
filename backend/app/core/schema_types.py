@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Any
 
-from pydantic import BeforeValidator, Field
+from pydantic import BaseModel, BeforeValidator, Field
 
 DEV_ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
@@ -29,3 +29,7 @@ OptionalActorId = Annotated[
     BeforeValidator(coerce_optional_uuid),
     Field(default=None),
 ]
+
+
+class AcknowledgeDuplicateMixin(BaseModel):
+    acknowledge_duplicate: bool = False

@@ -9,6 +9,8 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { withAcknowledgeDuplicate } from "@/lib/duplicate-record";
+import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
@@ -39,6 +41,8 @@ export function PartnerExpenseFrontedForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const { submitWithDuplicateGuard, DuplicateRecordDialog } =
+    useDuplicateRecordSubmit();
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -90,20 +94,27 @@ export function PartnerExpenseFrontedForm({
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(
-        `/entities/${entityId}/partners/${partnerId}/expenses-fronted`,
-        {
-          method: "POST",
-        idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            expense_date: expenseDate,
-            amount_kurus: amountKurus,
-            description,
-            actor_id: actorId,
-            expense_account_id: expenseAccountId,
-          }),
-        },
+      await submitWithDuplicateGuard(async (acknowledgedDuplicate) =>
+        apiFetch(
+          `/entities/${entityId}/partners/${partnerId}/expenses-fronted`,
+          {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              withAcknowledgeDuplicate(
+                {
+                  expense_date: expenseDate,
+                  amount_kurus: amountKurus,
+                  description,
+                  actor_id: actorId,
+                  expense_account_id: expenseAccountId,
+                },
+                acknowledgedDuplicate,
+              ),
+            ),
+          },
+        ),
       );
       submitIdempotency.completeSubmit();
       onSaved?.();
@@ -118,6 +129,7 @@ export function PartnerExpenseFrontedForm({
   }
 
   return (
+    <>
     <FormDialogShell
       embedded={embedded}
       open={open}
@@ -171,5 +183,7 @@ export function PartnerExpenseFrontedForm({
         </Button>
       </form>
     </FormDialogShell>
+    <DuplicateRecordDialog />
+    </>
   );
 }

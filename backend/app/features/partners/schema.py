@@ -7,7 +7,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
-from app.core.schema_types import OptionalActorId
+from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.partners.types import PartnerMovementType
@@ -77,7 +77,7 @@ class PartnerLedgerRead(BaseModel):
     entries: list[PartnerLedgerEntryRead]
 
 
-class ExpenseFrontedCreate(BaseModel):
+class ExpenseFrontedCreate(AcknowledgeDuplicateMixin):
     expense_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)

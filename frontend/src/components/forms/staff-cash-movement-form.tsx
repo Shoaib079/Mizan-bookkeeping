@@ -9,7 +9,9 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { withAcknowledgeDuplicate } from "@/lib/duplicate-record";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
+import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
@@ -41,24 +43,30 @@ export function StaffCashMovementForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const { submitWithDuplicateGuard, DuplicateRecordDialog } =
+    useDuplicateRecordSubmit();
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
 
   return (
-    <StaffAdvanceForm
-      open={open}
-      onClose={onClose}
-      employeeId={employeeId}
-      payCurrency={payCurrency}
-      embedded={embedded}
-      onSaved={onSaved}
-      entityId={entityId}
-      actorId={actorId}
-      toast={toast}
-      submitIdempotency={submitIdempotency}
-    />
+    <>
+      <StaffAdvanceForm
+        open={open}
+        onClose={onClose}
+        employeeId={employeeId}
+        payCurrency={payCurrency}
+        embedded={embedded}
+        onSaved={onSaved}
+        entityId={entityId}
+        actorId={actorId}
+        toast={toast}
+        submitIdempotency={submitIdempotency}
+        submitWithDuplicateGuard={submitWithDuplicateGuard}
+      />
+      <DuplicateRecordDialog />
+    </>
   );
 }
 
@@ -73,6 +81,7 @@ function StaffAdvanceForm({
   actorId,
   toast,
   submitIdempotency,
+  submitWithDuplicateGuard,
 }: {
   open: boolean;
   onClose: () => void;
@@ -84,6 +93,9 @@ function StaffAdvanceForm({
   actorId: string | null;
   toast: (message: string) => void;
   submitIdempotency: ReturnType<typeof useSubmitIdempotency>;
+  submitWithDuplicateGuard: ReturnType<
+    typeof useDuplicateRecordSubmit
+  >["submitWithDuplicateGuard"];
 }) {
   const isTry = payCurrency === "TRY";
 
@@ -180,14 +192,18 @@ function StaffAdvanceForm({
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(
-        `/entities/${entityId}/staff/employees/${employeeId}/advances`,
-        {
-          method: "POST",
-          idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
+      await submitWithDuplicateGuard(async (acknowledgedDuplicate) =>
+        apiFetch(
+          `/entities/${entityId}/staff/employees/${employeeId}/advances`,
+          {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              withAcknowledgeDuplicate(body, acknowledgedDuplicate),
+            ),
+          },
+        ),
       );
       submitIdempotency.completeSubmit();
       onSaved?.();

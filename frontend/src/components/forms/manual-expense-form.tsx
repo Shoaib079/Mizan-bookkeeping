@@ -18,6 +18,8 @@ import { type EmployeeRow } from "@/components/forms/employee-form";
 import { type PartnerRow } from "@/components/forms/partner-form";
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import { apiFetch } from "@/lib/api";
+import { withAcknowledgeDuplicate } from "@/lib/duplicate-record";
+import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import {
@@ -97,6 +99,8 @@ export function ManualExpenseForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const { submitWithDuplicateGuard, DuplicateRecordDialog } =
+    useDuplicateRecordSubmit();
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -409,40 +413,52 @@ export function ManualExpenseForm({
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
       const description = itemName || "Manual expense";
-      if (paymentMode === "partner") {
-        await apiFetch(
-          `/entities/${entityId}/partners/${partnerId}/expenses-fronted`,
-          {
+      await submitWithDuplicateGuard(async (acknowledgedDuplicate) => {
+        if (paymentMode === "partner") {
+          await apiFetch(
+            `/entities/${entityId}/partners/${partnerId}/expenses-fronted`,
+            {
+              method: "POST",
+              idempotencyKey,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(
+                withAcknowledgeDuplicate(
+                  {
+                    expense_date: expenseDate,
+                    amount_kurus: amountKurus,
+                    description,
+                    actor_id: actorId,
+                    expense_account_id: expenseAccountId,
+                  },
+                  acknowledgedDuplicate,
+                ),
+              ),
+            },
+          );
+        } else {
+          await apiFetch(`/entities/${entityId}/expenses`, {
             method: "POST",
             idempotencyKey,
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              expense_date: expenseDate,
-              amount_kurus: amountKurus,
-              description,
-              actor_id: actorId,
-              expense_account_id: expenseAccountId,
-            }),
-          },
-        );
-      } else {
-        await apiFetch(`/entities/${entityId}/expenses`, {
-          method: "POST",
-          idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            expense_date: expenseDate,
-            amount_kurus: amountKurus,
-            expense_account_id: expenseAccountId,
-            money_account_id: moneyAccountId,
-            written_item_description: itemName || null,
-            has_source_document: false,
-            description,
-            actor_id: actorId,
-            confirm_expense_item_id: confirmExpenseItemId,
-          }),
-        });
-      }
+            body: JSON.stringify(
+              withAcknowledgeDuplicate(
+                {
+                  expense_date: expenseDate,
+                  amount_kurus: amountKurus,
+                  expense_account_id: expenseAccountId,
+                  money_account_id: moneyAccountId,
+                  written_item_description: itemName || null,
+                  has_source_document: false,
+                  description,
+                  actor_id: actorId,
+                  confirm_expense_item_id: confirmExpenseItemId,
+                },
+                acknowledgedDuplicate,
+              ),
+            ),
+          });
+        }
+      });
       submitIdempotency.completeSubmit();
       clearDraft();
       onSaved?.();
@@ -483,6 +499,7 @@ export function ManualExpenseForm({
     recordKind === "salary" ? "Record salary payment" : title;
 
   return (
+    <>
     <Dialog
       open={open}
       title={dialogTitle}
@@ -686,5 +703,7 @@ export function ManualExpenseForm({
       </form>
       )}
     </Dialog>
+    <DuplicateRecordDialog />
+    </>
   );
 }

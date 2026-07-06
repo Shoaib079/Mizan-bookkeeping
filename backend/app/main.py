@@ -1,6 +1,6 @@
 """FastAPI entry — wires routes and middleware only. No business logic (ARCHITECTURE.md)."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
@@ -53,6 +53,7 @@ from app.features.auth.api import users_router as auth_users_router
 from app.features.documents.api import router as documents_router
 from app.adapters.storage import ensure_storage_roots
 from app.config import settings
+from app.core.duplicate_guard import DuplicateRecordError, duplicate_http_detail
 from app.core.idempotency.middleware import IdempotencyMiddleware
 from app.core.observability.logging_config import configure_logging
 from app.core.observability.rate_limit import RateLimitMiddleware
@@ -71,6 +72,11 @@ app = FastAPI(
     description="Restaurant bookkeeping API",
     version="0.1.0",
 )
+
+
+@app.exception_handler(DuplicateRecordError)
+async def duplicate_record_handler(_request: Request, exc: DuplicateRecordError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": duplicate_http_detail(exc.match)})
 
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(RequestLoggingMiddleware)

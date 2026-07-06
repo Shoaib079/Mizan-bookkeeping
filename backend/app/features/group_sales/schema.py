@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from app.core.schema_types import OptionalActorId
+from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 SUPPORTED_FOREX = frozenset({"USD", "EUR", "GBP"})
 GROUP_SALE_REFERENCE = "group_sale"
@@ -37,7 +37,7 @@ class GroupSaleLineInput(BaseModel):
     rate_per_person_minor: int = Field(gt=0)
 
 
-class GroupSaleCreate(BaseModel):
+class GroupSaleCreate(AcknowledgeDuplicateMixin):
     customer_id: uuid.UUID
     sale_date: date
     description: str = Field(min_length=1, max_length=512)

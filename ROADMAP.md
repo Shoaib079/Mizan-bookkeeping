@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | (none — owner sign-off pending on staff extra days + accrual) |
+| **Active slice**         | (none — owner sign-off pending on duplicate record guard) |
 | **Next up**              | P5 — Delete company UI |
-| **Last completed slice** | Staff extra days + global accrual consolidation |
-| **Last commit/tag**      | `v0.staff-extra-days-accrual` |
+| **Last completed slice** | Duplicate record guard — expenses, sales, salary |
+| **Last commit/tag**      | `v0.duplicate-record-guard` |
 
 **Owner sign-off required** — agency group sales v2 touches FX receivable/payment paths (money-critical). **Follow-up (not in v2):** per-menu period report for group/agency sales.
 
@@ -1869,6 +1869,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-06 | Duplicate record guard (expenses, sales, staff) | `v0.duplicate-record-guard`                          | `duplicate_guard.py` + `acknowledge_duplicate` on create schemas; HTTP 409 `duplicate_record`; frontend `useDuplicateRecordSubmit` on manual expense, partner fronted, credit/group sale, salary accrual/payment/advance/extra days; 3 pytest + vitest |
 | 2026-07-06 | Staff extra days + accrual consolidation        | `v0.staff-extra-days-accrual`                          | Global one-accrual-per-period (effective rows + pay-time correction); migration `077` `extra_days`; `EXTRA_DAYS_ACCRUED`/`PAID`; accrual-only salary (`amount_minor=0`); extra days in pay-salary dialog without paying now; date before employee (Expenses + Add hub); accrual form month reset fix; 4+ pytest |
 | 2026-07-06 | Operational ledger — effective entries only     | `v0.operational-ledger-effective`                      | `subledger_display.py`: classify effective / void_reversal / superseded; `display_kind` + `was_corrected` on staff/customer/partner/supplier/FX APIs; supplier activity aligned; dashboard recent entries `effective_only`; UI history toggle + Corrected badge on all operational ledgers; GL report unchanged |
 | 2026-07-06 | Review sales date filter + Excel export         | `v0.review-sales-date-export` / `efd1c99`              | `ReportDateRange` + All/Needs review/Posted tabs on `/review/sales`; GET export uncapped; delivery activity export paginates through all rows; pytest + vitest |

@@ -10,6 +10,7 @@ import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { withAcknowledgeDuplicate } from "@/lib/duplicate-record";
 import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative, parseFxNative } from "@/lib/fx-money";
@@ -17,6 +18,7 @@ import type { CustomerRow } from "@/components/forms/customer-form";
 import type { GroupMenuRow, GroupSaleRead } from "@/lib/group-sales-types";
 import { FOREX_CURRENCIES } from "@/lib/group-sales-types";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
+import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useToast } from "@/lib/toast";
 import { formatTry, formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
 
@@ -65,6 +67,8 @@ export function GroupSaleForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const { submitWithDuplicateGuard, DuplicateRecordDialog } =
+    useDuplicateRecordSubmit();
   const isCorrect = Boolean(correcting);
 
   useEffect(() => {
@@ -256,12 +260,16 @@ export function GroupSaleForm({
         );
         toast("Group sale corrected");
       } else {
-        await apiFetch(`/entities/${entityId}/group-sales`, {
-          method: "POST",
-          idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        await submitWithDuplicateGuard(async (acknowledgedDuplicate) =>
+          apiFetch(`/entities/${entityId}/group-sales`, {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              withAcknowledgeDuplicate(payload, acknowledgedDuplicate),
+            ),
+          }),
+        );
         toast("Group sale recorded");
       }
       submitIdempotency.completeSubmit();
@@ -282,6 +290,7 @@ export function GroupSaleForm({
   }));
 
   return (
+    <>
     <FormDialogShell
       open={open}
       onClose={onClose}
@@ -469,5 +478,7 @@ export function GroupSaleForm({
         </div>
       </form>
     </FormDialogShell>
+    <DuplicateRecordDialog />
+    </>
   );
 }

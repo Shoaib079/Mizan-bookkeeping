@@ -11,6 +11,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { withAcknowledgeDuplicate } from "@/lib/duplicate-record";
 import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
@@ -29,6 +30,7 @@ import {
   type SalaryPeriodStatus,
 } from "@/lib/staff-salary";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
+import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useToast } from "@/lib/toast";
 
 const MONTHS = [
@@ -98,6 +100,8 @@ export function StaffSalaryPaymentDialog({
   const { actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const { submitWithDuplicateGuard, DuplicateRecordDialog } =
+    useDuplicateRecordSubmit();
   const isTry = payCurrency === "TRY";
   const isStatement = source === "statement";
 
@@ -369,19 +373,26 @@ export function StaffSalaryPaymentDialog({
 
     const idempotencyKey = submitIdempotency.beginSubmit();
     try {
-      await apiFetch(
-        `/entities/${entityId}/staff/employees/${employeeId}/extra-days`,
-        {
-          method: "POST",
-          idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            payment_date: paymentDateParsed,
-            extra_days: extraDays,
-            per_day_minor: extraDayRateMinor,
-            actor_id: actorId,
-          }),
-        },
+      await submitWithDuplicateGuard(async (acknowledgedDuplicate) =>
+        apiFetch(
+          `/entities/${entityId}/staff/employees/${employeeId}/extra-days`,
+          {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              withAcknowledgeDuplicate(
+                {
+                  payment_date: paymentDateParsed,
+                  extra_days: extraDays,
+                  per_day_minor: extraDayRateMinor,
+                  actor_id: actorId,
+                },
+                acknowledgedDuplicate,
+              ),
+            ),
+          },
+        ),
       );
       return true;
     } catch (err) {
@@ -429,14 +440,18 @@ export function StaffSalaryPaymentDialog({
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(
-        `/entities/${entityId}/staff/employees/${employeeId}/payments`,
-        {
-          method: "POST",
-          idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
+      await submitWithDuplicateGuard(async (acknowledgedDuplicate) =>
+        apiFetch(
+          `/entities/${entityId}/staff/employees/${employeeId}/payments`,
+          {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              withAcknowledgeDuplicate(body, acknowledgedDuplicate),
+            ),
+          },
+        ),
       );
       return true;
     } catch (err) {
@@ -788,14 +803,18 @@ export function StaffSalaryPaymentDialog({
 
   if (embedded) {
     return (
-      <div className="space-y-3">
-        <h3 className="text-base font-semibold">{dialogTitle}</h3>
-        {form}
-      </div>
+      <>
+        <div className="space-y-3">
+          <h3 className="text-base font-semibold">{dialogTitle}</h3>
+          {form}
+        </div>
+        <DuplicateRecordDialog />
+      </>
     );
   }
 
   return (
+    <>
     <Dialog
       open={dialogOpen}
       title={dialogTitle}
@@ -804,5 +823,7 @@ export function StaffSalaryPaymentDialog({
     >
       {form}
     </Dialog>
+    <DuplicateRecordDialog />
+    </>
   );
 }

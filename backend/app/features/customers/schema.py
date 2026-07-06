@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from app.core.schema_types import OptionalActorId
+from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.receivables.types import CustomerMovementType
@@ -87,7 +87,7 @@ class CustomerLedgerRead(BaseModel):
     entries: list[CustomerLedgerEntryRead]
 
 
-class CreditSaleCreate(BaseModel):
+class CreditSaleCreate(AcknowledgeDuplicateMixin):
     sale_date: date
     amount_kurus: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)

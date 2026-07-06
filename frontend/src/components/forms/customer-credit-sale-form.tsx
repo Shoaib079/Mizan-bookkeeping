@@ -9,12 +9,14 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { withAcknowledgeDuplicate } from "@/lib/duplicate-record";
 import {
   filterRevenueAccounts,
   formatChartAccountLabel,
   type ChartAccountLike,
 } from "@/lib/chart-accounts";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
+import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative, parseFxNative } from "@/lib/fx-money";
@@ -46,6 +48,8 @@ export function CustomerCreditSaleForm({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
+  const { submitWithDuplicateGuard, DuplicateRecordDialog } =
+    useDuplicateRecordSubmit();
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -141,24 +145,31 @@ export function CustomerCreditSaleForm({
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      await apiFetch(
-        `/entities/${entityId}/customers/${customerId}/credit-sales`,
-        {
-          method: "POST",
-          idempotencyKey,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sale_date: saleDate,
-            amount_kurus: amountKurus,
-            description,
-            actor_id: actorId,
-            revenue_account_id: revenueAccountId || null,
-            pax: pax ?? undefined,
-            rate_per_person_kurus: rateTryKurus ?? undefined,
-            forex_currency: forexCurrency || undefined,
-            rate_per_person_forex_minor: rateForexMinor ?? undefined,
-          }),
-        },
+      await submitWithDuplicateGuard(async (acknowledgedDuplicate) =>
+        apiFetch(
+          `/entities/${entityId}/customers/${customerId}/credit-sales`,
+          {
+            method: "POST",
+            idempotencyKey,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              withAcknowledgeDuplicate(
+                {
+                  sale_date: saleDate,
+                  amount_kurus: amountKurus,
+                  description,
+                  actor_id: actorId,
+                  revenue_account_id: revenueAccountId || null,
+                  pax: pax ?? undefined,
+                  rate_per_person_kurus: rateTryKurus ?? undefined,
+                  forex_currency: forexCurrency || undefined,
+                  rate_per_person_forex_minor: rateForexMinor ?? undefined,
+                },
+                acknowledgedDuplicate,
+              ),
+            ),
+          },
+        ),
       );
       submitIdempotency.completeSubmit();
       onSaved?.();
@@ -172,6 +183,7 @@ export function CustomerCreditSaleForm({
   }
 
   return (
+    <>
     <FormDialogShell embedded={embedded} open={open} title="Group / credit sale" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
@@ -282,5 +294,7 @@ export function CustomerCreditSaleForm({
         </Button>
       </form>
     </FormDialogShell>
+    <DuplicateRecordDialog />
+    </>
   );
 }

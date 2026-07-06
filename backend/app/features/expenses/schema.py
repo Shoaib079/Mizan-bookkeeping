@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field
-from app.core.schema_types import OptionalActorId
+from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 from app.features.expenses.models import ExpenseEntryStatus, ExpenseReceiptIntakeStatus
 
@@ -38,7 +38,7 @@ class ExpenseAccountSuggestResponse(BaseModel):
     confidence: str | None = None
 
 
-class ExpenseCreate(BaseModel):
+class ExpenseCreate(AcknowledgeDuplicateMixin):
     expense_date: date
     amount_kurus: int = Field(gt=0)
     expense_account_id: uuid.UUID

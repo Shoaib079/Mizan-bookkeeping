@@ -19,6 +19,10 @@ from app.core.staff.ledger import (
     remaining_accrual_minor,
 )
 from app.core.staff.models import StaffLedgerEntry
+from app.core.duplicate_guard import (
+    ensure_not_duplicate,
+    find_duplicate_staff_movement,
+)
 from app.core.staff.types import PayCurrency, StaffMovementType
 from app.core.ledger.correction import CorrectionNotFoundError, correct_staff_journal_entry
 from app.core.ledger.posting import PostingLine
@@ -170,6 +174,20 @@ def record_accrual(
     employee_id: uuid.UUID,
     payload: StaffAccrualCreate,
 ) -> StaffAccrualResponse:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        ensure_not_duplicate(
+            find_duplicate_staff_movement(
+                session,
+                employee_id=employee_id,
+                movement_date=payload.accrual_date,
+                amount_minor=payload.amount_minor,
+                movement_type=StaffMovementType.SALARY_ACCRUED,
+                period_year=payload.period_year,
+                period_month=payload.period_month,
+            ),
+            acknowledged=payload.acknowledge_duplicate,
+        )
     result = staff_posting.post_salary_accrual(
         session,
         entity_id,
@@ -194,6 +212,18 @@ def record_advance(
     employee_id: uuid.UUID,
     payload: StaffAdvanceCreate,
 ) -> StaffAdvanceResponse:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        ensure_not_duplicate(
+            find_duplicate_staff_movement(
+                session,
+                employee_id=employee_id,
+                movement_date=payload.payment_date,
+                amount_minor=-payload.amount_minor,
+                movement_type=StaffMovementType.ADVANCE_PAID,
+            ),
+            acknowledged=payload.acknowledge_duplicate,
+        )
     result = staff_posting.post_advance_paid(
         session,
         entity_id,
@@ -276,6 +306,27 @@ def record_extra_days_paid(
         )
 
     total_minor = payload.extra_days * payload.per_day_minor
+    movement_type = (
+        StaffMovementType.EXTRA_DAYS_PAID
+        if payload.payment_account_id is not None
+        else StaffMovementType.EXTRA_DAYS_ACCRUED
+    )
+    signed_amount = (
+        -total_minor if movement_type == StaffMovementType.EXTRA_DAYS_PAID else total_minor
+    )
+    with entity_context(session, entity_id):
+        require_entity_context()
+        ensure_not_duplicate(
+            find_duplicate_staff_movement(
+                session,
+                employee_id=employee_id,
+                movement_date=payload.payment_date,
+                amount_minor=signed_amount,
+                movement_type=movement_type,
+                extra_days=payload.extra_days,
+            ),
+            acknowledged=payload.acknowledge_duplicate,
+        )
     result = staff_posting.post_extra_days_paid(
         session,
         entity_id,
@@ -312,6 +363,52 @@ def record_payment(
         raise ValueError(
             "amount_minor 0 requires period_year, period_month, and period_salary_minor"
         )
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        if (
+            payload.period_year is not None
+            and payload.period_month is not None
+            and payload.period_salary_minor is not None
+        ):
+            if payload.amount_minor == 0:
+                ensure_not_duplicate(
+                    find_duplicate_staff_movement(
+                        session,
+                        employee_id=employee_id,
+                        movement_date=payload.payment_date,
+                        amount_minor=payload.period_salary_minor,
+                        movement_type=StaffMovementType.SALARY_ACCRUED,
+                        period_year=payload.period_year,
+                        period_month=payload.period_month,
+                    ),
+                    acknowledged=payload.acknowledge_duplicate,
+                )
+            elif payload.amount_minor > 0:
+                ensure_not_duplicate(
+                    find_duplicate_staff_movement(
+                        session,
+                        employee_id=employee_id,
+                        movement_date=payload.payment_date,
+                        amount_minor=-payload.amount_minor,
+                        movement_type=StaffMovementType.SALARY_PAYMENT,
+                        period_year=payload.period_year,
+                        period_month=payload.period_month,
+                    ),
+                    acknowledged=payload.acknowledge_duplicate,
+                )
+        elif payload.amount_minor > 0:
+            ensure_not_duplicate(
+                find_duplicate_staff_movement(
+                    session,
+                    employee_id=employee_id,
+                    movement_date=payload.payment_date,
+                    amount_minor=-payload.amount_minor,
+                    movement_type=StaffMovementType.SALARY_PAYMENT,
+                ),
+                acknowledged=payload.acknowledge_duplicate,
+            )
+
     if (
         payload.period_year is not None
         and payload.period_month is not None

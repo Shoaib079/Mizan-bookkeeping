@@ -17,6 +17,10 @@ from app.core.receivables import ledger as receivables_ledger
 from app.core.receivables import posting as receivables_posting
 from app.core.receivables.models import CustomerLedgerEntry
 from app.core.receivables.types import CustomerMovementType
+from app.core.duplicate_guard import (
+    ensure_not_duplicate,
+    find_duplicate_credit_sale,
+)
 from app.db.session import entity_context, require_entity_context
 from app.features.customers.models import Customer
 from app.features.entities import service as entity_service
@@ -143,6 +147,15 @@ def post_group_sale(
 
         menu_names = _menu_name_map(session, payload.lines)
         computed = compute_group_sale(payload, menu_names)
+        ensure_not_duplicate(
+            find_duplicate_credit_sale(
+                session,
+                customer_id=payload.customer_id,
+                sale_date=payload.sale_date,
+                amount_kurus=computed.total_kurus,
+            ),
+            acknowledged=payload.acknowledge_duplicate,
+        )
         revenue = _group_sales_revenue_account(session)
 
         group_sale = GroupSale(

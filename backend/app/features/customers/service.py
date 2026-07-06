@@ -17,6 +17,10 @@ from app.core.ledger.subledger_display import enrich_entry_models
 from app.core.receivables import ledger as receivables_ledger
 from app.core.receivables.models import CustomerLedgerEntry
 from app.core.receivables import posting as receivables_posting
+from app.core.duplicate_guard import (
+    ensure_not_duplicate,
+    find_duplicate_credit_sale,
+)
 from app.db.session import entity_context, require_entity_context
 from app.features.customers.group_sale import (
     build_group_credit_sale_description,
@@ -176,6 +180,17 @@ def record_credit_sale(
     payload: CreditSaleCreate,
 ) -> CreditSaleResponse:
     amount_kurus = resolve_credit_sale_amount_kurus(payload)
+    with entity_context(session, entity_id):
+        require_entity_context()
+        ensure_not_duplicate(
+            find_duplicate_credit_sale(
+                session,
+                customer_id=customer_id,
+                sale_date=payload.sale_date,
+                amount_kurus=amount_kurus,
+            ),
+            acknowledged=payload.acknowledge_duplicate,
+        )
     description = build_group_credit_sale_description(payload)
     total_forex_minor = payload.total_forex_minor
     result = receivables_posting.post_credit_sale(

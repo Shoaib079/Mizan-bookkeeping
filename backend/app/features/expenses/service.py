@@ -41,6 +41,10 @@ from app.core.expenses.posting import (
 from app.core.expenses.normalize import normalize_expense_item_text
 from app.core.money import format_try
 from app.db.session import entity_context, require_entity_context
+from app.core.duplicate_guard import (
+    ensure_not_duplicate,
+    find_duplicate_expense,
+)
 from app.features.entities import service as entity_service
 from app.features.expenses import receipt_service
 from app.features.expenses.models import (
@@ -328,6 +332,16 @@ def create_expense(
         )
         suggested_account_id = (
             learned_suggestion.account_id if learned_suggestion is not None else None
+        )
+
+        ensure_not_duplicate(
+            find_duplicate_expense(
+                session,
+                expense_date=payload.expense_date,
+                amount_kurus=payload.amount_kurus,
+                expense_account_id=payload.expense_account_id,
+            ),
+            acknowledged=payload.acknowledge_duplicate,
         )
 
         if resolution.status == ExpenseEntryStatus.NEEDS_REVIEW:

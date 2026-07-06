@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from app.core.schema_types import OptionalActorId
+from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.staff.types import PayCurrency, StaffMovementType
@@ -64,7 +64,7 @@ class StaffLedgerRead(BaseModel):
     entries: list[StaffLedgerEntryRead]
 
 
-class StaffAccrualCreate(BaseModel):
+class StaffAccrualCreate(AcknowledgeDuplicateMixin):
     accrual_date: date
     amount_minor: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
@@ -80,7 +80,7 @@ class StaffAccrualCreate(BaseModel):
         return value
 
 
-class StaffAdvanceCreate(BaseModel):
+class StaffAdvanceCreate(AcknowledgeDuplicateMixin):
     payment_date: date
     amount_minor: int = Field(gt=0)
     description: str = Field(min_length=1, max_length=512)
@@ -90,7 +90,7 @@ class StaffAdvanceCreate(BaseModel):
     try_cost_kurus: int | None = Field(default=None, gt=0)
 
 
-class StaffExtraDaysPaidCreate(BaseModel):
+class StaffExtraDaysPaidCreate(AcknowledgeDuplicateMixin):
     payment_date: date
     extra_days: int = Field(gt=0, le=31)
     per_day_minor: int = Field(gt=0)
@@ -106,7 +106,7 @@ class StaffExtraDaysPaidResponse(BaseModel):
     total_minor: int
 
 
-class StaffPaymentCreate(BaseModel):
+class StaffPaymentCreate(AcknowledgeDuplicateMixin):
     payment_date: date
     amount_minor: int = Field(ge=0)
     description: str = Field(min_length=1, max_length=512)

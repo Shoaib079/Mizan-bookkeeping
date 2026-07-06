@@ -26,6 +26,10 @@ from app.core.chart_of_accounts.default_chart import (
     OWNER_DRAWINGS_CODE,
     PARTNER_REIMBURSEMENT_PAYABLE_CODE,
 )
+from app.core.duplicate_guard import (
+    ensure_not_duplicate,
+    find_duplicate_partner_expense_fronted,
+)
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.partners.models import Partner
@@ -211,6 +215,18 @@ def record_expense_fronted(
     partner_id: uuid.UUID,
     payload: ExpenseFrontedCreate,
 ) -> ExpenseFrontedResponse:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        ensure_not_duplicate(
+            find_duplicate_partner_expense_fronted(
+                session,
+                partner_id=partner_id,
+                expense_date=payload.expense_date,
+                amount_kurus=payload.amount_kurus,
+                expense_account_id=payload.expense_account_id,
+            ),
+            acknowledged=payload.acknowledge_duplicate,
+        )
     result = partner_posting.post_expense_fronted(
         session,
         entity_id,

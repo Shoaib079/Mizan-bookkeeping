@@ -72,14 +72,26 @@ function resolveIdempotencyKey(
   return {};
 }
 
-async function parseError(response: Response): Promise<string> {
+async function parseErrorBody(
+  response: Response,
+): Promise<{ message: string; detail?: unknown }> {
   try {
     const body = await response.json();
-    if (typeof body.detail === "string") return body.detail;
-    if (body.detail?.message) return String(body.detail.message);
-    return JSON.stringify(body.detail ?? body);
+    if (typeof body.detail === "string") {
+      return { message: body.detail, detail: body.detail };
+    }
+    if (body.detail?.message) {
+      return {
+        message: String(body.detail.message),
+        detail: body.detail,
+      };
+    }
+    return {
+      message: JSON.stringify(body.detail ?? body),
+      detail: body.detail,
+    };
   } catch {
-    return response.statusText;
+    return { message: response.statusText };
   }
 }
 
@@ -127,7 +139,8 @@ export async function apiFetch<T>(
       continue;
     }
 
-    throw new ApiError(await parseError(response), response.status);
+    const { message, detail } = await parseErrorBody(response);
+    throw new ApiError(message, response.status, detail);
   }
 
   throw new Error("apiFetch exhausted retry attempts");
@@ -176,7 +189,8 @@ export async function apiDownload(
       continue;
     }
 
-    throw new ApiError(await parseError(response), response.status);
+    const { message, detail } = await parseErrorBody(response);
+    throw new ApiError(message, response.status, detail);
   }
 
   throw new Error("apiDownload exhausted retry attempts");
