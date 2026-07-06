@@ -19,8 +19,13 @@ const RESOLVED_STATUSES = new Set([
 
 export async function loadStatementReviewLines(
   entityId: string,
+  options?: { from: string; to: string },
 ): Promise<StatementLineReview[]> {
   const byId = new Map<string, StatementLineReview>();
+  const rangeQuery =
+    options != null
+      ? `&from=${encodeURIComponent(options.from)}&to=${encodeURIComponent(options.to)}`
+      : "";
 
   const needsReview = await apiFetch<Paginated<NeedsReviewStatementLine>>(
     `/entities/${entityId}/banking/statements/needs-review?limit=100`,
@@ -39,7 +44,7 @@ export async function loadStatementReviewLines(
 
   for (const account of statementAccounts) {
     const statements = await apiFetch<Paginated<BankStatementRead>>(
-      `/entities/${entityId}/banking/accounts/${account.id}/statements?limit=50`,
+      `/entities/${entityId}/banking/accounts/${account.id}/statements?limit=50${rangeQuery}`,
     );
     for (const statement of statements.items) {
       for (const line of statement.lines) {

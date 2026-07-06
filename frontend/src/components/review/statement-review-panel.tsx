@@ -4,32 +4,34 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { ReportDateRange } from "@/components/reports/report-date-range";
 import { StatementLineReviewRow } from "@/components/statement-line-review-row";
 import type { StatementLineReview } from "@/lib/banking-types";
 import { loadStatementReviewLines } from "@/lib/load-statement-review-lines";
 import {
   countLinesByTab,
+  filterLinesByDateRange,
   filterLinesByTab,
   STATEMENT_REVIEW_TABS,
-  type StatementReviewTab,
 } from "@/lib/statement-review";
 import { useEntity } from "@/lib/entity-context";
 import { invalidateReviewCounts } from "@/lib/review-counts-types";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
+import { useStatementReviewUrl } from "@/lib/use-statement-review-url";
 import { cn } from "@/lib/utils";
 
 export function StatementReviewPanel() {
   const { entityId } = useEntity();
+  const { from, to, activeTab, setRange, setActiveTab } =
+    useStatementReviewUrl();
   const [lines, setLines] = useState<StatementLineReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<StatementReviewTab>("needs_review");
 
   const resetState = useCallback(() => {
     setLines([]);
     setLoading(true);
     setError(null);
-    setActiveTab("needs_review");
   }, []);
 
   useEntitySwitchReset(entityId, resetState);
@@ -39,7 +41,7 @@ export function StatementReviewPanel() {
     setLoading(true);
     setError(null);
     try {
-      const loaded = await loadStatementReviewLines(entityId);
+      const loaded = await loadStatementReviewLines(entityId, { from, to });
       setLines(loaded);
       invalidateReviewCounts();
     } catch (err) {
@@ -48,7 +50,7 @@ export function StatementReviewPanel() {
     } finally {
       setLoading(false);
     }
-  }, [entityId]);
+  }, [entityId, from, to]);
 
   useEffect(() => {
     void reload();
@@ -62,14 +64,24 @@ export function StatementReviewPanel() {
     );
   }
 
-  const tabCounts = countLinesByTab(lines);
-  const visibleLines = filterLinesByTab(lines, activeTab);
+  const linesInRange = filterLinesByDateRange(lines, from, to);
+  const tabCounts = countLinesByTab(linesInRange);
+  const visibleLines = filterLinesByTab(linesInRange, activeTab);
 
   return (
     <>
       <p className="mb-4 text-sm text-muted-foreground">
         Confirm suggestions, correct auto-posted lines, and manage suppliers inline.
       </p>
+
+      <div className="mb-4">
+        <ReportDateRange
+          from={from}
+          to={to}
+          disabled={loading}
+          onChange={setRange}
+        />
+      </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
@@ -105,7 +117,9 @@ export function StatementReviewPanel() {
       )}
 
       {!loading && visibleLines.length === 0 && (
-        <p className="text-sm text-muted-foreground">No lines in this filter.</p>
+        <p className="text-sm text-muted-foreground">
+          No lines in this filter for the selected dates.
+        </p>
       )}
 
       {!loading && visibleLines.length > 0 && (

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { StatementLineReview } from "@/lib/banking-types";
 import {
   countLinesByTab,
+  filterLinesByDateRange,
   filterLinesByTab,
   matchesReviewTab,
   suggestMatchToken,
@@ -99,6 +100,20 @@ describe("filterLinesByTab", () => {
       posted: 1,
       linked: 1,
     });
+  });
+});
+
+describe("filterLinesByDateRange", () => {
+  const lines = [
+    line({ id: "1", status: "posted", transaction_date: "2026-03-01" }),
+    line({ id: "2", status: "posted", transaction_date: "2026-03-15" }),
+    line({ id: "3", status: "posted", transaction_date: "2026-04-01" }),
+  ];
+
+  it("keeps lines within inclusive ISO date bounds", () => {
+    expect(
+      filterLinesByDateRange(lines, "2026-03-01", "2026-03-31").map((row) => row.id),
+    ).toEqual(["1", "2"]);
   });
 });
 

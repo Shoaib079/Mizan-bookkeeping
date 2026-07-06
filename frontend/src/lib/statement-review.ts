@@ -45,6 +45,16 @@ export function filterLinesByTab(
   return lines.filter((line) => matchesReviewTab(line, tab));
 }
 
+export function filterLinesByDateRange(
+  lines: StatementLineReview[],
+  from: string,
+  to: string,
+): StatementLineReview[] {
+  return lines.filter(
+    (line) => line.transaction_date >= from && line.transaction_date <= to,
+  );
+}
+
 export function countLinesByTab(
   lines: StatementLineReview[],
 ): Record<StatementReviewTab, number> {
