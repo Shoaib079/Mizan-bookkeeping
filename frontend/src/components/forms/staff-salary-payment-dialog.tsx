@@ -70,6 +70,8 @@ type Props = {
   lockCashAmount?: boolean;
   onConfirm?: (payload: PeriodPayload) => void | Promise<void>;
   onSaved?: () => void;
+  /** When false, dialog stays open after a successful post (e.g. Expenses hub). */
+  closeOnSuccess?: boolean;
   confirming?: boolean;
 };
 
@@ -87,6 +89,7 @@ export function StaffSalaryPaymentDialog({
   lockCashAmount = false,
   onConfirm,
   onSaved,
+  closeOnSuccess = true,
   confirming: confirmingProp = false,
 }: Props) {
   const { actorId } = useEntity();
@@ -305,7 +308,12 @@ export function StaffSalaryPaymentDialog({
       submitIdempotency.completeSubmit();
       toast("Payment recorded");
       onSaved?.();
-      onClose();
+      setCashText("");
+      if (!closeOnSuccess) {
+        void loadStatus();
+      } else {
+        onClose();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {

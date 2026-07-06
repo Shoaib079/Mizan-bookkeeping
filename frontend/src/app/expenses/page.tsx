@@ -7,6 +7,11 @@ import {
   CorrectExpenseForm,
   type CorrectableExpenseRow,
 } from "@/components/forms/correct-expense-form";
+import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
+import {
+  ExpenseRecordKindToggle,
+  type ExpenseRecordKind,
+} from "@/components/expenses/expense-record-kind-toggle";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,21 +36,38 @@ export default function ExpensesPage() {
     useEntityList<CorrectableExpenseRow>("/expenses", entityId);
   const [correctExpense, setCorrectExpense] =
     useState<CorrectableExpenseRow | null>(null);
+  const [recordKind, setRecordKind] = useState<ExpenseRecordKind>("expense");
+  const [formOpen, setFormOpen] = useState(false);
 
   return (
     <AppShell title="Expenses">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <ExpenseRecordKindToggle value={recordKind} onChange={setRecordKind} />
+        <Button
+          type="button"
+          disabled={!entityId}
+          onClick={() => setFormOpen(true)}
+        >
+          {recordKind === "salary" ? "Pay salary" : "Record expense"}
+        </Button>
+      </div>
+
+      <div className="mb-4">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? `${total} expense${total === 1 ? "" : "s"}`
+            ? recordKind === "salary"
+              ? "Pay staff salary from cash or bank — pick the salary month separately from the payment date."
+              : `${total} expense${total === 1 ? "" : "s"}`
             : "Select a restaurant in the sidebar"}
         </p>
       </div>
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={5} />}
+      {recordKind === "expense" && error && (
+        <p className="mb-4 text-sm text-destructive">{error}</p>
+      )}
+      {recordKind === "expense" && loading && <TableSkeleton columns={5} />}
 
-      {!loading && entityId && items.length === 0 && (
+      {recordKind === "expense" && !loading && entityId && items.length === 0 && (
         <EmptyState
           icon={Wallet}
           title="No expenses yet"
@@ -53,7 +75,7 @@ export default function ExpensesPage() {
         />
       )}
 
-      {items.length > 0 && (
+      {recordKind === "expense" && items.length > 0 && (
         <DataTable>
           <DataTableHead>
             <tr>
@@ -95,15 +117,33 @@ export default function ExpensesPage() {
         </DataTable>
       )}
 
-      <p className="mt-4 text-xs text-muted-foreground">
-        Record tips and other cash outflows via <strong>New → Manual expense</strong>.
-        After a Z mismatch on daily sales, record the tip as a normal expense, then
-        re-confirm on{" "}
-        <Link href="/sales" className="text-primary hover:underline">
-          Sales
-        </Link>
-        .
-      </p>
+      {recordKind === "expense" && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Record tips and other cash outflows with{" "}
+          <strong>Record expense</strong> above, or use{" "}
+          <strong>New → Manual expense</strong>. After a Z mismatch on daily sales,
+          record the tip as a normal expense, then re-confirm on{" "}
+          <Link href="/sales" className="text-primary hover:underline">
+            Sales
+          </Link>
+          .
+        </p>
+      )}
+
+      {recordKind === "salary" && entityId && (
+        <p className="mt-4 text-sm text-muted-foreground">
+          Salary posts through staff payable (not a generic expense line). Use{" "}
+          <strong>Pay salary</strong> above, or Staff → employee → Pay salary.
+        </p>
+      )}
+
+      <ManualExpenseForm
+        open={formOpen}
+        defaultRecordKind={recordKind}
+        showRecordKindToggle={false}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => void reload()}
+      />
 
       <CorrectExpenseForm
         open={correctExpense !== null}

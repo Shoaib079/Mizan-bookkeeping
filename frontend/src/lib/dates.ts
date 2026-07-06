@@ -38,7 +38,22 @@ export function addDays(d: Date, days: number): Date {
   return copy;
 }
 
-const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
+
+const ENGLISH_MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
 
 export function weekdayLabels(): readonly string[] {
   return WEEKDAY_LABELS;
@@ -59,10 +74,9 @@ export function getCalendarDays(year: number, month: number): (Date | null)[] {
 }
 
 export function formatMonthYear(year: number, month: number): string {
-  return new Date(year, month, 1).toLocaleDateString("tr-TR", {
-    month: "long",
-    year: "numeric",
-  });
+  const name = ENGLISH_MONTH_NAMES[month];
+  if (!name) return String(year);
+  return `${name} ${year}`;
 }
 
 export function isSameDay(a: Date, b: Date): boolean {

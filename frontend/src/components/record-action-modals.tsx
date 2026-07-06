@@ -106,6 +106,7 @@ export function RecordActionModals({ active, onClose }: Props) {
         defaultExpenseAccountCode="5220"
         paymentSource="bank_card"
         title="Store / card purchase"
+        showRecordKindToggle={false}
       />
       <ManualDailySalesForm open={effectiveModal === "sales"} onClose={closeAll} />
       <FxPurchaseQuickAction open={effectiveModal === "buyFx"} onClose={closeAll} />

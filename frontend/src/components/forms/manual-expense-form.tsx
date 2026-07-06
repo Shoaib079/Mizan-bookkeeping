@@ -42,12 +42,14 @@ import {
   shouldApplyExpenseAccountSuggestion,
   type ExpenseAccountSuggestion,
 } from "@/lib/expense-account-suggest";
+import {
+  ExpenseRecordKindToggle,
+  type ExpenseRecordKind,
+} from "@/components/expenses/expense-record-kind-toggle";
 
 type MoneyAccount = { id: string; name: string };
 
 type PaymentMode = "cash" | "partner";
-
-type RecordKind = "expense" | "salary";
 
 type ExpenseFormDraft = {
   expenseAccountId: string;
@@ -75,6 +77,11 @@ type Props = {
   /** Cash drawer (default) or bank/card accounts for card retail spend. */
   paymentSource?: "cash" | "bank_card";
   title?: string;
+  /** When set, opens in salary or expense mode (e.g. from Expenses page toggle). */
+  defaultRecordKind?: ExpenseRecordKind;
+  /** Hide in-dialog toggle when the Expenses page toggle controls mode. */
+  showRecordKindToggle?: boolean;
+  onSaved?: () => void;
 };
 
 export function ManualExpenseForm({
@@ -83,6 +90,9 @@ export function ManualExpenseForm({
   defaultExpenseAccountCode,
   paymentSource = "cash",
   title = "Manual expense",
+  defaultRecordKind = "expense",
+  showRecordKindToggle = true,
+  onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -94,7 +104,7 @@ export function ManualExpenseForm({
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
-  const [recordKind, setRecordKind] = useState<RecordKind>("expense");
+  const [recordKind, setRecordKind] = useState<ExpenseRecordKind>(defaultRecordKind);
   const [employeeId, setEmployeeId] = useState("");
   const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
@@ -239,14 +249,17 @@ export function ManualExpenseForm({
     setAmountText("");
     setPaymentMode("cash");
     setPartnerId("");
-    setRecordKind("expense");
+    setRecordKind(defaultRecordKind);
     setEmployeeId("");
     setError(null);
     userPickedAccountRef.current = false;
     setSuggestedAccountId(null);
     setSuggestedSource(null);
     void loadOptions().catch(() => undefined);
-  }, [open, loadOptions]);
+  }, [open, loadOptions, defaultRecordKind]);
+
+  const allowSalaryMode =
+    showRecordKindToggle && !defaultExpenseAccountCode && paymentSource === "cash";
 
   useEffect(() => {
     if (!open || !entityId || itemName.trim().length < 2) {
@@ -432,6 +445,7 @@ export function ManualExpenseForm({
       }
       submitIdempotency.completeSubmit();
       clearDraft();
+      onSaved?.();
       toast(
         paymentMode === "partner"
           ? "Partner expense recorded"
@@ -483,17 +497,13 @@ export function ManualExpenseForm({
           onDismiss={handleDeclineResume}
         />
       )}
-      <div className="mb-3">
-        <Label htmlFor="exp-record-kind">What are you recording?</Label>
-        <Select
-          id="exp-record-kind"
+      {allowSalaryMode && (
+        <ExpenseRecordKindToggle
           value={recordKind}
-          onChange={(e) => setRecordKind(e.target.value as RecordKind)}
-        >
-          <option value="expense">Business expense</option>
-          <option value="salary">Salary payment</option>
-        </Select>
-      </div>
+          onChange={setRecordKind}
+          className="mb-4"
+        />
+      )}
 
       {recordKind === "salary" ? (
         <>
@@ -523,8 +533,9 @@ export function ManualExpenseForm({
               employeeName={selectedEmployee.name}
               payCurrency={selectedEmployee.pay_currency}
               source="staff"
+              closeOnSuccess={false}
               onClose={onClose}
-              onSaved={onClose}
+              onSaved={onSaved}
             />
           )}
         </>
