@@ -548,3 +548,46 @@ def test_confirm_expense_item_id_reuses_item_without_duplicate(
             select(ExpenseItem).where(ExpenseItem.is_active.is_(True))
         ).all()
         assert len(active_items) == 2
+
+
+def test_list_expenses_returns_total_amount_and_pagination(
+    client: TestClient, expense_setup
+) -> None:
+    entity_id = expense_setup["entity_id"]
+    rent_id = expense_setup["accounts"][RENT_EXPENSE_CODE]
+    payload_base = {
+        "expense_date": "2026-06-02",
+        "amount_kurus": 10_000,
+        "expense_account_id": str(rent_id),
+        "money_account_id": str(expense_setup["drawer"].id),
+        "has_source_document": False,
+        "description": "Test expense",
+        "actor_id": str(ACTOR_ID),
+    }
+
+    for day in ("2026-06-01", "2026-06-02", "2026-06-03"):
+        resp = client.post(
+            f"/entities/{entity_id}/expenses",
+            json={**payload_base, "expense_date": day},
+        )
+        assert resp.status_code == 201
+
+    page_one = client.get(
+        f"/entities/{entity_id}/expenses",
+        params={"from": "2026-06-01", "to": "2026-06-03", "limit": 2, "offset": 0},
+    )
+    assert page_one.status_code == 200
+    body_one = page_one.json()
+    assert body_one["total"] == 3
+    assert body_one["total_amount_kurus"] == 30_000
+    assert len(body_one["items"]) == 2
+
+    page_two = client.get(
+        f"/entities/{entity_id}/expenses",
+        params={"from": "2026-06-01", "to": "2026-06-03", "limit": 2, "offset": 2},
+    )
+    assert page_two.status_code == 200
+    body_two = page_two.json()
+    assert body_two["total"] == 3
+    assert body_two["total_amount_kurus"] == 30_000
+    assert len(body_two["items"]) == 1

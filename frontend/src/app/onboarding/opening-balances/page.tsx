@@ -21,6 +21,7 @@ import { Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
+import { formatChartAccountLabel } from "@/lib/chart-accounts";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useFormDraft } from "@/lib/form-draft";
 import { useEntity } from "@/lib/entity-context";
@@ -410,7 +411,7 @@ export default function OpeningBalancesPage() {
                 { value: "", label: "Account…" },
                 ...obAccounts.map((a) => ({
                   value: a.code,
-                  label: `${a.code} — ${a.name_en}`,
+                  label: formatChartAccountLabel(a),
                 })),
               ]}
               placeholder="Account…"

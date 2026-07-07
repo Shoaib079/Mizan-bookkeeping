@@ -14,6 +14,8 @@ export const EXPENSE_REVIEW_FILTERS: { id: ExpenseReviewFilter; label: string }[
     { id: "posted", label: "Posted" },
   ];
 
+export const EXPENSE_REVIEW_PAGE_SIZE = 50;
+
 export function useExpensesReviewUrl() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -26,36 +28,72 @@ export function useExpensesReviewUrl() {
     statusParam === "needs_review" || statusParam === "posted"
       ? statusParam
       : "all";
+  const offset = Math.max(
+    0,
+    Number.parseInt(searchParams.get("offset") ?? "0", 10) || 0,
+  );
 
-  const setRange = useCallback(
-    (nextFrom: string, nextTo: string) => {
+  const replaceParams = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set("from", nextFrom);
-      params.set("to", nextTo);
+      mutate(params);
       router.replace(`?${params.toString()}`);
     },
     [router, searchParams],
   );
 
+  const setRange = useCallback(
+    (nextFrom: string, nextTo: string) => {
+      replaceParams((params) => {
+        params.set("from", nextFrom);
+        params.set("to", nextTo);
+        params.delete("offset");
+      });
+    },
+    [replaceParams],
+  );
+
   const setFilter = useCallback(
     (next: ExpenseReviewFilter) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (next === "all") params.delete("status");
-      else params.set("status", next);
-      router.replace(`?${params.toString()}`);
+      replaceParams((params) => {
+        if (next === "all") params.delete("status");
+        else params.set("status", next);
+        params.delete("offset");
+      });
     },
-    [router, searchParams],
+    [replaceParams],
+  );
+
+  const setOffset = useCallback(
+    (nextOffset: number) => {
+      replaceParams((params) => {
+        if (nextOffset <= 0) params.delete("offset");
+        else params.set("offset", String(nextOffset));
+      });
+    },
+    [replaceParams],
   );
 
   const listQuery = useMemo(() => {
     const params = new URLSearchParams({
       from,
       to,
-      limit: "50",
+      limit: String(EXPENSE_REVIEW_PAGE_SIZE),
+      offset: String(offset),
     });
     if (filter !== "all") params.set("status", filter);
     return params.toString();
-  }, [filter, from, to]);
+  }, [filter, from, offset, to]);
 
-  return { from, to, filter, setRange, setFilter, listQuery };
+  return {
+    from,
+    to,
+    filter,
+    offset,
+    pageSize: EXPENSE_REVIEW_PAGE_SIZE,
+    setRange,
+    setFilter,
+    setOffset,
+    listQuery,
+  };
 }

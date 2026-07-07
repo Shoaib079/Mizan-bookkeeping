@@ -5,10 +5,15 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, Field
+from app.core.listing.params import DEFAULT_LIST_LIMIT
 from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 from app.features.expenses.models import ExpenseEntryStatus, ExpenseReceiptIntakeStatus
+
+T = TypeVar("T")
 
 
 class ExpenseItemCreate(BaseModel):
@@ -107,6 +112,14 @@ class ExpenseRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ExpensePaginatedListOut(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    total_amount_kurus: int = 0
+    limit: int = Field(default=DEFAULT_LIST_LIMIT, ge=1)
+    offset: int = Field(default=0, ge=0)
 
 
 class ExpenseReceiptLineRead(BaseModel):

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.listing import (
@@ -415,7 +415,7 @@ def list_expenses(
     money_account_id: uuid.UUID | None = None,
     expense_item_id: uuid.UUID | None = None,
     list_params: ListParams | None = None,
-) -> tuple[list[ExpenseRead], int]:
+) -> tuple[list[ExpenseRead], int, int]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
@@ -443,6 +443,7 @@ def list_expenses(
             filters.append(ExpenseEntry.money_account_id == money_account_id)
         if expense_item_id is not None:
             filters.append(ExpenseEntry.expense_item_id == expense_item_id)
+        text_clauses: list = []
         if q:
             item_search = normalized_text_search_filter(
                 q, ExpenseItem.canonical_name_normalized
@@ -456,25 +457,35 @@ def list_expenses(
                 )
                 if c is not None
             ]
-            if text_clauses:
-                stmt = (
-                    select(ExpenseEntry)
-                    .outerjoin(
-                        ExpenseItem,
-                        ExpenseEntry.expense_item_id == ExpenseItem.id,
-                    )
-                    .where(*filters, or_(*text_clauses))
+        if text_clauses:
+            stmt = (
+                select(ExpenseEntry)
+                .outerjoin(
+                    ExpenseItem,
+                    ExpenseEntry.expense_item_id == ExpenseItem.id,
                 )
-            else:
-                stmt = select(ExpenseEntry).where(*filters)
+                .where(*filters, or_(*text_clauses))
+            )
+            sum_stmt = select(
+                func.coalesce(func.sum(ExpenseEntry.amount_kurus), 0)
+            ).select_from(
+                ExpenseEntry.outerjoin(
+                    ExpenseItem,
+                    ExpenseEntry.expense_item_id == ExpenseItem.id,
+                )
+            ).where(*filters, or_(*text_clauses))
         else:
             stmt = select(ExpenseEntry).where(*filters)
+            sum_stmt = select(
+                func.coalesce(func.sum(ExpenseEntry.amount_kurus), 0)
+            ).select_from(ExpenseEntry).where(*filters)
+        total_amount_kurus = int(session.scalar(sum_stmt) or 0)
         stmt = stmt.order_by(
             ExpenseEntry.expense_date.desc(),
             ExpenseEntry.created_at.desc(),
         )
         entries, total = fetch_paginated(session, stmt, params)
-        return [_to_expense_read(entry) for entry in entries], total
+        return [_to_expense_read(entry) for entry in entries], total, total_amount_kurus
 
 
 def correct_expense_by_id(

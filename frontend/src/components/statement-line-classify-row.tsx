@@ -26,6 +26,7 @@ import {
   suggestSupplierId,
   truncateStatementText,
 } from "@/lib/statement-classification-options";
+import { expenseAccountComboboxOptions } from "@/lib/expense-accounts";
 import {
   deliveryPlatformComboboxOptions,
   type StatementClassificationPickers,
@@ -229,10 +230,7 @@ export function StatementLineClassifyRow({
             id={`exp-${line.id}`}
             value={expenseAccountId}
             onValueChange={setExpenseAccountId}
-            options={pickers.expenseAccounts.map((a) => ({
-              value: a.id,
-              label: `${a.code} — ${a.name_en}`,
-            }))}
+            options={expenseAccountComboboxOptions(pickers.expenseAccounts)}
             placeholder="Expense GL…"
             className="h-8 min-w-[10rem] flex-1 text-xs"
           />

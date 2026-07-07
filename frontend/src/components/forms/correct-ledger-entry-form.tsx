@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { formatChartAccountLabel } from "@/lib/chart-accounts";
 import { useEntity } from "@/lib/entity-context";
 import { formatKurus, formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { withPeriodUnlockReason } from "@/lib/period-unlock";
@@ -29,7 +30,7 @@ export type CorrectableLedgerEntry = {
   lines: PostingLine[];
 };
 
-type Account = { id: string; code: string; name: string };
+type Account = { id: string; code: string; name_en: string; name_tr?: string };
 
 type Props = {
   open: boolean;
@@ -83,7 +84,7 @@ export function CorrectLedgerEntryForm({
 
   const accountLabel = (accountId: string) => {
     const acct = accounts.find((a) => a.id === accountId);
-    return acct ? `${acct.code} — ${acct.name}` : accountId.slice(0, 8);
+    return acct ? formatChartAccountLabel(acct) : accountId.slice(0, 8);
   };
 
   const parsedLines =

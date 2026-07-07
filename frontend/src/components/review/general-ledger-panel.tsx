@@ -37,6 +37,7 @@ import {
 import { Input, Label, Select } from "@/components/ui/input";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatChartAccountLabel } from "@/lib/chart-accounts";
 import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
@@ -367,7 +368,7 @@ function LedgerPanelContent() {
   function accountLabel(accountId: string): string {
     const account = accounts[accountId];
     if (!account) return accountId.slice(0, 8);
-    return `${account.code} ${account.name_en}`;
+    return formatChartAccountLabel(account);
   }
 
   function navigateToEntry(entryId: string) {

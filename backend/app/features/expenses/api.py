@@ -36,6 +36,7 @@ from app.features.expenses.schema import (
     ExpenseItemCreate,
     ExpenseItemMergeRequest,
     ExpenseItemRead,
+    ExpensePaginatedListOut,
     ExpenseRead,
     ExpenseReceiptRead,
     RejectExpenseReceiptRequest,
@@ -144,7 +145,7 @@ def create_expense(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/expenses", response_model=PaginatedListOut[ExpenseRead])
+@router.get("/expenses", response_model=ExpensePaginatedListOut[ExpenseRead])
 def list_expenses(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
@@ -159,9 +160,9 @@ def list_expenses(
     money_account_id: uuid.UUID | None = Query(default=None),
     expense_item_id: uuid.UUID | None = Query(default=None),
     list_params: ListParams = Depends(list_params_dependency),
-) -> PaginatedListOut[ExpenseRead]:
+) -> ExpensePaginatedListOut[ExpenseRead]:
     try:
-        items, total = expenses_service.list_expenses(
+        items, total, total_amount_kurus = expenses_service.list_expenses(
             session,
             entity_id,
             status=status,
@@ -177,9 +178,10 @@ def list_expenses(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return paginated_list(
-        items,
+    return ExpensePaginatedListOut(
+        items=items,
         total=total,
+        total_amount_kurus=total_amount_kurus,
         limit=list_params.limit,
         offset=list_params.offset,
     )

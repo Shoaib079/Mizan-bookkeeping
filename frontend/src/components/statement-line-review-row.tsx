@@ -16,6 +16,7 @@ import type {
 } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import {
+  expenseAccountComboboxOptions,
   filterExpenseAccounts,
   mergeExpenseAccounts,
   type ChartAccount,
@@ -485,10 +486,7 @@ export function StatementLineReviewRow({ line, onUpdated }: Props) {
                       id={`exp-${line.id}`}
                       value={expenseAccountId}
                       onValueChange={setExpenseAccountId}
-                      options={expenseAccounts.map((account) => ({
-                        value: account.id,
-                        label: `${account.code} — ${account.name_en}`,
-                      }))}
+                      options={expenseAccountComboboxOptions(expenseAccounts)}
                       placeholder="Expense account…"
                     />
                   </div>

@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | (none — owner sign-off pending on subledger void balance fix) |
+| **Active slice**         | (none — owner sign-off pending on expense review pagination + labels) |
 | **Next up**              | P5 — Delete company UI |
-| **Last completed slice** | Subledger void — effective balances + display enrichment |
-| **Last commit/tag**      | `v0.subledger-void-effective-balance` |
+| **Last completed slice** | Review expenses pagination/total + global expense account labels |
+| **Last commit/tag**      | `v0.expense-review-pagination-labels` |
 
 **Owner sign-off required** — agency group sales v2 touches FX receivable/payment paths (money-critical). **Follow-up (not in v2):** per-menu period report for group/agency sales.
 

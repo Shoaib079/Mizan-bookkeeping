@@ -10,6 +10,11 @@ import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import type { FxLedgerEntryRead } from "@/lib/banking-types";
+import {
+  fetchExpenseAccounts,
+  formatExpenseAccountLabel,
+  type ChartAccount,
+} from "@/lib/expense-accounts";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative, parseFxNative } from "@/lib/fx-money";
 import {
@@ -22,7 +27,7 @@ import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
-type ExpenseAccountOption = { id: string; code: string; name: string };
+type ExpenseAccountOption = ChartAccount;
 
 export type CorrectableFxSpendRow = Pick<
   FxLedgerEntryRead,
@@ -74,9 +79,7 @@ export function CorrectFxLedgerForm({
     if (!entityId) return;
     const [payments, expenses] = await Promise.all([
       loadBankAndCashAccounts(entityId),
-      apiFetch<{ items: ExpenseAccountOption[] }>(
-        `/entities/${entityId}/chart-of-accounts?limit=200`,
-      ).then((chart) => chart.items.filter((a) => a.code.startsWith("5"))),
+      fetchExpenseAccounts(entityId),
     ]);
     setTryAccounts(payments);
     setExpenseAccounts(expenses);
@@ -210,7 +213,7 @@ export function CorrectFxLedgerForm({
                 onValueChange={setExpenseAccountId}
                 options={expenseAccounts.map((a) => ({
                   value: a.id,
-                  label: `${a.code} — ${a.name}`,
+                  label: formatExpenseAccountLabel(a),
                 }))}
                 placeholder="Expense account…"
               />

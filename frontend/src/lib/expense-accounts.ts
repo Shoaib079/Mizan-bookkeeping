@@ -1,5 +1,7 @@
 /** Expense accounts from chart-of-accounts listing — filter by account_type. */
 
+import { apiFetch } from "@/lib/api";
+
 export type ChartAccount = {
   id: string;
   code: string;
@@ -27,6 +29,15 @@ export function formatExpenseAccountLabel(
   account: Pick<ChartAccount, "code" | "name_tr" | "name_en" | "name">,
 ): string {
   return `${account.code} — ${expenseAccountDisplayName(account)}`;
+}
+
+export function expenseAccountComboboxOptions(
+  accounts: ChartAccount[],
+): { value: string; label: string }[] {
+  return accounts.map((account) => ({
+    value: account.id,
+    label: formatExpenseAccountLabel(account),
+  }));
 }
 
 /**
@@ -61,4 +72,14 @@ export function findExpenseAccountByCode(
   code: string,
 ): ChartAccount | undefined {
   return filterExpenseAccounts(accounts).find((a) => a.code === code);
+}
+
+/** Load expense GL accounts for pickers (code + English/Turkish name). */
+export async function fetchExpenseAccounts(
+  entityId: string,
+): Promise<ChartAccount[]> {
+  const chart = await apiFetch<{ items: ChartAccount[] }>(
+    `/entities/${entityId}/chart-of-accounts?limit=200`,
+  );
+  return filterExpenseAccounts(chart.items);
 }

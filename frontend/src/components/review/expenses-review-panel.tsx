@@ -36,14 +36,30 @@ import {
 } from "@/lib/use-expenses-review-url";
 import { cn } from "@/lib/utils";
 
-type PaginatedResponse<T> = { items: T[]; total: number };
+type PaginatedResponse<T> = {
+  items: T[];
+  total: number;
+  total_amount_kurus: number;
+  limit: number;
+  offset: number;
+};
 
 export function ExpensesReviewPanel() {
   const { entityId } = useEntity();
-  const { from, to, filter, setRange, setFilter, listQuery } =
-    useExpensesReviewUrl();
+  const {
+    from,
+    to,
+    filter,
+    offset,
+    pageSize,
+    setRange,
+    setFilter,
+    setOffset,
+    listQuery,
+  } = useExpensesReviewUrl();
   const [items, setItems] = useState<CorrectableExpenseRow[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalAmountKurus, setTotalAmountKurus] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recordOpen, setRecordOpen] = useState(false);
@@ -58,6 +74,7 @@ export function ExpensesReviewPanel() {
     if (!entityId) {
       setItems([]);
       setTotal(0);
+      setTotalAmountKurus(0);
       setLoading(false);
       return;
     }
@@ -69,10 +86,12 @@ export function ExpensesReviewPanel() {
       );
       setItems(res.items);
       setTotal(res.total);
+      setTotalAmountKurus(res.total_amount_kurus);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load expenses");
       setItems([]);
       setTotal(0);
+      setTotalAmountKurus(0);
     } finally {
       setLoading(false);
     }
@@ -86,6 +105,15 @@ export function ExpensesReviewPanel() {
     invalidateReviewCounts();
     void reload();
   }
+
+  const pageStart = total === 0 ? 0 : offset + 1;
+  const pageEnd = Math.min(offset + pageSize, total);
+  const canPrev = offset > 0;
+  const canNext = offset + pageSize < total;
+  const filterLabel =
+    filter === "all"
+      ? ""
+      : ` (${EXPENSE_REVIEW_FILTERS.find((t) => t.id === filter)?.label ?? filter})`;
 
   if (!entityId) {
     return (
@@ -141,13 +169,29 @@ export function ExpensesReviewPanel() {
         </div>
 
         <p className="text-sm text-muted-foreground">
-          {loading
-            ? "Loading…"
-            : `${total} expense${total === 1 ? "" : "s"} in this period${
-                filter === "all"
-                  ? ""
-                  : ` (${EXPENSE_REVIEW_FILTERS.find((t) => t.id === filter)?.label ?? filter})`
-              }`}
+          {loading ? (
+            "Loading…"
+          ) : (
+            <>
+              {total} expense{total === 1 ? "" : "s"} in this period
+              {filterLabel}
+              {total > 0 && (
+                <>
+                  {" "}
+                  · total{" "}
+                  <span className="tabular-nums font-medium text-foreground">
+                    {formatTry(totalAmountKurus)}
+                  </span>
+                </>
+              )}
+              {total > pageSize && (
+                <>
+                  {" "}
+                  · showing {pageStart}–{pageEnd}
+                </>
+              )}
+            </>
+          )}
         </p>
       </div>
 
@@ -212,6 +256,33 @@ export function ExpensesReviewPanel() {
             ))}
           </DataTableBody>
         </DataTable>
+      )}
+
+      {!loading && total > pageSize && (
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Page {Math.floor(offset / pageSize) + 1} of{" "}
+            {Math.ceil(total / pageSize)}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!canPrev}
+              onClick={() => setOffset(Math.max(0, offset - pageSize))}
+            >
+              Previous
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!canNext}
+              onClick={() => setOffset(offset + pageSize)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
       )}
 
       <ManualExpenseForm

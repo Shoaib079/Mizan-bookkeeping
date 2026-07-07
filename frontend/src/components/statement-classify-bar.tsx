@@ -45,6 +45,7 @@ import {
 } from "@/lib/statement-line-form-state";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { expenseAccountComboboxOptions } from "@/lib/expense-accounts";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -407,10 +408,7 @@ export function StatementClassifyBar({
               id={`${idPrefix}-expense`}
               value={expenseAccountId}
               onValueChange={setExpenseAccountId}
-              options={pickers.expenseAccounts.map((a) => ({
-                value: a.id,
-                label: `${a.code} — ${a.name_en}`,
-              }))}
+              options={expenseAccountComboboxOptions(pickers.expenseAccounts)}
               placeholder="Expense GL — rent, utilities, repairs…"
               className="h-9 w-full min-w-0 text-xs"
             />

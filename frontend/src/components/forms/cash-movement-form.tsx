@@ -21,6 +21,7 @@ import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import {
   filterExpenseAccounts,
+  formatExpenseAccountLabel,
   mergeExpenseAccounts,
   type ChartAccount,
 } from "@/lib/expense-accounts";
@@ -203,7 +204,7 @@ export function CashMovementForm({
               onValueChange={setOffsetAccountId}
               options={offsetAccounts.map((a) => ({
                 value: a.id,
-                label: `${a.code} — ${a.name_en}`,
+                label: formatExpenseAccountLabel(a),
               }))}
               placeholder="Expense account…"
             />
