@@ -53,7 +53,14 @@ _OPERATING_SOURCES = frozenset(
 
 _INVESTING_SOURCES = frozenset({JournalEntrySource.FX_PURCHASE})
 
-_FINANCING_SOURCES = frozenset({JournalEntrySource.CREDIT_CARD_PAYMENT})
+_FINANCING_SOURCES = frozenset(
+    {
+        JournalEntrySource.CREDIT_CARD_PAYMENT,
+        JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
+        JournalEntrySource.PARTNER_LOAN_RECEIVED,
+        JournalEntrySource.PARTNER_LOAN_REPAID,
+    }
+)
 
 _EXCLUDED_SOURCES = frozenset({JournalEntrySource.TRANSFER})
 

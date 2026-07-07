@@ -112,6 +112,9 @@ VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
         JournalEntrySource.RULE_AUTO,
         JournalEntrySource.SYSTEM,
         JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
+        JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
+        JournalEntrySource.PARTNER_LOAN_RECEIVED,
+        JournalEntrySource.PARTNER_LOAN_REPAID,
     }
 )
 
