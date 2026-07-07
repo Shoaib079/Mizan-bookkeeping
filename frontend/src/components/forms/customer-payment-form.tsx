@@ -14,11 +14,12 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative, parseFxNative } from "@/lib/fx-money";
+import { computeTryCostKurusFromRate } from "@/lib/fx-purchase-helpers";
 import {
   loadPaymentReceiveAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
-import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { formatKurus, formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 
 type Props = {
@@ -65,6 +66,8 @@ export function CustomerPaymentForm({
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [forexAmountText, setForexAmountText] = useState("");
+  const [rateText, setRateText] = useState("");
+  const [tryValueTouched, setTryValueTouched] = useState(false);
   const [description, setDescription] = useState("Customer payment");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -96,14 +99,28 @@ export function CustomerPaymentForm({
   useEffect(() => {
     if (open) {
       setDateText(todayTrDate());
+      setAmountText("");
       setForexAmountText("");
+      setRateText("");
+      setTryValueTouched(false);
       void loadAccounts().catch(() => undefined);
     }
   }, [open, loadAccounts]);
 
   useEffect(() => {
-    if (!isFxWallet) setForexAmountText("");
+    if (!isFxWallet) {
+      setForexAmountText("");
+      setRateText("");
+      setTryValueTouched(false);
+    }
   }, [isFxWallet]);
+
+  useEffect(() => {
+    if (tryValueTouched) return;
+    const computed = computeTryCostKurusFromRate(forexAmountText, rateText);
+    if (computed === null) return;
+    setAmountText(formatKurus(computed));
+  }, [forexAmountText, rateText, tryValueTouched]);
 
   const amountKurus = parseTryToKurus(amountText);
   const forexMinor = parseFxNative(forexAmountText);
@@ -202,6 +219,8 @@ export function CustomerPaymentForm({
       onClose();
       setAmountText("");
       setForexAmountText("");
+      setRateText("");
+      setTryValueTouched(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment failed");
     } finally {
@@ -287,6 +306,27 @@ export function CustomerPaymentForm({
             )}
           </div>
         )}
+        {(isFxWallet || isFxReceivable) &&
+          selectedAccount?.currency &&
+          !nativeOnlyPayment && (
+            <div>
+              <Label htmlFor="cp-rate">
+                Rate (TRY per 1 {selectedAccount.currency})
+              </Label>
+              <MoneyInput
+                id="cp-rate"
+                value={rateText}
+                onChange={setRateText}
+                showPreview={false}
+                showInvalidHint={false}
+                placeholder="e.g. 34,50"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Sets the TRY book value below (amount received × rate). You can
+                still edit the TRY value directly.
+              </p>
+            </div>
+          )}
         {!nativeOnlyPayment && (
         <div>
           <Label htmlFor="cp-amount">
@@ -295,15 +335,18 @@ export function CustomerPaymentForm({
           <MoneyInput
             id="cp-amount"
             value={amountText}
-            onChange={setAmountText}
+            onChange={(value) => {
+              setTryValueTouched(true);
+              setAmountText(value);
+            }}
             showPreview={false}
             showInvalidHint={false}
             required
           />
           {isFxWallet && !isFxReceivable && (
             <p className="mt-1 text-xs text-muted-foreground">
-              Enter the lira value of this payment when received — same rule as
-              FX elsewhere (no online rates).
+              Enter a rate above to fill this automatically, or type the lira
+              value directly — same rule as FX elsewhere (no online rates).
             </p>
           )}
           {amountInvalid && (

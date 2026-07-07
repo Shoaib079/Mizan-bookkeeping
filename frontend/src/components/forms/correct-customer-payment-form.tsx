@@ -11,6 +11,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative, parseFxNative } from "@/lib/fx-money";
+import { computeTryCostKurusFromRate } from "@/lib/fx-purchase-helpers";
 import {
   loadPaymentReceiveAccounts,
   type MoneyAccountOption,
@@ -64,6 +65,8 @@ export function CorrectCustomerPaymentForm({
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [forexAmountText, setForexAmountText] = useState("");
+  const [rateText, setRateText] = useState("");
+  const [tryValueTouched, setTryValueTouched] = useState(false);
   const [description, setDescription] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -88,14 +91,27 @@ export function CorrectCustomerPaymentForm({
     setDateText(formatTrDate(payment.movement_date));
     setAmountText(formatKurus(payment.amount_kurus));
     setForexAmountText("");
+    setRateText("");
+    setTryValueTouched(false);
     setDescription(payment.description);
     setReason("");
     setError(null);
   }, [open, payment, loadAccounts]);
 
   useEffect(() => {
-    if (!isFxWallet) setForexAmountText("");
+    if (!isFxWallet) {
+      setForexAmountText("");
+      setRateText("");
+      setTryValueTouched(false);
+    }
   }, [isFxWallet]);
+
+  useEffect(() => {
+    if (tryValueTouched) return;
+    const computed = computeTryCostKurusFromRate(forexAmountText, rateText);
+    if (computed === null) return;
+    setAmountText(formatKurus(computed));
+  }, [forexAmountText, rateText, tryValueTouched]);
 
   const amountKurus = parseTryToKurus(amountText);
   const forexMinor = parseFxNative(forexAmountText);
@@ -204,6 +220,23 @@ export function CorrectCustomerPaymentForm({
               />
             </div>
           )}
+          {isFxWallet && selectedAccount?.currency && (
+            <div>
+              <Label htmlFor="ccp-rate">
+                Rate (TRY per 1 {selectedAccount.currency})
+              </Label>
+              <MoneyInput
+                id="ccp-rate"
+                value={rateText}
+                onChange={setRateText}
+                placeholder="e.g. 34,50"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Sets the TRY book value below (amount received × rate). You can
+                still edit the TRY value directly.
+              </p>
+            </div>
+          )}
           <div>
             <Label htmlFor="ccp-amount">
               {isFxWallet ? "TRY book value" : "Amount (TRY)"}
@@ -211,7 +244,10 @@ export function CorrectCustomerPaymentForm({
             <MoneyInput
               id="ccp-amount"
               value={amountText}
-              onChange={setAmountText}
+              onChange={(value) => {
+                setTryValueTouched(true);
+                setAmountText(value);
+              }}
               required
             />
           </div>

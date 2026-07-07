@@ -275,7 +275,7 @@ export default function CustomerDetailPage() {
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell align="right">
-                      {entry.movement_type === "payment" && (
+                      {entry.movement_type === "payment_received" && (
                         <SubledgerRowActions
                           row={entry}
                           onEdit={() =>
