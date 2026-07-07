@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -31,6 +32,7 @@ import { formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
 import {
+  isEffectiveLedgerRow,
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
@@ -48,6 +50,8 @@ type LedgerEntry = {
   rate_per_person_forex_minor: number | null;
   total_forex_minor: number | null;
   payment_native_quantity: number | null;
+  reference_type: string | null;
+  reference_id: string | null;
   journal_entry_id: string | null;
   display_kind: SubledgerDisplayKind;
   was_corrected?: boolean;
@@ -294,6 +298,24 @@ export default function CustomerDetailPage() {
                           }
                         />
                       )}
+                      {entry.movement_type === "credit_sale" &&
+                        entry.reference_type === "group_sale" &&
+                        entry.reference_id &&
+                        isEffectiveLedgerRow(entry) && (
+                          <div className="flex justify-end">
+                            <Link
+                              href={`/customers/group-sales/${entry.reference_id}`}
+                            >
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="h-8 px-2"
+                              >
+                                Edit / Void
+                              </Button>
+                            </Link>
+                          </div>
+                        )}
                     </DataTableCell>
                   </DataTableRow>
                 ))}

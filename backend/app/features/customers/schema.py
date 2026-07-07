@@ -74,6 +74,8 @@ class CustomerLedgerEntryRead(BaseModel):
     rate_per_person_forex_minor: int | None = None
     total_forex_minor: int | None = None
     payment_native_quantity: int | None = None
+    reference_type: str | None = None
+    reference_id: uuid.UUID | None = None
     actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID | None
     created_at: datetime
