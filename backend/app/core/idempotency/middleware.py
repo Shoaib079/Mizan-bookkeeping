@@ -53,7 +53,9 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 path=path,
                 idempotency_key=idempotency_key,
             )
-            if existing is not None:
+            if existing is not None and not idempotency_service.is_duplicate_record_response(
+                existing.status_code, existing.response_body
+            ):
                 return _cached_response(existing.status_code, existing.response_body)
         finally:
             session.close()

@@ -146,3 +146,73 @@ def test_different_amount_not_duplicate_expense(db_session, expense_setup) -> No
             expense_account_id=account_id,
         )
     assert match is None
+
+
+def test_different_item_not_duplicate_expense(db_session, expense_setup) -> None:
+    from app.features.expenses.schema import ExpenseItemCreate
+    from app.features.expenses.service import create_expense_item
+
+    entity_id = expense_setup["entity_id"]
+    drawer_id = expense_setup["drawer"].id
+    account_id = expense_setup["accounts"][RENT_EXPENSE_CODE]
+
+    sugar = create_expense_item(
+        db_session,
+        entity_id,
+        ExpenseItemCreate(canonical_name="Sugar"),
+    )
+    salt = create_expense_item(
+        db_session,
+        entity_id,
+        ExpenseItemCreate(canonical_name="Salt"),
+    )
+
+    create_expense(
+        db_session,
+        entity_id,
+        ExpenseCreate(
+            expense_date=date(2026, 5, 22),
+            amount_kurus=20_000,
+            expense_account_id=account_id,
+            money_account_id=drawer_id,
+            written_item_description="Sugar",
+            confirm_expense_item_id=sugar.id,
+            description="Sugar purchase",
+            actor_id=ACTOR_ID,
+        ),
+    )
+
+    with entity_context(db_session, entity_id):
+        same_item = find_duplicate_expense(
+            db_session,
+            expense_date=date(2026, 5, 22),
+            amount_kurus=20_000,
+            expense_account_id=account_id,
+            expense_item_id=sugar.id,
+        )
+        other_item = find_duplicate_expense(
+            db_session,
+            expense_date=date(2026, 5, 22),
+            amount_kurus=20_000,
+            expense_account_id=account_id,
+            expense_item_id=salt.id,
+        )
+
+    assert same_item is not None
+    assert "Sugar" in same_item.message
+    assert other_item is None
+
+    create_expense(
+        db_session,
+        entity_id,
+        ExpenseCreate(
+            expense_date=date(2026, 5, 22),
+            amount_kurus=20_000,
+            expense_account_id=account_id,
+            money_account_id=drawer_id,
+            written_item_description="Salt",
+            confirm_expense_item_id=salt.id,
+            description="Salt purchase",
+            actor_id=ACTOR_ID,
+        ),
+    )

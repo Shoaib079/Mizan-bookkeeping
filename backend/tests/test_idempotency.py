@@ -122,6 +122,39 @@ def test_different_keys_same_payload_both_succeed(
     assert _expense_count(db_session, entity_id) == 2
 
 
+def test_duplicate_acknowledge_retry_same_idempotency_key_succeeds(
+    db_session,
+    client: TestClient,
+    idempotency_setup,
+    monkeypatch,
+) -> None:
+    """409 duplicate_record must not be cached — user can confirm and retry same key."""
+    monkeypatch.setattr(settings, "idempotency_enforcement", True)
+    entity_id = idempotency_setup["entity_id"]
+    url = f"/entities/{entity_id}/expenses"
+    payload = _expense_payload(idempotency_setup)
+    key = str(uuid.uuid4())
+
+    first = client.post(
+        url,
+        json=payload,
+        headers={"Idempotency-Key": str(uuid.uuid4())},
+    )
+    assert first.status_code == 201
+
+    blocked = client.post(url, json=payload, headers={"Idempotency-Key": key})
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"]["code"] == "duplicate_record"
+
+    acknowledged = client.post(
+        url,
+        json=_expense_payload(idempotency_setup, acknowledge_duplicate=True),
+        headers={"Idempotency-Key": key},
+    )
+    assert acknowledged.status_code == 201
+    assert _expense_count(db_session, entity_id) == 2
+
+
 def test_enforcement_requires_header_on_mutations(
     client: TestClient,
     idempotency_setup,

@@ -16,7 +16,7 @@ from app.core.receivables.models import CustomerLedgerEntry
 from app.core.receivables.types import CustomerMovementType
 from app.core.staff.models import StaffLedgerEntry
 from app.core.staff.types import StaffMovementType
-from app.features.expenses.models import ExpenseEntry, ExpenseEntryStatus
+from app.features.expenses.models import ExpenseEntry, ExpenseEntryStatus, ExpenseItem
 from app.features.group_sales.models import GroupSale, GroupSaleStatus
 
 
@@ -72,27 +72,43 @@ def find_duplicate_expense(
     expense_date: date,
     amount_kurus: int,
     expense_account_id: uuid.UUID,
+    expense_item_id: uuid.UUID | None = None,
 ) -> DuplicateMatch | None:
+    filters = [
+        ExpenseEntry.expense_date == expense_date,
+        ExpenseEntry.amount_kurus == amount_kurus,
+        ExpenseEntry.expense_account_id == expense_account_id,
+        ExpenseEntry.status == ExpenseEntryStatus.POSTED,
+        _live_journal_filter(ExpenseEntry.journal_entry_id),
+    ]
+    if expense_item_id is not None:
+        filters.append(ExpenseEntry.expense_item_id == expense_item_id)
+    else:
+        filters.append(ExpenseEntry.expense_item_id.is_(None))
+
     row_id = session.scalar(
         select(ExpenseEntry.id)
         .outerjoin(JournalEntry, ExpenseEntry.journal_entry_id == JournalEntry.id)
-        .where(
-            ExpenseEntry.expense_date == expense_date,
-            ExpenseEntry.amount_kurus == amount_kurus,
-            ExpenseEntry.expense_account_id == expense_account_id,
-            ExpenseEntry.status == ExpenseEntryStatus.POSTED,
-            _live_journal_filter(ExpenseEntry.journal_entry_id),
-        )
+        .where(*filters)
         .limit(1)
     )
     if row_id is None:
         return None
+
+    if expense_item_id is not None:
+        item_name = session.scalar(
+            select(ExpenseItem.canonical_name).where(ExpenseItem.id == expense_item_id)
+        )
+        item_clause = f" for {item_name}" if item_name else " for this item"
+    else:
+        item_clause = ""
+
     return DuplicateMatch(
         record_kind="expense",
         existing_id=row_id,
         message=(
-            f"An expense for {_format_try(amount_kurus)} on {_format_tr_date(expense_date)} "
-            "in this category already exists."
+            f"An expense for {_format_try(amount_kurus)} on {_format_tr_date(expense_date)}"
+            f"{item_clause} in this category already exists."
         ),
     )
 

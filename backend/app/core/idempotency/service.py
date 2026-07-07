@@ -72,6 +72,16 @@ def find_record(
     )
 
 
+def is_duplicate_record_response(status_code: int, response_body: Any) -> bool:
+    """Duplicate confirm is transient — must not be replayed from idempotency cache."""
+    if status_code != 409:
+        return False
+    if not isinstance(response_body, dict):
+        return False
+    detail = response_body.get("detail")
+    return isinstance(detail, dict) and detail.get("code") == "duplicate_record"
+
+
 def decode_response_body(raw: bytes, content_type: str | None) -> Any:
     if not raw:
         return None
@@ -97,6 +107,8 @@ def store_record(
     response_body: Any,
 ) -> IdempotencyRecord | None:
     if status_code >= 500:
+        return None
+    if is_duplicate_record_response(status_code, response_body):
         return None
     record = IdempotencyRecord(
         scope_user_id=scope_user_id,

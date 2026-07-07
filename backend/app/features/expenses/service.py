@@ -344,6 +344,7 @@ def create_expense(
                 expense_date=payload.expense_date,
                 amount_kurus=payload.amount_kurus,
                 expense_account_id=payload.expense_account_id,
+                expense_item_id=resolution.expense_item_id,
             ),
             acknowledged=payload.acknowledge_duplicate,
         )
