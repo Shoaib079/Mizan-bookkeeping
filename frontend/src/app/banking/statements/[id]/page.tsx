@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { StatementClassifyBar } from "@/components/statement-classify-bar";
+import { StatementBulkActionBar } from "@/components/statement-bulk-action-bar";
 import { StatementLinesLedger } from "@/components/statement-lines-ledger";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -15,6 +16,11 @@ import type { BankStatementRead, ClassifyStatementLineResult } from "@/lib/banki
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate } from "@/lib/money";
 import { canDiscardStatement, defaultStatementLineFilter, queueLines, replaceStatementLine } from "@/lib/statement-line-filters";
+import {
+  bulkModeForLines,
+  toggleAllLineIds,
+  toggleLineIdSet,
+} from "@/lib/statement-bulk-selection";
 import { useStatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 
@@ -28,6 +34,8 @@ export default function StatementDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const [bulkSelectEnabled, setBulkSelectEnabled] = useState(false);
+  const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(() => new Set());
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const discardKeyRef = useRef<string | null>(null);
@@ -37,6 +45,8 @@ export default function StatementDetailPage() {
     setLoading(true);
     setError(null);
     setSelectedLineId(null);
+    setBulkSelectEnabled(false);
+    setSelectedLineIds(new Set());
     setDiscardOpen(false);
     setDiscarding(false);
     discardKeyRef.current = null;
@@ -86,6 +96,12 @@ export default function StatementDetailPage() {
 
   const handlePosted = useCallback((result: ClassifyStatementLineResult) => {
     setSelectedLineId(null);
+    setSelectedLineIds((prev) => {
+      if (!prev.has(result.line.id)) return prev;
+      const next = new Set(prev);
+      next.delete(result.line.id);
+      return next;
+    });
     setStatement((prev) => {
       if (!prev) return prev;
       return {
@@ -94,6 +110,19 @@ export default function StatementDetailPage() {
       };
     });
   }, []);
+
+  const bulkSelectedLines = useMemo(() => {
+    if (!statement || selectedLineIds.size === 0) return [];
+    return statement.lines.filter((line) => selectedLineIds.has(line.id));
+  }, [statement, selectedLineIds]);
+
+  const bulkActionMode = useMemo(
+    () => bulkModeForLines(bulkSelectedLines),
+    [bulkSelectedLines],
+  );
+
+  const showBulkBar =
+    bulkSelectEnabled && bulkSelectedLines.length > 0 && bulkActionMode != null;
 
   const discardAllowed = useMemo(
     () => (statement ? canDiscardStatement(statement.lines) : false),
@@ -182,8 +211,8 @@ export default function StatementDetailPage() {
               </Button>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Classify one line at a time in the bar below — Post moves to the next
-              transaction. Every posted line creates a debit/credit journal entry.
+              Classify one line at a time in the bar below, or use Select multiple in
+              the ledger to post or correct a batch with the same classification.
             </p>
             {!discardAllowed && (
               <p className="mt-2 text-xs text-muted-foreground">
@@ -230,14 +259,29 @@ export default function StatementDetailPage() {
             </div>
           </Dialog>
 
-          <StatementClassifyBar
-            statementId={statementId}
-            line={barLine}
-            queueIndex={queueIndex >= 0 ? queueIndex : 0}
-            queueTotal={queue.length}
-            pickers={pickers}
-            onPosted={handlePosted}
-          />
+          {showBulkBar ? (
+            <StatementBulkActionBar
+              lines={bulkSelectedLines}
+              pickers={pickers}
+              onLineDone={handlePosted}
+              onComplete={() => {
+                if (selectedLineIds.size === 0) setBulkSelectEnabled(false);
+              }}
+              onClearSelection={() => {
+                setSelectedLineIds(new Set());
+                setBulkSelectEnabled(false);
+              }}
+            />
+          ) : (
+            <StatementClassifyBar
+              statementId={statementId}
+              line={barLine}
+              queueIndex={queueIndex >= 0 ? queueIndex : 0}
+              queueTotal={queue.length}
+              pickers={pickers}
+              onPosted={handlePosted}
+            />
+          )}
 
           <StatementLinesLedger
             key={statementId}
@@ -246,6 +290,22 @@ export default function StatementDetailPage() {
             skippedDuplicateCount={statement.skipped_duplicate_count}
             defaultFilter={ledgerDefaultFilter}
             onSelectLine={setSelectedLineId}
+            bulkSelectEnabled={bulkSelectEnabled}
+            bulkActionMode={
+              bulkActionMode ??
+              (ledgerDefaultFilter === "queue" ? "post" : "correct")
+            }
+            selectedLineIds={selectedLineIds}
+            onToggleBulkSelect={(enabled) => {
+              setBulkSelectEnabled(enabled);
+              if (!enabled) setSelectedLineIds(new Set());
+            }}
+            onToggleLineChecked={(lineId, checked) => {
+              setSelectedLineIds((prev) => toggleLineIdSet(prev, lineId, checked));
+            }}
+            onSelectAllVisible={(lineIds, select) => {
+              setSelectedLineIds((prev) => toggleAllLineIds(prev, lineIds, select));
+            }}
           />
         </>
       )}
