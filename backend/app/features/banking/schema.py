@@ -343,3 +343,19 @@ class AccountTransferRead(BaseModel):
     from_statement_line_id: uuid.UUID | None
     to_statement_line_id: uuid.UUID | None
     created_at: datetime
+
+
+class CreditCardPaymentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    entity_id: uuid.UUID
+    credit_card_money_account_id: uuid.UUID
+    bank_money_account_id: uuid.UUID
+    payment_date: date
+    amount_kurus: int
+    description: str
+    actor_id: uuid.UUID
+    journal_entry_id: uuid.UUID
+    bank_statement_line_id: uuid.UUID | None
+    created_at: datetime

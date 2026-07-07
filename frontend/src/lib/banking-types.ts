@@ -199,6 +199,18 @@ export type AccountTransferRead = {
   created_at: string;
 };
 
+export type CreditCardPaymentRead = {
+  id: string;
+  credit_card_money_account_id: string;
+  bank_money_account_id: string;
+  payment_date: string;
+  amount_kurus: number;
+  description: string;
+  journal_entry_id: string;
+  bank_statement_line_id: string | null;
+  created_at: string;
+};
+
 export type CashDrawerSessionRead = {
   id: string;
   money_account_id: string;
