@@ -137,6 +137,15 @@ export function FxConversionForm({
     >
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
+          <Label htmlFor="fx-conv-date">Date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="fx-conv-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
+        <div>
           <Label htmlFor="fx-conv-native">{currency} spent</Label>
           <Input
             id="fx-conv-native"
@@ -167,15 +176,6 @@ export function FxConversionForm({
               label: a.name,
             }))}
             placeholder="TRY account…"
-          />
-        </div>
-        <div>
-          <Label htmlFor="fx-conv-date">Date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="fx-conv-date"
-            value={dateText}
-            onChange={setDateText}
-            required
           />
         </div>
         <div>

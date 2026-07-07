@@ -145,6 +145,15 @@ export function FxPurchaseFormFields({
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <div>
+        <Label htmlFor="fx-buy-date">Date (DD.MM.YYYY)</Label>
+        <DateInput
+          id="fx-buy-date"
+          value={dateText}
+          onChange={setDateText}
+          required
+        />
+      </div>
+      <div>
         <Label htmlFor="fx-buy-native">{currency} amount</Label>
         <Input
           id="fx-buy-native"
@@ -187,15 +196,6 @@ export function FxPurchaseFormFields({
             label: a.name,
           }))}
           placeholder="Cash drawer…"
-        />
-      </div>
-      <div>
-        <Label htmlFor="fx-buy-date">Date (DD.MM.YYYY)</Label>
-        <DateInput
-          id="fx-buy-date"
-          value={dateText}
-          onChange={setDateText}
-          required
         />
       </div>
       <div>

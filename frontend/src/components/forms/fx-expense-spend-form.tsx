@@ -125,6 +125,15 @@ export function FxExpenseSpendForm({
     >
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
+          <Label htmlFor="fx-spend-date">Date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="fx-spend-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
+        <div>
           <Label htmlFor="fx-spend-native">{currency} amount</Label>
           <Input
             id="fx-spend-native"
@@ -145,15 +154,6 @@ export function FxExpenseSpendForm({
               label: formatExpenseAccountLabel(a),
             }))}
             placeholder="Expense account…"
-          />
-        </div>
-        <div>
-          <Label htmlFor="fx-spend-date">Date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="fx-spend-date"
-            value={dateText}
-            onChange={setDateText}
-            required
           />
         </div>
         <div>

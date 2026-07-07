@@ -221,11 +221,6 @@ function StaffAdvanceForm({
   return (
     <FormDialogShell embedded={embedded} open={open} title="Record advance" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <p className="text-xs text-muted-foreground">
-          {isTry
-            ? `Pays from cash or bank (${payCurrency}).`
-            : `Pays from ${payCurrency} wallet; enter TRY cost for GL posting.`}
-        </p>
         <div>
           <Label htmlFor="staff-date">Date (DD.MM.YYYY)</Label>
           <DateInput
@@ -235,6 +230,11 @@ function StaffAdvanceForm({
             required
           />
         </div>
+        <p className="text-xs text-muted-foreground">
+          {isTry
+            ? `Pays from cash or bank (${payCurrency}).`
+            : `Pays from ${payCurrency} wallet; enter TRY cost for GL posting.`}
+        </p>
         <div>
           <Label htmlFor="staff-amount">Amount ({payCurrency})</Label>
           {isTry ? (

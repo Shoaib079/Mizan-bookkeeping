@@ -217,6 +217,15 @@ export function CustomerPaymentForm({
       onClose={onClose}
     >
       <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <Label htmlFor="cp-date">Payment date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="cp-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
         {balanceKurus !== undefined && balanceKurus > 0 && !isFxReceivable && (
           <p className="text-sm text-muted-foreground">
             Outstanding receivable: {formatTry(balanceKurus)}
@@ -231,15 +240,6 @@ export function CustomerPaymentForm({
             )}
           </p>
         )}
-        <div>
-          <Label htmlFor="cp-date">Payment date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="cp-date"
-            value={dateText}
-            onChange={setDateText}
-            required
-          />
-        </div>
         <div>
           <Label htmlFor="cp-account">Received into</Label>
           <Combobox

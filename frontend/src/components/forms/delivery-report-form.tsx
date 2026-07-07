@@ -141,25 +141,6 @@ export function DeliveryReportForm({
     <Dialog open={open} title="Record platform sales" onClose={onClose}>
       <RecordingForBanner />
       <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <Label htmlFor="dr-platform">Platform</Label>
-          <Combobox
-            id="dr-platform"
-            value={platformId}
-            onValueChange={setPlatformId}
-            options={
-              platforms.length === 0
-                ? [{ value: "", label: "No active platforms" }]
-                : platforms.map((p) => ({
-                    value: p.id,
-                    label: p.name,
-                  }))
-            }
-            placeholder="Choose platform…"
-            required
-            disabled={platforms.length === 0}
-          />
-        </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label htmlFor="dr-from">Period from</Label>
@@ -179,6 +160,25 @@ export function DeliveryReportForm({
               required
             />
           </div>
+        </div>
+        <div>
+          <Label htmlFor="dr-platform">Platform</Label>
+          <Combobox
+            id="dr-platform"
+            value={platformId}
+            onValueChange={setPlatformId}
+            options={
+              platforms.length === 0
+                ? [{ value: "", label: "No active platforms" }]
+                : platforms.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                  }))
+            }
+            placeholder="Choose platform…"
+            required
+            disabled={platforms.length === 0}
+          />
         </div>
         <div>
           <Label htmlFor="dr-gross">Total sales (KDV dahil)</Label>

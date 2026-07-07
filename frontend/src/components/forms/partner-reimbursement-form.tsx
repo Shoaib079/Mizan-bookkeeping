@@ -125,12 +125,6 @@ export function PartnerReimbursementForm({
       onClose={onClose}
     >
       <form onSubmit={onSubmit} className="space-y-3">
-        {balanceKurus !== undefined && balanceKurus > 0 && (
-          <p className="text-sm text-muted-foreground">
-            {partnerBalanceHeading(balanceKurus)}:{" "}
-            {partnerBalanceAmount(balanceKurus)}
-          </p>
-        )}
         <div>
           <Label htmlFor="pr-date">Payment date (DD.MM.YYYY)</Label>
           <DateInput
@@ -140,6 +134,12 @@ export function PartnerReimbursementForm({
             required
           />
         </div>
+        {balanceKurus !== undefined && balanceKurus > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {partnerBalanceHeading(balanceKurus)}:{" "}
+            {partnerBalanceAmount(balanceKurus)}
+          </p>
+        )}
         <div>
           <Label htmlFor="pr-amount">Amount (TRY)</Label>
           <MoneyInput

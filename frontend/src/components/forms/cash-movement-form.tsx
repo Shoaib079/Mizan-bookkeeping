@@ -147,6 +147,15 @@ export function CashMovementForm({
     <>
       <Dialog open={open} title="Cash drawer movement" onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
+          <div>
+            <Label htmlFor="cash-date">Date (DD.MM.YYYY)</Label>
+            <DateInput
+              id="cash-date"
+              value={dateText}
+              onChange={setDateText}
+              required
+            />
+          </div>
           <p className="text-sm text-muted-foreground">
             Posts to the cash account immediately. An EOD drawer session is optional
             — use Close drawer day when you want to reconcile a count.
@@ -197,15 +206,6 @@ export function CashMovementForm({
                 label: `${a.code} — ${a.name_en}`,
               }))}
               placeholder="Expense account…"
-            />
-          </div>
-          <div>
-            <Label htmlFor="cash-date">Date (DD.MM.YYYY)</Label>
-            <DateInput
-              id="cash-date"
-              value={dateText}
-              onChange={setDateText}
-              required
             />
           </div>
           <div>

@@ -557,6 +557,18 @@ export function StaffSalaryPaymentDialog({
 
   const form = (
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
+        {!isStatement && !hidePaymentDate && (
+          <div>
+            <Label htmlFor="pay-date">Payment date (DD.MM.YYYY)</Label>
+            <DateInput
+              id="pay-date"
+              value={dateText}
+              onChange={setDateText}
+              required
+            />
+          </div>
+        )}
+
         <p className="text-xs text-muted-foreground">
           Mizan accrues this month&apos;s salary when needed — no separate accrual
           step. Pay any prior month; pay in parts as cash comes in; extra becomes
@@ -565,15 +577,6 @@ export function StaffSalaryPaymentDialog({
 
         {!isStatement && !hidePaymentDate && (
           <>
-            <div>
-              <Label htmlFor="pay-date">Payment date (DD.MM.YYYY)</Label>
-              <DateInput
-                id="pay-date"
-                value={dateText}
-                onChange={setDateText}
-                required
-              />
-            </div>
             <div>
               <Label htmlFor="pay-desc">Description</Label>
               <Input

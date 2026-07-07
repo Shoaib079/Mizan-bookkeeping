@@ -149,6 +149,15 @@ export function CorrectFxPurchaseForm({
       <Dialog open={open} title={`Edit ${currency} purchase`} onClose={onClose}>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
+            <Label htmlFor="cfp-date">Date (DD.MM.YYYY)</Label>
+            <DateInput
+              id="cfp-date"
+              value={dateText}
+              onChange={setDateText}
+              required
+            />
+          </div>
+          <div>
             <Label htmlFor="cfp-native">{currency} amount</Label>
             <Input
               id="cfp-native"
@@ -177,15 +186,6 @@ export function CorrectFxPurchaseForm({
                 label: a.name,
               }))}
               placeholder="Cash drawer…"
-            />
-          </div>
-          <div>
-            <Label htmlFor="cfp-date">Date (DD.MM.YYYY)</Label>
-            <DateInput
-              id="cfp-date"
-              value={dateText}
-              onChange={setDateText}
-              required
             />
           </div>
           <div>

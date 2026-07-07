@@ -139,6 +139,15 @@ export function TransferForm({
     <Dialog open={open} title="Transfer between accounts" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
+          <Label htmlFor="xfer-date">Date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="xfer-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
+        <div>
           <Label htmlFor="xfer-from">From</Label>
           <Combobox
             id="xfer-from"
@@ -161,15 +170,6 @@ export function TransferForm({
         {sameAccount && (
           <ValidationHint>From and to accounts must be different.</ValidationHint>
         )}
-        <div>
-          <Label htmlFor="xfer-date">Date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="xfer-date"
-            value={dateText}
-            onChange={setDateText}
-            required
-          />
-        </div>
         <div>
           <Label htmlFor="xfer-amount">Amount (TRY)</Label>
           <MoneyInput

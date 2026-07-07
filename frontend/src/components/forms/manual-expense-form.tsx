@@ -514,6 +514,15 @@ export function ManualExpenseForm({
           onDismiss={handleDeclineResume}
         />
       )}
+      <div className="mb-4">
+        <Label htmlFor="exp-date">Date (DD.MM.YYYY)</Label>
+        <DateInput
+          id="exp-date"
+          value={dateText}
+          onChange={setDateText}
+          required
+        />
+      </div>
       {allowSalaryMode && (
         <ExpenseRecordKindToggle
           value={recordKind}
@@ -528,15 +537,6 @@ export function ManualExpenseForm({
             Posts through staff salary payable (same as Staff → Pay salary). Pick
             the salary month separately from the payment date.
           </p>
-          <div className="mb-3">
-            <Label htmlFor="exp-salary-date">Date (DD.MM.YYYY)</Label>
-            <DateInput
-              id="exp-salary-date"
-              value={dateText}
-              onChange={setDateText}
-              required
-            />
-          </div>
           <div className="mb-3">
             <Label htmlFor="exp-salary-employee">Employee</Label>
             <Combobox
@@ -569,15 +569,6 @@ export function ManualExpenseForm({
         </>
       ) : (
       <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <Label htmlFor="exp-date">Date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="exp-date"
-            value={dateText}
-            onChange={setDateText}
-            required
-          />
-        </div>
         <ExpenseItemTypeahead
           entityId={entityId}
           value={itemName}

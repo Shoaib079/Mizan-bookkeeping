@@ -298,6 +298,15 @@ export function GroupSaleForm({
       embedded={embedded}
     >
       <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          <Label htmlFor="group-sale-date">Sale date</Label>
+          <DateInput
+            id="group-sale-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
         {!customerId && (
           <div>
             <Label htmlFor="group-sale-agency">Agency</Label>
@@ -309,25 +318,14 @@ export function GroupSaleForm({
             />
           </div>
         )}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="group-sale-date">Sale date</Label>
-            <DateInput
-              id="group-sale-date"
-              value={dateText}
-              onChange={setDateText}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="group-sale-currency">Booking currency</Label>
-            <Combobox
-              id="group-sale-currency"
-              options={currencyOptions}
-              value={currency}
-              onValueChange={setCurrency}
-            />
-          </div>
+        <div>
+          <Label htmlFor="group-sale-currency">Booking currency</Label>
+          <Combobox
+            id="group-sale-currency"
+            options={currencyOptions}
+            value={currency}
+            onValueChange={setCurrency}
+          />
         </div>
 
         {isForex && (

@@ -154,11 +154,6 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
   return (
     <Dialog open={open} title="Allocate profit to partners" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Dr Retained earnings (3100), Cr Partner capital (3300) per ownership
-          share. Review the split before confirming.
-        </p>
-
         <div>
           <Label htmlFor="alloc-date">Allocation date</Label>
           <DateInput
@@ -167,6 +162,11 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
             onChange={setAllocationDateText}
           />
         </div>
+
+        <p className="text-sm text-muted-foreground">
+          Dr Retained earnings (3100), Cr Partner capital (3300) per ownership
+          share. Review the split before confirming.
+        </p>
 
         <div>
           <Label htmlFor="alloc-amount">Profit amount (TRY)</Label>

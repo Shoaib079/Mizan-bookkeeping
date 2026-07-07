@@ -155,11 +155,6 @@ export function StaffExtraDaysForm({
       embedded={embedded}
     >
       <form onSubmit={onSubmit} className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Pay for work on days off. Total is days × per-day rate. Leave pay-from
-          empty to accrue now and pay cash later.
-        </p>
-
         <div>
           <Label htmlFor="extra-days-date">Payment date</Label>
           <DateInput
@@ -168,6 +163,10 @@ export function StaffExtraDaysForm({
             onChange={setDateText}
           />
         </div>
+        <p className="text-sm text-muted-foreground">
+          Pay for work on days off. Total is days × per-day rate. Leave pay-from
+          empty to accrue now and pay cash later.
+        </p>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

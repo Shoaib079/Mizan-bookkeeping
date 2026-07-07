@@ -151,6 +151,15 @@ export function SupplierPaymentForm({
   return (
     <FormDialogShell embedded={embedded} open={open} title="Record payment" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <Label htmlFor="pay-date">Payment date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="pay-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
         {balanceKurus !== undefined && (
           <p className="text-sm text-muted-foreground">
             {isSupplierAdvanceBalance(balanceKurus)
@@ -161,15 +170,6 @@ export function SupplierPaymentForm({
             {formatSupplierPayableBalance(balanceKurus)}
           </p>
         )}
-        <div>
-          <Label htmlFor="pay-date">Payment date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="pay-date"
-            value={dateText}
-            onChange={setDateText}
-            required
-          />
-        </div>
         <div>
           <Label htmlFor="pay-amount">Amount (TRY)</Label>
           <MoneyInput

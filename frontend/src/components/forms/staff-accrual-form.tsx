@@ -160,6 +160,15 @@ export function StaffAccrualForm({
       onClose={onClose}
     >
       <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <Label htmlFor="acc-date">Accrual date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="acc-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
         <p className="text-xs text-muted-foreground">
           Accrues salary payable ({payCurrency}). No cash movement.
         </p>
@@ -189,15 +198,6 @@ export function StaffAccrualForm({
               ))}
             </Select>
           </div>
-        </div>
-        <div>
-          <Label htmlFor="acc-date">Accrual date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="acc-date"
-            value={dateText}
-            onChange={setDateText}
-            required
-          />
         </div>
         <div>
           <Label htmlFor="acc-amount">Amount ({payCurrency})</Label>

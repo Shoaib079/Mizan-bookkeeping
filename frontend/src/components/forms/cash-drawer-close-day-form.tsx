@@ -112,6 +112,15 @@ export function CashDrawerCloseDayForm({
   return (
     <Dialog open={open} title="Close drawer day" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <Label htmlFor="close-day-date">Session date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="close-day-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
         <p className="text-sm text-muted-foreground">
           Count the drawer for a day, compare to the ledger balance, and post
           over/short to 5400. Links any movements recorded that day.
@@ -127,15 +136,6 @@ export function CashDrawerCloseDayForm({
               label: a.name,
             }))}
             placeholder="Cash account…"
-          />
-        </div>
-        <div>
-          <Label htmlFor="close-day-date">Session date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="close-day-date"
-            value={dateText}
-            onChange={setDateText}
-            required
           />
         </div>
         <div>

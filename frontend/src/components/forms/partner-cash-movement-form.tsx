@@ -160,6 +160,15 @@ export function PartnerCashMovementForm({
       onClose={onClose}
     >
       <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <Label htmlFor="pc-date">Date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="pc-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
         {balanceKurus !== undefined && (
           <p className="text-sm text-muted-foreground">
             {partnerBalanceHeading(balanceKurus)}:{" "}
@@ -171,15 +180,6 @@ export function PartnerCashMovementForm({
             ? "Partner withdraws cash from the business — balance may go negative (partner owes you)."
             : "Partner repays cash against an outstanding drawing."}
         </p>
-        <div>
-          <Label htmlFor="pc-date">Date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="pc-date"
-            value={dateText}
-            onChange={setDateText}
-            required
-          />
-        </div>
         <div>
           <Label htmlFor="pc-amount">Amount (TRY)</Label>
           <MoneyInput

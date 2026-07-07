@@ -131,6 +131,15 @@ export function DeliverySettlementForm({
     <Dialog open={open} title="Delivery settlement" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
+          <Label htmlFor="ds-date">Settlement date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="ds-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
+        <div>
           <Label htmlFor="ds-platform">Platform</Label>
           <Combobox
             id="ds-platform"
@@ -155,15 +164,6 @@ export function DeliverySettlementForm({
               label: a.name,
             }))}
             placeholder="Choose bank account…"
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="ds-date">Settlement date (DD.MM.YYYY)</Label>
-          <DateInput
-            id="ds-date"
-            value={dateText}
-            onChange={setDateText}
             required
           />
         </div>
