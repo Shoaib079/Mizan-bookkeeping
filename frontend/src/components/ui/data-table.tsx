@@ -34,11 +34,13 @@ export function DataTableBody({ children }: { children: React.ReactNode }) {
 export function DataTableRow({
   children,
   className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return <tr className={cn("hover:bg-muted/20", className)}>{children}</tr>;
+  ...props
+}: React.ComponentPropsWithoutRef<"tr">) {
+  return (
+    <tr className={cn("hover:bg-muted/20", className)} {...props}>
+      {children}
+    </tr>
+  );
 }
 
 export function DataTableCell({

@@ -338,7 +338,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/delivery/reports/[id]", kind: "drill-down" },
   { pattern: "/delivery/settlements", kind: "tab" },
   { pattern: "/expenses", kind: "redirect" },
-  { pattern: "/expenses/items", kind: "page" },
+  { pattern: "/expenses/items", kind: "redirect" },
   { pattern: "/uploads", kind: "redirect" },
   { pattern: "/suppliers", kind: "tab" },
   { pattern: "/suppliers/[id]", kind: "drill-down" },
@@ -613,7 +613,7 @@ export function backLinkForPathname(pathname: string): PageBackLink | null {
     },
     {
       test: (path) => path === "/expenses/items",
-      href: "/review/expenses",
+      href: "/review/expenses?view=items",
       label: "Expenses",
     },
   ];

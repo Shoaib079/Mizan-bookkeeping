@@ -28,6 +28,7 @@ import {
 import { currentMonthRange } from "@/lib/date-range";
 import { formatTry } from "@/lib/money";
 import type { TimeSeriesRead } from "@/lib/report-types";
+import { reviewExpensesFilteredHref } from "@/lib/use-expenses-review-url";
 import { apiFetch } from "@/lib/api";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { useEntityAccess } from "@/lib/use-entity-access";
@@ -206,7 +207,9 @@ export function CommandPalette({ deliveryEnabled }: Props) {
           router.push(`/suppliers/${row.supplier.id}`);
           break;
         case "item":
-          router.push(`/expenses/items#item-${row.item.id}`);
+          router.push(
+            reviewExpensesFilteredHref(row.item.id, row.item.canonical_name),
+          );
           break;
         case "page":
           router.push(row.href);

@@ -81,11 +81,11 @@ describe("unified record dialogs", () => {
 
   it("manual expense can record salary payments", () => {
     const form = read("forms/manual-expense-form.tsx");
-    const expensesPage = read("../app/expenses/page.tsx");
+    const reviewPanel = read("review/expenses-review-panel.tsx");
     expect(form).toContain("ExpenseRecordKindToggle");
     expect(form).toContain("StaffSalaryPaymentDialog");
-    expect(expensesPage).toContain("ExpenseRecordKindToggle");
-    expect(expensesPage).toContain("Pay salary");
+    expect(reviewPanel).toContain("ManualExpenseForm");
+    expect(reviewPanel).toContain("Record expense");
   });
 
   it("opens invoice and receipt review in a dialog on the record page", () => {

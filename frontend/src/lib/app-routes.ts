@@ -211,7 +211,7 @@ export const appRoutes: AppRoute[] = [
     group: "Workspace",
   },
   {
-    href: "/expenses/items",
+    href: "/review/expenses?view=items",
     label: "Expense items",
     keywords: "merge duplicate items",
     icon: Tags,

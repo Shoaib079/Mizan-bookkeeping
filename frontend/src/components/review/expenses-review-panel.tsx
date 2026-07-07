@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   CorrectExpenseForm,
@@ -10,6 +10,8 @@ import {
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
+import { ExpenseItemFilterPicker } from "@/components/review/expense-item-filter-picker";
+import { ExpenseItemsReviewPanel } from "@/components/review/expense-items-review-panel";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +34,7 @@ import { isPendingReviewStatus } from "@/lib/review-status";
 import { REVIEW_TAB_HREFS } from "@/lib/review-routes";
 import {
   EXPENSE_REVIEW_FILTERS,
+  EXPENSE_REVIEW_VIEWS,
   useExpensesReviewUrl,
 } from "@/lib/use-expenses-review-url";
 import { cn } from "@/lib/utils";
@@ -51,15 +54,23 @@ export function ExpensesReviewPanel() {
     to,
     filter,
     offset,
+    view,
+    expenseItemId,
+    expenseItemName,
     pageSize,
     setRange,
     setFilter,
     setOffset,
+    setView,
+    setExpenseItem,
+    clearExpenseItem,
     listQuery,
   } = useExpensesReviewUrl();
   const [items, setItems] = useState<CorrectableExpenseRow[]>([]);
   const [total, setTotal] = useState(0);
   const [totalAmountKurus, setTotalAmountKurus] = useState(0);
+  const [itemsPostedTotalKurus, setItemsPostedTotalKurus] = useState(0);
+  const [itemsLoading, setItemsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recordOpen, setRecordOpen] = useState(false);
@@ -71,11 +82,13 @@ export function ExpensesReviewPanel() {
   } | null>(null);
 
   const reload = useCallback(async () => {
-    if (!entityId) {
-      setItems([]);
-      setTotal(0);
-      setTotalAmountKurus(0);
-      setLoading(false);
+    if (!entityId || view !== "expenses") {
+      if (!entityId) {
+        setItems([]);
+        setTotal(0);
+        setTotalAmountKurus(0);
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);
@@ -95,11 +108,19 @@ export function ExpensesReviewPanel() {
     } finally {
       setLoading(false);
     }
-  }, [entityId, listQuery]);
+  }, [entityId, listQuery, view]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    setItems([]);
+    setTotal(0);
+    setTotalAmountKurus(0);
+    setItemsPostedTotalKurus(0);
+    setError(null);
+  }, [entityId]);
 
   function onSaved() {
     invalidateReviewCounts();
@@ -114,6 +135,15 @@ export function ExpensesReviewPanel() {
     filter === "all"
       ? ""
       : ` (${EXPENSE_REVIEW_FILTERS.find((t) => t.id === filter)?.label ?? filter})`;
+
+  const periodTotalKurus =
+    view === "items" ? itemsPostedTotalKurus : totalAmountKurus;
+
+  const periodTotalLabel = useMemo(() => {
+    if (view === "items") return "Posted total";
+    if (expenseItemId) return "Item total";
+    return "Period total";
+  }, [expenseItemId, view]);
 
   if (!entityId) {
     return (
@@ -143,146 +173,195 @@ export function ExpensesReviewPanel() {
       </div>
 
       <div className="mb-4 space-y-3">
-        <ReportDateRange
-          from={from}
-          to={to}
-          disabled={loading}
-          onChange={setRange}
-        />
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <ReportDateRange
+            from={from}
+            to={to}
+            disabled={loading && view === "expenses"}
+            onChange={setRange}
+          />
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">{periodTotalLabel}</p>
+            <p className="text-2xl font-semibold tabular-nums tracking-tight">
+              {(view === "expenses" && loading) ||
+              (view === "items" && itemsLoading)
+                ? "…"
+                : formatTry(periodTotalKurus)}
+            </p>
+          </div>
+        </div>
 
         <div className="flex flex-wrap gap-1">
-          {EXPENSE_REVIEW_FILTERS.map((tab) => (
+          {EXPENSE_REVIEW_VIEWS.map((tab) => (
             <button
               key={tab.id}
               type="button"
               className={cn(
-                "rounded-md px-3 py-1.5 text-sm",
-                filter === tab.id
+                "rounded-md px-3 py-1.5 text-sm font-medium",
+                view === tab.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80",
               )}
-              onClick={() => setFilter(tab.id)}
+              onClick={() => setView(tab.id)}
             >
               {tab.label}
             </button>
           ))}
         </div>
 
-        <p className="text-sm text-muted-foreground">
-          {loading ? (
-            "Loading…"
-          ) : (
-            <>
-              {total} expense{total === 1 ? "" : "s"} in this period
-              {filterLabel}
-              {total > 0 && (
+        {view === "expenses" && (
+          <>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <ExpenseItemFilterPicker
+                entityId={entityId}
+                itemId={expenseItemId}
+                itemName={expenseItemName}
+                disabled={loading}
+                onPick={(item) => setExpenseItem(item.id, item.canonical_name)}
+                onClear={clearExpenseItem}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-1">
+              {EXPENSE_REVIEW_FILTERS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-sm",
+                    filter === tab.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80",
+                  )}
+                  onClick={() => setFilter(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              {loading ? (
+                "Loading…"
+              ) : (
                 <>
-                  {" "}
-                  · total{" "}
-                  <span className="tabular-nums font-medium text-foreground">
-                    {formatTry(totalAmountKurus)}
-                  </span>
+                  {total} expense{total === 1 ? "" : "s"} in this period
+                  {filterLabel}
+                  {expenseItemName ? ` for ${expenseItemName}` : ""}
+                  {total > pageSize && (
+                    <>
+                      {" "}
+                      · showing {pageStart}–{pageEnd}
+                    </>
+                  )}
                 </>
               )}
-              {total > pageSize && (
-                <>
-                  {" "}
-                  · showing {pageStart}–{pageEnd}
-                </>
-              )}
-            </>
-          )}
-        </p>
+            </p>
+          </>
+        )}
       </div>
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={5} />}
-
-      {!loading && items.length === 0 && (
-        <EmptyState
-          icon={Wallet}
-          title="No expenses in this view"
-          hint="Change the dates or filter, or record a manual expense from Add."
+      {view === "items" ? (
+        <ExpenseItemsReviewPanel
+          from={from}
+          to={to}
+          highlightItemId={expenseItemId}
+          onDrillDown={setExpenseItem}
+          onTotalsChange={setItemsPostedTotalKurus}
+          onLoadingChange={setItemsLoading}
         />
-      )}
+      ) : (
+        <>
+          {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+          {loading && <TableSkeleton columns={5} />}
 
-      {!loading && items.length > 0 && (
-        <DataTable>
-          <DataTableHead>
-            <tr>
-              <DataTableHeaderCell>Date</DataTableHeaderCell>
-              <DataTableHeaderCell>Description</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-            </tr>
-          </DataTableHead>
-          <DataTableBody>
-            {items.map((row) => (
-              <DataTableRow key={row.id}>
-                <DataTableCell>{formatTrDate(row.expense_date)}</DataTableCell>
-                <DataTableCell>
-                  {row.written_item_description || row.description}
-                </DataTableCell>
-                <DataTableCell align="right">
-                  {formatTry(row.amount_kurus)}
-                </DataTableCell>
-                <DataTableCell>
-                  <StatusBadge status={row.status} />
-                </DataTableCell>
-                <DataTableCell align="right">
-                  {row.status === "posted" ? (
-                    <SubledgerRowActions
-                      row={{
-                        display_kind: "effective",
-                        journal_entry_id: row.journal_entry_id,
-                      }}
-                      onEdit={() => setCorrectExpense(row)}
-                      onVoid={() =>
-                        setVoidTarget({
-                          expense_id: row.id,
-                          description:
-                            row.written_item_description || row.description,
-                        })
-                      }
-                    />
-                  ) : isPendingReviewStatus(row.status) ? (
-                    <span className="text-xs text-muted-foreground">
-                      Confirm via Add
-                    </span>
-                  ) : null}
-                </DataTableCell>
-              </DataTableRow>
-            ))}
-          </DataTableBody>
-        </DataTable>
-      )}
+          {!loading && items.length === 0 && (
+            <EmptyState
+              icon={Wallet}
+              title="No expenses in this view"
+              hint="Change the dates or filter, or record a manual expense from Add."
+            />
+          )}
 
-      {!loading && total > pageSize && (
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Page {Math.floor(offset / pageSize) + 1} of{" "}
-            {Math.ceil(total / pageSize)}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!canPrev}
-              onClick={() => setOffset(Math.max(0, offset - pageSize))}
-            >
-              Previous
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!canNext}
-              onClick={() => setOffset(offset + pageSize)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+          {!loading && items.length > 0 && (
+            <DataTable>
+              <DataTableHead>
+                <tr>
+                  <DataTableHeaderCell>Date</DataTableHeaderCell>
+                  <DataTableHeaderCell>Description</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  <DataTableHeaderCell>Status</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
+                </tr>
+              </DataTableHead>
+              <DataTableBody>
+                {items.map((row) => (
+                  <DataTableRow key={row.id}>
+                    <DataTableCell>{formatTrDate(row.expense_date)}</DataTableCell>
+                    <DataTableCell>
+                      {row.written_item_description || row.description}
+                    </DataTableCell>
+                    <DataTableCell align="right">
+                      {formatTry(row.amount_kurus)}
+                    </DataTableCell>
+                    <DataTableCell>
+                      <StatusBadge status={row.status} />
+                    </DataTableCell>
+                    <DataTableCell align="right">
+                      {row.status === "posted" ? (
+                        <SubledgerRowActions
+                          row={{
+                            display_kind: "effective",
+                            journal_entry_id: row.journal_entry_id,
+                          }}
+                          onEdit={() => setCorrectExpense(row)}
+                          onVoid={() =>
+                            setVoidTarget({
+                              expense_id: row.id,
+                              description:
+                                row.written_item_description || row.description,
+                            })
+                          }
+                        />
+                      ) : isPendingReviewStatus(row.status) ? (
+                        <span className="text-xs text-muted-foreground">
+                          Confirm via Add
+                        </span>
+                      ) : null}
+                    </DataTableCell>
+                  </DataTableRow>
+                ))}
+              </DataTableBody>
+            </DataTable>
+          )}
+
+          {!loading && total > pageSize && (
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Page {Math.floor(offset / pageSize) + 1} of{" "}
+                {Math.ceil(total / pageSize)}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!canPrev}
+                  onClick={() => setOffset(Math.max(0, offset - pageSize))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!canNext}
+                  onClick={() => setOffset(offset + pageSize)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <ManualExpenseForm

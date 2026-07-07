@@ -96,7 +96,7 @@ describe("navGroups", () => {
       "/settings/restaurant",
       "/settings/profile",
       "/onboarding/opening-balances",
-      "/expenses/items",
+      "/review/expenses?view=items",
     ];
     for (const href of expected) {
       expect([...hrefs].some((key) => key.startsWith(`${href}::`))).toBe(true);
@@ -415,14 +415,14 @@ describe("command palette (UX-B data-first search)", () => {
     expect(source).toContain("!a.hidden");
   });
 
-  it("routes item click to /expenses/items#item-{id}", async () => {
+  it("routes item click to filtered review expenses", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/command-palette.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("/expenses/items#item-${row.item.id}");
+    expect(source).toContain("reviewExpensesFilteredHref");
   });
 });
 
