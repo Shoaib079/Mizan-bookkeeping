@@ -5,6 +5,7 @@ import type {
   StatementLineClassification,
 } from "@/lib/banking-types";
 import type { ClassifyLinePayload } from "@/lib/statement-review-actions";
+import { classificationOption } from "@/lib/statement-classification-options";
 import type { StatementLineFormTargets } from "@/lib/statement-line-form-state";
 
 export function learnMatchTokenForLine(
