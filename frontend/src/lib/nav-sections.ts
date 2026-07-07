@@ -97,9 +97,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Accounts",
         match: (path) =>
           path === "/banking" ||
+          path === "/banking/banks" ||
+          path === "/banking/cards" ||
+          path === "/banking/fx" ||
+          path.startsWith("/banking/fx/") ||
           path.startsWith("/banking/accounts/") ||
-          path.startsWith("/banking/statements/") ||
-          path.startsWith("/banking/fx/"),
+          path.startsWith("/banking/statements/"),
       },
       {
         href: "/banking/transfers",
@@ -271,6 +274,9 @@ export const SIDEBAR_HIDDEN_HREFS = new Set([
   "/review/manual-journals",
   "/banking/transfers",
   "/banking/cash",
+  "/banking/banks",
+  "/banking/cards",
+  "/banking/fx",
   "/delivery/reports",
   "/delivery/settlements",
   "/delivery/platforms",
@@ -347,6 +353,9 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/customers/group-sales/[id]", kind: "drill-down" },
   { pattern: "/receivables", kind: "redirect" },
   { pattern: "/banking", kind: "tab" },
+  { pattern: "/banking/banks", kind: "page" },
+  { pattern: "/banking/cards", kind: "page" },
+  { pattern: "/banking/fx", kind: "page" },
   { pattern: "/banking/review", kind: "redirect" },
   { pattern: "/banking/transfers", kind: "tab" },
   { pattern: "/banking/cash", kind: "tab" },
@@ -470,6 +479,9 @@ export function pageTitleForPathname(pathname: string): string {
     "/staff": "Staff",
     "/partners": "Partners",
     "/banking": "Banking",
+    "/banking/banks": "Banks",
+    "/banking/cards": "Credit cards",
+    "/banking/fx": "Foreign currency",
     "/reports": "Reports",
     "/settings/restaurant": "Restaurant settings",
     "/settings/profile": "Your profile",
@@ -571,6 +583,16 @@ export function backLinkForPathname(pathname: string): PageBackLink | null {
     },
     {
       test: (path) => /^\/banking\/fx\/[^/]+$/.test(path),
+      href: "/banking/fx",
+      label: "Foreign currency",
+    },
+    {
+      test: (path) => path === "/banking/banks" || path === "/banking/cards",
+      href: "/banking",
+      label: "Banking",
+    },
+    {
+      test: (path) => path === "/banking/fx",
       href: "/banking",
       label: "Banking",
     },

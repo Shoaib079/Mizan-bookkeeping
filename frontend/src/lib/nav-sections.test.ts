@@ -78,14 +78,17 @@ const TAB_ONLY_HREFS = [
   "/review/manual-journals",
   "/banking/transfers",
   "/banking/cash",
+  "/banking/banks",
+  "/banking/cards",
+  "/banking/fx",
   "/delivery/reports",
   "/delivery/settlements",
   "/delivery/platforms",
 ] as const;
 
 describe("REGISTERED_PAGE_ROUTES", () => {
-  it("lists exactly 76 app pages", () => {
-    expect(REGISTERED_PAGE_ROUTES).toHaveLength(80);
+  it("lists exactly 83 app pages", () => {
+    expect(REGISTERED_PAGE_ROUTES).toHaveLength(83);
   });
 
   it("assigns each route exactly one entry kind", () => {
@@ -267,6 +270,28 @@ describe("backLinkForPathname", () => {
     expect(backLinkForPathname("/banking/accounts/acct-1/import")).toEqual({
       href: "/banking/accounts/acct-1",
       label: "Account",
+    });
+  });
+
+  it("maps FX wallet detail back to FX hub", () => {
+    expect(backLinkForPathname("/banking/fx/wallet-1")).toEqual({
+      href: "/banking/fx",
+      label: "Foreign currency",
+    });
+  });
+
+  it("maps banking branch lists back to hub", () => {
+    expect(backLinkForPathname("/banking/banks")).toEqual({
+      href: "/banking",
+      label: "Banking",
+    });
+    expect(backLinkForPathname("/banking/cards")).toEqual({
+      href: "/banking",
+      label: "Banking",
+    });
+    expect(backLinkForPathname("/banking/fx")).toEqual({
+      href: "/banking",
+      label: "Banking",
     });
   });
 
