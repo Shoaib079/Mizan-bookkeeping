@@ -189,6 +189,101 @@ def test_customer_payment_correct_ties_ar_control(
     assert books_balanced(db_session, restaurant_a.id)
 
 
+def test_customer_payment_fx_wallet_correct_preserves_native_quantity(
+    db_session, restaurant_a, seeded_accounts
+) -> None:
+    from app.core.fx.models import FxLedgerEntry
+    from app.core.fx.types import FxMovementType
+    from app.core.ledger.correction import correct_customer_payment
+    from app.core.receivables.models import CustomerLedgerEntry
+    from app.core.receivables.types import CustomerMovementType
+
+    fx_wallet = banking_service.create_money_account(
+        db_session,
+        restaurant_a.id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.FOREIGN_CURRENCY,
+            currency="USD",
+            name="USD Wallet",
+        ),
+    )
+    with entity_context(db_session, restaurant_a.id):
+        customer = Customer(name="Agency Group")
+        db_session.add(customer)
+        db_session.commit()
+        db_session.refresh(customer)
+        customer_id = customer.id
+
+    receivables_posting.post_credit_sale(
+        db_session,
+        restaurant_a.id,
+        customer_id,
+        sale_date=date(2026, 5, 28),
+        amount_kurus=1_372_800,
+        description="Group sale",
+        actor_id=ACTOR_ID,
+    )
+
+    # Mistyped TRY book value (44 TRY) with $300 received — real fix is ~13.200 TRY.
+    payment = receivables_posting.post_customer_payment(
+        db_session,
+        restaurant_a.id,
+        customer_id,
+        payment_date=date(2026, 7, 28),
+        amount_kurus=4_400,
+        description="Customer payment",
+        actor_id=ACTOR_ID,
+        payment_account_id=fx_wallet.gl_account_id,
+        payment_native_quantity=30_000,
+    )
+
+    corrected_try = 1_320_000  # 300 USD × 44,00 TRY/USD
+    result = correct_customer_payment(
+        db_session,
+        restaurant_a.id,
+        payment.journal_entry.id,
+        payment_date=date(2026, 7, 28),
+        amount_kurus=corrected_try,
+        description="Customer payment (corrected)",
+        actor_id=ACTOR_ID,
+        payment_account_id=fx_wallet.gl_account_id,
+        payment_native_quantity=30_000,
+    )
+
+    with entity_context(db_session, restaurant_a.id):
+        corrected_row = db_session.scalar(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.journal_entry_id == result.corrected.id,
+                CustomerLedgerEntry.movement_type == CustomerMovementType.PAYMENT_RECEIVED,
+            )
+        )
+        assert corrected_row is not None
+        assert corrected_row.forex_currency == "USD"
+        assert corrected_row.payment_native_quantity == 30_000
+        assert corrected_row.amount_kurus == -corrected_try
+
+        fx_row = db_session.scalar(
+            select(FxLedgerEntry).where(
+                FxLedgerEntry.journal_entry_id == result.corrected.id
+            )
+        )
+        assert fx_row is not None
+        assert fx_row.movement_type == FxMovementType.RECEIPT
+        assert fx_row.native_quantity == 30_000
+        assert fx_row.try_cost_kurus == corrected_try
+
+        wallet_balance = fx_ledger.native_quantity_balance(
+            db_session, restaurant_a.id, fx_wallet.id
+        )
+        assert wallet_balance == 30_000
+
+    ar_id = seeded_accounts[ACCOUNTS_RECEIVABLE_CODE]
+    ar_gl = gl_asset_balance(db_session, restaurant_a.id, ar_id)
+    subledger = customer_subledger_total(db_session, restaurant_a.id)
+    assert ar_gl == subledger == 1_372_800 - corrected_try
+    assert books_balanced(db_session, restaurant_a.id)
+
+
 def test_fx_purchase_correct_ties_fx_control(db_session, restaurant_a, seeded_accounts) -> None:
     drawer = banking_service.create_money_account(
         db_session,

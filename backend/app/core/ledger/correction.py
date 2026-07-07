@@ -567,10 +567,13 @@ def correct_customer_payment(
     description: str,
     actor_id: uuid.UUID,
     payment_account_id: uuid.UUID,
+    payment_native_quantity: int | None = None,
     reason: str | None = None,
     void_date: date | None = None,
     period_unlock_reason: str | None = None,
 ) -> SubledgerCorrectionResult:
+    from app.features.banking.models import MoneyAccount, MoneyAccountKind
+
     if amount_kurus <= 0:
         raise ValueError("amount_kurus must be positive")
 
@@ -596,6 +599,26 @@ def correct_customer_payment(
                 f"Payment of {amount_kurus} exceeds receivable balance"
             )
 
+        new_money_account = session.scalar(
+            select(MoneyAccount).where(
+                MoneyAccount.entity_id == entity_id,
+                MoneyAccount.gl_account_id == payment_account_id,
+            )
+        )
+        is_fx_wallet = (
+            new_money_account is not None
+            and new_money_account.account_kind == MoneyAccountKind.FOREIGN_CURRENCY
+        )
+        if is_fx_wallet:
+            if payment_native_quantity is None or payment_native_quantity <= 0:
+                raise ValueError(
+                    "FX wallet payment requires a positive payment_native_quantity"
+                )
+        elif payment_native_quantity is not None:
+            raise ValueError(
+                "payment_native_quantity is only allowed for FX wallet receipts"
+            )
+
     def after_gl(
         sess: Session,
         _original: JournalEntry,
@@ -604,6 +627,17 @@ def correct_customer_payment(
     ) -> None:
         original_row = _get_customer_ledger_row(sess, journal_entry_id)
         customer_id = original_row.customer_id
+
+        money_account = sess.scalar(
+            select(MoneyAccount).where(
+                MoneyAccount.entity_id == entity_id,
+                MoneyAccount.gl_account_id == payment_account_id,
+            )
+        )
+        corrected_is_fx = (
+            money_account is not None
+            and money_account.account_kind == MoneyAccountKind.FOREIGN_CURRENCY
+        )
 
         _append_customer_reversal(
             sess, original_row, reversal, actor_id=actor_id, void_date=void_date
@@ -619,7 +653,33 @@ def correct_customer_payment(
             journal_entry_id=corrected.id,
             reference_type=original_row.reference_type,
             reference_id=original_row.reference_id,
+            forex_currency=money_account.currency if corrected_is_fx else None,
+            payment_native_quantity=(
+                payment_native_quantity if corrected_is_fx else None
+            ),
         )
+
+        original_fx = sess.scalar(
+            select(FxLedgerEntry).where(
+                FxLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if original_fx is not None:
+            _append_fx_reversal(
+                sess, original_fx, reversal, actor_id=actor_id, void_date=void_date
+            )
+        if corrected_is_fx and money_account is not None:
+            record_fx_movement(
+                sess,
+                money_account.id,
+                movement_date=payment_date,
+                movement_type=FxMovementType.RECEIPT,
+                native_quantity=payment_native_quantity,
+                try_cost_kurus=amount_kurus,
+                description=description,
+                actor_id=actor_id,
+                journal_entry_id=corrected.id,
+            )
 
     def build_lines(sess: Session) -> list[PostingLine]:
         ar_account = sess.scalar(

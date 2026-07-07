@@ -330,6 +330,7 @@ def correct_customer_payment_entry(
         description=payload.description,
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
+        payment_native_quantity=payload.payment_native_quantity,
         reason=reason,
         void_date=void_date,
         period_unlock_reason=period_unlock_reason,

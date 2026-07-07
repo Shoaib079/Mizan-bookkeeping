@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none) |
 | **Next up**              | P5 — Delete company UI |
-| **Last completed slice** | Partner loan + capital statement classifications |
-| **Last commit/tag**      | `v0.review-expense-items` |
+| **Last completed slice** | Customer payment FX correction — preserve native quantity |
+| **Last commit/tag**      | `v0.customer-payment-fx-rate` |
 
 **Owner sign-off required** — agency group sales v2 touches FX receivable/payment paths (money-critical). **Follow-up (not in v2):** per-menu period report for group/agency sales.
 
@@ -1877,6 +1877,8 @@ Take the tested app to a real, secure production environment and put real data i
 | 2026-07-06 | Global Edit + Void on posted transactions       | `v0.global-edit-void`                                | Backend void APIs for expense/staff/partner/customer/supplier/FX subledger; UI Correct→Edit; SubledgerRowActions + VoidSubledgerDialog; strikethrough on voided/superseded rows; master records (staff/supplier/customer) stay active/inactive only |
 | 2026-07-06 | Duplicate record guard (expenses, sales, staff) | `v0.duplicate-record-guard`                          | `duplicate_guard.py` + `acknowledge_duplicate` on create schemas; HTTP 409 `duplicate_record`; frontend `useDuplicateRecordSubmit` on manual expense, partner fronted, credit/group sale, salary accrual/payment/advance/extra days; 3 pytest + vitest |
 | 2026-07-06 | Staff extra days + accrual consolidation        | `v0.staff-extra-days-accrual`                          | Global one-accrual-per-period (effective rows + pay-time correction); migration `077` `extra_days`; `EXTRA_DAYS_ACCRUED`/`PAID`; accrual-only salary (`amount_minor=0`); extra days in pay-salary dialog without paying now; date before employee (Expenses + Add hub); accrual form month reset fix; 4+ pytest |
+| 2026-07-07 | Customer payment FX correction — native qty | `v0.customer-payment-fx-correct-native` | `correct_customer_payment` persists `forex_currency` + `payment_native_quantity`; reverses/re-posts FX wallet RECEIPT on void-and-reenter; service passes `payment_native_quantity`; pytest |
+| 2026-07-07 | Customer payment FX rate + ledger edit | `v0.customer-payment-fx-rate` | Rate × USD amount auto-fills TRY book value (record + correct forms); fix `payment_received` Actions column so Edit/Void show on customer ledger |
 | 2026-07-07 | Partner loan + capital statement classify | `v0.partner-loan-capital-statement` | Rename loan_receipt → "Loan received"; add partner_capital_contribution (Dr bank / Cr 3300), partner_loan_receipt/payment (Cr/Dr 2200 per partner); generic loan for bank/friend |
 | 2026-07-07 | Review expenses — expense items tab | `v0.review-expense-items` | **Expenses \| Items** sub-tabs on `/review/expenses`; item picker filters expense list (`expense_item_id`); Items tab shows posted spend per item (time-series) + owner merge; `/expenses/items` → redirect; ⌘K item → filtered expenses; period/item/posted total top-right |
 | 2026-07-07 | Statement bulk checkbox UX | `v0.statement-bulk-checkbox-ux` | Always-visible tick next to date + header select-all; per-line post/correct eligibility fixes disabled checkboxes on Posted tab |
