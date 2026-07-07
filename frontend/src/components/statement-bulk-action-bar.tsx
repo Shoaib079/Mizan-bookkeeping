@@ -139,6 +139,9 @@ export function StatementBulkActionBar({
       case "partner_drawing":
       case "partner_reimbursement":
       case "partner_drawing_repayment":
+      case "partner_capital_contribution":
+      case "partner_loan_receipt":
+      case "partner_loan_payment":
         return (
           <Combobox
             value={targets.partnerId}

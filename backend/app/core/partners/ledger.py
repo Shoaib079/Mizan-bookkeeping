@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import (
     CAPITAL_MOVEMENT_TYPES,
+    LOAN_MOVEMENT_TYPES,
     REIMBURSEMENT_MOVEMENT_TYPES,
     WRITABLE_MOVEMENT_TYPES,
     PartnerMovementType,
@@ -38,6 +39,10 @@ class OverpaymentError(PartnerLedgerError):
 
 class OverRepaymentError(PartnerLedgerError):
     """Drawing repayment would exceed amount owed by partner."""
+
+
+class OverLoanRepaymentError(PartnerLedgerError):
+    """Loan repayment would exceed amount owed to partner."""
 
 
 def persist_partner_opening_entry(
@@ -228,6 +233,26 @@ def capital_balance_kurus(
         return _read()
 
 
+def loan_balance_kurus(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    """Net partner loan balance — positive means the business owes the partner."""
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    def _read() -> int:
+        partner = session.get(Partner, partner_id)
+        if partner is None:
+            raise LookupError("Partner not found")
+        return _sum_balance(session, partner_id, LOAN_MOVEMENT_TYPES)
+
+    if get_current_entity_id() == entity_id:
+        return _read()
+
+    with entity_context(session, entity_id):
+        return _read()
+
+
 def current_balance_kurus(
     session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
 ) -> int:
@@ -255,7 +280,12 @@ def entity_capital_total_kurus(session: Session, entity_id: uuid.UUID) -> int:
         return _sum_balance(
             session,
             None,
-            frozenset({PartnerMovementType.PROFIT_ALLOCATION}),
+            frozenset(
+                {
+                    PartnerMovementType.PROFIT_ALLOCATION,
+                    PartnerMovementType.CAPITAL_CONTRIBUTION,
+                }
+            ),
         )
 
 

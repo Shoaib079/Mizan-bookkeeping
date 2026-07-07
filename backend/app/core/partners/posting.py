@@ -10,11 +10,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.default_chart import (
+    LOANS_PAYABLE_CODE,
     OWNER_DRAWINGS_CODE,
+    PARTNER_CAPITAL_CODE,
     PARTNER_REIMBURSEMENT_PAYABLE_CODE,
 )
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
+from app.core.banking import statement_posting
 from app.core.ledger.models import JournalEntry, JournalEntrySource
 from app.core.ledger.posting import InvalidAccountError, PostingLine, prepare_journal_entry
 from app.core.partners import ledger as partner_ledger
@@ -55,6 +58,20 @@ class PartnerDrawingRepaymentPostResult:
     journal_entry: JournalEntry
     partner_ledger_entry: PartnerLedgerEntry
     balance_kurus: int
+
+
+@dataclass(frozen=True, slots=True)
+class PartnerCapitalContributionPostResult:
+    journal_entry: JournalEntry
+    partner_ledger_entry: PartnerLedgerEntry
+    balance_kurus: int
+
+
+@dataclass(frozen=True, slots=True)
+class PartnerLoanMovementPostResult:
+    journal_entry: JournalEntry
+    partner_ledger_entry: PartnerLedgerEntry
+    loan_balance_kurus: int
 
 
 def _get_partner(session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID) -> Partner:
@@ -473,4 +490,226 @@ def post_drawing_repayment(
             journal_entry=journal_entry,
             partner_ledger_entry=partner_entry,
             balance_kurus=balance,
+        )
+
+
+def build_capital_contribution_lines(
+    *,
+    payment_account_id: uuid.UUID,
+    partner_capital_id: uuid.UUID,
+    amount_kurus: int,
+) -> list[PostingLine]:
+    if amount_kurus <= 0:
+        raise ValueError("capital contribution amount must be positive kuruş")
+    return [
+        PostingLine(
+            account_id=payment_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.DEBIT,
+        ),
+        PostingLine(
+            account_id=partner_capital_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.CREDIT,
+        ),
+    ]
+
+
+def post_capital_contribution(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    *,
+    contribution_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+) -> PartnerCapitalContributionPostResult:
+    """Partner invests equity — Dr bank / Cr 3300; capital subledger +amount."""
+    if amount_kurus <= 0:
+        raise ValueError("amount_kurus must be positive")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        _get_partner(session, entity_id, partner_id)
+        payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
+        capital_gl = _chart_account(session, PARTNER_CAPITAL_CODE)
+
+        lines = build_capital_contribution_lines(
+            payment_account_id=payment_gl.id,
+            partner_capital_id=capital_gl.id,
+            amount_kurus=amount_kurus,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            contribution_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
+        )
+
+        partner_entry = partner_ledger.persist_partner_ledger_entry(
+            session,
+            partner_id,
+            movement_date=contribution_date,
+            movement_type=PartnerMovementType.CAPITAL_CONTRIBUTION,
+            amount_kurus=amount_kurus,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+        )
+
+        session.commit()
+        session.refresh(journal_entry)
+        session.refresh(partner_entry)
+        _ = list(journal_entry.lines)
+
+        balance = _capital_balance(session, entity_id, partner_id)
+        return PartnerCapitalContributionPostResult(
+            journal_entry=journal_entry,
+            partner_ledger_entry=partner_entry,
+            balance_kurus=balance,
+        )
+
+
+def post_partner_loan_receipt(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    *,
+    receipt_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+) -> PartnerLoanMovementPostResult:
+    """Partner lends to the business — Dr bank / Cr 2200; loan subledger +amount."""
+    if amount_kurus <= 0:
+        raise ValueError("amount_kurus must be positive")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        _get_partner(session, entity_id, partner_id)
+        payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
+        loans_gl = _chart_account(session, LOANS_PAYABLE_CODE)
+
+        lines = statement_posting.build_loan_receipt_lines(
+            bank_gl_account_id=payment_gl.id,
+            loans_payable_account_id=loans_gl.id,
+            amount_kurus=amount_kurus,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            receipt_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.PARTNER_LOAN_RECEIVED,
+        )
+
+        partner_entry = partner_ledger.persist_partner_ledger_entry(
+            session,
+            partner_id,
+            movement_date=receipt_date,
+            movement_type=PartnerMovementType.PARTNER_LOAN_RECEIVED,
+            amount_kurus=amount_kurus,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+        )
+
+        session.commit()
+        session.refresh(journal_entry)
+        session.refresh(partner_entry)
+        _ = list(journal_entry.lines)
+
+        balance = partner_ledger.loan_balance_kurus(session, entity_id, partner_id)
+        return PartnerLoanMovementPostResult(
+            journal_entry=journal_entry,
+            partner_ledger_entry=partner_entry,
+            loan_balance_kurus=balance,
+        )
+
+
+def post_partner_loan_payment(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    *,
+    payment_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+) -> PartnerLoanMovementPostResult:
+    """Repay a partner loan — Dr 2200 / Cr bank; loan subledger -amount."""
+    if amount_kurus <= 0:
+        raise ValueError("amount_kurus must be positive")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        _get_partner(session, entity_id, partner_id)
+
+        current = partner_ledger.loan_balance_kurus(session, entity_id, partner_id)
+        if current <= 0:
+            raise partner_ledger.OverLoanRepaymentError(
+                "Partner has no outstanding loan balance to repay"
+            )
+        if amount_kurus > current:
+            raise partner_ledger.OverLoanRepaymentError(
+                f"Repayment of {amount_kurus} exceeds partner loan balance of {current}"
+            )
+
+        payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
+        loans_gl = _chart_account(session, LOANS_PAYABLE_CODE)
+
+        lines = statement_posting.build_loan_payment_lines(
+            loans_payable_account_id=loans_gl.id,
+            bank_gl_account_id=payment_gl.id,
+            amount_kurus=amount_kurus,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            payment_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.PARTNER_LOAN_REPAID,
+        )
+
+        partner_entry = partner_ledger.persist_partner_ledger_entry(
+            session,
+            partner_id,
+            movement_date=payment_date,
+            movement_type=PartnerMovementType.PARTNER_LOAN_REPAID,
+            amount_kurus=-amount_kurus,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+        )
+
+        session.commit()
+        session.refresh(journal_entry)
+        session.refresh(partner_entry)
+        _ = list(journal_entry.lines)
+
+        balance = partner_ledger.loan_balance_kurus(session, entity_id, partner_id)
+        return PartnerLoanMovementPostResult(
+            journal_entry=journal_entry,
+            partner_ledger_entry=partner_entry,
+            loan_balance_kurus=balance,
         )

@@ -56,7 +56,7 @@ def import_sign_review_reason(description: str, amount_kurus: int) -> str | None
             return None
         if _has_unnegated_hint(_LOAN_INFLOW_HINTS, text):
             return (
-                "Amount sign may be inverted — description looks like loan proceeds "
+                "Amount sign may be inverted — description looks like a loan "
                 "(inflow) but amount is negative. Check Borç/Alacak or debit_is_outflow mapping."
             )
         if _has_unnegated_hint(_INFLOW_HINTS, text) and not _has_unnegated_hint(

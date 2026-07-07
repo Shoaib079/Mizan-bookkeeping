@@ -187,13 +187,9 @@ export function StatementClassifyBar({
       body.delivery_platform_id = deliveryPlatformId;
     if (target === "staff_payment" || target === "staff_advance" || target === "staff_incentive")
       body.employee_id = employeeId;
-    if (
-      target === "partner_drawing" ||
-      target === "partner_reimbursement" ||
-      target === "partner_drawing_repayment"
-    ) {
-      body.partner_id = partnerId;
-    }
+  if (classificationOption(target)?.target === "partner") {
+    body.partner_id = partnerId;
+  }
     if (line?.candidate_supplier_ledger_entry_id) {
       body.confirm_supplier_ledger_entry_id =
         line.candidate_supplier_ledger_entry_id;

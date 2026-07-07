@@ -53,11 +53,7 @@ export function buildClassifyLinePayload(
   ) {
     body.employee_id = targets.employeeId;
   }
-  if (
-    classification === "partner_drawing" ||
-    classification === "partner_reimbursement" ||
-    classification === "partner_drawing_repayment"
-  ) {
+  if (classificationOption(classification)?.target === "partner") {
     body.partner_id = targets.partnerId;
   }
 
@@ -87,6 +83,9 @@ export function targetsRequiredForClassification(
     case "partner_drawing":
     case "partner_reimbursement":
     case "partner_drawing_repayment":
+    case "partner_capital_contribution":
+    case "partner_loan_receipt":
+    case "partner_loan_payment":
       return !targets.partnerId;
     case "transfer":
       return !targets.counterpartId;

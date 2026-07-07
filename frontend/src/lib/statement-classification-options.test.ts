@@ -18,6 +18,9 @@ describe("classificationOptionGroups", () => {
     const values = all.map((o) => o.value);
     expect(values).toContain("staff_payment");
     expect(values).toContain("partner_drawing");
+    expect(values).toContain("partner_capital_contribution");
+    expect(values).toContain("partner_loan_receipt");
+    expect(values).toContain("partner_loan_payment");
     expect(values).toContain("loan_payment");
     expect(values).toContain("bank_fee");
     expect(values).toContain("pos_commission");
