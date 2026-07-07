@@ -8,8 +8,8 @@ import {
 const DELIVERY_ON = { deliveryEnabled: true };
 
 describe("sidebarGroupRenderMode", () => {
-  it("renders Reports as a direct link", () => {
-    expect(sidebarGroupRenderMode("Reports", DELIVERY_ON)).toBe("link");
+  it("renders Reports as an accordion when opening balances is listed", () => {
+    expect(sidebarGroupRenderMode("Reports", DELIVERY_ON)).toBe("accordion");
   });
 
   it("does not expose removed domain groups", () => {
@@ -29,6 +29,17 @@ describe("sidebar-nav rendering", () => {
     expect(source).toContain('item.href !== "/"');
     expect(source).toContain("hubItems.map");
     expect(source).toContain("NavRowLink");
+  });
+
+  it("renders nested rows under Reports", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../components/layout/sidebar-nav.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(source).toContain("border-l border-border pl-2");
+    expect(source).toContain("...children");
   });
 
   it("does not render accordion controls after UX6 collapse", async () => {

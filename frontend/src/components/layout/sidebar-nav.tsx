@@ -82,15 +82,26 @@ export function SidebarNav({
         .filter((group) => group.label !== "Overview")
         .map((group) => {
           const items = filterNavItemsByEntitySettings(group.items, settings);
-          const item = items[0];
-          if (!item) return null;
+          if (items.length === 0) return null;
+          const [primary, ...children] = items;
 
           return (
             <div
               key={group.label}
               className="border-t border-border pt-2 first:border-t-0 first:pt-0"
             >
-              <NavRowLink item={item} pathname={pathname} />
+              <NavRowLink item={primary} pathname={pathname} />
+              {children.length > 0 && (
+                <div className="ml-3 mt-0.5 space-y-0.5 border-l border-border pl-2">
+                  {children.map((child) => (
+                    <NavRowLink
+                      key={child.href}
+                      item={child}
+                      pathname={pathname}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

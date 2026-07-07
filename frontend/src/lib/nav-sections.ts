@@ -284,6 +284,7 @@ export const SIDEBAR_HIDDEN_HREFS = new Set([
 ]);
 
 export const REPORTS_CARD_HREFS = [
+  "/onboarding/opening-balances",
   "/reports/profit-and-loss",
   "/reports/balance-sheet",
   "/reports/cash-flow",
@@ -388,7 +389,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/settings/expense-items", kind: "redirect" },
   { pattern: "/settings/restaurant", kind: "page" },
   { pattern: "/settings/profile", kind: "page" },
-  { pattern: "/onboarding/opening-balances", kind: "page" },
+  { pattern: "/onboarding/opening-balances", kind: "reports-card" },
   { pattern: "/review/receipts/[id]", kind: "drill-down" },
   { pattern: "/review/invoices/[id]", kind: "drill-down" },
   { pattern: "/sign-in/[[...sign-in]]", kind: "auth" },
@@ -438,7 +439,11 @@ export function sidebarHrefActiveForPathname(
     return pathnameMatchesBalancesIntent(pathname);
   }
   if (sidebarHref === "/reports") {
-    return pathname === "/reports" || pathname.startsWith("/reports/");
+    return (
+      pathname === "/reports" ||
+      pathname.startsWith("/reports/") ||
+      pathname === "/onboarding/opening-balances"
+    );
   }
   return pathname === sidebarHref || pathname.startsWith(`${sidebarHref}/`);
 }
@@ -595,6 +600,11 @@ export function backLinkForPathname(pathname: string): PageBackLink | null {
       test: (path) => path === "/banking/fx",
       href: "/banking",
       label: "Banking",
+    },
+    {
+      test: (path) => path === "/onboarding/opening-balances",
+      href: "/reports",
+      label: "Reports",
     },
     {
       test: (path) => path.startsWith("/reports/") && path !== "/reports",

@@ -37,7 +37,12 @@ describe("sidebarGroupStateForPathname", () => {
   it("returns empty for direct-link intents (UX6 collapsed sidebar)", () => {
     expect(sidebarGroupStateForPathname("/sales", SETTINGS)).toEqual({});
     expect(sidebarGroupStateForPathname("/record", SETTINGS)).toEqual({});
-    expect(sidebarGroupStateForPathname("/reports", SETTINGS)).toEqual({});
+  });
+
+  it("opens Reports when on opening balances", () => {
+    expect(
+      sidebarGroupStateForPathname("/onboarding/opening-balances", SETTINGS),
+    ).toEqual({ Reports: true });
   });
 
   it("returns empty on Dashboard (pinned outside groups)", () => {
@@ -50,9 +55,11 @@ describe("resolveSidebarGroupState", () => {
     stubBrowserStorage();
   });
 
-  it("returns empty when all sidebar groups are direct links", () => {
+  it("restores persisted Reports accordion on dashboard", () => {
     expect(resolveSidebarGroupState("/sales", SETTINGS, {})).toEqual({});
-    expect(resolveSidebarGroupState("/", SETTINGS, { Reports: true })).toEqual({});
+    expect(resolveSidebarGroupState("/", SETTINGS, { Reports: true })).toEqual({
+      Reports: true,
+    });
   });
 });
 
@@ -93,10 +100,14 @@ describe("collapsible group labels", () => {
 });
 
 describe("sidebarGroupRenderMode", () => {
-  it("Reports is always a direct link", () => {
+  it("renders Reports as accordion with opening balances listed", () => {
     for (const label of ["Reports"] as const) {
-      expect(sidebarGroupRenderMode(label, { deliveryEnabled: true })).toBe("link");
-      expect(sidebarGroupRenderMode(label, { deliveryEnabled: false })).toBe("link");
+      expect(sidebarGroupRenderMode(label, { deliveryEnabled: true })).toBe(
+        "accordion",
+      );
+      expect(sidebarGroupRenderMode(label, { deliveryEnabled: false })).toBe(
+        "accordion",
+      );
     }
   });
 });

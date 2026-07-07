@@ -10,6 +10,7 @@ import {
   CreditCard,
   HandCoins,
   Handshake,
+  Landmark,
   LayoutDashboard,
   ScanSearch,
   Scale,
@@ -173,6 +174,13 @@ export const appRoutes: AppRoute[] = [
   { href: "/banking/cash", label: "Cash drawer", icon: Wallet, group: "Cash & bank" },
   { href: "/reports", label: "Reports", icon: BarChart3, group: "Reports" },
   {
+    href: "/onboarding/opening-balances",
+    label: "Opening balances",
+    keywords: "go-live opening balance cash bank equity supplier",
+    icon: Landmark,
+    group: "Reports",
+  },
+  {
     href: "/reports/ledger",
     label: "General ledger",
     keywords: "journal entries ledger all entries correct manual bank charges",
@@ -200,12 +208,6 @@ export const appRoutes: AppRoute[] = [
     label: "Your profile",
     keywords: "display name user",
     icon: UserCircle,
-    group: "Workspace",
-  },
-  {
-    href: "/onboarding/opening-balances",
-    label: "Opening balances",
-    icon: Settings,
     group: "Workspace",
   },
   {

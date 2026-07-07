@@ -27,7 +27,9 @@ import { useFormDraft } from "@/lib/form-draft";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import {
+  defaultBankAccountId,
   defaultMainDrawerId,
+  formatMoneyAccountOptionLabel,
   loadBankAndCashAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
@@ -443,7 +445,7 @@ export default function OpeningBalancesPage() {
               { value: "", label: "Bank / cash…" },
               ...moneyAccounts.map((a) => ({
                 value: a.id,
-                label: a.name,
+                label: formatMoneyAccountOptionLabel(a),
               })),
             ]}
             placeholder="Bank / cash…"
@@ -545,19 +547,65 @@ export default function OpeningBalancesPage() {
             </div>
 
             <div>
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-sm font-semibold">Balance lines</h2>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    const line = newLine();
-                    setLines((prev) => [...prev, line]);
-                    setFocusLineId(line.id);
-                  }}
-                >
-                  Add line
-                </Button>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-semibold">Balance lines</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    For cash drawer and bank balances, choose type{" "}
+                    <span className="font-medium">Bank / cash account</span> and
+                    pick the account — one line per account. Balance with equity,
+                    payables, or other GL lines.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!defaultMainDrawerId(moneyAccounts)}
+                    onClick={() => {
+                      const drawerId = defaultMainDrawerId(moneyAccounts);
+                      if (!drawerId) return;
+                      const line: OpeningBalanceLineDraft = {
+                        ...newLine(),
+                        target: "money_account",
+                        moneyAccountId: drawerId,
+                      };
+                      setLines((prev) => [...prev, line]);
+                      setFocusLineId(line.id);
+                    }}
+                  >
+                    + Cash drawer
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!defaultBankAccountId(moneyAccounts)}
+                    onClick={() => {
+                      const bankId = defaultBankAccountId(moneyAccounts);
+                      if (!bankId) return;
+                      const line: OpeningBalanceLineDraft = {
+                        ...newLine(),
+                        target: "money_account",
+                        moneyAccountId: bankId,
+                      };
+                      setLines((prev) => [...prev, line]);
+                      setFocusLineId(line.id);
+                    }}
+                  >
+                    + Bank account
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const line = newLine();
+                      setLines((prev) => [...prev, line]);
+                      setFocusLineId(line.id);
+                    }}
+                  >
+                    Add line
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -587,14 +635,16 @@ export default function OpeningBalancesPage() {
                           };
                           if (target === "money_account") {
                             patch.moneyAccountId =
-                              defaultMainDrawerId(moneyAccounts) ?? "";
+                              defaultMainDrawerId(moneyAccounts) ??
+                              defaultBankAccountId(moneyAccounts) ??
+                              "";
                           }
                           updateLine(line.id, patch);
                         }}
                         className="w-36"
                       >
                         <option value="account">GL account</option>
-                        <option value="money_account">Bank / cash</option>
+                        <option value="money_account">Bank / cash account</option>
                         <option value="supplier">Supplier</option>
                         <option value="partner">Partner</option>
                         <option value="customer">Customer</option>

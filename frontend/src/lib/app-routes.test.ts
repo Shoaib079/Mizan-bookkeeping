@@ -27,6 +27,14 @@ describe("navGroups", () => {
     expect(navGroups.some((group) => group.label === "Set up")).toBe(false);
   });
 
+  it("lists Opening balances under Reports in the sidebar", () => {
+    const reports = navGroups.find((group) => group.label === "Reports");
+    expect(reports?.items.map((item) => item.href)).toEqual([
+      "/reports",
+      "/onboarding/opening-balances",
+    ]);
+  });
+
   it("keeps hub intents under Overview in sidebar order", () => {
     const overview = navGroups.find((group) => group.label === "Overview");
     expect(overview?.items.map((item) => item.href)).toEqual([

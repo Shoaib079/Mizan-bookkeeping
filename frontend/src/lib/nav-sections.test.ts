@@ -295,6 +295,13 @@ describe("backLinkForPathname", () => {
     });
   });
 
+  it("maps opening balances back to reports hub", () => {
+    expect(backLinkForPathname("/onboarding/opening-balances")).toEqual({
+      href: "/reports",
+      label: "Reports",
+    });
+  });
+
   it("maps report cards back to the reports hub", () => {
     expect(backLinkForPathname("/reports/profit-and-loss")).toEqual({
       href: "/reports",

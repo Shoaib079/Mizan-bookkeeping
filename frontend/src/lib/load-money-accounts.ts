@@ -38,6 +38,30 @@ export function defaultMainDrawerId(
   return (named ?? cash[0])?.id ?? null;
 }
 
+export function formatMoneyAccountKindLabel(kind: string): string {
+  switch (kind) {
+    case "bank":
+      return "Bank";
+    case "cash":
+      return "Cash drawer";
+    case "credit_card":
+      return "Credit card";
+    default:
+      return kind;
+  }
+}
+
+export function formatMoneyAccountOptionLabel(account: MoneyAccountOption): string {
+  return `${account.name} (${formatMoneyAccountKindLabel(account.account_kind)})`;
+}
+
+/** First bank account, if any. */
+export function defaultBankAccountId(
+  accounts: MoneyAccountOption[],
+): string | null {
+  return accounts.find((a) => a.account_kind === "bank")?.id ?? null;
+}
+
 /** Bank + cash accounts for payment pickers. */
 export async function loadBankAndCashAccounts(
   entityId: string,

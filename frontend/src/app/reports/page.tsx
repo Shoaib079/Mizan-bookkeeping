@@ -41,9 +41,20 @@ type ReportCard = {
   financial: boolean;
   asOf?: boolean;
   hideExport?: boolean;
+  skipRange?: boolean;
 };
 
 const reportCards: ReportCard[] = [
+  {
+    href: "/onboarding/opening-balances",
+    title: "Opening balances",
+    description: "Go-live date, cash and bank balances, payables, and equity.",
+    icon: Landmark,
+    category: "Setup",
+    financial: false,
+    hideExport: true,
+    skipRange: true,
+  },
   {
     href: "/reports/profit-and-loss",
     title: "Profit & loss",
@@ -215,9 +226,11 @@ function ReportsBody() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {visibleCards.map((card) => {
-          const href = card.asOf
-            ? `${card.href}?as_of=${range.to}`
-            : `${card.href}?${qs}`;
+          const href = card.skipRange
+            ? card.href
+            : card.asOf
+              ? `${card.href}?as_of=${range.to}`
+              : `${card.href}?${qs}`;
           return (
             <Link
               key={card.href}
