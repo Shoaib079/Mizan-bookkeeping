@@ -1508,6 +1508,14 @@ def classify_statement_line(
             if actor_id is None:
                 raise InvalidClassificationError("actor_id is required for bank charges")
 
+        elif classification == StatementLineClassification.POS_COMMISSION:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "pos_commission classification requires an outflow (negative amount_kurus)"
+                )
+            if actor_id is None:
+                raise InvalidClassificationError("actor_id is required for pos_commission")
+
         elif classification == StatementLineClassification.RENT_UTILITY:
             if line.amount_kurus >= 0:
                 raise InvalidClassificationError(
@@ -1891,6 +1899,50 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.BANK_FEE,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.POS_COMMISSION:
+        commission_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        try:
+            result = pos_posting.post_card_commission_from_statement(
+                session,
+                entity_id,
+                commission_date=line.transaction_date,
+                amount_kurus=commission_amount,
+                description=line.description,
+                actor_id=actor_id,
+                bank_statement_line_id=line.id,
+            )
+        except pos_posting.NothingToClearError as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        except pos_posting.CommissionExceedsClearingError as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.POS_COMMISSION
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            line.classification_source = StatementLineClassificationSource.MANUAL.value
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.POS_COMMISSION,
             match_token=match_token,
         )
         return ClassifyStatementLineResult(

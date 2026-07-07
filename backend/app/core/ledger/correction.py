@@ -102,6 +102,7 @@ VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
         JournalEntrySource.CARD_SALES,
         JournalEntrySource.POS_CARD_TIP,
         JournalEntrySource.POS_COMMISSION_SWEEP,
+        JournalEntrySource.POS_COMMISSION_STATEMENT,
         JournalEntrySource.DELIVERY_REPORT,
         JournalEntrySource.DELIVERY_SETTLEMENT,
         JournalEntrySource.DELIVERY_COMMISSION,

@@ -35,6 +35,13 @@ export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
     target: null,
   },
   {
+    value: "pos_commission",
+    label: "Card acquirer commission (clears card sales)",
+    hint: "POS/Kart komisyon — Dr bank charges / Cr card clearing (1400), not Cr bank",
+    direction: "outflow",
+    target: null,
+  },
+  {
     value: "delivery_settlement",
     label: "Delivery app payment",
     hint: "Trendyol, Getir, Yemeksepeti, Migros…",
@@ -142,7 +149,7 @@ export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
   {
     value: "bank_fee",
     label: "Bank fee / charge",
-    hint: "BSM, havale, EFT, commission — Dr bank charges / Cr bank",
+    hint: "BSM, havale, EFT, account fees — Dr bank charges / Cr bank",
     direction: "outflow",
     target: null,
   },
@@ -219,7 +226,9 @@ const DELIVERY_HINT =
   /TRENDYOL|GETIR|YEMEK|MIGROS|TYG\s|DELIVERY|MARKETPLACE|YEMEKSEPETI/i;
 const POS_HINT =
   /POS|KART|CARD|ÖKC|BKM|SANAL|VISA|MASTERCARD|NET\s*SAT/i;
-const BANK_FEE_HINT = /KOMISYON|BANKA|MASRAF|ÜCRET|EFT|HAVALE|BSM|BSMV/i;
+const POS_COMMISSION_HINT =
+  /POS.*KOM[İI]SYON|KOM[İI]SYON.*POS|KART.*KOM[İI]SYON|KOM[İI]SYON.*KART|BKM.*KOM[İI]SYON|ÖKC.*KOM[İI]SYON|POS\s*ÜCRET|POS\s*MASRAF/i;
+const BANK_FEE_HINT = /BANKA|MASRAF|ÜCRET|EFT|HAVALE|BSM|BSMV/i;
 const STORE_PURCHASE_HINT =
   /\bMIGROS\b|\bBIM\b|\bBİM\b|\bA101\b|\bSOK\b|\bŞOK\b|\bCARREFOUR\b|\bFILE\b|\bHAPPY\s*CENTER\b/i;
 const SALARY_HINT = /MAAŞ|MAAS|SALARY|ÜCRET\s*ÖD|UCRET\s*OD/i;
@@ -238,6 +247,7 @@ export function suggestClassificationForLine(line: {
     return "customer_payment";
   }
   if (line.amount_kurus < 0) {
+    if (POS_COMMISSION_HINT.test(text)) return "pos_commission";
     if (BANK_FEE_HINT.test(text)) return "bank_fee";
     if (STORE_PURCHASE_HINT.test(text)) return "store_purchase";
     if (SALARY_HINT.test(text)) return "staff_payment";

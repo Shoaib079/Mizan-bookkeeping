@@ -45,9 +45,35 @@ _FEE_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
 
 _BARE_FEE_TOKENS = frozenset({"komisyon", "komisyonu", "masraf", "masrafi", "ucret", "ucreti"})
 
+_POS_COMMISSION_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"\bpos\s+(?:komisyon|ucret|masraf)",
+        r"\b(?:komisyon|ucret|masraf)\s+pos\b",
+        r"\bkart\s+(?:komisyon|ucret|masraf)",
+        r"\b(?:komisyon|ucret|masraf)\s+kart\b",
+        r"\bbkm\s+komisyon",
+        r"\bkomisyon\s+bkm\b",
+        r"\bokc\s+komisyon",
+        r"\bkomisyon\s+okc\b",
+        r"\bpos\s+islem",
+        r"\bsanal\s+pos\s+komisyon",
+    )
+)
+
+
+def is_pos_commission_description(description: str) -> bool:
+    """True when the bank line looks like card-acquirer commission, not a transfer fee."""
+    normalized = _normalize_fee_text(description)
+    if not normalized:
+        return False
+    return any(pattern.search(normalized) for pattern in _POS_COMMISSION_PATTERNS)
+
 
 def is_bank_fee_description(description: str) -> bool:
     """True when the bank line description looks like a bank charge, not a payment."""
+    if is_pos_commission_description(description):
+        return False
     normalized = _normalize_fee_text(description)
     if not normalized:
         return False

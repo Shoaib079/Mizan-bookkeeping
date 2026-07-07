@@ -59,6 +59,7 @@ const JOURNAL_SOURCES = [
   "card_sales",
   "pos_card_tip",
   "pos_commission_sweep",
+  "pos_commission_statement",
   "delivery_report",
   "delivery_settlement",
   "delivery_commission",
@@ -118,6 +119,7 @@ function entryTotalKurus(lines: JournalEntryLine[]): number {
 const SOURCE_LABELS: Record<string, string> = {
   bank_fee: "bank charges",
   pos_commission_sweep: "bank commission",
+  pos_commission_statement: "card commission (statement)",
 };
 
 function sourceLabel(source: string): string {

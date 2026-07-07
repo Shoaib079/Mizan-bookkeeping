@@ -17,6 +17,7 @@ class StatementLineClassification(str, enum.Enum):
     SUPPLIER_PAYMENT = "supplier_payment"
     TRANSFER = "transfer"
     POS_SETTLEMENT = "pos_settlement"
+    POS_COMMISSION = "pos_commission"
     DELIVERY_SETTLEMENT = "delivery_settlement"
     BANK_FEE = "bank_fee"
     RENT_UTILITY = "rent_utility"

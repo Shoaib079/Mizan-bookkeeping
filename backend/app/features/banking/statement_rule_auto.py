@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.banking import statement_posting
-from app.core.banking.bank_fee_detect import is_bank_fee_description
+from app.core.banking.bank_fee_detect import is_bank_fee_description, is_pos_commission_description
 from app.core.expenses.posting import InvalidExpensePostingError, post_expense_entry
 from app.core.ledger.models import JournalEntrySource
 from app.features.banking.bank_fee_settings import get_bank_fee_auto_post_ceiling_kurus
@@ -419,6 +419,17 @@ def try_auto_post_detected_bank_fee(
     """Deterministic fee detect on import — no learned rule required."""
     if line.amount_kurus >= 0:
         return False
+    if is_pos_commission_description(line.description):
+        _route_rule_needs_review(
+            line,
+            classification=StatementLineClassification.POS_COMMISSION,
+            supplier_id=None,
+            review_reason=(
+                "Card acquirer commission — classify as card commission to clear "
+                "card sales clearing (1400), not bank charges"
+            ),
+        )
+        return True
     if not is_bank_fee_description(line.description):
         return False
 

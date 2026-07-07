@@ -28,6 +28,19 @@ def test_fee_descriptions_match(description: str) -> None:
 @pytest.mark.parametrize(
     "description",
     [
+        "POS KOMİSYONU INDIA GATE",
+        "KART KOMİSYONU BKM",
+        "BKM KOMİSYON 12,00",
+        "POS İŞLEM ÜCRETİ",
+    ],
+)
+def test_pos_commission_not_bank_fee(description: str) -> None:
+    assert is_bank_fee_description(description) is False
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
         "HAVALE TRENDYOL 5.000,00",
         "EFT METRO GIDA SAN TIC ODEME",
         "KOMİSYON",

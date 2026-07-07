@@ -58,6 +58,7 @@ export type StatementLineClassification =
   | "supplier_payment"
   | "transfer"
   | "pos_settlement"
+  | "pos_commission"
   | "delivery_settlement"
   | "bank_fee"
   | "rent_utility"

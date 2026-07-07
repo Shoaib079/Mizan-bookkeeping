@@ -36,6 +36,10 @@ class NothingToClearError(ValueError):
     """Card clearing balance is zero or negative — nothing to sweep as commission."""
 
 
+class CommissionExceedsClearingError(ValueError):
+    """Commission amount exceeds the current card-clearing residual."""
+
+
 class InTransitCardSalesError(ValueError):
     """Card sales not yet deposited — commission sweep would mis-book clearing."""
 
@@ -57,6 +61,30 @@ class CardCommissionClearanceResult:
     journal_entry: JournalEntry
     commission_kurus: int
     clearing_balance_before_kurus: int
+
+
+def build_card_commission_posting_lines(
+    *,
+    bank_charges_account_id: uuid.UUID,
+    clearing_account_id: uuid.UUID,
+    amount_kurus: int,
+) -> list[PostingLine]:
+    """GL pattern: debit bank charges, credit card sales clearing."""
+    if amount_kurus <= 0:
+        raise ValueError("commission amount must be positive kuruş")
+
+    return [
+        PostingLine(
+            account_id=bank_charges_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.DEBIT,
+        ),
+        PostingLine(
+            account_id=clearing_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.CREDIT,
+        ),
+    ]
 
 
 def build_pos_settlement_posting_lines(
@@ -371,18 +399,11 @@ def post_card_commission_clearance(
             )
 
         bank_charges_account = _get_account_by_code(session, BANK_CHARGES_CODE)
-        lines = [
-            PostingLine(
-                account_id=bank_charges_account.id,
-                amount_kurus=residual_kurus,
-                side=AccountNormalBalance.DEBIT,
-            ),
-            PostingLine(
-                account_id=clearing_account.id,
-                amount_kurus=residual_kurus,
-                side=AccountNormalBalance.CREDIT,
-            ),
-        ]
+        lines = build_card_commission_posting_lines(
+            bank_charges_account_id=bank_charges_account.id,
+            clearing_account_id=clearing_account.id,
+            amount_kurus=residual_kurus,
+        )
         journal_entry = prepare_journal_entry(
             session,
             entity_id,
@@ -400,6 +421,74 @@ def post_card_commission_clearance(
         return CardCommissionClearanceResult(
             journal_entry=journal_entry,
             commission_kurus=residual_kurus,
+            clearing_balance_before_kurus=residual_kurus,
+        )
+
+
+def post_card_commission_from_statement(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    commission_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    bank_statement_line_id: uuid.UUID | None = None,
+) -> CardCommissionClearanceResult:
+    """Book card acquirer commission from a bank statement outflow — Dr 5300 / Cr 1400.
+
+    Matches the per-settlement commission leg and the Cards "clear bank commission"
+    sweep, but for an explicit statement line amount instead of the full residual.
+    """
+    from app.features.banking import service as banking_service
+
+    if amount_kurus <= 0:
+        raise ValueError("commission amount must be positive kuruş")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+
+        clearing_account = _get_account_by_code(session, CARD_SALES_CLEARING_CODE)
+        residual_kurus = banking_service.gl_balance_kurus(
+            session, clearing_account.id, AccountNormalBalance.DEBIT
+        )
+        if residual_kurus <= 0:
+            raise NothingToClearError(
+                "Card clearing balance is zero or negative — record card deposits "
+                "before classifying commission"
+            )
+        if amount_kurus > residual_kurus:
+            raise CommissionExceedsClearingError(
+                f"Commission {amount_kurus} kuruş exceeds card clearing residual "
+                f"{residual_kurus} kuruş — review deposits and card sales first"
+            )
+
+        bank_charges_account = _get_account_by_code(session, BANK_CHARGES_CODE)
+        lines = build_card_commission_posting_lines(
+            bank_charges_account_id=bank_charges_account.id,
+            clearing_account_id=clearing_account.id,
+            amount_kurus=amount_kurus,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            commission_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.POS_COMMISSION_STATEMENT,
+        )
+
+        session.commit()
+        session.refresh(journal_entry)
+        _ = list(journal_entry.lines)
+
+        return CardCommissionClearanceResult(
+            journal_entry=journal_entry,
+            commission_kurus=amount_kurus,
             clearing_balance_before_kurus=residual_kurus,
         )
 

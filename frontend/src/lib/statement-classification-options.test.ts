@@ -20,6 +20,7 @@ describe("classificationOptionGroups", () => {
     expect(values).toContain("partner_drawing");
     expect(values).toContain("loan_payment");
     expect(values).toContain("bank_fee");
+    expect(values).toContain("pos_commission");
     expect(values).toContain("pos_settlement");
   });
 });
@@ -64,6 +65,15 @@ describe("suggestClassificationForLine", () => {
         description: "NET SATIŞ TUTARI INDIA GATE RESTAURANT",
       }),
     ).toBe("pos_settlement");
+  });
+
+  it("suggests pos commission for POS komisyon outflows", () => {
+    expect(
+      suggestClassificationForLine({
+        amount_kurus: -3_000,
+        description: "POS KOMİSYONU INDIA GATE RESTAURANT",
+      }),
+    ).toBe("pos_commission");
   });
 
   it("suggests bank fee for HAVALE outflows", () => {
