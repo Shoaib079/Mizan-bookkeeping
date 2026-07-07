@@ -17,7 +17,6 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTrDate } from "@/lib/money";
 import { canDiscardStatement, defaultStatementLineFilter, queueLines, replaceStatementLine } from "@/lib/statement-line-filters";
 import {
-  bulkModeForLines,
   toggleAllLineIds,
   toggleLineIdSet,
 } from "@/lib/statement-bulk-selection";
@@ -34,7 +33,6 @@ export default function StatementDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
-  const [bulkSelectEnabled, setBulkSelectEnabled] = useState(false);
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(() => new Set());
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -45,7 +43,6 @@ export default function StatementDetailPage() {
     setLoading(true);
     setError(null);
     setSelectedLineId(null);
-    setBulkSelectEnabled(false);
     setSelectedLineIds(new Set());
     setDiscardOpen(false);
     setDiscarding(false);
@@ -116,13 +113,7 @@ export default function StatementDetailPage() {
     return statement.lines.filter((line) => selectedLineIds.has(line.id));
   }, [statement, selectedLineIds]);
 
-  const bulkActionMode = useMemo(
-    () => bulkModeForLines(bulkSelectedLines),
-    [bulkSelectedLines],
-  );
-
-  const showBulkBar =
-    bulkSelectEnabled && bulkSelectedLines.length > 0 && bulkActionMode != null;
+  const showBulkBar = bulkSelectedLines.length > 0;
 
   const discardAllowed = useMemo(
     () => (statement ? canDiscardStatement(statement.lines) : false),
@@ -211,8 +202,8 @@ export default function StatementDetailPage() {
               </Button>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Classify one line at a time in the bar below, or use Select multiple in
-              the ledger to post or correct a batch with the same classification.
+              Tick lines next to the date to post or correct a batch. Click a row for
+              one-at-a-time classification in the bar below.
             </p>
             {!discardAllowed && (
               <p className="mt-2 text-xs text-muted-foreground">
@@ -265,11 +256,10 @@ export default function StatementDetailPage() {
               pickers={pickers}
               onLineDone={handlePosted}
               onComplete={() => {
-                if (selectedLineIds.size === 0) setBulkSelectEnabled(false);
+                if (selectedLineIds.size === 0) return;
               }}
               onClearSelection={() => {
                 setSelectedLineIds(new Set());
-                setBulkSelectEnabled(false);
               }}
             />
           ) : (
@@ -290,22 +280,14 @@ export default function StatementDetailPage() {
             skippedDuplicateCount={statement.skipped_duplicate_count}
             defaultFilter={ledgerDefaultFilter}
             onSelectLine={setSelectedLineId}
-            bulkSelectEnabled={bulkSelectEnabled}
-            bulkActionMode={
-              bulkActionMode ??
-              (ledgerDefaultFilter === "queue" ? "post" : "correct")
-            }
             selectedLineIds={selectedLineIds}
-            onToggleBulkSelect={(enabled) => {
-              setBulkSelectEnabled(enabled);
-              if (!enabled) setSelectedLineIds(new Set());
-            }}
             onToggleLineChecked={(lineId, checked) => {
               setSelectedLineIds((prev) => toggleLineIdSet(prev, lineId, checked));
             }}
             onSelectAllVisible={(lineIds, select) => {
               setSelectedLineIds((prev) => toggleAllLineIds(prev, lineIds, select));
             }}
+            onClearSelection={() => setSelectedLineIds(new Set())}
           />
         </>
       )}

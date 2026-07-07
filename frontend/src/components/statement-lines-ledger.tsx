@@ -1,10 +1,9 @@
 "use client";
 
-/** Full statement line ledger — search, filters, row selection, optional bulk checkboxes. */
+/** Full statement line ledger — search, filters, row selection, bulk checkboxes by date. */
 
 import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
   DataTable,
   DataTableBody,
@@ -17,10 +16,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import type { BankStatementLine } from "@/lib/banking-types";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { classificationLabel } from "@/lib/statement-classification-options";
-import {
-  isBulkSelectableLine,
-  type StatementBulkMode,
-} from "@/lib/statement-bulk-selection";
+import { canBulkSelectLine } from "@/lib/statement-bulk-selection";
 import {
   filterStatementLines,
   hasLedgerEntry,
@@ -37,12 +33,10 @@ type Props = {
   skippedDuplicateCount?: number;
   defaultFilter?: StatementLineFilter;
   onSelectLine: (lineId: string) => void;
-  bulkSelectEnabled?: boolean;
-  bulkActionMode?: StatementBulkMode | null;
   selectedLineIds?: ReadonlySet<string>;
-  onToggleBulkSelect?: (enabled: boolean) => void;
   onToggleLineChecked?: (lineId: string, checked: boolean) => void;
   onSelectAllVisible?: (lineIds: string[], select: boolean) => void;
+  onClearSelection?: () => void;
 };
 
 export function StatementLinesLedger({
@@ -51,12 +45,10 @@ export function StatementLinesLedger({
   skippedDuplicateCount = 0,
   defaultFilter = "queue",
   onSelectLine,
-  bulkSelectEnabled = false,
-  bulkActionMode = null,
   selectedLineIds,
-  onToggleBulkSelect,
   onToggleLineChecked,
   onSelectAllVisible,
+  onClearSelection,
 }: Props) {
   const [filter, setFilter] = useState<StatementLineFilter>(defaultFilter);
   const [search, setSearch] = useState("");
@@ -67,13 +59,12 @@ export function StatementLinesLedger({
     [lines, filter, search],
   );
 
-  const selectableVisibleIds = useMemo(() => {
-    if (!bulkSelectEnabled || !bulkActionMode) return [];
-    return filtered
-      .filter((line) => isBulkSelectableLine(line, bulkActionMode))
-      .map((line) => line.id);
-  }, [bulkActionMode, bulkSelectEnabled, filtered]);
+  const selectableVisibleIds = useMemo(
+    () => filtered.filter(canBulkSelectLine).map((line) => line.id),
+    [filtered],
+  );
 
+  const selectedCount = selectedLineIds?.size ?? 0;
   const allVisibleSelected =
     selectableVisibleIds.length > 0 &&
     selectableVisibleIds.every((id) => selectedLineIds?.has(id));
@@ -87,8 +78,6 @@ export function StatementLinesLedger({
     return counts;
   }, [lines]);
 
-  const colSpan = bulkSelectEnabled ? 7 : 6;
-
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -99,28 +88,28 @@ export function StatementLinesLedger({
             {summary.skipped} skipped (no GL) · {summary.queue} to post
             {skippedDuplicateCount > 0 &&
               ` · ${skippedDuplicateCount} duplicate rows skipped at import`}
+            {selectedCount > 0 && (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  className="text-primary hover:underline"
+                  onClick={onClearSelection}
+                >
+                  {selectedCount} selected — clear
+                </button>
+              </>
+            )}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {onToggleBulkSelect && (
-            <Button
-              type="button"
-              variant={bulkSelectEnabled ? "primary" : "ghost"}
-              className="h-9 text-xs"
-              onClick={() => onToggleBulkSelect(!bulkSelectEnabled)}
-            >
-              {bulkSelectEnabled ? "Done selecting" : "Select multiple"}
-            </Button>
-          )}
-          <Input
-            type="search"
-            placeholder="Search description or reference…"
-            className="h-9 max-w-xs text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search statement lines"
-          />
-        </div>
+        <Input
+          type="search"
+          placeholder="Search description or reference…"
+          className="h-9 max-w-xs text-sm"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search statement lines"
+        />
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -146,52 +135,38 @@ export function StatementLinesLedger({
         })}
       </div>
 
-      {bulkSelectEnabled && bulkActionMode && onSelectAllVisible && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <button
-            type="button"
-            className="text-primary hover:underline"
-            onClick={() =>
-              onSelectAllVisible(selectableVisibleIds, !allVisibleSelected)
-            }
-            disabled={selectableVisibleIds.length === 0}
-          >
-            {allVisibleSelected ? "Clear visible" : "Select all visible"}
-          </button>
-          <span>
-            {selectedLineIds?.size ?? 0} selected
-            {bulkActionMode === "post"
-              ? " (to post)"
-              : " (to correct)"}
-          </span>
-        </div>
-      )}
-
       {filter === "skipped" && summary.skipped > 0 && (
         <p className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
           Skipped lines were marked &ldquo;Decide later&rdquo; — they never hit P&L or
-          balance sheet. Select a row and use Correct to post them properly (e.g. Bank
-          charges for BSM / havale fees).
+          balance sheet. Tick them and bulk-correct, or select one row for the bar above.
         </p>
       )}
 
       {filter === "no_ledger" && summary.noLedger > 0 && (
         <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
           Lines without a journal entry: still in queue, skipped, or waiting for
-          needs-review confirmation. Nothing here means your books already have a
-          matching entry — use Correct only if the classification was wrong.
+          needs-review confirmation.
         </p>
       )}
 
       <DataTable className="max-h-[min(65vh,800px)]">
         <DataTableHead>
           <tr>
-            {bulkSelectEnabled && (
-              <DataTableHeaderCell>
-                <span className="sr-only">Select</span>
-              </DataTableHeaderCell>
-            )}
-            <DataTableHeaderCell>Date</DataTableHeaderCell>
+            <DataTableHeaderCell>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border"
+                  checked={allVisibleSelected}
+                  disabled={selectableVisibleIds.length === 0}
+                  aria-label="Select all visible lines"
+                  onChange={(e) =>
+                    onSelectAllVisible?.(selectableVisibleIds, e.target.checked)
+                  }
+                />
+                <span>Date</span>
+              </div>
+            </DataTableHeaderCell>
             <DataTableHeaderCell>Description</DataTableHeaderCell>
             <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
             <DataTableHeaderCell>Status</DataTableHeaderCell>
@@ -203,7 +178,7 @@ export function StatementLinesLedger({
           {filtered.length === 0 ? (
             <tr>
               <td
-                colSpan={colSpan}
+                colSpan={6}
                 className="px-3 py-8 text-center text-sm text-muted-foreground"
               >
                 No lines match this filter.
@@ -213,10 +188,7 @@ export function StatementLinesLedger({
             filtered.map((line) => {
               const selected = line.id === selectedLineId;
               const checked = selectedLineIds?.has(line.id) ?? false;
-              const bulkSelectable =
-                bulkSelectEnabled &&
-                bulkActionMode != null &&
-                isBulkSelectableLine(line, bulkActionMode);
+              const bulkSelectable = canBulkSelectLine(line);
               const amountClass =
                 line.amount_kurus > 0
                   ? "text-success"
@@ -228,23 +200,20 @@ export function StatementLinesLedger({
                   key={line.id}
                   className={cn(
                     "cursor-pointer hover:bg-muted/30",
-                    selected && !bulkSelectEnabled && "bg-primary/5 ring-1 ring-inset ring-primary/30",
-                    checked && bulkSelectEnabled && "bg-primary/5 ring-1 ring-inset ring-primary/30",
+                    selected && selectedCount === 0 && "bg-primary/5 ring-1 ring-inset ring-primary/30",
+                    checked && "bg-primary/5 ring-1 ring-inset ring-primary/30",
                     isSkippedLine(line) && "bg-warning/5",
                   )}
                   onClick={() => {
-                    if (bulkSelectEnabled && bulkSelectable && onToggleLineChecked) {
-                      onToggleLineChecked(line.id, !checked);
-                      return;
-                    }
+                    if (selectedCount > 0) return;
                     onSelectLine(line.id);
                   }}
                 >
-                  {bulkSelectEnabled && (
-                    <DataTableCell>
+                  <DataTableCell className="whitespace-nowrap py-1.5 text-xs">
+                    <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-border"
+                        className="h-4 w-4 shrink-0 rounded border-border"
                         checked={checked}
                         disabled={!bulkSelectable}
                         aria-label={`Select ${line.description}`}
@@ -254,10 +223,8 @@ export function StatementLinesLedger({
                         }}
                         onClick={(e) => e.stopPropagation()}
                       />
-                    </DataTableCell>
-                  )}
-                  <DataTableCell className="whitespace-nowrap py-1.5 text-xs">
-                    {formatTrDate(line.transaction_date)}
+                      <span>{formatTrDate(line.transaction_date)}</span>
+                    </div>
                   </DataTableCell>
                   <DataTableCell className="max-w-[28rem] py-1.5 text-xs">
                     <span
@@ -299,9 +266,8 @@ export function StatementLinesLedger({
       </DataTable>
 
       <p className="text-[11px] text-muted-foreground">
-        {bulkSelectEnabled
-          ? "Tick lines that share the same classification, then post or correct them together."
-          : "Click any row to inspect or correct it in the bar above. Posted lines create debit/credit journal entries."}
+        Tick the box next to the date to select lines for bulk post or correct. Click a
+        row (without ticks selected) to work one line in the bar above.
       </p>
     </section>
   );

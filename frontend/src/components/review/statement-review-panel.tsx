@@ -7,15 +7,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { StatementBulkActionBar } from "@/components/statement-bulk-action-bar";
 import { StatementLineReviewRow } from "@/components/statement-line-review-row";
-import { Button } from "@/components/ui/button";
 import type { ClassifyStatementLineResult, StatementLineReview } from "@/lib/banking-types";
 import { loadStatementReviewLines } from "@/lib/load-statement-review-lines";
 import {
-  bulkModeForLines,
-  isReviewBulkSelectableLine,
+  canBulkSelectLine,
   toggleAllLineIds,
   toggleLineIdSet,
-  type StatementBulkMode,
 } from "@/lib/statement-bulk-selection";
 import {
   countLinesByTab,
@@ -39,7 +36,6 @@ export function StatementReviewPanel() {
   const [lines, setLines] = useState<StatementLineReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bulkSelectEnabled, setBulkSelectEnabled] = useState(false);
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -48,7 +44,6 @@ export function StatementReviewPanel() {
     setLines([]);
     setLoading(true);
     setError(null);
-    setBulkSelectEnabled(false);
     setSelectedLineIds(new Set());
   }, []);
 
@@ -78,25 +73,14 @@ export function StatementReviewPanel() {
   const tabCounts = countLinesByTab(linesInRange);
   const visibleLines = filterLinesByTab(linesInRange, activeTab);
 
-  const defaultBulkMode: StatementBulkMode =
-    activeTab === "needs_review" ? "post" : "correct";
-
   const bulkSelectedLines = useMemo(
     () => visibleLines.filter((line) => selectedLineIds.has(line.id)),
     [selectedLineIds, visibleLines],
   );
 
-  const bulkActionMode = useMemo(
-    () => bulkModeForLines(bulkSelectedLines) ?? defaultBulkMode,
-    [bulkSelectedLines, defaultBulkMode],
-  );
-
   const selectableVisibleIds = useMemo(
-    () =>
-      visibleLines
-        .filter((line) => isReviewBulkSelectableLine(line, bulkActionMode))
-        .map((line) => line.id),
-    [bulkActionMode, visibleLines],
+    () => visibleLines.filter(canBulkSelectLine).map((line) => line.id),
+    [visibleLines],
   );
 
   const allVisibleSelected =
@@ -114,8 +98,7 @@ export function StatementReviewPanel() {
     invalidateReviewCounts();
   }, []);
 
-  const showBulkBar =
-    bulkSelectEnabled && bulkSelectedLines.length > 0 && bulkActionMode != null;
+  const showBulkBar = bulkSelectedLines.length > 0;
 
   if (!entityId) {
     return (
@@ -128,30 +111,17 @@ export function StatementReviewPanel() {
   return (
     <>
       <p className="mb-4 text-sm text-muted-foreground">
-        Confirm suggestions, correct auto-posted lines, and manage suppliers inline.
-        Use Select multiple to post or correct a batch with the same classification.
+        Tick the box next to the date on each line to post or correct a batch with the
+        same classification. Expand a row for one-at-a-time actions.
       </p>
 
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-4">
         <ReportDateRange
           from={from}
           to={to}
           disabled={loading}
           onChange={setRange}
         />
-        <Button
-          type="button"
-          variant={bulkSelectEnabled ? "primary" : "ghost"}
-          className="h-9 text-xs"
-          onClick={() => {
-            setBulkSelectEnabled((value) => {
-              if (value) setSelectedLineIds(new Set());
-              return !value;
-            });
-          }}
-        >
-          {bulkSelectEnabled ? "Done selecting" : "Select multiple"}
-        </Button>
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
@@ -165,10 +135,7 @@ export function StatementReviewPanel() {
           pickers={pickers}
           onLineDone={handleBulkLineDone}
           onComplete={() => void reload()}
-          onClearSelection={() => {
-            setSelectedLineIds(new Set());
-            setBulkSelectEnabled(false);
-          }}
+          onClearSelection={() => setSelectedLineIds(new Set())}
         />
       )}
 
@@ -202,24 +169,31 @@ export function StatementReviewPanel() {
         ))}
       </div>
 
-      {bulkSelectEnabled && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <button
-            type="button"
-            className="text-primary hover:underline"
-            onClick={() =>
-              setSelectedLineIds((prev) =>
-                toggleAllLineIds(prev, selectableVisibleIds, !allVisibleSelected),
-              )
-            }
-            disabled={selectableVisibleIds.length === 0}
-          >
-            {allVisibleSelected ? "Clear visible" : "Select all visible"}
-          </button>
-          <span>
-            {selectedLineIds.size} selected
-            {bulkActionMode === "post" ? " (to post)" : " (to correct)"}
-          </span>
+      {!loading && visibleLines.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-border"
+              checked={allVisibleSelected}
+              disabled={selectableVisibleIds.length === 0}
+              onChange={(e) =>
+                setSelectedLineIds((prev) =>
+                  toggleAllLineIds(prev, selectableVisibleIds, e.target.checked),
+                )
+              }
+            />
+            <span>Select all visible</span>
+          </label>
+          {selectedLineIds.size > 0 && (
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => setSelectedLineIds(new Set())}
+            >
+              Clear {selectedLineIds.size} selected
+            </button>
+          )}
         </div>
       )}
 
@@ -240,9 +214,8 @@ export function StatementReviewPanel() {
               key={line.id}
               line={line}
               onUpdated={() => void reload()}
-              bulkSelectEnabled={bulkSelectEnabled}
               bulkChecked={selectedLineIds.has(line.id)}
-              bulkSelectable={isReviewBulkSelectableLine(line, bulkActionMode)}
+              bulkSelectable={canBulkSelectLine(line)}
               onToggleBulkChecked={(checked) => {
                 setSelectedLineIds((prev) => toggleLineIdSet(prev, line.id, checked));
               }}

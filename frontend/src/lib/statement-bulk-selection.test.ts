@@ -4,6 +4,7 @@ import type { BankStatementLine } from "@/lib/banking-types";
 import {
   amountDirectionForLines,
   bulkModeForLines,
+  lineBulkMode,
   validateBulkSelection,
 } from "@/lib/statement-bulk-selection";
 
@@ -60,6 +61,19 @@ describe("amountDirectionForLines", () => {
         line({ id: "b", amount_kurus: -50, status: "imported" }),
       ]),
     ).toBe("mixed");
+  });
+});
+
+describe("lineBulkMode", () => {
+  it("maps queue lines to post and posted to correct", () => {
+    expect(lineBulkMode(line({ id: "a", amount_kurus: -100, status: "imported" }))).toBe(
+      "post",
+    );
+    expect(
+      lineBulkMode(
+        line({ id: "b", amount_kurus: -100, status: "posted", journal_entry_id: "je-1" }),
+      ),
+    ).toBe("correct");
   });
 });
 

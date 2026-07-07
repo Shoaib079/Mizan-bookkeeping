@@ -49,7 +49,6 @@ import {
 type Props = {
   line: StatementLineReview;
   onUpdated: () => void;
-  bulkSelectEnabled?: boolean;
   bulkChecked?: boolean;
   bulkSelectable?: boolean;
   onToggleBulkChecked?: (checked: boolean) => void;
@@ -58,7 +57,6 @@ type Props = {
 export function StatementLineReviewRow({
   line,
   onUpdated,
-  bulkSelectEnabled = false,
   bulkChecked = false,
   bulkSelectable = false,
   onToggleBulkChecked,
@@ -312,28 +310,26 @@ export function StatementLineReviewRow({
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-start gap-2">
-          {bulkSelectEnabled && (
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">{line.description}</p>
+          <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <input
               type="checkbox"
-              className="mt-1 h-4 w-4 shrink-0 rounded border-border"
+              className="h-4 w-4 shrink-0 rounded border-border"
               checked={bulkChecked}
               disabled={!bulkSelectable}
               aria-label={`Select ${line.description}`}
               onChange={(e) => onToggleBulkChecked?.(e.target.checked)}
             />
-          )}
-          <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{line.description}</p>
-          <p className="text-xs text-muted-foreground">
-            {formatTrDate(line.transaction_date)}
-            {line.reference && ` · ${line.reference}`}
-            {line.original_filename && ` · ${line.original_filename}`}
+            <span>
+              {formatTrDate(line.transaction_date)}
+              {line.reference && ` · ${line.reference}`}
+              {line.original_filename && ` · ${line.original_filename}`}
+            </span>
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {classificationLabel(line.classification)}
           </p>
-          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="tabular-nums text-sm font-medium">

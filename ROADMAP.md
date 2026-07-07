@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | (none — owner sign-off pending on statement bulk classify) |
+| **Active slice**         | (none) |
 | **Next up**              | P5 — Delete company UI |
-| **Last completed slice** | Statement bulk classify (select multiple) |
-| **Last commit/tag**      | `v0.statement-bulk-classify` |
+| **Last completed slice** | Statement bulk checkbox UX (always visible, per-line select) |
+| **Last commit/tag**      | `v0.statement-bulk-checkbox-ux` |
 
 **Owner sign-off required** — agency group sales v2 touches FX receivable/payment paths (money-critical). **Follow-up (not in v2):** per-menu period report for group/agency sales.
 
@@ -1877,6 +1877,7 @@ Take the tested app to a real, secure production environment and put real data i
 | 2026-07-06 | Global Edit + Void on posted transactions       | `v0.global-edit-void`                                | Backend void APIs for expense/staff/partner/customer/supplier/FX subledger; UI Correct→Edit; SubledgerRowActions + VoidSubledgerDialog; strikethrough on voided/superseded rows; master records (staff/supplier/customer) stay active/inactive only |
 | 2026-07-06 | Duplicate record guard (expenses, sales, staff) | `v0.duplicate-record-guard`                          | `duplicate_guard.py` + `acknowledge_duplicate` on create schemas; HTTP 409 `duplicate_record`; frontend `useDuplicateRecordSubmit` on manual expense, partner fronted, credit/group sale, salary accrual/payment/advance/extra days; 3 pytest + vitest |
 | 2026-07-06 | Staff extra days + accrual consolidation        | `v0.staff-extra-days-accrual`                          | Global one-accrual-per-period (effective rows + pay-time correction); migration `077` `extra_days`; `EXTRA_DAYS_ACCRUED`/`PAID`; accrual-only salary (`amount_minor=0`); extra days in pay-salary dialog without paying now; date before employee (Expenses + Add hub); accrual form month reset fix; 4+ pytest |
+| 2026-07-07 | Statement bulk checkbox UX | `v0.statement-bulk-checkbox-ux` | Always-visible tick next to date + header select-all; per-line post/correct eligibility fixes disabled checkboxes on Posted tab |
 | 2026-07-07 | Statement bulk classify (select multiple) | `v0.statement-bulk-classify` | Checkbox multi-select on statement detail + Review bank; shared classification post/correct bar; sequential API with per-line idempotency; vitest |
 | 2026-07-07 | Statement card commission classify (`pos_commission`) | `cf71591` | New `pos_commission` bank statement classification — Dr `5300` / Cr `1400` (clears card sales clearing, same GL as Cards sweep); `POS_COMMISSION_STATEMENT` journal source; POS komisyon detect excludes bank-fee auto-post; frontend picker + suggestion; 3 pytest + vitest |
 | 2026-07-06 | Operational ledger — effective entries only     | `v0.operational-ledger-effective`                      | `subledger_display.py`: classify effective / void_reversal / superseded; `display_kind` + `was_corrected` on staff/customer/partner/supplier/FX APIs; supplier activity aligned; dashboard recent entries `effective_only`; UI history toggle + Corrected badge on all operational ledgers; GL report unchanged |

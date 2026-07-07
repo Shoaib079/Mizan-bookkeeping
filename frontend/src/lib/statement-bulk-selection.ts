@@ -7,7 +7,6 @@ import type {
 } from "@/lib/banking-types";
 import { classificationMatchesAmount } from "@/lib/statement-classification-options";
 import { isCorrectableLine, isQueueLine } from "@/lib/statement-line-filters";
-import { isLineCorrectable } from "@/lib/statement-review";
 
 export type StatementBulkMode = "post" | "correct";
 
@@ -32,6 +31,21 @@ export function bulkModeForLines(
   if (allQueue) return "post";
   if (allCorrectable) return "correct";
   return null;
+}
+
+/** Whether this line can be ticked for bulk post or bulk correct. */
+export function lineBulkMode(
+  line: BankStatementLine | StatementLineReview,
+): StatementBulkMode | null {
+  if (isQueueLine(line)) return "post";
+  if (isCorrectableLine(line)) return "correct";
+  return null;
+}
+
+export function canBulkSelectLine(
+  line: BankStatementLine | StatementLineReview,
+): boolean {
+  return lineBulkMode(line) !== null;
 }
 
 export function amountDirectionForLines(
@@ -112,18 +126,16 @@ export function validateBulkSelection(
 
 export function isBulkSelectableLine(
   line: BankStatementLine | StatementLineReview,
-  mode: StatementBulkMode,
+  mode?: StatementBulkMode,
 ): boolean {
-  if (mode === "post") return isQueueLine(line);
-  return isCorrectableLine(line) && !isQueueLine(line);
+  const lineMode = lineBulkMode(line);
+  if (lineMode === null) return false;
+  if (mode === undefined) return true;
+  return lineMode === mode;
 }
 
-export function isReviewBulkSelectableLine(
-  line: StatementLineReview,
-  mode: StatementBulkMode,
-): boolean {
-  if (mode === "post") return line.status === "needs_review" || line.status === "imported";
-  return isLineCorrectable(line) && !isQueueLine(line);
+export function isReviewBulkSelectableLine(line: StatementLineReview): boolean {
+  return canBulkSelectLine(line);
 }
 
 export function toggleLineIdSet(
