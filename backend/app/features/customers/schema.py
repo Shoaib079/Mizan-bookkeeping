@@ -149,6 +149,20 @@ class CustomerPaymentResponse(BaseModel):
     balance_kurus: int
 
 
+class CustomerWriteOffCreate(BaseModel):
+    write_off_date: date
+    amount_kurus: int = Field(gt=0)
+    description: str = Field(
+        default="Receivable write-off", min_length=1, max_length=512
+    )
+    actor_id: OptionalActorId = None
+
+
+class CustomerWriteOffResponse(BaseModel):
+    journal_entry_id: uuid.UUID
+    balance_kurus: int
+
+
 class CustomerPaymentCorrect(CustomerPaymentCreate):
     reason: str | None = Field(default=None, max_length=512)
     void_date: date | None = None

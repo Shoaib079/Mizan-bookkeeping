@@ -404,3 +404,101 @@ def post_group_sale_discount(
         session.refresh(journal_entry)
         _ = list(journal_entry.lines)
         return journal_entry
+
+
+def _customer_outstanding_forex(
+    session: Session, customer_id: uuid.UUID
+) -> tuple[str | None, int]:
+    """The single forex currency the customer still owes in, with its native balance."""
+    from app.features.group_sales.fx_receivable import native_balance_for_currency
+
+    currencies = session.scalars(
+        select(CustomerLedgerEntry.forex_currency)
+        .where(
+            CustomerLedgerEntry.customer_id == customer_id,
+            CustomerLedgerEntry.forex_currency.isnot(None),
+        )
+        .distinct()
+    ).all()
+    for cur in currencies:
+        if not cur:
+            continue
+        bal = native_balance_for_currency(session, customer_id, cur)
+        if bal > 0:
+            return cur, bal
+    return None, 0
+
+
+def post_customer_write_off(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    *,
+    write_off_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+) -> JournalEntry:
+    """Write off part/all of an agency's outstanding receivable — Dr 5800 / Cr AR.
+
+    Capped at the customer's current receivable balance (never more than owed). Clears the
+    proportional forex native balance so the FX view stays consistent.
+    """
+    if amount_kurus <= 0:
+        raise ValueError("amount_kurus must be positive")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        _get_customer(session, entity_id, customer_id)
+        current = receivables_ledger.current_balance_kurus(session, entity_id, customer_id)
+        if amount_kurus > current:
+            raise InvalidReceivablePostingError(
+                f"write-off {amount_kurus} exceeds receivable balance {current}"
+            )
+
+        currency, native_bal = _customer_outstanding_forex(session, customer_id)
+        native_written: int | None = None
+        if currency and native_bal > 0 and current > 0:
+            native_written = round(native_bal * amount_kurus / current)
+
+        ar_account = _chart_account(session, ACCOUNTS_RECEIVABLE_CODE)
+        discount_account = _chart_account(session, SALES_DISCOUNT_CODE)
+        lines = [
+            PostingLine(
+                account_id=discount_account.id,
+                amount_kurus=amount_kurus,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=ar_account.id,
+                amount_kurus=amount_kurus,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ]
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            write_off_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.GROUP_SALE,
+        )
+        receivables_ledger.persist_customer_ledger_entry(
+            session,
+            customer_id,
+            movement_date=write_off_date,
+            movement_type=CustomerMovementType.DISCOUNT,
+            amount_kurus=-amount_kurus,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+            reference_type="write_off",
+            reference_id=None,
+            forex_currency=currency,
+            total_forex_minor=(-native_written if native_written else None),
+        )
+        session.commit()
+        session.refresh(journal_entry)
+        _ = list(journal_entry.lines)
+        return journal_entry

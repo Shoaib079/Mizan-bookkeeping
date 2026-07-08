@@ -15,7 +15,7 @@ import {
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
-import { GroupSaleDiscountDialog } from "@/components/forms/group-sale-discount-dialog";
+import { CustomerWriteOffDialog } from "@/components/forms/customer-write-off-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -106,7 +106,7 @@ export default function CustomerDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [saleOpen, setSaleOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [discountSaleId, setDiscountSaleId] = useState<string | null>(null);
+  const [writeOffOpen, setWriteOffOpen] = useState(false);
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableCustomerPaymentRow | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
@@ -224,6 +224,16 @@ export default function CustomerDetailPage() {
             <Button type="button" variant="secondary" onClick={() => setPaymentOpen(true)}>
               Record payment
             </Button>
+            {ledger.balance_kurus > 0 && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setWriteOffOpen(true)}
+                title="Write off part or all of the outstanding balance"
+              >
+                Write off
+              </Button>
+            )}
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
@@ -304,17 +314,7 @@ export default function CustomerDetailPage() {
                         entry.reference_type === "group_sale" &&
                         entry.reference_id &&
                         isEffectiveLedgerRow(entry) && (
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-8 px-2"
-                              onClick={() =>
-                                setDiscountSaleId(entry.reference_id!)
-                              }
-                            >
-                              Write off
-                            </Button>
+                          <div className="flex justify-end">
                             <Link
                               href={`/customers/group-sales/${entry.reference_id}`}
                             >
@@ -351,12 +351,15 @@ export default function CustomerDetailPage() {
             onClose={() => setSaleOpen(false)}
             onSaved={() => void reload()}
           />
-          <GroupSaleDiscountDialog
-            open={discountSaleId !== null}
-            saleId={discountSaleId}
-            onClose={() => setDiscountSaleId(null)}
-            onSaved={() => void reload()}
-          />
+          {ledger && (
+            <CustomerWriteOffDialog
+              open={writeOffOpen}
+              customerId={customerId}
+              balanceKurus={ledger.balance_kurus}
+              onClose={() => setWriteOffOpen(false)}
+              onSaved={() => void reload()}
+            />
+          )}
           <CustomerPaymentForm
             open={paymentOpen}
             customerId={customerId}

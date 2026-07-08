@@ -18,6 +18,9 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntryLine
+from app.core.receivables import ledger as receivables_ledger
+from app.core.receivables import posting as receivables_posting
+from app.core.receivables.posting import InvalidReceivablePostingError
 from app.core.staff import ledger as staff_ledger
 from app.core.staff import posting as staff_posting
 from app.core.staff.posting import InvalidStaffPostingError
@@ -351,3 +354,63 @@ def test_void_gate_reenables_after_payment_reversed(db_session, setup) -> None:
         db_session, entity_id, sale_id, actor_id=ACTOR_ID
     )
     assert voided.status == GroupSaleStatus.VOIDED.value
+
+
+# ---------- Agency-level (customer) write-off ----------
+
+
+def test_customer_write_off_clears_balance(db_session, setup) -> None:
+    entity_id = setup["entity_id"]
+    customer_id = setup["customer_id"]
+    _post_try_sale(db_session, setup, pax=10, rate=10_000, day=11)  # 100_000
+
+    # Agency-level payment NOT linked to any sale (the real-world case).
+    customers_service.record_customer_payment(
+        db_session,
+        entity_id,
+        customer_id,
+        CustomerPaymentCreate(
+            payment_date=date(2026, 9, 12),
+            amount_kurus=40_000,
+            description="Partial",
+            actor_id=ACTOR_ID,
+            payment_account_id=setup["bank"].gl_account_id,
+        ),
+    )
+    assert (
+        receivables_ledger.current_balance_kurus(db_session, entity_id, customer_id)
+        == 60_000
+    )
+
+    receivables_posting.post_customer_write_off(
+        db_session,
+        entity_id,
+        customer_id,
+        write_off_date=date(2026, 9, 13),
+        amount_kurus=60_000,
+        description="Write off",
+        actor_id=ACTOR_ID,
+    )
+
+    assert (
+        receivables_ledger.current_balance_kurus(db_session, entity_id, customer_id) == 0
+    )
+    assert _gl_balance(db_session, entity_id, ACCOUNTS_RECEIVABLE_CODE, AccountNormalBalance.DEBIT) == 0
+    assert _gl_balance(db_session, entity_id, SALES_DISCOUNT_CODE, AccountNormalBalance.DEBIT) == 60_000
+
+
+def test_customer_write_off_exceeds_balance_rejected(db_session, setup) -> None:
+    entity_id = setup["entity_id"]
+    customer_id = setup["customer_id"]
+    _post_try_sale(db_session, setup, pax=1, rate=10_000, day=14)  # 10_000
+
+    with pytest.raises(InvalidReceivablePostingError):
+        receivables_posting.post_customer_write_off(
+            db_session,
+            entity_id,
+            customer_id,
+            write_off_date=date(2026, 9, 15),
+            amount_kurus=20_000,
+            description="Too much",
+            actor_id=ACTOR_ID,
+        )

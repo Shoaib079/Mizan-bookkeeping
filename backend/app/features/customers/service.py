@@ -40,6 +40,8 @@ from app.features.customers.schema import (
     CustomerPaymentCorrectOut,
     CustomerPaymentResponse,
     CustomerUpdate,
+    CustomerWriteOffCreate,
+    CustomerWriteOffResponse,
 )
 from app.features.entities import service as entity_service
 
@@ -252,6 +254,28 @@ def record_customer_payment(
             session, result.customer_ledger_entry, entity_id=entity_id
         ),
         balance_kurus=result.balance_kurus,
+    )
+
+
+def record_customer_write_off(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    payload: CustomerWriteOffCreate,
+) -> CustomerWriteOffResponse:
+    result = receivables_posting.post_customer_write_off(
+        session,
+        entity_id,
+        customer_id,
+        write_off_date=payload.write_off_date,
+        amount_kurus=payload.amount_kurus,
+        description=payload.description,
+        actor_id=payload.actor_id,
+    )
+    balance = receivables_ledger.current_balance_kurus(session, entity_id, customer_id)
+    return CustomerWriteOffResponse(
+        journal_entry_id=result.id,
+        balance_kurus=balance,
     )
 
 

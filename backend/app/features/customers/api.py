@@ -28,6 +28,8 @@ from app.features.customers.schema import (
     CustomerPaymentResponse,
     CustomerRead,
     CustomerUpdate,
+    CustomerWriteOffCreate,
+    CustomerWriteOffResponse,
     CreditSaleCorrect,
     CreditSaleCorrectOut,
 )
@@ -163,6 +165,31 @@ def post_customer_payment(
     except (ZeroMovementError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{customer_id}/write-off",
+    response_model=CustomerWriteOffResponse,
+    status_code=201,
+)
+def write_off_customer_balance(
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    payload: CustomerWriteOffCreate,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> CustomerWriteOffResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.record_customer_write_off(session, entity_id, customer_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

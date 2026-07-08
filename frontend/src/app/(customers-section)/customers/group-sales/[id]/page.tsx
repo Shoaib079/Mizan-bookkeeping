@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
-import { GroupSaleDiscountDialog } from "@/components/forms/group-sale-discount-dialog";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +44,6 @@ export default function GroupSaleDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [voiding, setVoiding] = useState(false);
-  const [discountOpen, setDiscountOpen] = useState(false);
 
   const resetState = useCallback(() => {
     setSale(null);
@@ -161,16 +159,13 @@ export default function GroupSaleDetailPage() {
           <p className="mt-1 text-2xl font-semibold tabular-nums">
             {formatTry(sale.total_kurus)}
           </p>
-          {isForex && sale.remaining_forex_minor != null && (
+          {isForex && sale.total_forex_minor != null && (
             <>
               <p className="mt-3 text-sm text-muted-foreground">
-                Balance ({sale.forex_currency})
+                Booked ({sale.forex_currency})
               </p>
               <p className="mt-1 text-lg font-semibold tabular-nums">
-                {formatFxNative(
-                  sale.remaining_forex_minor,
-                  sale.forex_currency!,
-                )}
+                {formatFxNative(sale.total_forex_minor, sale.forex_currency!)}
               </p>
             </>
           )}
@@ -183,59 +178,12 @@ export default function GroupSaleDetailPage() {
         </p>
       )}
 
-      <h2 className="mb-2 text-sm font-semibold">Menu lines</h2>
-      <DataTable>
-        <DataTableHead>
-          <tr>
-            <DataTableHeaderCell>Menu</DataTableHeaderCell>
-            <DataTableHeaderCell>Pax</DataTableHeaderCell>
-            <DataTableHeaderCell>Rate / person</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">Line total</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">TRY</DataTableHeaderCell>
-          </tr>
-        </DataTableHead>
-        <DataTableBody>
-          {sale.lines.map((line) => (
-            <DataTableRow key={line.id}>
-              <DataTableCell>{line.menu_name_snapshot}</DataTableCell>
-              <DataTableCell>{line.pax}</DataTableCell>
-              <DataTableCell className="tabular-nums">
-                {isForex
-                  ? formatFxNative(
-                      line.rate_per_person_minor,
-                      sale.forex_currency!,
-                    )
-                  : formatTry(line.rate_per_person_minor)}
-              </DataTableCell>
-              <DataTableCell align="right" className="tabular-nums">
-                {isForex
-                  ? formatFxNative(line.line_total_minor, sale.forex_currency!)
-                  : formatTry(line.line_total_minor)}
-              </DataTableCell>
-              <DataTableCell align="right" className="tabular-nums">
-                {formatTry(line.line_total_kurus)}
-              </DataTableCell>
-            </DataTableRow>
-          ))}
-        </DataTableBody>
-      </DataTable>
-
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         {sale.status === "posted" && (
           <>
             <Button type="button" onClick={() => setPaymentOpen(true)}>
               Record payment
             </Button>
-            {(sale.remaining_kurus ?? sale.total_kurus) > 0 && (
-              <Button
-                type="button"
-                variant="secondary"
-                title="Write off part or all of the unpaid remainder to Sales Discounts"
-                onClick={() => setDiscountOpen(true)}
-              >
-                Write off remaining
-              </Button>
-            )}
             {canMutate ? (
               <>
                 <Button
@@ -297,17 +245,48 @@ export default function GroupSaleDetailPage() {
         )}
       </div>
 
+      <h2 className="mb-2 text-sm font-semibold">Menu lines</h2>
+      <DataTable>
+        <DataTableHead>
+          <tr>
+            <DataTableHeaderCell>Menu</DataTableHeaderCell>
+            <DataTableHeaderCell>Pax</DataTableHeaderCell>
+            <DataTableHeaderCell>Rate / person</DataTableHeaderCell>
+            <DataTableHeaderCell align="right">Line total</DataTableHeaderCell>
+            <DataTableHeaderCell align="right">TRY</DataTableHeaderCell>
+          </tr>
+        </DataTableHead>
+        <DataTableBody>
+          {sale.lines.map((line) => (
+            <DataTableRow key={line.id}>
+              <DataTableCell>{line.menu_name_snapshot}</DataTableCell>
+              <DataTableCell>{line.pax}</DataTableCell>
+              <DataTableCell className="tabular-nums">
+                {isForex
+                  ? formatFxNative(
+                      line.rate_per_person_minor,
+                      sale.forex_currency!,
+                    )
+                  : formatTry(line.rate_per_person_minor)}
+              </DataTableCell>
+              <DataTableCell align="right" className="tabular-nums">
+                {isForex
+                  ? formatFxNative(line.line_total_minor, sale.forex_currency!)
+                  : formatTry(line.line_total_minor)}
+              </DataTableCell>
+              <DataTableCell align="right" className="tabular-nums">
+                {formatTry(line.line_total_kurus)}
+              </DataTableCell>
+            </DataTableRow>
+          ))}
+        </DataTableBody>
+      </DataTable>
+
       <GroupSaleForm
         open={editOpen}
         customerId={sale.customer_id}
         correcting={sale}
         onClose={() => setEditOpen(false)}
-        onSaved={() => void reload()}
-      />
-      <GroupSaleDiscountDialog
-        open={discountOpen}
-        saleId={sale.id}
-        onClose={() => setDiscountOpen(false)}
         onSaved={() => void reload()}
       />
       <CustomerPaymentForm
