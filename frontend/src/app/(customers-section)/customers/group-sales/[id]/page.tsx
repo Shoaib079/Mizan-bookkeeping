@@ -44,6 +44,7 @@ export default function GroupSaleDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [voiding, setVoiding] = useState(false);
+  const [discounting, setDiscounting] = useState(false);
 
   const resetState = useCallback(() => {
     setSale(null);
@@ -102,6 +103,31 @@ export default function GroupSaleDetailPage() {
       toast(err instanceof Error ? err.message : "Void failed", "error");
     } finally {
       setVoiding(false);
+    }
+  }
+
+  async function onDiscount(remainingKurus: number, remainingForexMinor: number | null) {
+    if (!entityId || !sale || remainingKurus <= 0) return;
+    setDiscounting(true);
+    try {
+      await apiFetch(`/entities/${entityId}/group-sales/${sale.id}/discount`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          discount_kurus: remainingKurus,
+          discount_native:
+            sale.forex_currency && remainingForexMinor != null
+              ? remainingForexMinor
+              : undefined,
+          description: "Group sale discount (write-off)",
+        }),
+      });
+      toast("Remaining balance written off to discount");
+      await reload();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Discount failed", "error");
+    } finally {
+      setDiscounting(false);
     }
   }
 
@@ -224,6 +250,22 @@ export default function GroupSaleDetailPage() {
             <Button type="button" onClick={() => setPaymentOpen(true)}>
               Record payment
             </Button>
+            {(sale.remaining_kurus ?? sale.total_kurus) > 0 && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={discounting}
+                title="Write off the unpaid remainder to Sales Discounts"
+                onClick={() =>
+                  void onDiscount(
+                    sale.remaining_kurus ?? sale.total_kurus,
+                    sale.remaining_forex_minor ?? null,
+                  )
+                }
+              >
+                Write off remaining
+              </Button>
+            )}
             {canMutate ? (
               <>
                 <Button

@@ -125,6 +125,14 @@ class GroupSaleVoid(BaseModel):
     period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
+class GroupSaleDiscountCreate(BaseModel):
+    actor_id: OptionalActorId = None
+    discount_kurus: int = Field(gt=0)
+    discount_native: int | None = Field(default=None, gt=0)
+    description: str | None = Field(default=None, max_length=512)
+    discount_date: date | None = None
+
+
 class GroupSalePostResponse(BaseModel):
     group_sale: GroupSaleRead
     balance_kurus: int

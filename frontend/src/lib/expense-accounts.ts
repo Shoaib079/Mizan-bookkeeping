@@ -46,8 +46,9 @@ export function expenseAccountComboboxOptions(
  *  - 5100 Salaries & Wages → use Staff → Pay salary (attributes to an employee + staff ledger)
  *  - 5400 Cash Over/Short  → set automatically by the day-close reconciliation, never manual
  *  - 5500 Delivery Commission → posted via the delivery commission flow
+ *  - 5800 Sales Discounts → posted only by the group-sale discount write-off
  */
-const NON_MANUAL_EXPENSE_CODES = new Set(["5100", "5400", "5500"]);
+const NON_MANUAL_EXPENSE_CODES = new Set(["5100", "5400", "5500", "5800"]);
 
 export function filterExpenseAccounts(accounts: ChartAccount[]): ChartAccount[] {
   return accounts.filter(

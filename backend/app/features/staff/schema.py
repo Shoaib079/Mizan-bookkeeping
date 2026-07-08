@@ -90,6 +90,14 @@ class StaffAdvanceCreate(AcknowledgeDuplicateMixin):
     try_cost_kurus: int | None = Field(default=None, gt=0)
 
 
+class StaffAdvanceReturnCreate(AcknowledgeDuplicateMixin):
+    payment_date: date
+    amount_minor: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: OptionalActorId = None
+    payment_account_id: uuid.UUID
+
+
 class StaffExtraDaysPaidCreate(AcknowledgeDuplicateMixin):
     payment_date: date
     extra_days: int = Field(gt=0, le=31)

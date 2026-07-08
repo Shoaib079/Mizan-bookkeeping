@@ -466,6 +466,90 @@ def post_advance_paid(
         )
 
 
+def post_advance_returned(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    *,
+    payment_date: date,
+    amount_minor: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+) -> StaffAdvancePostResult:
+    """Employee returns an advance/overpayment in cash — Dr cash / Cr 1300; subledger positive."""
+    if amount_minor <= 0:
+        raise ValueError("Return amount_minor must be positive")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        employee = _get_employee(session, entity_id, employee_id)
+        if employee.pay_currency != PayCurrency.TRY:
+            raise InvalidStaffPostingError(
+                "advance return is only supported for TRY-paid employees"
+            )
+        outstanding = staff_ledger.outstanding_advance_minor(session, employee_id)
+        if amount_minor > outstanding:
+            raise InvalidStaffPostingError(
+                f"return {amount_minor} exceeds outstanding advance {outstanding}"
+            )
+        advances = _chart_account(session, EMPLOYEE_ADVANCES_CODE)
+        payment_gl = _validate_try_payment_account(session, entity_id, payment_account_id)
+
+        lines = [
+            PostingLine(
+                account_id=payment_gl.id,
+                amount_kurus=amount_minor,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=advances.id,
+                amount_kurus=amount_minor,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ]
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            payment_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.STAFF_ADVANCE,
+        )
+        staff_entry = staff_ledger.persist_staff_ledger_entry(
+            session,
+            employee_id,
+            movement_date=payment_date,
+            movement_type=StaffMovementType.ADVANCE_RETURNED,
+            amount_minor=amount_minor,
+            try_cost_kurus=None,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+        )
+
+        session.commit()
+        session.refresh(journal_entry)
+        session.refresh(staff_entry)
+        _ = list(journal_entry.lines)
+
+        balance = session.scalar(
+            select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
+                StaffLedgerEntry.employee_id == employee_id
+            )
+        )
+        return StaffAdvancePostResult(
+            journal_entry=journal_entry,
+            staff_ledger_entry=staff_entry,
+            balance_minor=int(balance or 0),
+            fx_ledger_entry=None,
+        )
+
+
 def post_salary_payment(
     session: Session,
     entity_id: uuid.UUID,

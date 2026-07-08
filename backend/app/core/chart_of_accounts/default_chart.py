@@ -38,6 +38,7 @@ TRANSPORT_EXPENSE_CODE = "5250"
 CLEANING_EXPENSE_CODE = "5260"
 OFFICE_EXPENSE_CODE = "5270"
 DELIVERY_COMMISSION_EXPENSE_CODE = "5500"
+SALES_DISCOUNT_CODE = "5800"
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +131,14 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
     DefaultAccount(FX_GAIN_CODE, "FX Gain", "Kur Kazancı", AccountType.REVENUE, AccountNormalBalance.CREDIT, False),
     # Expenses
     DefaultAccount("5000", "Rent Expense", "Kira Gideri", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
+    DefaultAccount(
+        SALES_DISCOUNT_CODE,
+        "Sales Discounts",
+        "Satış İskontoları",
+        AccountType.EXPENSE,
+        AccountNormalBalance.DEBIT,
+        False,
+    ),
     DefaultAccount(
         SALARY_EXPENSE_CODE,
         "Salaries & Wages",

@@ -19,6 +19,7 @@ from app.features.group_sales.schema import (
     GroupMenuUpdate,
     GroupSaleCorrect,
     GroupSaleCreate,
+    GroupSaleDiscountCreate,
     GroupSalePostResponse,
     GroupSaleRead,
     GroupSaleVoid,
@@ -168,6 +169,36 @@ def void_group_sale(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except (LookupError, GroupSaleError) as exc:
         raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 422, detail=str(exc)) from exc
+    from app.db.session import entity_context
+
+    with entity_context(session, entity_id):
+        return service.to_group_sale_read(session, sale)
+
+
+@router.post("/group-sales/{group_sale_id}/discount", response_model=GroupSaleRead)
+def discount_group_sale(
+    entity_id: uuid.UUID,
+    group_sale_id: uuid.UUID,
+    payload: GroupSaleDiscountCreate,
+    session: Session = Depends(get_session),
+    actor: User = Depends(operations_write_guard),
+) -> GroupSaleRead:
+    actor_id = resolve_actor_id(actor, payload.actor_id)
+    try:
+        sale = service.post_group_sale_discount(
+            session,
+            entity_id,
+            group_sale_id,
+            discount_kurus=payload.discount_kurus,
+            discount_native=payload.discount_native,
+            description=payload.description,
+            actor_id=actor_id,
+            discount_date=payload.discount_date,
+        )
+    except (LookupError, GroupSaleError) as exc:
+        raise HTTPException(
+            status_code=404 if isinstance(exc, LookupError) else 422, detail=str(exc)
+        ) from exc
     from app.db.session import entity_context
 
     with entity_context(session, entity_id):

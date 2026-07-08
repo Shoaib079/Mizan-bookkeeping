@@ -3,6 +3,7 @@ export const staffMovementLabels: Record<string, string> = {
   salary_accrued: "Salary accrual",
   advance_paid: "Advance paid",
   advance_applied: "Advance applied",
+  advance_returned: "Advance returned",
   salary_payment: "Salary payment",
   incentive_paid: "Incentive / company expense",
   extra_days_accrued: "Extra days accrued",
@@ -23,4 +24,5 @@ export const customerMovementLabels: Record<string, string> = {
   adjustment: "Adjustment",
   credit_sale: "Group sale",
   payment_received: "Payment received",
+  discount: "Discount (write-off)",
 };

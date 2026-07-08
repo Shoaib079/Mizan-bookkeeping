@@ -37,7 +37,15 @@ def native_balance_for_currency(
             CustomerLedgerEntry.movement_type == CustomerMovementType.PAYMENT_RECEIVED,
         )
     )
-    return int(sales or 0) - int(payments or 0)
+    # Discount write-offs store a negative total_forex_minor, so they reduce the balance.
+    discounts = session.scalar(
+        select(func.coalesce(func.sum(CustomerLedgerEntry.total_forex_minor), 0)).where(
+            CustomerLedgerEntry.customer_id == customer_id,
+            CustomerLedgerEntry.forex_currency == forex_currency,
+            CustomerLedgerEntry.movement_type == CustomerMovementType.DISCOUNT,
+        )
+    )
+    return int(sales or 0) + int(discounts or 0) - int(payments or 0)
 
 
 def try_balance_for_currency(
@@ -56,16 +64,25 @@ def try_balance_for_currency(
 
 
 def remaining_on_group_sale(session: Session, group_sale: GroupSale) -> tuple[int, int | None]:
-    """TRY and native remaining for one posted group sale."""
-    paid_try = session.scalar(
+    """TRY and native remaining for one posted group sale.
+
+    Both payments and discount write-offs reduce the receivable, so both are netted here.
+    """
+    # Payments and discounts both credit AR (negative amount_kurus) → both reduce remaining.
+    reduced_try = session.scalar(
         select(func.coalesce(func.sum(-CustomerLedgerEntry.amount_kurus), 0)).where(
             CustomerLedgerEntry.reference_type == "group_sale",
             CustomerLedgerEntry.reference_id == group_sale.id,
-            CustomerLedgerEntry.movement_type == CustomerMovementType.PAYMENT_RECEIVED,
+            CustomerLedgerEntry.movement_type.in_(
+                (
+                    CustomerMovementType.PAYMENT_RECEIVED,
+                    CustomerMovementType.DISCOUNT,
+                )
+            ),
         )
     )
-    paid_native = 0
-    if group_sale.forex_currency:
+    remaining_native = None
+    if group_sale.total_forex_minor is not None:
         paid_native = int(
             session.scalar(
                 select(func.coalesce(func.sum(CustomerLedgerEntry.payment_native_quantity), 0)).where(
@@ -76,10 +93,19 @@ def remaining_on_group_sale(session: Session, group_sale: GroupSale) -> tuple[in
             )
             or 0
         )
-    remaining_kurus = group_sale.total_kurus - int(paid_try or 0)
-    remaining_native = None
-    if group_sale.total_forex_minor is not None:
-        remaining_native = group_sale.total_forex_minor - paid_native
+        # Discount native is stored as a negative total_forex_minor, so subtracting it reduces remaining.
+        discount_native = int(
+            session.scalar(
+                select(func.coalesce(func.sum(-CustomerLedgerEntry.total_forex_minor), 0)).where(
+                    CustomerLedgerEntry.reference_type == "group_sale",
+                    CustomerLedgerEntry.reference_id == group_sale.id,
+                    CustomerLedgerEntry.movement_type == CustomerMovementType.DISCOUNT,
+                )
+            )
+            or 0
+        )
+        remaining_native = group_sale.total_forex_minor - paid_native - discount_native
+    remaining_kurus = group_sale.total_kurus - int(reduced_try or 0)
     return remaining_kurus, remaining_native
 
 

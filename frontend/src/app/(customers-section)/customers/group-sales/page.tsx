@@ -22,6 +22,9 @@ import { formatFxNative } from "@/lib/fx-money";
 import type { GroupSaleRead } from "@/lib/group-sales-types";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
+import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
+import { apiFetch } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 
 function statusBadge(status: string) {
   if (status === "posted") return "active" as const;
@@ -43,6 +46,27 @@ export default function GroupSalesPage() {
     entityId,
   );
   const [formOpen, setFormOpen] = useState(false);
+  const [editSale, setEditSale] = useState<GroupSaleRead | null>(null);
+  const [voidingId, setVoidingId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  async function onVoid(sale: GroupSaleRead) {
+    if (!entityId) return;
+    setVoidingId(sale.id);
+    try {
+      await apiFetch(`/entities/${entityId}/group-sales/${sale.id}/void`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      toast("Group sale voided");
+      await reload();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Void failed", "error");
+    } finally {
+      setVoidingId(null);
+    }
+  }
 
   if (!entityId) {
     return (
@@ -106,11 +130,43 @@ export default function GroupSalesPage() {
                   <StatusBadge status={statusBadge(sale.status)} />
                 </DataTableCell>
                 <DataTableCell align="right">
-                  <Link href={`/customers/group-sales/${sale.id}`}>
-                    <Button type="button" variant="secondary">
-                      Open
-                    </Button>
-                  </Link>
+                  <div className="flex justify-end gap-2">
+                    <Link href={`/customers/group-sales/${sale.id}`}>
+                      <Button type="button" variant="secondary">
+                        Open
+                      </Button>
+                    </Link>
+                    {sale.status === "posted" &&
+                      ((sale.remaining_kurus ?? sale.total_kurus) <
+                      sale.total_kurus ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled
+                          title="Void or settle the linked payment first"
+                        >
+                          Void
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setEditSale(sale)}
+                          >
+                            Edit
+                          </Button>
+                          <VoidTriggerButton
+                            className="h-9 border border-destructive/40 px-3 hover:bg-destructive/10"
+                            confirmTitle="Void this group sale?"
+                            confirmDetail={`${sale.description} · ${formatTry(sale.total_kurus)}`}
+                            confirmLabel="Void group sale"
+                            confirming={voidingId === sale.id}
+                            onContinue={() => void onVoid(sale)}
+                          />
+                        </>
+                      ))}
+                  </div>
                 </DataTableCell>
               </DataTableRow>
             ))}
@@ -121,6 +177,13 @@ export default function GroupSalesPage() {
       <GroupSaleForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
+        onSaved={() => void reload()}
+      />
+      <GroupSaleForm
+        open={editSale !== null}
+        customerId={editSale?.customer_id}
+        correcting={editSale ?? undefined}
+        onClose={() => setEditSale(null)}
         onSaved={() => void reload()}
       />
     </>

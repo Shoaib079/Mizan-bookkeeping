@@ -8,6 +8,7 @@ class CustomerMovementType(str, Enum):
     ADJUSTMENT = "adjustment"
     CREDIT_SALE = "credit_sale"
     PAYMENT_RECEIVED = "payment_received"
+    DISCOUNT = "discount"
 
 
 WRITABLE_MOVEMENT_TYPES: frozenset[CustomerMovementType] = frozenset(

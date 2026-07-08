@@ -41,6 +41,7 @@ from app.features.staff.schema import (
     StaffAccrualCreate,
     StaffAccrualResponse,
     StaffAdvanceCreate,
+    StaffAdvanceReturnCreate,
     StaffAdvanceResponse,
     StaffExtraDaysPaidCreate,
     StaffExtraDaysPaidResponse,
@@ -256,6 +257,44 @@ def record_advance(
         fx_ledger_entry_id=(
             result.fx_ledger_entry.id if result.fx_ledger_entry else None
         ),
+    )
+
+
+def record_advance_return(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    payload: StaffAdvanceReturnCreate,
+) -> StaffAdvanceResponse:
+    with entity_context(session, entity_id):
+        require_entity_context()
+        ensure_not_duplicate(
+            find_duplicate_staff_movement(
+                session,
+                employee_id=employee_id,
+                movement_date=payload.payment_date,
+                amount_minor=payload.amount_minor,
+                movement_type=StaffMovementType.ADVANCE_RETURNED,
+            ),
+            acknowledged=payload.acknowledge_duplicate,
+        )
+    result = staff_posting.post_advance_returned(
+        session,
+        entity_id,
+        employee_id,
+        payment_date=payload.payment_date,
+        amount_minor=payload.amount_minor,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+    )
+    return StaffAdvanceResponse(
+        journal_entry_id=result.journal_entry.id,
+        staff_ledger_entry=_staff_entry_read(
+            session, result.staff_ledger_entry, entity_id=entity_id
+        ),
+        balance_minor=result.balance_minor,
+        fx_ledger_entry_id=None,
     )
 
 

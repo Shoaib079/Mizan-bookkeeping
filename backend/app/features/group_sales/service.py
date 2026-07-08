@@ -119,16 +119,20 @@ def list_group_menus(
 
 
 def _has_linked_payments(session: Session, group_sale_id: uuid.UUID) -> bool:
-    count = session.scalar(
-        select(func.count())
-        .select_from(CustomerLedgerEntry)
-        .where(
+    """True only if a live (net, un-reversed) payment is applied to this sale.
+
+    Payments reduce AR (negative amount_kurus); a voided/corrected payment appends
+    an equal-and-opposite PAYMENT_RECEIVED reversal row carrying the same group-sale
+    reference. So a fully-reversed payment nets to zero and no longer blocks void.
+    """
+    net = session.scalar(
+        select(func.coalesce(func.sum(CustomerLedgerEntry.amount_kurus), 0)).where(
             CustomerLedgerEntry.reference_type == GROUP_SALE_REFERENCE,
             CustomerLedgerEntry.reference_id == group_sale_id,
             CustomerLedgerEntry.movement_type == CustomerMovementType.PAYMENT_RECEIVED,
         )
     )
-    return int(count or 0) > 0
+    return int(net or 0) != 0
 
 
 def post_group_sale(
@@ -255,6 +259,58 @@ def list_group_sales(
         return fetch_paginated(session, stmt, params)
 
 
+def post_group_sale_discount(
+    session: Session,
+    entity_id: uuid.UUID,
+    group_sale_id: uuid.UUID,
+    *,
+    discount_kurus: int,
+    discount_native: int | None = None,
+    description: str | None = None,
+    actor_id: uuid.UUID,
+    discount_date: date | None = None,
+) -> GroupSale:
+    """Write off the small unpaid remainder of a group sale to 5800 Sales Discounts."""
+    _require_entity(session, entity_id)
+    with entity_context(session, entity_id):
+        require_entity_context()
+        group_sale = session.get(GroupSale, group_sale_id)
+        if group_sale is None:
+            raise LookupError("Group sale not found")
+        if group_sale.status != GroupSaleStatus.POSTED.value:
+            raise GroupSaleError(
+                f"Cannot discount group sale in status {group_sale.status!r}"
+            )
+        if discount_kurus <= 0:
+            raise GroupSaleError("discount must be positive")
+        remaining_kurus, remaining_native = remaining_on_group_sale(session, group_sale)
+        if discount_kurus > remaining_kurus:
+            raise GroupSaleError("discount exceeds remaining balance")
+        if group_sale.forex_currency and discount_native is not None:
+            if remaining_native is None or discount_native > remaining_native:
+                raise GroupSaleError("discount exceeds remaining forex balance")
+        customer_id = group_sale.customer_id
+        forex_currency = group_sale.forex_currency
+        sale_date = group_sale.sale_date
+
+    receivables_posting.post_group_sale_discount(
+        session,
+        entity_id,
+        customer_id,
+        discount_date=discount_date or sale_date,
+        discount_kurus=discount_kurus,
+        description=(description or "Group sale discount").strip(),
+        actor_id=actor_id,
+        group_sale_id=group_sale_id,
+        forex_currency=forex_currency,
+        discount_native=discount_native,
+    )
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        return session.get(GroupSale, group_sale_id)
+
+
 def _reverse_group_sale_gl(
     session: Session,
     entity_id: uuid.UUID,
@@ -277,6 +333,17 @@ def _reverse_group_sale_gl(
     if customer_row is None:
         raise LookupError("Customer ledger entry not found")
 
+    # Discount write-offs tied to this sale must be reversed too, so 5800 + AR unwind cleanly.
+    discount_rows = list(
+        session.scalars(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.reference_type == GROUP_SALE_REFERENCE,
+                CustomerLedgerEntry.reference_id == group_sale.id,
+                CustomerLedgerEntry.movement_type == CustomerMovementType.DISCOUNT,
+            )
+        ).all()
+    )
+
     from app.core.period_locks.guards import mark_periods_dirty_for_dates
 
     with journal_void_update_allowed(session):
@@ -296,6 +363,25 @@ def _reverse_group_sale_gl(
             actor_id=actor_id,
             void_date=void_date,
         )
+        for drow in discount_rows:
+            if drow.journal_entry_id is None:
+                continue
+            _, drev = _void_journal_entry_in_transaction(
+                session,
+                entity_id,
+                drow.journal_entry_id,
+                actor_id=actor_id,
+                reason=reason,
+                void_date=void_date,
+                period_unlock_reason=period_unlock_reason,
+            )
+            _append_customer_reversal(
+                session,
+                drow,
+                drev,
+                actor_id=actor_id,
+                void_date=void_date,
+            )
         group_sale.status = final_status
         session.flush()
         mark_periods_dirty_for_dates(

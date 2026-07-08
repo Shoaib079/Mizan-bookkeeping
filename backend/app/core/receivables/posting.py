@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.default_chart import (
     ACCOUNTS_RECEIVABLE_CODE,
+    SALES_DISCOUNT_CODE,
     SALES_REVENUE_CODE,
 )
 from app.core.chart_of_accounts.models import Account
@@ -336,3 +337,70 @@ def post_customer_payment(
             customer_ledger_entry=customer_entry,
             balance_kurus=int(balance or 0),
         )
+
+
+def post_group_sale_discount(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    *,
+    discount_date: date,
+    discount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    group_sale_id: uuid.UUID,
+    forex_currency: str | None = None,
+    discount_native: int | None = None,
+) -> JournalEntry:
+    """Write off a group-sale remainder — Dr 5800 Sales Discounts / Cr AR; subledger -amount.
+
+    Clears the receivable when a group rounds down (does not pay a small fraction). No second
+    revenue line; the discount is a tracked contra to the sale.
+    """
+    if discount_kurus <= 0:
+        raise ValueError("discount_kurus must be positive")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        ar_account = _chart_account(session, ACCOUNTS_RECEIVABLE_CODE)
+        discount_account = _chart_account(session, SALES_DISCOUNT_CODE)
+
+        lines = [
+            PostingLine(
+                account_id=discount_account.id,
+                amount_kurus=discount_kurus,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=ar_account.id,
+                amount_kurus=discount_kurus,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ]
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            discount_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.GROUP_SALE,
+        )
+        receivables_ledger.persist_customer_ledger_entry(
+            session,
+            customer_id,
+            movement_date=discount_date,
+            movement_type=CustomerMovementType.DISCOUNT,
+            amount_kurus=-discount_kurus,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+            reference_type="group_sale",
+            reference_id=group_sale_id,
+            forex_currency=forex_currency,
+            total_forex_minor=(-discount_native if discount_native else None),
+        )
+        session.commit()
+        session.refresh(journal_entry)
+        _ = list(journal_entry.lines)
+        return journal_entry

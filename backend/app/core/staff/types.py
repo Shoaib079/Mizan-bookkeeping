@@ -17,6 +17,7 @@ class StaffMovementType(str, enum.Enum):
     SALARY_ACCRUED = "salary_accrued"
     ADVANCE_PAID = "advance_paid"
     ADVANCE_APPLIED = "advance_applied"
+    ADVANCE_RETURNED = "advance_returned"
     SALARY_PAYMENT = "salary_payment"
     INCENTIVE_PAID = "incentive_paid"
     EXTRA_DAYS_ACCRUED = "extra_days_accrued"
@@ -27,6 +28,7 @@ WRITABLE_MOVEMENT_TYPES: frozenset[StaffMovementType] = frozenset(
     {
         StaffMovementType.SALARY_ACCRUED,
         StaffMovementType.ADVANCE_PAID,
+        StaffMovementType.ADVANCE_RETURNED,
         StaffMovementType.SALARY_PAYMENT,
     }
 )

@@ -208,7 +208,8 @@ def outstanding_advance_minor(session: Session, employee_id: uuid.UUID) -> int:
     """Unapplied advance total in pay-currency minor units (positive number)."""
     advance = _sum_by_type(session, employee_id, StaffMovementType.ADVANCE_PAID)
     applied = _sum_by_type(session, employee_id, StaffMovementType.ADVANCE_APPLIED)
-    raw = -advance - applied
+    returned = _sum_by_type(session, employee_id, StaffMovementType.ADVANCE_RETURNED)
+    raw = -advance - applied - returned
     return raw if raw > 0 else 0
 
 
@@ -224,6 +225,7 @@ def outstanding_advance_try_kurus(session: Session, employee_id: uuid.UUID) -> i
                 (
                     StaffMovementType.ADVANCE_PAID,
                     StaffMovementType.ADVANCE_APPLIED,
+                    StaffMovementType.ADVANCE_RETURNED,
                 )
             ),
         )
