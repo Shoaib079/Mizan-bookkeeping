@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
+import { GroupSaleDiscountDialog } from "@/components/forms/group-sale-discount-dialog";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +45,7 @@ export default function GroupSaleDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [voiding, setVoiding] = useState(false);
-  const [discounting, setDiscounting] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
 
   const resetState = useCallback(() => {
     setSale(null);
@@ -103,31 +104,6 @@ export default function GroupSaleDetailPage() {
       toast(err instanceof Error ? err.message : "Void failed", "error");
     } finally {
       setVoiding(false);
-    }
-  }
-
-  async function onDiscount(remainingKurus: number, remainingForexMinor: number | null) {
-    if (!entityId || !sale || remainingKurus <= 0) return;
-    setDiscounting(true);
-    try {
-      await apiFetch(`/entities/${entityId}/group-sales/${sale.id}/discount`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          discount_kurus: remainingKurus,
-          discount_native:
-            sale.forex_currency && remainingForexMinor != null
-              ? remainingForexMinor
-              : undefined,
-          description: "Group sale discount (write-off)",
-        }),
-      });
-      toast("Remaining balance written off to discount");
-      await reload();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Discount failed", "error");
-    } finally {
-      setDiscounting(false);
     }
   }
 
@@ -254,14 +230,8 @@ export default function GroupSaleDetailPage() {
               <Button
                 type="button"
                 variant="secondary"
-                disabled={discounting}
-                title="Write off the unpaid remainder to Sales Discounts"
-                onClick={() =>
-                  void onDiscount(
-                    sale.remaining_kurus ?? sale.total_kurus,
-                    sale.remaining_forex_minor ?? null,
-                  )
-                }
+                title="Write off part or all of the unpaid remainder to Sales Discounts"
+                onClick={() => setDiscountOpen(true)}
               >
                 Write off remaining
               </Button>
@@ -332,6 +302,12 @@ export default function GroupSaleDetailPage() {
         customerId={sale.customer_id}
         correcting={sale}
         onClose={() => setEditOpen(false)}
+        onSaved={() => void reload()}
+      />
+      <GroupSaleDiscountDialog
+        open={discountOpen}
+        saleId={sale.id}
+        onClose={() => setDiscountOpen(false)}
         onSaved={() => void reload()}
       />
       <CustomerPaymentForm

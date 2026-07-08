@@ -15,6 +15,7 @@ import {
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
+import { GroupSaleDiscountDialog } from "@/components/forms/group-sale-discount-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -105,6 +106,7 @@ export default function CustomerDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [saleOpen, setSaleOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [discountSaleId, setDiscountSaleId] = useState<string | null>(null);
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableCustomerPaymentRow | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
@@ -302,7 +304,17 @@ export default function CustomerDetailPage() {
                         entry.reference_type === "group_sale" &&
                         entry.reference_id &&
                         isEffectiveLedgerRow(entry) && (
-                          <div className="flex justify-end">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-8 px-2"
+                              onClick={() =>
+                                setDiscountSaleId(entry.reference_id!)
+                              }
+                            >
+                              Write off
+                            </Button>
                             <Link
                               href={`/customers/group-sales/${entry.reference_id}`}
                             >
@@ -337,6 +349,12 @@ export default function CustomerDetailPage() {
             open={saleOpen}
             customerId={customerId}
             onClose={() => setSaleOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <GroupSaleDiscountDialog
+            open={discountSaleId !== null}
+            saleId={discountSaleId}
+            onClose={() => setDiscountSaleId(null)}
             onSaved={() => void reload()}
           />
           <CustomerPaymentForm

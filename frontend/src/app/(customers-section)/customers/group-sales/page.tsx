@@ -45,6 +45,11 @@ export default function GroupSalesPage() {
     "/group-sales",
     entityId,
   );
+  const { items: customers } = useEntityList<{ id: string; name: string }>(
+    "/customers",
+    entityId,
+  );
+  const agencyNameById = new Map(customers.map((c) => [c.id, c.name]));
   const [formOpen, setFormOpen] = useState(false);
   const [editSale, setEditSale] = useState<GroupSaleRead | null>(null);
   const [voidingId, setVoidingId] = useState<string | null>(null);
@@ -119,7 +124,7 @@ export default function GroupSalesPage() {
                     href={`/customers/${sale.customer_id}`}
                     className="text-primary hover:underline"
                   >
-                    View agency
+                    {agencyNameById.get(sale.customer_id) ?? "Agency"}
                   </Link>
                 </DataTableCell>
                 <DataTableCell>{sale.description}</DataTableCell>
