@@ -3,7 +3,7 @@
 /** Dashboard — live KPIs from GET .../dashboard (Phase 9 Slice 8). */
 
 import Link from "next/link";
-import { ShoppingBag, Wallet } from "lucide-react";
+import { ArrowRightLeft, ShoppingBag, TrendingUp, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { useQuickActions } from "@/components/quick-actions";
@@ -18,11 +18,7 @@ import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
-import {
-  filterDashboardKpis,
-  shouldShowWriteChrome,
-  type DashboardKpi,
-} from "@/lib/entity-access";
+import { shouldShowWriteChrome } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
@@ -102,45 +98,6 @@ function DashboardBody() {
   useEffect(() => {
     void reload();
   }, [reload]);
-
-  const kpis: DashboardKpi[] = data
-    ? filterDashboardKpis(
-        [
-          { key: "sales", label: "Sales", value: formatTry(data.sales.total_sales_kurus) },
-          {
-            key: "expenses",
-            label: "Expenses",
-            value: formatTry(data.total_expenses_kurus),
-          },
-          {
-            key: "net_result",
-            label: "Net result",
-            value: formatTry(data.net_result_kurus),
-          },
-          {
-            key: "payables",
-            label: "Payables",
-            value: formatTry(data.total_payables_kurus),
-          },
-          {
-            key: "receivables",
-            label: "Receivables",
-            value: formatTry(data.total_receivables_kurus),
-          },
-          {
-            key: "cash_in_hand",
-            label: "Cash in hand",
-            value: formatTry(data.cash_in_hand_kurus),
-          },
-          {
-            key: "bank_balance",
-            label: "Bank balance",
-            value: formatTry(data.bank_balance_kurus),
-          },
-        ],
-        role,
-      )
-    : [];
 
   const deliveryBalanceLeftTotal = data?.delivery_balance_left.reduce(
     (sum, row) => sum + row.balance_left_kurus,
@@ -229,34 +186,116 @@ function DashboardBody() {
 
       {data && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {kpis.map((kpi) => {
-              const inner = (
-                <>
-                  <p className="text-sm text-muted-foreground">{kpi.label}</p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">
-                    {kpi.value}
-                  </p>
-                </>
-              );
-              return kpi.href ? (
-                <Link
-                  key={kpi.key}
-                  href={kpi.href}
-                  className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
-                >
-                  {inner}
-                </Link>
-              ) : (
-                <div
-                  key={kpi.key}
-                  className="rounded-lg border border-border bg-card p-4"
-                >
-                  {inner}
+          {canReadFinancialReports ? (
+            <div className="grid gap-4 lg:grid-cols-3">
+              {/* This period — profit is the headline */}
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <TrendingUp className="size-4" /> This period
                 </div>
-              );
-            })}
-          </div>
+                <p className="mt-3 text-xs text-muted-foreground">Net result</p>
+                <p
+                  className={`mt-0.5 text-2xl font-semibold tabular-nums ${
+                    data.net_result_kurus >= 0
+                      ? "text-success"
+                      : "text-destructive"
+                  }`}
+                >
+                  {formatTry(data.net_result_kurus)}
+                </p>
+                <div className="mt-3 border-t border-border pt-3 text-sm">
+                  <div className="flex justify-between py-0.5">
+                    <span className="text-muted-foreground">Sales</span>
+                    <span className="tabular-nums">
+                      {formatTry(data.sales.total_sales_kurus)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-0.5">
+                    <span className="text-muted-foreground">Expenses</span>
+                    <span className="tabular-nums text-destructive">
+                      {formatTry(data.total_expenses_kurus)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Money on hand — liquidity in one place */}
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Wallet className="size-4" /> Money on hand
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">Cash + bank</p>
+                <p className="mt-0.5 text-2xl font-semibold tabular-nums">
+                  {formatTry(data.cash_in_hand_kurus + data.bank_balance_kurus)}
+                </p>
+                <div className="mt-3 border-t border-border pt-3 text-sm">
+                  <div className="flex justify-between py-0.5">
+                    <span className="text-muted-foreground">Cash in hand</span>
+                    <span className="tabular-nums">
+                      {formatTry(data.cash_in_hand_kurus)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-0.5">
+                    <span className="text-muted-foreground">Bank</span>
+                    <span className="tabular-nums">
+                      {formatTry(data.bank_balance_kurus)}
+                    </span>
+                  </div>
+                  {data.fx_balances.length > 0 && (
+                    <div className="flex justify-between gap-2 py-0.5 text-muted-foreground">
+                      <span>FX wallets</span>
+                      <span className="truncate tabular-nums">
+                        {data.fx_balances
+                          .map((r) => formatFxNative(r.native_quantity, r.currency))
+                          .join(" · ")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Owed — in vs out at a glance */}
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ArrowRightLeft className="size-4" /> Owed
+                </div>
+                <div className="mt-3 flex gap-4">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">They owe you</p>
+                    <p className="text-xl font-semibold tabular-nums text-success">
+                      {formatTry(data.total_receivables_kurus)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Receivables
+                    </p>
+                  </div>
+                  <div className="w-px bg-border" />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">You owe</p>
+                    <p className="text-xl font-semibold tabular-nums text-destructive">
+                      {formatTry(data.total_payables_kurus)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Payables</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-border bg-card p-5">
+                <p className="text-sm text-muted-foreground">Sales</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
+                  {formatTry(data.sales.total_sales_kurus)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <p className="text-sm text-muted-foreground">Expenses</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
+                  {formatTry(data.total_expenses_kurus)}
+                </p>
+              </div>
+            </div>
+          )}
 
           {data.fx_balances.length > 0 && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
