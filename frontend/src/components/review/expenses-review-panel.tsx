@@ -295,13 +295,28 @@ export function ExpensesReviewPanel() {
                 </tr>
               </DataTableHead>
               <DataTableBody>
-                {items.map((row) => (
+                {items.map((row) => {
+                  const isVoided = row.status === "voided";
+                  return (
                   <DataTableRow key={row.id}>
-                    <DataTableCell>{formatTrDate(row.expense_date)}</DataTableCell>
-                    <DataTableCell>
+                    <DataTableCell
+                      className={isVoided ? "text-muted-foreground" : undefined}
+                    >
+                      {formatTrDate(row.expense_date)}
+                    </DataTableCell>
+                    <DataTableCell
+                      className={
+                        isVoided ? "text-muted-foreground line-through" : undefined
+                      }
+                    >
                       {row.written_item_description || row.description}
                     </DataTableCell>
-                    <DataTableCell align="right">
+                    <DataTableCell
+                      align="right"
+                      className={
+                        isVoided ? "text-muted-foreground line-through" : undefined
+                      }
+                    >
                       {formatTry(row.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell>
@@ -330,7 +345,8 @@ export function ExpensesReviewPanel() {
                       ) : null}
                     </DataTableCell>
                   </DataTableRow>
-                ))}
+                  );
+                })}
               </DataTableBody>
             </DataTable>
           )}

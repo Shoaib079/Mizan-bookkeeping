@@ -425,6 +425,9 @@ def list_expenses(
         filters = []
         if status is not None:
             filters.append(ExpenseEntry.status == status)
+        else:
+            # Active list excludes voided entries; fetch them via status=voided.
+            filters.append(ExpenseEntry.status != ExpenseEntryStatus.VOIDED)
         filters.extend(
             date_range_filters(
                 ExpenseEntry.expense_date, from_date=from_date, to_date=to_date
@@ -589,10 +592,22 @@ def void_expense_by_id(
         void_date=void_date,
         period_unlock_reason=period_unlock_reason,
     )
-    return SubledgerVoidOut(
+    # Read the journal ids BEFORE the status commit below — committing expires these
+    # JournalEntry objects, and refreshing them outside an entity context fails under RLS.
+    out = SubledgerVoidOut(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
     )
+
+    # Mark the expense row voided so it drops out of the active list and shows struck-through.
+    with entity_context(session, entity_id):
+        require_entity_context()
+        entry = session.get(ExpenseEntry, expense_id)
+        if entry is not None:
+            entry.status = ExpenseEntryStatus.VOIDED
+            session.commit()
+
+    return out
 
 
 def confirm_expense_item(

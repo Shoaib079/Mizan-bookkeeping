@@ -5,7 +5,7 @@ import { useCallback, useMemo } from "react";
 
 import { currentMonthRange } from "@/lib/date-range";
 
-export type ExpenseReviewFilter = "all" | "needs_review" | "posted";
+export type ExpenseReviewFilter = "all" | "needs_review" | "posted" | "voided";
 
 export type ExpenseReviewView = "expenses" | "items";
 
@@ -14,6 +14,7 @@ export const EXPENSE_REVIEW_FILTERS: { id: ExpenseReviewFilter; label: string }[
     { id: "all", label: "All" },
     { id: "needs_review", label: "Needs review" },
     { id: "posted", label: "Posted" },
+    { id: "voided", label: "Voided" },
   ];
 
 export const EXPENSE_REVIEW_VIEWS: { id: ExpenseReviewView; label: string }[] = [
@@ -64,7 +65,9 @@ export function useExpensesReviewUrl() {
   const to = searchParams.get("to") ?? defaults.to;
   const statusParam = searchParams.get("status");
   const filter: ExpenseReviewFilter =
-    statusParam === "needs_review" || statusParam === "posted"
+    statusParam === "needs_review" ||
+    statusParam === "posted" ||
+    statusParam === "voided"
       ? statusParam
       : "all";
   const offset = Math.max(

@@ -16,6 +16,7 @@ from app.db.base import Base, EntityScopedMixin, utcnow
 class ExpenseEntryStatus(str, enum.Enum):
     NEEDS_REVIEW = "needs_review"
     POSTED = "posted"
+    VOIDED = "voided"
 
 
 class ExpenseReceiptIntakeStatus(str, enum.Enum):

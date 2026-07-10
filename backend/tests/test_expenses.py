@@ -591,3 +591,51 @@ def test_list_expenses_returns_total_amount_and_pagination(
     assert body_two["total"] == 3
     assert body_two["total_amount_kurus"] == 30_000
     assert len(body_two["items"]) == 1
+
+
+def test_void_marks_expense_voided_and_excludes_from_active_list(
+    client: TestClient, expense_setup
+) -> None:
+    entity_id = expense_setup["entity_id"]
+    rent_id = expense_setup["accounts"][RENT_EXPENSE_CODE]
+
+    resp = client.post(
+        f"/entities/{entity_id}/expenses",
+        json={
+            "expense_date": "2026-06-01",
+            "amount_kurus": 750_000,
+            "expense_account_id": str(rent_id),
+            "money_account_id": str(expense_setup["bank"].id),
+            "written_item_description": "Yasir Riaz",
+            "has_source_document": False,
+            "description": "Yasir Riaz",
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    expense_id = resp.json()["id"]
+
+    params = {"from": "2026-06-01", "to": "2026-06-30"}
+    before = client.get(f"/entities/{entity_id}/expenses", params=params)
+    assert any(e["id"] == expense_id for e in before.json()["items"])
+
+    void = client.post(
+        f"/entities/{entity_id}/expenses/{expense_id}/void",
+        json={"actor_id": str(ACTOR_ID), "reason": "charged as expense"},
+    )
+    assert void.status_code in (200, 201), void.text
+
+    # Dropped from the active list...
+    after = client.get(f"/entities/{entity_id}/expenses", params=params)
+    assert all(e["id"] != expense_id for e in after.json()["items"])
+
+    # ...but visible under the Voided filter, reported as voided.
+    voided = client.get(
+        f"/entities/{entity_id}/expenses",
+        params={**params, "status": "voided"},
+    )
+    match = next(
+        (e for e in voided.json()["items"] if e["id"] == expense_id), None
+    )
+    assert match is not None
+    assert match["status"] == "voided"

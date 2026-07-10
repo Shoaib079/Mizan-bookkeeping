@@ -14,6 +14,7 @@ const statusStyles: Record<string, string> = {
   imported: "bg-muted text-muted-foreground",
   classified: "bg-primary/10 text-primary",
   linked: "bg-success/10 text-success",
+  voided: "bg-muted text-muted-foreground line-through",
 };
 
 const statusLabels: Record<string, string> = {
@@ -30,6 +31,7 @@ const statusLabels: Record<string, string> = {
   imported: "Imported",
   classified: "Classified",
   linked: "Linked",
+  voided: "Voided",
 };
 
 export function StatusBadge({
