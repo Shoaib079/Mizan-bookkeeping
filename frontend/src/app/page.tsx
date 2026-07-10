@@ -189,7 +189,10 @@ function DashboardBody() {
           {canReadFinancialReports ? (
             <div className="grid gap-4 lg:grid-cols-3">
               {/* This period — profit is the headline */}
-              <div className="rounded-xl border border-border bg-card p-5">
+              <Link
+                href="/reports"
+                className="block rounded-xl border border-border bg-card p-5 transition-colors hover:bg-muted/40"
+              >
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <TrendingUp className="size-4" /> This period
                 </div>
@@ -217,10 +220,13 @@ function DashboardBody() {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Link>
 
               {/* Money on hand — liquidity in one place */}
-              <div className="rounded-xl border border-border bg-card p-5">
+              <Link
+                href="/banking"
+                className="block rounded-xl border border-border bg-card p-5 transition-colors hover:bg-muted/40"
+              >
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Wallet className="size-4" /> Money on hand
                 </div>
@@ -252,31 +258,37 @@ function DashboardBody() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Link>
 
               {/* Owed — in vs out at a glance */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ArrowRightLeft className="size-4" /> Owed
                 </div>
-                <div className="mt-3 flex gap-4">
-                  <div className="flex-1">
+                <div className="mt-3 flex items-stretch gap-2">
+                  <Link
+                    href="/receivables"
+                    className="flex-1 rounded-lg p-2 transition-colors hover:bg-muted/40"
+                  >
                     <p className="text-xs text-muted-foreground">They owe you</p>
-                    <p className="text-xl font-semibold tabular-nums text-success">
+                    <p className="whitespace-nowrap text-lg font-semibold tabular-nums text-success">
                       {formatTry(data.total_receivables_kurus)}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       Receivables
                     </p>
-                  </div>
-                  <div className="w-px bg-border" />
-                  <div className="flex-1">
+                  </Link>
+                  <div className="w-px self-stretch bg-border" />
+                  <Link
+                    href="/suppliers"
+                    className="flex-1 rounded-lg p-2 transition-colors hover:bg-muted/40"
+                  >
                     <p className="text-xs text-muted-foreground">You owe</p>
-                    <p className="text-xl font-semibold tabular-nums text-destructive">
-                      {formatTry(data.total_payables_kurus)}
+                    <p className="whitespace-nowrap text-lg font-semibold tabular-nums text-destructive">
+                      {formatTry(Math.abs(data.total_payables_kurus))}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">Payables</p>
-                  </div>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -297,35 +309,6 @@ function DashboardBody() {
             </div>
           )}
 
-          {data.fx_balances.length > 0 && (
-            <section className="mt-6 rounded-lg border border-border bg-card p-4">
-              <h2 className="text-sm font-semibold">FX wallets</h2>
-              <ul className="mt-3 space-y-2 text-sm">
-                {data.fx_balances.map((row) => (
-                  <li
-                    key={row.money_account_id}
-                    className="flex justify-between gap-2"
-                  >
-                    <Link
-                      href={`/banking/fx/${row.money_account_id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {row.name} ({row.currency})
-                    </Link>
-                    <div className="text-right">
-                      <p className="tabular-nums">
-                        {formatFxNative(row.native_quantity, row.currency)}
-                      </p>
-                      <p className="text-xs text-muted-foreground tabular-nums">
-                        Book cost: {formatTry(row.try_cost_kurus)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
           {canReadFinancialReports && (
             <div className="mt-6">
               <WeeklyChart
@@ -336,44 +319,6 @@ function DashboardBody() {
           )}
 
           {entityId && <RecentEntriesCard entityId={entityId} className="mt-6" />}
-
-          {data.sales.total_sales_kurus > 0 && (
-            <section className="mt-6 rounded-lg border border-border bg-card p-4">
-              <h2 className="text-sm font-semibold">Sales breakdown</h2>
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-5">
-                <div>
-                  <dt className="text-muted-foreground">Cash</dt>
-                  <dd className="tabular-nums">
-                    {formatTry(data.sales.cash_sales_kurus)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">POS card</dt>
-                  <dd className="tabular-nums">
-                    {formatTry(data.sales.pos_card_sales_kurus)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Delivery</dt>
-                  <dd className="tabular-nums">
-                    {formatTry(data.sales.delivery_sales_kurus)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Group / agency</dt>
-                  <dd className="tabular-nums">
-                    {formatTry(data.sales.group_sales_kurus)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Other</dt>
-                  <dd className="tabular-nums">
-                    {formatTry(data.sales.other_sales_kurus)}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-          )}
 
           {data.confirmed_invoice_drafts > 0 && (
             <section className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
@@ -425,34 +370,6 @@ function DashboardBody() {
             </section>
           )}
 
-          {data.payables_preview.length > 0 && canReadFinancialReports && (
-            <section className="mt-6 rounded-lg border border-border bg-card p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold">Top payables</h2>
-                <Link
-                  href="/balances/suppliers"
-                  className="text-xs text-primary hover:underline"
-                >
-                  View all
-                </Link>
-              </div>
-              <ul className="space-y-2 text-sm">
-                {data.payables_preview.map((row) => (
-                  <li key={row.supplier_id} className="flex justify-between gap-2">
-                    <Link
-                      href={`/suppliers/${row.supplier_id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {row.supplier_name}
-                    </Link>
-                    <span className="tabular-nums">
-                      {formatTry(row.balance_kurus)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
         </>
       )}
     </>
