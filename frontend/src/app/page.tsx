@@ -8,10 +8,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useQuickActions } from "@/components/quick-actions";
 import {
-  SalesMixChart,
-  SalesExpensesNetChart,
-} from "@/components/dashboard/dashboard-charts";
-import {
   WeeklyChart,
   type WeeklyChartStatus,
 } from "@/components/dashboard/weekly-chart";
@@ -32,7 +28,6 @@ import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead, TimeSeriesRead } from "@/lib/report-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
-import { reviewHrefForNeedsReviewKey } from "@/lib/review-routes";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
@@ -133,15 +128,14 @@ function DashboardBody() {
             value: formatTry(data.total_receivables_kurus),
           },
           {
-            key: "try_position",
-            label: "TRY position",
-            value: formatTry(data.total_try_position_kurus),
+            key: "cash_in_hand",
+            label: "Cash in hand",
+            value: formatTry(data.cash_in_hand_kurus),
           },
           {
-            key: "needs_review",
-            label: "Needs review",
-            value: String(data.needs_review.total),
-            href: "/review",
+            key: "bank_balance",
+            label: "Bank balance",
+            value: formatTry(data.bank_balance_kurus),
           },
         ],
         role,
@@ -264,32 +258,6 @@ function DashboardBody() {
             })}
           </div>
 
-          {canReadFinancialReports && (
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              <SalesMixChart
-                cashKurus={data.sales.cash_sales_kurus}
-                posCardKurus={data.sales.pos_card_sales_kurus}
-                deliveryKurus={data.sales.delivery_sales_kurus}
-                groupSalesKurus={data.sales.group_sales_kurus}
-                otherKurus={data.sales.other_sales_kurus}
-              />
-              <SalesExpensesNetChart
-                salesKurus={data.sales.total_sales_kurus}
-                expensesKurus={data.total_expenses_kurus}
-                netKurus={data.net_result_kurus}
-              />
-            </div>
-          )}
-
-          {canReadFinancialReports && (
-            <div className="mt-6">
-              <WeeklyChart
-                status={timeSeriesStatus}
-                daily={timeSeries?.daily ?? []}
-              />
-            </div>
-          )}
-
           {data.fx_balances.length > 0 && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold">FX wallets</h2>
@@ -317,6 +285,15 @@ function DashboardBody() {
                 ))}
               </ul>
             </section>
+          )}
+
+          {canReadFinancialReports && (
+            <div className="mt-6">
+              <WeeklyChart
+                status={timeSeriesStatus}
+                daily={timeSeries?.daily ?? []}
+              />
+            </div>
           )}
 
           {entityId && <RecentEntriesCard entityId={entityId} className="mt-6" />}
@@ -376,82 +353,6 @@ function DashboardBody() {
             </section>
           )}
 
-          {data.needs_review.total > 0 && (
-            <section className="mt-6 rounded-lg border border-border bg-card p-4">
-              <h2 className="text-sm font-semibold">
-                <Link href="/review" className="hover:underline">
-                  Needs review
-                </Link>
-              </h2>
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                {data.needs_review.invoice_drafts > 0 && (
-                  <div>
-                    <dt className="text-muted-foreground">Invoice drafts</dt>
-                    <dd className="tabular-nums">
-                      <Link
-                        href={reviewHrefForNeedsReviewKey("invoice_drafts")}
-                        className="text-primary hover:underline"
-                      >
-                        {data.needs_review.invoice_drafts}
-                      </Link>
-                    </dd>
-                  </div>
-                )}
-                {data.needs_review.bank_statement_lines > 0 && (
-                  <div>
-                    <dt className="text-muted-foreground">Bank lines</dt>
-                    <dd className="tabular-nums">
-                      <Link
-                        href={reviewHrefForNeedsReviewKey("bank_statement_lines")}
-                        className="text-primary hover:underline"
-                      >
-                        {data.needs_review.bank_statement_lines}
-                      </Link>
-                    </dd>
-                  </div>
-                )}
-                {data.needs_review.pos_daily_summaries > 0 && (
-                  <div>
-                    <dt className="text-muted-foreground">POS summaries</dt>
-                    <dd className="tabular-nums">
-                      <Link
-                        href={reviewHrefForNeedsReviewKey("pos_daily_summaries")}
-                        className="text-primary hover:underline"
-                      >
-                        {data.needs_review.pos_daily_summaries}
-                      </Link>
-                    </dd>
-                  </div>
-                )}
-                {data.needs_review.delivery_reports > 0 && (
-                  <div>
-                    <dt className="text-muted-foreground">Platform sales</dt>
-                    <dd className="tabular-nums">
-                      <Link
-                        href={reviewHrefForNeedsReviewKey("delivery_reports")}
-                        className="text-primary hover:underline"
-                      >
-                        {data.needs_review.delivery_reports}
-                      </Link>
-                    </dd>
-                  </div>
-                )}
-                {data.needs_review.expense_entries > 0 && (
-                  <div>
-                    <dt className="text-muted-foreground">Expenses</dt>
-                    <dd className="tabular-nums">
-                      <Link
-                        href={reviewHrefForNeedsReviewKey("expense_entries")}
-                        className="text-primary hover:underline"
-                      >
-                        {data.needs_review.expense_entries}
-                      </Link>
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </section>
-          )}
 
           {data.delivery_balance_left.length > 0 && deliveryEnabled && (
             <section className="mt-6 rounded-lg border border-border bg-card p-4">

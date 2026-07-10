@@ -70,6 +70,8 @@ class DashboardRead(BaseModel):
         description="Per-platform gross − commission posted − bank settled; empty when delivery disabled",
     )
     total_try_position_kurus: int
+    cash_in_hand_kurus: int = 0
+    bank_balance_kurus: int = 0
     fx_balances: list[FxBalanceRow] = Field(default_factory=list)
     tax_department_payments_kurus: int | None = None
     needs_review: NeedsReviewBreakdown

@@ -61,62 +61,30 @@ describe("OwedOwingChart removed", () => {
 });
 
 describe("dashboard page wiring", () => {
-  it("imports SalesMixChart and SalesExpensesNetChart (not OwedOwingChart)", async () => {
+  it("keeps the weekly chart and drops the mix/net composition charts", async () => {
     const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../../app/page.tsx", import.meta.url),
-        "utf8",
-      ),
+      fs.readFile(new URL("../../app/page.tsx", import.meta.url), "utf8"),
     );
-    expect(source).toContain("SalesMixChart");
-    expect(source).toContain("SalesExpensesNetChart");
+    expect(source).toContain("WeeklyChart");
+    expect(source).not.toContain("SalesMixChart");
+    expect(source).not.toContain("SalesExpensesNetChart");
     expect(source).not.toContain("OwedOwingChart");
   });
 
-  it("gates charts behind canReadFinancialReports", async () => {
+  it("gates the chart behind canReadFinancialReports", async () => {
     const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../../app/page.tsx", import.meta.url),
-        "utf8",
-      ),
+      fs.readFile(new URL("../../app/page.tsx", import.meta.url), "utf8"),
     );
     expect(source).toContain("{canReadFinancialReports && (");
   });
 
-  it("passes DashboardRead sales fields to SalesMixChart", async () => {
+  it("shows cash-in-hand and bank-balance KPIs, not needs-review", async () => {
     const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../../app/page.tsx", import.meta.url),
-        "utf8",
-      ),
+      fs.readFile(new URL("../../app/page.tsx", import.meta.url), "utf8"),
     );
-    expect(source).toContain("cashKurus={data.sales.cash_sales_kurus}");
-    expect(source).toContain("posCardKurus={data.sales.pos_card_sales_kurus}");
-    expect(source).toContain("deliveryKurus={data.sales.delivery_sales_kurus}");
-    expect(source).toContain("groupSalesKurus={data.sales.group_sales_kurus}");
-    expect(source).toContain("otherKurus={data.sales.other_sales_kurus}");
-  });
-
-  it("passes totals to SalesExpensesNetChart", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../../app/page.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
-    expect(source).toContain("salesKurus={data.sales.total_sales_kurus}");
-    expect(source).toContain("expensesKurus={data.total_expenses_kurus}");
-    expect(source).toContain("netKurus={data.net_result_kurus}");
-  });
-
-  it("uses 2-column grid for composition charts", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../../app/page.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
-    expect(source).toContain("lg:grid-cols-2");
+    expect(source).toContain("data.cash_in_hand_kurus");
+    expect(source).toContain("data.bank_balance_kurus");
+    expect(source).not.toContain("data.needs_review.total");
   });
 });
 

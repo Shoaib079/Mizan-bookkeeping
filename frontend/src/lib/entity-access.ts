@@ -57,6 +57,8 @@ export type DashboardKpiKey =
   | "payables"
   | "receivables"
   | "try_position"
+  | "cash_in_hand"
+  | "bank_balance"
   | "needs_review";
 
 export type DashboardKpi = {
@@ -71,6 +73,8 @@ const FINANCIAL_KPI_KEYS: ReadonlySet<DashboardKpiKey> = new Set([
   "payables",
   "receivables",
   "try_position",
+  "cash_in_hand",
+  "bank_balance",
 ]);
 
 /** Hide P&L/balance-sheet KPIs for roles without financial_reports:read. */

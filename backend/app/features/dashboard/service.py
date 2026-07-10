@@ -170,12 +170,14 @@ def _try_money_position_kurus(
     session: Session,
     *,
     money_account_id: uuid.UUID | None,
+    kinds: tuple[MoneyAccountKind, ...] = (
+        MoneyAccountKind.BANK,
+        MoneyAccountKind.CASH,
+    ),
 ) -> int:
     query = select(MoneyAccount).where(
         MoneyAccount.is_active.is_(True),
-        MoneyAccount.account_kind.in_(
-            (MoneyAccountKind.BANK, MoneyAccountKind.CASH),
-        ),
+        MoneyAccount.account_kind.in_(kinds),
     )
     if money_account_id is not None:
         query = query.where(MoneyAccount.id == money_account_id)
@@ -338,6 +340,16 @@ def get_dashboard(
         total_try_position = _try_money_position_kurus(
             session, money_account_id=money_account_id
         )
+        cash_in_hand = _try_money_position_kurus(
+            session,
+            money_account_id=money_account_id,
+            kinds=(MoneyAccountKind.CASH,),
+        )
+        bank_balance = _try_money_position_kurus(
+            session,
+            money_account_id=money_account_id,
+            kinds=(MoneyAccountKind.BANK,),
+        )
         fx_balances = _fx_balances(session)
 
     delivery_platforms: list = []
@@ -376,6 +388,8 @@ def get_dashboard(
         total_receivables_kurus=total_receivables,
         delivery_balance_left=delivery_balance_left,
         total_try_position_kurus=total_try_position,
+        cash_in_hand_kurus=cash_in_hand,
+        bank_balance_kurus=bank_balance,
         fx_balances=fx_balances,
         tax_department_payments_kurus=None,
         needs_review=needs_review,
