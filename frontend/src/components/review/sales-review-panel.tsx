@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
+import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { ReportDateRange } from "@/components/reports/report-date-range";
@@ -35,15 +36,43 @@ import { createEntitySwitchTracker } from "@/lib/use-entity-reset";
 import {
   SALES_REVIEW_FILTERS,
   useSalesReviewUrl,
+  type SalesReviewFilter,
 } from "@/lib/use-sales-review-url";
 import { cn } from "@/lib/utils";
 
 type PaginatedResponse<T> = { items: T[]; total: number };
 
-export function SalesReviewPanel() {
+type Props = {
+  /** M1: /sales defaults to "all", /review/sales to "pending". */
+  defaultFilter?: SalesReviewFilter;
+  /** M3: /sales owns creation — "New daily sales" button + ?new=1 deep link. */
+  showCreate?: boolean;
+};
+
+export function SalesReviewPanel({
+  defaultFilter = "all",
+  showCreate = false,
+}: Props) {
   const { entityId } = useEntity();
   const { from, to, review, setRange, setReview, listQuery, exportQuery } =
-    useSalesReviewUrl();
+    useSalesReviewUrl(defaultFilter);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  // ?new=1 (Record hub deep link) opens the form once, then cleans the URL.
+  useEffect(() => {
+    if (!showCreate) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("new")) {
+      setCreateOpen(true);
+      params.delete("new");
+      const query = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${query ? `?${query}` : ""}`,
+      );
+    }
+  }, [showCreate]);
   const entityTrackerRef = useRef(createEntitySwitchTracker());
   const [items, setItems] = useState<PosDailySummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -129,16 +158,23 @@ export function SalesReviewPanel() {
             disabled={loading || exporting}
             onChange={setRange}
           />
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={loading || exporting || total === 0}
-            className="gap-1.5"
-            onClick={() => void onExport()}
-          >
-            <Download className="size-4" />
-            {exporting ? "Downloading…" : "Download Excel"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loading || exporting || total === 0}
+              className="gap-1.5"
+              onClick={() => void onExport()}
+            >
+              <Download className="size-4" />
+              {exporting ? "Downloading…" : "Download Excel"}
+            </Button>
+            {showCreate && (
+              <Button type="button" onClick={() => setCreateOpen(true)}>
+                New daily sales
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-1">
@@ -250,6 +286,14 @@ export function SalesReviewPanel() {
             ))}
           </DataTableBody>
         </DataTable>
+      )}
+
+      {showCreate && (
+        <ManualDailySalesForm
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onSaved={() => void reload()}
+        />
       )}
 
       <CorrectDailySalesForm

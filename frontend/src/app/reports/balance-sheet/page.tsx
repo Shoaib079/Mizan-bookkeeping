@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 /** Balance sheet report (Phase 9 Slice 8). */
 
 import type { ReactNode } from "react";
@@ -81,6 +83,17 @@ function BalanceSheetContent() {
           disabled={forbidden || !report}
         />
       </div>
+
+      <p className="mb-4 text-xs text-muted-foreground">
+        Starting figures come from{" "}
+        <Link
+          href="/onboarding/opening-balances"
+          className="text-primary hover:underline"
+        >
+          Opening balances
+        </Link>{" "}
+        (Settings).
+      </p>
 
       {!entityId && (
         <p className="text-sm text-muted-foreground">

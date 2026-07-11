@@ -297,10 +297,10 @@ describe("backLinkForPathname", () => {
     });
   });
 
-  it("maps opening balances back to reports hub", () => {
+  it("maps opening balances back to Settings (M6)", () => {
     expect(backLinkForPathname("/onboarding/opening-balances")).toEqual({
-      href: "/reports",
-      label: "Reports",
+      href: "/settings/restaurant",
+      label: "Settings",
     });
   });
 

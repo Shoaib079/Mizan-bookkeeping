@@ -19,13 +19,11 @@ import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
 import { ExpenseReceiptUploadForm } from "@/components/forms/expense-receipt-upload-form";
 import { FxPurchaseQuickAction } from "@/components/forms/fx-purchase-quick-action";
-import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
 import { PartnerProfitAllocationForm } from "@/components/forms/partner-profit-allocation-form";
 import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
 import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
 import { SupplierForm } from "@/components/forms/supplier-form";
-import { TransferForm } from "@/components/forms/transfer-form";
 import { useQuickActions } from "@/components/quick-actions";
 import {
   PERSON_PICKER_ACTIONS,
@@ -108,7 +106,6 @@ export function RecordActionModals({ active, onClose }: Props) {
         title="Store / card purchase"
         showRecordKindToggle={false}
       />
-      <ManualDailySalesForm open={effectiveModal === "sales"} onClose={closeAll} />
       <FxPurchaseQuickAction open={effectiveModal === "buyFx"} onClose={closeAll} />
       <PosSummaryUploadForm
         open={effectiveModal === "posPhoto"}
@@ -135,7 +132,6 @@ export function RecordActionModals({ active, onClose }: Props) {
 
       <CashDrawerCloseDayForm open={effectiveModal === "closeDay"} onClose={closeAll} />
       <CashMovementForm open={effectiveModal === "cashMovement"} onClose={closeAll} />
-      <TransferForm open={effectiveModal === "transfer"} onClose={closeAll} />
       <FxWalletActionDialog
         open={effectiveModal === "fxConvert"}
         mode="convert"

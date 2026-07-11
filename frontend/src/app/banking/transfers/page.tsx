@@ -34,6 +34,21 @@ export default function TransfersPage() {
   const [accounts, setAccounts] = useState<Record<string, string>>({});
   const [transferOpen, setTransferOpen] = useState(false);
 
+  // ?new=1 (Record hub deep link, M3) opens the form once, then cleans the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("new")) {
+      setTransferOpen(true);
+      params.delete("new");
+      const query = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${query ? `?${query}` : ""}`,
+      );
+    }
+  }, []);
+
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
     const res = await apiFetch<{ items: MoneyAccount[] }>(

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { BackupsInfoPanel } from "@/components/settings/backups-info-panel";
@@ -254,6 +256,20 @@ export function RestaurantSettingsContent() {
             ? "Loading…"
             : `${chartCount} account${chartCount === 1 ? "" : "s"} on chart.`}
         </p>
+      </section>
+
+      <section className="rounded-lg border border-border bg-card p-5">
+        <h2 className="text-sm font-semibold">Opening balances</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Go-live date, cash and bank balances, payables, and equity — the
+          starting point your books measure from.
+        </p>
+        <Link
+          href="/onboarding/opening-balances"
+          className="mt-3 inline-block text-sm text-primary hover:underline"
+        >
+          Review opening balances →
+        </Link>
       </section>
 
       <BackupsInfoPanel />

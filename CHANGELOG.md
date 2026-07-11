@@ -4,6 +4,14 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-11
 
+**Phase 7 — page merges M1/M3/M6 (`v0.ia2-phase7-merges`, branch `frontend-overhaul`):**
+
+- **M1 — /sales + /review/sales merged.** `/sales` now renders `SalesReviewPanel` (date range, All/Needs review/Posted chips, Excel export, edit + void) — the ~200-line duplicate table implementation is deleted. `/review/sales` renders the same panel pre-filtered to Needs review via a new `defaultFilter` prop on `useSalesReviewUrl` (the review chip param is now always explicit in the URL so "All" works from either entry point).
+- **M3 — page-owned Record actions.** `openRecordAction` consults `RECORD_ACTION_PAGE_HREFS`: converted actions navigate to their owning page with `?new=1` (form opens once, URL cleaned) instead of opening a context-less dialog. Converted: **Daily sales (manual)** → `/sales?new=1` (panel gained a "New daily sales" button + hosts `ManualDailySalesForm`, which now takes `onSaved` to reload the list) and **Transfer** → `/banking/transfers?new=1`. Both dialogs removed from `RecordActionModals` (usage tracking unchanged). Remaining dialog actions can convert one registry line at a time.
+- **M6 — Opening balances re-homed under Settings.** Removed from the Reports card grid + `REPORTS_CARD_HREFS`; new section in Settings → Restaurant links to it; back link and sidebar highlight now point at Settings; Balance-sheet report links to it as the source of starting figures. URL unchanged (`/onboarding/opening-balances`) — no redirect needed.
+- **M2 (close-day consolidation) deliberately deferred:** the Record "Close day" dialog (`/cash/drawer-sessions/close-day`, drawer over/short) and the `/close-day` page (`DayCloseoutForm`, full day closeout) post **different accounting operations** under one name. Merging them is a product decision (owner), not a refactor — see FRONTEND_AUDIT_FINAL Part B.
+- Verified: tsc, eslint, 524/524 frontend tests.
+
 **Phase 6 — React Query data layer (`v0.ia2-phase6-query`, branch `frontend-overhaul`):** Shared data hooks now run on TanStack Query (`@tanstack/react-query` 5.x) — caching, background revalidation on window focus, and one global invalidation path. No visual changes; URL-driven filters untouched.
 
 - **Setup:** `QueryProvider` (`lib/query-client.tsx`) wraps the app in `providers.tsx` — retry off (apiFetch keeps its own backoff), staleTime 30s, gcTime 5min. `mizan:ledger-changed` moved to `lib/ledger-events.ts` (`emitLedgerChanged()`); the provider listens and invalidates ALL queries, and `VoidSubledgerDialog` now emits it on every successful void — so any void anywhere refreshes every cached list, balance, and badge.

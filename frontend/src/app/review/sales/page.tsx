@@ -16,7 +16,8 @@ const SalesReviewPanel = dynamic(
 export default function ReviewSalesPage() {
   return (
     <Suspense fallback={<TableSkeleton columns={6} />}>
-      <SalesReviewPanel />
+      {/* M1: same merged panel as /sales, pre-filtered to the review queue. */}
+      <SalesReviewPanel defaultFilter="pending" />
     </Suspense>
   );
 }
