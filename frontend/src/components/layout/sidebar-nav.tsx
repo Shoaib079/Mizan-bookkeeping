@@ -83,25 +83,20 @@ export function SidebarNav({
         .map((group) => {
           const items = filterNavItemsByEntitySettings(group.items, settings);
           if (items.length === 0) return null;
-          const [primary, ...children] = items;
 
           return (
-            <div
-              key={group.label}
-              className="border-t border-border pt-2 first:border-t-0 first:pt-0"
-            >
-              <NavRowLink item={primary} pathname={pathname} />
-              {children.length > 0 && (
-                <div className="ml-3 mt-0.5 space-y-0.5 border-l border-border pl-2">
-                  {children.map((child) => (
-                    <NavRowLink
-                      key={child.href}
-                      item={child}
-                      pathname={pathname}
-                    />
-                  ))}
-                </div>
-              )}
+            <div key={group.label} className="pt-2">
+              <p
+                className="px-2 pb-1 font-medium uppercase text-muted-foreground"
+                style={{ fontSize: "10.5px", letterSpacing: "0.06em", opacity: 0.75 }}
+              >
+                {group.label}
+              </p>
+              <div className="space-y-0.5">
+                {items.map((item) => (
+                  <NavRowLink key={item.href} item={item} pathname={pathname} />
+                ))}
+              </div>
             </div>
           );
         })}

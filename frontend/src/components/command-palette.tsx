@@ -1,8 +1,8 @@
 "use client";
 
-/** Global ⌘K data-first search — suppliers, items, pages, actions (UX-B). */
+/** Global ⌘K data-first search — suppliers, customers, items, pages, actions (UX-B, audit A6). */
 
-import { Search, Users, Tags } from "lucide-react";
+import { Search, UserCircle, Users, Tags } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -21,8 +21,10 @@ import {
   nextSearchGeneration,
   isStale,
   searchSuppliers,
+  searchCustomers,
   searchExpenseItems,
   type PaletteSupplier,
+  type PaletteCustomer,
   type PaletteExpenseItem,
 } from "@/lib/palette-search";
 import { currentMonthRange } from "@/lib/date-range";
@@ -41,6 +43,7 @@ type Props = {
 
 type PaletteRow =
   | { kind: "supplier"; supplier: PaletteSupplier }
+  | { kind: "customer"; customer: PaletteCustomer }
   | { kind: "item"; item: PaletteExpenseItem }
   | { kind: "page"; label: string; href: string; icon: React.ComponentType<{ className?: string }>; group: string }
   | { kind: "action"; action: RecordActionDef };
@@ -58,6 +61,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
 
   const [suppliers, setSuppliers] = useState<PaletteSupplier[]>([]);
+  const [customers, setCustomers] = useState<PaletteCustomer[]>([]);
   const [items, setItems] = useState<PaletteExpenseItem[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const prevEntityRef = useRef(entityId);
@@ -71,6 +75,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
     if (prevEntityRef.current !== entityId) {
       prevEntityRef.current = entityId;
       setSuppliers([]);
+      setCustomers([]);
       setItems([]);
       setSupplierSpend(new Map());
       setItemSpend(new Map());
@@ -120,6 +125,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
     const q = query.trim();
     if (q.length < PALETTE_SEARCH_MIN_CHARS || !entityId) {
       setSuppliers([]);
+      setCustomers([]);
       setItems([]);
       return;
     }
@@ -130,6 +136,11 @@ export function CommandPalette({ deliveryEnabled }: Props) {
       void searchSuppliers(entityId, q, gen).then((res) => {
         if (!isStale(gen)) setSuppliers(res);
       });
+      void searchCustomers(entityId, q, gen)
+        .then((res) => {
+          if (!isStale(gen)) setCustomers(res);
+        })
+        .catch(() => setCustomers([]));
       void searchExpenseItems(entityId, q, gen).then((res) => {
         if (!isStale(gen)) setItems(res);
       });
@@ -145,6 +156,9 @@ export function CommandPalette({ deliveryEnabled }: Props) {
     // Data results first (only when typing)
     for (const s of suppliers) {
       result.push({ kind: "supplier", supplier: s });
+    }
+    for (const c of customers) {
+      result.push({ kind: "customer", customer: c });
     }
     for (const i of items) {
       result.push({ kind: "item", item: i });
@@ -184,13 +198,14 @@ export function CommandPalette({ deliveryEnabled }: Props) {
     }
 
     return result;
-  }, [query, suppliers, items, routes, actions]);
+  }, [query, suppliers, customers, items, routes, actions]);
 
   const close = useCallback(() => {
     setOpen(false);
     setQuery("");
     setActiveIndex(0);
     setSuppliers([]);
+    setCustomers([]);
     setItems([]);
     nextSearchGeneration();
   }, []);
@@ -205,6 +220,9 @@ export function CommandPalette({ deliveryEnabled }: Props) {
       switch (row.kind) {
         case "supplier":
           router.push(`/suppliers/${row.supplier.id}`);
+          break;
+        case "customer":
+          router.push(`/customers/${row.customer.id}`);
           break;
         case "item":
           router.push(
@@ -272,7 +290,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
   useEffect(() => {
     setActiveIndex(0);
     listRef.current?.scrollTo({ top: 0 });
-  }, [query, suppliers, items]);
+  }, [query, suppliers, customers, items]);
 
   useEffect(() => {
     if (open) {
@@ -301,10 +319,10 @@ export function CommandPalette({ deliveryEnabled }: Props) {
           <Input
             ref={inputRef}
             className="border-0 shadow-none focus-visible:ring-0"
-            placeholder="Search suppliers, items, pages…"
+            placeholder="Search suppliers, customers, items, pages…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search suppliers, items, pages"
+            aria-label="Search suppliers, customers, items, pages"
           />
           <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground sm:inline">
             Esc
@@ -347,6 +365,8 @@ function rowKey(row: PaletteRow, index: number): string {
   switch (row.kind) {
     case "supplier":
       return `s-${row.supplier.id}`;
+    case "customer":
+      return `c-${row.customer.id}`;
     case "item":
       return `i-${row.item.id}`;
     case "page":
@@ -362,6 +382,8 @@ function RowIcon({ row }: { row: PaletteRow }) {
   switch (row.kind) {
     case "supplier":
       return <Users className="size-4 shrink-0 text-blue-500" />;
+    case "customer":
+      return <UserCircle className="size-4 shrink-0 text-violet-500" />;
     case "item":
       return <Tags className="size-4 shrink-0 text-emerald-500" />;
     case "page":
@@ -375,6 +397,8 @@ function rowLabel(row: PaletteRow): string {
   switch (row.kind) {
     case "supplier":
       return row.supplier.name;
+    case "customer":
+      return row.customer.name;
     case "item":
       return row.item.canonical_name;
     case "page":
@@ -394,6 +418,8 @@ function rowBadge(
       const spend = supplierSpend.get(row.supplier.id);
       return spend ? formatTry(spend) : "Supplier";
     }
+    case "customer":
+      return "Customer";
     case "item": {
       const spend = itemSpend.get(row.item.id);
       return spend ? formatTry(spend) : "Item";

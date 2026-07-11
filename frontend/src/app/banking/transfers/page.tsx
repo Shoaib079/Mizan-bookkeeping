@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { TablePager } from "@/components/ui/table-pager";
 import { ArrowLeftRight } from "lucide-react";
 import type { AccountTransferRead } from "@/lib/banking-types";
 import { apiFetch } from "@/lib/api";
@@ -28,7 +29,7 @@ type MoneyAccount = { id: string; name: string };
 
 export default function TransfersPage() {
   const { entityId } = useEntity();
-  const { items, total, loading, error, reload } =
+  const { items, total, loading, error, reload, offset, setOffset, pageSize } =
     useEntityList<AccountTransferRead>("/banking/transfers", entityId);
   const [accounts, setAccounts] = useState<Record<string, string>>({});
   const [transferOpen, setTransferOpen] = useState(false);
@@ -112,6 +113,13 @@ export default function TransfersPage() {
               ))}
             </DataTableBody>
           </DataTable>
+          <TablePager
+            offset={offset}
+            pageSize={pageSize}
+            total={total}
+            disabled={loading}
+            onOffsetChange={setOffset}
+          />
         </>
       )}
 

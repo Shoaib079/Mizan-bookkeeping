@@ -4,6 +4,9 @@
  */
 @import "tailwindcss";
 
+/* Class-based dark mode — toggled by ThemeToggle on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-inter);
   --color-background: var(--background);
@@ -48,6 +51,31 @@
   --sidebar-foreground: #334155;
   --sidebar-accent: #eff6ff;
   --ring: #2563eb;
+  /* Elevation (audit C3) */
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05);
+  --shadow-pop: 0 8px 24px rgb(15 23 42 / 0.12), 0 2px 6px rgb(15 23 42 / 0.08);
+}
+
+/* Dark theme — same token contract, flipped values (audit C3). */
+.dark {
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --primary: #60a5fa;
+  --primary-foreground: #0b1222;
+  --muted: #16213a;
+  --muted-foreground: #94a3b8;
+  --border: #1e293b;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --destructive: #f87171;
+  --card: #111c33;
+  --sidebar: #0f172a;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-accent: #172554;
+  --ring: #60a5fa;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
 }
 
 @layer base {

@@ -146,7 +146,8 @@ describe("route reachability guard", () => {
     for (const href of TAB_ONLY_HREFS) {
       expect(sidebar.has(href)).toBe(false);
     }
-    expect(sidebar.has("/sales")).toBe(false);
+    // IA v2 (audit A1): Sales is a sidebar row AND its section's first tab.
+    expect(sidebar.has("/sales")).toBe(true);
     expect(collectTabHrefs(settingsOn).has("/sales")).toBe(true);
   });
 
@@ -180,13 +181,14 @@ describe("SIDEBAR_HIDDEN_HREFS", () => {
 });
 
 describe("tab + sidebar highlighting", () => {
-  it("highlights Record sidebar row and the Card clearing tab on /cards", () => {
-    const record = navGroups
-      .find((group) => group.label === "Overview")
-      ?.items.find((item) => item.href === "/record");
-    expect(record).toBeDefined();
-    expect(isNavItemActive("/cards", record!)).toBe(true);
-    expect(sidebarHrefActiveForPathname("/record", "/cards")).toBe(true);
+  it("highlights Sales sidebar row and the Card clearing tab on /cards (IA v2)", () => {
+    const sales = navGroups
+      .find((group) => group.label === "Money in")
+      ?.items.find((item) => item.href === "/sales");
+    expect(sales).toBeDefined();
+    expect(isNavItemActive("/cards", sales!)).toBe(true);
+    expect(sidebarHrefActiveForPathname("/sales", "/cards")).toBe(true);
+    expect(sidebarHrefActiveForPathname("/record", "/cards")).toBe(false);
 
     const section = navSectionForPathname("/cards");
     expect(section?.id).toBe("sales");

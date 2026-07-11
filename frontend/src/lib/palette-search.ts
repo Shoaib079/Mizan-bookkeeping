@@ -1,4 +1,4 @@
-/** Palette search helpers — suppliers + expense items via existing API (UX-B). */
+/** Palette search helpers — suppliers, customers + expense items via existing API (UX-B, audit A6). */
 
 import { apiFetch } from "@/lib/api";
 
@@ -15,6 +15,12 @@ export type PaletteSupplier = {
 export type PaletteExpenseItem = {
   id: string;
   canonical_name: string;
+};
+
+export type PaletteCustomer = {
+  id: string;
+  name: string;
+  identifier: string | null;
 };
 
 type PaginatedList<T> = { items: T[]; total: number };
@@ -43,6 +49,20 @@ export async function searchSuppliers(
   if (q.length < PALETTE_SEARCH_MIN_CHARS) return [];
   const res = await apiFetch<PaginatedList<PaletteSupplier>>(
     `/entities/${entityId}/suppliers?q=${encodeURIComponent(q)}&limit=${SEARCH_LIMIT}`,
+  );
+  if (isStale(gen)) return [];
+  return res.items;
+}
+
+export async function searchCustomers(
+  entityId: string,
+  query: string,
+  gen: number,
+): Promise<PaletteCustomer[]> {
+  const q = query.trim();
+  if (q.length < PALETTE_SEARCH_MIN_CHARS) return [];
+  const res = await apiFetch<PaginatedList<PaletteCustomer>>(
+    `/entities/${entityId}/customers?q=${encodeURIComponent(q)}&limit=${SEARCH_LIMIT}`,
   );
   if (isStale(gen)) return [];
   return res.items;

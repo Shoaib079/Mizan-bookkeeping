@@ -1,5 +1,7 @@
 /** Dashboard recent journal entries — shared with ledger report. */
 
+import { sourceLabel } from "@/lib/transaction-registry";
+
 export const RECENT_ENTRIES_LIMIT = 10;
 
 export type RecentEntryLine = {
@@ -12,6 +14,11 @@ export type RecentEntryRow = {
   entry_date: string;
   description: string;
   source: string;
+  status?: string;
+  reverses_entry_id?: string | null;
+  reversed_by_entry_id?: string | null;
+  amends_entry_id?: string | null;
+  amended_by_entry_id?: string | null;
   lines: RecentEntryLine[];
 };
 
@@ -39,6 +46,7 @@ export function journalEntryTotalKurus(lines: RecentEntryLine[]): number {
   );
 }
 
+/** Single label vocabulary with the transaction registry (no duplicates). */
 export function journalSourceLabel(source: string): string {
-  return source.replaceAll("_", " ");
+  return sourceLabel(source);
 }

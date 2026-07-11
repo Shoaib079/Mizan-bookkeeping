@@ -43,43 +43,15 @@ import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { journalEntryRowClassName } from "@/lib/ledger-display";
+import {
+  GENERIC_CORRECTABLE_SOURCES,
+  JOURNAL_SOURCES,
+  sourceFlow,
+  sourceLabel,
+} from "@/lib/transaction-registry";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 50;
-
-const CORRECTABLE_SOURCES = new Set(["manual", "bank_fee"]);
-
-const JOURNAL_SOURCES = [
-  "manual",
-  "opening_balance",
-  "invoice",
-  "payment",
-  "transfer",
-  "pos_settlement",
-  "card_sales",
-  "pos_card_tip",
-  "pos_commission_sweep",
-  "pos_commission_statement",
-  "delivery_report",
-  "delivery_settlement",
-  "delivery_commission",
-  "bank_fee",
-  "credit_card_payment",
-  "cash_movement",
-  "cash_drawer_close",
-  "fx_purchase",
-  "staff_accrual",
-  "staff_advance",
-  "staff_payment",
-  "partner_expense_fronted",
-  "partner_reimbursement_paid",
-  "customer_credit_sale",
-  "customer_payment_received",
-  "fx_conversion",
-  "fx_expense_spend",
-  "expense_entry",
-  "system",
-] as const;
 
 type JournalEntryLine = {
   id: string;
@@ -114,16 +86,6 @@ function entryTotalKurus(lines: JournalEntryLine[]): number {
     (sum, line) => sum + (line.side === "debit" ? line.amount_kurus : 0),
     0,
   );
-}
-
-const SOURCE_LABELS: Record<string, string> = {
-  bank_fee: "bank charges",
-  pos_commission_sweep: "bank commission",
-  pos_commission_statement: "card commission (statement)",
-};
-
-function sourceLabel(source: string): string {
-  return SOURCE_LABELS[source] ?? source.replaceAll("_", " ");
 }
 
 function ChainLink({
@@ -217,15 +179,19 @@ function EntryDetailPanel({
         </DataTableBody>
       </DataTable>
 
-      {row.source === "manual" && row.status === "posted" && (
-        <p className="text-xs text-muted-foreground">
-          To void this manual journal, use{" "}
-          <Link href="/review/manual-journals" className="text-primary hover:underline">
-            Manual journals
-          </Link>
-          .
-        </p>
-      )}
+      {(() => {
+        const flow = sourceFlow(row.source);
+        if (!flow || GENERIC_CORRECTABLE_SOURCES.has(row.source)) return null;
+        return (
+          <p className="text-xs text-muted-foreground">
+            This entry is managed by its own flow — edit or void it in{" "}
+            <Link href={flow.href} className="text-primary hover:underline">
+              {flow.label}
+            </Link>
+            .
+          </p>
+        );
+      })()}
     </div>
   );
 }
@@ -397,14 +363,9 @@ function LedgerPanelContent() {
   return (
     <>
       <p className="mb-6 max-w-3xl text-sm text-muted-foreground">
-        Every journal entry for this restaurant — posted and voided. This is the
-        general ledger, not the deferred audit-events log (immutable change
-        history). Edit posted manual journals and bank charges here; void manual
-        journals on{" "}
-        <Link href="/review/manual-journals" className="text-primary hover:underline">
-          Manual journals
-        </Link>
-        . Subledger-backed entries use their dedicated correction flows.
+        Every journal entry for this restaurant — posted and voided. Edit or
+        void manual journals and bank charges directly here; expand any other
+        entry for a direct link to the flow that manages it.
       </p>
 
       <div className="mb-6 space-y-4">
@@ -588,7 +549,7 @@ function LedgerPanelContent() {
                         </DataTableCell>
                         <DataTableCell align="right">
                           {row.status === "posted" &&
-                            CORRECTABLE_SOURCES.has(row.source) && (
+                            GENERIC_CORRECTABLE_SOURCES.has(row.source) && (
                               <SubledgerRowActions
                                 row={{
                                   display_kind: "effective",

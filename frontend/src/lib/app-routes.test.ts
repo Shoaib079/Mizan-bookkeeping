@@ -7,12 +7,17 @@ import {
   navGroups,
   sidebarChildrenForNavItem,
 } from "@/lib/app-routes";
-const EXPECTED_SIDEBAR_GROUPS = ["Overview", "Reports"] as const;
+const EXPECTED_SIDEBAR_GROUPS = [
+  "Overview",
+  "Money in",
+  "Money out",
+  "Money held",
+  "Understand",
+] as const;
 
 describe("navGroups", () => {
-  it("uses six-intent sidebar sections only", () => {
+  it("uses the IA v2 sidebar sections only", () => {
     expect(navGroups.map((group) => group.label)).toEqual([...EXPECTED_SIDEBAR_GROUPS]);
-    expect(navGroups.some((group) => group.label === "Sales")).toBe(false);
     expect(navGroups.some((group) => group.label === "Books")).toBe(false);
   });
 
@@ -22,16 +27,16 @@ describe("navGroups", () => {
     }
   });
 
-  it("shows Overview and Reports sidebar groups only", () => {
+  it("shows the IA v2 sidebar groups only", () => {
     expect(navGroups.map((group) => group.label)).toEqual([...EXPECTED_SIDEBAR_GROUPS]);
     expect(navGroups.some((group) => group.label === "Set up")).toBe(false);
   });
 
-  it("lists Opening balances under Reports in the sidebar", () => {
-    const reports = navGroups.find((group) => group.label === "Reports");
-    expect(reports?.items.map((item) => item.href)).toEqual([
+  it("lists Reports and Settings under Understand in the sidebar", () => {
+    const understand = navGroups.find((group) => group.label === "Understand");
+    expect(understand?.items.map((item) => item.href)).toEqual([
       "/reports",
-      "/onboarding/opening-balances",
+      "/settings/restaurant",
     ]);
   });
 
@@ -42,27 +47,41 @@ describe("navGroups", () => {
       "/record",
       "/review",
       "/balances",
-      "/suppliers",
-      "/customers",
-      "/staff",
-      "/partners",
-      "/banking",
-      "/delivery",
     ]);
   });
 
-  it("hides collapsed domain routes from sidebar rows", () => {
+  it("groups the money sections per IA v2", () => {
+    const moneyIn = navGroups.find((group) => group.label === "Money in");
+    expect(moneyIn?.items.map((item) => item.href)).toEqual([
+      "/sales",
+      "/delivery",
+      "/customers",
+    ]);
+    const moneyOut = navGroups.find((group) => group.label === "Money out");
+    expect(moneyOut?.items.map((item) => item.href)).toEqual([
+      "/suppliers",
+      "/staff",
+      "/partners",
+    ]);
+    const moneyHeld = navGroups.find((group) => group.label === "Money held");
+    expect(moneyHeld?.items.map((item) => item.href)).toEqual(["/banking"]);
+  });
+
+  it("shows Sales in the sidebar and keeps legacy/tab-only routes out (audit A1)", () => {
     const sidebarHrefs = navGroups.flatMap((group) => group.items.map((item) => item.href));
-    expect(sidebarHrefs).not.toContain("/sales");
+    expect(sidebarHrefs).toContain("/sales");
+    expect(sidebarHrefs).toContain("/settings/restaurant");
     expect(sidebarHrefs).not.toContain("/expenses");
     expect(sidebarHrefs).not.toContain("/uploads");
+    expect(sidebarHrefs).not.toContain("/close-day");
+    expect(sidebarHrefs).not.toContain("/cards");
+    expect(sidebarHrefs).not.toContain("/onboarding/opening-balances");
     expect(sidebarHrefs).toContain("/suppliers");
     expect(sidebarHrefs).toContain("/customers");
     expect(sidebarHrefs).toContain("/staff");
     expect(sidebarHrefs).toContain("/partners");
     expect(sidebarHrefs).toContain("/banking");
     expect(sidebarHrefs).toContain("/delivery");
-    expect(sidebarHrefs).not.toContain("/settings/restaurant");
   });
 
   it("keeps every page route in appRoutes for palette indexing", () => {
@@ -144,17 +163,15 @@ describe("app shell header", () => {
     expect(source).not.toMatch(/authOn && <AccountMenu/);
   });
 
-  it("shows sidebar restaurant badge only — no sidebar switcher in any mode", async () => {
+  it("renders the sidebar restaurant switcher (audit A5)", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/layout/app-shell.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("Use the account menu to switch");
-    expect(source).toContain("EntityBadge");
+    expect(source).toContain("SidebarEntitySwitcher");
     expect(source).not.toContain("Combobox");
-    expect(source).not.toContain("entity-select");
     expect(source).not.toContain("actor-id");
   });
 
@@ -253,20 +270,36 @@ describe("sidebarChildrenForNavItem", () => {
 });
 
 describe("intent sidebar highlighting", () => {
-  it("highlights Add when on legacy sales routes", () => {
+  it("highlights the Sales sidebar row on sales routes (IA v2)", () => {
+    const sales = navGroups
+      .find((group) => group.label === "Money in")
+      ?.items.find((item) => item.href === "/sales");
+    expect(sales).toBeDefined();
+    expect(isNavItemActive("/sales", sales!)).toBe(true);
+    expect(isNavItemActive("/cards", sales!)).toBe(true);
+    expect(isNavItemActive("/close-day", sales!)).toBe(true);
+
     const record = navGroups
       .find((group) => group.label === "Overview")
       ?.items.find((item) => item.href === "/record");
     expect(record).toBeDefined();
-    expect(isNavItemActive("/sales", record!)).toBe(true);
+    expect(isNavItemActive("/sales", record!)).toBe(false);
   });
 
   it("highlights Banking when on banking routes", () => {
     const banking = navGroups
-      .find((group) => group.label === "Overview")
+      .find((group) => group.label === "Money held")
       ?.items.find((item) => item.href === "/banking");
     expect(banking).toBeDefined();
     expect(isNavItemActive("/banking/transfers", banking!)).toBe(true);
+  });
+
+  it("highlights Settings on any settings page", () => {
+    const settings = navGroups
+      .find((group) => group.label === "Understand")
+      ?.items.find((item) => item.href === "/settings/restaurant");
+    expect(settings).toBeDefined();
+    expect(isNavItemActive("/settings/profile", settings!)).toBe(true);
   });
 });
 

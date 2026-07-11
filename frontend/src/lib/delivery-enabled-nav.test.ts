@@ -111,8 +111,9 @@ describe("delivery enabled cache", () => {
 });
 
 describe("delivery nav visibility", () => {
+  // IA v2: Delivery lives in the "Money in" sidebar group.
   const overviewHub = appRoutes.filter(
-    (route) => route.group === "Overview" && !route.nestedUnder,
+    (route) => route.group === "Money in" && !route.nestedUnder,
   );
 
   it("shows Delivery nav when deliveryEnabled is true", () => {

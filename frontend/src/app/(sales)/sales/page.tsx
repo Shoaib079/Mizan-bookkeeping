@@ -16,6 +16,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { TablePager } from "@/components/ui/table-pager";
 import { ShoppingBag } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -24,10 +25,8 @@ import type { PosDailySummary } from "@/lib/pos-delivery-types";
 
 export default function SalesPage() {
   const { entityId } = useEntity();
-  const { items, total, loading, error, reload } = useEntityList<PosDailySummary>(
-    "/pos/daily-summaries",
-    entityId,
-  );
+  const { items, total, loading, error, reload, offset, setOffset, pageSize } =
+    useEntityList<PosDailySummary>("/pos/daily-summaries", entityId);
   const [correctSummary, setCorrectSummary] = useState<PosDailySummary | null>(
     null,
   );
@@ -126,6 +125,14 @@ export default function SalesPage() {
           </DataTableBody>
         </DataTable>
       )}
+
+      <TablePager
+        offset={offset}
+        pageSize={pageSize}
+        total={total}
+        disabled={loading}
+        onOffsetChange={setOffset}
+      />
 
       <CorrectDailySalesForm
         open={correctSummary !== null}
