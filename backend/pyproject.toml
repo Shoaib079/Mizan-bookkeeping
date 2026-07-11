@@ -42,6 +42,15 @@ app = ["assets/fonts/*.ttf", "assets/fonts/LICENSE"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+filterwarnings = [
+    # Third-party noise only — never blanket-ignore whole categories.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+    # PyMuPDF's SWIG-generated bindings under Python 3.13 (fixed upstream in
+    # wheels built with SWIG >= 4.3 — drop these once pymupdf is upgraded).
+    "ignore:builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
