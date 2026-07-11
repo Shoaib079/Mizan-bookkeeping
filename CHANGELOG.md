@@ -4,6 +4,13 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-11
 
+**Phase 6 — React Query data layer (`v0.ia2-phase6-query`, branch `frontend-overhaul`):** Shared data hooks now run on TanStack Query (`@tanstack/react-query` 5.x) — caching, background revalidation on window focus, and one global invalidation path. No visual changes; URL-driven filters untouched.
+
+- **Setup:** `QueryProvider` (`lib/query-client.tsx`) wraps the app in `providers.tsx` — retry off (apiFetch keeps its own backoff), staleTime 30s, gcTime 5min. `mizan:ledger-changed` moved to `lib/ledger-events.ts` (`emitLedgerChanged()`); the provider listens and invalidates ALL queries, and `VoidSubledgerDialog` now emits it on every successful void — so any void anywhere refreshes every cached list, balance, and badge.
+- **`useEntityList` rewritten on `useQuery`** keyed `[entity-list, entityId, path, offset]` — all 15 consumer pages/panels (sales, suppliers, customers, staff, transfers, group sales, review panels, delivery panels, team) get instant cached revisits + focus revalidation with zero component edits; return contract unchanged. Offset still resets on filter/entity change.
+- **Also query-backed:** `use-balance-map` (directory balance columns), dashboard `RecentEntriesCard` (manual ledger-changed listener deleted — global invalidation covers it), `useReviewCounts` (30s poll via refetchInterval + review-counts-changed event → targeted invalidation).
+- Verified: tsc, eslint, 524/524 frontend tests. Remaining hand-rolled fetchers (GL panel, dashboard KPIs, statement review) can migrate incrementally on the same pattern.
+
 **Phase 5 — Delivery + POS voids (`v0.ia2-phase5-voids`, branch `frontend-overhaul`):** Edit/void is now global across every transaction family. F3 policy decision (owner, 2026-07-11): new voids behave exactly like existing ones — retroactive, period-lock gated.
 
 - **Backend:** `void_pos_daily_summary` in `core/ledger/correction.py` (voids the linked card-sales batch + cash-movement JEs — the void half of the existing correct flow — and marks the summary voided, freeing its date). New endpoints: `POST /pos/daily-summaries/{id}/void`, `POST /pos/settlements/{id}/void`, `POST /delivery/reports/{id}/void`, `POST /delivery/settlements/{id}/void` — all reuse `void_gl_with_subledger_rows`/`_run_subledger_void` (period locks, dirty-period marking, RLS) and the standard `VoidJournalEntryRequest`/`SubledgerVoidOut` contract. `voided` added to `PosDailySummaryStatus` + `DeliveryReportStatus` (string columns — no migration). Settlement read models gain a derived `status` ("posted"/"voided") from the linked journal entry — no new columns.

@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { emitLedgerChanged } from "@/lib/ledger-events";
 import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate } from "@/lib/money";
@@ -90,6 +91,7 @@ export function VoidSubledgerDialog({
       submitIdempotency.completeSubmit();
       onClose();
       onSaved();
+      emitLedgerChanged();
       toast("Record voided");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Void failed");
