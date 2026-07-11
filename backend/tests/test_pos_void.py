@@ -141,6 +141,25 @@ def test_voided_date_can_be_posted_again(db_session, client, pos_void_setup) -> 
     assert manual.json()["status"] == "posted"
 
 
+def test_same_photo_can_be_reuploaded_after_void(client, pos_void_setup) -> None:
+    """Voiding retires the file fingerprint — the identical upload isn't a duplicate."""
+    entity_id = pos_void_setup["entity_id"]
+    summary = _post_sample_summary(client, pos_void_setup)
+
+    void = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries/{summary['id']}/void",
+        json={"actor_id": str(ACTOR_ID)},
+    )
+    assert void.status_code == 200
+
+    reupload = client.post(
+        f"/entities/{entity_id}/pos/daily-summaries",
+        files={"file": ("summary.txt", SAMPLE_SUMMARY.read_bytes(), "text/plain")},
+    )
+    assert reupload.status_code == 201, reupload.text
+    assert reupload.json()["id"] != summary["id"]
+
+
 def test_void_rejected_for_non_posted_summary(client, pos_void_setup) -> None:
     entity_id = pos_void_setup["entity_id"]
     upload = client.post(

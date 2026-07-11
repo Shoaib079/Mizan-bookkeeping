@@ -1964,6 +1964,10 @@ def void_pos_daily_summary(
                 )
 
             summary.status = PosDailySummaryStatus.VOIDED
+            # Retire the fingerprint so the same POS photo can be re-uploaded
+            # after the void — the (entity_id, file_fingerprint) unique
+            # constraint would otherwise block it forever.
+            summary.file_fingerprint = f"voided:{summary.id}"
             if dirty_dates:
                 mark_periods_dirty_for_dates(session, entity_id, dirty_dates)
             session.flush()

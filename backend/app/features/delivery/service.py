@@ -730,6 +730,11 @@ def void_delivery_report_intake(
     with entity_context(session, entity_id):
         report = _get_report_row(session, entity_id, report_id)
         report.status = DeliveryReportStatus.VOIDED.value
+        # Retire the fingerprint so the same figures can be re-entered after the
+        # void — the (entity_id, file_fingerprint) unique constraint would
+        # otherwise block an identical re-upload forever. "voided:{id}" stays
+        # unique per row and within String(64).
+        report.file_fingerprint = f"voided:{report.id}"
         session.commit()
 
     return out
