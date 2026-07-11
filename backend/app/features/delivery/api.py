@@ -10,6 +10,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.delivery.posting import InvalidDeliveryReportError
+from app.core.ledger.posting import PostingError
+from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
@@ -346,3 +348,57 @@ def export_delivery_activity(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return xlsx_response(data, filename)
+
+
+@reports_router.post("/{report_id}/void", response_model=SubledgerVoidOut)
+def void_delivery_report(
+    entity_id: uuid.UUID,
+    report_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return delivery_service.void_delivery_report_intake(
+            session,
+            entity_id,
+            report_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except delivery_service.DeliveryReportImmutableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@settlements_router.post("/{settlement_id}/void", response_model=SubledgerVoidOut)
+def void_delivery_settlement(
+    entity_id: uuid.UUID,
+    settlement_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return delivery_service.void_delivery_settlement_intake(
+            session,
+            entity_id,
+            settlement_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except delivery_service.DeliverySettlementNotVoidableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

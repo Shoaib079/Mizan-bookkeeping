@@ -17,6 +17,7 @@ class DeliveryReportStatus(str, enum.Enum):
     NEEDS_REVIEW = "needs_review"
     POSTED = "posted"
     REJECTED = "rejected"
+    VOIDED = "voided"
 
 
 class OwnedDeliveryPlatform(EntityScopedMixin, Base):

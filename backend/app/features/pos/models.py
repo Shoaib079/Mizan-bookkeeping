@@ -19,6 +19,7 @@ class PosDailySummaryStatus(str, enum.Enum):
     CONFIRMED = "confirmed"
     POSTED = "posted"
     REJECTED = "rejected"
+    VOIDED = "voided"
 
 
 class CardSalesBatch(EntityScopedMixin, Base):

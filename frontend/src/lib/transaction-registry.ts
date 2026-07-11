@@ -6,8 +6,10 @@
  * POST /ledger/entries/{id}/void|correct. Subledger-backed sources (expenses,
  * payables, staff, partners, customers, FX, group sales) must use their
  * feature endpoints, reached via the flow page — voiding them through the
- * generic path would skip subledger bookkeeping. Delivery and POS sources
- * have no void endpoint yet (backend gap; see FRONTEND_AUDIT_FINAL Part C1).
+ * generic path would skip subledger bookkeeping. Delivery and POS voids
+ * (phase 5) also live on their flow pages: /pos/daily-summaries/{id}/void,
+ * /pos/settlements/{id}/void, /delivery/reports/{id}/void,
+ * /delivery/settlements/{id}/void.
  */
 
 export const JOURNAL_SOURCES = [

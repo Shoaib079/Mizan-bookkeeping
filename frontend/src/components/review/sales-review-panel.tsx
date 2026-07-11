@@ -5,6 +5,8 @@ import { Download } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +50,7 @@ export function SalesReviewPanel() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [voidSummary, setVoidSummary] = useState<PosDailySummary | null>(null);
   const [correctSummary, setCorrectSummary] = useState<PosDailySummary | null>(
     null,
   );
@@ -223,14 +226,17 @@ export function SalesReviewPanel() {
                 </DataTableCell>
                 <DataTableCell align="right">
                   {row.status === "posted" ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-8 px-3 text-xs"
-                      onClick={() => setCorrectSummary(row)}
-                    >
-                      Edit
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="h-8 px-3 text-xs"
+                        onClick={() => setCorrectSummary(row)}
+                      >
+                        Edit
+                      </Button>
+                      <VoidTriggerButton onContinue={() => setVoidSummary(row)} />
+                    </div>
                   ) : isPendingReviewStatus(row.status) ? (
                     <Link
                       href={`/sales/${row.id}`}
@@ -251,6 +257,26 @@ export function SalesReviewPanel() {
         summary={correctSummary}
         onClose={() => setCorrectSummary(null)}
         onSaved={() => void reload()}
+      />
+
+      <VoidSubledgerDialog
+        open={voidSummary !== null}
+        title="Void daily sales"
+        description={
+          voidSummary?.summary_date
+            ? `Daily sales ${voidSummary.summary_date}`
+            : voidSummary?.id
+        }
+        voidPath={
+          entityId && voidSummary
+            ? `/entities/${entityId}/pos/daily-summaries/${voidSummary.id}/void`
+            : null
+        }
+        onClose={() => setVoidSummary(null)}
+        onSaved={() => {
+          setVoidSummary(null);
+          void reload();
+        }}
       />
     </>
   );

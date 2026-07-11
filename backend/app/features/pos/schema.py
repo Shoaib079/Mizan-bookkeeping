@@ -58,6 +58,7 @@ class PosSettlementRead(BaseModel):
     commission_kurus: int | None
     commission_inferred: bool
     card_sales_batch_id: uuid.UUID | None
+    status: str = "posted"
     created_at: datetime
 
 

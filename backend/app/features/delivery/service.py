@@ -109,10 +109,20 @@ def _to_report_read(session: Session, report: DeliveryReport) -> DeliveryReportR
     )
 
 
+def _settlement_status(session: Session, settlement: DeliverySettlement) -> str:
+    from app.core.ledger.models import JournalEntry, JournalEntryStatus
+
+    entry = session.get(JournalEntry, settlement.journal_entry_id)
+    if entry is not None and entry.status == JournalEntryStatus.VOIDED:
+        return "voided"
+    return "posted"
+
+
 def _to_settlement_read(
     session: Session, settlement: DeliverySettlement
 ) -> DeliverySettlementRead:
     return DeliverySettlementRead(
+        status=_settlement_status(session, settlement),
         id=settlement.id,
         entity_id=settlement.entity_id,
         delivery_platform_id=settlement.delivery_platform_id,
@@ -611,3 +621,111 @@ def export_delivery_activity(
     slug = platform_label.replace(" ", "-").lower() if delivery_platform_id else "all-platforms"
     filename = f"delivery-{slug}-{from_date.isoformat()}-{to_date.isoformat()}.xlsx"
     return data, filename
+
+
+class DeliverySettlementNotVoidableError(Exception):
+    """Delivery settlement cannot be voided in its current state."""
+
+
+def void_delivery_settlement_intake(
+    session: Session,
+    entity_id: uuid.UUID,
+    settlement_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+):
+    """Void a delivery settlement — reverses bank←platform receivable."""
+    from app.core.ledger.correction import void_gl_with_subledger_rows
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    _require_entity(session, entity_id)
+
+    with entity_context(session, entity_id):
+        settlement = session.get(DeliverySettlement, settlement_id)
+        if settlement is None:
+            raise LookupError("Delivery settlement not found")
+        if _settlement_status(session, settlement) == "voided":
+            raise DeliverySettlementNotVoidableError(
+                "Delivery settlement is already voided"
+            )
+        journal_entry_id = settlement.journal_entry_id
+
+    result = void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )
+
+
+def void_delivery_report_intake(
+    session: Session,
+    entity_id: uuid.UUID,
+    report_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+):
+    """Void a posted delivery report — reverses platform receivable←delivery sales.
+
+    Guard: money already received against this report (a live settlement
+    referencing it) must be voided first, or the receivable would go negative.
+    """
+    from app.core.ledger.correction import void_gl_with_subledger_rows
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    _require_entity(session, entity_id)
+
+    with entity_context(session, entity_id):
+        report = _get_report_row(session, entity_id, report_id)
+        if report.status != DeliveryReportStatus.POSTED.value:
+            raise DeliveryReportImmutableError(
+                f"Cannot void report in status {report.status} — must be posted"
+            )
+        if report.journal_entry_id is None:
+            raise DeliveryReportImmutableError("Report has no journal entry to void")
+
+        linked = session.scalars(
+            select(DeliverySettlement).where(
+                DeliverySettlement.delivery_report_id == report.id
+            )
+        ).all()
+        for settlement in linked:
+            if _settlement_status(session, settlement) != "voided":
+                raise DeliveryReportImmutableError(
+                    "A settlement was already received against this report — "
+                    "void that settlement first, then void the report."
+                )
+        journal_entry_id = report.journal_entry_id
+
+    result = void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+
+    with entity_context(session, entity_id):
+        report = _get_report_row(session, entity_id, report_id)
+        report.status = DeliveryReportStatus.VOIDED.value
+        session.commit()
+
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )

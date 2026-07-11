@@ -2,6 +2,15 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-07-11
+
+**Phase 5 — Delivery + POS voids (`v0.ia2-phase5-voids`, branch `frontend-overhaul`):** Edit/void is now global across every transaction family. F3 policy decision (owner, 2026-07-11): new voids behave exactly like existing ones — retroactive, period-lock gated.
+
+- **Backend:** `void_pos_daily_summary` in `core/ledger/correction.py` (voids the linked card-sales batch + cash-movement JEs — the void half of the existing correct flow — and marks the summary voided, freeing its date). New endpoints: `POST /pos/daily-summaries/{id}/void`, `POST /pos/settlements/{id}/void`, `POST /delivery/reports/{id}/void`, `POST /delivery/settlements/{id}/void` — all reuse `void_gl_with_subledger_rows`/`_run_subledger_void` (period locks, dirty-period marking, RLS) and the standard `VoidJournalEntryRequest`/`SubledgerVoidOut` contract. `voided` added to `PosDailySummaryStatus` + `DeliveryReportStatus` (string columns — no migration). Settlement read models gain a derived `status` ("posted"/"voided") from the linked journal entry — no new columns.
+- **Consistency guards:** a daily summary whose card sales were already settled cannot be voided until the settlement is voided first; a delivery report with a live settlement referencing it is blocked the same way (409 with a plain-English message).
+- **Frontend:** Void buttons (existing VoidTriggerButton → VoidSubledgerDialog pattern) on Sales (both /sales and Review → Sales), Card clearing settlements, Delivery reports, and Delivery settlements; voided rows render struck-through. `DataTableCell` accepts `onClick` for action cells inside clickable rows.
+- **Tests:** new `backend/tests/test_pos_void.py` (5 tests) + `backend/tests/test_delivery_void.py` (5 tests) — void + reversal status, date/period freed for reposting, guard blocks + unblock-after-void, double-void 409s, 404s. ⚠️ Backend suite not run in this session (sandbox lacks Python 3.11/Postgres) — run `cd backend && .venv/bin/pytest -q` before merging. Frontend: tsc, eslint, 524/524 tests green.
+
 ## 2026-07-10
 
 **IA v2 — Frontend overhaul phases 1–4 (`v0.ia2-frontend-overhaul`, branch `frontend-overhaul`):** Implements FRONTEND_AUDIT_FINAL.md parts A/C. Frontend only — zero backend/accounting changes.

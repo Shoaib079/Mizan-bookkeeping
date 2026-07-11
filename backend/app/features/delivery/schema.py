@@ -86,6 +86,7 @@ class DeliverySettlementRead(BaseModel):
     reference_id: uuid.UUID | None
     bank_statement_line_id: uuid.UUID | None
     delivery_report_id: uuid.UUID | None
+    status: str = "posted"
     created_at: datetime
 
 

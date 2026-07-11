@@ -17,6 +17,7 @@ from app.core.pos.posting import (
     NothingToClearError,
 )
 from app.core.ledger.posting import PostingError
+from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
 from app.features.auth.models import User
@@ -377,4 +378,62 @@ def create_manual_daily_sales(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except daily_summary_service.PosDailySummaryConfirmError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@settlements_router.post("/{settlement_id}/void", response_model=SubledgerVoidOut)
+def void_pos_settlement(
+    entity_id: uuid.UUID,
+    settlement_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return pos_service.void_pos_settlement_by_id(
+            session,
+            entity_id,
+            settlement_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except pos_service.PosSettlementNotVoidableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@daily_summaries_router.post("/{summary_id}/void", response_model=SubledgerVoidOut)
+def void_pos_daily_summary(
+    entity_id: uuid.UUID,
+    summary_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    from app.core.ledger.correction import PosDailySummaryCorrectionError
+
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return daily_summary_service.void_pos_daily_summary_intake(
+            session,
+            entity_id,
+            summary_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except daily_summary_service.PosDailySummaryImmutableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PosDailySummaryCorrectionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

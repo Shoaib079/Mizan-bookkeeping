@@ -6,6 +6,8 @@ import { DeliveryHubToolbar } from "@/components/delivery/delivery-hub-toolbar";
 import { DeliveryPlatformFilter } from "@/components/delivery/delivery-platform-filter";
 import { DeliveryReportReview } from "@/components/delivery-report-review";
 import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -42,6 +44,7 @@ export function DeliveryReportsPanel() {
   } = useDeliveryHubUrl("/delivery/reports");
 
   const [platforms, setPlatforms] = useState<DeliveryPlatform[]>([]);
+  const [voidReport, setVoidReport] = useState<DeliveryReport | null>(null);
   const [platformsLoading, setPlatformsLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
 
@@ -186,6 +189,7 @@ export function DeliveryReportsPanel() {
               <DataTableHeaderCell>Period</DataTableHeaderCell>
               <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -214,6 +218,15 @@ export function DeliveryReportsPanel() {
                   <DataTableCell className="py-2">
                     <StatusBadge status={row.status} />
                   </DataTableCell>
+                  <DataTableCell
+                    align="right"
+                    className="py-2"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {row.status === "posted" && (
+                      <VoidTriggerButton onContinue={() => setVoidReport(row)} />
+                    )}
+                  </DataTableCell>
                 </tr>
               );
             })}
@@ -239,6 +252,26 @@ export function DeliveryReportsPanel() {
         defaultPeriodTo={to}
         onClose={() => setFormOpen(false)}
         onSaved={onReportSaved}
+      />
+
+      <VoidSubledgerDialog
+        open={voidReport !== null}
+        title="Void delivery report"
+        description={
+          voidReport
+            ? `${voidReport.platform_name} — ${formatDeliveryPeriod(voidReport)}`
+            : undefined
+        }
+        voidPath={
+          entityId && voidReport
+            ? `/entities/${entityId}/delivery/reports/${voidReport.id}/void`
+            : null
+        }
+        onClose={() => setVoidReport(null)}
+        onSaved={() => {
+          setVoidReport(null);
+          void reload();
+        }}
       />
     </>
   );

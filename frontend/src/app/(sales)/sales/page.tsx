@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -30,6 +32,7 @@ export default function SalesPage() {
   const [correctSummary, setCorrectSummary] = useState<PosDailySummary | null>(
     null,
   );
+  const [voidSummary, setVoidSummary] = useState<PosDailySummary | null>(null);
 
   return (
     <>
@@ -110,14 +113,17 @@ export default function SalesPage() {
                 </DataTableCell>
                 <DataTableCell align="right">
                   {row.status === "posted" && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-8 px-3 text-xs"
-                      onClick={() => setCorrectSummary(row)}
-                    >
-                      Correct
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="h-8 px-3 text-xs"
+                        onClick={() => setCorrectSummary(row)}
+                      >
+                        Correct
+                      </Button>
+                      <VoidTriggerButton onContinue={() => setVoidSummary(row)} />
+                    </div>
                   )}
                 </DataTableCell>
               </DataTableRow>
@@ -139,6 +145,26 @@ export default function SalesPage() {
         summary={correctSummary}
         onClose={() => setCorrectSummary(null)}
         onSaved={() => void reload()}
+      />
+
+      <VoidSubledgerDialog
+        open={voidSummary !== null}
+        title="Void daily sales"
+        description={
+          voidSummary?.summary_date
+            ? `Daily sales ${voidSummary.summary_date}`
+            : voidSummary?.id
+        }
+        voidPath={
+          entityId && voidSummary
+            ? `/entities/${entityId}/pos/daily-summaries/${voidSummary.id}/void`
+            : null
+        }
+        onClose={() => setVoidSummary(null)}
+        onSaved={() => {
+          setVoidSummary(null);
+          void reload();
+        }}
       />
     </>
   );

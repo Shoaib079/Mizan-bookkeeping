@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState } from "react";
 import { CardSalesForm } from "@/components/forms/card-sales-form";
 import { ClearCommissionForm } from "@/components/forms/clear-commission-form";
 import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -34,6 +36,7 @@ export function CardsPageContent() {
   const { from, to, setRange, listQuery } = useCardsUrl();
   const [batches, setBatches] = useState<CardSalesBatch[]>([]);
   const [settlements, setSettlements] = useState<PosSettlement[]>([]);
+  const [voidSettlement, setVoidSettlement] = useState<PosSettlement | null>(null);
   const [recon, setRecon] = useState<ClearingReconciliation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -212,11 +215,15 @@ export function CardsPageContent() {
                 <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
                 <DataTableHeaderCell align="right">Bank commission</DataTableHeaderCell>
                 <DataTableHeaderCell>Description</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
               </tr>
             </DataTableHead>
             <DataTableBody>
               {settlements.map((row) => (
-                <DataTableRow key={row.id}>
+                <DataTableRow
+                  key={row.id}
+                  className={row.status === "voided" ? "text-muted-foreground line-through opacity-70" : undefined}
+                >
                   <DataTableCell>
                     {formatTrDate(row.settlement_date)}
                   </DataTableCell>
@@ -229,6 +236,13 @@ export function CardsPageContent() {
                       : "—"}
                   </DataTableCell>
                   <DataTableCell>{row.description}</DataTableCell>
+                  <DataTableCell align="right">
+                    {row.status !== "voided" && (
+                      <VoidTriggerButton
+                        onContinue={() => setVoidSettlement(row)}
+                      />
+                    )}
+                  </DataTableCell>
                 </DataTableRow>
               ))}
             </DataTableBody>
@@ -250,6 +264,21 @@ export function CardsPageContent() {
         open={clearFormOpen}
         onClose={() => setClearFormOpen(false)}
         onCleared={() => void reload()}
+      />
+      <VoidSubledgerDialog
+        open={voidSettlement !== null}
+        title="Void POS settlement"
+        description={voidSettlement?.description}
+        voidPath={
+          entityId && voidSettlement
+            ? `/entities/${entityId}/pos/settlements/${voidSettlement.id}/void`
+            : null
+        }
+        onClose={() => setVoidSettlement(null)}
+        onSaved={() => {
+          setVoidSettlement(null);
+          void reload();
+        }}
       />
     </>
   );

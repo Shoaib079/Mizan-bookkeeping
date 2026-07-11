@@ -1877,3 +1877,97 @@ def correct_pos_daily_summary(
             mark_periods_dirty_for_dates(session, entity_id, dirty_dates)
 
         return result
+
+
+def void_pos_daily_summary(
+    session: Session,
+    entity_id: uuid.UUID,
+    summary: "PosDailySummary",
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    """Void a posted daily summary — reverse linked card batch + cash movement JEs.
+
+    Same void half as ``correct_pos_daily_summary`` but without a repost; the
+    summary row is marked voided, freeing its date for a fresh posting.
+    F3 policy (2026-07-10): identical retroactive behavior to all other voids,
+    gated by period locks.
+    """
+    from app.core.period_locks.guards import mark_periods_dirty_for_dates
+    from app.features.pos.models import CardSalesBatch, PosDailySummaryStatus
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    status = PosDailySummaryStatus(summary.status)
+    if status != PosDailySummaryStatus.POSTED:
+        raise PosDailySummaryCorrectionError(
+            f"summary status {status.value!r} cannot be voided — must be posted"
+        )
+
+    dirty_dates: list[date] = []
+    original: JournalEntry | None = None
+    reversal: JournalEntry | None = None
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+
+        from app.core.ledger.models import journal_void_update_allowed
+
+        with journal_void_update_allowed(session):
+            if summary.card_sales_batch_id is not None:
+                batch = session.get(CardSalesBatch, summary.card_sales_batch_id)
+                if batch is not None:
+                    original, reversal = _void_journal_entry_in_transaction(
+                        session,
+                        entity_id,
+                        batch.journal_entry_id,
+                        actor_id=actor_id,
+                        reason=reason,
+                        void_date=void_date,
+                        period_unlock_reason=period_unlock_reason,
+                    )
+                    dirty_dates.extend([batch.sales_date, reversal.entry_date])
+
+            if summary.cash_movement_id is not None:
+                original_cash = session.get(CashMovement, summary.cash_movement_id)
+                if original_cash is not None:
+                    cash_original, cash_reversal = _void_journal_entry_in_transaction(
+                        session,
+                        entity_id,
+                        original_cash.journal_entry_id,
+                        actor_id=actor_id,
+                        reason=reason,
+                        void_date=void_date,
+                        period_unlock_reason=period_unlock_reason,
+                    )
+                    _append_cash_movement_reversal(
+                        session,
+                        entity_id,
+                        original_cash,
+                        cash_reversal,
+                        actor_id=actor_id,
+                        void_date=void_date,
+                    )
+                    dirty_dates.extend(
+                        [original_cash.movement_date, cash_reversal.entry_date]
+                    )
+                    if original is None:
+                        original, reversal = cash_original, cash_reversal
+
+            if original is None or reversal is None:
+                raise PosDailySummaryCorrectionError(
+                    "summary has no linked journal entries to void"
+                )
+
+            summary.status = PosDailySummaryStatus.VOIDED
+            if dirty_dates:
+                mark_periods_dirty_for_dates(session, entity_id, dirty_dates)
+            session.flush()
+        session.commit()
+        session.refresh(original)
+        session.refresh(reversal)
+        return SubledgerVoidResult(original=original, reversal=reversal)
