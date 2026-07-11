@@ -133,7 +133,7 @@ export const NAV_SECTIONS: NavSection[] = [
     tabs: [
       {
         href: "/customers",
-        label: "Agencies",
+        label: "Customers",
         match: (path) =>
           path === "/customers" ||
           (/^\/customers\/[0-9a-f-]{36}$/i.test(path) &&
@@ -253,7 +253,6 @@ export const NAV_SECTIONS: NavSection[] = [
 
 /** Routes registered in appRoutes but hidden from sidebar (reachable via tabs/cards). */
 export const SIDEBAR_HIDDEN_HREFS = new Set([
-  "/sales",
   "/expenses",
   "/uploads",
   "/close-day",
@@ -281,6 +280,7 @@ export const SIDEBAR_HIDDEN_HREFS = new Set([
   "/delivery/settlements",
   "/delivery/platforms",
   "/accounting/manual-journals",
+  "/onboarding/opening-balances",
 ]);
 
 export const REPORTS_CARD_HREFS = [
@@ -445,6 +445,9 @@ export function sidebarHrefActiveForPathname(
       pathname === "/onboarding/opening-balances"
     );
   }
+  if (sidebarHref === "/settings/restaurant") {
+    return pathname === "/settings/restaurant" || pathname.startsWith("/settings/");
+  }
   return pathname === sidebarHref || pathname.startsWith(`${sidebarHref}/`);
 }
 
@@ -478,7 +481,7 @@ export function pageTitleForPathname(pathname: string): string {
     "/expenses/items": "Expense items",
     "/uploads": "Documents",
     "/suppliers": "Suppliers",
-    "/customers": "Agencies",
+    "/customers": "Customers",
     "/customers/group-menus": "Group menus",
     "/customers/group-sales": "Group sales",
     "/staff": "Staff",
@@ -502,7 +505,7 @@ export function pageTitleForPathname(pathname: string): string {
   if (pathname.startsWith("/customers/group-sales/") && pathname !== "/customers/group-sales") {
     return "Group sale";
   }
-  if (pathname.startsWith("/customers/")) return "Agency";
+  if (pathname.startsWith("/customers/")) return "Customer";
   if (pathname.startsWith("/banking/accounts/") && pathname.endsWith("/import")) {
     return "Import statement";
   }
@@ -574,7 +577,7 @@ export function backLinkForPathname(pathname: string): PageBackLink | null {
         /^\/customers\/[0-9a-f-]{36}$/i.test(path) &&
         !path.startsWith("/customers/group-"),
       href: "/customers",
-      label: "Agencies",
+      label: "Customers",
     },
     {
       test: (path) => /^\/customers\/group-sales\/[^/]+$/.test(path),
@@ -598,6 +601,11 @@ export function backLinkForPathname(pathname: string): PageBackLink | null {
     },
     {
       test: (path) => path === "/banking/fx",
+      href: "/banking",
+      label: "Banking",
+    },
+    {
+      test: (path) => path === "/banking/cash",
       href: "/banking",
       label: "Banking",
     },

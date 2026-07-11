@@ -158,18 +158,16 @@ export default function StatementDetailPage() {
 
   return (
     <>
-      <div className="mb-4">
-        <Link
-          href={
-            statement
-              ? `/banking/accounts/${statement.money_account_id}`
-              : "/banking"
-          }
-          className="text-sm text-primary hover:underline"
-        >
-          ← Account
-        </Link>
-      </div>
+      {statement && (
+        <div className="mb-4">
+          <Link
+            href={`/banking/accounts/${statement.money_account_id}`}
+            className="text-sm text-primary hover:underline"
+          >
+            ← Account
+          </Link>
+        </div>
+      )}
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && (

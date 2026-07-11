@@ -1,6 +1,6 @@
 "use client";
 
-/** Suppliers list — Phase 9 Slice 3. */
+/** Suppliers list — directory with balances, search, and paging (audit A2/A3). */
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -17,13 +17,26 @@ import {
 } from "@/components/ui/data-table";
 import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { TablePager } from "@/components/ui/table-pager";
 import { Users } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
+import { formatTry } from "@/lib/money";
+import { formatSupplierPayableBalance } from "@/lib/supplier-balance";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useEntityList } from "@/lib/use-entity-list";
+import { useSupplierBalances } from "@/lib/use-balance-map";
+import { cn } from "@/lib/utils";
 
-function SupplierTable({ rows }: { rows: SupplierRow[] }) {
+function SupplierTable({
+  rows,
+  balances,
+}: {
+  rows: SupplierRow[];
+  balances: Map<string, number>;
+}) {
   return (
     <DataTable>
       <DataTableHead>
@@ -31,25 +44,39 @@ function SupplierTable({ rows }: { rows: SupplierRow[] }) {
           <DataTableHeaderCell>Name</DataTableHeaderCell>
           <DataTableHeaderCell>VKN</DataTableHeaderCell>
           <DataTableHeaderCell>Status</DataTableHeaderCell>
+          <DataTableHeaderCell align="right">Balance owed</DataTableHeaderCell>
         </tr>
       </DataTableHead>
       <DataTableBody>
-        {rows.map((row) => (
-          <DataTableRow key={row.id}>
-            <DataTableCell>
-              <Link
-                href={`/suppliers/${row.id}`}
-                className="text-primary hover:underline"
+        {rows.map((row) => {
+          const balance = balances.get(row.id) ?? 0;
+          return (
+            <DataTableRow key={row.id}>
+              <DataTableCell>
+                <Link
+                  href={`/suppliers/${row.id}`}
+                  className="text-primary hover:underline"
+                >
+                  {row.name}
+                </Link>
+              </DataTableCell>
+              <DataTableCell>{row.vkn}</DataTableCell>
+              <DataTableCell>
+                <StatusBadge status={row.is_active ? "active" : "inactive"} />
+              </DataTableCell>
+              <DataTableCell
+                align="right"
+                className={cn(
+                  "tabular-nums",
+                  balance > 0 && "text-destructive",
+                  balance < 0 && "text-success",
+                )}
               >
-                {row.name}
-              </Link>
-            </DataTableCell>
-            <DataTableCell>{row.vkn}</DataTableCell>
-            <DataTableCell>
-              <StatusBadge status={row.is_active ? "active" : "inactive"} />
-            </DataTableCell>
-          </DataTableRow>
-        ))}
+                {balance === 0 ? "—" : formatSupplierPayableBalance(balance)}
+              </DataTableCell>
+            </DataTableRow>
+          );
+        })}
       </DataTableBody>
     </DataTable>
   );
@@ -58,34 +85,43 @@ function SupplierTable({ rows }: { rows: SupplierRow[] }) {
 export default function SuppliersPage() {
   const { entityId } = useEntity();
   const [showInactive, setShowInactive] = useState(false);
-  const listPath = showInactive
-    ? "/suppliers?include_inactive=true"
-    : "/suppliers?include_inactive=false";
-  const { items, total, loading, error, forbidden, reload } =
+  const [searchDraft, setSearchDraft] = useState("");
+  const search = useDebouncedValue(searchDraft.trim(), 300);
+  const listPath = useMemo(() => {
+    const params = new URLSearchParams({
+      include_inactive: showInactive ? "true" : "false",
+    });
+    if (search) params.set("q", search);
+    return `/suppliers?${params.toString()}`;
+  }, [showInactive, search]);
+  const { items, total, loading, error, forbidden, reload, offset, setOffset, pageSize } =
     useEntityList<SupplierRow>(listPath, entityId);
+  const balancesState = useSupplierBalances(entityId);
   const [formOpen, setFormOpen] = useState(false);
 
-  const activeItems = useMemo(
-    () => items.filter((row) => row.is_active),
-    [items],
-  );
-  const inactiveItems = useMemo(
-    () => items.filter((row) => !row.is_active),
-    [items],
-  );
-
+  const activeItems = useMemo(() => items.filter((row) => row.is_active), [items]);
+  const inactiveItems = useMemo(() => items.filter((row) => !row.is_active), [items]);
   const activeCount = showInactive ? activeItems.length : total;
 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {entityId
-            ? showInactive
-              ? `${activeCount} active · ${inactiveItems.length} inactive`
-              : `${total} active supplier${total === 1 ? "" : "s"}`
-            : "Select a restaurant in the sidebar"}
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            value={searchDraft}
+            disabled={!entityId}
+            placeholder="Search suppliers…"
+            className="w-56"
+            onChange={(event) => setSearchDraft(event.target.value)}
+          />
+          <p className="text-sm text-muted-foreground">
+            {entityId
+              ? showInactive
+                ? `${activeCount} active · ${inactiveItems.length} inactive`
+                : `${total} active supplier${total === 1 ? "" : "s"}`
+              : "Select a restaurant in the sidebar"}
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           {entityId && (
             <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
@@ -98,14 +134,6 @@ export default function SuppliersPage() {
               Show inactive suppliers
             </label>
           )}
-          {entityId && (
-            <Link
-              href="/balances/suppliers"
-              className="text-sm text-primary hover:underline"
-            >
-              Payables →
-            </Link>
-          )}
           <Button
             type="button"
             disabled={!entityId}
@@ -117,16 +145,18 @@ export default function SuppliersPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {entityId && forbidden && (
-        <ForbiddenMessage context="supplier list" />
-      )}
-      {loading && <TableSkeleton columns={3} />}
+      {entityId && forbidden && <ForbiddenMessage context="supplier list" />}
+      {loading && <TableSkeleton columns={4} />}
 
       {!loading && entityId && !forbidden && items.length === 0 && (
         <EmptyState
           icon={Users}
-          title="No suppliers yet"
-          hint="Create a supplier to track payables and e-Fatura invoices."
+          title={search ? "No suppliers match your search" : "No suppliers yet"}
+          hint={
+            search
+              ? "Try a different name or clear the search."
+              : "Create a supplier to track payables and e-Fatura invoices."
+          }
         />
       )}
 
@@ -135,7 +165,7 @@ export default function SuppliersPage() {
           <h2 className="mb-2 text-sm font-semibold text-foreground">
             Active suppliers
           </h2>
-          <SupplierTable rows={activeItems} />
+          <SupplierTable rows={activeItems} balances={balancesState.balances} />
         </section>
       )}
 
@@ -148,22 +178,37 @@ export default function SuppliersPage() {
             Deactivated suppliers stay in history but are hidden from invoice
             linking and new payments.
           </p>
-          <SupplierTable rows={inactiveItems} />
+          <SupplierTable rows={inactiveItems} balances={balancesState.balances} />
         </section>
       )}
 
-      {!loading &&
-        !forbidden &&
-        !showInactive &&
-        items.length > 0 && <SupplierTable rows={items} />}
+      {!loading && !forbidden && !showInactive && items.length > 0 && (
+        <SupplierTable rows={items} balances={balancesState.balances} />
+      )}
 
-      <p className="mt-4 text-xs text-muted-foreground">
-        Outstanding balances across all suppliers are on{" "}
-        <Link href="/balances/suppliers" className="text-primary hover:underline">
-          Payables
-        </Link>
-        .
-      </p>
+      {!forbidden && (
+        <TablePager
+          offset={offset}
+          pageSize={pageSize}
+          total={total}
+          disabled={loading}
+          onOffsetChange={setOffset}
+        />
+      )}
+
+      {entityId && !forbidden && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Total payable across all suppliers:{" "}
+          <span className="font-medium tabular-nums text-foreground">
+            {balancesState.loading ? "…" : formatTry(balancesState.totalKurus)}
+          </span>{" "}
+          — details on{" "}
+          <Link href="/balances/suppliers" className="text-primary hover:underline">
+            Payables
+          </Link>
+          .
+        </p>
+      )}
 
       <SupplierForm
         open={formOpen}

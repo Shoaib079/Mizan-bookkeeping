@@ -10,9 +10,14 @@ type PaginatedResponse<T> = {
   total: number;
 };
 
+export const ENTITY_LIST_PAGE_SIZE = 50;
+
+/** Paginated entity-scoped list (audit A3: no more silent 50-row cap —
+ * offset paging is built in; render `TablePager` with the returned controls). */
 export function useEntityList<T>(path: string, entityId: string) {
   const [items, setItems] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -22,10 +27,19 @@ export function useEntityList<T>(path: string, entityId: string) {
     if (!entityTrackerRef.current.sync(entityId)) return;
     setItems([]);
     setTotal(0);
+    setOffset(0);
     setError(null);
     setForbidden(false);
     setLoading(Boolean(entityId));
   }, [entityId]);
+
+  // New filters (path change, e.g. a search) restart from the first page.
+  const prevPathRef = useRef(path);
+  useLayoutEffect(() => {
+    if (prevPathRef.current === path) return;
+    prevPathRef.current = path;
+    setOffset(0);
+  }, [path]);
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -40,9 +54,12 @@ export function useEntityList<T>(path: string, entityId: string) {
     setForbidden(false);
     try {
       const hasLimit = /[?&]limit=/.test(path);
+      const sep = path.includes("?") ? "&" : "?";
       const suffix = hasLimit
-        ? ""
-        : `${path.includes("?") ? "&" : "?"}limit=50`;
+        ? offset > 0
+          ? `&offset=${offset}`
+          : ""
+        : `${sep}limit=${ENTITY_LIST_PAGE_SIZE}&offset=${offset}`;
       const res = await apiFetch<PaginatedResponse<T>>(
         `/entities/${entityId}${path}${suffix}`,
       );
@@ -60,11 +77,21 @@ export function useEntityList<T>(path: string, entityId: string) {
     } finally {
       setLoading(false);
     }
-  }, [entityId, path]);
+  }, [entityId, path, offset]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  return { items, total, loading, error, forbidden, reload };
+  return {
+    items,
+    total,
+    loading,
+    error,
+    forbidden,
+    reload,
+    offset,
+    setOffset,
+    pageSize: ENTITY_LIST_PAGE_SIZE,
+  };
 }
