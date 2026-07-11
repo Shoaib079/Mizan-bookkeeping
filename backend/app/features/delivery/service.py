@@ -719,13 +719,17 @@ def void_delivery_report_intake(
         void_date=void_date,
         period_unlock_reason=period_unlock_reason,
     )
+    # Read the journal ids BEFORE the status commit below — committing expires
+    # these JournalEntry objects, and refreshing them outside an entity context
+    # fails under RLS (same pattern as expenses_service.void_expense_by_id).
+    out = SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )
 
     with entity_context(session, entity_id):
         report = _get_report_row(session, entity_id, report_id)
         report.status = DeliveryReportStatus.VOIDED.value
         session.commit()
 
-    return SubledgerVoidOut(
-        original_journal_entry_id=result.original.id,
-        reversal_journal_entry_id=result.reversal.id,
-    )
+    return out
