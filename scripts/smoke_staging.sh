@@ -41,7 +41,7 @@ fi
 echo "==> Automated checks passed"
 echo ""
 echo "Manual Clerk sign-in checks (test keys on staging, live keys on production):"
-echo "  1. Open the Netlify frontend in a private window."
+echo "  1. Open the Vercel frontend in a private window."
 echo "  2. Sign in — Clerk modal completes without error."
 echo "  3. Create a restaurant — no 401/403 from the API."
 echo "  4. Settings → Members loads for the owner."

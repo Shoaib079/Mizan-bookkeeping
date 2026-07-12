@@ -1,14 +1,13 @@
 "use client";
 
-/** Dashboard card — latest journal entries; rows open the transaction drawer. */
+/** Dashboard card — latest journal entries; rows open the transaction drawer.
+ * Query-backed (phase 6): the global ledger-changed invalidation refreshes it
+ * after any void/correction — no manual event listener needed. */
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import {
-  LEDGER_CHANGED_EVENT,
-  useTransactionPeek,
-} from "@/components/ledger/transaction-drawer";
+import { useTransactionPeek } from "@/components/ledger/transaction-drawer";
 import { apiFetch } from "@/lib/api";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
@@ -16,7 +15,6 @@ import {
   journalSourceLabel,
   recentEntriesListUrl,
   type RecentEntriesListResponse,
-  type RecentEntryRow,
 } from "@/lib/recent-entries";
 
 type Props = {
@@ -26,44 +24,18 @@ type Props = {
 
 export function RecentEntriesCard({ entityId, className }: Props) {
   const { openTransaction } = useTransactionPeek();
-  const [items, setItems] = useState<RecentEntryRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ["recent-entries", entityId],
+    enabled: Boolean(entityId),
+    queryFn: () =>
+      apiFetch<RecentEntriesListResponse>(recentEntriesListUrl(entityId)),
+  });
 
-  const reload = useCallback(async () => {
-    if (!entityId) {
-      setItems([]);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch<RecentEntriesListResponse>(
-        recentEntriesListUrl(entityId),
-      );
-      setItems(res.items);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Could not load recent entries",
-      );
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [entityId]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  // Refresh after a void/correction anywhere in the app.
-  useEffect(() => {
-    function onLedgerChanged() {
-      void reload();
-    }
-    window.addEventListener(LEDGER_CHANGED_EVENT, onLedgerChanged);
-    return () => window.removeEventListener(LEDGER_CHANGED_EVENT, onLedgerChanged);
-  }, [reload]);
+  const items = query.data?.items ?? [];
+  const loading = Boolean(entityId) && query.isPending;
+  const error = query.error
+    ? query.error.message || "Could not load recent entries"
+    : null;
 
   return (
     <section

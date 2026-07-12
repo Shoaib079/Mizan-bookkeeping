@@ -2,6 +2,7 @@
 
 /** Shared quick-action dialogs — New menu, command palette, Record hub (UX1). */
 
+import { useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -46,7 +47,15 @@ type QuickActionsContextValue = {
 
 const QuickActionsContext = createContext<QuickActionsContextValue | null>(null);
 
+/** M3: actions whose form lives on an owning page — the action deep-links
+ * there (?new=1 opens the form) instead of duplicating it in a dialog. */
+export const RECORD_ACTION_PAGE_HREFS: Partial<Record<RecordActionKey, string>> = {
+  sales: "/sales?new=1",
+  transfer: "/banking/transfers?new=1",
+};
+
 export function QuickActionsProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const { entityId } = useEntity();
   const { isAuthReady } = useApiAuth();
   const { canWriteOperations } = useEntityAccess();
@@ -104,10 +113,16 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     (key: RecordActionKey) => {
       if (!canWriteOperations) return;
       if (key === "deliveryReport" && !deliveryEnabled) return;
-      setActive(key);
       if (entityId) recordActionUsage(entityId, key);
+      // M3: page-owned actions navigate; the page opens its own form (?new=1).
+      const pageHref = RECORD_ACTION_PAGE_HREFS[key];
+      if (pageHref) {
+        router.push(pageHref);
+        return;
+      }
+      setActive(key);
     },
-    [canWriteOperations, deliveryEnabled, entityId],
+    [canWriteOperations, deliveryEnabled, entityId, router],
   );
 
   const openQuickAction = useCallback(

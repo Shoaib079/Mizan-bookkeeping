@@ -50,10 +50,10 @@ Confirm nothing is stranded: `git status` clean, `git log` shows the slices.
 
 ---
 
-## 3. Vercel config — the header gap (BLOCKER for security parity)
+## 3. Vercel config — security headers (RESOLVED)
 
-Vercel does **not** read `netlify.toml`. Until the cleanup slice merges, the
-site has NO security headers live.
+Netlify is fully retired; all headers live in `next.config.ts` and Vercel
+serves them directly.
 
 - [x] `next.config.ts` has an `async headers()` block with: X-Frame-Options
       DENY, X-Content-Type-Options nosniff, Referrer-Policy

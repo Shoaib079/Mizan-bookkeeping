@@ -13,7 +13,10 @@ export const SALES_REVIEW_FILTERS: { id: SalesReviewFilter; label: string }[] = 
   { id: "posted", label: "Posted" },
 ];
 
-export function useSalesReviewUrl() {
+/** URL-driven sales list state. `defaultFilter` lets the two entry points of
+ * the merged Sales page differ (M1): /sales defaults to All, /review/sales to
+ * Needs review — the URL param always wins once the user picks a chip. */
+export function useSalesReviewUrl(defaultFilter: SalesReviewFilter = "all") {
   const searchParams = useSearchParams();
   const router = useRouter();
   const defaults = useMemo(() => currentMonthRange(), []);
@@ -22,7 +25,9 @@ export function useSalesReviewUrl() {
   const to = searchParams.get("to") ?? defaults.to;
   const reviewParam = searchParams.get("review");
   const review: SalesReviewFilter =
-    reviewParam === "pending" || reviewParam === "posted" ? reviewParam : "all";
+    reviewParam === "pending" || reviewParam === "posted" || reviewParam === "all"
+      ? reviewParam
+      : defaultFilter;
 
   const setRange = useCallback(
     (nextFrom: string, nextTo: string) => {
@@ -37,8 +42,8 @@ export function useSalesReviewUrl() {
   const setReview = useCallback(
     (next: SalesReviewFilter) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (next === "all") params.delete("review");
-      else params.set("review", next);
+      // Always set explicitly so "All" works even where the default differs.
+      params.set("review", next);
       router.replace(`?${params.toString()}`);
     },
     [router, searchParams],

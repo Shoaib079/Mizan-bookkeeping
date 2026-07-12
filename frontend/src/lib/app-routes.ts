@@ -189,9 +189,9 @@ export const appRoutes: AppRoute[] = [
   {
     href: "/onboarding/opening-balances",
     label: "Opening balances",
-    keywords: "go-live opening balance cash bank equity supplier",
+    keywords: "go-live opening balance cash bank equity supplier setup",
     icon: Landmark,
-    group: "Reports",
+    group: "Understand",
   },
   {
     href: "/reports/ledger",

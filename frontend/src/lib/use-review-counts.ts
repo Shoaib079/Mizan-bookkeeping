@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect } from "react";
 
 import { apiFetch } from "@/lib/api";
 import {
@@ -11,49 +12,37 @@ import {
 
 const POLL_MS = 30_000;
 
+/** Review-queue badge counts (query-backed in phase 6): 30s poll + window
+ * focus revalidation from React Query, plus the app's explicit
+ * review-counts-changed event after posting flows. */
 export function useReviewCounts(entityId: string) {
-  const [counts, setCounts] = useState<ReviewCounts>(EMPTY_REVIEW_COUNTS);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const reload = useCallback(async () => {
-    if (!entityId) {
-      setCounts(EMPTY_REVIEW_COUNTS);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const data = await apiFetch<ReviewCounts>(
-        `/entities/${entityId}/review-counts`,
-      );
-      setCounts(data);
-    } catch {
-      setCounts(EMPTY_REVIEW_COUNTS);
-    } finally {
-      setLoading(false);
-    }
-  }, [entityId]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const query = useQuery({
+    queryKey: ["review-counts", entityId],
+    enabled: Boolean(entityId),
+    refetchInterval: POLL_MS,
+    queryFn: () => apiFetch<ReviewCounts>(`/entities/${entityId}/review-counts`),
+  });
 
   useEffect(() => {
     if (!entityId) return;
-
-    const onInvalidate = () => void reload();
-    const onFocus = () => void reload();
-
+    const onInvalidate = () =>
+      void queryClient.invalidateQueries({ queryKey: ["review-counts", entityId] });
     window.addEventListener(REVIEW_COUNTS_CHANGED_EVENT, onInvalidate);
-    window.addEventListener("focus", onFocus);
-    const interval = window.setInterval(() => void reload(), POLL_MS);
-
-    return () => {
+    return () =>
       window.removeEventListener(REVIEW_COUNTS_CHANGED_EVENT, onInvalidate);
-      window.removeEventListener("focus", onFocus);
-      window.clearInterval(interval);
-    };
-  }, [entityId, reload]);
+  }, [entityId, queryClient]);
 
-  return { counts, loading, reload };
+  const refetch = query.refetch;
+  const reload = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  return {
+    // Errors fall back to empty counts — the badge simply hides (same as before).
+    counts: query.data ?? EMPTY_REVIEW_COUNTS,
+    loading: Boolean(entityId) && query.isPending,
+    reload,
+  };
 }

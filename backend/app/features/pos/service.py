@@ -39,8 +39,18 @@ from app.features.pos.schema import (
 )
 
 
-def _to_settlement_read(settlement: PosSettlement) -> PosSettlementRead:
+def _settlement_status(session: Session, settlement: PosSettlement) -> str:
+    from app.core.ledger.models import JournalEntry, JournalEntryStatus
+
+    entry = session.get(JournalEntry, settlement.journal_entry_id)
+    if entry is not None and entry.status == JournalEntryStatus.VOIDED:
+        return "voided"
+    return "posted"
+
+
+def _to_settlement_read(session: Session, settlement: PosSettlement) -> PosSettlementRead:
     return PosSettlementRead(
+        status=_settlement_status(session, settlement),
         id=settlement.id,
         entity_id=settlement.entity_id,
         money_account_id=settlement.money_account_id,
@@ -149,7 +159,7 @@ def create_pos_settlement(
         commission_kurus=payload.commission_kurus,
         card_sales_batch_id=payload.card_sales_batch_id,
     )
-    return _to_settlement_read(result.pos_settlement)
+    return _to_settlement_read(session, result.pos_settlement)
 
 
 def clear_card_commission(
@@ -227,7 +237,7 @@ def list_pos_settlements(
             )
         )
         settlements, total = fetch_paginated(session, stmt, params)
-        return [_to_settlement_read(s) for s in settlements], total
+        return [_to_settlement_read(session, s) for s in settlements], total
 
 
 def get_pos_settlement(
@@ -243,7 +253,7 @@ def get_pos_settlement(
         settlement = session.get(PosSettlement, settlement_id)
         if settlement is None:
             raise LookupError("POS settlement not found")
-        return _to_settlement_read(settlement)
+        return _to_settlement_read(session, settlement)
 
 
 def get_clearing_reconciliation(
@@ -306,3 +316,48 @@ def get_clearing_reconciliation(
             card_sales_batch_count=batch_count,
             pos_settlement_count=settlement_count,
         )
+
+
+class PosSettlementNotVoidableError(ValueError):
+    """POS settlement cannot be voided in its current state."""
+
+
+def void_pos_settlement_by_id(
+    session: Session,
+    entity_id: uuid.UUID,
+    settlement_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+):
+    """Void a POS settlement — reverses bank←clearing, card sales go back in transit."""
+    from app.core.ledger.correction import void_gl_with_subledger_rows
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        settlement = session.get(PosSettlement, settlement_id)
+        if settlement is None:
+            raise LookupError("POS settlement not found")
+        if _settlement_status(session, settlement) == "voided":
+            raise PosSettlementNotVoidableError("POS settlement is already voided")
+        journal_entry_id = settlement.journal_entry_id
+
+    result = void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )

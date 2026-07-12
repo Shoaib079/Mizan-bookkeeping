@@ -254,7 +254,7 @@ def test_verify_clerk_token_rejects_unverified_email_claim(monkeypatch) -> None:
             "iss": "https://example.test",
             "aud": "pk_test_audience",
         },
-        "not-the-real-key",
+        "not-the-real-key-padded-to-32-bytes!!",
         algorithm="HS256",
     )
 
@@ -318,7 +318,7 @@ def test_jwt_verification_uses_signature_not_decode_only(monkeypatch) -> None:
     settings.clerk_issuer = "https://example.test"
     token = jwt.encode(
         {"sub": "user_fake", "email": "fake@example.com", "email_verified": True},
-        "not-the-real-key",
+        "not-the-real-key-padded-to-32-bytes!!",
         algorithm="HS256",
     )
 

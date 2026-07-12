@@ -31,9 +31,11 @@ type ManualDailySalesResponse = {
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** Called after a successful post (M3: lets the owning page reload its list). */
+  onSaved?: () => void;
 };
 
-export function ManualDailySalesForm({ open, onClose }: Props) {
+export function ManualDailySalesForm({ open, onClose, onSaved }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -164,6 +166,7 @@ export function ManualDailySalesForm({ open, onClose }: Props) {
       }
 
       onClose();
+      onSaved?.();
       toast("Daily sales posted");
       setCashText("");
       setCardText("");

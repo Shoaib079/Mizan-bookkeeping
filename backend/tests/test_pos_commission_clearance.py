@@ -14,7 +14,7 @@ import pytest
 from sqlalchemy import func, select
 
 from app.core.chart_of_accounts.default_chart import (
-    BANK_CHARGES_CODE,
+    CARD_COMMISSION_CODE,
     CARD_SALES_CLEARING_CODE,
 )
 from app.core.chart_of_accounts.models import Account
@@ -102,7 +102,7 @@ def _net_deposit(db_session, entity_id, bank, amount, when):
 def test_two_banks_one_clearing_residual_is_commission(client, db_session, setup) -> None:
     entity_id = setup["entity_id"]
     clearing_id = setup["accounts"][CARD_SALES_CLEARING_CODE]
-    charges_id = setup["accounts"][BANK_CHARGES_CODE]
+    charges_id = setup["accounts"][CARD_COMMISSION_CODE]
 
     # 1,000,000 of card sales clear to 1400; deposits arrive net across two banks.
     _card_sales(db_session, entity_id, 1_000_000)
@@ -131,7 +131,7 @@ def test_two_banks_one_clearing_residual_is_commission(client, db_session, setup
 
 def test_clear_is_repeatable_after_more_sales(client, db_session, setup) -> None:
     entity_id = setup["entity_id"]
-    charges_id = setup["accounts"][BANK_CHARGES_CODE]
+    charges_id = setup["accounts"][CARD_COMMISSION_CODE]
 
     _card_sales(db_session, entity_id, 500_000)
     _net_deposit(db_session, entity_id, setup["bank1"], 490_000, date(2026, 6, 2))

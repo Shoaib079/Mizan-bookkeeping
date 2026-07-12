@@ -30,6 +30,8 @@ export type PosSettlement = {
   commission_kurus: number | null;
   description: string;
   money_account_id: string;
+  /** "posted" | "voided" — derived from the linked journal entry (phase 5). */
+  status: string;
   created_at: string;
 };
 
@@ -72,6 +74,8 @@ export type DeliverySettlement = {
   amount_kurus: number;
   description: string;
   money_account_id: string;
+  /** "posted" | "voided" — derived from the linked journal entry (phase 5). */
+  status: string;
   created_at: string;
 };
 

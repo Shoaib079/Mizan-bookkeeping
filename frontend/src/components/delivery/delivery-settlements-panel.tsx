@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DeliveryHubToolbar } from "@/components/delivery/delivery-hub-toolbar";
 import { DeliveryPlatformFilter } from "@/components/delivery/delivery-platform-filter";
 import { DeliverySettlementForm } from "@/components/forms/delivery-settlement-form";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -39,6 +41,9 @@ export function DeliverySettlementsPanel() {
   } = useDeliveryHubUrl("/delivery/settlements");
 
   const [platforms, setPlatforms] = useState<DeliveryPlatform[]>([]);
+  const [voidSettlement, setVoidSettlement] = useState<DeliverySettlement | null>(
+    null,
+  );
   const [platformsLoading, setPlatformsLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
 
@@ -157,6 +162,7 @@ export function DeliverySettlementsPanel() {
               )}
               <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
               <DataTableHeaderCell>Description</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -168,6 +174,8 @@ export function DeliverySettlementsPanel() {
                   className={cn(
                     "cursor-pointer border-b border-border transition-colors hover:bg-muted/40",
                     selected && "bg-primary/5",
+                    row.status === "voided" &&
+                      "text-muted-foreground line-through opacity-70",
                   )}
                   onClick={() => setDetailId("settlement", row.id)}
                 >
@@ -184,6 +192,17 @@ export function DeliverySettlementsPanel() {
                   </DataTableCell>
                   <DataTableCell className="py-2 text-sm">
                     {row.description}
+                  </DataTableCell>
+                  <DataTableCell
+                    align="right"
+                    className="py-2"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {row.status !== "voided" && (
+                      <VoidTriggerButton
+                        onContinue={() => setVoidSettlement(row)}
+                      />
+                    )}
                   </DataTableCell>
                 </tr>
               );
@@ -221,6 +240,26 @@ export function DeliverySettlementsPanel() {
         defaultPlatformId={platform ?? undefined}
         onClose={() => setFormOpen(false)}
         onSaved={() => void reload()}
+      />
+
+      <VoidSubledgerDialog
+        open={voidSettlement !== null}
+        title="Void delivery settlement"
+        description={
+          voidSettlement
+            ? `${voidSettlement.platform_name} — ${voidSettlement.description}`
+            : undefined
+        }
+        voidPath={
+          entityId && voidSettlement
+            ? `/entities/${entityId}/delivery/settlements/${voidSettlement.id}/void`
+            : null
+        }
+        onClose={() => setVoidSettlement(null)}
+        onSaved={() => {
+          setVoidSettlement(null);
+          void reload();
+        }}
       />
     </>
   );

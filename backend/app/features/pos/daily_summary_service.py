@@ -728,3 +728,60 @@ def correct_pos_daily_summary_intake(
         raise
 
     return _to_read(result.summary)
+
+
+def void_pos_daily_summary_intake(
+    session: Session,
+    entity_id: uuid.UUID,
+    summary_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+):
+    """Void a posted daily summary (audit C1 / phase 5).
+
+    Guard: if the day's card sales batch was already settled by a live POS
+    settlement, the settlement must be voided first — otherwise the clearing
+    account would go negative against a reversed batch.
+    """
+    from app.core.ledger.correction import void_pos_daily_summary
+    from app.core.ledger.models import JournalEntry, JournalEntryStatus
+    from app.features.ledger.schema import SubledgerVoidOut
+    from app.features.pos.models import PosSettlement
+
+    _require_entity(session, entity_id)
+    summary = _get_summary_row(session, entity_id, summary_id)
+
+    with entity_context(session, entity_id):
+        if summary.card_sales_batch_id is not None:
+            settlement = session.scalars(
+                select(PosSettlement).where(
+                    PosSettlement.card_sales_batch_id == summary.card_sales_batch_id
+                )
+            ).first()
+            if settlement is not None:
+                settlement_entry = session.get(JournalEntry, settlement.journal_entry_id)
+                if (
+                    settlement_entry is not None
+                    and settlement_entry.status != JournalEntryStatus.VOIDED
+                ):
+                    raise PosDailySummaryImmutableError(
+                        "This day's card sales were already settled to the bank — "
+                        "void that POS settlement first, then void the day."
+                    )
+
+    result = void_pos_daily_summary(
+        session,
+        entity_id,
+        summary,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )

@@ -43,7 +43,7 @@ if [[ -s "$TMP_HITS" ]]; then
     echo "FAIL: possible hardcoded secrets in tracked files:" >&2
     cat "$FILTERED" >&2
     echo >&2
-    echo "Owner checklist: no secrets in git; use host secret store only (Render/Netlify env)." >&2
+    echo "Owner checklist: no secrets in git; use host secret store only (Railway/Vercel env)." >&2
     rm -f "$FILTERED"
     exit 1
   fi

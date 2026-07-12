@@ -46,16 +46,6 @@ type ReportCard = {
 
 const reportCards: ReportCard[] = [
   {
-    href: "/onboarding/opening-balances",
-    title: "Opening balances",
-    description: "Go-live date, cash and bank balances, payables, and equity.",
-    icon: Landmark,
-    category: "Setup",
-    financial: false,
-    hideExport: true,
-    skipRange: true,
-  },
-  {
     href: "/reports/profit-and-loss",
     title: "Profit & loss",
     description: "Revenue and expense accounts for the period.",

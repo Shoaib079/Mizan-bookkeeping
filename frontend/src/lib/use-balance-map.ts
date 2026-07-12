@@ -1,63 +1,51 @@
 "use client";
 
-/** Balance lookups for directory pages (audit A2) — reuses the same
- * payables/receivables endpoints the Balances hub reads, so the numbers
- * always agree between the directory and the hub. */
+/** Balance lookups for directory pages (audit A2, query-backed in phase 6) —
+ * reuses the same payables/receivables endpoints the Balances hub reads, so
+ * the numbers always agree between the directory and the hub. */
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { apiFetch } from "@/lib/api";
 
-type BalanceMapState = {
+type BalanceMapResult = {
   balances: Map<string, number>;
   totalKurus: number;
   loading: boolean;
   error: string | null;
+  reload: () => Promise<void>;
 };
 
-const EMPTY: BalanceMapState = {
-  balances: new Map(),
-  totalKurus: 0,
-  loading: false,
-  error: null,
-};
+const EMPTY_MAP = new Map<string, number>();
 
 function useBalanceMap(
   entityId: string,
+  domain: string,
   path: string,
-  parse: (res: unknown) => { id: string; balanceKurus: number }[],
-  totalOf: (res: unknown) => number,
-): BalanceMapState & { reload: () => Promise<void> } {
-  const [state, setState] = useState<BalanceMapState>(EMPTY);
-
-  const reload = useCallback(async () => {
-    if (!entityId) {
-      setState(EMPTY);
-      return;
-    }
-    setState((s) => ({ ...s, loading: true, error: null }));
-    try {
+  parse: (res: unknown) => { rows: { id: string; balanceKurus: number }[]; total: number },
+): BalanceMapResult {
+  const query = useQuery({
+    queryKey: ["balance-map", entityId, domain],
+    enabled: Boolean(entityId),
+    queryFn: async () => {
       const res = await apiFetch<unknown>(`/entities/${entityId}${path}`);
-      const rows = parse(res);
-      setState({
+      const { rows, total } = parse(res);
+      return {
         balances: new Map(rows.map((r) => [r.id, r.balanceKurus])),
-        totalKurus: totalOf(res),
-        loading: false,
-        error: null,
-      });
-    } catch (err) {
-      setState({
-        ...EMPTY,
-        error: err instanceof Error ? err.message : "Failed to load balances",
-      });
-    }
-  }, [entityId, path]); // eslint-disable-line react-hooks/exhaustive-deps
+        totalKurus: total,
+      };
+    },
+  });
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  return { ...state, reload };
+  return {
+    balances: query.data?.balances ?? EMPTY_MAP,
+    totalKurus: query.data?.totalKurus ?? 0,
+    loading: Boolean(entityId) && query.isPending,
+    error: query.error ? query.error.message || "Failed to load balances" : null,
+    reload: async () => {
+      await query.refetch();
+    },
+  };
 }
 
 type PayablesResponse = {
@@ -66,16 +54,16 @@ type PayablesResponse = {
 };
 
 export function useSupplierBalances(entityId: string) {
-  return useBalanceMap(
-    entityId,
-    "/payables?limit=500",
-    (res) =>
-      (res as PayablesResponse).suppliers.map((s) => ({
+  return useBalanceMap(entityId, "payables", "/payables?limit=500", (res) => {
+    const data = res as PayablesResponse;
+    return {
+      rows: data.suppliers.map((s) => ({
         id: s.supplier_id,
         balanceKurus: s.balance_kurus,
       })),
-    (res) => (res as PayablesResponse).total_payables_kurus,
-  );
+      total: data.total_payables_kurus,
+    };
+  });
 }
 
 type ReceivablesResponse = {
@@ -84,14 +72,14 @@ type ReceivablesResponse = {
 };
 
 export function useCustomerBalances(entityId: string) {
-  return useBalanceMap(
-    entityId,
-    "/receivables?limit=500",
-    (res) =>
-      (res as ReceivablesResponse).customers.map((c) => ({
+  return useBalanceMap(entityId, "receivables", "/receivables?limit=500", (res) => {
+    const data = res as ReceivablesResponse;
+    return {
+      rows: data.customers.map((c) => ({
         id: c.customer_id,
         balanceKurus: c.balance_kurus,
       })),
-    (res) => (res as ReceivablesResponse).total_receivables_kurus,
-  );
+      total: data.total_receivables_kurus,
+    };
+  });
 }

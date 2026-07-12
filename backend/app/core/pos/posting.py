@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.default_chart import (
-    BANK_CHARGES_CODE,
+    CARD_COMMISSION_CODE,
     CARD_SALES_CLEARING_CODE,
     SALES_REVENUE_CODE,
 )
@@ -398,7 +398,7 @@ def post_card_commission_clearance(
                 "review deposits before clearing commission"
             )
 
-        bank_charges_account = _get_account_by_code(session, BANK_CHARGES_CODE)
+        bank_charges_account = _get_account_by_code(session, CARD_COMMISSION_CODE)
         lines = build_card_commission_posting_lines(
             bank_charges_account_id=bank_charges_account.id,
             clearing_account_id=clearing_account.id,
@@ -466,7 +466,7 @@ def post_card_commission_from_statement(
                 f"{residual_kurus} kuruş — review deposits and card sales first"
             )
 
-        bank_charges_account = _get_account_by_code(session, BANK_CHARGES_CODE)
+        bank_charges_account = _get_account_by_code(session, CARD_COMMISSION_CODE)
         lines = build_card_commission_posting_lines(
             bank_charges_account_id=bank_charges_account.id,
             clearing_account_id=clearing_account.id,
@@ -548,7 +548,7 @@ def post_pos_settlement(
         )
 
         if effective_commission > 0:
-            bank_charges_account = _get_account_by_code(session, BANK_CHARGES_CODE)
+            bank_charges_account = _get_account_by_code(session, CARD_COMMISSION_CODE)
             lines = build_pos_settlement_posting_lines_with_commission(
                 bank_gl_account_id=money_account.gl_account_id,
                 clearing_account_id=clearing_account.id,

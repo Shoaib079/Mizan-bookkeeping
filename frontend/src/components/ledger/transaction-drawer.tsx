@@ -22,6 +22,7 @@ import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useEntity } from "@/lib/entity-context";
+import { LEDGER_CHANGED_EVENT, emitLedgerChanged } from "@/lib/ledger-events";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
   GENERIC_CORRECTABLE_SOURCES,
@@ -31,7 +32,7 @@ import {
   sourceLabel,
 } from "@/lib/transaction-registry";
 
-export const LEDGER_CHANGED_EVENT = "mizan:ledger-changed";
+export { LEDGER_CHANGED_EVENT };
 
 export type PeekEntryLine = {
   amount_kurus: number;
@@ -262,7 +263,7 @@ export function TransactionPeekProvider({
             onSaved={() => {
               setVoidOpen(false);
               close();
-              window.dispatchEvent(new Event(LEDGER_CHANGED_EVENT));
+              emitLedgerChanged();
             }}
           />
         </>

@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core.chart_of_accounts.default_chart import (
-    BANK_CHARGES_CODE,
+    CARD_COMMISSION_CODE,
     CARD_SALES_CLEARING_CODE,
 )
 from app.core.chart_of_accounts.models import Account
@@ -69,7 +69,7 @@ def test_pos_commission_classification_clears_1400(db_session, setup) -> None:
     entity_id = setup["entity_id"]
     bank = setup["bank"]
     clearing_id = setup["accounts"][CARD_SALES_CLEARING_CODE]
-    charges_id = setup["accounts"][BANK_CHARGES_CODE]
+    charges_id = setup["accounts"][CARD_COMMISSION_CODE]
 
     pos_posting.post_card_sales_batch(
         db_session,

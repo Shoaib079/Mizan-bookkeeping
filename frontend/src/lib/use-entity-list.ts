@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import { ApiError, apiFetch } from "@/lib/api";
-import { createEntitySwitchTracker } from "@/lib/use-entity-reset";
 
 type PaginatedResponse<T> = {
   items: T[];
@@ -12,26 +12,16 @@ type PaginatedResponse<T> = {
 
 export const ENTITY_LIST_PAGE_SIZE = 50;
 
-/** Paginated entity-scoped list (audit A3: no more silent 50-row cap —
- * offset paging is built in; render `TablePager` with the returned controls). */
+/** Paginated entity-scoped list (audit A3 + C2b).
+ *
+ * Phase 6: backed by React Query — results cached per
+ * [entityId, path, offset], revalidated in the background (window focus),
+ * and invalidated globally on "mizan:ledger-changed". Return contract is
+ * unchanged from the hand-rolled version, so consumers need no edits:
+ * fresh keys show the skeleton exactly like before; revisits are instant.
+ */
 export function useEntityList<T>(path: string, entityId: string) {
-  const [items, setItems] = useState<T[]>([]);
-  const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [forbidden, setForbidden] = useState(false);
-  const entityTrackerRef = useRef(createEntitySwitchTracker());
-
-  useLayoutEffect(() => {
-    if (!entityTrackerRef.current.sync(entityId)) return;
-    setItems([]);
-    setTotal(0);
-    setOffset(0);
-    setError(null);
-    setForbidden(false);
-    setLoading(Boolean(entityId));
-  }, [entityId]);
 
   // New filters (path change, e.g. a search) restart from the first page.
   const prevPathRef = useRef(path);
@@ -41,18 +31,18 @@ export function useEntityList<T>(path: string, entityId: string) {
     setOffset(0);
   }, [path]);
 
-  const reload = useCallback(async () => {
-    if (!entityId) {
-      setItems([]);
-      setTotal(0);
-      setForbidden(false);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setForbidden(false);
-    try {
+  // Entity switch also restarts paging.
+  const prevEntityRef = useRef(entityId);
+  useLayoutEffect(() => {
+    if (prevEntityRef.current === entityId) return;
+    prevEntityRef.current = entityId;
+    setOffset(0);
+  }, [entityId]);
+
+  const query = useQuery<PaginatedResponse<T>, Error>({
+    queryKey: ["entity-list", entityId, path, offset],
+    enabled: Boolean(entityId),
+    queryFn: async () => {
       const hasLimit = /[?&]limit=/.test(path);
       const sep = path.includes("?") ? "&" : "?";
       const suffix = hasLimit
@@ -60,34 +50,24 @@ export function useEntityList<T>(path: string, entityId: string) {
           ? `&offset=${offset}`
           : ""
         : `${sep}limit=${ENTITY_LIST_PAGE_SIZE}&offset=${offset}`;
-      const res = await apiFetch<PaginatedResponse<T>>(
-        `/entities/${entityId}${path}${suffix}`,
-      );
-      setItems(res.items);
-      setTotal(res.total);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        setForbidden(true);
-        setError(null);
-      } else {
-        setError(err instanceof Error ? err.message : "Failed to load");
-      }
-      setItems([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [entityId, path, offset]);
+      return apiFetch<PaginatedResponse<T>>(`/entities/${entityId}${path}${suffix}`);
+    },
+  });
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const refetch = query.refetch;
+  const reload = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  const forbidden = query.error instanceof ApiError && query.error.status === 403;
+  const errorMessage =
+    query.error && !forbidden ? query.error.message || "Failed to load" : null;
 
   return {
-    items,
-    total,
-    loading,
-    error,
+    items: query.data?.items ?? [],
+    total: query.data?.total ?? 0,
+    loading: Boolean(entityId) && query.isPending,
+    error: errorMessage,
     forbidden,
     reload,
     offset,
