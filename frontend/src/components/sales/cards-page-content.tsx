@@ -37,6 +37,7 @@ export function CardsPageContent() {
   const [batches, setBatches] = useState<CardSalesBatch[]>([]);
   const [settlements, setSettlements] = useState<PosSettlement[]>([]);
   const [voidSettlement, setVoidSettlement] = useState<PosSettlement | null>(null);
+  const [voidBatch, setVoidBatch] = useState<CardSalesBatch | null>(null);
   const [recon, setRecon] = useState<ClearingReconciliation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -184,16 +185,25 @@ export function CardsPageContent() {
                 <DataTableHeaderCell>Date</DataTableHeaderCell>
                 <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
                 <DataTableHeaderCell>Description</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
               </tr>
             </DataTableHead>
             <DataTableBody>
               {batches.map((row) => (
-                <DataTableRow key={row.id}>
+                <DataTableRow
+                  key={row.id}
+                  className={row.status === "voided" ? "text-muted-foreground line-through opacity-70" : undefined}
+                >
                   <DataTableCell>{formatTrDate(row.sales_date)}</DataTableCell>
                   <DataTableCell align="right">
                     {formatTry(row.gross_amount_kurus)}
                   </DataTableCell>
                   <DataTableCell>{row.description}</DataTableCell>
+                  <DataTableCell align="right">
+                    {row.status !== "voided" && (
+                      <VoidTriggerButton onContinue={() => setVoidBatch(row)} />
+                    )}
+                  </DataTableCell>
                 </DataTableRow>
               ))}
             </DataTableBody>
@@ -277,6 +287,21 @@ export function CardsPageContent() {
         onClose={() => setVoidSettlement(null)}
         onSaved={() => {
           setVoidSettlement(null);
+          void reload();
+        }}
+      />
+      <VoidSubledgerDialog
+        open={voidBatch !== null}
+        title="Void card sales batch"
+        description={voidBatch?.description}
+        voidPath={
+          entityId && voidBatch
+            ? `/entities/${entityId}/pos/card-sales/${voidBatch.id}/void`
+            : null
+        }
+        onClose={() => setVoidBatch(null)}
+        onSaved={() => {
+          setVoidBatch(null);
           void reload();
         }}
       />

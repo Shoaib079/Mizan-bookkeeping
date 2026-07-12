@@ -166,6 +166,33 @@ def list_card_sales_batches(
     )
 
 
+@card_sales_router.post("/{batch_id}/void", response_model=SubledgerVoidOut)
+def void_card_sales_batch(
+    entity_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    payload: VoidJournalEntryRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> SubledgerVoidOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return pos_service.void_card_sales_batch_by_id(
+            session,
+            entity_id,
+            batch_id,
+            actor_id=payload.actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except pos_service.CardSalesBatchNotVoidableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @reconciliation_router.get("", response_model=ClearingReconciliationRead)
 def get_clearing_reconciliation(
     entity_id: uuid.UUID,

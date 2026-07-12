@@ -21,6 +21,7 @@ export type CardSalesBatch = {
   gross_amount_kurus: number;
   description: string;
   created_at: string;
+  status?: string;
 };
 
 export type PosSettlement = {

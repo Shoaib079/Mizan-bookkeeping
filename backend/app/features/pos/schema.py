@@ -21,6 +21,7 @@ class CardSalesBatchCreate(BaseModel):
 class CardSalesBatchRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    status: str = "posted"
     id: uuid.UUID
     entity_id: uuid.UUID
     sales_date: date

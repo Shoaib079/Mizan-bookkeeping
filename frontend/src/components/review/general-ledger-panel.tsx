@@ -45,6 +45,7 @@ import { formatTrDate, formatTry } from "@/lib/money";
 import { journalEntryRowClassName } from "@/lib/ledger-display";
 import {
   GENERIC_CORRECTABLE_SOURCES,
+  GENERIC_VOID_SAFE_SOURCES,
   JOURNAL_SOURCES,
   sourceFlow,
   sourceLabel,
@@ -181,7 +182,7 @@ function EntryDetailPanel({
 
       {(() => {
         const flow = sourceFlow(row.source);
-        if (!flow || GENERIC_CORRECTABLE_SOURCES.has(row.source)) return null;
+        if (!flow || GENERIC_VOID_SAFE_SOURCES.has(row.source)) return null;
         return (
           <p className="text-xs text-muted-foreground">
             This entry is managed by its own flow — edit or void it in{" "}
@@ -549,12 +550,15 @@ function LedgerPanelContent() {
                         </DataTableCell>
                         <DataTableCell align="right">
                           {row.status === "posted" &&
-                            GENERIC_CORRECTABLE_SOURCES.has(row.source) && (
+                            GENERIC_VOID_SAFE_SOURCES.has(row.source) && (
                               <SubledgerRowActions
                                 row={{
                                   display_kind: "effective",
                                   journal_entry_id: row.id,
                                 }}
+                                showEdit={GENERIC_CORRECTABLE_SOURCES.has(
+                                  row.source,
+                                )}
                                 onEdit={() =>
                                   setCorrectTarget({
                                     id: row.id,

@@ -51,6 +51,16 @@ export type JournalSource = (typeof JOURNAL_SOURCES)[number];
  * general-ledger panel). */
 export const GENERIC_CORRECTABLE_SOURCES = new Set<string>(["manual", "bank_fee"]);
 
+/** Sources safe to VOID (but not edit/correct) through the generic ledger void
+ * endpoint. These are plain journal entries with no subledger rows, so the
+ * generic reversal is complete. The commission sweep (Dr 5300/5310 / Cr 1400)
+ * belongs here: its own "Card clearing" flow has no void UI, so voiding it from
+ * the GL is the only way to reverse a mistaken "Clear bank commission". */
+export const GENERIC_VOID_SAFE_SOURCES = new Set<string>([
+  ...GENERIC_CORRECTABLE_SOURCES,
+  "pos_commission_sweep",
+]);
+
 const SOURCE_LABELS: Record<string, string> = {
   bank_fee: "bank charges",
   pos_commission_sweep: "bank commission",

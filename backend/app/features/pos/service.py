@@ -69,8 +69,18 @@ def _to_settlement_read(session: Session, settlement: PosSettlement) -> PosSettl
     )
 
 
-def _to_batch_read(batch: CardSalesBatch) -> CardSalesBatchRead:
+def _batch_status(session: Session, batch: CardSalesBatch) -> str:
+    from app.core.ledger.models import JournalEntry, JournalEntryStatus
+
+    entry = session.get(JournalEntry, batch.journal_entry_id)
+    if entry is not None and entry.status == JournalEntryStatus.VOIDED:
+        return "voided"
+    return "posted"
+
+
+def _to_batch_read(batch: CardSalesBatch, *, status: str = "posted") -> CardSalesBatchRead:
     return CardSalesBatchRead(
+        status=status,
         id=batch.id,
         entity_id=batch.entity_id,
         sales_date=batch.sales_date,
@@ -140,7 +150,10 @@ def list_card_sales_batches(
             )
         )
         batches, total = fetch_paginated(session, stmt, params)
-        return [_to_batch_read(batch) for batch in batches], total
+        return [
+            _to_batch_read(batch, status=_batch_status(session, batch))
+            for batch in batches
+        ], total
 
 
 def create_pos_settlement(
@@ -360,4 +373,91 @@ def void_pos_settlement_by_id(
     return SubledgerVoidOut(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
+    )
+
+
+class CardSalesBatchNotVoidableError(ValueError):
+    """Raised when a card sales batch cannot be voided directly."""
+
+
+def void_card_sales_batch_by_id(
+    session: Session,
+    entity_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+):
+    """Void a card sales batch — reverses Dr 1400 clearing / Cr revenue for the day.
+
+    Used to remove duplicate/mistaken batches (e.g. a manual daily-sales entry
+    that double-counts a day already covered by another batch).
+
+    Guards:
+    - Already-voided batch: nothing to do.
+    - Batch owned by a POS daily summary: void it from the daily-summary flow so
+      the summary record stays consistent.
+    - Batch already settled by a live POS settlement: void that settlement first,
+      otherwise the clearing account would go negative against a reversed batch.
+    """
+    from app.core.ledger.models import JournalEntry, JournalEntryStatus
+    from app.core.ledger.posting import void_journal_entry
+    from app.features.ledger.schema import SubledgerVoidOut
+    from app.features.pos.models import PosDailySummary
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        batch = session.get(CardSalesBatch, batch_id)
+        if batch is None:
+            raise LookupError("Card sales batch not found")
+        journal_entry_id = batch.journal_entry_id
+
+        entry = session.get(JournalEntry, journal_entry_id)
+        if entry is not None and entry.status == JournalEntryStatus.VOIDED:
+            raise CardSalesBatchNotVoidableError("Card sales batch is already voided")
+
+        summary = session.scalars(
+            select(PosDailySummary).where(
+                PosDailySummary.card_sales_batch_id == batch_id
+            )
+        ).first()
+        if summary is not None:
+            raise CardSalesBatchNotVoidableError(
+                "This batch came from a POS daily summary — void it from the "
+                "daily summaries flow instead."
+            )
+
+        settlement = session.scalars(
+            select(PosSettlement).where(
+                PosSettlement.card_sales_batch_id == batch_id
+            )
+        ).first()
+        if settlement is not None:
+            settlement_entry = session.get(JournalEntry, settlement.journal_entry_id)
+            if (
+                settlement_entry is not None
+                and settlement_entry.status != JournalEntryStatus.VOIDED
+            ):
+                raise CardSalesBatchNotVoidableError(
+                    "This day's card sales were already settled to the bank — "
+                    "void that POS settlement first, then void the batch."
+                )
+
+    original, reversal = void_journal_entry(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=original.id,
+        reversal_journal_entry_id=reversal.id,
     )
