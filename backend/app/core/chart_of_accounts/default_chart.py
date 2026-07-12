@@ -26,6 +26,7 @@ DELIVERY_CLEARING_PARENT_CODE = "1450"
 SALES_REVENUE_CODE = "4000"
 GROUP_SALES_REVENUE_CODE = "4300"
 BANK_CHARGES_CODE = "5300"
+CARD_COMMISSION_CODE = "5310"
 CASH_OVER_SHORT_CODE = "5400"
 FX_GAIN_CODE = "4200"
 FX_LOSS_CODE = "5600"
@@ -212,6 +213,7 @@ DEFAULT_CHART: tuple[DefaultAccount, ...] = (
         False,
     ),
     DefaultAccount("5300", "Bank Charges", "Banka Masrafları", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
+    DefaultAccount("5310", "Card Commission", "Kart Komisyonu", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount("5400", "Cash Over/Short", "Kasa Fazlası/Eksiği", AccountType.EXPENSE, AccountNormalBalance.DEBIT, False),
     DefaultAccount(
         DELIVERY_COMMISSION_EXPENSE_CODE,

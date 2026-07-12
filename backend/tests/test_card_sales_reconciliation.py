@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from app.core.chart_of_accounts.default_chart import (
-    BANK_CHARGES_CODE,
+    CARD_COMMISSION_CODE,
     CARD_SALES_CLEARING_CODE,
     SALES_REVENUE_CODE,
 )
@@ -88,7 +88,7 @@ def test_settlement_with_explicit_commission_zeros_clearing(db_session, pos_setu
     entity_id = pos_setup["entity_id"]
     bank = pos_setup["bank"]
     clearing_id = pos_setup["accounts"][CARD_SALES_CLEARING_CODE]
-    bank_charges_id = pos_setup["accounts"][BANK_CHARGES_CODE]
+    bank_charges_id = pos_setup["accounts"][CARD_COMMISSION_CODE]
 
     pos_posting.post_card_sales_batch(
         db_session,
