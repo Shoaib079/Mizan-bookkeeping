@@ -391,7 +391,11 @@ def get_clearing_reconciliation(
             or 0
         )
 
-        in_transit_kurus = total_card_sales_kurus - total_settled_gross_kurus
+        # In-transit is the authoritative GL clearing balance — card sales minus
+        # everything that has relieved clearing (deposits AND commission swept to
+        # 5310). Deriving it from sales − settled would ignore swept commission
+        # and leave a phantom residual after a net-bank sweep.
+        in_transit_kurus = clearing_balance_kurus
 
         # Period roll-forward over the selected range (defaults to current month).
         today = date.today()
