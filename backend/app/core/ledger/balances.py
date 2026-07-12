@@ -14,6 +14,7 @@ from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntryS
 
 __all__ = [
     "balance_as_of_kurus",
+    "debit_credit_activity_kurus",
     "net_cash_effect_on_accounts",
     "period_activity_kurus",
 ]
@@ -78,6 +79,23 @@ def period_activity_kurus(
         to_date=to_date,
     )
     return _signed_balance_kurus(debits, credits, account.normal_balance)
+
+
+def debit_credit_activity_kurus(
+    session: Session,
+    account_id,
+    from_date: date,
+    to_date: date,
+) -> tuple[int, int]:
+    """Raw (debits, credits) posted to an account within an inclusive range.
+
+    Unlike ``period_activity_kurus`` (which nets to a signed balance), this keeps
+    the two sides separate so a clearing roll-forward can show card sales (debits
+    into 1400) and deposits/sweeps (credits out of 1400) as distinct lines.
+    """
+    return _debit_credit_totals_kurus(
+        session, account_id, from_date=from_date, to_date=to_date
+    )
 
 
 def balance_as_of_kurus(

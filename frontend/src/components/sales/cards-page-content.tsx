@@ -73,7 +73,7 @@ export function CardsPageContent() {
           `/entities/${entityId}/pos/settlements?${listQuery}`,
         ),
         apiFetch<ClearingReconciliation>(
-          `/entities/${entityId}/pos/clearing-reconciliation`,
+          `/entities/${entityId}/pos/clearing-reconciliation?${listQuery}`,
         ),
       ]);
       setBatches(batchRes.items);
@@ -169,6 +169,70 @@ export function CardsPageContent() {
               <dd>{recon.pos_settlement_count}</dd>
             </div>
           </dl>
+
+          <div className="mt-4 border-t border-border pt-4">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              This period{" "}
+              {recon.period_from && recon.period_to
+                ? `(${formatTrDate(recon.period_from)} – ${formatTrDate(recon.period_to)})`
+                : ""}
+            </h3>
+            <dl className="space-y-1 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Opening in-transit</dt>
+                <dd className="tabular-nums">
+                  {formatTry(recon.opening_in_transit_kurus)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">+ Card sales</dt>
+                <dd className="tabular-nums">
+                  {formatTry(recon.period_card_sales_kurus)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">− Deposits &amp; clearances</dt>
+                <dd className="tabular-nums">
+                  {formatTry(recon.period_clearances_kurus)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 border-t border-border pt-1 font-medium">
+                <dt>= Closing in-transit</dt>
+                <dd className="tabular-nums">
+                  {formatTry(recon.closing_in_transit_kurus)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 pt-1">
+                <dt className="text-muted-foreground">
+                  Commission recorded (5310)
+                </dt>
+                <dd className="tabular-nums">
+                  {formatTry(recon.commission_recorded_kurus)}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          {recon.aging.some((b) => b.amount_kurus !== 0) && (
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Undeposited card sales — aging
+              </h3>
+              <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                {recon.aging.map((b) => (
+                  <div key={b.label} className="flex justify-between gap-4 sm:block">
+                    <dt className="text-muted-foreground">{b.label}</dt>
+                    <dd className="tabular-nums">{formatTry(b.amount_kurus)}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Money waiting for the bank to deposit. Anything in the older
+                buckets is card revenue the bank hasn&apos;t settled yet — or
+                sales recorded without a matching deposit.
+              </p>
+            </div>
+          )}
         </section>
       )}
 

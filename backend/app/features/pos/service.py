@@ -33,6 +33,7 @@ from app.features.pos.schema import (
     CardCommissionClearanceRequest,
     CardSalesBatchCreate,
     CardSalesBatchRead,
+    ClearingAgingBucket,
     ClearingReconciliationRead,
     PosSettlementCreate,
     PosSettlementRead,
@@ -175,6 +176,15 @@ def create_pos_settlement(
     return _to_settlement_read(session, result.pos_settlement)
 
 
+class SuspiciousClearanceAmountError(ValueError):
+    """Sweep residual is implausibly large to be commission — needs confirmation."""
+
+
+# Commission on card sales realistically tops out around a few percent; a residual
+# above this share of card sales is almost always undeposited sales, not commission.
+_COMMISSION_PLAUSIBILITY_RATE = 0.10
+
+
 def clear_card_commission(
     session: Session,
     entity_id: uuid.UUID,
@@ -187,6 +197,22 @@ def clear_card_commission(
             "Card sales are still in transit "
             f"({reconciliation.in_transit_kurus} kuruş unsettled) — "
             "record bank deposits before clearing commission"
+        )
+
+    residual_kurus = reconciliation.clearing_balance_kurus
+    total_sales_kurus = reconciliation.total_card_sales_kurus
+    threshold_kurus = int(total_sales_kurus * _COMMISSION_PLAUSIBILITY_RATE)
+    if (
+        not payload.confirm
+        and total_sales_kurus > 0
+        and residual_kurus > threshold_kurus
+    ):
+        raise SuspiciousClearanceAmountError(
+            f"This would book {residual_kurus} kuruş as commission — more than "
+            f"{int(_COMMISSION_PLAUSIBILITY_RATE * 100)}% of total card sales "
+            f"({total_sales_kurus} kuruş). That usually means card deposits are "
+            "missing, not commission. Classify the missing deposits first, or "
+            "confirm to proceed anyway."
         )
 
     result = post_card_commission_clearance(
@@ -272,7 +298,20 @@ def get_pos_settlement(
 def get_clearing_reconciliation(
     session: Session,
     entity_id: uuid.UUID,
+    *,
+    from_date: date | None = None,
+    to_date: date | None = None,
 ) -> ClearingReconciliationRead:
+    from datetime import timedelta
+
+    from app.core.chart_of_accounts.default_chart import CARD_COMMISSION_CODE
+    from app.core.ledger.balances import (
+        balance_as_of_kurus,
+        debit_credit_activity_kurus,
+        period_activity_kurus,
+    )
+    from app.core.pos.aging import AGING_BUCKETS, compute_undeposited_aging
+
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
@@ -354,6 +393,49 @@ def get_clearing_reconciliation(
 
         in_transit_kurus = total_card_sales_kurus - total_settled_gross_kurus
 
+        # Period roll-forward over the selected range (defaults to current month).
+        today = date.today()
+        if from_date is None:
+            from_date = today.replace(day=1)
+        if to_date is None:
+            to_date = today
+
+        opening_in_transit_kurus = balance_as_of_kurus(
+            session, clearing_account, from_date - timedelta(days=1)
+        )
+        period_debits, period_credits = debit_credit_activity_kurus(
+            session, clearing_account.id, from_date, to_date
+        )
+        closing_in_transit_kurus = balance_as_of_kurus(
+            session, clearing_account, to_date
+        )
+
+        # Commission already recognised in 5310 (statement lines + sweeps) in range.
+        commission_recorded_kurus = 0
+        commission_account = session.scalar(
+            select(Account).where(Account.code == CARD_COMMISSION_CODE)
+        )
+        if commission_account is not None:
+            commission_recorded_kurus = period_activity_kurus(
+                session, commission_account, from_date, to_date
+            )
+
+        # Aging of the current (cumulative) undeposited clearing balance.
+        aging_batches = session.execute(
+            select(CardSalesBatch.sales_date, CardSalesBatch.gross_amount_kurus)
+            .join(
+                JournalEntry,
+                JournalEntry.id == CardSalesBatch.journal_entry_id,
+            )
+            .where(JournalEntry.status != JournalEntryStatus.VOIDED)
+            .order_by(CardSalesBatch.sales_date.desc())
+        ).all()
+        aging_map = compute_undeposited_aging(
+            [(row[0], int(row[1])) for row in aging_batches],
+            clearing_balance_kurus,
+            today,
+        )
+
         return ClearingReconciliationRead(
             clearing_balance_kurus=clearing_balance_kurus,
             total_card_sales_kurus=total_card_sales_kurus,
@@ -361,6 +443,17 @@ def get_clearing_reconciliation(
             in_transit_kurus=in_transit_kurus,
             card_sales_batch_count=batch_count,
             pos_settlement_count=settlement_count,
+            period_from=from_date,
+            period_to=to_date,
+            opening_in_transit_kurus=opening_in_transit_kurus,
+            period_card_sales_kurus=period_debits,
+            period_clearances_kurus=period_credits,
+            closing_in_transit_kurus=closing_in_transit_kurus,
+            commission_recorded_kurus=commission_recorded_kurus,
+            aging=[
+                ClearingAgingBucket(label=label, amount_kurus=aging_map[label])
+                for label, _ in AGING_BUCKETS
+            ],
         )
 
 

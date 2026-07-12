@@ -198,9 +198,13 @@ def get_clearing_reconciliation(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
 ) -> ClearingReconciliationRead:
     try:
-        return pos_service.get_clearing_reconciliation(session, entity_id)
+        return pos_service.get_clearing_reconciliation(
+            session, entity_id, from_date=from_date, to_date=to_date
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -217,6 +221,8 @@ def clear_card_commission(
         return pos_service.clear_card_commission(session, entity_id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except pos_service.SuspiciousClearanceAmountError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except NothingToClearError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InTransitCardSalesError as exc:

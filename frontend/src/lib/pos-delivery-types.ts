@@ -36,6 +36,11 @@ export type PosSettlement = {
   created_at: string;
 };
 
+export type ClearingAgingBucket = {
+  label: string;
+  amount_kurus: number;
+};
+
 export type ClearingReconciliation = {
   clearing_balance_kurus: number;
   total_card_sales_kurus: number;
@@ -43,6 +48,14 @@ export type ClearingReconciliation = {
   in_transit_kurus: number;
   card_sales_batch_count: number;
   pos_settlement_count: number;
+  period_from: string | null;
+  period_to: string | null;
+  opening_in_transit_kurus: number;
+  period_card_sales_kurus: number;
+  period_clearances_kurus: number;
+  closing_in_transit_kurus: number;
+  commission_recorded_kurus: number;
+  aging: ClearingAgingBucket[];
 };
 
 export type DeliveryPlatform = {

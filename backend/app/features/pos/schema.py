@@ -63,6 +63,11 @@ class PosSettlementRead(BaseModel):
     created_at: datetime
 
 
+class ClearingAgingBucket(BaseModel):
+    label: str
+    amount_kurus: int
+
+
 class ClearingReconciliationRead(BaseModel):
     clearing_balance_kurus: int
     total_card_sales_kurus: int
@@ -70,12 +75,27 @@ class ClearingReconciliationRead(BaseModel):
     in_transit_kurus: int
     card_sales_batch_count: int
     pos_settlement_count: int
+    # Period roll-forward for the selected date range: opening in-transit +
+    # card sales − clearances (deposits + sweeps) = closing in-transit.
+    period_from: date | None = None
+    period_to: date | None = None
+    opening_in_transit_kurus: int = 0
+    period_card_sales_kurus: int = 0
+    period_clearances_kurus: int = 0
+    closing_in_transit_kurus: int = 0
+    # Commission already recognised in 5310 (statement lines + sweeps) in range,
+    # so the sweep is visibly aware of commission you already recorded.
+    commission_recorded_kurus: int = 0
+    # Age of the current (cumulative) undeposited clearing balance.
+    aging: list[ClearingAgingBucket] = Field(default_factory=list)
 
 
 class CardCommissionClearanceRequest(BaseModel):
     actor_id: OptionalActorId = None
     clearance_date: date | None = None
     description: str | None = Field(default=None, max_length=512)
+    # Set true to proceed past the large-amount safety guard.
+    confirm: bool = False
 
 
 class CardCommissionClearanceRead(BaseModel):
