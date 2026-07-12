@@ -1,4 +1,4 @@
-"""Bank statement pos_commission classification — clears card sales clearing (1400)."""
+"""Bank statement pos_commission classification — Dr 5310 Card Commission / Cr bank."""
 
 from __future__ import annotations
 
@@ -65,12 +65,14 @@ def _import_outflow(db_session, entity_id, bank, description: str, amount: str):
     )
 
 
-def test_pos_commission_classification_clears_1400(db_session, setup) -> None:
+def test_pos_commission_posts_dr_5310_cr_bank(db_session, setup) -> None:
     entity_id = setup["entity_id"]
     bank = setup["bank"]
     clearing_id = setup["accounts"][CARD_SALES_CLEARING_CODE]
     charges_id = setup["accounts"][CARD_COMMISSION_CODE]
 
+    # Full-deposit bank: gross sales in, full deposit clears 1400, then the bank
+    # deducts commission as a separate statement outflow.
     pos_posting.post_card_sales_batch(
         db_session,
         entity_id,
@@ -84,8 +86,8 @@ def test_pos_commission_classification_clears_1400(db_session, setup) -> None:
         entity_id,
         money_account_id=bank.id,
         settlement_date=date(2026, 6, 2),
-        amount_kurus=97_000,
-        description="net deposit",
+        amount_kurus=100_000,
+        description="full deposit",
         actor_id=ACTOR_ID,
     )
     with entity_context(db_session, entity_id):
@@ -93,7 +95,7 @@ def test_pos_commission_classification_clears_1400(db_session, setup) -> None:
             banking_service.gl_balance_kurus(
                 db_session, clearing_id, AccountNormalBalance.DEBIT
             )
-            == 3_000
+            == 0
         )
 
     statement = _import_outflow(
@@ -129,68 +131,19 @@ def test_pos_commission_classification_clears_1400(db_session, setup) -> None:
         ).all()
         by_account = {line.account_id: line for line in lines}
 
+    # Dr 5310 Card Commission / Cr bank — clearing is not touched by the commission.
     assert by_account[charges_id].side == AccountNormalBalance.DEBIT
     assert by_account[charges_id].amount_kurus == 3_000
-    assert by_account[clearing_id].side == AccountNormalBalance.CREDIT
-    assert by_account[clearing_id].amount_kurus == 3_000
-    assert bank.gl_account_id not in by_account
+    assert by_account[bank.gl_account_id].side == AccountNormalBalance.CREDIT
+    assert by_account[bank.gl_account_id].amount_kurus == 3_000
+    assert clearing_id not in by_account
 
     with entity_context(db_session, entity_id):
-        assert (
-            banking_service.gl_balance_kurus(
-                db_session, clearing_id, AccountNormalBalance.DEBIT
-            )
-            == 0
-        )
         assert (
             banking_service.gl_balance_kurus(
                 db_session, charges_id, AccountNormalBalance.DEBIT
             )
             == 3_000
-        )
-
-
-def test_pos_commission_rejects_amount_above_clearing_residual(db_session, setup) -> None:
-    entity_id = setup["entity_id"]
-    bank = setup["bank"]
-
-    pos_posting.post_card_sales_batch(
-        db_session,
-        entity_id,
-        sales_date=date(2026, 6, 1),
-        gross_amount_kurus=50_000,
-        description="card sales",
-        actor_id=ACTOR_ID,
-    )
-    pos_posting.post_pos_settlement(
-        db_session,
-        entity_id,
-        money_account_id=bank.id,
-        settlement_date=date(2026, 6, 2),
-        amount_kurus=48_000,
-        description="net deposit",
-        actor_id=ACTOR_ID,
-    )
-
-    statement = _import_outflow(
-        db_session,
-        entity_id,
-        bank,
-        "POS KOMİSYONU",
-        "-25,00",
-    )
-
-    with pytest.raises(
-        statement_service.InvalidClassificationError,
-        match="exceeds card clearing residual",
-    ):
-        statement_service.classify_statement_line(
-            db_session,
-            entity_id,
-            statement.id,
-            statement.lines[0].id,
-            classification=StatementLineClassification.POS_COMMISSION,
-            actor_id=ACTOR_ID,
         )
 
 

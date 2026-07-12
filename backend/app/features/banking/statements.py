@@ -16,6 +16,8 @@ from app.core.banking.line_dedup import plan_statement_line_imports
 from app.core.content_fingerprint import file_fingerprint
 from app.core.banking import posting as banking_posting
 from app.core.banking import statement_posting
+from app.core.chart_of_accounts.default_chart import CARD_COMMISSION_CODE
+from app.core.ledger.models import JournalEntrySource
 from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_date_bounds
 from app.core.receivables import posting as receivables_posting
 from app.core.payables import posting as payables_posting
@@ -1955,20 +1957,19 @@ def classify_statement_line(
     if classification == StatementLineClassification.POS_COMMISSION:
         commission_amount = abs(line.amount_kurus)
         assert actor_id is not None
-        try:
-            result = pos_posting.post_card_commission_from_statement(
-                session,
-                entity_id,
-                commission_date=line.transaction_date,
-                amount_kurus=commission_amount,
-                description=line.description,
-                actor_id=actor_id,
-                bank_statement_line_id=line.id,
-            )
-        except pos_posting.NothingToClearError as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        except pos_posting.CommissionExceedsClearingError as exc:
-            raise InvalidClassificationError(str(exc)) from exc
+        # Card commission is money the bank took out of the account — Dr 5310 / Cr bank,
+        # exactly like a bank fee but to the dedicated Card Commission account.
+        result = statement_posting.post_bank_fee(
+            session,
+            entity_id,
+            bank_money_account_id=statement.money_account_id,
+            fee_date=line.transaction_date,
+            amount_kurus=commission_amount,
+            description=line.description,
+            actor_id=actor_id,
+            source=JournalEntrySource.POS_COMMISSION_STATEMENT,
+            charges_account_code=CARD_COMMISSION_CODE,
+        )
         journal_id = result.journal_entry.id
 
         with entity_context(session, entity_id):

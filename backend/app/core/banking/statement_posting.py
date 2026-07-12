@@ -179,8 +179,12 @@ def post_bank_fee(
     description: str,
     actor_id: uuid.UUID,
     source: JournalEntrySource = JournalEntrySource.BANK_FEE,
+    charges_account_code: str = BANK_CHARGES_CODE,
 ) -> BankFeePostResult:
-    """Post bank fee: Dr Bank Charges (5300), Cr bank — not classify-only."""
+    """Post a money-out bank charge: Dr expense (default 5300 Bank Charges), Cr bank.
+
+    Pass charges_account_code to route card commission to 5310 instead of 5300.
+    """
     if amount_kurus <= 0:
         raise ValueError("Bank charges amount_kurus must be positive")
 
@@ -194,10 +198,10 @@ def post_bank_fee(
         _validate_bank_gl_account(session, entity_id, bank_account.gl_account_id)
 
         bank_charges = session.scalar(
-            select(Account).where(Account.code == BANK_CHARGES_CODE)
+            select(Account).where(Account.code == charges_account_code)
         )
         if bank_charges is None:
-            raise InvalidAccountError(f"bank charges account {BANK_CHARGES_CODE} not found")
+            raise InvalidAccountError(f"charges account {charges_account_code} not found")
 
         lines = build_bank_fee_posting_lines(
             bank_gl_account_id=bank_account.gl_account_id,

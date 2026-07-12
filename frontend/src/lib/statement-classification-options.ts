@@ -36,8 +36,8 @@ export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
   },
   {
     value: "pos_commission",
-    label: "Card acquirer commission (clears card sales)",
-    hint: "POS/Kart komisyon — Dr bank charges / Cr card clearing (1400), not Cr bank",
+    label: "Card commission",
+    hint: "Bank deducted card processing commission — Dr Card Commission (5310) / Cr bank",
     direction: "outflow",
     target: null,
   },
