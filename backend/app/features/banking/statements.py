@@ -2807,6 +2807,7 @@ def correct_statement_line(
                     journal_entry_id,
                     actor_id=actor_id,
                     reason=reason or "Statement line correction",
+                    void_date=journal.entry_date,
                 )
         elif was_linked and journal_entry_id is not None:
             pass
