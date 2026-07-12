@@ -276,6 +276,8 @@ def get_clearing_reconciliation(
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
+    from app.core.ledger.models import JournalEntry, JournalEntryStatus
+
     with entity_context(session, entity_id):
         require_entity_context()
 
@@ -291,14 +293,31 @@ def get_clearing_reconciliation(
             AccountNormalBalance.DEBIT,
         )
 
+        # Totals below must mirror the GL clearing balance, which only counts
+        # posted journal lines — so exclude batches/settlements whose journal
+        # entry has been voided (e.g. duplicates removed during cleanup).
         total_card_sales_kurus = int(
             session.scalar(
                 select(func.coalesce(func.sum(CardSalesBatch.gross_amount_kurus), 0))
+                .join(
+                    JournalEntry,
+                    JournalEntry.id == CardSalesBatch.journal_entry_id,
+                )
+                .where(JournalEntry.status != JournalEntryStatus.VOIDED)
             )
             or 0
         )
         batch_count = int(
-            session.scalar(select(func.count()).select_from(CardSalesBatch)) or 0
+            session.scalar(
+                select(func.count())
+                .select_from(CardSalesBatch)
+                .join(
+                    JournalEntry,
+                    JournalEntry.id == CardSalesBatch.journal_entry_id,
+                )
+                .where(JournalEntry.status != JournalEntryStatus.VOIDED)
+            )
+            or 0
         )
 
         total_settled_gross_kurus = int(
@@ -312,11 +331,25 @@ def get_clearing_reconciliation(
                         0,
                     )
                 )
+                .join(
+                    JournalEntry,
+                    JournalEntry.id == PosSettlement.journal_entry_id,
+                )
+                .where(JournalEntry.status != JournalEntryStatus.VOIDED)
             )
             or 0
         )
         settlement_count = int(
-            session.scalar(select(func.count()).select_from(PosSettlement)) or 0
+            session.scalar(
+                select(func.count())
+                .select_from(PosSettlement)
+                .join(
+                    JournalEntry,
+                    JournalEntry.id == PosSettlement.journal_entry_id,
+                )
+                .where(JournalEntry.status != JournalEntryStatus.VOIDED)
+            )
+            or 0
         )
 
         in_transit_kurus = total_card_sales_kurus - total_settled_gross_kurus
