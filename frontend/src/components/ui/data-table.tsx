@@ -10,7 +10,7 @@ export function DataTable({
   return (
     <div
       className={cn(
-        "overflow-auto rounded-lg border border-border bg-card",
+        "overflow-auto rounded-lg border border-border bg-card shadow-[var(--shadow-card)]",
         className,
       )}
     >
@@ -37,7 +37,13 @@ export function DataTableRow({
   ...props
 }: React.ComponentPropsWithoutRef<"tr">) {
   return (
-    <tr className={cn("hover:bg-muted/20", className)} {...props}>
+    <tr
+      className={cn(
+        "transition-colors duration-150 hover:bg-muted/40",
+        className,
+      )}
+      {...props}
+    >
       {children}
     </tr>
   );
@@ -79,7 +85,7 @@ export function DataTableHeaderCell({
   return (
     <th
       className={cn(
-        "px-4 py-2 font-medium",
+        "px-4 py-2 text-[11px] font-medium uppercase tracking-wider",
         align === "right" && "text-right",
       )}
     >

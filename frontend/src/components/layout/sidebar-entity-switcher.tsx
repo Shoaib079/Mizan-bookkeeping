@@ -51,7 +51,7 @@ export function SidebarEntitySwitcher() {
       {open && entities.length > 0 && (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full z-40 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-card py-1 shadow-lg"
+          className="absolute left-0 right-0 top-full z-40 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-card py-1 shadow-[var(--shadow-pop)]"
         >
           {entities.map((entity) => {
             const selected = entity.id === entityId;

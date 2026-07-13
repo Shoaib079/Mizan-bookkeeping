@@ -309,7 +309,7 @@ export function CommandPalette({ deliveryEnabled }: Props) {
     <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 p-4 pt-[15vh]">
       <div
         ref={panelRef}
-        className="w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-xl"
+        className="w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-pop)]"
         role="dialog"
         aria-modal
         aria-label="Search"

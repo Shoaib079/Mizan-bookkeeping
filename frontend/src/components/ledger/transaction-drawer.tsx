@@ -140,7 +140,7 @@ export function TransactionPeekProvider({
           <aside
             role="dialog"
             aria-label="Transaction details"
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l border-border bg-card shadow-xl"
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l border-border bg-card shadow-[var(--shadow-pop)]"
           >
             <div className="border-b border-border px-5 py-4">
               <div className="flex items-center justify-between text-xs text-muted-foreground">

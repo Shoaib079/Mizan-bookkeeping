@@ -32,8 +32,9 @@ function NavRowLink({
     <Link
       href={item.href}
       className={cn(
-        "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent",
-        active && "bg-sidebar-accent font-medium text-primary",
+        "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-sidebar-accent",
+        active &&
+          "bg-sidebar-accent font-medium text-primary shadow-[inset_2.5px_0_0_var(--primary)]",
       )}
     >
       <item.icon className="size-4 shrink-0" />

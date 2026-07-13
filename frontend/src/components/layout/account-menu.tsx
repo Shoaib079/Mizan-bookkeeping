@@ -218,7 +218,7 @@ function AccountMenuPanel({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border border-border bg-card py-2 shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border border-border bg-card py-2 shadow-[var(--shadow-pop)]"
         >
           <div className="border-b border-border px-4 pb-3 pt-1">
             <div className="flex items-center gap-3">
@@ -418,7 +418,7 @@ function ConfirmOverlay({
         if (event.target === event.currentTarget) onCancel();
       }}
     >
-      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-4 shadow-lg">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-pop)]">
         <h3 id="account-confirm-title" className="text-sm font-semibold">
           {title}
         </h3>

@@ -116,7 +116,7 @@ export function Dialog({
       <div
         ref={panelRef}
         className={cn(
-          "relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-lg",
+          "relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-pop)]",
           className,
         )}
         role="dialog"
@@ -144,7 +144,7 @@ export function Dialog({
             role="alertdialog"
             aria-labelledby={`${titleId}-discard`}
           >
-            <div className="w-full max-w-sm rounded-lg border border-border bg-card p-4 shadow-lg">
+            <div className="w-full max-w-sm rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-pop)]">
               <h3
                 id={`${titleId}-discard`}
                 className="text-sm font-semibold"

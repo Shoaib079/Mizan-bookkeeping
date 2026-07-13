@@ -4,6 +4,14 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-11
 
+**Phase 8 — theme pass (`v0.ia2-phase8-theme`, branch `frontend-overhaul`):** Shared components + tokens only, zero page-logic changes; matches FRONTEND_PROPOSAL_PREVIEW.html. (Dark mode + elevation tokens + content-area page titles shipped early in phases 1–4.)
+
+- **Tables (`data-table.tsx`):** column labels now 11px uppercase letter-spaced (preview style); row hover deepened to `bg-muted/40` with 150ms transitions; table container gets the `--shadow-card` whisper-depth. Sticky headers already existed.
+- **Elevation applied:** dialogs, confirm boxes, account menu, ⌘K palette, transaction drawer, and the sidebar restaurant switcher all use the `--shadow-pop` token (replacing ad-hoc `shadow-lg/xl`) — consistent depth in light and dark mode.
+- **Sidebar:** active item gains the preview's inset blue accent bar + 150ms hover transitions.
+- StatusBadge already covered every state (posted/needs review/voided struck-through/draft/active/…) — no changes needed.
+- Verified: tsc, eslint, 524/524 frontend tests.
+
 **Phase 7 — page merges M1/M3/M6 (`v0.ia2-phase7-merges`, branch `frontend-overhaul`):**
 
 - **M1 — /sales + /review/sales merged.** `/sales` now renders `SalesReviewPanel` (date range, All/Needs review/Posted chips, Excel export, edit + void) — the ~200-line duplicate table implementation is deleted. `/review/sales` renders the same panel pre-filtered to Needs review via a new `defaultFilter` prop on `useSalesReviewUrl` (the review chip param is now always explicit in the URL so "All" works from either entry point).
