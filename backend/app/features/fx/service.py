@@ -63,6 +63,11 @@ def _to_ledger_read(
     entity_id: uuid.UUID,
     journal: JournalEntry | None = None,
 ) -> FxLedgerEntryRead:
+    from app.core.fx.types import FxMovementType
+    from app.core.ledger.models import JournalEntryLine
+    from app.features.banking.models import MoneyAccount
+
+    try_cash_money_account_id: uuid.UUID | None = None
     with entity_context(session, entity_id):
         require_entity_context()
         if journal is None:
@@ -71,11 +76,34 @@ def _to_ledger_read(
             description=entry.description,
             journal=journal,
         )
+        # For a purchase, the journal debits the FX wallet and credits a TRY cash
+        # account — both money lines. Restore the TRY cash side (the money line
+        # that isn't this wallet's GL) so the edit form reopens with it, mapped
+        # back to its money account id (what the form's picker uses).
+        if journal is not None and entry.movement_type == FxMovementType.PURCHASE:
+            fx_ma = session.get(MoneyAccount, entry.fx_money_account_id)
+            fx_gl = fx_ma.gl_account_id if fx_ma is not None else None
+            gl_to_money_account = {
+                gl: mid
+                for mid, gl in session.execute(
+                    select(MoneyAccount.id, MoneyAccount.gl_account_id)
+                ).all()
+            }
+            line_accounts = session.scalars(
+                select(JournalEntryLine.account_id).where(
+                    JournalEntryLine.journal_entry_id == journal.id,
+                    JournalEntryLine.account_id.in_(set(gl_to_money_account.keys())),
+                )
+            ).all()
+            others = {a for a in line_accounts if a != fx_gl}
+            if len(others) == 1:
+                try_cash_money_account_id = gl_to_money_account.get(next(iter(others)))
     return FxLedgerEntryRead.model_validate(entry).model_copy(
         update={
             "journal_source": journal.source if journal is not None else None,
             "display_kind": display_kind,
             "was_corrected": was_corrected,
+            "try_cash_money_account_id": try_cash_money_account_id,
         }
     )
 

@@ -37,6 +37,9 @@ class FxLedgerEntryRead(BaseModel):
     actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID
     journal_source: JournalEntrySource | None = None
+    # Money account id of the TRY cash a purchase was funded from — restores the
+    # "Paid from" picker on the edit form (matches the form's value directly).
+    try_cash_money_account_id: uuid.UUID | None = None
     created_at: datetime
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
     was_corrected: bool = False

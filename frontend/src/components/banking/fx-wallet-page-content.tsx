@@ -271,6 +271,8 @@ export function FxWalletPageContent() {
                                 native_quantity: row.native_quantity,
                                 try_cost_kurus: row.try_cost_kurus,
                                 description: row.description,
+                                try_cash_money_account_id:
+                                  row.try_cash_money_account_id,
                               })
                             }
                             onVoid={() =>

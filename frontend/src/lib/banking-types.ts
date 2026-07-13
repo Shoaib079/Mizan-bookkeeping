@@ -257,6 +257,7 @@ export type FxLedgerEntryRead = {
   description: string;
   journal_entry_id: string;
   journal_source?: string | null;
+  try_cash_money_account_id?: string | null;
   created_at: string;
   display_kind?: "effective" | "void_reversal" | "superseded";
   was_corrected?: boolean;

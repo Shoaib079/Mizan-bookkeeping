@@ -24,6 +24,8 @@ export type CorrectableFxPurchaseRow = {
   native_quantity: number;
   try_cost_kurus: number;
   description: string;
+  /** Money account the TRY cash came from — restores the "Paid from" picker. */
+  try_cash_money_account_id?: string | null;
 };
 
 type Props = {
@@ -62,25 +64,33 @@ export function CorrectFxPurchaseForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadAccounts = useCallback(async () => {
-    if (!entityId) return;
-    const cashRes = await apiFetch<{ items: MoneyAccountLeaf[] }>(
-      `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
-    );
-    const accounts = cashRes.items.filter((a) => a.is_active);
-    setTryCashAccounts(accounts);
-    if (accounts[0]) setTryCashId(accounts[0].id);
-  }, [entityId]);
+  const loadAccounts = useCallback(
+    async (recorded: CorrectableFxPurchaseRow) => {
+      if (!entityId) return;
+      const cashRes = await apiFetch<{ items: MoneyAccountLeaf[] }>(
+        `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
+      );
+      const accounts = cashRes.items.filter((a) => a.is_active);
+      setTryCashAccounts(accounts);
+      // Restore the TRY cash account this purchase was funded from.
+      const chosen =
+        (recorded.try_cash_money_account_id &&
+          accounts.find((a) => a.id === recorded.try_cash_money_account_id)) ||
+        accounts[0];
+      setTryCashId(chosen?.id ?? "");
+    },
+    [entityId],
+  );
 
   useEffect(() => {
     if (!open || !purchase) return;
-    void loadAccounts().catch(() => undefined);
     setDateText(formatTrDate(purchase.movement_date));
     setNativeText(formatFxNative(Math.abs(purchase.native_quantity), currency));
     setTryCostText(formatKurus(purchase.try_cost_kurus));
     setDescription(purchase.description);
     setReason("");
     setError(null);
+    void loadAccounts(purchase).catch(() => undefined);
   }, [open, purchase, loadAccounts, currency]);
 
   async function onSubmit(event: FormEvent) {
