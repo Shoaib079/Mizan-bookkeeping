@@ -87,7 +87,8 @@ export function CorrectExpenseForm({
     if (!open || !expense) return;
     void loadOptions().catch(() => undefined);
     setDateText(formatTrDate(expense.expense_date));
-    setAmountText(formatKurus(expense.amount_kurus));
+    // Show the amount as entered (positive magnitude), not the signed ledger value.
+    setAmountText(formatKurus(Math.abs(expense.amount_kurus)));
     setItemName(expense.written_item_description ?? "");
     setDescription(expense.description);
     setExpenseAccountId(expense.expense_account_id);

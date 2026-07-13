@@ -72,7 +72,8 @@ export function CorrectSupplierPaymentForm({
     if (!open || !payment) return;
     void loadAccounts().catch(() => undefined);
     setDateText(formatTrDate(payment.movement_date));
-    setAmountText(formatKurus(payment.amount_kurus));
+    // Show the amount as entered (positive magnitude), not the signed ledger value.
+    setAmountText(formatKurus(Math.abs(payment.amount_kurus)));
     setDescription(payment.description);
     setReference("");
     setReason("");

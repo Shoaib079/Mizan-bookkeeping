@@ -89,7 +89,11 @@ export function CorrectCustomerPaymentForm({
     if (!open || !payment) return;
     void loadAccounts().catch(() => undefined);
     setDateText(formatTrDate(payment.movement_date));
-    setAmountText(formatKurus(payment.amount_kurus));
+    // Prefill the amount exactly as it was entered — a positive payment figure —
+    // not the signed ledger value (a customer payment is stored as a negative
+    // credit). Showing −13.200 both misrepresents the entry and blocks saving
+    // (the form requires a positive amount).
+    setAmountText(formatKurus(Math.abs(payment.amount_kurus)));
     setForexAmountText("");
     setRateText("");
     setTryValueTouched(false);

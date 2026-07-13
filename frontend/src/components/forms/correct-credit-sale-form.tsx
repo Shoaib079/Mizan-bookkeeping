@@ -56,7 +56,8 @@ export function CorrectCreditSaleForm({
   useEffect(() => {
     if (!open || !sale) return;
     setDateText(formatTrDate(sale.movement_date));
-    setAmountText(formatKurus(sale.amount_kurus));
+    // Show the amount as entered (positive magnitude), not the signed ledger value.
+    setAmountText(formatKurus(Math.abs(sale.amount_kurus)));
     setDescription(sale.description);
     setReason("");
     setError(null);
