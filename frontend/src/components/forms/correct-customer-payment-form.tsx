@@ -95,16 +95,27 @@ export function CorrectCustomerPaymentForm({
           merged.find((a) => a.gl_account_id === recorded.payment_account_id)) ||
         merged[0];
       setPaymentGlAccountId(chosen?.gl_account_id ?? "");
-      // If it was an FX-wallet payment, restore the forex amount received so the
-      // form reopens as recorded (USD as USD) rather than blank.
+      // If it was an FX-wallet payment, restore everything as recorded: the
+      // forex amount received, the exact TRY book value, and the rate it was
+      // booked at (derived from TRY ÷ forex) — so nothing has to be re-guessed.
       if (
         chosen?.account_kind === "foreign_currency" &&
         chosen.currency &&
-        recorded.payment_native_quantity != null
+        recorded.payment_native_quantity != null &&
+        recorded.payment_native_quantity > 0
       ) {
         setForexAmountText(
           formatFxNative(recorded.payment_native_quantity, chosen.currency),
         );
+        // amount_kurus and payment_native_quantity are both ×100-scaled, so their
+        // ratio is TRY-per-unit directly; ×100 back into kuruş for the rate field.
+        const rateKurus = Math.round(
+          (Math.abs(recorded.amount_kurus) / recorded.payment_native_quantity) * 100,
+        );
+        setRateText(formatKurus(rateKurus));
+        // Keep the recorded TRY value authoritative (don't let forex×rate rounding
+        // nudge it).
+        setTryValueTouched(true);
       }
     },
     [entityId],

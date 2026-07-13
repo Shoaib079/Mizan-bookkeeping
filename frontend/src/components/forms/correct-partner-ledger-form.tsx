@@ -33,6 +33,8 @@ export type CorrectablePartnerLedgerRow = {
   movement_type: string;
   amount_kurus: number;
   description: string;
+  /** GL account a reimbursement was paid from — restores the picker. */
+  payment_account_id?: string | null;
 };
 
 type Props = {
@@ -68,17 +70,25 @@ export function CorrectPartnerLedgerForm({
 
   const isExpenseFronted = entry?.movement_type === "expense_fronted";
 
-  const loadOptions = useCallback(async () => {
-    if (!entityId) return;
-    const [expenses, payments] = await Promise.all([
-      fetchExpenseAccounts(entityId),
-      loadBankAndCashAccounts(entityId),
-    ]);
-    setExpenseAccounts(expenses);
-    setPaymentAccounts(payments);
-    if (expenses[0]) setExpenseAccountId(expenses[0].id);
-    if (payments[0]) setPaymentGlAccountId(payments[0].gl_account_id);
-  }, [entityId]);
+  const loadOptions = useCallback(
+    async (recorded: CorrectablePartnerLedgerRow) => {
+      if (!entityId) return;
+      const [expenses, payments] = await Promise.all([
+        fetchExpenseAccounts(entityId),
+        loadBankAndCashAccounts(entityId),
+      ]);
+      setExpenseAccounts(expenses);
+      setPaymentAccounts(payments);
+      if (expenses[0]) setExpenseAccountId(expenses[0].id);
+      // Restore the account the reimbursement was actually paid from.
+      const chosen =
+        (recorded.payment_account_id &&
+          payments.find((a) => a.gl_account_id === recorded.payment_account_id)) ||
+        payments[0];
+      setPaymentGlAccountId(chosen?.gl_account_id ?? "");
+    },
+    [entityId],
+  );
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -86,12 +96,12 @@ export function CorrectPartnerLedgerForm({
 
   useEffect(() => {
     if (!open || !entry) return;
-    void loadOptions().catch(() => undefined);
     setDateText(formatTrDate(entry.movement_date));
     setAmountText(formatKurus(Math.abs(entry.amount_kurus)));
     setDescription(entry.description);
     setReason("");
     setError(null);
+    void loadOptions(entry).catch(() => undefined);
   }, [open, entry, loadOptions]);
 
   const amountKurus = parseTryToKurus(amountText);

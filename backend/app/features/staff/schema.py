@@ -48,6 +48,8 @@ class StaffLedgerEntryRead(BaseModel):
     description: str
     actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID | None
+    # GL account a payment (advance/salary) was paid from — restores the picker.
+    payment_account_id: uuid.UUID | None = None
     period_year: int | None = None
     period_month: int | None = None
     extra_days: int | None = None

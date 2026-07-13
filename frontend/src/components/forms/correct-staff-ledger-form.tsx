@@ -26,6 +26,8 @@ export type CorrectableStaffLedgerRow = {
   movement_type: string;
   amount_minor: number;
   description: string;
+  /** GL account an advance/salary was paid from — restores the picker. */
+  payment_account_id?: string | null;
 };
 
 type Props = {
@@ -61,12 +63,20 @@ export function CorrectStaffLedgerForm({
     entry?.movement_type === "advance_paid" ||
     entry?.movement_type === "salary_payment";
 
-  const loadAccounts = useCallback(async () => {
-    if (!entityId) return;
-    const merged = await loadBankAndCashAccounts(entityId);
-    setPaymentAccounts(merged);
-    if (merged[0]) setPaymentGlAccountId(merged[0].gl_account_id);
-  }, [entityId]);
+  const loadAccounts = useCallback(
+    async (recorded: CorrectableStaffLedgerRow) => {
+      if (!entityId) return;
+      const merged = await loadBankAndCashAccounts(entityId);
+      setPaymentAccounts(merged);
+      // Restore the account the payment was actually paid from.
+      const chosen =
+        (recorded.payment_account_id &&
+          merged.find((a) => a.gl_account_id === recorded.payment_account_id)) ||
+        merged[0];
+      setPaymentGlAccountId(chosen?.gl_account_id ?? "");
+    },
+    [entityId],
+  );
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -74,12 +84,12 @@ export function CorrectStaffLedgerForm({
 
   useEffect(() => {
     if (!open || !entry) return;
-    void loadAccounts().catch(() => undefined);
     setDateText(formatTrDate(entry.movement_date));
     setAmountText(formatKurus(Math.abs(entry.amount_minor)));
     setDescription(entry.description);
     setReason("");
     setError(null);
+    void loadAccounts(entry).catch(() => undefined);
   }, [open, entry, loadAccounts]);
 
   const amountMinor = parseTryToKurus(amountText);

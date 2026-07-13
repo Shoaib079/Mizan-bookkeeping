@@ -47,6 +47,7 @@ type LedgerEntry = {
   amount_minor: number;
   description: string;
   journal_entry_id: string | null;
+  payment_account_id: string | null;
   period_year?: number | null;
   period_month?: number | null;
   extra_days?: number | null;
@@ -339,6 +340,7 @@ export default function StaffDetailPage() {
                               movement_type: entry.movement_type,
                               amount_minor: entry.amount_minor,
                               description: entry.description,
+                              payment_account_id: entry.payment_account_id,
                             })
                           }
                           onVoid={() =>

@@ -50,6 +50,7 @@ type LedgerEntry = {
   amount_kurus: number;
   description: string;
   journal_entry_id: string | null;
+  payment_account_id: string | null;
   display_kind: SubledgerDisplayKind;
   was_corrected?: boolean;
 };
@@ -266,6 +267,7 @@ export default function PartnerDetailPage() {
                               movement_type: entry.movement_type,
                               amount_kurus: entry.amount_kurus,
                               description: entry.description,
+                              payment_account_id: entry.payment_account_id,
                             })
                           }
                           onVoid={() =>

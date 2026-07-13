@@ -65,6 +65,8 @@ class PartnerLedgerEntryRead(BaseModel):
     description: str
     actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID | None
+    # GL account a reimbursement was paid from — restores the picker.
+    payment_account_id: uuid.UUID | None = None
     created_at: datetime
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
     was_corrected: bool = False
