@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form";
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
@@ -175,6 +175,20 @@ export default function StaffDetailPage() {
     visibleRows,
   } = useLedgerHistoryView(ledger?.entries ?? []);
 
+  // Running balance after each effective movement (skips voided/superseded
+  // history rows so the last row always reconciles to the staff balance).
+  const runningBalanceById = useMemo(() => {
+    const map = new Map<string, number>();
+    let running = 0;
+    for (const e of ledger?.entries ?? []) {
+      if ((e.display_kind ?? "effective") === "effective") {
+        running += e.amount_minor;
+        map.set(e.id, running);
+      }
+    }
+    return map;
+  }, [ledger?.entries]);
+
   const balanceLabel =
     employee?.pay_currency === "TRY"
       ? formatTry(ledger?.balance_minor ?? 0)
@@ -285,6 +299,7 @@ export default function StaffDetailPage() {
                   <DataTableHeaderCell>Type</DataTableHeaderCell>
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
                   <DataTableHeaderCell>Actions</DataTableHeaderCell>
                 </tr>
               </DataTableHead>
@@ -326,6 +341,13 @@ export default function StaffDetailPage() {
                       {employee.pay_currency === "TRY"
                         ? formatTry(entry.amount_minor)
                         : `${(entry.amount_minor / 100).toFixed(2)} ${employee.pay_currency}`}
+                    </DataTableCell>
+                    <DataTableCell align="right" className="tabular-nums text-muted-foreground">
+                      {runningBalanceById.has(entry.id)
+                        ? employee.pay_currency === "TRY"
+                          ? formatTry(runningBalanceById.get(entry.id) ?? 0)
+                          : `${((runningBalanceById.get(entry.id) ?? 0) / 100).toFixed(2)} ${employee.pay_currency}`
+                        : "—"}
                     </DataTableCell>
                     <DataTableCell align="right">
                       {(correctableStaffTypes.has(entry.movement_type) ||
