@@ -2,6 +2,25 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-07-13
+
+⚠️ **Verified `tsc` + `py_compile` in the working session only — backend `pytest` NOT run here (sandbox lacks Python 3.11 + Postgres). Owner runs `cd backend && .venv/bin/pytest -q` before relying on the backend changes below.**
+
+**Edit-as-recorded — correction/edit forms reopen the way the entry was booked.**
+- **Amount as entered, not signed:** customer/supplier/staff/partner/credit-sale/expense correction forms prefill the positive figure you typed, not the ledger's signed value (a customer payment that showed `−13.200` and blocked saving now shows `13.200`). Fixed by `Math.abs(...)` on prefill across the correct-* forms.
+- **Money account restored:** customer payment ("Received into"), supplier payment ("Pay from"), staff advance/salary, partner reimbursement, and FX purchase (TRY-cash side) now reopen with the account actually used instead of defaulting to the first in the list. New shared backend helper `journal_money_account.py::money_account_gl_by_journal_entry` reads the money line off each payment's journal; exposed as `payment_account_id` on customer/supplier/staff/partner ledger reads (+ supplier `/activity`), and `try_cash_money_account_id` on the FX-purchase read (resolves the non-wallet money line, maps GL→money-account id).
+- **FX payments fully restored:** a customer payment received in USD reopens with the currency amount, the TRY book value, and the **rate** (derived from TRY ÷ forex). Supplier payments confirmed TRY-only (no FX to restore).
+
+**Card clearing / reconciliation (honesty pass).**
+- **184k phantom bank charge, root-caused + fixable:** the "Clear bank commission" sweep booked the entire card-clearing residual (mostly undeposited card sales, incl. duplicate manual+POS batches) to 5300 Bank Charges. Made the sweep entry **voidable from the General Ledger**; gave the **Card sales batches** list a status column + **Void** (with guards: POS-summary batches route to the daily-summary flow; already-settled batches must void the settlement first).
+- **Reconciliation now tells the truth:** date-aware roll-forward (opening in-transit + card sales − deposits/clearances = closing), undeposited-sales **aging** buckets, a **Commission recorded (5310)** line; totals **exclude voided** rows; **in-transit derives from the GL clearing balance** so a net-bank sweep leaves no phantom residual. Added a **large-amount guard** on "Clear bank commission" (409 → confirm dialog when the residual exceeds ~10% of card sales).
+
+**Navigation & polish (audit M4 + C-tail).**
+- **Balances is one door, not five:** sidebar section collapsed to **Overview + Cash & bank**; `/balances` renders a real overview (payables/receivables totals + cards into the directories); **Staff & Partners directories gained inline balance columns** so all four directories are self-sufficient; redundant directory→balances footer links removed. Nav registry + 65 nav tests updated/green.
+- **Whole-row click** on the four directory tables (`DataTableRow href`, keyboard-accessible, modifier/inner-control safe).
+
+**Deferred (design captured, NOT built):** forex-only group sales (TRY recognised at forex conversion) — see DECISIONS 2026-07-13 + POST_LAUNCH_PLAN § GS-FX.
+
 ## 2026-07-11
 
 **Phase 8 — theme pass (`v0.ia2-phase8-theme`, branch `frontend-overhaul`):** Shared components + tokens only, zero page-logic changes; matches FRONTEND_PROPOSAL_PREVIEW.html. (Dark mode + elevation tokens + content-area page titles shipped early in phases 1–4.)

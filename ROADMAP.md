@@ -15,11 +15,13 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none) |
-| **Next up**              | P5 — Delete company UI |
-| **Last completed slice** | Group-sale discount write-off + staff advance return + list void/edit |
-| **Last commit/tag**      | `v0.group-sales-followups` / `v0.staff-advance-return` |
+| **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI |
+| **Last completed slice** | Edit-forms-reopen-as-recorded + card-clearing reconciliation honesty + Balances→overview/directory balances + whole-row click (2026-07-13; `tsc`/nav-tests green, **backend pytest pending owner**) |
+| **Last commit/tag**      | `v0.group-sales-followups` / `v0.staff-advance-return` (2026-07-13 work pushed by owner; not yet tagged) |
 
-**Owner sign-off required** — group-sale discount + staff advance return touch AR / staff advance posting (money-critical); run full pytest locally. **Follow-ups (not in this slice):** per-menu period report for group/agency sales; generic-ledger deep-link of GROUP_SALE entries to their mother page (backend already refuses generic void safely).
+**Owner sign-off required** — group-sale discount + staff advance return touch AR / staff advance posting (money-critical); run full pytest locally. **Follow-ups (not in this slice):** **GS-FX forex-only group sales** (design locked, NOT built — POST_LAUNCH § GS-FX / DECISIONS 2026-07-13; the biggest deferred item, money-critical, ship with tests); per-menu period report for group/agency sales; generic-ledger deep-link of GROUP_SALE entries to their mother page (backend already refuses generic void safely); A6 ⌘K palette gaps (staff/partners/transaction search); A7 Agency/Customers naming; C4 mobile shell + TR localization (owner-deferred until rest is solid).
+
+> **2026-07-13 session (pushed by owner, backend pytest pending):** edit forms reopen as recorded (positive amount + restored money account + FX rate); card-clearing reconciliation honesty (roll-forward, aging, 5310 awareness, in-transit = GL balance, large-sweep guard, sweep/batch void); Balances collapsed to one overview with directories as the door (staff/partners balance columns); whole-row click on directory tables. Verified `tsc` + 65 nav tests; **backend `pytest` NOT run in the working session** — owner runs locally. See CHANGELOG/BUGLOG 2026-07-13.
 
 > **⚠️ Deploy reality (2026-07):** App is LIVE but the last *successful* production deploy is `68a262a` — **72+ commits behind** `main`. Everything since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed to GitHub but NOT deployed. Render API is `autoDeploy: false` (manual deploy). **Netlify→Vercel migration complete** — `netlify.toml` deleted, security headers moved to `next.config.ts`, `vercel.json` added. Remaining owner steps: set env vars on Vercel + Render dashboards, push, deploy, smoke — see `PRE_DEPLOY_CHECKLIST.md`.
 

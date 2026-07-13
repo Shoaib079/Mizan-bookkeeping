@@ -2,6 +2,28 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-07-13 — Forex-only group sales (design agreed, implementation DEFERRED — NOT BUILT)
+
+**Status:** ⛔ **NOT IMPLEMENTED.** Design agreed with owner 2026-07-13; deferred to a dedicated, test-covered session (owner chose "next session, staged with verification"). Do **not** assume this exists in code — today a forex group sale still **requires** a sale-date TRY rate (`fx_rate_used` or `total_kurus`). This entry exists so we build it once, correctly, and don't re-litigate the model. Tracked as a to-build slice in `POST_LAUNCH_PLAN.md`.
+
+**Owner need:** When a group/agency booking is agreed in a foreign currency (e.g. "5,000 USD"), the owner thinks and settles in that currency and keeps the forex record separate. Entering a TRY rate + TRY amount + TRY total at sale time is confusing and, to the owner, useless *at that moment*. Quote: *"even if i do not record TRY and it does not show in GL or financials is also fine for me bcz i am keeping forex record separate and when i sell the forex i will have them in financials."*
+
+**Agreed accounting model — TRY recognition deferred to forex conversion:**
+- **Forex group sale (no rate):** records a **forex-only receivable in the customer subledger** (forex amount tracked via existing `total_forex_minor` / native-balance logic). **No GL journal entry**, no TRY revenue, no TRY receivable. `customer_ledger_entries.amount_kurus = 0`, `journal_entry_id = NULL`.
+- **Forex payment against it:** reduces the forex receivable (native balance) and the forex **enters the FX wallet at ZERO TRY cost**. **No TRY/GL posting** on the AR side (otherwise AR goes negative in TRY against a receivable that was never booked).
+- **Conversion (FX sale → TRY):** existing average-cost FX engine — zero-cost forex means the **full TRY proceeds surface as income at conversion**. This is exactly "the TRY hits my financials when I sell the forex." Cash-basis-style deferral of revenue recognition to conversion, by design.
+
+**Why this is a real multi-path change (not a field toggle) — all must move together:**
+1. **Sale entry** — `GroupSaleCreate` validator + `compute_group_sale` allow forex with *no* `fx_rate_used`/`total_kurus`; new `post_forex_only_credit_sale` (subledger row, `amount_kurus=0`, `journal_entry_id=None`, no GL).
+2. **Void** — `_reverse_group_sale_gl` currently hard-requires `journal_entry_id` ("Group sale missing journal links"); needs a forex-only branch (void the subledger row, no GL reversal).
+3. **Discount / write-off** — `post_group_sale_discount` posts Dr 5800 / Cr AR in TRY; forex-only needs a forex discount path (or block).
+4. **Forex payment posting** — must skip TRY/GL for forex-only sales and deposit forex to the wallet at zero cost.
+5. **FX wallet cost basis** — support a **zero-cost lot** on receipt; conversion then yields proceeds-as-income.
+
+**Known caveat (tell the owner):** if one FX wallet holds *both* purchased forex (real TRY cost) and sale-received forex (zero cost), the average-cost math **blends** them, so a later conversion smears the two attributions. Acceptable for most restaurants; flag if precise per-lot attribution is ever needed (would require lot-level tracking).
+
+**Why deferred:** touches the double-entry engine, revenue-recognition timing, and FX cost basis on a **live** app; the current working session **cannot run the backend `pytest` suite** (sandbox lacks Python 3.11 + Postgres). Money-critical FX-engine changes must ship with tests written alongside and run green before touching real books.
+
 ## 2026-07 — Production stack of record: Neon + Railway + Vercel + R2 (supersedes ALL "Render" references)
 
 **Authoritative stack (verified 2026-07):**

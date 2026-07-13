@@ -2,6 +2,36 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-13 — "Clear bank commission" dumped the whole clearing residual as Bank Charges (184k)
+
+**Symptom:** Bank Charges (5300) jumped to 184,628.82 ₺ after clicking "Clear bank commission" on the card-clearing page. Real commission was ~20k.
+
+**Root cause:** the sweep (`post_card_commission_clearance`) books the **entire** card-clearing (1400) balance to commission, assuming the residual is commission. The residual was mostly **undeposited card sales** — including days recorded **twice** (a manual daily-sales batch *and* a POS-daily-summary batch for the same date), which double-counted revenue into clearing. So the sweep dumped ~184k of not-yet-deposited sales as an expense.
+
+**Fix:** (1) the sweep entry is now **voidable from the General Ledger** (added `pos_commission_sweep` to a void-safe set; the generic ledger void reverses Dr 1400 / Cr 5300). (2) **Card sales batches** list gained a status column + **Void** so duplicate live batches can be removed (guards: POS-summary batches route to the daily-summary void; already-settled batches require the settlement voided first). (3) **Large-amount guard**: `clear_card_commission` raises `SuspiciousClearanceAmountError` (→ 409, confirm dialog) when the residual exceeds ~10% of card sales. **Owner data cleanup:** void the 184k sweep, void duplicate batches, classify the missing card deposits.
+
+**Guarding test:** ⚠️ pending — owner to add `test_clear_commission_guard` + card-sales-batch void tests; `tsc`/`py_compile` clean this session, backend pytest not run in sandbox.
+
+## 2026-07-13 — Edit forms opened as a fresh entry (wrong amount sign + wrong account)
+
+**Symptom:** Editing a customer payment showed the amount as `−13.200` (which also blocked saving, since the form requires a positive amount), and "Received into" defaulted to the first account in the list rather than the account actually used — easy to save a mistake (wrong bank).
+
+**Root cause:** correction forms prefilled the **signed ledger value** and reset the account selector to `accounts[0]`; the payment's money account wasn't exposed on the ledger read at all.
+
+**Fix:** prefill `Math.abs(amount)` across the correct-* forms; new backend helper resolves the money account off the payment's journal line and exposes `payment_account_id` (customer/supplier/staff/partner + supplier activity) and `try_cash_money_account_id` (FX purchase); forms restore the recorded account (and, for customer FX payments, the forex amount + derived rate).
+
+**Guarding test:** ⚠️ pending — owner to add read-exposes-payment-account tests per subledger; `tsc`/`py_compile` clean, backend pytest not run in sandbox.
+
+## 2026-07-13 — "In transit" showed a phantom residual after a net-bank commission sweep
+
+**Symptom:** After clearing commission, the card-clearing card showed a non-zero "In transit" even though the actual clearing balance was zero.
+
+**Root cause:** `in_transit_kurus` was computed as `total_card_sales − total_settled_gross` (subledger), which ignores commission recognised by the sweep (Cr 1400 with no settlement row) and counted voided rows.
+
+**Fix:** `get_clearing_reconciliation` now derives `in_transit_kurus` from the **GL clearing balance** (which nets sales − deposits − sweeps), and the sales/settled totals **exclude voided** batches/settlements. In-transit and clearing balance always agree now.
+
+**Guarding test:** ⚠️ pending — existing `test_card_sales_reconciliation` assertions still hold (their scenarios have in-transit == clearing balance); add a post-sweep case. Backend pytest not run in sandbox.
+
 ## 2026-06-23 — Tips recorded as a liability instead of an expense
 
 **Symptom:** Tips were booked to `2260 Tips Payable` (a pass-through liability) and the POS confirm carved tips out of sales revenue, so both the tip and the underlying sale were understated/mismodelled. Owner's real workflow: a tip is taken from the drawer and paid to staff immediately and written on the expense list — it is an expense, and sales are gross.

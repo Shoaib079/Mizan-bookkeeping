@@ -4,6 +4,21 @@
 
 ---
 
+## Status update — 2026-07-13 (what's now DONE; do not rebuild)
+
+The IA v2 overhaul (phases 1–8, `frontend-overhaul`) shipped Parts A/C and merges M1/M3/M6. Additional items closed **2026-07-13** (verified `tsc` + nav tests; see CHANGELOG 2026-07-13):
+
+- **A2 / M4 — DONE.** All four directories (Suppliers, Customers, **Staff, Partners**) now carry inline balance columns; the Balances section collapsed to a single **Overview** (+ Cash & bank), `/balances` renders `BalancesOverview`. Directories are the door.
+- **C3 (row interaction) — partial DONE.** Whole-row click on the four directory tables (`DataTableRow href`, keyboard-accessible). Status pills / empty states / hover / amount-coloring were already in place.
+- **A6 — still PARTIAL.** ⌘K palette covers suppliers, customers, expense-items; **still missing staff, partners, and transaction-description search** ("⌘K → Metro 4.500").
+- **A7 — naming drift remains.** `/customers` group-sales page still says "Agency/Agencies" vs sidebar "Customers" — pick one.
+- **C4 — NOT started (owner-deferred until the rest is solid).** No mobile shell (bottom tab bar / slide-over), no TR localization. This is the main remaining chunk.
+- **Cleanup:** the real 760-line opening-balances page still lives at `/onboarding/opening-balances` while Settings redirects to it — consolidate.
+
+Not a frontend-audit item but logged here for continuity: **edit-forms-reopen-as-recorded** and **card-clearing reconciliation honesty** shipped 2026-07-13 (see CHANGELOG/BUGLOG). **Deferred:** forex-only group sales (DECISIONS 2026-07-13 / POST_LAUNCH § GS-FX).
+
+---
+
 ## Part A — Bugs and gaps found page-by-page
 
 ### A1 — HIGH · The entire Sales section is invisible (⌘K-only island)

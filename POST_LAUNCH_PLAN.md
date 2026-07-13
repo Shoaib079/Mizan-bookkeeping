@@ -8,6 +8,11 @@ Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) ·
 
 ## ✅ Done (do not rebuild)
 
+- **Edit forms reopen exactly as recorded (2026-07-13)** — correction/edit forms now prefill the way the entry was booked, not as a fresh entry: amount shown as the positive figure entered (not the signed ledger value) on customer/supplier/staff/partner/credit-sale/expense edits; the **money account is restored** on customer payment, supplier payment, staff advance/salary, partner reimbursement, and FX-purchase (TRY-cash side) edits; **customer FX payments** reopen with currency amount + TRY value + **rate** (derived). Shared backend helper `app/features/banking/journal_money_account.py::money_account_gl_by_journal_entry` reads the money line off each payment's journal; FX purchase resolves the non-wallet money line and maps GL→money-account id. Frontend `tsc` + backend `py_compile` clean; **owner must run pytest** (touched customer/payables/staff/partner/fx services). Backend files: `features/{customers,payables,staff,partners,fx}/{service,schema}.py`, `features/payables/supplier_activity.py`.
+- **Balances → single overview; directories are the door (2026-07-13, audit M4)** — collapsed the Balances sidebar section from 5 per-entity tabs to **Overview + Cash & bank**; `/balances` renders a new `BalancesOverview` (payables/receivables totals + cards to Suppliers/Customers/Staff/Partners directories + Cash & bank); **Staff and Partners directories gained inline balance columns** (per-row ledger fetch via `lib/use-ledger-balance-map.ts`) so all four directories are self-sufficient; removed redundant directory→Payables/Receivables footer links. Nav registry updated (`/balances` → tab kind, per-entity → page kind); 65 nav tests green. Legacy `/balances/*` pages still reachable by URL.
+- **Whole-row click on directory tables (2026-07-13)** — `DataTableRow` gained an opt-in `href` (accessible: keyboard + Enter, ⌘/ctrl/shift + inner links/buttons untouched); wired into Suppliers/Customers/Staff/Partners.
+- **Clearing reconciliation honesty (2026-07-13)** — card-clearing page: date-aware **roll-forward** (opening in-transit + card sales − clearances = closing) + **undeposited-sales aging** buckets + **commission-recorded (5310)** line; totals **exclude voided** batches/settlements; **in-transit now derives from the GL clearing balance** (no phantom residual after a net-bank sweep); **large-amount guard** on "Clear bank commission" (blocks a sweep > 10% of card sales unless confirmed). Card sales batches list gained status + Void; commission sweep voidable from the General Ledger.
+- **Card commission split to 5310 (2026-07 earlier)** — "Card commission" statement classification posts Dr 5310 / Cr bank (separate from 5300 bank charges); statement-line corrections reverse on the original entry date, not today.
 - **Production go-live** — Neon Postgres + Railway API + Vercel frontend + Clerk auth, `APP_ENV=staging`.
 - **Open self-signup** (`6c6bf92`) — first verified sign-in auto-provisions a user; `SELF_SIGNUP_ENABLED` flag; invites still work; new user becomes owner on first company.
 - **Auth/deploy enablement** — `CLERK_AUDIENCE` optional; managed-Postgres (Neon) role-hardening tolerance + RLS verify; cold-load 401 fix (auth provider waits for token + `AuthReadyGate` + 401 retry); Vercel Next.js runtime; Dockerfile pip retries; `pg_dump 18` in image.
@@ -59,6 +64,7 @@ Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) ·
 | — | **BSF-3** | Supplier suggestion from bank description | **Done** |
 | — | **BSF-4** | Per-supplier auto-post toggle | **Done** |
 | — | P5 / ~~P8~~ | Delete company UI · ~~Groceries path~~ | P8 done; P5 queued |
+| — | **GS-FX** | Forex-only group sales (TRY at conversion) | **Design locked, NOT built** — see slice below + DECISIONS 2026-07-13 |
 | — | P4, P7 | Backup prune, lint | Optional |
 
 **Rule:** one slice at a time, in the numbered order. Phase 13 slices assume the app is LIVE — every backend addition must be entity-scoped (RLS) and date-range bounded like the rest.
@@ -99,6 +105,24 @@ Frontend polish (small usage tracking — localStorage per entity, or a light ba
 ---
 
 ## 🔨 Build queue (each = one slice)
+
+### GS-FX — Forex-only group sales (TRY recognition deferred to conversion)  *(design locked, NOT built)*
+
+**Why:** Owner books agency groups in forex (e.g. 5,000 USD), thinks/settles in forex, and keeps the forex record separate. Entering a TRY rate/amount at sale time is confusing and not useful to them. Full model + rationale + caveat: **DECISIONS.md 2026-07-13 — "Forex-only group sales"**. Owner agreed the model 2026-07-13 and chose to defer to a dedicated, test-covered session (money-critical FX-engine change; the working session couldn't run backend pytest).
+
+**Model (see DECISIONS for detail):** a forex group sale with **no rate** records a **forex-only subledger receivable** (no GL, `amount_kurus=0`, `journal_entry_id=NULL`); a forex payment against it posts **no TRY/GL** and deposits the forex into the FX wallet at **zero TRY cost**; the **full TRY value is recognized as income at conversion** via the existing average-cost engine.
+
+**All five paths must ship together (a partial change corrupts AR):**
+1. **Sale entry** — relax `GroupSaleCreate.check_fx_rate` + `compute_group_sale` to allow forex with no `fx_rate_used`/`total_kurus` (→ `total_kurus=0`, forex tracked); new `receivables_posting.post_forex_only_credit_sale` (subledger row, no GL).
+2. **Void** — `_reverse_group_sale_gl` currently hard-fails without `journal_entry_id`; add a forex-only branch (void the subledger row, no GL reversal).
+3. **Discount/write-off** — `post_group_sale_discount` (Dr 5800 / Cr AR, TRY) needs a forex path or an explicit block for forex-only sales.
+4. **Forex payment posting** — skip TRY/GL for forex-only sales; deposit forex to the wallet at zero cost.
+5. **FX wallet cost basis** — support a zero-cost receipt lot; conversion then surfaces proceeds as income.
+6. **Frontend** — make the sale-date rate optional on `group-sale-form.tsx` (forex path); show "TRY recorded at conversion" helper text; balances/remaining already forex-aware.
+
+**Caveat to surface in UI/owner note:** a wallet holding both purchased (real-cost) and sale-received (zero-cost) forex blends under average cost — conversion attribution smears. Acceptable for now; lot-level tracking only if precise attribution is ever needed.
+
+**Gate:** write backend tests alongside (forex-only sale posts no GL; forex payment posts no GL + zero-cost wallet receipt; conversion recognizes full proceeds; void/discount forex-only; existing TRY group sales unchanged). **Owner runs full pytest before merge — money-critical.** Do not merge on an untested branch.
 
 ### IC — Invoice classification & e-Fatura routing  *(PRIORITY — before FP/FS)*
 
