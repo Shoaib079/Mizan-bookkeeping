@@ -384,6 +384,24 @@ def get_supplier_activity(
 
     rows = [item[2] for item in raw_rows]
 
+    # Restore which money account each payment used so the edit form reopens with
+    # the recorded account instead of defaulting to the first in the list.
+    from app.features.banking.journal_money_account import (
+        money_account_gl_by_journal_entry,
+    )
+
+    payment_je_ids = [
+        r.journal_entry_id
+        for r in rows
+        if r.movement_kind == "payment" and r.journal_entry_id is not None
+    ]
+    if payment_je_ids:
+        with entity_context(session, entity_id):
+            account_by_je = money_account_gl_by_journal_entry(session, payment_je_ids)
+        for r in rows:
+            if r.movement_kind == "payment" and r.journal_entry_id in account_by_je:
+                r.payment_account_id = account_by_je[r.journal_entry_id]
+
     invoices_gross = sum(
         r.amount_kurus or 0
         for r in rows

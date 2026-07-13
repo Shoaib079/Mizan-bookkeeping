@@ -38,13 +38,32 @@ def supplier_entry_reads(
 ) -> list[SupplierLedgerEntryRead]:
     if not entries:
         return []
-    return enrich_entry_models(
+    reads = enrich_entry_models(
         session,
         SupplierLedgerEntryRead,
         entries,
         journal_entry_id=lambda entry: entry.journal_entry_id,
         description=lambda entry: entry.description,
     )
+    # Restore the money account each payment was paid from, so the edit form
+    # reopens with the recorded account instead of the first in the list.
+    from app.core.payables.types import SupplierMovementType
+    from app.features.banking.journal_money_account import (
+        money_account_gl_by_journal_entry,
+    )
+
+    payment_je_ids = [
+        r.journal_entry_id
+        for r in reads
+        if r.movement_type == SupplierMovementType.PAYMENT
+        and r.journal_entry_id is not None
+    ]
+    if payment_je_ids:
+        account_by_je = money_account_gl_by_journal_entry(session, payment_je_ids)
+        for r in reads:
+            if r.journal_entry_id in account_by_je:
+                r.payment_account_id = account_by_je[r.journal_entry_id]
+    return reads
 
 
 def list_payables(

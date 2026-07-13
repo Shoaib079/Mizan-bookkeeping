@@ -62,6 +62,9 @@ class SupplierLedgerEntryRead(BaseModel):
     reference_type: str | None
     reference_id: uuid.UUID | None
     journal_entry_id: uuid.UUID | None
+    # GL account id of the money account this payment was paid from (restored
+    # from the journal entry) — lets the edit form reopen with the recorded one.
+    payment_account_id: uuid.UUID | None = None
     created_at: datetime
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
     was_corrected: bool = False
@@ -149,6 +152,8 @@ class SupplierActivityRow(BaseModel):
     has_document: bool = False
     can_edit: bool = False
     expense_account_id: uuid.UUID | None = None
+    # GL account a payment was paid from — restores the edit form's picker.
+    payment_account_id: uuid.UUID | None = None
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
     was_corrected: bool = False
 

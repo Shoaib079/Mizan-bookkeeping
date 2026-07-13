@@ -25,6 +25,8 @@ export type CorrectableSupplierPaymentRow = {
   movement_date: string;
   amount_kurus: number;
   description: string;
+  /** GL account the payment was paid from — restores the picker. */
+  payment_account_id?: string | null;
 };
 
 type Props = {
@@ -61,16 +63,24 @@ export function CorrectSupplierPaymentForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadAccounts = useCallback(async () => {
-    if (!entityId) return;
-    const merged = await loadBankAndCashAccounts(entityId);
-    setAccounts(merged);
-    if (merged[0]) setPaymentGlAccountId(merged[0].gl_account_id);
-  }, [entityId]);
+  const loadAccounts = useCallback(
+    async (recorded: CorrectableSupplierPaymentRow) => {
+      if (!entityId) return;
+      const merged = await loadBankAndCashAccounts(entityId);
+      setAccounts(merged);
+      // Restore the account the payment was actually paid from; fall back to the
+      // first account only when the recorded one is unknown/unavailable.
+      const chosen =
+        (recorded.payment_account_id &&
+          merged.find((a) => a.gl_account_id === recorded.payment_account_id)) ||
+        merged[0];
+      setPaymentGlAccountId(chosen?.gl_account_id ?? "");
+    },
+    [entityId],
+  );
 
   useEffect(() => {
     if (!open || !payment) return;
-    void loadAccounts().catch(() => undefined);
     setDateText(formatTrDate(payment.movement_date));
     // Show the amount as entered (positive magnitude), not the signed ledger value.
     setAmountText(formatKurus(Math.abs(payment.amount_kurus)));
@@ -78,6 +88,7 @@ export function CorrectSupplierPaymentForm({
     setReference("");
     setReason("");
     setError(null);
+    void loadAccounts(payment).catch(() => undefined);
   }, [open, payment, loadAccounts]);
 
   const amountKurus = parseTryToKurus(amountText);

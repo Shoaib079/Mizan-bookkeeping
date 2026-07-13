@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { type CorrectableSupplierPaymentRow } from "@/components/forms/correct-supplier-payment-form";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
@@ -55,6 +56,7 @@ export type SupplierActivityRow = {
   has_document: boolean;
   can_edit: boolean;
   expense_account_id: string | null;
+  payment_account_id: string | null;
   display_kind?: SubledgerDisplayKind;
   was_corrected?: boolean;
 };
@@ -75,12 +77,7 @@ type SupplierActivity = {
 
 type Props = {
   supplierId: string;
-  onCorrectPayment?: (row: {
-    journal_entry_id: string;
-    movement_date: string;
-    amount_kurus: number;
-    description: string;
-  }) => void;
+  onCorrectPayment?: (row: CorrectableSupplierPaymentRow) => void;
   onEditInvoice?: (row: {
     journal_entry_id: string;
     movement_date: string;
@@ -309,6 +306,7 @@ export function SupplierActivityPanel({
                             movement_date: row.movement_date,
                             amount_kurus: row.amount_kurus ?? 0,
                             description: row.detail,
+                            payment_account_id: row.payment_account_id,
                           })
                         }
                         onVoid={() =>

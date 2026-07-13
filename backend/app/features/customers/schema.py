@@ -78,6 +78,9 @@ class CustomerLedgerEntryRead(BaseModel):
     reference_id: uuid.UUID | None = None
     actor_id: OptionalActorId = None
     journal_entry_id: uuid.UUID | None
+    # GL account id of the money account this payment used (restored from the
+    # journal entry) — lets the edit form reopen with the recorded account.
+    payment_account_id: uuid.UUID | None = None
     created_at: datetime
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
     was_corrected: bool = False

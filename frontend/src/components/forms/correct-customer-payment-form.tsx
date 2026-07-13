@@ -27,6 +27,11 @@ export type CorrectableCustomerPaymentRow = {
   movement_date: string;
   amount_kurus: number;
   description: string;
+  /** GL account the payment was received into — restores the picker. */
+  payment_account_id?: string | null;
+  /** FX native amount received (minor units), for FX-wallet payments. */
+  payment_native_quantity?: number | null;
+  forex_currency?: string | null;
 };
 
 type Props = {
@@ -78,16 +83,35 @@ export function CorrectCustomerPaymentForm({
   );
   const isFxWallet = selectedAccount?.account_kind === "foreign_currency";
 
-  const loadAccounts = useCallback(async () => {
-    if (!entityId) return;
-    const merged = await loadPaymentReceiveAccounts(entityId);
-    setAccounts(merged);
-    if (merged[0]) setPaymentGlAccountId(merged[0].gl_account_id);
-  }, [entityId]);
+  const loadAccounts = useCallback(
+    async (recorded: CorrectableCustomerPaymentRow) => {
+      if (!entityId) return;
+      const merged = await loadPaymentReceiveAccounts(entityId);
+      setAccounts(merged);
+      // Restore the account the payment was actually received into; fall back to
+      // the first account only when the recorded one is unknown/unavailable.
+      const chosen =
+        (recorded.payment_account_id &&
+          merged.find((a) => a.gl_account_id === recorded.payment_account_id)) ||
+        merged[0];
+      setPaymentGlAccountId(chosen?.gl_account_id ?? "");
+      // If it was an FX-wallet payment, restore the forex amount received so the
+      // form reopens as recorded (USD as USD) rather than blank.
+      if (
+        chosen?.account_kind === "foreign_currency" &&
+        chosen.currency &&
+        recorded.payment_native_quantity != null
+      ) {
+        setForexAmountText(
+          formatFxNative(recorded.payment_native_quantity, chosen.currency),
+        );
+      }
+    },
+    [entityId],
+  );
 
   useEffect(() => {
     if (!open || !payment) return;
-    void loadAccounts().catch(() => undefined);
     setDateText(formatTrDate(payment.movement_date));
     // Prefill the amount exactly as it was entered — a positive payment figure —
     // not the signed ledger value (a customer payment is stored as a negative
@@ -100,6 +124,8 @@ export function CorrectCustomerPaymentForm({
     setDescription(payment.description);
     setReason("");
     setError(null);
+    // Load accounts last — it restores the recorded account and FX amount.
+    void loadAccounts(payment).catch(() => undefined);
   }, [open, payment, loadAccounts]);
 
   useEffect(() => {

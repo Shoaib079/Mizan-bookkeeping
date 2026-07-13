@@ -54,6 +54,7 @@ type LedgerEntry = {
   reference_type: string | null;
   reference_id: string | null;
   journal_entry_id: string | null;
+  payment_account_id: string | null;
   display_kind: SubledgerDisplayKind;
   was_corrected?: boolean;
 };
@@ -300,6 +301,9 @@ export default function CustomerDetailPage() {
                               movement_date: entry.movement_date,
                               amount_kurus: entry.amount_kurus,
                               description: entry.description,
+                              payment_account_id: entry.payment_account_id,
+                              payment_native_quantity: entry.payment_native_quantity,
+                              forex_currency: entry.forex_currency,
                             })
                           }
                           onVoid={() =>
