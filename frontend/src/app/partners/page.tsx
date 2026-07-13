@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
 import { AppShell } from "@/components/layout/app-shell";
@@ -20,6 +20,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Handshake } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { formatTry } from "@/lib/money";
+import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
 
 type PartnerListResponse = {
   items: PartnerRow[];
@@ -44,6 +46,13 @@ export default function PartnersPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const partnerIds = useMemo(() => items.map((row) => row.id), [items]);
+  const { balances, loading: balancesLoading } = useLedgerBalanceMap(
+    entityId,
+    partnerIds,
+    (id) => `/partners/${id}/ledger`,
+    (res) => (res as { balance_kurus: number }).balance_kurus,
+  );
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -87,19 +96,9 @@ export default function PartnersPage() {
             ? `${total} registered partner${total === 1 ? "" : "s"} (active and inactive — never deleted)`
             : "Select a restaurant in the sidebar"}
         </p>
-        <div className="flex flex-wrap items-center gap-3">
-          {entityId && (
-            <Link
-              href="/balances/partners"
-              className="text-sm text-primary hover:underline"
-            >
-              Partner balances →
-            </Link>
-          )}
-          <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
-            New partner
-          </Button>
-        </div>
+        <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
+          New partner
+        </Button>
       </div>
 
       {shareWarning && (
@@ -108,7 +107,7 @@ export default function PartnersPage() {
         </p>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={3} />}
+      {loading && <TableSkeleton columns={4} />}
 
       {!loading && entityId && items.length === 0 && (
         <EmptyState
@@ -125,6 +124,7 @@ export default function PartnersPage() {
               <DataTableHeaderCell>Name</DataTableHeaderCell>
               <DataTableHeaderCell>Share %</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -143,6 +143,13 @@ export default function PartnersPage() {
                 </DataTableCell>
                 <DataTableCell>
                   <StatusBadge status={row.is_active ? "active" : "inactive"} />
+                </DataTableCell>
+                <DataTableCell align="right" className="tabular-nums">
+                  {balances.has(row.id)
+                    ? formatTry(balances.get(row.id) ?? 0)
+                    : balancesLoading
+                      ? "…"
+                      : "—"}
                 </DataTableCell>
               </DataTableRow>
             ))}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form";
 import { AppShell } from "@/components/layout/app-shell";
@@ -21,6 +21,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { UsersRound } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityList } from "@/lib/use-entity-list";
+import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
+import { formatStaffBalanceMinor } from "@/lib/format-staff-balance";
 
 export default function StaffPage() {
   const { entityId } = useEntity();
@@ -29,6 +31,13 @@ export default function StaffPage() {
       "/staff/employees?include_inactive=true",
       entityId,
     );
+  const employeeIds = useMemo(() => items.map((row) => row.id), [items]);
+  const { balances, loading: balancesLoading } = useLedgerBalanceMap(
+    entityId,
+    employeeIds,
+    (id) => `/staff/employees/${id}/ledger`,
+    (res) => (res as { balance_minor: number }).balance_minor,
+  );
   const [formOpen, setFormOpen] = useState(false);
 
   return (
@@ -39,24 +48,14 @@ export default function StaffPage() {
             ? `${total} registered employee${total === 1 ? "" : "s"} (active and inactive — never deleted)`
             : "Select a restaurant in the sidebar"}
         </p>
-        <div className="flex flex-wrap items-center gap-3">
-          {entityId && (
-            <Link
-              href="/balances/staff"
-              className="text-sm text-primary hover:underline"
-            >
-              Staff balances →
-            </Link>
-          )}
-          <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
-            New employee
-          </Button>
-        </div>
+        <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
+          New employee
+        </Button>
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {entityId && forbidden && <ForbiddenMessage context="staff list" />}
-      {loading && <TableSkeleton columns={3} />}
+      {loading && <TableSkeleton columns={4} />}
 
       {!loading && entityId && !forbidden && items.length === 0 && (
         <EmptyState
@@ -73,6 +72,7 @@ export default function StaffPage() {
               <DataTableHeaderCell>Name</DataTableHeaderCell>
               <DataTableHeaderCell>Pay currency</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -89,6 +89,16 @@ export default function StaffPage() {
                 <DataTableCell>{row.pay_currency}</DataTableCell>
                 <DataTableCell>
                   <StatusBadge status={row.is_active ? "active" : "inactive"} />
+                </DataTableCell>
+                <DataTableCell align="right" className="tabular-nums">
+                  {balances.has(row.id)
+                    ? formatStaffBalanceMinor(
+                        balances.get(row.id) ?? 0,
+                        row.pay_currency,
+                      )
+                    : balancesLoading
+                      ? "…"
+                      : "—"}
                 </DataTableCell>
               </DataTableRow>
             ))}
