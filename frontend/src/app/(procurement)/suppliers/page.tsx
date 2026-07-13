@@ -51,11 +51,11 @@ function SupplierTable({
         {rows.map((row) => {
           const balance = balances.get(row.id) ?? 0;
           return (
-            <DataTableRow key={row.id}>
+            <DataTableRow key={row.id} href={`/suppliers/${row.id}`}>
               <DataTableCell>
                 <Link
                   href={`/suppliers/${row.id}`}
-                  className="text-primary hover:underline"
+                  className="font-medium text-foreground hover:underline"
                 >
                   {row.name}
                 </Link>

@@ -77,11 +77,11 @@ export default function StaffPage() {
           </DataTableHead>
           <DataTableBody>
             {items.map((row) => (
-              <DataTableRow key={row.id}>
+              <DataTableRow key={row.id} href={`/staff/${row.id}`}>
                 <DataTableCell>
                   <Link
                     href={`/staff/${row.id}`}
-                    className="text-primary hover:underline"
+                    className="font-medium text-foreground hover:underline"
                   >
                     {row.name}
                   </Link>

@@ -1,3 +1,7 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+
 import { cn } from "@/lib/utils";
 
 export function DataTable({
@@ -34,14 +38,58 @@ export function DataTableBody({ children }: { children: React.ReactNode }) {
 export function DataTableRow({
   children,
   className,
+  href,
   ...props
-}: React.ComponentPropsWithoutRef<"tr">) {
+}: React.ComponentPropsWithoutRef<"tr"> & {
+  /** When set, the whole row is clickable and navigates here. Clicks on inner
+   * links/buttons/inputs and modifier-clicks (⌘/ctrl/shift, middle) are left
+   * alone so open-in-new-tab and row actions still work. */
+  href?: string;
+}) {
+  const router = useRouter();
+
+  if (!href) {
+    return (
+      <tr
+        className={cn(
+          "transition-colors duration-150 hover:bg-muted/40",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </tr>
+    );
+  }
+
+  const isInteractiveTarget = (target: EventTarget | null) =>
+    target instanceof HTMLElement &&
+    target.closest("a,button,input,select,textarea,label,[role=button]") !== null;
+
   return (
     <tr
+      role="link"
+      tabIndex={0}
       className={cn(
-        "transition-colors duration-150 hover:bg-muted/40",
+        "cursor-pointer transition-colors duration-150 hover:bg-muted/40 focus-visible:bg-muted/50 focus-visible:outline-none",
         className,
       )}
+      onClick={(event) => {
+        if (
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          isInteractiveTarget(event.target)
+        ) {
+          return;
+        }
+        router.push(href);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && !isInteractiveTarget(event.target)) {
+          router.push(href);
+        }
+      }}
       {...props}
     >
       {children}

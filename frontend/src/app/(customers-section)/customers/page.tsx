@@ -95,11 +95,11 @@ export default function CustomersPage() {
             {items.map((row) => {
               const balance = balancesState.balances.get(row.id) ?? 0;
               return (
-                <DataTableRow key={row.id}>
+                <DataTableRow key={row.id} href={`/customers/${row.id}`}>
                   <DataTableCell>
                     <Link
                       href={`/customers/${row.id}`}
-                      className="text-primary hover:underline"
+                      className="font-medium text-foreground hover:underline"
                     >
                       {row.name}
                     </Link>

@@ -129,11 +129,11 @@ export default function PartnersPage() {
           </DataTableHead>
           <DataTableBody>
             {items.map((row) => (
-              <DataTableRow key={row.id}>
+              <DataTableRow key={row.id} href={`/partners/${row.id}`}>
                 <DataTableCell>
                   <Link
                     href={`/partners/${row.id}`}
-                    className="text-primary hover:underline"
+                    className="font-medium text-foreground hover:underline"
                   >
                     {row.name}
                   </Link>
