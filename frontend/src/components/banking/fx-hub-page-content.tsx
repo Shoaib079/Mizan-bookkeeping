@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/data-table";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
+import { filterLedgerRows } from "@/lib/ledger-display";
 import type { FxLedgerEntryRead, MoneyAccountTree } from "@/lib/banking-types";
 import {
   allFxAccounts,
@@ -98,8 +99,14 @@ export function FxHubPageContent() {
     return null;
   }, [allWallets, filteredWallets, walletFilter]);
 
+  // Hub summary shows effective rows only — voided/superseded correction
+  // history lives on the wallet detail page behind its history toggle.
   const mergedLedger = useMemo(
-    () => mergeFxLedgerEntries(filteredWallets, ledgerByWallet),
+    () =>
+      filterLedgerRows(
+        mergeFxLedgerEntries(filteredWallets, ledgerByWallet),
+        false,
+      ),
     [filteredWallets, ledgerByWallet],
   );
 
