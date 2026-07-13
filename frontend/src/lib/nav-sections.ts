@@ -178,24 +178,19 @@ export const NAV_SECTIONS: NavSection[] = [
     sidebarHref: "/balances",
     tabs: [
       {
-        href: "/balances/suppliers",
-        label: "Payables",
-        match: (path) => path === "/balances/suppliers" || path === "/payables",
-      },
-      {
-        href: "/balances/customers",
-        label: "Receivables",
-        match: (path) => path === "/balances/customers" || path === "/receivables",
-      },
-      {
-        href: "/balances/staff",
-        label: "Staff balances",
-        match: (path) => path === "/balances/staff",
-      },
-      {
-        href: "/balances/partners",
-        label: "Partner balances",
-        match: (path) => path === "/balances/partners",
+        href: "/balances",
+        label: "Overview",
+        // The overview is the single Balances door; per-entity detail lives in
+        // the directories (Suppliers/Customers/Staff/Partners). The legacy
+        // /balances/* pages stay reachable by URL but are no longer sidebar tabs.
+        match: (path) =>
+          path === "/balances" ||
+          path === "/balances/suppliers" ||
+          path === "/balances/customers" ||
+          path === "/balances/staff" ||
+          path === "/balances/partners" ||
+          path === "/payables" ||
+          path === "/receivables",
       },
       {
         href: "/balances/cash",
@@ -321,11 +316,11 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/review/delivery", kind: "tab" },
   { pattern: "/review/posted", kind: "redirect" },
   { pattern: "/review/manual-journals", kind: "tab" },
-  { pattern: "/balances", kind: "sidebar" },
-  { pattern: "/balances/suppliers", kind: "tab" },
-  { pattern: "/balances/customers", kind: "tab" },
-  { pattern: "/balances/staff", kind: "tab" },
-  { pattern: "/balances/partners", kind: "tab" },
+  { pattern: "/balances", kind: "tab" },
+  { pattern: "/balances/suppliers", kind: "page" },
+  { pattern: "/balances/customers", kind: "page" },
+  { pattern: "/balances/staff", kind: "page" },
+  { pattern: "/balances/partners", kind: "page" },
   { pattern: "/balances/cash", kind: "tab" },
   { pattern: "/sales", kind: "tab" },
   { pattern: "/sales/[id]", kind: "drill-down" },

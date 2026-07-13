@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { BalancesOverview } from "@/components/balances/balances-overview";
 
 export default function BalancesIndexPage() {
-  redirect("/balances/suppliers");
+  return <BalancesOverview />;
 }

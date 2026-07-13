@@ -20,11 +20,13 @@ describe("balances hub navigation", () => {
     expect(sidebarHrefActiveForPathname("/balances", "/payables")).toBe(true);
   });
 
-  it("resolves balances section tabs", () => {
+  it("resolves the balances overview for legacy per-entity routes", () => {
+    // M4: the per-entity balances pages fold into the single Overview tab;
+    // directories (Suppliers/Customers/…) own the per-entity detail now.
     const section = navSectionForPathname("/balances/customers");
     expect(section?.id).toBe("balances");
     expect(section?.tabs.find((tab) => tab.match("/balances/customers"))?.label).toBe(
-      "Receivables",
+      "Overview",
     );
   });
 });

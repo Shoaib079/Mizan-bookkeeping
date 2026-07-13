@@ -136,11 +136,7 @@ export default function CustomersPage() {
           Total receivable across all customers:{" "}
           <span className="font-medium tabular-nums text-foreground">
             {balancesState.loading ? "…" : formatTry(balancesState.totalKurus)}
-          </span>{" "}
-          — details on{" "}
-          <Link href="/balances/customers" className="text-primary hover:underline">
-            Receivables
-          </Link>
+          </span>
           .
         </p>
       )}

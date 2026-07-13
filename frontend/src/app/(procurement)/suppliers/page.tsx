@@ -201,11 +201,7 @@ export default function SuppliersPage() {
           Total payable across all suppliers:{" "}
           <span className="font-medium tabular-nums text-foreground">
             {balancesState.loading ? "…" : formatTry(balancesState.totalKurus)}
-          </span>{" "}
-          — details on{" "}
-          <Link href="/balances/suppliers" className="text-primary hover:underline">
-            Payables
-          </Link>
+          </span>
           .
         </p>
       )}
