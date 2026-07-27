@@ -27,6 +27,8 @@ export type StaffDisplayRow<T extends StaffLedgerRowLike = StaffLedgerRowLike> =
   netMinor: number;
   /** Portion settled from an outstanding advance (0 when none). */
   advanceAppliedMinor: number;
+  /** Portion of the cash that became a NEW advance (paid ahead of any debt). */
+  advanceCreatedMinor: number;
   /** True when the group moved no money: advance offset against salary. */
   isAdvanceOffset: boolean;
   /** Running balance after this event (effective rows only). */
@@ -35,6 +37,7 @@ export type StaffDisplayRow<T extends StaffLedgerRowLike = StaffLedgerRowLike> =
 };
 
 const ADVANCE_APPLIED = "advance_applied";
+const ADVANCE_PAID = "advance_paid";
 
 function isEffective(row: StaffLedgerRowLike): boolean {
   return (row.display_kind ?? "effective") === "effective";
@@ -60,12 +63,25 @@ export function groupStaffLedgerRows<T extends StaffLedgerRowLike>(
     const advanceAppliedMinor = members
       .filter((row) => row.movement_type === ADVANCE_APPLIED)
       .reduce((sum, row) => sum + Math.abs(row.amount_minor), 0);
+    // Only count an advance CREATED alongside other rows (cash paid ahead of
+    // debt). A standalone advance is its own row and speaks for itself.
+    const advanceCreatedMinor =
+      members.length > 1
+        ? members
+            .filter((row) => row.movement_type === ADVANCE_PAID)
+            .reduce((sum, row) => sum + Math.abs(row.amount_minor), 0)
+        : 0;
     const primary =
-      members.find((row) => row.movement_type !== ADVANCE_APPLIED) ?? members[0];
+      members.find(
+        (row) =>
+          row.movement_type !== ADVANCE_APPLIED &&
+          row.movement_type !== ADVANCE_PAID,
+      ) ?? members[0];
     return {
       primary,
       netMinor,
       advanceAppliedMinor,
+      advanceCreatedMinor,
       isAdvanceOffset: netMinor === 0 && advanceAppliedMinor > 0,
       balanceMinor: null,
       memberCount: members.length,

@@ -372,6 +372,12 @@ export default function StaffDetailPage() {
                               : `incl. ${formatMinorAmount(group.advanceAppliedMinor)} from advance`}
                           </span>
                         )}
+                        {group.advanceCreatedMinor > 0 && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            incl. {formatMinorAmount(group.advanceCreatedMinor)}{" "}
+                            held as advance
+                          </span>
+                        )}
                         {entry.was_corrected && (
                           <span className="ml-2">
                             <EditedBadge />

@@ -76,6 +76,26 @@ describe("staffDisplayRows", () => {
     expect(display[2].balanceMinor).toBe(60_000);
   });
 
+  it("surfaces cash that became a new advance in the same payment", () => {
+    // Paid 7.500 cash when only 3.700 was owed: 3.800 parks as advance.
+    const rows = [
+      row("a", "salary_payment", -370_000, "je1"),
+      row("b", "advance_paid", -380_000, "je1", "… — excess as advance"),
+    ];
+    const display = staffDisplayRows(rows);
+
+    expect(display).toHaveLength(1);
+    expect(display[0].netMinor).toBe(-750_000);
+    expect(display[0].advanceCreatedMinor).toBe(380_000);
+    expect(display[0].primary.movement_type).toBe("salary_payment");
+  });
+
+  it("does not label a standalone advance as created-within-a-payment", () => {
+    const display = staffDisplayRows([row("a", "advance_paid", -50_000, "je1")]);
+    expect(display[0].advanceCreatedMinor).toBe(0);
+    expect(display[0].netMinor).toBe(-50_000);
+  });
+
   it("picks the non-companion row as primary for labels and actions", () => {
     const rows = [
       row("a", "advance_applied", 380_000, "je1"),
