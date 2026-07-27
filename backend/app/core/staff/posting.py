@@ -689,17 +689,13 @@ def post_salary_payment(
                 f"Payment of {amount_minor} exceeds staff balance of {current}"
             )
 
-        # Decoupled 2026-07-13 (BUGLOG): a TRY salary payment settles CASH ONLY —
-        # advances are applied via the explicit apply-advance action, never
-        # silently. FX keeps auto-apply: the explicit action is TRY-only (FX
-        # advances carry a TRY cost basis), so without it FX advances would be
-        # unsettleable.
-        if employee.pay_currency == PayCurrency.TRY:
-            advance_applied_minor = 0
-        else:
-            remaining = staff_ledger.remaining_accrual_minor(session, employee_id)
-            advance_minor = staff_ledger.outstanding_advance_minor(session, employee_id)
-            advance_applied_minor = max(0, min(advance_minor, remaining - amount_minor))
+        # Advances net automatically against salary owed (owner decision
+        # 2026-07-13): the software does the arithmetic, not the owner.
+        # `remaining_accrual_minor` now includes EXTRA_DAYS_ACCRUED, so an
+        # advance can finally clear extra-days too (BUGLOG 2026-07-13).
+        remaining = staff_ledger.remaining_accrual_minor(session, employee_id)
+        advance_minor = staff_ledger.outstanding_advance_minor(session, employee_id)
+        advance_applied_minor = max(0, min(advance_minor, remaining - amount_minor))
 
         fx_entry: FxLedgerEntry | None = None
         journal_entry: JournalEntry
@@ -1109,19 +1105,18 @@ def post_period_salary_payment(
             actor_id=actor_id,
         )
 
-        period_remaining = staff_ledger.period_remaining_minor(
-            session,
-            employee_id,
-            period_year=period_year,
-            period_month=period_month,
-            period_salary_minor=period_salary_minor,
-        )
-        # Decoupled 2026-07-13 (BUGLOG): a salary payment settles CASH ONLY.
-        # Advances are applied via the explicit apply-advance action, never
-        # silently. Cash beyond the period's remaining still parks as advance.
-        advance_applied_minor = 0
-        salary_cash_minor = min(cash_minor, max(0, period_remaining))
+        # Advances net automatically (owner decision 2026-07-13). Cash settles
+        # everything still owed — this period AND anything else outstanding
+        # (prior months, extra days) — then the advance clears whatever is left
+        # owed. Only genuine surplus beyond ALL debt parks as a new advance,
+        # which is why the old "excess as advance" loop no longer regenerates.
+        total_owed = staff_ledger.remaining_accrual_minor(session, employee_id)
+        advance_minor = staff_ledger.outstanding_advance_minor(session, employee_id)
+        salary_cash_minor = min(cash_minor, max(0, total_owed))
         excess_advance_minor = cash_minor - salary_cash_minor
+        advance_applied_minor = max(
+            0, min(advance_minor, total_owed - salary_cash_minor)
+        )
         payable_cleared = salary_cash_minor + advance_applied_minor
 
         payment_gl = _validate_try_payment_account(session, entity_id, payment_account_id)

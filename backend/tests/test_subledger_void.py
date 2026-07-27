@@ -94,26 +94,18 @@ def test_void_period_salary_with_advance_applied_reverses_all_staff_rows(
         actor_id=ACTOR_ID,
         payment_account_id=drawer.gl_account_id,
     )
-    staff_posting.post_salary_accrual(
+    payment = staff_posting.post_period_salary_payment(
         db_session,
         entity_id,
         employee_id,
-        accrual_date=date(2026, 5, 31),
-        amount_minor=1_000_000,
-        description="May salary",
-        actor_id=ACTOR_ID,
+        payment_date=date(2026, 5, 31),
+        cash_minor=800_000,
         period_year=2026,
         period_month=5,
-    )
-    # Decoupled 2026-07-13: the SALARY_PAYMENT + ADVANCE_APPLIED pair now comes
-    # from the explicit apply-advance action (payments are cash-only).
-    payment = staff_posting.post_apply_advance(
-        db_session,
-        entity_id,
-        employee_id,
-        applied_date=date(2026, 5, 31),
-        description="Apply advance",
+        period_salary_minor=1_000_000,
+        description="May salary",
         actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
     )
     assert payment.advance_applied_minor == 200_000
     journal_id = payment.journal_entry.id

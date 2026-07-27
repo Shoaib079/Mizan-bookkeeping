@@ -337,18 +337,21 @@ export function StaffSalaryPaymentDialog({
 
   const periodRemaining = status?.period_remaining_minor ?? 0;
   const outstandingAdvance = status?.outstanding_advance_minor ?? 0;
+  // Advances net against everything owed (incl. extra days), not just this
+  // period — mirrors the backend (BUGLOG 2026-07-13).
+  const owedPreview = status?.total_owed_minor ?? periodRemaining;
   const cashPreview = cashMinor ?? 0;
   const advancePreview =
     cashPreview > 0
-      ? advanceAppliedPreview(cashPreview, periodRemaining, outstandingAdvance)
+      ? advanceAppliedPreview(cashPreview, owedPreview, outstandingAdvance)
       : 0;
   const payablePreview =
     cashPreview > 0
-      ? payableClearedPreview(cashPreview, periodRemaining, outstandingAdvance)
+      ? payableClearedPreview(cashPreview, owedPreview, outstandingAdvance)
       : 0;
   const excessPreview =
     cashPreview > 0
-      ? excessAdvancePreview(cashPreview, periodRemaining, outstandingAdvance)
+      ? excessAdvancePreview(cashPreview, owedPreview, outstandingAdvance)
       : 0;
 
   function formatMinor(minor: number): string {
@@ -768,9 +771,8 @@ export function StaffSalaryPaymentDialog({
               <p className="mt-1 text-muted-foreground">
                 Outstanding advance:{" "}
                 <span className="tabular-nums">{formatMinor(outstandingAdvance)}</span>
-                {" — "}not applied automatically; use{" "}
-                <span className="font-medium">Apply advance</span> on the staff
-                page to net it against salary owed.
+                {" — "}applied automatically against salary owed (including
+                extra days) when you record this payment.
               </p>
             )}
             {cashPreview > 0 && payablePreview > 0 && (

@@ -21,17 +21,29 @@ describe("isValidStaffSalaryEmployee", () => {
   });
 });
 
-describe("advanceAppliedPreview (decoupled 2026-07-13)", () => {
-  it("never auto-applies — salary payments settle cash only", () => {
-    expect(advanceAppliedPreview(300_000, 450_000, 150_000)).toBe(0);
-    expect(advanceAppliedPreview(400_000, 450_000, 150_000)).toBe(0);
+describe("advanceAppliedPreview (auto-nets against all owed)", () => {
+  it("applies advance up to owed minus cash", () => {
+    expect(advanceAppliedPreview(300_000, 450_000, 150_000)).toBe(150_000);
+  });
+
+  it("caps advance when cash leaves less room", () => {
+    expect(advanceAppliedPreview(400_000, 450_000, 150_000)).toBe(50_000);
+  });
+
+  it("returns zero when nothing owed, no advance, or cash covers it all", () => {
     expect(advanceAppliedPreview(100_000, 0, 50_000)).toBe(0);
     expect(advanceAppliedPreview(100_000, 200_000, 0)).toBe(0);
+    expect(advanceAppliedPreview(500_000, 450_000, 150_000)).toBe(0);
+  });
+
+  it("nets against extra-days owed beyond the period (Latif case)", () => {
+    // 13.440 extra days owed, 13.515 advance, no cash → advance clears it.
+    expect(advanceAppliedPreview(0, 1_344_000, 1_351_500)).toBe(1_344_000);
   });
 });
 
 describe("payableClearedPreview", () => {
-  it("clears cash only (advances are applied via the explicit action)", () => {
-    expect(payableClearedPreview(300_000, 450_000, 150_000)).toBe(300_000);
+  it("sums cash and applied advance", () => {
+    expect(payableClearedPreview(300_000, 450_000, 150_000)).toBe(450_000);
   });
 });

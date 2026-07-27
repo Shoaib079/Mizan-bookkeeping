@@ -128,8 +128,8 @@ def test_period_payment_excess_becomes_advance(db_session, staff_setup) -> None:
         assert outstanding_advance_minor(db_session, employee_id) == 100_000
 
 
-def test_period_payment_cash_only_then_explicit_apply(db_session, staff_setup) -> None:
-    """Decoupled 2026-07-13: payment never silently applies; explicit action does."""
+def test_period_payment_applies_existing_advance(db_session, staff_setup) -> None:
+    """Advances net automatically against salary owed (2026-07-13)."""
     entity_id = staff_setup["entity_id"]
     employee_id = staff_setup["employee_id"]
     drawer = staff_setup["drawer"]
@@ -157,25 +157,12 @@ def test_period_payment_cash_only_then_explicit_apply(db_session, staff_setup) -
         actor_id=ACTOR_ID,
         payment_account_id=drawer.gl_account_id,
     )
-    assert result.advance_applied_minor == 0
+    assert result.advance_applied_minor == 200_000
 
     with entity_context(db_session, entity_id):
         assert period_paid_minor(
             db_session, employee_id, period_year=2026, period_month=5
-        ) == 800_000
-        assert outstanding_advance_minor(db_session, employee_id) == 200_000
-
-    applied = staff_posting.post_apply_advance(
-        db_session,
-        entity_id,
-        employee_id,
-        applied_date=date(2026, 5, 31),
-        description="Apply advance",
-        actor_id=ACTOR_ID,
-    )
-    assert applied.advance_applied_minor == 200_000
-
-    with entity_context(db_session, entity_id):
+        ) == 1_000_000
         assert outstanding_advance_minor(db_session, employee_id) == 0
 
 

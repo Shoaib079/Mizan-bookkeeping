@@ -192,8 +192,10 @@ def test_apply_advance_rejects_over_cap_and_nothing_to_apply(
         assert staff_ledger.outstanding_advance_minor(db_session, employee_id) == 50_000
 
 
-def test_salary_payment_never_silently_applies_advance(db_session, staff_setup) -> None:
-    """Owner report #2: 15.000 cash against 38.000 owed with 13.515 advance."""
+def test_salary_payment_auto_applies_advance_against_all_owed(
+    db_session, staff_setup
+) -> None:
+    """15.000 cash against 38.000 owed with a 13.515 advance → advance clears."""
     entity_id = staff_setup["entity_id"]
     employee_id = staff_setup["employee_id"]
     drawer = staff_setup["drawer"]
@@ -212,21 +214,56 @@ def test_salary_payment_never_silently_applies_advance(db_session, staff_setup) 
         actor_id=ACTOR_ID,
         payment_account_id=drawer.gl_account_id,
     )
-    assert result.advance_applied_minor == 0
+    # Owed 38.000; cash 15.000 settles part, advance 13.515 clears more.
+    assert result.advance_applied_minor == 1_351_500
     with entity_context(db_session, entity_id):
-        # Advance untouched; June still owes 38.000 − 15.000.
-        assert staff_ledger.outstanding_advance_minor(db_session, employee_id) == 1_351_500
-        assert staff_ledger.period_remaining_minor(
-            db_session,
-            employee_id,
-            period_year=2026,
-            period_month=6,
-            period_salary_minor=3_800_000,
-        ) == 2_300_000
+        assert staff_ledger.outstanding_advance_minor(db_session, employee_id) == 0
+        # 38.000 − 15.000 cash − 13.515 advance still owed.
+        assert staff_ledger.remaining_accrual_minor(db_session, employee_id) == 948_500
 
 
-def test_excess_cash_still_parks_as_advance(db_session, staff_setup) -> None:
-    """Regression: paying more cash than the period owes still parks the excess."""
+def test_salary_payment_auto_clears_extra_days_advance(db_session, staff_setup) -> None:
+    """Latif via payment: extra-days owed is now visible, so the advance clears."""
+    entity_id = staff_setup["entity_id"]
+    employee_id = staff_setup["employee_id"]
+    drawer = staff_setup["drawer"]
+
+    staff_posting.post_extra_days_paid(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 8),
+        extra_days=7,
+        per_day_minor=192_000,
+        description="Extra days",
+        actor_id=ACTOR_ID,
+        payment_account_id=None,
+    )
+    _advance(db_session, entity_id, employee_id, drawer, 1_344_000, date(2026, 6, 8))
+
+    result = staff_posting.post_period_salary_payment(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 7, 6),
+        cash_minor=1_000_000,
+        period_year=2026,
+        period_month=7,
+        period_salary_minor=1_000_000,
+        description="July salary",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    # Owed = 13.440 extra days + 10.000 July = 23.440; cash 10.000 →
+    # 13.440 left owed, advance 13.440 clears it exactly.
+    assert result.advance_applied_minor == 1_344_000
+    with entity_context(db_session, entity_id):
+        assert staff_ledger.outstanding_advance_minor(db_session, employee_id) == 0
+        assert staff_ledger.remaining_accrual_minor(db_session, employee_id) == 0
+
+
+def test_excess_cash_beyond_all_owed_parks_as_advance(db_session, staff_setup) -> None:
+    """Only surplus beyond ALL debt parks — no more advance/re-advance loop."""
     entity_id = staff_setup["entity_id"]
     employee_id = staff_setup["employee_id"]
     drawer = staff_setup["drawer"]
@@ -247,13 +284,45 @@ def test_excess_cash_still_parks_as_advance(db_session, staff_setup) -> None:
     assert result.advance_applied_minor == 0
     with entity_context(db_session, entity_id):
         assert staff_ledger.outstanding_advance_minor(db_session, employee_id) == 100_000
-        assert staff_ledger.period_remaining_minor(
-            db_session,
-            employee_id,
-            period_year=2026,
-            period_month=6,
-            period_salary_minor=1_000_000,
-        ) == 0
+        assert staff_ledger.remaining_accrual_minor(db_session, employee_id) == 0
+
+
+def test_extra_days_owed_absorbs_cash_instead_of_becoming_advance(
+    db_session, staff_setup
+) -> None:
+    """Root-cause guard: cash beyond the period settles extra-days owed first."""
+    entity_id = staff_setup["entity_id"]
+    employee_id = staff_setup["employee_id"]
+    drawer = staff_setup["drawer"]
+
+    staff_posting.post_extra_days_paid(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 8),
+        extra_days=7,
+        per_day_minor=192_000,
+        description="Extra days",
+        actor_id=ACTOR_ID,
+        payment_account_id=None,
+    )
+    result = staff_posting.post_period_salary_payment(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 8),
+        cash_minor=1_344_000,
+        period_year=2026,
+        period_month=6,
+        period_salary_minor=1,  # negligible period salary
+        description="Pay extra days",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    assert result.advance_applied_minor == 0
+    with entity_context(db_session, entity_id):
+        # Previously the whole 13.440 became a NEW advance; now it settles debt.
+        assert staff_ledger.outstanding_advance_minor(db_session, employee_id) == 0
 
 
 def test_apply_advance_api_endpoint(client, db_session, staff_setup) -> None:

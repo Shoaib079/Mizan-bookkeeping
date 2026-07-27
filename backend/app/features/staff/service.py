@@ -372,6 +372,11 @@ def get_salary_period_status(
             period_salary_minor=salary_target,
         )
         advance = outstanding_advance_minor(session, employee_id)
+        # Payments accrue the month at post time, so the preview's "owed" must
+        # include the part of this period's salary not yet accrued.
+        total_owed = remaining_accrual_minor(session, employee_id) + max(
+            0, salary_target - accrued
+        )
     return SalaryPeriodStatusRead(
         employee_id=employee_id,
         period_year=period_year,
@@ -380,6 +385,7 @@ def get_salary_period_status(
         period_paid_minor=paid,
         period_remaining_minor=remaining,
         outstanding_advance_minor=advance,
+        total_owed_minor=total_owed,
     )
 
 

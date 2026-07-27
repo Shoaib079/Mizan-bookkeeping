@@ -8,6 +8,7 @@ import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
 import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
 import { StaffAdvanceReturnForm } from "@/components/forms/staff-advance-return-form";
 import { StaffApplyAdvanceForm } from "@/components/forms/staff-apply-advance-form";
+import { OverflowMenu } from "@/components/ui/overflow-menu";
 import { StaffExtraDaysForm } from "@/components/forms/staff-extra-days-form";
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import {
@@ -197,10 +198,18 @@ export default function StaffDetailPage() {
     return map;
   }, [ledger?.entries]);
 
-  const balanceLabel =
-    employee?.pay_currency === "TRY"
-      ? formatTry(ledger?.balance_minor ?? 0)
-      : `${((ledger?.balance_minor ?? 0) / 100).toFixed(2)} ${employee?.pay_currency ?? ""}`;
+  const formatMinorAmount = useCallback(
+    (minor: number) =>
+      employee?.pay_currency === "TRY"
+        ? formatTry(minor)
+        : `${(minor / 100).toFixed(2)} ${employee?.pay_currency ?? ""}`,
+    [employee?.pay_currency],
+  );
+
+  /** What the business is really out of pocket for: salary owed less the
+   * advance already in the employee's hands. */
+  const netPositionMinor =
+    (ledger?.balance_minor ?? 0) - (ledger?.outstanding_advance_minor ?? 0);
 
   if (!entityId) {
     return (
@@ -235,66 +244,66 @@ export default function StaffDetailPage() {
                 </p>
               )}
             </div>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">Staff balance</p>
+            <div className="min-w-[15rem] rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Net position</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {balanceLabel}
+                {formatMinorAmount(netPositionMinor)}
               </p>
-              {ledger.outstanding_advance_minor > 0 && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Outstanding advance:{" "}
-                  {employee.pay_currency === "TRY"
-                    ? formatTry(ledger.outstanding_advance_minor)
-                    : `${(ledger.outstanding_advance_minor / 100).toFixed(2)} ${employee.pay_currency}`}
-                </p>
-              )}
+              <div className="mt-3 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
+                <div className="flex justify-between gap-4">
+                  <span>Salary owed</span>
+                  <span className="tabular-nums">
+                    {formatMinorAmount(ledger.balance_minor)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span>Advance held</span>
+                  <span className="tabular-nums">
+                    {ledger.outstanding_advance_minor > 0 ? "−" : ""}
+                    {formatMinorAmount(ledger.outstanding_advance_minor)}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
-              Edit
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setAccrualOpen(true)}>
-              Adjust accrual (advanced)
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => setAdvanceOpen(true)}>
-              Advance
-            </Button>
-            {employee.pay_currency === "TRY" &&
-              ledger.outstanding_advance_minor > 0 && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setReturnOpen(true)}
-                  title="Record cash returned by the employee for an advance/overpayment"
-                >
-                  Return advance
-                </Button>
-              )}
-            {employee.pay_currency === "TRY" &&
-              ledger.outstanding_advance_minor > 0 && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setApplyAdvanceOpen(true)}
-                  title="Net the outstanding advance against unpaid salary (incl. extra days) — no cash moves"
-                >
-                  Apply advance
-                </Button>
-              )}
-            {employee.pay_currency === "TRY" && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setExtraDaysOpen(true)}
-              >
-                Extra days pay
-              </Button>
-            )}
-            <Button type="button" variant="secondary" onClick={() => setPaymentOpen(true)}>
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            <Button type="button" onClick={() => setPaymentOpen(true)}>
               Salary payment
             </Button>
+            <OverflowMenu
+              items={[
+                { label: "Edit employee", onSelect: () => setEditOpen(true) },
+                { label: "Advance", onSelect: () => setAdvanceOpen(true) },
+                {
+                  label: "Extra days pay",
+                  show: employee.pay_currency === "TRY",
+                  onSelect: () => setExtraDaysOpen(true),
+                },
+                {
+                  label: "Return advance",
+                  title:
+                    "Record cash returned by the employee for an advance/overpayment",
+                  show:
+                    employee.pay_currency === "TRY" &&
+                    ledger.outstanding_advance_minor > 0,
+                  onSelect: () => setReturnOpen(true),
+                },
+                {
+                  label: "Apply advance to salary",
+                  title:
+                    "Net the outstanding advance against unpaid salary — normally automatic at the next salary payment",
+                  show:
+                    employee.pay_currency === "TRY" &&
+                    ledger.outstanding_advance_minor > 0,
+                  onSelect: () => setApplyAdvanceOpen(true),
+                },
+                {
+                  label: "Adjust accrual (advanced)",
+                  onSelect: () => setAccrualOpen(true),
+                },
+              ]}
+            />
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>

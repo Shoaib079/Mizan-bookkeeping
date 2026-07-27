@@ -22,29 +22,31 @@ export type SalaryPeriodStatus = {
   period_paid_minor: number;
   period_remaining_minor: number;
   outstanding_advance_minor: number;
+  /** Everything owed across all periods incl. extra days (advance nets here). */
+  total_owed_minor?: number;
 };
 
+/** Mirrors backend post_period_salary_payment (2026-07-13): cash settles all
+ * owed, the advance clears what's left owed, only true surplus parks. The
+ * `owedMinor` arg is total owed (incl. extra days), falling back to the
+ * period's remaining when the caller has nothing better. */
 export function advanceAppliedPreview(
-  _cashMinor: number,
-  _periodRemainingMinor: number,
-  _outstandingAdvanceMinor: number,
+  cashMinor: number,
+  owedMinor: number,
+  outstandingAdvanceMinor: number,
 ): number {
-  // Decoupled 2026-07-13 (BUGLOG): salary payments settle CASH ONLY — advances
-  // are applied via the explicit "Apply advance" action on the staff page.
-  return 0;
+  if (outstandingAdvanceMinor <= 0 || owedMinor <= 0) return 0;
+  const salaryCash = Math.min(cashMinor, Math.max(0, owedMinor));
+  return Math.max(0, Math.min(outstandingAdvanceMinor, owedMinor - salaryCash));
 }
 
 export function salaryCashPreview(
   cashMinor: number,
-  periodRemainingMinor: number,
-  outstandingAdvanceMinor: number,
+  owedMinor: number,
+  _outstandingAdvanceMinor: number,
 ): number {
-  const applied = advanceAppliedPreview(
-    cashMinor,
-    periodRemainingMinor,
-    outstandingAdvanceMinor,
-  );
-  return Math.min(cashMinor, Math.max(0, periodRemainingMinor - applied));
+  // Cash settles owed first; the advance only clears what cash didn't.
+  return Math.min(cashMinor, Math.max(0, owedMinor));
 }
 
 export function excessAdvancePreview(

@@ -157,6 +157,9 @@ class SalaryPeriodStatusRead(BaseModel):
     period_paid_minor: int
     period_remaining_minor: int
     outstanding_advance_minor: int
+    # Everything still owed across all periods, including extra days — the base
+    # an advance nets against (BUGLOG 2026-07-13).
+    total_owed_minor: int = 0
 
 
 class StaffAccrualResponse(BaseModel):
