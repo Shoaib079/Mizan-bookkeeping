@@ -188,6 +188,10 @@ class StaffJournalEntryCorrect(BaseModel):
     description: str = Field(min_length=1, max_length=512)
     actor_id: OptionalActorId = None
     amount_minor: int | None = Field(default=None, gt=0)
+    # Extra-days rows: send days + per-day and the amount is derived, so the
+    # "4 days × 950" metadata stays truthful after an edit.
+    extra_days: int | None = Field(default=None, gt=0, le=31)
+    per_day_minor: int | None = Field(default=None, gt=0)
     try_cost_kurus: int | None = Field(default=None, gt=0)
     payment_account_id: uuid.UUID | None = None
     fx_money_account_id: uuid.UUID | None = None

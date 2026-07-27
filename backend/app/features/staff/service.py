@@ -554,12 +554,19 @@ def _build_staff_correction_lines(
         SALARIES_PAYABLE_CODE,
         SALARY_EXPENSE_CODE,
     )
+    from app.core.chart_of_accounts.types import AccountNormalBalance
 
     employee = staff_posting._get_employee(session, entity_id, employee_id)
     movement_type = staff_row.movement_type
-    amount_minor = (
-        payload.amount_minor if payload.amount_minor is not None else abs(staff_row.amount_minor)
-    )
+    if payload.extra_days is not None and payload.per_day_minor is not None:
+        # Days × rate wins for extra-days rows so amount and metadata agree.
+        amount_minor = payload.extra_days * payload.per_day_minor
+    else:
+        amount_minor = (
+            payload.amount_minor
+            if payload.amount_minor is not None
+            else abs(staff_row.amount_minor)
+        )
     try_cost = (
         payload.try_cost_kurus
         if payload.try_cost_kurus is not None
@@ -577,6 +584,44 @@ def _build_staff_correction_lines(
             amount_kurus=amount_minor,
         )
         return lines, amount_minor, None
+
+    if movement_type == StaffMovementType.EXTRA_DAYS_ACCRUED:
+        # Accrue-only extra days: Dr salary expense / Cr salaries payable, same
+        # shape as a salary accrual. Amount is days × per-day when both given.
+        if employee.pay_currency != PayCurrency.TRY:
+            raise ValueError("FX extra days accrual has no GL entry to correct")
+        salary_expense = staff_posting._chart_account(session, SALARY_EXPENSE_CODE)
+        salaries_payable = staff_posting._chart_account(session, SALARIES_PAYABLE_CODE)
+        lines = staff_posting.build_try_salary_accrual_lines(
+            salary_expense_id=salary_expense.id,
+            salaries_payable_id=salaries_payable.id,
+            amount_kurus=amount_minor,
+        )
+        return lines, amount_minor, None
+
+    if movement_type == StaffMovementType.EXTRA_DAYS_PAID:
+        # Extra days paid straight from cash: Dr salary expense / Cr cash.
+        if employee.pay_currency != PayCurrency.TRY:
+            raise ValueError("FX extra days payment is not correctable")
+        if payload.payment_account_id is None:
+            raise ValueError("payment_account_id required for extra days correction")
+        payment_gl = staff_posting._validate_try_payment_account(
+            session, entity_id, payload.payment_account_id
+        )
+        salary_expense = staff_posting._chart_account(session, SALARY_EXPENSE_CODE)
+        lines = [
+            PostingLine(
+                account_id=salary_expense.id,
+                amount_kurus=amount_minor,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=payment_gl.id,
+                amount_kurus=amount_minor,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ]
+        return lines, -amount_minor, None
 
     if movement_type == StaffMovementType.ADVANCE_PAID:
         advances = staff_posting._chart_account(session, EMPLOYEE_ADVANCES_CODE)
@@ -694,6 +739,7 @@ def correct_staff_journal_entry_http(
         actor_id=payload.actor_id,
         amount_minor=amount_minor,
         try_cost_kurus=try_cost,
+        extra_days=payload.extra_days,
         reason=payload.reason,
         void_date=payload.void_date,
         period_unlock_reason=payload.period_unlock_reason,

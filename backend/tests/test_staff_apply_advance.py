@@ -325,6 +325,47 @@ def test_extra_days_owed_absorbs_cash_instead_of_becoming_advance(
         assert staff_ledger.outstanding_advance_minor(db_session, employee_id) == 0
 
 
+def test_extra_days_accrual_is_correctable_and_keeps_day_count(
+    client, db_session, staff_setup
+) -> None:
+    """Edit extra days as days × rate — metadata must survive the correction."""
+    entity_id = staff_setup["entity_id"]
+    employee_id = staff_setup["employee_id"]
+
+    result = staff_posting.post_extra_days_paid(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 8),
+        extra_days=4,
+        per_day_minor=95_000,
+        description="Extra days (4 × 950.00 ₺/day)",
+        actor_id=ACTOR_ID,
+        payment_account_id=None,
+    )
+    journal_id = result.journal_entry.id
+
+    resp = client.post(
+        f"/entities/{entity_id}/staff/employees/{employee_id}"
+        f"/ledger/{journal_id}/correct",
+        json={
+            "entry_date": "2026-06-08",
+            "description": "Extra days (5 × 950.00 ₺/day)",
+            "actor_id": str(ACTOR_ID),
+            "extra_days": 5,
+            "per_day_minor": 95_000,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    corrected = resp.json()["staff_ledger_entry"]
+    assert corrected["extra_days"] == 5
+    assert corrected["amount_minor"] == 475_000
+
+    with entity_context(db_session, entity_id):
+        # Owed follows the corrected figure, not the original 380_000.
+        assert staff_ledger.remaining_accrual_minor(db_session, employee_id) == 475_000
+
+
 def test_apply_advance_api_endpoint(client, db_session, staff_setup) -> None:
     entity_id = staff_setup["entity_id"]
     employee_id = staff_setup["employee_id"]

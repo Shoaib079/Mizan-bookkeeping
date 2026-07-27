@@ -14,7 +14,13 @@ import {
   loadBankAndCashAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
-import { formatKurus, formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
+import {
+  formatKurus,
+  formatTrDate,
+  formatTry,
+  parseTrDate,
+  parseTryToKurus,
+} from "@/lib/money";
 import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
@@ -28,6 +34,8 @@ export type CorrectableStaffLedgerRow = {
   description: string;
   /** GL account an advance/salary was paid from — restores the picker. */
   payment_account_id?: string | null;
+  /** Days worked on an extra-days row — restores days × rate. */
+  extra_days?: number | null;
 };
 
 type Props = {
@@ -55,13 +63,19 @@ export function CorrectStaffLedgerForm({
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("");
+  const [daysText, setDaysText] = useState("");
+  const [perDayText, setPerDayText] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const needsPaymentAccount =
     entry?.movement_type === "advance_paid" ||
-    entry?.movement_type === "salary_payment";
+    entry?.movement_type === "salary_payment" ||
+    entry?.movement_type === "extra_days_paid";
+  const isExtraDays =
+    entry?.movement_type === "extra_days_accrued" ||
+    entry?.movement_type === "extra_days_paid";
 
   const loadAccounts = useCallback(
     async (recorded: CorrectableStaffLedgerRow) => {
@@ -87,12 +101,28 @@ export function CorrectStaffLedgerForm({
     setDateText(formatTrDate(entry.movement_date));
     setAmountText(formatKurus(Math.abs(entry.amount_minor)));
     setDescription(entry.description);
+    // Extra-days rows reopen as days × rate, exactly as recorded.
+    const days = entry.extra_days ?? null;
+    setDaysText(days ? String(days) : "");
+    setPerDayText(
+      days && days > 0
+        ? formatKurus(Math.round(Math.abs(entry.amount_minor) / days))
+        : "",
+    );
     setReason("");
     setError(null);
     void loadAccounts(entry).catch(() => undefined);
   }, [open, entry, loadAccounts]);
 
-  const amountMinor = parseTryToKurus(amountText);
+  const parsedDays = Number.parseInt(daysText, 10);
+  const extraDaysValue = Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : null;
+  const perDayMinor = parseTryToKurus(perDayText);
+  // For extra days the total is always days × rate, so the two can never drift.
+  const extraDaysTotalMinor =
+    isExtraDays && extraDaysValue !== null && perDayMinor !== null && perDayMinor > 0
+      ? extraDaysValue * perDayMinor
+      : null;
+  const amountMinor = isExtraDays ? extraDaysTotalMinor : parseTryToKurus(amountText);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -100,6 +130,10 @@ export function CorrectStaffLedgerForm({
     const entryDate = parseTrDate(dateText);
     if (!entryDate) {
       setError("Date must be DD.MM.YYYY.");
+      return;
+    }
+    if (isExtraDays && amountMinor === null) {
+      setError("Enter the days worked and the pay per day.");
       return;
     }
     if (amountMinor === null || amountMinor <= 0) {
@@ -125,6 +159,8 @@ export function CorrectStaffLedgerForm({
                   description: description.trim() || entry.description,
                   actor_id: actorId,
                   payment_account_id: needsPaymentAccount ? paymentGlAccountId : null,
+                  extra_days: isExtraDays ? extraDaysValue : null,
+                  per_day_minor: isExtraDays ? perDayMinor : null,
                   reason: reason.trim() || null,
                 },
                 periodUnlockReason,
@@ -152,10 +188,47 @@ export function CorrectStaffLedgerForm({
             <Label htmlFor="csl-date">Date</Label>
             <DateInput id="csl-date" value={dateText} onChange={setDateText} required />
           </div>
-          <div>
-            <Label htmlFor="csl-amount">Amount (TRY)</Label>
-            <MoneyInput id="csl-amount" value={amountText} onChange={setAmountText} required />
-          </div>
+          {isExtraDays ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="csl-days">Days worked</Label>
+                  <Input
+                    id="csl-days"
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={daysText}
+                    onChange={(e) => setDaysText(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="csl-perday">Pay per day (₺)</Label>
+                  <MoneyInput
+                    id="csl-perday"
+                    value={perDayText}
+                    onChange={setPerDayText}
+                    required
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total:{" "}
+                <span className="font-medium tabular-nums text-foreground">
+                  {extraDaysTotalMinor === null
+                    ? "—"
+                    : formatTry(extraDaysTotalMinor)}
+                </span>{" "}
+                — days × pay per day.
+              </p>
+            </>
+          ) : (
+            <div>
+              <Label htmlFor="csl-amount">Amount (TRY)</Label>
+              <MoneyInput id="csl-amount" value={amountText} onChange={setAmountText} required />
+            </div>
+          )}
           {needsPaymentAccount && (
             <div>
               <Label htmlFor="csl-pay">Pay from</Label>

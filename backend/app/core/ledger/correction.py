@@ -1139,6 +1139,7 @@ def correct_staff_journal_entry(
     actor_id: uuid.UUID,
     amount_minor: int | None = None,
     try_cost_kurus: int | None = None,
+    extra_days: int | None = None,
     reason: str | None = None,
     void_date: date | None = None,
     period_unlock_reason: str | None = None,
@@ -1161,6 +1162,9 @@ def correct_staff_journal_entry(
         movement_type = staff_row.movement_type
         new_amount_minor = amount_minor if amount_minor is not None else staff_row.amount_minor
         new_try_cost = try_cost_kurus if try_cost_kurus is not None else staff_row.try_cost_kurus
+        # Extra-days rows carry a day count; keep it (or take the corrected one)
+        # so an edited entry doesn't lose "4 days × 950" on the way through.
+        new_extra_days = extra_days if extra_days is not None else staff_row.extra_days
 
         def new_staff(sess: Session, corrected: JournalEntry) -> None:
             staff_ledger.persist_staff_ledger_entry(
@@ -1177,6 +1181,7 @@ def correct_staff_journal_entry(
                 reference_id=staff_row.reference_id,
                 period_year=staff_row.period_year,
                 period_month=staff_row.period_month,
+                extra_days=new_extra_days,
             )
 
         def new_fx(sess: Session, corrected: JournalEntry) -> None:

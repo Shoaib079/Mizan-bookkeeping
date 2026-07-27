@@ -85,16 +85,13 @@ const correctableStaffTypes = new Set([
   "salary_accrued",
   "advance_paid",
   "salary_payment",
-]);
-
-/** Void-only rows: companions (advance applied) void the whole journal, and
- * extra-days entries carry days×rate metadata that a plain amount edit would
- * corrupt — correct them by voiding and re-entering via "Extra days pay". */
-const staffVoidCompanionTypes = new Set([
-  "advance_applied",
   "extra_days_accrued",
   "extra_days_paid",
 ]);
+
+/** Void-only rows: companion entries void the whole journal, and editing one
+ * half of a pair in isolation would unbalance it. */
+const staffVoidCompanionTypes = new Set(["advance_applied"]);
 
 function extraDaysLabel(entry: LedgerEntry): string | null {
   if (
@@ -405,6 +402,7 @@ export default function StaffDetailPage() {
                                 amount_minor: entry.amount_minor,
                                 description: entry.description,
                                 payment_account_id: entry.payment_account_id,
+                                extra_days: entry.extra_days,
                               })
                             }
                             onVoid={() =>
