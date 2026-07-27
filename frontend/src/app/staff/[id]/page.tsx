@@ -9,6 +9,7 @@ import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-fo
 import { StaffAdvanceReturnForm } from "@/components/forms/staff-advance-return-form";
 import { StaffApplyAdvanceForm } from "@/components/forms/staff-apply-advance-form";
 import { OverflowMenu } from "@/components/ui/overflow-menu";
+import { staffDisplayRows } from "@/lib/staff-ledger-display";
 import { StaffExtraDaysForm } from "@/components/forms/staff-extra-days-form";
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import {
@@ -184,19 +185,10 @@ export default function StaffDetailPage() {
     visibleRows,
   } = useLedgerHistoryView(ledger?.entries ?? []);
 
-  // Running balance after each effective movement (skips voided/superseded
-  // history rows so the last row always reconciles to the staff balance).
-  const runningBalanceById = useMemo(() => {
-    const map = new Map<string, number>();
-    let running = 0;
-    for (const e of ledger?.entries ?? []) {
-      if ((e.display_kind ?? "effective") === "effective") {
-        running += e.amount_minor;
-        map.set(e.id, running);
-      }
-    }
-    return map;
-  }, [ledger?.entries]);
+  // One display row per real event: rows written under the same journal entry
+  // (salary payment + advance applied) collapse into a single net line, so an
+  // advance offset no longer masquerades as a second "Salary payment".
+  const displayRows = useMemo(() => staffDisplayRows(visibleRows), [visibleRows]);
 
   const formatMinorAmount = useCallback(
     (minor: number) =>
@@ -332,78 +324,95 @@ export default function StaffDetailPage() {
                 </tr>
               </DataTableHead>
               <DataTableBody>
-                {visibleRows.map((entry) => (
-                  <DataTableRow
-                    key={entry.id}
-                    className={subledgerRowClassName(
-                      entry.display_kind,
-                      showHistory,
-                    )}
-                  >
-                    <DataTableCell>
-                      {formatTrDate(entry.movement_date)}
-                    </DataTableCell>
-                    <DataTableCell>
-                      {staffMovementLabels[entry.movement_type] ??
-                        entry.movement_type}
-                      {salaryPeriodLabel(entry) && (
-                        <span className="ml-1 text-muted-foreground">
-                          ({salaryPeriodLabel(entry)})
-                        </span>
+                {displayRows.map((group) => {
+                  const entry = group.primary;
+                  const canEdit =
+                    !group.isAdvanceOffset &&
+                    correctableStaffTypes.has(entry.movement_type);
+                  const canAct =
+                    canEdit ||
+                    group.isAdvanceOffset ||
+                    staffVoidCompanionTypes.has(entry.movement_type) ||
+                    correctableStaffTypes.has(entry.movement_type);
+                  return (
+                    <DataTableRow
+                      key={entry.id}
+                      className={subledgerRowClassName(
+                        entry.display_kind,
+                        showHistory,
                       )}
-                      {extraDaysLabel(entry) && (
-                        <span className="ml-1 text-muted-foreground">
-                          ({extraDaysLabel(entry)})
-                        </span>
-                      )}
-                    </DataTableCell>
-                    <DataTableCell>
-                      {entry.description}
-                      {entry.was_corrected && (
-                        <span className="ml-2">
-                          <EditedBadge />
-                        </span>
-                      )}
-                    </DataTableCell>
-                    <DataTableCell align="right">
-                      {employee.pay_currency === "TRY"
-                        ? formatTry(entry.amount_minor)
-                        : `${(entry.amount_minor / 100).toFixed(2)} ${employee.pay_currency}`}
-                    </DataTableCell>
-                    <DataTableCell align="right" className="tabular-nums text-muted-foreground">
-                      {runningBalanceById.has(entry.id)
-                        ? employee.pay_currency === "TRY"
-                          ? formatTry(runningBalanceById.get(entry.id) ?? 0)
-                          : `${((runningBalanceById.get(entry.id) ?? 0) / 100).toFixed(2)} ${employee.pay_currency}`
-                        : "—"}
-                    </DataTableCell>
-                    <DataTableCell align="right">
-                      {(correctableStaffTypes.has(entry.movement_type) ||
-                        staffVoidCompanionTypes.has(entry.movement_type)) && (
-                        <SubledgerRowActions
-                          row={entry}
-                          showEdit={correctableStaffTypes.has(entry.movement_type)}
-                          onEdit={() =>
-                            setCorrectEntry({
-                              journal_entry_id: entry.journal_entry_id!,
-                              movement_date: entry.movement_date,
-                              movement_type: entry.movement_type,
-                              amount_minor: entry.amount_minor,
-                              description: entry.description,
-                              payment_account_id: entry.payment_account_id,
-                            })
-                          }
-                          onVoid={() =>
-                            setVoidTarget({
-                              journal_entry_id: entry.journal_entry_id!,
-                              description: entry.description,
-                            })
-                          }
-                        />
-                      )}
-                    </DataTableCell>
-                  </DataTableRow>
-                ))}
+                    >
+                      <DataTableCell>
+                        {formatTrDate(entry.movement_date)}
+                      </DataTableCell>
+                      <DataTableCell>
+                        {group.isAdvanceOffset
+                          ? "Advance applied"
+                          : (staffMovementLabels[entry.movement_type] ??
+                            entry.movement_type)}
+                        {!group.isAdvanceOffset && salaryPeriodLabel(entry) && (
+                          <span className="ml-1 text-muted-foreground">
+                            ({salaryPeriodLabel(entry)})
+                          </span>
+                        )}
+                        {extraDaysLabel(entry) && (
+                          <span className="ml-1 text-muted-foreground">
+                            ({extraDaysLabel(entry)})
+                          </span>
+                        )}
+                      </DataTableCell>
+                      <DataTableCell>
+                        {group.isAdvanceOffset
+                          ? "Advance applied to salary"
+                          : entry.description}
+                        {group.advanceAppliedMinor > 0 && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {group.isAdvanceOffset
+                              ? `${formatMinorAmount(group.advanceAppliedMinor)} from advance — no cash`
+                              : `incl. ${formatMinorAmount(group.advanceAppliedMinor)} from advance`}
+                          </span>
+                        )}
+                        {entry.was_corrected && (
+                          <span className="ml-2">
+                            <EditedBadge />
+                          </span>
+                        )}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        {formatMinorAmount(group.netMinor)}
+                      </DataTableCell>
+                      <DataTableCell align="right" className="tabular-nums text-muted-foreground">
+                        {group.balanceMinor === null
+                          ? "—"
+                          : formatMinorAmount(group.balanceMinor)}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        {canAct && (
+                          <SubledgerRowActions
+                            row={entry}
+                            showEdit={canEdit}
+                            onEdit={() =>
+                              setCorrectEntry({
+                                journal_entry_id: entry.journal_entry_id!,
+                                movement_date: entry.movement_date,
+                                movement_type: entry.movement_type,
+                                amount_minor: entry.amount_minor,
+                                description: entry.description,
+                                payment_account_id: entry.payment_account_id,
+                              })
+                            }
+                            onVoid={() =>
+                              setVoidTarget({
+                                journal_entry_id: entry.journal_entry_id!,
+                                description: entry.description,
+                              })
+                            }
+                          />
+                        )}
+                      </DataTableCell>
+                    </DataTableRow>
+                  );
+                })}
               </DataTableBody>
             </DataTable>
           )}
