@@ -11,7 +11,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
-import { parseFxNative, formatFxNative } from "@/lib/fx-money";
+import { parseFxNative, formatFxNativeInput } from "@/lib/fx-money";
 import { formatKurus, formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
@@ -85,7 +85,7 @@ export function CorrectFxPurchaseForm({
   useEffect(() => {
     if (!open || !purchase) return;
     setDateText(formatTrDate(purchase.movement_date));
-    setNativeText(formatFxNative(Math.abs(purchase.native_quantity), currency));
+    setNativeText(formatFxNativeInput(purchase.native_quantity));
     setTryCostText(formatKurus(purchase.try_cost_kurus));
     setDescription(purchase.description);
     setReason("");

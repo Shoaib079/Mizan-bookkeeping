@@ -10,7 +10,7 @@ import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
-import { formatFxNative, parseFxNative } from "@/lib/fx-money";
+import { formatFxNativeInput, parseFxNative } from "@/lib/fx-money";
 import { computeTryCostKurusFromRate } from "@/lib/fx-purchase-helpers";
 import {
   loadPaymentReceiveAccounts,
@@ -105,7 +105,7 @@ export function CorrectCustomerPaymentForm({
         recorded.payment_native_quantity > 0
       ) {
         setForexAmountText(
-          formatFxNative(recorded.payment_native_quantity, chosen.currency),
+          formatFxNativeInput(recorded.payment_native_quantity),
         );
         // amount_kurus and payment_native_quantity are both ×100-scaled, so their
         // ratio is TRY-per-unit directly; ×100 back into kuruş for the rate field.

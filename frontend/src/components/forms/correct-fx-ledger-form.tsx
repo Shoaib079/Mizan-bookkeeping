@@ -16,7 +16,7 @@ import {
   type ChartAccount,
 } from "@/lib/expense-accounts";
 import { useEntity } from "@/lib/entity-context";
-import { formatFxNative, parseFxNative } from "@/lib/fx-money";
+import { formatFxNativeInput, parseFxNative } from "@/lib/fx-money";
 import {
   loadBankAndCashAccounts,
   type MoneyAccountOption,
@@ -95,7 +95,7 @@ export function CorrectFxLedgerForm({
     if (!open || !entry) return;
     void loadOptions().catch(() => undefined);
     setDateText(formatTrDate(entry.movement_date));
-    setNativeText(formatFxNative(Math.abs(entry.native_quantity), currency));
+    setNativeText(formatFxNativeInput(entry.native_quantity));
     setTryReceivedText(formatKurus(Math.abs(entry.try_cost_kurus)));
     setDescription(entry.description);
     setReason("");
