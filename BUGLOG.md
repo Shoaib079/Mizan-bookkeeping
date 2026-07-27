@@ -2,6 +2,18 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-13 — Staff advance can't be applied against extra-days owed (OPEN — handed to Cursor)
+
+**Symptom:** Outstanding advance grows and can never be netted, even at 0-cash payment. India Gate / "Latif Coşgun": staff balance 170 ₺ but outstanding advance 13.515 ₺ = 75 (23.05 excess) + 13.440 (08.06). Owner owes 13.440 for extra days AND holds a 13.440 advance; they offset on the balance but sit gross with no way to net them.
+
+**Root cause (diagnosed 2026-07-13):** `EXTRA_DAYS_ACCRUED` is persisted with **no period** (`post_extra_days_paid`, `core/staff/posting.py` ~1191) and is **excluded from `remaining_accrual_minor`** (`core/staff/ledger.py` ~182). The salary-payment dialog uses `post_period_salary_payment`'s period-scoped `advance_applied = min(advance, period_remaining)`, so extra-days-owed is invisible → advances can never apply to it → a 0-cash payment applies 0. Reachable from two entry points: staff page and the Expenses form (`manual-expense-form.tsx`).
+
+**Related report #2 (same subsystem):** a 15.000 cash salary payment **silently auto-applied** the full 13.515 advance (`advance_applied = min(advance, period_remaining)`), and the entry then **can't be edited** (`service.py:586` blocks correcting a payment with an `ADVANCE_APPLIED` sibling — only Void works). Owner wants control over advance application + a correction path.
+
+**Fix (IMPLEMENTED 2026-07-13, ⚠️ pytest pending owner):** decoupled design — (1) **TRY salary payments settle cash only**, never silently applying advances (`post_salary_payment` + `post_period_salary_payment`; FX keeps auto-apply since the explicit action is TRY-only and FX advances would otherwise be unsettleable); (2) `remaining_accrual_minor` now **includes EXTRA_DAYS_ACCRUED** (excludes EXTRA_DAYS_PAID — direct pay never enters payable); (3) new explicit **`post_apply_advance`** (Dr Salaries Payable / Cr 1300, no cash, capped at min(advance, owed incl. extra-days)) + `POST /staff/employees/{id}/apply-advance` + "Apply advance" button/dialog on the staff page; (4) the `service.py:586` dead-end message now directs to Void (which reverses payment+advance-applied together) — legacy rows only, new payments have no siblings; (5) frontend previews (`staff-salary.ts`) match cash-only. Brief superseded: `CURSOR_BRIEF_staff_advance_extra_days.md`.
+
+**Guarding test:** `tests/test_staff_apply_advance.py` (7 tests incl. the **Latif reproduction**: 13.440 extra-days owed + 13.440 advance → apply → both zero, balance unchanged; report-#2 reproduction: 15.000 cash / 38.000 owed / 13.515 advance → advance untouched). Updated to the new design: `test_staff.py`, `test_staff_period_payment.py`, `test_subledger_void.py`, `frontend/src/lib/staff-salary.test.ts`. **Owner: run `cd backend && .venv/bin/pytest -q` before merge — money-critical.**
+
 ## 2026-07-13 — "Clear bank commission" dumped the whole clearing residual as Bank Charges (184k)
 
 **Symptom:** Bank Charges (5300) jumped to 184,628.82 ₺ after clicking "Clear bank commission" on the card-clearing page. Real commission was ~20k.

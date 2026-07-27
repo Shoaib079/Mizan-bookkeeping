@@ -7,6 +7,7 @@ import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
 import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
 import { StaffAdvanceReturnForm } from "@/components/forms/staff-advance-return-form";
+import { StaffApplyAdvanceForm } from "@/components/forms/staff-apply-advance-form";
 import { StaffExtraDaysForm } from "@/components/forms/staff-extra-days-form";
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import {
@@ -118,6 +119,7 @@ export default function StaffDetailPage() {
   const [accrualOpen, setAccrualOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
+  const [applyAdvanceOpen, setApplyAdvanceOpen] = useState(false);
   const [extraDaysOpen, setExtraDaysOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectableStaffLedgerRow | null>(null);
@@ -262,6 +264,17 @@ export default function StaffDetailPage() {
                   title="Record cash returned by the employee for an advance/overpayment"
                 >
                   Return advance
+                </Button>
+              )}
+            {employee.pay_currency === "TRY" &&
+              ledger.outstanding_advance_minor > 0 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setApplyAdvanceOpen(true)}
+                  title="Net the outstanding advance against unpaid salary (incl. extra days) — no cash moves"
+                >
+                  Apply advance
                 </Button>
               )}
             {employee.pay_currency === "TRY" && (
@@ -409,6 +422,13 @@ export default function StaffDetailPage() {
             open={returnOpen}
             employeeId={employeeId}
             onClose={() => setReturnOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <StaffApplyAdvanceForm
+            open={applyAdvanceOpen}
+            employeeId={employeeId}
+            outstandingAdvanceMinor={ledger?.outstanding_advance_minor ?? 0}
+            onClose={() => setApplyAdvanceOpen(false)}
             onSaved={() => void reload()}
           />
           <StaffExtraDaysForm

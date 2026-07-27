@@ -25,14 +25,13 @@ export type SalaryPeriodStatus = {
 };
 
 export function advanceAppliedPreview(
-  cashMinor: number,
-  periodRemainingMinor: number,
-  outstandingAdvanceMinor: number,
+  _cashMinor: number,
+  _periodRemainingMinor: number,
+  _outstandingAdvanceMinor: number,
 ): number {
-  if (outstandingAdvanceMinor <= 0 || periodRemainingMinor <= 0) return 0;
-  const room = periodRemainingMinor - cashMinor;
-  if (room <= 0) return 0;
-  return Math.min(outstandingAdvanceMinor, room);
+  // Decoupled 2026-07-13 (BUGLOG): salary payments settle CASH ONLY — advances
+  // are applied via the explicit "Apply advance" action on the staff page.
+  return 0;
 }
 
 export function salaryCashPreview(

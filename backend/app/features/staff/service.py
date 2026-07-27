@@ -280,6 +280,33 @@ def record_advance(
     )
 
 
+def record_apply_advance(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    payload,
+) -> StaffPaymentResponse:
+    """Explicit apply-advance — nets outstanding advance against salary owed."""
+    result = staff_posting.post_apply_advance(
+        session,
+        entity_id,
+        employee_id,
+        applied_date=payload.applied_date,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        amount_minor=payload.amount_minor,
+    )
+    return StaffPaymentResponse(
+        journal_entry_id=result.journal_entry.id,
+        staff_ledger_entry=_staff_entry_read(
+            session, result.staff_ledger_entry, entity_id=entity_id
+        ),
+        balance_minor=result.balance_minor,
+        advance_applied_minor=result.advance_applied_minor,
+        fx_ledger_entry_id=None,
+    )
+
+
 def record_advance_return(
     session: Session,
     entity_id: uuid.UUID,
@@ -582,8 +609,15 @@ def _build_staff_correction_lines(
             )
         )
         if sibling is not None:
+            # Legacy rows only: payments no longer auto-apply advances
+            # (decoupled 2026-07-13), so new payments never hit this. A paired
+            # payment+advance-applied can't be partially rewritten — voiding is
+            # the safe correction (it reverses both rows together and restores
+            # the advance).
             raise ValueError(
-                "salary payment with advance applied cannot be corrected via this endpoint yet"
+                "This payment also applied an advance. Void it instead — the "
+                "void reverses both entries together and restores the advance "
+                "— then re-record the payment."
             )
 
         if employee.pay_currency == PayCurrency.TRY:

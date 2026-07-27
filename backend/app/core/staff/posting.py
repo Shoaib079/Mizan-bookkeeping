@@ -550,6 +550,113 @@ def post_advance_returned(
         )
 
 
+def post_apply_advance(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    *,
+    applied_date: date,
+    description: str,
+    actor_id: uuid.UUID,
+    amount_minor: int | None = None,
+) -> StaffPaymentPostResult:
+    """Apply an outstanding advance against salary owed — no cash moves.
+
+    Explicit owner action (BUGLOG 2026-07-13): nets the advance against ALL
+    unpaid salary, regular accruals AND extra-days. Dr Salaries Payable /
+    Cr 1300 Employee Advances; subledger SALARY_PAYMENT −X + ADVANCE_APPLIED +X
+    (same journal), so the staff balance is unchanged while both the payable
+    and the advance drop.
+    """
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        employee = _get_employee(session, entity_id, employee_id)
+        if employee.pay_currency != PayCurrency.TRY:
+            raise InvalidStaffPostingError(
+                "Apply advance is TRY-only for now — FX advances carry a TRY "
+                "cost basis; settle via salary payment instead"
+            )
+
+        outstanding = staff_ledger.outstanding_advance_minor(session, employee_id)
+        owed = staff_ledger.remaining_accrual_minor(session, employee_id)
+        cap = min(outstanding, max(0, owed))
+        if cap <= 0:
+            raise InvalidStaffPostingError(
+                "Nothing to apply — needs both an outstanding advance and "
+                "unpaid salary (including extra days)"
+            )
+        apply_minor = cap if amount_minor is None else amount_minor
+        if apply_minor <= 0 or apply_minor > cap:
+            raise InvalidStaffPostingError(
+                f"Apply amount must be between 1 and {cap} kuruş "
+                "(min of outstanding advance and salary owed)"
+            )
+
+        salaries_payable = _chart_account(session, SALARIES_PAYABLE_CODE)
+        advances = _chart_account(session, EMPLOYEE_ADVANCES_CODE)
+        lines = [
+            PostingLine(
+                account_id=salaries_payable.id,
+                amount_kurus=apply_minor,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=advances.id,
+                amount_kurus=apply_minor,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ]
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            applied_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=JournalEntrySource.STAFF_PAYMENT,
+        )
+        staff_entry = staff_ledger.persist_staff_ledger_entry(
+            session,
+            employee_id,
+            movement_date=applied_date,
+            movement_type=StaffMovementType.SALARY_PAYMENT,
+            amount_minor=-apply_minor,
+            description=description,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+        )
+        staff_ledger.persist_staff_ledger_entry(
+            session,
+            employee_id,
+            movement_date=applied_date,
+            movement_type=StaffMovementType.ADVANCE_APPLIED,
+            amount_minor=apply_minor,
+            description=f"{description} — advance applied",
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+        )
+
+        session.commit()
+        session.refresh(journal_entry)
+        session.refresh(staff_entry)
+        _ = list(journal_entry.lines)
+
+        balance = session.scalar(
+            select(func.coalesce(func.sum(StaffLedgerEntry.amount_minor), 0)).where(
+                StaffLedgerEntry.employee_id == employee_id
+            )
+        )
+        return StaffPaymentPostResult(
+            journal_entry=journal_entry,
+            staff_ledger_entry=staff_entry,
+            balance_minor=int(balance or 0),
+            advance_applied_minor=apply_minor,
+        )
+
+
 def post_salary_payment(
     session: Session,
     entity_id: uuid.UUID,
@@ -582,9 +689,17 @@ def post_salary_payment(
                 f"Payment of {amount_minor} exceeds staff balance of {current}"
             )
 
-        remaining = staff_ledger.remaining_accrual_minor(session, employee_id)
-        advance_minor = staff_ledger.outstanding_advance_minor(session, employee_id)
-        advance_applied_minor = min(advance_minor, remaining - amount_minor)
+        # Decoupled 2026-07-13 (BUGLOG): a TRY salary payment settles CASH ONLY —
+        # advances are applied via the explicit apply-advance action, never
+        # silently. FX keeps auto-apply: the explicit action is TRY-only (FX
+        # advances carry a TRY cost basis), so without it FX advances would be
+        # unsettleable.
+        if employee.pay_currency == PayCurrency.TRY:
+            advance_applied_minor = 0
+        else:
+            remaining = staff_ledger.remaining_accrual_minor(session, employee_id)
+            advance_minor = staff_ledger.outstanding_advance_minor(session, employee_id)
+            advance_applied_minor = max(0, min(advance_minor, remaining - amount_minor))
 
         fx_entry: FxLedgerEntry | None = None
         journal_entry: JournalEntry
@@ -1001,13 +1116,11 @@ def post_period_salary_payment(
             period_month=period_month,
             period_salary_minor=period_salary_minor,
         )
-        advance_minor = staff_ledger.outstanding_advance_minor(session, employee_id)
-        advance_applied_minor = (
-            min(advance_minor, period_remaining) if period_remaining > 0 else 0
-        )
-        salary_cash_minor = min(
-            cash_minor, max(0, period_remaining - advance_applied_minor)
-        )
+        # Decoupled 2026-07-13 (BUGLOG): a salary payment settles CASH ONLY.
+        # Advances are applied via the explicit apply-advance action, never
+        # silently. Cash beyond the period's remaining still parks as advance.
+        advance_applied_minor = 0
+        salary_cash_minor = min(cash_minor, max(0, period_remaining))
         excess_advance_minor = cash_minor - salary_cash_minor
         payable_cleared = salary_cash_minor + advance_applied_minor
 

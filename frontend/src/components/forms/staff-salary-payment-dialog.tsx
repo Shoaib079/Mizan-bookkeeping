@@ -768,6 +768,9 @@ export function StaffSalaryPaymentDialog({
               <p className="mt-1 text-muted-foreground">
                 Outstanding advance:{" "}
                 <span className="tabular-nums">{formatMinor(outstandingAdvance)}</span>
+                {" — "}not applied automatically; use{" "}
+                <span className="font-medium">Apply advance</span> on the staff
+                page to net it against salary owed.
               </p>
             )}
             {cashPreview > 0 && payablePreview > 0 && (

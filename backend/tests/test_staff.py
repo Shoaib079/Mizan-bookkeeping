@@ -183,8 +183,27 @@ def test_salary_payment_no_second_5100_with_advance_offset(db_session, staff_set
     )
 
     assert result.journal_entry.source == JournalEntrySource.STAFF_PAYMENT
-    assert result.advance_applied_minor == 200_000
+    # Decoupled 2026-07-13: TRY payments settle cash only — no silent apply.
+    assert result.advance_applied_minor == 0
     assert _salary_expense_total(db_session, entity_id, accounts[SALARY_EXPENSE_CODE]) == 500_000
+    assert _gl_balance(
+        db_session, entity_id, accounts[SALARIES_PAYABLE_CODE], AccountNormalBalance.CREDIT
+    ) == 200_000
+    assert _gl_balance(
+        db_session, entity_id, accounts[EMPLOYEE_ADVANCES_CODE], AccountNormalBalance.DEBIT
+    ) == 200_000
+    assert _subledger_balance(db_session, entity_id, employee_id) == 0
+
+    # Explicit apply-advance nets the 200k advance against the 200k still owed.
+    applied = staff_posting.post_apply_advance(
+        db_session,
+        entity_id,
+        employee_id,
+        applied_date=date(2026, 6, 30),
+        description="Apply advance",
+        actor_id=ACTOR_ID,
+    )
+    assert applied.advance_applied_minor == 200_000
     assert _gl_balance(
         db_session, entity_id, accounts[SALARIES_PAYABLE_CODE], AccountNormalBalance.CREDIT
     ) == 0
@@ -254,6 +273,17 @@ def test_partial_salary_payment_applies_advance_only_once(db_session, staff_setu
         description="Partial pay 2",
         actor_id=ACTOR_ID,
         payment_account_id=drawer.gl_account_id,
+    )
+
+    # Decoupled: partial pays clear cash only (50k of the 100k salary);
+    # the 50k advance is netted by ONE explicit apply — never re-applied.
+    staff_posting.post_apply_advance(
+        db_session,
+        entity_id,
+        employee_id,
+        applied_date=date(2026, 6, 30),
+        description="Apply advance",
+        actor_id=ACTOR_ID,
     )
 
     assert _gl_balance(
@@ -580,14 +610,31 @@ def test_api_staff_flow(client: TestClient, staff_setup, db_session) -> None:
     )
     assert payment.status_code == 201
     assert payment.json()["balance_minor"] == 0
-    assert payment.json()["advance_applied_minor"] == 150000
+    # Decoupled 2026-07-13: cash-only payment — no silent advance apply.
+    assert payment.json()["advance_applied_minor"] == 0
+
+    mid = client.get(f"{base}/employees/{employee_id}/ledger")
+    assert mid.status_code == 200
+    assert mid.json()["remaining_accrual_minor"] == 150000
+    assert mid.json()["outstanding_advance_minor"] == 150000
+
+    applied = client.post(
+        f"{base}/employees/{employee_id}/apply-advance",
+        json={
+            "applied_date": "2026-06-30",
+            "description": "Apply advance",
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert applied.status_code == 201
+    assert applied.json()["advance_applied_minor"] == 150000
 
     ledger = client.get(f"{base}/employees/{employee_id}/ledger")
     assert ledger.status_code == 200
     assert ledger.json()["balance_minor"] == 0
     assert ledger.json()["remaining_accrual_minor"] == 0
     assert ledger.json()["outstanding_advance_minor"] == 0
-    assert len(ledger.json()["entries"]) == 4
+    assert len(ledger.json()["entries"]) == 5
     types = {e["movement_type"] for e in ledger.json()["entries"]}
     assert types == {
         "salary_accrued",

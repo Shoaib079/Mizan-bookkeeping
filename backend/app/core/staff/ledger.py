@@ -163,10 +163,19 @@ def _sum_by_type(
 
 
 def remaining_accrual_minor(session: Session, employee_id: uuid.UUID) -> int:
-    """Gross accrued salary not yet cleared by salary payments (excludes advances)."""
+    """Gross accrued salary not yet cleared by salary payments (excludes advances).
+
+    Includes EXTRA_DAYS_ACCRUED: it credits salaries payable exactly like a
+    salary accrual, so it is owed; excluding it made extra-days owed invisible
+    to advance application (BUGLOG 2026-07-13). EXTRA_DAYS_PAID stays excluded —
+    direct-paid extra days go Dr expense / Cr cash and never enter payable.
+    """
     accrued = _sum_by_type(session, employee_id, StaffMovementType.SALARY_ACCRUED)
     paid = _sum_by_type(session, employee_id, StaffMovementType.SALARY_PAYMENT)
-    return accrued + paid
+    extra_accrued = _sum_by_type(
+        session, employee_id, StaffMovementType.EXTRA_DAYS_ACCRUED
+    )
+    return accrued + paid + extra_accrued
 
 
 def period_accrued_minor(
