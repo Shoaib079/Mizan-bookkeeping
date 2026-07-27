@@ -19,7 +19,9 @@ import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
 import { ExpenseReceiptUploadForm } from "@/components/forms/expense-receipt-upload-form";
 import { FxPurchaseQuickAction } from "@/components/forms/fx-purchase-quick-action";
+import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
+import { TransferForm } from "@/components/forms/transfer-form";
 import { PartnerProfitAllocationForm } from "@/components/forms/partner-profit-allocation-form";
 import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
 import { PosSummaryUploadForm } from "@/components/forms/pos-summary-upload-form";
@@ -97,6 +99,8 @@ export function RecordActionModals({ active, onClose }: Props) {
         onConfirm={handleDocumentConfirm}
       />
 
+      <ManualDailySalesForm open={effectiveModal === "sales"} onClose={closeAll} />
+      <TransferForm open={effectiveModal === "transfer"} onClose={closeAll} />
       <ManualExpenseForm open={effectiveModal === "expense"} onClose={closeAll} />
       <ManualExpenseForm
         open={effectiveModal === "storePurchase"}

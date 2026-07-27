@@ -47,12 +47,13 @@ type QuickActionsContextValue = {
 
 const QuickActionsContext = createContext<QuickActionsContextValue | null>(null);
 
-/** M3: actions whose form lives on an owning page — the action deep-links
- * there (?new=1 opens the form) instead of duplicating it in a dialog. */
-export const RECORD_ACTION_PAGE_HREFS: Partial<Record<RecordActionKey, string>> = {
-  sales: "/sales?new=1",
-  transfer: "/banking/transfers?new=1",
-};
+/** Actions that navigate to an owning page instead of opening a dialog.
+ *
+ * Deliberately empty: recording from Add should keep you in Add. The forms are
+ * dialog components shared with their owning pages, so hosting them here is one
+ * implementation with two entry points — not a duplicate. Pages still honour
+ * `?new=1` for deep links. */
+export const RECORD_ACTION_PAGE_HREFS: Partial<Record<RecordActionKey, string>> = {};
 
 export function QuickActionsProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
