@@ -210,6 +210,9 @@ function LedgerPanelContent() {
   const status = searchParams.get("status") ?? "";
   const offset = Number(searchParams.get("offset") ?? "0");
   const focusId = searchParams.get("focus") ?? "";
+  /** Default view is the live books: voided entries and their "Void: …"
+   * reversals are audit trail, not current state. `history=1` reveals them. */
+  const showHistory = searchParams.get("history") === "1";
 
   const [searchDraft, setSearchDraft] = useState(q);
   const [items, setItems] = useState<JournalEntryRow[]>([]);
@@ -258,9 +261,14 @@ function LedgerPanelContent() {
     params.set("offset", String(offset));
     if (q.trim()) params.set("q", q.trim());
     if (source) params.set("source", source);
-    if (status) params.set("status", status);
+    if (showHistory) {
+      if (status) params.set("status", status);
+    } else {
+      // Hides voided originals AND the system "Void: …" reversal entries.
+      params.set("effective_only", "true");
+    }
     return params.toString();
-  }, [from, to, offset, q, source, status]);
+  }, [from, to, offset, q, source, status, showHistory]);
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -415,29 +423,48 @@ function LedgerPanelContent() {
               ))}
             </Select>
           </div>
-          <div>
-            <Label htmlFor="ledger-status">Status</Label>
-            <Select
-              id="ledger-status"
-              className="mt-1 w-36"
-              value={status}
+          {showHistory && (
+            <div>
+              <Label htmlFor="ledger-status">Status</Label>
+              <Select
+                id="ledger-status"
+                className="mt-1 w-36"
+                value={status}
+                disabled={loading}
+                onChange={(e) =>
+                  setParams({
+                    status: e.target.value || null,
+                    offset: "0",
+                    focus: null,
+                  })
+                }
+              >
+                <option value="">All</option>
+                <option value="posted">Posted</option>
+                <option value="voided">Voided</option>
+              </Select>
+            </div>
+          )}
+          <Button type="button" variant="secondary" disabled={loading} onClick={applySearch}>
+            Apply search
+          </Button>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={showHistory}
               disabled={loading}
+              className="h-4 w-4 rounded border-border"
               onChange={(e) =>
                 setParams({
-                  status: e.target.value || null,
+                  history: e.target.checked ? "1" : null,
+                  status: null,
                   offset: "0",
                   focus: null,
                 })
               }
-            >
-              <option value="">All</option>
-              <option value="posted">Posted</option>
-              <option value="voided">Voided</option>
-            </Select>
-          </div>
-          <Button type="button" variant="secondary" disabled={loading} onClick={applySearch}>
-            Apply search
-          </Button>
+            />
+            Show voids &amp; corrections
+          </label>
         </div>
       </div>
 
