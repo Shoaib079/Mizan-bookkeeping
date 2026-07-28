@@ -101,6 +101,14 @@ function CashBookContent() {
     ];
   }, [report]);
 
+  // Newest first so the top row's balance IS the current drawer figure — no
+  // scrolling to the bottom to check it matches "should be in the drawer".
+  // Balances are computed chronologically server-side; only the display flips.
+  const movementsNewestFirst = useMemo(
+    () => [...(report?.rows ?? [])].reverse(),
+    [report?.rows],
+  );
+
   const countGap = report?.last_count?.over_short_kurus ?? null;
   const netCounted = useMemo(
     () => (report?.counts ?? []).reduce((sum, c) => sum + c.over_short_kurus, 0),
@@ -299,7 +307,7 @@ function CashBookContent() {
                   </tr>
                 </DataTableHead>
                 <DataTableBody>
-                  {report.rows.map((row, index) => (
+                  {movementsNewestFirst.map((row, index) => (
                     <DataTableRow key={`${row.journal_entry_id}-${index}`}>
                       <DataTableCell>{formatTrDate(row.entry_date)}</DataTableCell>
                       <DataTableCell>
