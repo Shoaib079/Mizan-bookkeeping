@@ -161,3 +161,39 @@ class PeriodComparisonRead(BaseModel):
     prior_from: date
     prior_to: date
     metrics: list[PeriodMetricComparison]
+
+
+class ExpenseRegisterRow(BaseModel):
+    """One expense posting, whichever flow recorded it."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    entry_date: date
+    account_id: uuid.UUID
+    account_code: str
+    account_name: str
+    description: str
+    source: str
+    amount_kurus: int
+    journal_entry_id: uuid.UUID
+
+
+class ExpenseRegisterAccountTotal(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    account_id: uuid.UUID
+    account_code: str
+    account_name: str
+    amount_kurus: int
+    entry_count: int
+
+
+class ExpenseRegisterRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    from_date: date
+    to_date: date
+    rows: list[ExpenseRegisterRow]
+    account_totals: list[ExpenseRegisterAccountTotal]
+    total_kurus: int
+    entry_count: int

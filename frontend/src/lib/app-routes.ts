@@ -202,6 +202,15 @@ export const appRoutes: AppRoute[] = [
     nestedUnder: "/reports",
   },
   {
+    href: "/reports/expense-register",
+    label: "Expense register",
+    keywords:
+      "all expenses one place spending salaries invoices bank charges commission missed check",
+    icon: BookOpen,
+    group: "Reports",
+    nestedUnder: "/reports",
+  },
+  {
     href: "/review/manual-journals",
     label: "Manual journals",
     keywords: "void manual journal",

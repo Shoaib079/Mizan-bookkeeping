@@ -193,3 +193,31 @@ export type ReportSlug =
   | "kdv-input"
   | "delivery-sales"
   | "period-comparison";
+
+export type ExpenseRegisterRow = {
+  entry_date: string;
+  account_id: string;
+  account_code: string;
+  account_name: string;
+  description: string;
+  source: string;
+  amount_kurus: number;
+  journal_entry_id: string;
+};
+
+export type ExpenseRegisterAccountTotal = {
+  account_id: string;
+  account_code: string;
+  account_name: string;
+  amount_kurus: number;
+  entry_count: number;
+};
+
+export type ExpenseRegisterRead = {
+  from_date: string;
+  to_date: string;
+  rows: ExpenseRegisterRow[];
+  account_totals: ExpenseRegisterAccountTotal[];
+  total_kurus: number;
+  entry_count: number;
+};

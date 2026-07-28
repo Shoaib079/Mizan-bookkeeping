@@ -15,6 +15,7 @@ from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
 from app.features.reports import cash_flow
 from app.features.reports import excel_export
+from app.features.reports import expense_register
 from app.features.reports import financial_statements
 from app.features.reports import kdv_input
 from app.features.reports import pdf_export
@@ -24,6 +25,7 @@ from app.features.reports.schema import (
     BalanceSheetRead,
     CashFlowRead,
     DeliverySalesReportRead,
+    ExpenseRegisterRead,
     KdvInputReportRead,
     PeriodComparisonRead,
     ProfitAndLossRead,
@@ -98,6 +100,31 @@ def export_delivery_sales(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DeliveryNotEnabledError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidDateRangeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/expense-register", response_model=ExpenseRegisterRead)
+def get_expense_register(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    account_id: uuid.UUID | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=256),
+    session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
+) -> ExpenseRegisterRead:
+    try:
+        return expense_register.get_expense_register(
+            session,
+            entity_id,
+            from_date,
+            to_date,
+            account_id=account_id,
+            q=q,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InvalidDateRangeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
