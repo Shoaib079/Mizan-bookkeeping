@@ -19,7 +19,7 @@ from typing import Any
 from xml.etree import ElementTree as ET
 
 from app.config import settings
-from app.core.money import amount_text_to_kurus
+from app.core.money import amount_text_to_kurus, decimal_text_to_kurus
 from app.core.turkish_vkn import is_valid_vkn_or_tckn
 from app.features.invoices.validation import (
     InvoiceTotalsError,
@@ -173,8 +173,9 @@ def extract_efatura_xml(content: bytes) -> EInvoiceExtraction:
     if net_text is None or gross_text is None:
         raise EfaturaExtractionError("Missing LegalMonetaryTotal amounts")
 
-    net_kurus = amount_text_to_kurus(net_text)
-    gross_kurus = amount_text_to_kurus(gross_text)
+    # UBL amounts are machine-format decimals — never Turkish grouping.
+    net_kurus = decimal_text_to_kurus(net_text)
+    gross_kurus = decimal_text_to_kurus(gross_text)
 
     vat_breakdown: list[VatBreakdownLine] = []
     for subtotal in _find_all(root, ".//cac:TaxTotal/cac:TaxSubtotal"):
@@ -188,8 +189,8 @@ def extract_efatura_xml(content: bytes) -> EInvoiceExtraction:
         vat_breakdown.append(
             {
                 "rate_percent": float(rate_node.text.strip()),
-                "base_kurus": amount_text_to_kurus(base_node.text),
-                "vat_kurus": amount_text_to_kurus(vat_node.text),
+                "base_kurus": decimal_text_to_kurus(base_node.text),
+                "vat_kurus": decimal_text_to_kurus(vat_node.text),
             }
         )
 

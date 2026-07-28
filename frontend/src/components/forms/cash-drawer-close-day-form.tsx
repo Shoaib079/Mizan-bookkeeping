@@ -15,7 +15,8 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
-import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import { todayTrDate } from "@/lib/dates";
 
 type Props = {
@@ -64,6 +65,17 @@ export function CashDrawerCloseDayForm({
       void loadAccounts().catch(() => undefined);
     }
   }, [open, defaultSessionDate, loadAccounts]);
+
+  /** What the books say should be in the drawer — the same GL balance the
+   * backend uses to compute over/short, so the preview can't disagree with
+   * what gets posted. */
+  const selectedAccount = cashAccounts.find((a) => a.id === moneyAccountId);
+  const expectedKurus = selectedAccount?.balance_kurus ?? null;
+  const countedPreviewKurus = parseTryToKurus(countedText);
+  const overShortKurus =
+    expectedKurus !== null && countedPreviewKurus !== null
+      ? countedPreviewKurus - expectedKurus
+      : null;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -138,6 +150,21 @@ export function CashDrawerCloseDayForm({
             placeholder="Cash account…"
           />
         </div>
+        {expectedKurus !== null && (
+          <div className="rounded-md border border-border bg-muted/40 p-3">
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="text-sm text-muted-foreground">
+                Should be in the drawer
+              </span>
+              <span className="text-lg font-semibold tabular-nums">
+                {formatTry(expectedKurus)}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cash sales and money in, less expenses and money out, as recorded.
+            </p>
+          </div>
+        )}
         <div>
           <Label htmlFor="close-day-counted">Counted balance (TRY)</Label>
           <MoneyInput
@@ -148,6 +175,28 @@ export function CashDrawerCloseDayForm({
             required
           />
         </div>
+        {overShortKurus !== null && (
+          <div
+            className={cn(
+              "flex items-baseline justify-between gap-4 rounded-md px-3 py-2 text-sm",
+              overShortKurus === 0 && "bg-success/10 text-success",
+              overShortKurus > 0 && "bg-warning/10 text-warning",
+              overShortKurus < 0 && "bg-destructive/10 text-destructive",
+            )}
+          >
+            <span>
+              {overShortKurus === 0
+                ? "Drawer matches the books"
+                : overShortKurus > 0
+                  ? "Over — more cash than expected"
+                  : "Short — less cash than expected"}
+            </span>
+            <span className="font-semibold tabular-nums">
+              {overShortKurus > 0 ? "+" : ""}
+              {formatTry(overShortKurus)}
+            </span>
+          </div>
+        )}
         <div>
           <Label htmlFor="close-day-desc">Description</Label>
           <Input
