@@ -180,6 +180,55 @@ def test_clear_negative_balance_rejected(client, db_session, setup) -> None:
     assert "negative" in resp.json()["detail"].lower()
 
 
+def test_clearance_only_sweeps_the_residual_as_of_its_date(db_session, setup) -> None:
+    """The 184k bug: clearing June must not sweep July's undeposited sales."""
+    from datetime import date
+
+    from app.core.pos import posting as pos_posting
+
+    entity_id = setup["entity_id"]
+    bank = setup["bank1"]
+
+    # June: 100.000 sold, 97.000 deposited — 3.000 left is genuine commission.
+    pos_posting.post_card_sales_batch(
+        db_session,
+        entity_id,
+        sales_date=date(2026, 6, 10),
+        gross_amount_kurus=100_000,
+        description="June card sales",
+        actor_id=ACTOR_ID,
+    )
+    pos_posting.post_pos_settlement(
+        db_session,
+        entity_id,
+        money_account_id=bank.id,
+        settlement_date=date(2026, 6, 12),
+        amount_kurus=97_000,
+        description="June net deposit",
+        actor_id=ACTOR_ID,
+    )
+    # July: a big batch not yet deposited — must stay in clearing.
+    pos_posting.post_card_sales_batch(
+        db_session,
+        entity_id,
+        sales_date=date(2026, 7, 5),
+        gross_amount_kurus=500_000,
+        description="July card sales",
+        actor_id=ACTOR_ID,
+    )
+
+    result = pos_posting.post_card_commission_clearance(
+        db_session,
+        entity_id,
+        clearance_date=date(2026, 6, 30),
+        description="Clear June commission",
+        actor_id=ACTOR_ID,
+    )
+
+    # Only June's 3.000 residual — not 503.000.
+    assert result.commission_kurus == 3_000
+
+
 def test_clear_rejected_when_sales_in_transit_no_deposits(
     client, db_session, setup
 ) -> None:

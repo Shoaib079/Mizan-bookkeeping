@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.default_chart import CARD_SALES_CLEARING_CODE
 from app.core.chart_of_accounts.models import Account
+from app.core.ledger.balances import balance_as_of_kurus
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.pos.posting import (
     InTransitCardSalesError,
@@ -199,7 +200,20 @@ def clear_card_commission(
             "record bank deposits before clearing commission"
         )
 
-    residual_kurus = reconciliation.clearing_balance_kurus
+    # Judge the guard against the same as-of residual the sweep will post, not
+    # the all-time balance — otherwise clearing an old month gets flagged for
+    # sales that arrived after it.
+    clearance_date = payload.clearance_date or date.today()
+    with entity_context(session, entity_id):
+        require_entity_context()
+        clearing_account = session.scalar(
+            select(Account).where(Account.code == CARD_SALES_CLEARING_CODE)
+        )
+        residual_kurus = (
+            balance_as_of_kurus(session, clearing_account, clearance_date)
+            if clearing_account is not None
+            else reconciliation.clearing_balance_kurus
+        )
     total_sales_kurus = reconciliation.total_card_sales_kurus
     threshold_kurus = int(total_sales_kurus * _COMMISSION_PLAUSIBILITY_RATE)
     if (
@@ -218,7 +232,7 @@ def clear_card_commission(
     result = post_card_commission_clearance(
         session,
         entity_id,
-        clearance_date=payload.clearance_date or date.today(),
+        clearance_date=clearance_date,
         description=payload.description or "Bank commission clearance",
         actor_id=payload.actor_id,
     )

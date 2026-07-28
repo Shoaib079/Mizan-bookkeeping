@@ -17,6 +17,7 @@ from app.core.chart_of_accounts.default_chart import (
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 from app.core.ledger.models import JournalEntry, JournalEntrySource
+from app.core.ledger.balances import balance_as_of_kurus
 from app.core.ledger.posting import InvalidAccountError, PostingLine, prepare_journal_entry
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
@@ -385,8 +386,12 @@ def post_card_commission_clearance(
         require_entity_context()
 
         clearing_account = _get_account_by_code(session, CARD_SALES_CLEARING_CODE)
-        residual_kurus = banking_service.gl_balance_kurus(
-            session, clearing_account.id, AccountNormalBalance.DEBIT
+        # Only the residual AS OF the clearance date. Using the all-time balance
+        # meant "clear June's commission" also swept July's not-yet-deposited
+        # card sales — how a month of undeposited sales once became a 184k
+        # "commission" expense (BUGLOG 2026-07-13).
+        residual_kurus = balance_as_of_kurus(
+            session, clearing_account, clearance_date
         )
         if residual_kurus == 0:
             raise NothingToClearError(

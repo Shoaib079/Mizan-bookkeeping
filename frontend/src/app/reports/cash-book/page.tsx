@@ -102,6 +102,10 @@ function CashBookContent() {
   }, [report]);
 
   const countGap = report?.last_count?.over_short_kurus ?? null;
+  const netCounted = useMemo(
+    () => (report?.counts ?? []).reduce((sum, c) => sum + c.over_short_kurus, 0),
+    [report?.counts],
+  );
 
   return (
     <AppShell title="Cash book">
@@ -206,6 +210,71 @@ function CashBookContent() {
                   ))}
                 </DataTableBody>
               </DataTable>
+            </section>
+          )}
+
+          {report.counts.length > 0 && (
+            <section>
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
+                <h2 className="text-sm font-semibold">Count history</h2>
+                <p className="text-xs text-muted-foreground">
+                  {report.counts.length} count
+                  {report.counts.length === 1 ? "" : "s"} ·{" "}
+                  {report.counts.filter((c) => c.over_short_kurus === 0).length}{" "}
+                  matched exactly · net{" "}
+                  <span
+                    className={cn(
+                      "font-medium tabular-nums",
+                      netCounted > 0 && "text-warning",
+                      netCounted < 0 && "text-destructive",
+                    )}
+                  >
+                    {formatTry(netCounted)}
+                  </span>
+                </p>
+              </div>
+              <DataTable>
+                <DataTableHead>
+                  <tr>
+                    <DataTableHeaderCell>Date</DataTableHeaderCell>
+                    <DataTableHeaderCell align="right">Should be</DataTableHeaderCell>
+                    <DataTableHeaderCell align="right">Counted</DataTableHeaderCell>
+                    <DataTableHeaderCell align="right">Difference</DataTableHeaderCell>
+                  </tr>
+                </DataTableHead>
+                <DataTableBody>
+                  {report.counts.map((count) => (
+                    <DataTableRow key={count.session_date}>
+                      <DataTableCell>
+                        {formatTrDate(count.session_date)}
+                      </DataTableCell>
+                      <DataTableCell align="right" className="tabular-nums">
+                        {formatTry(count.expected_kurus)}
+                      </DataTableCell>
+                      <DataTableCell align="right" className="tabular-nums">
+                        {formatTry(count.counted_kurus)}
+                      </DataTableCell>
+                      <DataTableCell
+                        align="right"
+                        className={cn(
+                          "tabular-nums",
+                          count.over_short_kurus === 0 && "text-muted-foreground",
+                          count.over_short_kurus > 0 && "text-warning",
+                          count.over_short_kurus < 0 && "text-destructive",
+                        )}
+                      >
+                        {count.over_short_kurus === 0
+                          ? "—"
+                          : `${count.over_short_kurus > 0 ? "+" : ""}${formatTry(count.over_short_kurus)}`}
+                      </DataTableCell>
+                    </DataTableRow>
+                  ))}
+                </DataTableBody>
+              </DataTable>
+              <p className="mt-2 text-xs text-muted-foreground">
+                One short day is noise; the same drawer short repeatedly is a
+                pattern worth looking into.
+              </p>
             </section>
           )}
 

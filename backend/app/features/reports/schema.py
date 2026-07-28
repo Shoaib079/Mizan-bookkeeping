@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.chart_of_accounts.types import AccountType
 
@@ -245,3 +245,5 @@ class CashBookRead(BaseModel):
     rows: list[CashBookRow]
     source_totals: list[CashBookSourceTotal]
     last_count: CashBookLastCount | None = None
+    # Closed drawer counts, newest first — the over/short pattern over time.
+    counts: list[CashBookLastCount] = Field(default_factory=list)

@@ -3,12 +3,15 @@
 import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
+import { parseTrDate } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
 
 type Props = {
   open: boolean;
@@ -24,6 +27,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
+  const [dateText, setDateText] = useState("");
   const [description, setDescription] = useState("Clear bank commission");
   const [error, setError] = useState<string | null>(null);
   const [confirmWarning, setConfirmWarning] = useState<string | null>(null);
@@ -31,6 +35,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    setDateText(todayTrDate());
     setError(null);
     setConfirmWarning(null);
   }, [open]);
@@ -38,6 +43,11 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
   async function submitClear(confirm: boolean) {
     if (!entityId) {
       setError("Select a restaurant in the sidebar first.");
+      return;
+    }
+    const clearanceDate = parseTrDate(dateText);
+    if (!clearanceDate) {
+      setError("Date must be DD.MM.YYYY.");
       return;
     }
     setSubmitting(true);
@@ -52,6 +62,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             actor_id: actorId,
+            clearance_date: clearanceDate,
             description: description.trim() || null,
             confirm,
           }),
@@ -85,9 +96,23 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
     <Dialog open={open} title="Clear bank commission" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Posts accumulated bank commission from clearing to expense when all
-          card sales are settled and in-transit is zero.
+          Books the card-clearing leftover as commission. Only what is left over
+          <em> as at the date below</em> is cleared — sales deposited after it
+          are untouched.
         </p>
+        <div>
+          <Label htmlFor="clear-date">Clear up to (DD.MM.YYYY)</Label>
+          <DateInput
+            id="clear-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Use the last day of the month you are closing. The entry posts on
+            this date too.
+          </p>
+        </div>
         <div>
           <Label htmlFor="clear-desc">Description (optional)</Label>
           <Input

@@ -56,6 +56,21 @@ export function filterExpenseAccounts(accounts: ChartAccount[]): ChartAccount[] 
   );
 }
 
+/** Revenue accounts the system posts to itself — picking them by hand would
+ * double-count against the flow that owns them (group sales, FX gain). */
+const NON_MANUAL_REVENUE_CODES = new Set(["4300", "4400"]);
+
+/** Income accounts valid as the offset when cash comes IN to a drawer.
+ *
+ * Cash in posts Dr cash / Cr offset, so the offset must be something that
+ * increases on a credit — income. Offering expense accounts here would credit
+ * an expense, i.e. record a refund, which is almost never what's meant. */
+export function filterRevenueAccounts(accounts: ChartAccount[]): ChartAccount[] {
+  return accounts.filter(
+    (a) => a.account_type === "revenue" && !NON_MANUAL_REVENUE_CODES.has(a.code),
+  );
+}
+
 /** Merge a newly created category into a picker list (no refetch). */
 export function mergeExpenseAccounts(
   existing: ChartAccount[],

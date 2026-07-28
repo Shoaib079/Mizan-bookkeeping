@@ -2,7 +2,7 @@
 
 /** Cash drawer movement — Phase 9 Slice 4 / 11.13 optional session. */
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,8 @@ import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import {
   filterExpenseAccounts,
+  filterRevenueAccounts,
   formatExpenseAccountLabel,
-  mergeExpenseAccounts,
   type ChartAccount,
 } from "@/lib/expense-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -50,7 +50,7 @@ export function CashMovementForm({
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccountLeaf[]>([]);
-  const [offsetAccounts, setOffsetAccounts] = useState<ChartAccount[]>([]);
+  const [chartAccounts, setChartAccounts] = useState<ChartAccount[]>([]);
   const [moneyAccountId, setMoneyAccountId] = useState("");
   const [direction, setDirection] = useState<"in" | "out">("in");
   const [offsetAccountId, setOffsetAccountId] = useState("");
@@ -71,11 +71,9 @@ export function CashMovementForm({
       ),
     ]);
     setCashAccounts(cashRes.items.filter((a) => a.is_active));
-    const pickable = filterExpenseAccounts(chartRes.items);
-    setOffsetAccounts(pickable);
+    setChartAccounts(chartRes.items);
     if (defaultCashAccountId) setMoneyAccountId(defaultCashAccountId);
     else if (cashRes.items[0]) setMoneyAccountId(cashRes.items[0].id);
-    if (pickable[0]) setOffsetAccountId(pickable[0].id);
   }, [entityId, defaultCashAccountId]);
 
   useEffect(() => {
@@ -84,6 +82,28 @@ export function CashMovementForm({
       void loadData().catch(() => undefined);
     }
   }, [open, loadData]);
+
+  // Cash in posts Dr cash / Cr offset, so the offset must be income; cash out
+  // posts Dr offset / Cr cash, so it must be an expense. Offering the wrong
+  // side let you credit an expense on a cash-in — a refund, not income.
+  const offsetAccounts = useMemo(
+    () =>
+      direction === "in"
+        ? filterRevenueAccounts(chartAccounts)
+        : filterExpenseAccounts(chartAccounts),
+    [direction, chartAccounts],
+  );
+
+  // Keep the selection valid when the direction (and so the list) changes.
+  useEffect(() => {
+    if (offsetAccounts.length === 0) {
+      setOffsetAccountId("");
+      return;
+    }
+    setOffsetAccountId((current) =>
+      offsetAccounts.some((a) => a.id === current) ? current : offsetAccounts[0].id,
+    );
+  }, [offsetAccounts]);
 
   const amountKurus = parseTryToKurus(amountText);
   const amountInvalid =
@@ -187,12 +207,24 @@ export function CashMovementForm({
           </div>
           <div>
             <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="cash-offset">Offset account (expense)</Label>
-              {entityId && (
+              <Label htmlFor="cash-offset">
+                {direction === "in"
+                  ? "Where the money came from (income)"
+                  : "What it was spent on (expense)"}
+              </Label>
+              {/* Creates an expense category, so it only applies to cash out. */}
+              {entityId && direction === "out" && (
                 <AddExpenseCategoryButton
                   entityId={entityId}
                   onCreated={async (account) => {
-                    setOffsetAccounts((prev) => mergeExpenseAccounts(prev, account));
+                    // Append, don't merge-filter: chartAccounts holds every
+                    // account type, and the expense-only merge would drop the
+                    // revenue ones the cash-in picker needs.
+                    setChartAccounts((prev) =>
+                      prev.some((a) => a.id === account.id)
+                        ? prev
+                        : [...prev, account],
+                    );
                     setOffsetAccountId(account.id);
                   }}
                 />

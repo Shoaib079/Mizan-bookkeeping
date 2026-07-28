@@ -99,26 +99,28 @@ def get_cash_book(
             .order_by(JournalEntry.entry_date, JournalEntry.id)
         ).all()
 
-        # Most recent closed count, for "book says X, you counted Y".
-        last_session = session.scalars(
+        # Closed counts, newest first. One short day is noise; the same drawer
+        # short repeatedly is a pattern, so the history lives with the
+        # roll-forward that explains it rather than off in Banking.
+        closed_sessions = session.scalars(
             select(CashDrawerSession)
             .where(
                 CashDrawerSession.money_account_id == money_account_id,
                 CashDrawerSession.status == CashDrawerSessionStatus.CLOSED,
             )
             .order_by(CashDrawerSession.session_date.desc())
-            .limit(1)
-        ).first()
-        last_count = (
+            .limit(60)
+        ).all()
+        counts = [
             CashBookLastCount(
-                session_date=last_session.session_date,
-                expected_kurus=last_session.expected_balance_kurus or 0,
-                counted_kurus=last_session.counted_balance_kurus or 0,
-                over_short_kurus=last_session.over_short_kurus or 0,
+                session_date=s.session_date,
+                expected_kurus=s.expected_balance_kurus or 0,
+                counted_kurus=s.counted_balance_kurus or 0,
+                over_short_kurus=s.over_short_kurus or 0,
             )
-            if last_session is not None
-            else None
-        )
+            for s in closed_sessions
+        ]
+        last_count = counts[0] if counts else None
 
     rows: list[CashBookRow] = []
     totals: dict[str, CashBookSourceTotal] = {}
@@ -174,4 +176,5 @@ def get_cash_book(
         rows=rows,
         source_totals=sorted(totals.values(), key=lambda t: t.source),
         last_count=last_count,
+        counts=counts,
     )

@@ -258,4 +258,5 @@ export type CashBookRead = {
   rows: CashBookRow[];
   source_totals: CashBookSourceTotal[];
   last_count: CashBookLastCount | null;
+  counts: CashBookLastCount[];
 };
