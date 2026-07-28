@@ -157,6 +157,7 @@ def close_cash_drawer(
     counted_balance_kurus: int,
     actor_id: uuid.UUID,
     description: str = "Cash drawer EOD close",
+    confirm_large_variance: bool = False,
 ) -> CashDrawerCloseResponse:
     result = close_cash_drawer_session(
         session,
@@ -165,6 +166,7 @@ def close_cash_drawer(
         counted_balance_kurus=counted_balance_kurus,
         actor_id=actor_id,
         description=description,
+        confirm_large_variance=confirm_large_variance,
     )
     return CashDrawerCloseResponse(
         session=_to_session_read(result.session),
@@ -187,6 +189,7 @@ def close_cash_drawer_day(
         counted_balance_kurus=payload.counted_balance_kurus,
         actor_id=payload.actor_id,
         description=payload.description,
+        confirm_large_variance=payload.confirm_large_variance,
     )
     return CashDrawerCloseResponse(
         session=_to_session_read(result.session),

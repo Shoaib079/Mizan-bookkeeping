@@ -112,6 +112,7 @@ describe("navGroups", () => {
       "/reports",
       "/reports/ledger",
       "/reports/expense-register",
+      "/reports/cash-book",
       "/review/manual-journals",
       "/settings/restaurant",
       "/settings/profile",

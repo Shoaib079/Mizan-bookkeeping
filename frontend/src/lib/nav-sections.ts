@@ -190,12 +190,8 @@ export const NAV_SECTIONS: NavSection[] = [
           path === "/balances/staff" ||
           path === "/balances/partners" ||
           path === "/payables" ||
-          path === "/receivables",
-      },
-      {
-        href: "/balances/cash",
-        label: "Cash & bank",
-        match: (path) => path === "/balances/cash",
+          path === "/receivables" ||
+          path === "/balances/cash",
       },
     ],
   },
@@ -284,6 +280,7 @@ export const REPORTS_CARD_HREFS = [
   "/reports/cash-flow",
   "/reports/ledger",
   "/reports/expense-register",
+  "/reports/cash-book",
   "/reports/kdv-input",
   "/reports/delivery-sales",
   "/reports/period-comparison",
@@ -303,6 +300,8 @@ export type RouteEntryKind =
 export const LEGACY_BALANCE_REDIRECTS: Record<string, string> = {
   "/payables": "/balances/suppliers",
   "/receivables": "/balances/customers",
+  // Was a signpost page of links into Banking — go straight to the real thing.
+  "/balances/cash": "/banking",
 };
 
 export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[] = [
@@ -322,7 +321,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/balances/customers", kind: "page" },
   { pattern: "/balances/staff", kind: "page" },
   { pattern: "/balances/partners", kind: "page" },
-  { pattern: "/balances/cash", kind: "tab" },
+  { pattern: "/balances/cash", kind: "redirect" },
   { pattern: "/sales", kind: "tab" },
   { pattern: "/sales/[id]", kind: "drill-down" },
   { pattern: "/cards", kind: "tab" },
@@ -364,6 +363,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/reports/balance-sheet", kind: "reports-card" },
   { pattern: "/reports/cash-flow", kind: "reports-card" },
   { pattern: "/reports/expense-register", kind: "reports-card" },
+  { pattern: "/reports/cash-book", kind: "reports-card" },
   { pattern: "/reports/kdv-input", kind: "reports-card" },
   { pattern: "/reports/delivery-sales", kind: "reports-card" },
   { pattern: "/reports/period-comparison", kind: "reports-card" },

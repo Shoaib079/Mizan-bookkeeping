@@ -221,3 +221,41 @@ export type ExpenseRegisterRead = {
   total_kurus: number;
   entry_count: number;
 };
+
+export type CashBookRow = {
+  entry_date: string;
+  description: string;
+  source: string;
+  in_kurus: number;
+  out_kurus: number;
+  balance_kurus: number;
+  journal_entry_id: string;
+};
+
+export type CashBookSourceTotal = {
+  source: string;
+  in_kurus: number;
+  out_kurus: number;
+  entry_count: number;
+};
+
+export type CashBookLastCount = {
+  session_date: string;
+  expected_kurus: number;
+  counted_kurus: number;
+  over_short_kurus: number;
+};
+
+export type CashBookRead = {
+  money_account_id: string;
+  money_account_name: string;
+  from_date: string;
+  to_date: string;
+  opening_kurus: number;
+  total_in_kurus: number;
+  total_out_kurus: number;
+  closing_kurus: number;
+  rows: CashBookRow[];
+  source_totals: CashBookSourceTotal[];
+  last_count: CashBookLastCount | null;
+};

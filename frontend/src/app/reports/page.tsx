@@ -11,6 +11,7 @@ import {
   Percent,
   Receipt,
   Scale,
+  Wallet,
   TrendingUp,
   Truck,
 } from "lucide-react";
@@ -76,6 +77,15 @@ const reportCards: ReportCard[] = [
     title: "General ledger",
     description: "Every journal entry with debit and credit lines.",
     icon: BookOpen,
+    category: "Financial statements",
+    financial: true,
+    hideExport: true,
+  },
+  {
+    href: "/reports/cash-book",
+    title: "Cash book",
+    description: "Drawer money in and out, and what should be left in it.",
+    icon: Wallet,
     category: "Financial statements",
     financial: true,
     hideExport: true,

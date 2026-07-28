@@ -12,7 +12,7 @@ from app.core.listing import ListParams, PaginatedListOut, list_params_dependenc
 
 from app.config import settings
 from app.core.cash.errors import DrawerDayClosedError, DrawerUnlockRequiredError
-from app.core.cash.posting import InvalidCashDrawerError
+from app.core.cash.posting import InvalidCashDrawerError, LargeCashVarianceError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard, require_owner_members, resolve_actor_id
@@ -112,6 +112,8 @@ def close_cash_drawer_day_route(
         return cash_service.close_cash_drawer_day(session, entity_id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LargeCashVarianceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except (InvalidCashDrawerError, DrawerDayClosedError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
@@ -135,9 +137,12 @@ def close_cash_drawer_session_route(
             counted_balance_kurus=payload.counted_balance_kurus,
             actor_id=actor_id,
             description=payload.description,
+            confirm_large_variance=payload.confirm_large_variance,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LargeCashVarianceError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except InvalidCashDrawerError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:

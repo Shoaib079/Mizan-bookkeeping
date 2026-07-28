@@ -36,6 +36,28 @@ from app.features.cash.models import (
 from app.features.entities import service as entity_service
 
 
+class LargeCashVarianceError(ValueError):
+    """Counted balance is implausibly far from the books — needs confirmation."""
+
+
+# A drawer out by more than this share of expected cash (or this absolute
+# amount, whichever is larger) is treated as suspicious rather than routine.
+_VARIANCE_SHARE_OF_EXPECTED = 0.10
+_VARIANCE_FLOOR_KURUS = 50_000  # 500,00 ₺ — never nag over small change
+
+
+def _variance_is_implausible(over_short_kurus: int, expected_kurus: int) -> bool:
+    """True when the over/short is too large to be ordinary drawer drift."""
+    magnitude = abs(over_short_kurus)
+    if magnitude == 0:
+        return False
+    threshold = max(
+        _VARIANCE_FLOOR_KURUS,
+        int(abs(expected_kurus) * _VARIANCE_SHARE_OF_EXPECTED),
+    )
+    return magnitude > threshold
+
+
 class InvalidCashDrawerError(ValueError):
     """Cash drawer preconditions failed."""
 
@@ -305,6 +327,7 @@ def close_cash_drawer_session(
     counted_balance_kurus: int,
     actor_id: uuid.UUID,
     description: str = "Cash drawer EOD close",
+    confirm_large_variance: bool = False,
 ) -> CashDrawerCloseResult:
     """Close drawer day — post over/short if needed and lock the session."""
     if counted_balance_kurus < 0:
@@ -345,6 +368,20 @@ def close_cash_drawer_session(
             AccountNormalBalance.DEBIT,
         )
         over_short_kurus = counted_balance_kurus - expected_balance_kurus
+
+        # A drawer is normally out by small change. A large variance is usually a
+        # typo or an unrecorded movement, not a real loss — and closing writes it
+        # off to 5400 permanently, so make the owner confirm first.
+        if not confirm_large_variance and _variance_is_implausible(
+            over_short_kurus, expected_balance_kurus
+        ):
+            raise LargeCashVarianceError(
+                f"Counted {counted_balance_kurus} kuruş against an expected "
+                f"{expected_balance_kurus} — a difference of {over_short_kurus}. "
+                "That is large enough to usually be a typo or a movement that "
+                "wasn't recorded. Check the cash book, then confirm to post it "
+                "as over/short."
+            )
 
         close_journal_entry: JournalEntry | None = None
         if over_short_kurus != 0:

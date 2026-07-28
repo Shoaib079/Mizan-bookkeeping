@@ -13,6 +13,7 @@ from app.core.auth.deps import financial_reports_guard, reports_read_guard
 from app.db.session import get_session
 from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
+from app.features.reports import cash_book
 from app.features.reports import cash_flow
 from app.features.reports import excel_export
 from app.features.reports import expense_register
@@ -23,6 +24,7 @@ from app.features.reports import period_comparison
 from app.features.entities import service as entity_service
 from app.features.reports.schema import (
     BalanceSheetRead,
+    CashBookRead,
     CashFlowRead,
     DeliverySalesReportRead,
     ExpenseRegisterRead,
@@ -99,6 +101,27 @@ def export_delivery_sales(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DeliveryNotEnabledError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidDateRangeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/cash-book", response_model=CashBookRead)
+def get_cash_book(
+    entity_id: uuid.UUID,
+    money_account_id: uuid.UUID = Query(...),
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
+) -> CashBookRead:
+    try:
+        return cash_book.get_cash_book(
+            session, entity_id, money_account_id, from_date, to_date
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except cash_book.CashAccountRequiredError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidDateRangeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

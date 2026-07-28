@@ -10,7 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
@@ -44,6 +44,7 @@ export function CashDrawerCloseDayForm({
   const [description, setDescription] = useState("Cash drawer EOD close");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmWarning, setConfirmWarning] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -77,8 +78,7 @@ export function CashDrawerCloseDayForm({
       ? countedPreviewKurus - expectedKurus
       : null;
 
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
+  async function submitClose(confirmLargeVariance: boolean) {
     if (!entityId) {
       setError("Select a restaurant in the sidebar first.");
       return;
@@ -107,18 +107,32 @@ export function CashDrawerCloseDayForm({
           counted_balance_kurus: countedKurus,
           actor_id: actorId,
           description,
+          confirm_large_variance: confirmLargeVariance,
         }),
       });
       submitIdempotency.completeSubmit();
+      setConfirmWarning(null);
       onClosed?.();
       toast("Drawer day closed");
       onClose();
       setCountedText("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Close failed");
+      // 409 = variance guard: offer confirmation instead of a dead error.
+      if (err instanceof ApiError && err.status === 409) {
+        submitIdempotency.resetSubmit();
+        setConfirmWarning(err.message);
+      } else {
+        setConfirmWarning(null);
+        setError(err instanceof Error ? err.message : "Close failed");
+      }
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    void submitClose(false);
   }
 
   return (
@@ -206,9 +220,32 @@ export function CashDrawerCloseDayForm({
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Closing…" : "Close drawer day"}
-        </Button>
+        {confirmWarning ? (
+          <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3">
+            <p className="text-sm text-amber-900">{confirmWarning}</p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={submitting}
+                onClick={() => setConfirmWarning(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={submitting}
+                onClick={() => void submitClose(true)}
+              >
+                {submitting ? "Closing…" : "Post anyway"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Closing…" : "Close drawer day"}
+          </Button>
+        )}
       </form>
     </Dialog>
   );

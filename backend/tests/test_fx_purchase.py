@@ -380,6 +380,11 @@ def test_fx_purchase_cash_movement_visible_on_drawer_session(
             "session_date": "2026-05-15",
             "counted_balance_kurus": 0,
             "actor_id": str(actor.id),
+            # This fixture spends from the drawer without ever putting cash in,
+            # so the books sit at −1.750,00 ₺ and counting 0 is a 1.750,00 ₺
+            # swing — the large-variance guard correctly flags it. The subject
+            # here is FX movement visibility, so confirm past the guard.
+            "confirm_large_variance": True,
         },
     )
     assert close.status_code == 200

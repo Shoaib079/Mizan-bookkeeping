@@ -202,6 +202,14 @@ export const appRoutes: AppRoute[] = [
     nestedUnder: "/reports",
   },
   {
+    href: "/reports/cash-book",
+    label: "Cash book",
+    keywords: "cash drawer till money in out should have count reconcile",
+    icon: BookOpen,
+    group: "Reports",
+    nestedUnder: "/reports",
+  },
+  {
     href: "/reports/expense-register",
     label: "Expense register",
     keywords:

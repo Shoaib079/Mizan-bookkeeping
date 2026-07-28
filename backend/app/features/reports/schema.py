@@ -197,3 +197,51 @@ class ExpenseRegisterRead(BaseModel):
     account_totals: list[ExpenseRegisterAccountTotal]
     total_kurus: int
     entry_count: int
+
+
+class CashBookRow(BaseModel):
+    """One movement through a cash drawer."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    entry_date: date
+    description: str
+    source: str
+    in_kurus: int
+    out_kurus: int
+    balance_kurus: int
+    journal_entry_id: uuid.UUID
+
+
+class CashBookSourceTotal(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source: str
+    in_kurus: int
+    out_kurus: int
+    entry_count: int
+
+
+class CashBookLastCount(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    session_date: date
+    expected_kurus: int
+    counted_kurus: int
+    over_short_kurus: int
+
+
+class CashBookRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    money_account_id: uuid.UUID
+    money_account_name: str
+    from_date: date
+    to_date: date
+    opening_kurus: int
+    total_in_kurus: int
+    total_out_kurus: int
+    closing_kurus: int
+    rows: list[CashBookRow]
+    source_totals: list[CashBookSourceTotal]
+    last_count: CashBookLastCount | None = None

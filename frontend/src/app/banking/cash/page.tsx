@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { Wallet } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CashDrawerCloseDayForm } from "@/components/forms/cash-drawer-close-day-form";
 import { CashDrawerCloseForm } from "@/components/forms/cash-drawer-close-form";
@@ -30,12 +30,26 @@ import type {
   CashDrawerSessionRead,
 } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
+import { cn } from "@/lib/utils";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 
 export default function CashDrawerPage() {
   const { entityId, actorId } = useEntity();
   const [sessions, setSessions] = useState<CashDrawerSessionRead[]>([]);
+  /** Closed counts only — an open session has nothing counted yet. */
+  const countHistory = useMemo(
+    () => sessions.filter((s) => s.status === "closed"),
+    [sessions],
+  );
+  const netOverShort = useMemo(
+    () => countHistory.reduce((sum, s) => sum + (s.over_short_kurus ?? 0), 0),
+    [countHistory],
+  );
+  const matchedCount = useMemo(
+    () => countHistory.filter((s) => (s.over_short_kurus ?? 0) === 0).length,
+    [countHistory],
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CashDrawerSessionDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -298,6 +312,69 @@ export default function CashDrawerPage() {
             </section>
           )}
         </div>
+      )}
+
+      {countHistory.length > 0 && (
+        <section className="mt-8">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold">Count history</h2>
+            <p className="text-xs text-muted-foreground">
+              {countHistory.length} count
+              {countHistory.length === 1 ? "" : "s"} ·{" "}
+              {matchedCount} matched exactly · net{" "}
+              <span
+                className={cn(
+                  "font-medium tabular-nums",
+                  netOverShort > 0 && "text-warning",
+                  netOverShort < 0 && "text-destructive",
+                )}
+              >
+                {formatTry(netOverShort)}
+              </span>
+            </p>
+          </div>
+          <DataTable>
+            <DataTableHead>
+              <tr>
+                <DataTableHeaderCell>Date</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Should be</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Counted</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Difference</DataTableHeaderCell>
+              </tr>
+            </DataTableHead>
+            <DataTableBody>
+              {countHistory.map((s) => {
+                const diff = s.over_short_kurus ?? 0;
+                return (
+                  <DataTableRow key={s.id}>
+                    <DataTableCell>{formatTrDate(s.session_date)}</DataTableCell>
+                    <DataTableCell align="right" className="tabular-nums">
+                      {formatTry(s.expected_balance_kurus ?? 0)}
+                    </DataTableCell>
+                    <DataTableCell align="right" className="tabular-nums">
+                      {formatTry(s.counted_balance_kurus ?? 0)}
+                    </DataTableCell>
+                    <DataTableCell
+                      align="right"
+                      className={cn(
+                        "tabular-nums",
+                        diff === 0 && "text-muted-foreground",
+                        diff > 0 && "text-warning",
+                        diff < 0 && "text-destructive",
+                      )}
+                    >
+                      {diff === 0 ? "—" : `${diff > 0 ? "+" : ""}${formatTry(diff)}`}
+                    </DataTableCell>
+                  </DataTableRow>
+                );
+              })}
+            </DataTableBody>
+          </DataTable>
+          <p className="mt-2 text-xs text-muted-foreground">
+            One short day is noise; the same drawer short repeatedly is a pattern
+            worth looking into.
+          </p>
+        </section>
       )}
 
       {!loading && entityId && sessions.length === 0 && (

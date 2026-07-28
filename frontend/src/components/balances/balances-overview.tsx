@@ -5,6 +5,9 @@
  * links straight to the directory that owns each number. */
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+
+import { apiFetch } from "@/lib/api";
 import {
   ArrowRight,
   Banknote,
@@ -68,6 +71,37 @@ export function BalancesOverview() {
   const payables = useSupplierBalances(entityId ?? "");
   const receivables = useCustomerBalances(entityId ?? "");
 
+  // Money actually held, across every bank, cash drawer and FX wallet.
+  const [cashAndBankKurus, setCashAndBankKurus] = useState(0);
+  const [moneyLoading, setMoneyLoading] = useState(false);
+
+  useEffect(() => {
+    if (!entityId) {
+      setCashAndBankKurus(0);
+      return;
+    }
+    let cancelled = false;
+    setMoneyLoading(true);
+    void apiFetch<{ items: { balance_kurus: number; is_active: boolean }[] }>(
+      `/entities/${entityId}/banking/accounts?limit=100`,
+    )
+      .then((res) => {
+        if (cancelled) return;
+        setCashAndBankKurus(
+          res.items
+            .filter((a) => a.is_active)
+            .reduce((sum, a) => sum + (a.balance_kurus ?? 0), 0),
+        );
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setMoneyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [entityId]);
+
   if (!entityId) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -101,10 +135,12 @@ export function BalancesOverview() {
           loading={receivables.loading}
         />
         <BalanceCard
-          href="/balances/cash"
+          href="/banking"
           title="Cash & bank"
-          hint="Cash on hand and bank account balances"
+          hint="Money you hold — open Banking for each account"
           icon={Wallet}
+          amount={formatTry(cashAndBankKurus)}
+          loading={moneyLoading}
         />
         <BalanceCard
           href="/staff"

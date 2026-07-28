@@ -67,6 +67,8 @@ class CashDrawerCloseRequest(BaseModel):
     counted_balance_kurus: int = Field(ge=0)
     actor_id: OptionalActorId = None
     description: str = Field(default="Cash drawer EOD close", max_length=512)
+    # Set true to post an implausibly large over/short anyway.
+    confirm_large_variance: bool = False
 
 
 class CashDrawerCloseDayRequest(BaseModel):
@@ -75,6 +77,7 @@ class CashDrawerCloseDayRequest(BaseModel):
     counted_balance_kurus: int = Field(ge=0)
     actor_id: OptionalActorId = None
     description: str = Field(default="Cash drawer EOD close", max_length=512)
+    confirm_large_variance: bool = False
 
 
 class CashDrawerCloseResponse(BaseModel):
