@@ -13,6 +13,7 @@ from app.core.auth.deps import financial_reports_guard, reports_read_guard
 from app.db.session import get_session
 from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
+from app.features.reports import bank_reconciliation
 from app.features.reports import cash_book
 from app.features.reports import cash_flow
 from app.features.reports import excel_export
@@ -24,6 +25,7 @@ from app.features.reports import period_comparison
 from app.features.entities import service as entity_service
 from app.features.reports.schema import (
     BalanceSheetRead,
+    BankReconciliationRead,
     CashBookRead,
     CashFlowRead,
     DeliverySalesReportRead,
@@ -104,6 +106,22 @@ def export_delivery_sales(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidDateRangeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/bank-reconciliation", response_model=BankReconciliationRead)
+def get_bank_reconciliation(
+    entity_id: uuid.UUID,
+    as_of: date | None = Query(default=None),
+    money_account_id: uuid.UUID | None = Query(default=None),
+    session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
+) -> BankReconciliationRead:
+    try:
+        return bank_reconciliation.get_bank_reconciliation(
+            session, entity_id, as_of=as_of, money_account_id=money_account_id
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/cash-book", response_model=CashBookRead)

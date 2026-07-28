@@ -282,6 +282,7 @@ def _to_statement_read(
         period_end=statement.period_end,
         original_filename=statement.original_filename,
         line_count=statement.line_count,
+        closing_balance_kurus=statement.closing_balance_kurus,
         skipped_duplicate_count=skipped_duplicate_count,
         imported_at=statement.imported_at,
         lines=[_to_line_read(line, session=session) for line in lines],
@@ -2847,3 +2848,29 @@ def correct_statement_line(
         partner_id=partner_id,
         match_token=match_token,
     )
+
+
+def set_statement_closing_balance(
+    session: Session,
+    entity_id: uuid.UUID,
+    statement_id: uuid.UUID,
+    closing_balance_kurus: int,
+) -> BankStatementRead:
+    """Record the bank's own closing balance so reconciliation can spot lines
+    missing from the import entirely, not just unclassified ones."""
+    with entity_context(session, entity_id):
+        require_entity_context()
+        statement = session.get(BankStatement, statement_id)
+        if statement is None:
+            raise LookupError("Statement not found")
+        statement.closing_balance_kurus = closing_balance_kurus
+        session.commit()
+        session.refresh(statement)
+        lines = list(
+            session.scalars(
+                select(BankStatementLine)
+                .where(BankStatementLine.statement_id == statement_id)
+                .order_by(BankStatementLine.transaction_date)
+            )
+        )
+        return _to_statement_read(statement, lines, session=session)

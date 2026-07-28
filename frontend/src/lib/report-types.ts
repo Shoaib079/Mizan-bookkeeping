@@ -260,3 +260,33 @@ export type CashBookRead = {
   last_count: CashBookLastCount | null;
   counts: CashBookLastCount[];
 };
+
+export type UnreconciledLine = {
+  id: string;
+  statement_id: string;
+  transaction_date: string;
+  description: string;
+  amount_kurus: number;
+  status: string;
+};
+
+export type BankReconciliationAccount = {
+  money_account_id: string;
+  name: string;
+  account_kind: string;
+  book_balance_kurus: number;
+  imported_lines_total_kurus: number;
+  unreconciled_count: number;
+  unreconciled_total_kurus: number;
+  statement_period_end: string | null;
+  stated_closing_balance_kurus: number | null;
+  missing_from_import_kurus: number | null;
+  is_reconciled: boolean;
+  latest_statement_id: string | null;
+  lines: UnreconciledLine[];
+};
+
+export type BankReconciliationRead = {
+  as_of: string | null;
+  accounts: BankReconciliationAccount[];
+};

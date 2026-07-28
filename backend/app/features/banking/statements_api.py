@@ -28,6 +28,7 @@ from app.features.banking.schema import (
     BankImportProfileUpsert,
     BankStatementPreview,
     BankStatementRead,
+    SetStatementClosingBalanceRequest,
     ClassifyStatementLineRequest,
     ClassifyStatementLineResult,
     CorrectStatementLineRequest,
@@ -302,6 +303,24 @@ def discard_bank_statement(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except statement_service.StatementNotDiscardableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@statements_router.patch(
+    "/{statement_id}/closing-balance", response_model=BankStatementRead
+)
+def set_statement_closing_balance(
+    entity_id: uuid.UUID,
+    statement_id: uuid.UUID,
+    payload: SetStatementClosingBalanceRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> BankStatementRead:
+    try:
+        return statement_service.set_statement_closing_balance(
+            session, entity_id, statement_id, payload.closing_balance_kurus
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @statements_router.patch(

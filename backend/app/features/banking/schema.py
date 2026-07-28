@@ -178,6 +178,8 @@ class BankStatementRead(BaseModel):
     period_end: date
     original_filename: str
     line_count: int
+    # Balance the bank printed for period_end, when known or entered by hand.
+    closing_balance_kurus: int | None = None
     skipped_duplicate_count: int = 0
     imported_at: datetime
     lines: list[BankStatementLineRead]
@@ -359,3 +361,9 @@ class CreditCardPaymentRead(BaseModel):
     journal_entry_id: uuid.UUID
     bank_statement_line_id: uuid.UUID | None
     created_at: datetime
+
+
+class SetStatementClosingBalanceRequest(BaseModel):
+    """Record the closing balance printed on the bank's own statement."""
+
+    closing_balance_kurus: int

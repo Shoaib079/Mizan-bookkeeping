@@ -247,3 +247,42 @@ class CashBookRead(BaseModel):
     last_count: CashBookLastCount | None = None
     # Closed drawer counts, newest first — the over/short pattern over time.
     counts: list[CashBookLastCount] = Field(default_factory=list)
+
+
+class UnreconciledLine(BaseModel):
+    """A statement line that hasn't become a journal entry yet."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    statement_id: uuid.UUID
+    transaction_date: date
+    description: str
+    amount_kurus: int
+    status: str
+
+
+class BankReconciliationAccount(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    money_account_id: uuid.UUID
+    name: str
+    account_kind: str
+    book_balance_kurus: int
+    imported_lines_total_kurus: int
+    unreconciled_count: int
+    unreconciled_total_kurus: int
+    statement_period_end: date | None = None
+    # What the bank printed, when known — lets us spot lines missing entirely.
+    stated_closing_balance_kurus: int | None = None
+    missing_from_import_kurus: int | None = None
+    is_reconciled: bool = False
+    latest_statement_id: uuid.UUID | None = None
+    lines: list[UnreconciledLine] = Field(default_factory=list)
+
+
+class BankReconciliationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    as_of: date | None = None
+    accounts: list[BankReconciliationAccount] = Field(default_factory=list)

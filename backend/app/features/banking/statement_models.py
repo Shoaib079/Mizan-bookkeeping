@@ -74,6 +74,10 @@ class BankStatement(EntityScopedMixin, Base):
     original_filename: Mapped[str] = mapped_column(String(512), nullable=False)
     storage_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     line_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Balance the bank itself printed for period_end, when known. Lets
+    # reconciliation catch lines missing from the import, not just unclassified
+    # ones. Nullable: not every format exposes it; can be entered by hand.
+    closing_balance_kurus: Mapped[int | None] = mapped_column(Integer, nullable=True)
     imported_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 

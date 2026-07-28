@@ -82,6 +82,16 @@ const reportCards: ReportCard[] = [
     hideExport: true,
   },
   {
+    href: "/reports/bank-reconciliation",
+    title: "Bank reconciliation",
+    description: "Whether each bank account agrees with the bank.",
+    icon: Landmark,
+    category: "Financial statements",
+    financial: true,
+    hideExport: true,
+    skipRange: true,
+  },
+  {
     href: "/reports/cash-book",
     title: "Cash book",
     description: "Drawer money in and out, and what should be left in it.",
