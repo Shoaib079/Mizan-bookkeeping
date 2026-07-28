@@ -18,6 +18,7 @@ const pickers: StatementClassificationPickers = {
   moneyAccounts: [],
   creditCards: [],
   expenseAccounts: [],
+  incomeAccounts: [],
   deliveryPlatforms: [],
   deliveryPlatformsError: null,
   loading: false,

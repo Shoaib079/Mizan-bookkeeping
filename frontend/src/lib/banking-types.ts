@@ -76,6 +76,7 @@ export type StatementLineClassification =
   | "partner_loan_payment"
   | "loan_payment"
   | "loan_receipt"
+  | "other_income"
   | "unknown";
 
 export type BankStatementLine = {

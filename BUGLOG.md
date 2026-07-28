@@ -2,6 +2,24 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-27 — Money in with no home: bank accounts could never reach "Reconciled"
+
+**Symptom:** Certain inflows on an imported bank statement — bank interest, a supplier refund, an insurance payout, an owner depositing miscellaneous income — had **no classification that fit**. The line sat in the review queue permanently, so `unreconciled_count` never hit 0 and the account never showed as reconciled on Reports → Bank reconciliation.
+
+**Root cause (audit, 2026-07-27):** the classification chart was **asymmetric**. All 21 classifications are reachable and direction is enforced both in the UI (`classificationOptionsForAmount`) and server-side (21 validations) — that part was sound. But of the options, **13 outflow classifications had a catch-all** (`rent_utility` = "Expense from bank", pick any expense GL) while the **7 inflow classifications had none**. Every outflow could always be booked somewhere; an inflow that wasn't a customer payment, card settlement, delivery settlement, loan receipt or partner contribution had nowhere to go.
+
+**Fix:** added `other_income` — "Income to bank", the inflow twin of "Expense from bank". Posts `Dr bank / Cr chosen income account`.
+- `StatementLineClassification.OTHER_INCOME` (`statement_models.py`)
+- `build_bank_income_posting_lines` / `_validate_income_gl_account` / `post_bank_income` (`core/banking/statement_posting.py`)
+- Validation branch requires an **inflow**, an `actor_id`, and an `income_account_id` (`statements.py`)
+- **The income account must be a revenue account.** Crediting an expense would silently record a refund; crediting a liability would hide the income entirely. Enforced server-side, and the picker only offers revenue accounts (`filterRevenueAccounts`).
+- **Second bug found while wiring:** `correct_statement_line` accepted `income_account_id` but **dropped it** when delegating to `classify_statement_line`, so every *correction* to other_income would have failed with "income_account_id is required". Fixed and covered.
+- Frontend: option in `STATEMENT_CLASSIFICATION_OPTIONS` (`direction: "inflow"`, `target: "income"`), `incomeAccounts` on the pickers hook, and the picker wired into classify row, classify bar, review row and bulk bar.
+
+**Deliberate asymmetry with expenses:** the income picker has **no first-in-list default**, unlike the expense picker. The first revenue account is Sales Revenue, so a silent default would book bank interest as food sales and quietly inflate the top line. The user must pick.
+
+**Guarding tests:** `backend/tests/test_statement_other_income.py` (5: Dr bank / Cr income shape, outflow rejected, missing account rejected, non-revenue account rejected, correction keeps the account) and `frontend/src/lib/statement-other-income.test.ts` (8). ⚠️ **Owner: run `cd backend && .venv/bin/pytest -q` before merge — money-critical, sandbox cannot run pytest.**
+
 ## 2026-07-13 — Staff advance can't be applied against extra-days owed (OPEN — handed to Cursor)
 
 **Symptom:** Outstanding advance grows and can never be netted, even at 0-cash payment. India Gate / "Latif Coşgun": staff balance 170 ₺ but outstanding advance 13.515 ₺ = 75 (23.05 excess) + 13.440 (08.06). Owner owes 13.440 for extra days AND holds a 13.440 advance; they offset on the balance but sit gross with no way to net them.

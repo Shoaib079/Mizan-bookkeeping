@@ -45,7 +45,10 @@ import {
 } from "@/lib/statement-line-form-state";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
-import { expenseAccountComboboxOptions } from "@/lib/expense-accounts";
+import {
+  chartAccountComboboxOptions,
+  expenseAccountComboboxOptions,
+} from "@/lib/expense-accounts";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -81,6 +84,7 @@ export function StatementClassifyBar({
   const [counterpartId, setCounterpartId] = useState("");
   const [creditCardId, setCreditCardId] = useState("");
   const [expenseAccountId, setExpenseAccountId] = useState("");
+  const [incomeAccountId, setIncomeAccountId] = useState("");
   const [deliveryPlatformId, setDeliveryPlatformId] = useState("");
   const [learnAs, setLearnAs] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +116,7 @@ export function StatementClassifyBar({
     setCounterpartId(targets.counterpartId);
     setCreditCardId(targets.creditCardId);
     setExpenseAccountId(targets.expenseAccountId);
+    setIncomeAccountId(targets.incomeAccountId);
     setDeliveryPlatformId(targets.deliveryPlatformId);
   }
 
@@ -132,6 +137,7 @@ export function StatementClassifyBar({
     if (kind === "transfer" && !counterpartId) return true;
     if (kind === "credit_card" && !creditCardId) return true;
     if (kind === "expense" && !expenseAccountId) return true;
+    if (kind === "income" && !incomeAccountId) return true;
     if (kind === "delivery_platform" && !deliveryPlatformId) return true;
     return false;
   }
@@ -183,6 +189,7 @@ export function StatementClassifyBar({
     if (target === "customer_payment") body.customer_id = customerId;
     if (target === "rent_utility" || target === "store_purchase")
       body.expense_account_id = expenseAccountId;
+    if (target === "other_income") body.income_account_id = incomeAccountId;
     if (target === "delivery_settlement")
       body.delivery_platform_id = deliveryPlatformId;
     if (target === "staff_payment" || target === "staff_advance" || target === "staff_incentive")
@@ -420,6 +427,19 @@ export function StatementClassifyBar({
             />
           )}
         </div>
+      );
+    }
+    if (targetKind === "income") {
+      return (
+        <Combobox
+          id={`${idPrefix}-income`}
+          value={incomeAccountId}
+          onValueChange={setIncomeAccountId}
+          options={chartAccountComboboxOptions(pickers.incomeAccounts)}
+          placeholder="Income GL — interest, refunds, other income…"
+          emptyMessage="No income accounts — add one under Chart of accounts"
+          className="h-9 w-full min-w-0 text-xs"
+        />
       );
     }
     if (targetKind === "delivery_platform") {

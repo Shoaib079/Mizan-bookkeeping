@@ -2,6 +2,17 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-07-27
+
+⚠️ **`tsc` + full frontend vitest (546 tests) + `py_compile` green in this session — backend `pytest` NOT run here (sandbox lacks Python 3.11 + Postgres). Run `cd backend && .venv/bin/pytest -q` before relying on the backend changes below.**
+
+**"Income to bank" — money in that isn't a customer or a settlement now has a home.**
+- Bank interest, a supplier refund, an insurance payout: previously **no classification fit**, so the line stayed in the review queue and the bank account could never reach "Reconciled". Outflows have always had a catch-all ("Expense from bank"); inflows had none. Now they do.
+- Pick **Income to bank** on any money-in line, choose the income account, and it posts **Dr bank / Cr that income account**.
+- The picker offers **income accounts only** — crediting an expense would record a refund instead of income, and the server rejects it either way. FX Gain and Sales Discounts stay out of the list because the FX and group-sale flows own them.
+- Unlike the expense picker, this one **has no default** — the first income account is Sales Revenue, and silently booking bank interest as food sales would inflate the top line. You pick it.
+- Also fixed while wiring: **correcting** a line to Income to bank would have failed outright, because the correction path forgot to pass the chosen account through.
+
 ## 2026-07-13
 
 ⚠️ **Verified `tsc` + `py_compile` in the working session only — backend `pytest` NOT run here (sandbox lacks Python 3.11 + Postgres). Owner runs `cd backend && .venv/bin/pytest -q` before relying on the backend changes below.**

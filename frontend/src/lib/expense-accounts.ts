@@ -40,6 +40,10 @@ export function expenseAccountComboboxOptions(
   }));
 }
 
+/** Same "code — name" label, for income pickers; the formatting isn't
+ * expense-specific, only the list that gets passed in is. */
+export const chartAccountComboboxOptions = expenseAccountComboboxOptions;
+
 /**
  * Control / special-flow expense accounts that must NOT be picked in a free-form
  * manual expense — they require a dedicated flow or are system-managed:

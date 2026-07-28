@@ -28,7 +28,10 @@ describe("SEC-4: M2 — FX parser uses parseTryParts (no 100× bug)", () => {
 
   it("parseFxNative imports parseTryParts instead of using parseFloat", async () => {
     const src = await readSource("./fx-money.ts");
-    expect(src).toContain('import { parseTryParts }');
+    // Match the named import, not the whole import statement — the module also
+    // pulls in formatKurus (for formatFxNativeInput), and pinning the exact
+    // statement text made an unrelated addition look like a regression.
+    expect(src).toMatch(/import \{[^}]*\bparseTryParts\b[^}]*\} from "@\/lib\/money"/);
     expect(src).not.toContain("parseFloat");
   });
 

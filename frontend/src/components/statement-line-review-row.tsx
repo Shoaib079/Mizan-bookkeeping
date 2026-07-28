@@ -16,8 +16,10 @@ import type {
 } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import {
+  chartAccountComboboxOptions,
   expenseAccountComboboxOptions,
   filterExpenseAccounts,
+  filterRevenueAccounts,
   mergeExpenseAccounts,
   type ChartAccount,
 } from "@/lib/expense-accounts";
@@ -78,11 +80,14 @@ export function StatementLineReviewRow({
   const [moneyAccounts, setMoneyAccounts] = useState<MoneyAccount[]>([]);
   const [creditCards, setCreditCards] = useState<MoneyAccount[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
+  const [incomeAccounts, setIncomeAccounts] = useState<ChartAccount[]>([]);
   const [supplierId, setSupplierId] = useState(line.supplier_id ?? line.suggestion?.supplier_id ?? "");
   const [customerId, setCustomerId] = useState("");
   const [counterpartId, setCounterpartId] = useState("");
   const [creditCardId, setCreditCardId] = useState("");
   const [expenseAccountId, setExpenseAccountId] = useState("");
+  // Deliberately no first-in-list default (that would be Sales Revenue).
+  const [incomeAccountId, setIncomeAccountId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [correctOpen, setCorrectOpen] = useState(false);
@@ -118,6 +123,7 @@ export function StatementLineReviewRow({
     setCreditCards(ccRes.items);
     const expenses = filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(expenses);
+    setIncomeAccounts(filterRevenueAccounts(chartRes.items));
     if (!supplierId && supRes.items[0]) setSupplierId(supRes.items[0].id);
     const suggested =
       line.suggestion?.supplier_id ??
@@ -179,6 +185,8 @@ export function StatementLineReviewRow({
     if (targetClassification === "customer_payment") body.customer_id = customerId;
     if (targetClassification === "rent_utility" || targetClassification === "store_purchase")
       body.expense_account_id = expenseAccountId;
+    if (targetClassification === "other_income")
+      body.income_account_id = incomeAccountId;
     return body;
   }
 
@@ -510,6 +518,20 @@ export function StatementLineReviewRow({
                     />
                   </div>
                 ) : null}
+
+                {classification === "other_income" && (
+                  <div>
+                    <Label htmlFor={`inc-${line.id}`}>Income account</Label>
+                    <Combobox
+                      id={`inc-${line.id}`}
+                      value={incomeAccountId}
+                      onValueChange={setIncomeAccountId}
+                      options={chartAccountComboboxOptions(incomeAccounts)}
+                      placeholder="Income account…"
+                      emptyMessage="No income accounts"
+                    />
+                  </div>
+                )}
 
                 <Button type="submit" variant="secondary" disabled={submitting}>
                   {submitting ? "Posting…" : "Classify & post"}

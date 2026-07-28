@@ -26,7 +26,10 @@ import {
   suggestSupplierId,
   truncateStatementText,
 } from "@/lib/statement-classification-options";
-import { expenseAccountComboboxOptions } from "@/lib/expense-accounts";
+import {
+  chartAccountComboboxOptions,
+  expenseAccountComboboxOptions,
+} from "@/lib/expense-accounts";
 import {
   deliveryPlatformComboboxOptions,
   type StatementClassificationPickers,
@@ -75,6 +78,9 @@ export function StatementLineClassifyRow({
   const [expenseAccountId, setExpenseAccountId] = useState(
     pickers.expenseAccounts[0]?.id ?? "",
   );
+  // No first-in-list default: that would be Sales Revenue, and silently
+  // booking bank interest as food sales is worse than making them pick.
+  const [incomeAccountId, setIncomeAccountId] = useState("");
   const [deliveryPlatformId, setDeliveryPlatformId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -129,6 +135,7 @@ export function StatementLineClassifyRow({
     if (classification === "customer_payment") body.customer_id = customerId;
     if (classification === "rent_utility" || classification === "store_purchase")
       body.expense_account_id = expenseAccountId;
+    if (classification === "other_income") body.income_account_id = incomeAccountId;
     if (classification === "delivery_settlement")
       body.delivery_platform_id = deliveryPlatformId;
     try {
@@ -245,6 +252,19 @@ export function StatementLineClassifyRow({
             />
           )}
         </div>
+      );
+    }
+    if (targetKind === "income") {
+      return (
+        <Combobox
+          id={`inc-${line.id}`}
+          value={incomeAccountId}
+          onValueChange={setIncomeAccountId}
+          options={chartAccountComboboxOptions(pickers.incomeAccounts)}
+          placeholder="Income GL…"
+          emptyMessage="No income accounts"
+          className="h-8 min-w-[10rem] text-xs"
+        />
       );
     }
     if (targetKind === "delivery_platform") {

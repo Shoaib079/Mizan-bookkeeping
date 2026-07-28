@@ -22,6 +22,7 @@ export type StatementLineFormTargets = {
   counterpartId: string;
   creditCardId: string;
   expenseAccountId: string;
+  incomeAccountId: string;
   deliveryPlatformId: string;
 };
 
@@ -88,6 +89,11 @@ export function hydrateStatementLineFormState(
     expenseAccountId = pickers.expenseAccounts[0].id;
   }
 
+  // No first-in-list fallback here, unlike expenses: the first revenue account
+  // is Sales Revenue, so a silent default would book bank interest or a refund
+  // as food sales and quietly inflate the top line. Make them pick.
+  const incomeAccountId = "";
+
   const suggestedPlatform = suggestDeliveryPlatformId(
     line.description,
     pickers.deliveryPlatforms,
@@ -103,6 +109,7 @@ export function hydrateStatementLineFormState(
     counterpartId,
     creditCardId,
     expenseAccountId,
+    incomeAccountId,
     deliveryPlatformId,
   };
 }
@@ -133,6 +140,7 @@ export function postedLineTargetSummary(
     case "transfer":
     case "credit_card":
     case "expense":
+    case "income":
     case "delivery_platform":
       return null;
     default:

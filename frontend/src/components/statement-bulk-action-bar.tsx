@@ -14,7 +14,10 @@ import type {
   StatementLineClassification,
 } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
-import { expenseAccountComboboxOptions } from "@/lib/expense-accounts";
+import {
+  chartAccountComboboxOptions,
+  expenseAccountComboboxOptions,
+} from "@/lib/expense-accounts";
 import { formatTry } from "@/lib/money";
 import {
   classificationOptionGroups,
@@ -52,6 +55,7 @@ const EMPTY_TARGETS: StatementLineFormTargets = {
   counterpartId: "",
   creditCardId: "",
   expenseAccountId: "",
+  incomeAccountId: "",
   deliveryPlatformId: "",
 };
 
@@ -200,6 +204,17 @@ export function StatementBulkActionBar({
               />
             )}
           </div>
+        );
+      case "other_income":
+        return (
+          <Combobox
+            value={targets.incomeAccountId}
+            onValueChange={(incomeAccountId) => patchTargets({ incomeAccountId })}
+            options={chartAccountComboboxOptions(pickers.incomeAccounts)}
+            placeholder="Income GL…"
+            emptyMessage="No income accounts"
+            className="h-9 w-full min-w-0 text-xs"
+          />
         );
       case "delivery_settlement":
         return (

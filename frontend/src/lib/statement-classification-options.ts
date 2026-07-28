@@ -14,6 +14,7 @@ export type ClassificationTarget =
   | "transfer"
   | "credit_card"
   | "expense"
+  | "income"
   | "delivery_platform";
 
 export type ClassificationOption = {
@@ -166,6 +167,17 @@ export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
     hint: "Pick GL account: 5000 rent, 5210 utilities, 5230 repairs, 5220 supplies, 5240 advertising…",
     direction: "outflow",
     target: "expense",
+  },
+  // The inflow twin of "Expense from bank". Without it, money in that isn't a
+  // customer, settlement, loan or partner contribution — bank interest, a
+  // supplier refund, an insurance payout — had nowhere to go, so the line
+  // stayed in review and the account could never reconcile.
+  {
+    value: "other_income",
+    label: "Income to bank",
+    hint: "Pick GL account: interest earned, refunds, other income — Dr bank / Cr income",
+    direction: "inflow",
+    target: "income",
   },
   {
     value: "bank_fee",

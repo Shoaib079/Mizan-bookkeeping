@@ -434,3 +434,90 @@ def post_loan_receipt(
         session.refresh(journal_entry)
         _ = list(journal_entry.lines)
         return LoanMovementPostResult(journal_entry=journal_entry)
+
+
+def build_bank_income_posting_lines(
+    *,
+    bank_gl_account_id: uuid.UUID,
+    income_account_id: uuid.UUID,
+    amount_kurus: int,
+) -> list[PostingLine]:
+    """Money in from a non-customer source: Dr bank / Cr income."""
+    if amount_kurus <= 0:
+        raise ValueError("income amount must be positive kuruş")
+    return [
+        PostingLine(
+            account_id=bank_gl_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.DEBIT,
+        ),
+        PostingLine(
+            account_id=income_account_id,
+            amount_kurus=amount_kurus,
+            side=AccountNormalBalance.CREDIT,
+        ),
+    ]
+
+
+def _validate_income_gl_account(
+    session: Session, entity_id: uuid.UUID, income_account_id: uuid.UUID
+) -> Account:
+    """Income must credit a revenue account — crediting an expense would record
+    a refund, and crediting a liability would hide the income entirely."""
+    account = session.get(Account, income_account_id)
+    if account is None or account.entity_id != entity_id:
+        raise InvalidAccountError("income account not found")
+    if account.account_type != AccountType.REVENUE:
+        raise InvalidAccountError("income account must be a revenue account")
+    if not account.is_active:
+        raise InvalidAccountError("income account is not active")
+    return account
+
+
+def post_bank_income(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    bank_money_account_id: uuid.UUID,
+    income_date: date,
+    amount_kurus: int,
+    income_account_id: uuid.UUID,
+    description: str,
+    actor_id: uuid.UUID,
+    source: JournalEntrySource = JournalEntrySource.SYSTEM,
+) -> BankFeePostResult:
+    """Money arriving that isn't a customer or settlement — bank interest, a
+    refund, an insurance payout. The inflow counterpart of post_bank_fee;
+    without it such lines could never be classified and an account could never
+    reach "reconciled"."""
+    if amount_kurus <= 0:
+        raise ValueError("income amount_kurus must be positive")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+
+        bank_account = _validate_bank_money_account(session, entity_id, bank_money_account_id)
+        _validate_bank_gl_account(session, entity_id, bank_account.gl_account_id)
+        income_account = _validate_income_gl_account(session, entity_id, income_account_id)
+
+        lines = build_bank_income_posting_lines(
+            bank_gl_account_id=bank_account.gl_account_id,
+            income_account_id=income_account.id,
+            amount_kurus=amount_kurus,
+        )
+        journal_entry = prepare_journal_entry(
+            session,
+            entity_id,
+            income_date,
+            description,
+            lines,
+            actor_id=actor_id,
+            source=source,
+        )
+        session.commit()
+        session.refresh(journal_entry)
+        _ = list(journal_entry.lines)
+        return BankFeePostResult(journal_entry=journal_entry)

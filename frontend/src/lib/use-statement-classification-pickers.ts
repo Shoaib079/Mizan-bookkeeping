@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
 import {
   filterExpenseAccounts,
+  filterRevenueAccounts,
   mergeExpenseAccounts,
   type ChartAccount,
 } from "@/lib/expense-accounts";
@@ -24,6 +25,9 @@ export type StatementClassificationPickers = {
   moneyAccounts: MoneyAccountOption[];
   creditCards: MoneyAccountOption[];
   expenseAccounts: ChartAccount[];
+  /** Revenue accounts only — an inflow credits its offset, so crediting an
+   * expense here would book a refund instead of income. */
+  incomeAccounts: ChartAccount[];
   deliveryPlatforms: DeliveryPlatform[];
   deliveryPlatformsError: string | null;
   loading: boolean;
@@ -51,6 +55,7 @@ export function useStatementClassificationPickers(
   const [moneyAccounts, setMoneyAccounts] = useState<MoneyAccountOption[]>([]);
   const [creditCards, setCreditCards] = useState<MoneyAccountOption[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
+  const [incomeAccounts, setIncomeAccounts] = useState<ChartAccount[]>([]);
   const [deliveryPlatforms, setDeliveryPlatforms] = useState<DeliveryPlatform[]>([]);
   const [deliveryPlatformsError, setDeliveryPlatformsError] = useState<string | null>(
     null,
@@ -95,6 +100,7 @@ export function useStatementClassificationPickers(
       setMoneyAccounts(acctRes.items);
       setCreditCards(ccRes.items);
       setExpenseAccounts(filterExpenseAccounts(chartRes.items));
+      setIncomeAccounts(filterRevenueAccounts(chartRes.items));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load pickers");
       setLoading(false);
@@ -132,6 +138,7 @@ export function useStatementClassificationPickers(
     moneyAccounts,
     creditCards,
     expenseAccounts,
+    incomeAccounts,
     deliveryPlatforms,
     deliveryPlatformsError,
     loading,

@@ -242,6 +242,8 @@ class BankStatementPreview(BaseModel):
 
 
 class ClassifyStatementLineRequest(BaseModel):
+    # Revenue account for other_income (the inflow counterpart of expenses).
+    income_account_id: uuid.UUID | None = None
     classification: StatementLineClassification
     supplier_id: uuid.UUID | None = None
     counterpart_money_account_id: uuid.UUID | None = None
@@ -291,6 +293,7 @@ class ClassifyStatementLineRequest(BaseModel):
 
 
 class CorrectStatementLineRequest(BaseModel):
+    income_account_id: uuid.UUID | None = None
     classification: StatementLineClassification
     supplier_id: uuid.UUID | None = None
     counterpart_money_account_id: uuid.UUID | None = None

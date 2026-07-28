@@ -44,6 +44,9 @@ export function buildClassifyLinePayload(
   if (classification === "rent_utility" || classification === "store_purchase") {
     body.expense_account_id = targets.expenseAccountId;
   }
+  if (classification === "other_income") {
+    body.income_account_id = targets.incomeAccountId;
+  }
   if (classification === "delivery_settlement") {
     body.delivery_platform_id = targets.deliveryPlatformId;
   }
@@ -95,6 +98,8 @@ export function targetsRequiredForClassification(
     case "rent_utility":
     case "store_purchase":
       return !targets.expenseAccountId;
+    case "other_income":
+      return !targets.incomeAccountId;
     case "delivery_settlement":
       return !targets.deliveryPlatformId;
     default:

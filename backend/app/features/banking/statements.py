@@ -16,6 +16,7 @@ from app.core.banking.line_dedup import plan_statement_line_imports
 from app.core.content_fingerprint import file_fingerprint
 from app.core.banking import posting as banking_posting
 from app.core.banking import statement_posting
+from app.core.ledger.posting import InvalidAccountError
 from app.core.chart_of_accounts.default_chart import CARD_COMMISSION_CODE
 from app.core.ledger.models import JournalEntrySource
 from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_date_bounds
@@ -1164,6 +1165,7 @@ def classify_statement_line(
     confirm_account_transfer_id: uuid.UUID | None = None,
     delivery_platform_id: uuid.UUID | None = None,
     expense_account_id: uuid.UUID | None = None,
+    income_account_id: uuid.UUID | None = None,
     employee_id: uuid.UUID | None = None,
     period_year: int | None = None,
     period_month: int | None = None,
@@ -1525,6 +1527,18 @@ def classify_statement_line(
                 )
             if actor_id is None:
                 raise InvalidClassificationError("actor_id is required for pos_commission")
+
+        elif classification == StatementLineClassification.OTHER_INCOME:
+            if line.amount_kurus <= 0:
+                raise InvalidClassificationError(
+                    "other_income classification requires an inflow (positive amount_kurus)"
+                )
+            if actor_id is None:
+                raise InvalidClassificationError("actor_id is required for other_income")
+            if income_account_id is None:
+                raise InvalidClassificationError(
+                    "income_account_id is required for other_income"
+                )
 
         elif classification == StatementLineClassification.RENT_UTILITY:
             if line.amount_kurus >= 0:
@@ -2033,6 +2047,41 @@ def classify_statement_line(
             StatementLineClassification.CREDIT_CARD_PAYMENT,
             match_token=match_token,
         )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.OTHER_INCOME:
+        assert actor_id is not None
+        assert income_account_id is not None
+        try:
+            result = statement_posting.post_bank_income(
+                session,
+                entity_id,
+                bank_money_account_id=statement.money_account_id,
+                income_date=line.transaction_date,
+                amount_kurus=abs(line.amount_kurus),
+                income_account_id=income_account_id,
+                description=line.description,
+                actor_id=actor_id,
+            )
+        except (InvalidAccountError, ValueError) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+
+        journal_id = result.journal_entry.id
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.OTHER_INCOME
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            session.commit()
+            session.refresh(line)
+
         return ClassifyStatementLineResult(
             line=_line_read_by_id(session, entity_id, line_id),
             linked_existing_payment=False,
@@ -2762,6 +2811,7 @@ def correct_statement_line(
     credit_card_money_account_id: uuid.UUID | None = None,
     delivery_platform_id: uuid.UUID | None = None,
     expense_account_id: uuid.UUID | None = None,
+    income_account_id: uuid.UUID | None = None,
     employee_id: uuid.UUID | None = None,
     period_year: int | None = None,
     period_month: int | None = None,
@@ -2841,6 +2891,7 @@ def correct_statement_line(
         actor_id=actor_id,
         delivery_platform_id=delivery_platform_id,
         expense_account_id=expense_account_id,
+        income_account_id=income_account_id,
         employee_id=employee_id,
         period_year=period_year,
         period_month=period_month,
