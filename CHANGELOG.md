@@ -4,7 +4,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-27
 
-⚠️ **Month-close slice 2 (below) adds migration `083_period_close_snapshots` and changes what P&L and balance sheet return — `tsc` clean, frontend vitest 568/568, `py_compile` clean, but backend `pytest` NOT run in the working session. Run `cd backend && .venv/bin/pytest -q` before relying on it.** Everything above slice 2 was already pytest-green.
+✅ **Verified: backend `pytest` green (owner-run, includes migration `083_period_close_snapshots`), `tsc` clean, frontend vitest 568/568, `py_compile` clean.**
 
 **Month close — seal a month once you're happy with it.**
 - New **Reports → Month close**. Pick a month, see a checklist of everything that might be unfinished, then close it.
