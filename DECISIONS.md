@@ -2,6 +2,59 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-07-27 — Month close: soft lock + close-time snapshot (design agreed — NOT BUILT)
+
+**Status:** ⛔ **NOT IMPLEMENTED.** Design agreed with owner 2026-07-27. This entry exists so the design isn't re-litigated and the existing backend isn't rebuilt by mistake.
+
+### What already exists — do NOT rebuild
+
+The **engine is complete and tested**; only the front of it is missing.
+
+- `period_locks` table with `DAY` and `MONTH` kinds (`core/period_locks/models.py`)
+- `close_period` / `reopen_period` / `list_period_locks` (`core/period_locks/service.py`)
+- `POST /period-locks/close`, `POST /period-locks/{id}/reopen`, `GET /period-locks`
+- **`assert_entry_dates_allowed` runs on every posting path** — ledger posting, corrections, staff, group sales, manual journals, partner profit allocation
+- `PeriodLockAuditEvent` with `CLOSE` / `REOPEN` / `UNLOCK_WRITE` actions and a reason
+- `dirty` flag on the lock, already exposed in `PeriodLockOut`
+- Tests: `backend/tests/test_period_locks.py`
+
+**Missing:** any UI (the only frontend trace is `lib/period-unlock.ts`, a 422 handler), any readiness gate before closing, any surfacing of `dirty`, any freezing of figures.
+
+### Owner decisions (2026-07-27)
+
+**1. Soft lock — no backend change needed.** The guard already implements exactly this: non-owner writing into a closed period → `PeriodLockedError`; owner with no reason → `PeriodUnlockRequiredError`; owner **with** a reason → the post goes through, an `UNLOCK_WRITE` audit event records the reason, and the lock flips `dirty`. Owner asked directly whether closed months stay amendable — **they do**, at the cost of one typed reason. `Reopen` stays available for batches of fixes (clears the lock entirely; re-close afterwards). Slice 1 is therefore UI-only over a tested backend.
+
+**2. Snapshot on close — fixes FINANCIAL_AUDIT F3.** Closing writes a frozen trial balance; closed-month reports serve the snapshot, so an exported month stops moving. Without this, voiding a January entry in March silently rewrites January (`balances.py` excludes both the voided original and its reversal).
+
+**3. Only unclassified bank lines block the close.** Everything else warns. Rationale: an unclassified statement line is a *real money movement missing from the books* — closing over it means the month is knowingly wrong. Every other check is judgement (a residual may legitimately carry, a drawer may go uncounted on a closed day).
+
+### Design
+
+**Page:** Reports → Month close. Month picker → readiness checklist → Close (with optional note). Below it, the history: closed months, who/when, `dirty` badge, Reopen.
+
+**Checklist** — every item is derivable from something already built:
+
+| Check | Source | Severity |
+| --- | --- | --- |
+| Statement lines dated in the month still unclassified | `reports/bank_reconciliation.py`, scoped to the period | **BLOCK** |
+| Books vs bank's stated closing balance | same (needs the balance entered) | warn |
+| Card clearing (1400) residual at month end | `balance_as_of_kurus` | warn |
+| Drawer counted; cash book vs last count | `reports/cash_book.py` | warn |
+| Manual journals still in draft | `features/manual_journals` | warn |
+| Staff with no salary accrual for the month | `core/staff/ledger.py` | warn |
+
+**Snapshot model:** `period_close_snapshots` — one row per account per close: `(period_lock_id, account_id, closing_balance_kurus, period_debit_kurus, period_credit_kurus, created_at)`. Written **in the same transaction as `close_period`**. Reopen keeps the snapshot (it is history); re-closing writes a new one; latest-per-lock wins.
+
+**Report integration:** P&L, balance sheet, period comparison and cash flow serve the snapshot when the requested period is closed and a snapshot exists, with an "as closed 01.08.2026" banner. If the lock is `dirty`, show **as-closed and live side by side** rather than silently picking one.
+
+### Slices (build in this order)
+
+1. **Month close UI + readiness checklist** over the existing backend. No migration. Immediately useful, low risk.
+2. **Snapshot** — migration 083, write-on-close, report integration, as-closed/live banner. Own session: touches every financial report on a live app.
+3. **Dirty surfacing** — which entries changed a closed month (join `UNLOCK_WRITE` audit events with entries posted after `closed_at` in range).
+
+**Why sliced:** slice 1 is UI over tested code; slice 2 changes what every financial report returns and must ship with `pytest` green.
+
 ## 2026-07-13 — Forex-only group sales (design agreed, implementation DEFERRED — NOT BUILT)
 
 **Status:** ⛔ **NOT IMPLEMENTED.** Design agreed with owner 2026-07-13; deferred to a dedicated, test-covered session (owner chose "next session, staged with verification"). Do **not** assume this exists in code — today a forex group sale still **requires** a sale-date TRY rate (`fx_rate_used` or `total_kurus`). This entry exists so we build it once, correctly, and don't re-litigate the model. Tracked as a to-build slice in `POST_LAUNCH_PLAN.md`.
