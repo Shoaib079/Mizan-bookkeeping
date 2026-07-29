@@ -10,7 +10,10 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.chart_of_accounts.default_chart import CARD_SALES_CLEARING_CODE
+from app.core.chart_of_accounts.default_chart import (
+    CARD_COMMISSION_CODE,
+    CARD_SALES_CLEARING_CODE,
+)
 from app.core.chart_of_accounts.models import Account
 from app.core.ledger.balances import balance_as_of_kurus
 from app.core.chart_of_accounts.types import AccountNormalBalance
@@ -298,20 +301,19 @@ def clear_card_commission(
     """
     reconciliation = get_clearing_reconciliation(session, entity_id)
 
-    # The residual as of the commission's own date — not the all-time balance,
-    # or recording an old month would be judged against sales that arrived
-    # after it.
+    # No deposits recorded at all, yet sales are sitting in clearing: the card
+    # side isn't set up or entered yet, and a commission against it would be
+    # measured against gross sales rather than a real residual (Phase 8.8 H1).
+    if reconciliation.in_transit_kurus > 0 and reconciliation.pos_settlement_count == 0:
+        raise InTransitCardSalesError(
+            "Card sales are still in transit "
+            f"({reconciliation.in_transit_kurus} kuruş unsettled) — "
+            "record bank deposits before recording commission"
+        )
+
+    # post_card_commission does the "not more than clearing holds" check
+    # against the residual as of this same date, so it isn't repeated here.
     clearance_date = payload.clearance_date or date.today()
-    with entity_context(session, entity_id):
-        require_entity_context()
-        clearing_account = session.scalar(
-            select(Account).where(Account.code == CARD_SALES_CLEARING_CODE)
-        )
-        residual_kurus = (
-            balance_as_of_kurus(session, clearing_account, clearance_date)
-            if clearing_account is not None
-            else reconciliation.clearing_balance_kurus
-        )
 
     total_sales_kurus = reconciliation.total_card_sales_kurus
     threshold_kurus = int(total_sales_kurus * _COMMISSION_ABSURDITY_RATE)
@@ -421,7 +423,6 @@ def get_clearing_reconciliation(
 ) -> ClearingReconciliationRead:
     from datetime import timedelta
 
-    from app.core.chart_of_accounts.default_chart import CARD_COMMISSION_CODE
     from app.core.ledger.balances import (
         balance_as_of_kurus,
         debit_credit_activity_kurus,
