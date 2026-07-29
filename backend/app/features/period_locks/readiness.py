@@ -32,6 +32,7 @@ from sqlalchemy.orm import Session
 from app.core.chart_of_accounts.default_chart import CARD_SALES_CLEARING_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.ledger.balances import balance_as_of_kurus
+from app.core.ledger.models import JournalEntry, JournalEntryStatus
 from app.core.staff.models import StaffLedgerEntry
 from app.core.staff.types import StaffMovementType
 from app.db.session import entity_context, require_entity_context
@@ -39,6 +40,7 @@ from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.banking.statement_models import BankStatement, BankStatementLine
 from app.features.cash.models import CashDrawerSession, CashDrawerSessionStatus
 from app.features.entities import service as entity_service
+from app.features.pos.models import CardSalesBatch
 from app.features.reports.bank_reconciliation import SETTLED_LINE_STATUSES
 from app.features.staff.models import Employee
 
@@ -139,12 +141,25 @@ def _unclassified_statement_lines(
     )
 
 
-def _card_clearing_residual(session: Session, period_end: date) -> ReadinessCheck:
-    """What's left sitting in 1400 at month end.
+#: Card money from the last few days of the month is *expected* to still be in
+#: clearing at month end — a Friday/Saturday/Sunday takes until Monday to land,
+#: and Monday may be the 1st or 2nd of the next month. Anything older than this
+#: is not a weekend, it's a deposit that never got matched.
+FRESH_CLEARING_DAYS = 4
 
-    A residual is normal — sales deposited after the 1st. It matters because
-    this is the account that once absorbed a month of undeposited sales and
-    then got swept to expense as a 184k "commission" (BUGLOG 2026-07-13).
+
+def _card_clearing_residual(session: Session, period_end: date) -> ReadinessCheck:
+    """What's left sitting in 1400 at month end, split by age.
+
+    A residual by itself means nothing — the last weekend's card sales are
+    always still in transit on the 30th. What matters is *how old* it is. Under
+    FIFO the acquirer settles oldest first, so the residual belongs to the
+    newest sales; anything attributed to sales older than a few days is money
+    the bank should already have sent.
+
+    This is the account that once absorbed a month of undeposited sales and was
+    then swept to expense as a 184k "commission" (BUGLOG 2026-07-13). That
+    residual was weeks old — exactly what this check now separates out.
     """
     account = session.scalar(
         select(Account).where(Account.code == CARD_SALES_CLEARING_CODE)
@@ -152,26 +167,86 @@ def _card_clearing_residual(session: Session, period_end: date) -> ReadinessChec
     if account is None:
         return ReadinessCheck(
             key="card_clearing_residual",
-            label="Card clearing settled",
+            label="Card money deposited",
             severity=CheckSeverity.WARN,
             passed=True,
         )
 
     residual = balance_as_of_kurus(session, account, period_end)
+    if residual <= 0:
+        return ReadinessCheck(
+            key="card_clearing_residual",
+            label="Card money deposited",
+            severity=CheckSeverity.WARN,
+            passed=True,
+        )
+
+    batches = session.execute(
+        select(CardSalesBatch.sales_date, CardSalesBatch.gross_amount_kurus)
+        .join(JournalEntry, JournalEntry.id == CardSalesBatch.journal_entry_id)
+        .where(
+            JournalEntry.status != JournalEntryStatus.VOIDED,
+            CardSalesBatch.sales_date <= period_end,
+        )
+        .order_by(CardSalesBatch.sales_date.desc())
+    ).all()
+
+    # Age the residual against the month end, not today: the question is what
+    # was still in transit on the 30th, not what is in transit now.
+    stale = 0
+    remaining = residual
+    oldest_stale: date | None = None
+    for sales_date, gross in batches:
+        if remaining <= 0:
+            break
+        take = min(int(gross), remaining)
+        remaining -= take
+        if (period_end - sales_date).days > FRESH_CLEARING_DAYS:
+            stale += take
+            oldest_stale = sales_date
+    # Residual the batches can't account for is unattributable, so treat it as
+    # stale rather than quietly passing it.
+    stale += max(remaining, 0)
+
+    fresh = residual - stale
+    if stale == 0:
+        return ReadinessCheck(
+            key="card_clearing_residual",
+            label="Card money deposited",
+            severity=CheckSeverity.WARN,
+            passed=True,
+            detail=(
+                f"{_fmt(fresh)} from the last few days is still with the bank — "
+                "normal, it lands next month and clears itself."
+            ),
+            amount_kurus=fresh,
+            href="/cards",
+        )
+
+    oldest = (
+        f" Oldest is {oldest_stale.strftime('%d.%m.%Y')}." if oldest_stale else ""
+    )
     return ReadinessCheck(
         key="card_clearing_residual",
-        label="Card clearing settled",
+        label="Card money deposited",
         severity=CheckSeverity.WARN,
-        passed=residual == 0,
+        passed=False,
         detail=(
-            ""
-            if residual == 0
-            else "Card sales recorded but not yet matched to a bank deposit. "
-            "Normal if deposits land after month end — check it's not older than that."
+            f"{_fmt(stale)} of card sales older than {FRESH_CLEARING_DAYS} days "
+            f"never reached the bank.{oldest} The last weekend's sales being in "
+            "transit is normal; this is older than that."
         ),
-        amount_kurus=residual if residual else None,
+        amount_kurus=stale,
         href="/cards",
     )
+
+
+def _fmt(kurus: int) -> str:
+    """Turkish money for a sentence — 1.234,50 ₺."""
+    whole, frac = divmod(abs(int(kurus)), 100)
+    grouped = f"{whole:,}".replace(",", ".")
+    sign = "-" if kurus < 0 else ""
+    return f"{sign}{grouped},{frac:02d} ₺"
 
 
 def _open_drawers(
