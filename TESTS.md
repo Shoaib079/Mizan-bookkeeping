@@ -111,6 +111,8 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **Count:** 1271 pytest + 583 vitest (last full run 2026-07-27; vitest green, pytest green through slice 2 — slice 3's 9 backend tests pending the owner's run).
 
+**Don't hold an entity-scoped ORM object across a `commit()`.** A commit expires loaded instances, so the next attribute read reloads the row — and if that read happens outside an `entity_context`, RLS hides it. SQLAlchemy finds nothing and raises `ObjectDeletedError`, which reads as "the row was deleted" when it is merely invisible. In tests, grab the id (`lock.id`) while the instance is still valid and carry the UUID. This cost a CI run on 2026-07-27; product code is safe because every path either reads inside the context or returns plain dataclasses.
+
 **Calling a posting service directly? Pass `actor_id`.** Request schemas type it as `OptionalActorId = None` because the API fills it in (`resolve_actor_id` returns a UUID or raises 422). A test that calls the service directly reaches that `None`, and it fails at the **INSERT**, not at validation — first on `ledger_audit_events.actor_id`, since the journal entry is written before any subledger row. The error therefore names a table you weren't thinking about. This cost two CI runs on 2026-07-27.
 
 **Registry-completeness guards — read this before adding a `JournalEntrySource`.** Several registries assert every enum member is classified and fail the suite if not. Adding a source means updating *all* of them in the same commit:
