@@ -113,7 +113,11 @@ def test_two_banks_one_clearing_residual_is_commission(client, db_session, setup
 
     resp = client.post(
         f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
-        json={"actor_id": str(ACTOR_ID), "clearance_date": "2026-06-30"},
+        json={
+            "actor_id": str(ACTOR_ID),
+            "clearance_date": "2026-06-30",
+            "amount_kurus": 20_000,
+        },
     )
     assert resp.status_code == 200
     body = resp.json()
@@ -137,7 +141,7 @@ def test_clear_is_repeatable_after_more_sales(client, db_session, setup) -> None
     _net_deposit(db_session, entity_id, setup["bank1"], 490_000, date(2026, 6, 2))
     first = client.post(
         f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
-        json={"actor_id": str(ACTOR_ID)},
+        json={"actor_id": str(ACTOR_ID), "amount_kurus": 10_000},
     )
     assert first.status_code == 200
     assert first.json()["commission_kurus"] == 10_000
@@ -147,7 +151,7 @@ def test_clear_is_repeatable_after_more_sales(client, db_session, setup) -> None
     _net_deposit(db_session, entity_id, setup["bank2"], 295_000, date(2026, 6, 9))
     second = client.post(
         f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
-        json={"actor_id": str(ACTOR_ID)},
+        json={"actor_id": str(ACTOR_ID), "amount_kurus": 5_000},
     )
     assert second.status_code == 200
     assert second.json()["commission_kurus"] == 5_000
@@ -158,13 +162,13 @@ def test_clear_zero_balance_rejected(client, db_session, setup) -> None:
     entity_id = setup["entity_id"]
     _card_sales(db_session, entity_id, 100_000)
     _net_deposit(db_session, entity_id, setup["bank1"], 100_000, date(2026, 6, 2))
-    # Fully deposited, no commission left.
+    # Fully deposited — nothing in clearing for a commission to come out of.
     resp = client.post(
         f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
-        json={"actor_id": str(ACTOR_ID)},
+        json={"actor_id": str(ACTOR_ID), "amount_kurus": 1_000},
     )
     assert resp.status_code == 422
-    assert "nothing to clear" in resp.json()["detail"].lower()
+    assert "record card deposits" in resp.json()["detail"].lower()
 
 
 def test_clear_negative_balance_rejected(client, db_session, setup) -> None:
@@ -174,10 +178,10 @@ def test_clear_negative_balance_rejected(client, db_session, setup) -> None:
     _net_deposit(db_session, entity_id, setup["bank1"], 120_000, date(2026, 6, 2))
     resp = client.post(
         f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
-        json={"actor_id": str(ACTOR_ID)},
+        json={"actor_id": str(ACTOR_ID), "amount_kurus": 1_000},
     )
     assert resp.status_code == 422
-    assert "negative" in resp.json()["detail"].lower()
+    assert "zero or negative" in resp.json()["detail"].lower()
 
 
 def test_clearance_only_sweeps_the_residual_as_of_its_date(db_session, setup) -> None:
@@ -217,16 +221,28 @@ def test_clearance_only_sweeps_the_residual_as_of_its_date(db_session, setup) ->
         actor_id=ACTOR_ID,
     )
 
-    result = pos_posting.post_card_commission_clearance(
+    # June's own residual is 3.000; July's undeposited 500.000 must be invisible
+    # to a commission dated 30 June, so a 4.000 amount has to be refused.
+    with pytest.raises(pos_posting.CommissionExceedsClearingError):
+        pos_posting.post_card_commission(
+            db_session,
+            entity_id,
+            commission_date=date(2026, 6, 30),
+            amount_kurus=4_000,
+            description="Too much for June",
+            actor_id=ACTOR_ID,
+        )
+
+    result = pos_posting.post_card_commission(
         db_session,
         entity_id,
-        clearance_date=date(2026, 6, 30),
+        commission_date=date(2026, 6, 30),
+        amount_kurus=3_000,
         description="Clear June commission",
         actor_id=ACTOR_ID,
     )
-
-    # Only June's 3.000 residual — not 503.000.
     assert result.commission_kurus == 3_000
+    assert result.clearing_balance_before_kurus == 3_000
 
 
 def test_clear_rejected_when_sales_in_transit_no_deposits(
@@ -246,7 +262,7 @@ def test_clear_rejected_when_sales_in_transit_no_deposits(
 
     resp = client.post(
         f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
-        json={"actor_id": str(ACTOR_ID)},
+        json={"actor_id": str(ACTOR_ID), "amount_kurus": 1_000},
     )
     assert resp.status_code == 422
     assert "in transit" in resp.json()["detail"].lower()
@@ -265,7 +281,7 @@ def test_void_clearance_restores_residual(client, db_session, setup) -> None:
     _net_deposit(db_session, entity_id, setup["bank1"], 195_000, date(2026, 6, 2))
     resp = client.post(
         f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
-        json={"actor_id": str(ACTOR_ID)},
+        json={"actor_id": str(ACTOR_ID), "amount_kurus": 5_000},
     )
     je_id = uuid.UUID(resp.json()["journal_entry_id"])
     assert _gl_balance(db_session, entity_id, clearing_id) == 0

@@ -219,8 +219,8 @@ export const appRoutes: AppRoute[] = [
   },
   {
     href: "/reports/cash-book",
-    label: "Cash book",
-    keywords: "cash drawer till money in out should have count reconcile",
+    label: "Cash & bank book",
+    keywords: "cash bank drawer till account book money in out running balance should have count reconcile statement",
     icon: BookOpen,
     group: "Reports",
     nestedUnder: "/reports",

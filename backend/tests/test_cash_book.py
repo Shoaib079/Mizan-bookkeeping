@@ -14,7 +14,7 @@ from app.db.session import entity_context
 from app.features.banking import service as banking_service
 from app.features.cash.models import CashMovementDirection
 from app.features.reports import cash_book
-from app.features.reports.cash_book import CashAccountRequiredError
+from app.features.reports.cash_book import MoneyAccountKindNotSupportedError
 from app.features.reports.service import InvalidDateRangeError
 
 from tests.test_cash_drawer import cash_setup  # noqa: F401
@@ -116,16 +116,22 @@ def test_cash_book_groups_by_source(db_session, cash_setup):
     assert sum(t.entry_count for t in report.source_totals) == len(report.rows)
 
 
-def test_cash_book_rejects_bad_range_and_non_cash_account(db_session, cash_setup):
-    from app.features.banking.models import MoneyAccountKind
-    from app.features.banking.schema import MoneyAccountCreate
-
+def test_cash_book_rejects_a_backwards_range(db_session, cash_setup):
     entity_id = cash_setup["entity_id"]
     drawer = cash_setup["drawer"]
 
     with pytest.raises(InvalidDateRangeError):
         cash_book.get_cash_book(db_session, entity_id, drawer.id, TO, FROM)
 
+
+def test_a_bank_account_gets_a_book_too(db_session, cash_setup):
+    """The cash-only limit was never an accounting one — a bank has GL lines
+    just the same. Excluding banks meant you could see *that* the books and a
+    statement disagreed but not *where* (2026-07-29)."""
+    from app.features.banking.models import MoneyAccountKind
+    from app.features.banking.schema import MoneyAccountCreate
+
+    entity_id = cash_setup["entity_id"]
     bank = banking_service.create_money_account(
         db_session,
         entity_id,
@@ -133,8 +139,30 @@ def test_cash_book_rejects_bad_range_and_non_cash_account(db_session, cash_setup
             account_kind=MoneyAccountKind.BANK, name="Garanti", bank_name="Garanti"
         ),
     )
-    with pytest.raises(CashAccountRequiredError):
-        cash_book.get_cash_book(db_session, entity_id, bank.id, FROM, TO)
+
+    book = cash_book.get_cash_book(db_session, entity_id, bank.id, FROM, TO)
+    assert book.money_account_id == bank.id
+    assert book.money_account_name == "Garanti"
+    # A bank has no drawer counts — empty, not an error.
+    assert book.counts == []
+    assert book.last_count is None
+
+
+def test_a_credit_card_is_still_refused(db_session, cash_setup):
+    """A liability reads back-to-front as money in / money out."""
+    from app.features.banking.models import MoneyAccountKind
+    from app.features.banking.schema import MoneyAccountCreate
+
+    entity_id = cash_setup["entity_id"]
+    card = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.CREDIT_CARD, name="Bonus Card"
+        ),
+    )
+    with pytest.raises(MoneyAccountKindNotSupportedError):
+        cash_book.get_cash_book(db_session, entity_id, card.id, FROM, TO)
 
 
 def test_variance_guard_thresholds() -> None:

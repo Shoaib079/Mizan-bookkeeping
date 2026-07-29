@@ -219,7 +219,7 @@ def test_clear_commission_rejected_while_sales_in_transit(
 
     resp = client.post(
         f"/entities/{entity_id}/pos/clearing-reconciliation/clear-commission",
-        json={"actor_id": str(ACTOR_ID)},
+        json={"actor_id": str(ACTOR_ID), "amount_kurus": 5_000},
     )
     assert resp.status_code == 422
     assert "in transit" in resp.json()["detail"].lower()

@@ -4,6 +4,16 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-29
 
+**Card commission: you now type what the bank charged.**
+- The button used to book whatever was left sitting in card clearing, assuming the leftover *was* the commission. It isn't — it's commission plus any sales the bank hasn't deposited yet, which is how a month of undeposited sales once became a 184.628,82 ₺ expense.
+- Enter the figure from your statement. Whatever stays in clearing afterwards is genuinely undeposited sales, and the month-close check flags it if it gets old.
+- **It won't let you enter more than clearing holds** — that means your sales or deposits for the period aren't recorded yet.
+- Instead of guessing what your rate should be, the app **shows you the number**: type an amount and it tells you *"that's 3,8% of 326.000,00 ₺ card sales"*, with your previous months beside it. A mistyped extra zero reads 38,2% and you'll spot it instantly. The old 10% warning was useless anyway — your real rate is 3–4%, so it would have let through an amount two and a half times too big.
+
+**Cash book now covers bank accounts too — renamed Cash & bank book.**
+- Bank reconciliation tells you *that* your books and a statement disagree. This tells you *where*: every movement through the account in date order with a running balance, to hold against the statement.
+- The cash-only limit had no accounting reason behind it. Credit cards stay out, since "money in / money out" reads back-to-front for a card.
+
 **Fixed: period comparison compared a month against the wrong dates.**
 - Comparing July was showing the prior period as 31.05 – 30.06. It stepped back 31 days (July's length) instead of going to the previous month.
 - A whole month now compares against the **whole previous month**, and a whole year against the previous year. February, leap years and January rolling back to December all come out right.

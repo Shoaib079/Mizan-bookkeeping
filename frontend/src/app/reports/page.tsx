@@ -94,8 +94,9 @@ const reportCards: ReportCard[] = [
   },
   {
     href: "/reports/cash-book",
-    title: "Cash book",
-    description: "Drawer money in and out, and what should be left in it.",
+    title: "Cash & bank book",
+    description:
+      "Every movement through a drawer or bank account, with a running balance.",
     icon: Wallet,
     category: "Financial statements",
     financial: true,

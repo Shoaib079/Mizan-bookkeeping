@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import calendar
+
 import uuid
 from datetime import date
 
@@ -12,9 +14,10 @@ from app.core.chart_of_accounts.default_chart import CARD_SALES_CLEARING_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.ledger.balances import balance_as_of_kurus
 from app.core.chart_of_accounts.types import AccountNormalBalance
+from app.core.ledger.models import JournalEntrySource
 from app.core.pos.posting import (
     InTransitCardSalesError,
-    post_card_commission_clearance,
+    post_card_commission,
     post_card_sales_batch,
     post_pos_settlement,
 )
@@ -177,13 +180,109 @@ def create_pos_settlement(
     return _to_settlement_read(session, result.pos_settlement)
 
 
+def commission_rate_percent(
+    commission_kurus: int, card_sales_kurus: int
+) -> float | None:
+    """Commission as a share of gross card sales, to one decimal.
+
+    None when there were no card sales — dividing by zero is not "0%", and a
+    month with no trading has no rate to report.
+    """
+    if card_sales_kurus <= 0:
+        return None
+    return round(commission_kurus / card_sales_kurus * 100, 1)
+
+
+def get_commission_rate_history(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    months: int = 6,
+) -> CommissionRateHistoryRead:
+    """What commission actually worked out to, month by month.
+
+    Derived from figures that already exist rather than stored: commission
+    recognised in 5310 over gross card sales, per calendar month. Deriving
+    means it can never drift out of step with the books if a sale is later
+    corrected — and it needs no migration.
+
+    Its purpose is to let the owner judge a typed amount. The app deliberately
+    holds no opinion about what the rate should be: it differs by bank and
+    changes over time, so a constant baked into the code would be a guess that
+    goes stale (DECISIONS 2026-07-29).
+    """
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    today = date.today()
+    periods: list[CommissionRatePeriod] = []
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        commission_account = session.scalar(
+            select(Account).where(Account.code == CARD_COMMISSION_CODE)
+        )
+
+        year, month = today.year, today.month
+        for _ in range(max(months, 0)):
+            month -= 1
+            if month == 0:
+                year, month = year - 1, 12
+            period_start = date(year, month, 1)
+            period_end = date(
+                year, month, calendar.monthrange(year, month)[1]
+            )
+
+            card_sales = int(
+                session.scalar(
+                    select(func.coalesce(func.sum(CardSalesBatch.gross_amount_kurus), 0))
+                    .join(
+                        JournalEntry,
+                        JournalEntry.id == CardSalesBatch.journal_entry_id,
+                    )
+                    .where(
+                        JournalEntry.status != JournalEntryStatus.VOIDED,
+                        CardSalesBatch.sales_date >= period_start,
+                        CardSalesBatch.sales_date <= period_end,
+                    )
+                )
+                or 0
+            )
+            commission = (
+                period_activity_kurus(
+                    session, commission_account, period_start, period_end
+                )
+                if commission_account is not None
+                else 0
+            )
+
+            # A month with neither is noise, not history.
+            if card_sales == 0 and commission == 0:
+                continue
+
+            periods.append(
+                CommissionRatePeriod(
+                    year=year,
+                    month=month,
+                    card_sales_kurus=card_sales,
+                    commission_kurus=commission,
+                    rate_percent=commission_rate_percent(commission, card_sales),
+                )
+            )
+
+    return CommissionRateHistoryRead(periods=periods)
+
+
 class SuspiciousClearanceAmountError(ValueError):
-    """Sweep residual is implausibly large to be commission — needs confirmation."""
+    """Amount is implausibly large to be commission — needs confirmation."""
 
 
-# Commission on card sales realistically tops out around a few percent; a residual
-# above this share of card sales is almost always undeposited sales, not commission.
-_COMMISSION_PLAUSIBILITY_RATE = 0.10
+# A backstop, not the primary signal. Real card commission runs at a few
+# percent, so this only catches an order-of-magnitude slip (a missing decimal).
+# Judging plausibility is the owner's job: the UI shows the implied rate and
+# the previous months' rates, which is information the app cannot invent —
+# rates differ by bank and change over time (DECISIONS 2026-07-29).
+_COMMISSION_ABSURDITY_RATE = 0.25
 
 
 def clear_card_commission(
@@ -191,18 +290,17 @@ def clear_card_commission(
     entity_id: uuid.UUID,
     payload: CardCommissionClearanceRequest,
 ) -> CardCommissionClearanceRead:
-    """Total clearance — sweep the current card-clearing residual to commission."""
-    reconciliation = get_clearing_reconciliation(session, entity_id)
-    if reconciliation.in_transit_kurus > 0 and reconciliation.pos_settlement_count == 0:
-        raise InTransitCardSalesError(
-            "Card sales are still in transit "
-            f"({reconciliation.in_transit_kurus} kuruş unsettled) — "
-            "record bank deposits before clearing commission"
-        )
+    """Book the commission the bank actually charged against card clearing.
 
-    # Judge the guard against the same as-of residual the sweep will post, not
-    # the all-time balance — otherwise clearing an old month gets flagged for
-    # sales that arrived after it.
+    The amount comes from the statement, not from whatever happens to be left
+    in 1400. Whatever remains afterwards is undeposited card sales, which is
+    the truth rather than a rounding of it.
+    """
+    reconciliation = get_clearing_reconciliation(session, entity_id)
+
+    # The residual as of the commission's own date — not the all-time balance,
+    # or recording an old month would be judged against sales that arrived
+    # after it.
     clearance_date = payload.clearance_date or date.today()
     with entity_context(session, entity_id):
         require_entity_context()
@@ -214,32 +312,37 @@ def clear_card_commission(
             if clearing_account is not None
             else reconciliation.clearing_balance_kurus
         )
+
     total_sales_kurus = reconciliation.total_card_sales_kurus
-    threshold_kurus = int(total_sales_kurus * _COMMISSION_PLAUSIBILITY_RATE)
+    threshold_kurus = int(total_sales_kurus * _COMMISSION_ABSURDITY_RATE)
     if (
         not payload.confirm
         and total_sales_kurus > 0
-        and residual_kurus > threshold_kurus
+        and payload.amount_kurus > threshold_kurus
     ):
         raise SuspiciousClearanceAmountError(
-            f"This would book {residual_kurus} kuruş as commission — more than "
-            f"{int(_COMMISSION_PLAUSIBILITY_RATE * 100)}% of total card sales "
-            f"({total_sales_kurus} kuruş). That usually means card deposits are "
-            "missing, not commission. Classify the missing deposits first, or "
-            "confirm to proceed anyway."
+            f"{payload.amount_kurus} kuruş is more than "
+            f"{int(_COMMISSION_ABSURDITY_RATE * 100)}% of card sales "
+            f"({total_sales_kurus} kuruş). Card commission is normally a few "
+            "percent — check the amount against your statement, or confirm to "
+            "proceed."
         )
 
-    result = post_card_commission_clearance(
+    result = post_card_commission(
         session,
         entity_id,
-        clearance_date=clearance_date,
-        description=payload.description or "Bank commission clearance",
+        commission_date=clearance_date,
+        amount_kurus=payload.amount_kurus,
+        description=payload.description or "Card commission",
         actor_id=payload.actor_id,
+        source=JournalEntrySource.POS_COMMISSION_SWEEP,
     )
     return CardCommissionClearanceRead(
         commission_kurus=result.commission_kurus,
         clearing_balance_before_kurus=result.clearing_balance_before_kurus,
-        clearing_balance_after_kurus=0,
+        clearing_balance_after_kurus=(
+            result.clearing_balance_before_kurus - result.commission_kurus
+        ),
         clearance_date=result.journal_entry.entry_date,
         journal_entry_id=result.journal_entry.id,
     )

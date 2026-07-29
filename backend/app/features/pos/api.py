@@ -14,6 +14,7 @@ from app.core.pos.posting import (
     InTransitCardSalesError,
     InvalidCardSalesBatchError,
     InvalidPosSettlementError,
+    CommissionExceedsClearingError,
     NothingToClearError,
 )
 from app.core.ledger.posting import PostingError
@@ -26,6 +27,7 @@ from app.features.pos import service as pos_service
 from app.features.pos.models import PosDailySummaryStatus
 from app.features.pos.schema import (
     CardCommissionClearanceRead,
+    CommissionRateHistoryRead,
     CardCommissionClearanceRequest,
     CardSalesBatchCreate,
     CardSalesBatchRead,
@@ -223,10 +225,27 @@ def clear_card_commission(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except pos_service.SuspiciousClearanceAmountError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except CommissionExceedsClearingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except NothingToClearError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InTransitCardSalesError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@reconciliation_router.get("/commission-rates", response_model=CommissionRateHistoryRead)
+def commission_rate_history(
+    entity_id: uuid.UUID,
+    months: int = 6,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> CommissionRateHistoryRead:
+    try:
+        return pos_service.get_commission_rate_history(
+            session, entity_id, months=months
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @daily_summaries_router.post("", response_model=PosDailySummaryRead, status_code=201)

@@ -359,78 +359,7 @@ def post_card_sales_batch(
         )
 
 
-def post_card_commission_clearance(
-    session: Session,
-    entity_id: uuid.UUID,
-    *,
-    clearance_date: date,
-    description: str,
-    actor_id: uuid.UUID,
-) -> CardCommissionClearanceResult:
-    """Total clearance — book the current card-clearing (1400) residual as commission.
-
-    Both banks' card deposits land in the one card-clearing account. Whatever is
-    left after deposits is the hidden bank commission, so this sweeps the current
-    1400 debit balance to 5300 bank charges (Dr 5300 / Cr 1400), zeroing 1400.
-
-    Press it when all deposits for the period are in: any card sales not yet
-    deposited still sit in 1400 and would be swept as commission. Rejects a zero
-    or negative clearing balance (nothing to clear / deposits exceed sales).
-    """
-    from app.features.banking import service as banking_service
-
-    if entity_service.get_entity(session, entity_id) is None:
-        raise LookupError("Entity not found")
-
-    with entity_context(session, entity_id):
-        require_entity_context()
-
-        clearing_account = _get_account_by_code(session, CARD_SALES_CLEARING_CODE)
-        # Only the residual AS OF the clearance date. Using the all-time balance
-        # meant "clear June's commission" also swept July's not-yet-deposited
-        # card sales — how a month of undeposited sales once became a 184k
-        # "commission" expense (BUGLOG 2026-07-13).
-        residual_kurus = balance_as_of_kurus(
-            session, clearing_account, clearance_date
-        )
-        if residual_kurus == 0:
-            raise NothingToClearError(
-                "Card clearing balance is zero — nothing to clear as commission"
-            )
-        if residual_kurus < 0:
-            raise NothingToClearError(
-                "Card clearing balance is negative — deposits exceed card sales; "
-                "review deposits before clearing commission"
-            )
-
-        bank_charges_account = _get_account_by_code(session, CARD_COMMISSION_CODE)
-        lines = build_card_commission_posting_lines(
-            bank_charges_account_id=bank_charges_account.id,
-            clearing_account_id=clearing_account.id,
-            amount_kurus=residual_kurus,
-        )
-        journal_entry = prepare_journal_entry(
-            session,
-            entity_id,
-            clearance_date,
-            description,
-            lines,
-            actor_id=actor_id,
-            source=JournalEntrySource.POS_COMMISSION_SWEEP,
-        )
-
-        session.commit()
-        session.refresh(journal_entry)
-        _ = list(journal_entry.lines)
-
-        return CardCommissionClearanceResult(
-            journal_entry=journal_entry,
-            commission_kurus=residual_kurus,
-            clearing_balance_before_kurus=residual_kurus,
-        )
-
-
-def post_card_commission_from_statement(
+def post_card_commission(
     session: Session,
     entity_id: uuid.UUID,
     *,
@@ -438,15 +367,20 @@ def post_card_commission_from_statement(
     amount_kurus: int,
     description: str,
     actor_id: uuid.UUID,
-    bank_statement_line_id: uuid.UUID | None = None,
+    source: JournalEntrySource = JournalEntrySource.POS_COMMISSION_STATEMENT,
 ) -> CardCommissionClearanceResult:
-    """Book card acquirer commission from a bank statement outflow — Dr 5300 / Cr 1400.
+    """Book card acquirer commission against clearing — Dr 5310 / Cr 1400.
 
-    Matches the per-settlement commission leg and the Cards "clear bank commission"
-    sweep, but for an explicit statement line amount instead of the full residual.
+    The amount is always given, never inferred. Booking "whatever is left in
+    1400" assumed the residual WAS commission; it is really commission *plus*
+    any sales the bank hasn't deposited yet, which is how a month of
+    undeposited sales became a 184k expense (BUGLOG 2026-07-13). Whatever
+    remains after this posts is undeposited sales, and says so honestly.
+
+    Rejects an amount larger than the residual: that means card sales or
+    deposits for the period aren't recorded yet, and posting it would drive
+    clearing negative.
     """
-    from app.features.banking import service as banking_service
-
     if amount_kurus <= 0:
         raise ValueError("commission amount must be positive kuruş")
 
@@ -457,8 +391,10 @@ def post_card_commission_from_statement(
         require_entity_context()
 
         clearing_account = _get_account_by_code(session, CARD_SALES_CLEARING_CODE)
-        residual_kurus = banking_service.gl_balance_kurus(
-            session, clearing_account.id, AccountNormalBalance.DEBIT
+        # As of the commission's own date, not all-time: recording an old
+        # month must not be measured against sales that arrived after it.
+        residual_kurus = balance_as_of_kurus(
+            session, clearing_account, commission_date
         )
         if residual_kurus <= 0:
             raise NothingToClearError(
@@ -484,7 +420,7 @@ def post_card_commission_from_statement(
             description,
             lines,
             actor_id=actor_id,
-            source=JournalEntrySource.POS_COMMISSION_STATEMENT,
+            source=source,
         )
 
         session.commit()

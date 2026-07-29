@@ -94,16 +94,39 @@ class CardCommissionClearanceRequest(BaseModel):
     actor_id: OptionalActorId = None
     clearance_date: date | None = None
     description: str | None = Field(default=None, max_length=512)
-    # Set true to proceed past the large-amount safety guard.
+    #: What the bank actually charged, read off the statement. Required — the
+    #: old behaviour of booking whatever was left in clearing assumed the
+    #: residual WAS the commission, and that assumption once turned a month of
+    #: undeposited sales into a 184k expense (BUGLOG 2026-07-13).
+    amount_kurus: int = Field(gt=0)
+    # Set true to proceed past the implausible-amount backstop.
     confirm: bool = False
 
 
 class CardCommissionClearanceRead(BaseModel):
     commission_kurus: int
     clearing_balance_before_kurus: int
+    #: What stays in clearing afterwards — genuinely undeposited card sales,
+    #: no longer forced to zero.
     clearing_balance_after_kurus: int
     clearance_date: date
     journal_entry_id: uuid.UUID
+
+
+class CommissionRatePeriod(BaseModel):
+    """A closed month's effective commission rate, derived not stored."""
+
+    year: int
+    month: int
+    card_sales_kurus: int
+    commission_kurus: int
+    #: Commission as a percentage of gross card sales, or None when there were
+    #: no card sales to divide by.
+    rate_percent: float | None = None
+
+
+class CommissionRateHistoryRead(BaseModel):
+    periods: list[CommissionRatePeriod]
 
 
 class PosDailySummaryRead(BaseModel):

@@ -2,6 +2,38 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-29 — "Clear commission" booked the leftover, not the commission
+
+**Symptom (design flaw, not a crash):** the Cards button booked whatever was sitting in card clearing (1400) as commission. That rests on "the leftover IS the commission", which is only true when the bank deposits net and never charges separately. It was wrong once already — a month of undeposited sales became a **184.628,82 ₺** expense (BUGLOG 2026-07-13) — and cannot be right for every bank. Owner: *"we can not just put every bank on app how they work… i need to be able to manually add amount for the real commission deducted by the bank."*
+
+**Fix:** the amount is now always given, never inferred.
+- `post_card_commission(amount_kurus=…)` replaces `post_card_commission_clearance`. The sweep is **deleted**, not kept as an option — two ways to do one thing is how the mistake gets back in.
+- **Refused when the amount exceeds the residual** as of the commission's own date. That means sales or deposits aren't recorded yet; posting it would drive clearing negative. Being blocked costs nothing (the month stays open), while being permissive cost real money last time.
+- **The leftover stays in clearing**, which is the truth: sales the bank hasn't deposited. The month-close aging check flags it if it gets old.
+
+**The guard was replaced, not just retuned.** The old one fired above 10% of card sales — but real commission is 3–4%, so it would wave through an amount **2,5× too large**. Owner: *"i can never say its gonna say there around 4 percent or 3 percent."* A constant is a guess that goes stale, so the app now **asserts nothing and shows the number**: the implied rate as you type, plus your own previous months beside it. A mistyped extra zero reads as 38,2% and is obvious on sight. The threshold survives only as a backstop at 25%, for an order-of-magnitude slip.
+
+**Rate history is derived, not stored** — commission recognised in 5310 over gross card sales, per month. No migration, and it can never drift out of step if a sale is later corrected.
+
+**Existing tests encoded the old contract** (calling the endpoint with no amount) and were updated; the date-scoping test now also proves a later month's undeposited sales can't authorise a bigger amount.
+
+**Guarding tests:** `backend/tests/test_commission_amount_and_rates.py` (9), `frontend/src/lib/commission-rate.test.ts` (11), plus the updated `test_pos_commission_clearance.py`.
+
+## 2026-07-29 — Bank accounts had no book to read
+
+**Symptom:** Bank reconciliation says *that* the books and a statement disagree; nothing said *where*. The cash book — the report that lists every movement with a running balance — hard-refused bank accounts:
+
+```python
+if money_account.account_kind != MoneyAccountKind.CASH:
+    raise CashAccountRequiredError("money account must be a cash drawer")
+```
+
+**Root cause:** that restriction was never an accounting one. The report reads a money account's GL lines, and a bank account has those too.
+
+**Fix:** `BOOKABLE_KINDS = (CASH, BANK)`, renamed to **Cash & bank book**. Drawer counts come back empty for a bank rather than erroring. **Credit cards stay out** — a liability reads back-to-front as "money in / money out" and has its own page.
+
+**Guarding tests:** `test_cash_book.py` — a bank account gets a book, a credit card is still refused. The old test asserting banks were rejected encoded the restriction and was replaced.
+
 ## 2026-07-29 — Period comparison compared a month against the wrong dates
 
 **Symptom:** Reports → Period comparison for **01.07.2026 – 31.07.2026** showed *"Prior: 31.05.2026 – 30.06.2026"*. Owner: *"prior month date must be 01.06 to 30.06 not 31.05 thats not month."*

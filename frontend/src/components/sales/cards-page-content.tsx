@@ -114,7 +114,7 @@ export function CardsPageContent() {
             disabled={!entityId}
             onClick={() => setClearFormOpen(true)}
           >
-            Clear bank commission
+            Record commission
           </Button>
           <Button
             type="button"

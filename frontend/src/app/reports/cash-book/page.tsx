@@ -1,8 +1,10 @@
 "use client";
 
-/** Cash book — one drawer as a statement, so physical cash can be matched.
- * Opening + money in − money out = what should be in the drawer, against the
- * last count. Reads the cash GL account, so every flow that touched cash shows. */
+/** Account book — one cash drawer or bank account as a statement.
+ * Opening + money in − money out = what should be there. Reads the account's GL
+ * lines, so every flow that touched it shows regardless of which screen recorded
+ * it. Banks are included: Bank reconciliation tells you *that* the books and the
+ * statement disagree, this tells you *where*. */
 
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -48,11 +50,17 @@ function CashBookContent() {
     if (!entityId) return;
     let cancelled = false;
     void apiFetch<{ items: MoneyAccountLeaf[] }>(
-      `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
+      `/entities/${entityId}/banking/accounts?limit=100`,
     )
       .then((res) => {
         if (cancelled) return;
-        const active = res.items.filter((a) => a.is_active);
+        // Cash drawers and banks only — a credit card is a liability and would
+        // read back-to-front here.
+        const active = res.items.filter(
+          (a) =>
+            a.is_active &&
+            (a.account_kind === "cash" || a.account_kind === "bank"),
+        );
         setAccounts(active);
         setAccountId((current) => current || active[0]?.id || "");
       })
@@ -95,7 +103,7 @@ function CashBookContent() {
   const rollForward = useMemo(() => {
     if (!report) return [];
     return [
-      { label: "Opening cash", value: report.opening_kurus },
+      { label: "Opening balance", value: report.opening_kurus },
       { label: "+ Money in", value: report.total_in_kurus },
       { label: "− Money out", value: report.total_out_kurus },
     ];
@@ -116,11 +124,11 @@ function CashBookContent() {
   );
 
   return (
-    <AppShell title="Cash book">
+    <AppShell title="Cash & bank book">
       <p className="mb-4 text-sm text-muted-foreground">
-        Everything that moved through this drawer — sales, expenses paid from
-        the till, staff payments, deposits to the bank — and what should be left
-        in it.
+        Everything that moved through this account — sales, expenses, staff
+        payments, transfers — and what should be left in it. For a bank, this
+        is the list to hold against your statement when the two disagree.
       </p>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -137,7 +145,7 @@ function CashBookContent() {
             value={accountId}
             onValueChange={setAccountId}
             options={accounts.map((a) => ({ value: a.id, label: a.name }))}
-            placeholder="Cash drawer…"
+            placeholder="Account…"
           />
         )}
       </div>
@@ -162,7 +170,7 @@ function CashBookContent() {
                 </div>
               ))}
               <div className="flex justify-between gap-4 border-t border-border pt-2 text-base font-semibold">
-                <dt>= Should be in the drawer</dt>
+                <dt>= Should be there</dt>
                 <dd className="tabular-nums">{formatTry(report.closing_kurus)}</dd>
               </div>
             </dl>
@@ -291,8 +299,8 @@ function CashBookContent() {
             {report.rows.length === 0 ? (
               <EmptyState
                 icon={Wallet}
-                title="No cash movements in this period"
-                hint="Widen the date range, or pick another drawer."
+                title="No movements in this period"
+                hint="Widen the date range, or pick another account."
               />
             ) : (
               <DataTable>

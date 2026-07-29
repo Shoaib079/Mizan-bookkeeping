@@ -1,4 +1,4 @@
-"""Cash book — one drawer as a statement, so physical cash can be matched.
+"""Account book — one cash drawer or bank account as a statement.
 
 Cash is touched by many flows: daily cash sales, expenses paid from the drawer,
 staff salaries and advances, supplier payments, customer payments, deposits to
@@ -13,6 +13,14 @@ shows up regardless of which screen recorded it — and rolls forward:
 
 The closing figure is the same GL balance the drawer close compares a physical
 count against, so the book and the count can never disagree by construction.
+
+**Bank accounts work identically and are included.** The restriction to cash
+drawers was never an accounting one — the report reads a money account's GL
+lines, and a bank account has those too. Excluding banks meant you could see
+*that* your books disagreed with a statement (Bank reconciliation) but not
+*where*, which is the question you actually have with the statement in hand
+(2026-07-29). Drawer counts simply come back empty for a bank, since it has
+none.
 """
 
 from __future__ import annotations
@@ -46,7 +54,12 @@ from app.features.reports.service import InvalidDateRangeError
 __all__ = ["get_cash_book"]
 
 
-class CashAccountRequiredError(ValueError):
+#: Kinds this report can read. A credit card is a liability and reads
+#: back-to-front as "money in / money out", so it keeps its own page.
+BOOKABLE_KINDS = (MoneyAccountKind.CASH, MoneyAccountKind.BANK)
+
+
+class MoneyAccountKindNotSupportedError(ValueError):
     """The requested money account is not a cash account."""
 
 
@@ -67,13 +80,15 @@ def get_cash_book(
 
         money_account = session.get(MoneyAccount, money_account_id)
         if money_account is None:
-            raise LookupError("Cash account not found")
-        if money_account.account_kind != MoneyAccountKind.CASH:
-            raise CashAccountRequiredError("money account must be a cash drawer")
+            raise LookupError("Money account not found")
+        if money_account.account_kind not in BOOKABLE_KINDS:
+            raise MoneyAccountKindNotSupportedError(
+                "account book covers cash drawers and bank accounts"
+            )
 
         gl_account = session.get(Account, money_account.gl_account_id)
         if gl_account is None:
-            raise LookupError("Cash GL account not found")
+            raise LookupError("GL account not found for this money account")
 
         opening_kurus = balance_as_of_kurus(
             session, gl_account, from_date - timedelta(days=1)

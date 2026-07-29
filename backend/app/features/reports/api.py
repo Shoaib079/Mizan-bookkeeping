@@ -139,7 +139,7 @@ def get_cash_book(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except cash_book.CashAccountRequiredError as exc:
+    except cash_book.MoneyAccountKindNotSupportedError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidDateRangeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
