@@ -2,6 +2,25 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-29 — Every Excel export was in kuruş
+
+**Symptom:** downloads showed `18462882` where the owner expected `184.628,82`. Owner: *"the downloaded excel shows amounts in kuruş that is hard to read or not possible to convert."* Not a display nit — a partner can't tick a figure off against a bank statement without dividing every cell by 100 by hand, which defeats the point of sending them the file.
+
+**Root cause:** money is stored in integer kuruş so the ledger never touches a float (Decisions §5), and every exporter wrote that integer straight into the cell. Nothing converted at the boundary because there was no boundary — each of the six exporters called `ws.cell(value=…)` itself.
+
+**Fix:** one place converts. `write_money(ws, row, col, minor)` in `core/excel/workbook.py` writes `minor / 100` as a **real number** with format `#,##0.00`, and every exporter now goes through it:
+- **A number, not a formatted string.** Text would look identical and silently break every `SUM()` and filter in the file — the reason to send Excel rather than PDF.
+- **The format is `#,##0.00`, not a literal `#.##0,00`.** Excel renders it per the *reader's* locale, so a Turkish machine shows `1.234,50` from the same file an English one shows `1,234.50` in.
+- Column headings carry `(₺)` via `money_header()`, so the unit is never in doubt again.
+
+**Two things the first pass missed**, both worth recording because they're the same shape:
+1. My grep for converted cells was `value=.*_kurus`, which can't see `for label, value in figures: ws.cell(value=value)`. Four blocks (the pack's Summary and sales mix, card clearing, cash flow) were still in kuruş after I'd declared the file done. **A grep over the calling syntax proves nothing about the data flowing through it.**
+2. Renaming `format_kurus_label` → `money_header` left **three exporters importing a name that no longer existed** — POS sales, supplier activity, delivery. Those endpoints would have 500'd on first use. No test imported them, so nothing failed.
+
+**Also fixed:** the month pack never showed foreign currency at all, so "what you hold" was incomplete. New **Foreign currency** sheet lists each wallet's quantity held *and* its TRY cost as separate columns — conflating them is the usual mistake, and no rate is applied since the gain or loss isn't realised until conversion.
+
+**Guarding tests:** `test_excel_export.py` — amounts read as lira, cells stay numeric with the money format, headings carry ₺, and **all four exporter modules still import**. `test_month_pack.py` — same in the pack, plus the Foreign currency sheet exists and is counted in the Summary.
+
 ## 2026-07-29 — "Clear commission" booked the leftover, not the commission
 
 **Symptom (design flaw, not a crash):** the Cards button booked whatever was sitting in card clearing (1400) as commission. That rests on "the leftover IS the commission", which is only true when the bank deposits net and never charges separately. It was wrong once already — a month of undeposited sales became a **184.628,82 ₺** expense (BUGLOG 2026-07-13) — and cannot be right for every bank. Owner: *"we can not just put every bank on app how they work… i need to be able to manually add amount for the real commission deducted by the bank."*

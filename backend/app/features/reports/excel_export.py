@@ -12,7 +12,8 @@ from app.core.excel.workbook import (
     autosize_columns,
     bold_row,
     create_workbook,
-    format_kurus_label,
+    money_header,
+    write_money,
     save_workbook_to_bytes,
 )
 from app.features.reports.schema import (
@@ -64,7 +65,7 @@ def write_profit_and_loss_sheet(ws, report: ProfitAndLossRead) -> None:
         date_label="Period",
         date_value=f"{report.from_date} to {report.to_date}",
     )
-    amount_label = format_kurus_label()
+    amount_label = money_header()
     headers = ["Code", "Name", "Type", amount_label]
     for col, header in enumerate(headers, start=1):
         ws.cell(row=header_row, column=col, value=header)
@@ -75,18 +76,18 @@ def write_profit_and_loss_sheet(ws, report: ProfitAndLossRead) -> None:
         ws.cell(row=row, column=1, value=account.code)
         ws.cell(row=row, column=2, value=account.name_en)
         ws.cell(row=row, column=3, value=account.account_type.value)
-        ws.cell(row=row, column=4, value=account.amount_kurus)
+        write_money(ws, row, 4, account.amount_kurus)
         row += 1
 
     row += 1
     ws.cell(row=row, column=1, value="TOTAL REVENUE")
-    ws.cell(row=row, column=4, value=report.total_revenue_kurus)
+    write_money(ws, row, 4, report.total_revenue_kurus)
     row += 1
     ws.cell(row=row, column=1, value="TOTAL EXPENSES")
-    ws.cell(row=row, column=4, value=report.total_expenses_kurus)
+    write_money(ws, row, 4, report.total_expenses_kurus)
     row += 1
     ws.cell(row=row, column=1, value="NET INCOME")
-    ws.cell(row=row, column=4, value=report.net_income_kurus)
+    write_money(ws, row, 4, report.net_income_kurus)
     bold_row(ws, row - 2, end_col=4)
     bold_row(ws, row - 1, end_col=4)
     bold_row(ws, row, end_col=4)
@@ -114,7 +115,7 @@ def _write_balance_sheet_section(
     bold_row(ws, row, end_col=4)
     row += 1
 
-    amount_label = format_kurus_label("Balance")
+    amount_label = money_header("Balance")
     for col, header in enumerate(["Code", "Name", "Type", amount_label], start=1):
         ws.cell(row=row, column=col, value=header)
     bold_row(ws, row, end_col=4)
@@ -124,16 +125,16 @@ def _write_balance_sheet_section(
         ws.cell(row=row, column=1, value=account.code)
         ws.cell(row=row, column=2, value=account.name_en)
         ws.cell(row=row, column=3, value=account.account_type.value)
-        ws.cell(row=row, column=4, value=account.balance_kurus)
+        write_money(ws, row, 4, account.balance_kurus)
         row += 1
 
     if extra_label is not None and extra_kurus is not None:
         ws.cell(row=row, column=1, value=extra_label)
-        ws.cell(row=row, column=4, value=extra_kurus)
+        write_money(ws, row, 4, extra_kurus)
         row += 1
 
     ws.cell(row=row, column=1, value=f"{section_name} subtotal")
-    ws.cell(row=row, column=4, value=subtotal_kurus)
+    write_money(ws, row, 4, subtotal_kurus)
     bold_row(ws, row, end_col=4)
     return row + 2
 
@@ -173,10 +174,10 @@ def build_balance_sheet_xlsx(report: BalanceSheetRead) -> bytes:
     )
 
     ws.cell(row=row, column=1, value="Total assets")
-    ws.cell(row=row, column=4, value=report.total_assets_kurus)
+    write_money(ws, row, 4, report.total_assets_kurus)
     row += 1
     ws.cell(row=row, column=1, value="Total liabilities and equity")
-    ws.cell(row=row, column=4, value=report.total_liabilities_and_equity_kurus)
+    write_money(ws, row, 4, report.total_liabilities_and_equity_kurus)
     row += 1
     ws.cell(
         row=row,
@@ -201,7 +202,7 @@ def build_cash_flow_xlsx(report: CashFlowRead) -> bytes:
         date_value=f"{report.from_date} to {report.to_date}",
     )
 
-    summary_headers = ["Metric", format_kurus_label()]
+    summary_headers = ["Metric", money_header()]
     for col, header in enumerate(summary_headers, start=1):
         ws.cell(row=row, column=col, value=header)
     bold_row(ws, row, end_col=2)
@@ -223,11 +224,11 @@ def build_cash_flow_xlsx(report: CashFlowRead) -> bytes:
     ]
     for label, value in summary_rows:
         ws.cell(row=row, column=1, value=label)
-        ws.cell(row=row, column=2, value=value)
+        write_money(ws, row, 2, value)
         row += 1
 
     row += 1
-    source_headers = ["Source", "Category", format_kurus_label("Net cash")]
+    source_headers = ["Source", "Category", money_header("Net cash")]
     for col, header in enumerate(source_headers, start=1):
         ws.cell(row=row, column=col, value=header)
     bold_row(ws, row, end_col=3)
@@ -236,7 +237,7 @@ def build_cash_flow_xlsx(report: CashFlowRead) -> bytes:
     for source_row in report.by_source:
         ws.cell(row=row, column=1, value=source_row.source)
         ws.cell(row=row, column=2, value=source_row.category)
-        ws.cell(row=row, column=3, value=source_row.net_cash_kurus)
+        write_money(ws, row, 3, source_row.net_cash_kurus)
         row += 1
 
     autosize_columns(ws)
@@ -255,8 +256,8 @@ def build_kdv_input_xlsx(report: KdvInputReportRead) -> bytes:
 
     headers = [
         "Rate (%)",
-        format_kurus_label("Base"),
-        format_kurus_label("VAT"),
+        money_header("Base"),
+        money_header("VAT"),
         "Invoice count",
     ]
     for col, header in enumerate(headers, start=1):
@@ -266,15 +267,15 @@ def build_kdv_input_xlsx(report: KdvInputReportRead) -> bytes:
 
     for rate_row in report.rates:
         ws.cell(row=row, column=1, value=rate_row.rate_percent)
-        ws.cell(row=row, column=2, value=rate_row.base_kurus)
-        ws.cell(row=row, column=3, value=rate_row.vat_kurus)
+        write_money(ws, row, 2, rate_row.base_kurus)
+        write_money(ws, row, 3, rate_row.vat_kurus)
         ws.cell(row=row, column=4, value=rate_row.invoice_count)
         row += 1
 
     row += 1
     ws.cell(row=row, column=1, value="TOTAL")
-    ws.cell(row=row, column=2, value=report.total_base_kurus)
-    ws.cell(row=row, column=3, value=report.total_vat_kurus)
+    write_money(ws, row, 2, report.total_base_kurus)
+    write_money(ws, row, 3, report.total_vat_kurus)
     ws.cell(row=row, column=4, value=report.invoice_count)
     bold_row(ws, row, end_col=4)
 
@@ -295,7 +296,7 @@ def build_delivery_sales_xlsx(report: DeliverySalesReportRead) -> bytes:
     headers = [
         "Platform",
         "Active",
-        format_kurus_label("Gross"),
+        money_header("Gross"),
         "Report count",
     ]
     for col, header in enumerate(headers, start=1):
@@ -306,13 +307,13 @@ def build_delivery_sales_xlsx(report: DeliverySalesReportRead) -> bytes:
     for platform in report.platforms:
         ws.cell(row=row, column=1, value=platform.platform_name)
         ws.cell(row=row, column=2, value=platform.is_active)
-        ws.cell(row=row, column=3, value=platform.gross_kurus)
+        write_money(ws, row, 3, platform.gross_kurus)
         ws.cell(row=row, column=4, value=platform.report_count)
         row += 1
 
     row += 1
     ws.cell(row=row, column=1, value="TOTAL")
-    ws.cell(row=row, column=3, value=report.total_gross_kurus)
+    write_money(ws, row, 3, report.total_gross_kurus)
     bold_row(ws, row, end_col=4)
 
     autosize_columns(ws)
@@ -337,9 +338,9 @@ def build_period_comparison_xlsx(report: PeriodComparisonRead) -> bytes:
 
     headers = [
         "Metric",
-        format_kurus_label("Current"),
-        format_kurus_label("Prior"),
-        format_kurus_label("Change"),
+        money_header("Current"),
+        money_header("Prior"),
+        money_header("Change"),
         "Change (%)",
     ]
     for col, header in enumerate(headers, start=1):
@@ -349,9 +350,9 @@ def build_period_comparison_xlsx(report: PeriodComparisonRead) -> bytes:
 
     for metric in report.metrics:
         ws.cell(row=row, column=1, value=metric.label)
-        ws.cell(row=row, column=2, value=metric.current_kurus)
-        ws.cell(row=row, column=3, value=metric.prior_kurus)
-        ws.cell(row=row, column=4, value=metric.change_kurus)
+        write_money(ws, row, 2, metric.current_kurus)
+        write_money(ws, row, 3, metric.prior_kurus)
+        write_money(ws, row, 4, metric.change_kurus)
         ws.cell(
             row=row,
             column=5,

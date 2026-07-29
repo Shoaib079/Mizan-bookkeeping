@@ -9,8 +9,9 @@ from app.core.excel.workbook import (
     autosize_columns,
     bold_row,
     create_workbook,
-    format_kurus_label,
+    money_header,
     save_workbook_to_bytes,
+    write_money,
 )
 from app.features.pos.schema import PosDailySummaryRead
 
@@ -33,10 +34,10 @@ def build_pos_daily_summaries_xlsx(
     headers = [
         "Date",
         "Status",
-        format_kurus_label("Cash"),
-        format_kurus_label("Card"),
-        format_kurus_label("Total"),
-        format_kurus_label("Z report"),
+        money_header("Cash"),
+        money_header("Card"),
+        money_header("Total"),
+        money_header("Z report"),
         "Review reason",
         "Posted at",
     ]
@@ -51,10 +52,10 @@ def build_pos_daily_summaries_xlsx(
     for summary in summaries:
         ws.cell(row=row, column=1, value=str(summary.summary_date or ""))
         ws.cell(row=row, column=2, value=summary.status)
-        ws.cell(row=row, column=3, value=summary.cash_kurus)
-        ws.cell(row=row, column=4, value=summary.card_kurus)
-        ws.cell(row=row, column=5, value=summary.total_kurus)
-        ws.cell(row=row, column=6, value=summary.z_report_kurus)
+        write_money(ws, row, 3, summary.cash_kurus)
+        write_money(ws, row, 4, summary.card_kurus)
+        write_money(ws, row, 5, summary.total_kurus)
+        write_money(ws, row, 6, summary.z_report_kurus)
         ws.cell(row=row, column=7, value=summary.review_reason or "")
         ws.cell(row=row, column=8, value=str(summary.posted_at or ""))
         cash_total += summary.cash_kurus
@@ -64,9 +65,9 @@ def build_pos_daily_summaries_xlsx(
 
     row += 1
     ws.cell(row=row, column=1, value="TOTAL")
-    ws.cell(row=row, column=3, value=cash_total)
-    ws.cell(row=row, column=4, value=card_total)
-    ws.cell(row=row, column=5, value=total_total)
+    write_money(ws, row, 3, cash_total)
+    write_money(ws, row, 4, card_total)
+    write_money(ws, row, 5, total_total)
     bold_row(ws, row, end_col=5)
 
     autosize_columns(ws)

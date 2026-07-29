@@ -4,6 +4,16 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-29
 
+**Every download is now in lira, not kuruş.**
+- Exports showed `18462882` where you expected `184.628,82`, so nothing could be checked against a bank statement without dividing each figure by 100 yourself.
+- All of them are fixed — the month pack, profit & loss, balance sheet, cash flow, KDV, period comparison, POS sales, supplier activity and delivery. Money columns are now headed with **₺** so the unit is never in doubt.
+- The figures are still real numbers, so you can filter a column and total it in Excel exactly as before.
+
+**The month pack now shows the foreign currency you hold.**
+- New **Foreign currency** sheet: each wallet, how much of the currency is in it, and what you paid for it in lira — as two separate columns, because they're two different numbers.
+- No exchange rate is applied. Any gain or loss on currency you're still holding isn't real until you convert it, and putting today's rate in the file would invent a figure your books don't have.
+- The Summary's "what you hold" block now counts it too, alongside cash in hand and bank balance.
+
 **Balances now shows staff and partner totals.**
 - Those two cards were blank — they only linked through to the directory, so the hub couldn't answer "what do I owe my staff" without a click.
 - Both now show the grand total, with the number of people it covers. A negative staff total means your employees are holding advances rather than being owed, and it's coloured differently to make that obvious.

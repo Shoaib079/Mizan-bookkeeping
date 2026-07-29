@@ -9,8 +9,9 @@ from app.core.excel.workbook import (
     autosize_columns,
     bold_row,
     create_workbook,
-    format_kurus_label,
+    money_header,
     save_workbook_to_bytes,
+    write_money,
 )
 from app.features.delivery.schema import DeliveryReportRead, DeliverySettlementRead
 
@@ -38,7 +39,7 @@ def build_delivery_activity_xlsx(
         "Platform",
         "Period from",
         "Period to",
-        "Gross",
+        money_header("Gross"),
         "Status",
         "Description",
     ]
@@ -52,7 +53,7 @@ def build_delivery_activity_xlsx(
         ws_sales.cell(row=row, column=1, value=item.platform_name)
         ws_sales.cell(row=row, column=2, value=item.period_start.isoformat())
         ws_sales.cell(row=row, column=3, value=item.period_end.isoformat())
-        ws_sales.cell(row=row, column=4, value=item.gross_kurus)
+        write_money(ws_sales, row, 4, item.gross_kurus)
         ws_sales.cell(row=row, column=5, value=item.status)
         ws_sales.cell(row=row, column=6, value=item.description)
         if item.status == "posted":
@@ -61,7 +62,7 @@ def build_delivery_activity_xlsx(
 
     row += 1
     ws_sales.cell(row=row, column=1, value="Posted total")
-    ws_sales.cell(row=row, column=4, value=sales_total)
+    write_money(ws_sales, row, 4, sales_total)
     bold_row(ws_sales, row, end_col=4)
     autosize_columns(ws_sales)
 
@@ -78,7 +79,7 @@ def build_delivery_activity_xlsx(
     settle_headers = [
         "Platform",
         "Date",
-        format_kurus_label("Amount"),
+        money_header("Amount"),
         "Description",
     ]
     for col, header in enumerate(settle_headers, start=1):
@@ -90,14 +91,14 @@ def build_delivery_activity_xlsx(
     for item in settlements:
         ws_settle.cell(row=row, column=1, value=item.platform_name)
         ws_settle.cell(row=row, column=2, value=item.settlement_date.isoformat())
-        ws_settle.cell(row=row, column=3, value=item.amount_kurus)
+        write_money(ws_settle, row, 3, item.amount_kurus)
         ws_settle.cell(row=row, column=4, value=item.description)
         settle_total += item.amount_kurus
         row += 1
 
     row += 1
     ws_settle.cell(row=row, column=1, value="Total")
-    ws_settle.cell(row=row, column=3, value=settle_total)
+    write_money(ws_settle, row, 3, settle_total)
     bold_row(ws_settle, row, end_col=3)
     autosize_columns(ws_settle)
 

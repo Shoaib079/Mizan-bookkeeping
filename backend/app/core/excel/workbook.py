@@ -26,8 +26,40 @@ def add_sheet(wb: Workbook, title: str) -> Worksheet:
     return wb.create_sheet(title=title[:31])
 
 
-def format_kurus_label(column_name: str = "Amount") -> str:
-    return f"{column_name} (kuruş)"
+#: Plain numeric format. Deliberately not a literal like "#.##0,00" — Excel
+#: renders this per the *reader's* locale, so a Turkish machine shows
+#: 1.234,50 and an English one 1,234.50, both from the same file.
+MONEY_FORMAT = "#,##0.00"
+
+
+def money_header(column_name: str = "Amount") -> str:
+    return f"{column_name} (₺)"
+
+
+def write_money(ws, row: int, col: int, minor: int | None) -> None:
+    """Write a minor-unit amount as lira, still a number Excel can sum.
+
+    Amounts are stored in kuruş so the ledger never touches a float, but a
+    column of raw kuruş is unreadable and can't be checked against a statement
+    — the owner would have to divide every figure by 100 by hand
+    (2026-07-29). Written as a real number, not text, so filters and SUM()
+    keep working.
+    """
+    if minor is None:
+        return
+    cell = ws.cell(row=row, column=col, value=minor / 100)
+    cell.number_format = MONEY_FORMAT
+
+
+def write_quantity(ws, row: int, col: int, minor: int | None) -> None:
+    """A foreign-currency quantity held in minor units — €, $, £, not ₺.
+
+    Arithmetically identical to write_money today, and kept separate anyway:
+    these two columns sit side by side on the foreign currency sheet and mean
+    different things, so a future change to one (a ₺ symbol in the format, say)
+    must not silently follow into the other.
+    """
+    write_money(ws, row, col, minor)
 
 
 def bold_row(ws: Worksheet, row: int, *, start_col: int = 1, end_col: int) -> None:

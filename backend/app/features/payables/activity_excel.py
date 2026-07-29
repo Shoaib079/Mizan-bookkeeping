@@ -6,8 +6,9 @@ from app.core.excel.workbook import (
     autosize_columns,
     bold_row,
     create_workbook,
-    format_kurus_label,
+    money_header,
     save_workbook_to_bytes,
+    write_money,
 )
 from app.features.payables.schema import SupplierActivityRead
 
@@ -22,23 +23,23 @@ def build_supplier_activity_xlsx(report: SupplierActivityRead) -> bytes:
         value=f"Dönem: {report.from_date} – {report.to_date}",
     )
     ws.cell(row=4, column=1, value="Açılış bakiyesi")
-    ws.cell(row=4, column=2, value=report.opening_balance_kurus)
+    write_money(ws, 4, 2, report.opening_balance_kurus)
     ws.cell(row=5, column=1, value="Kapanış bakiyesi")
-    ws.cell(row=5, column=2, value=report.closing_balance_kurus)
+    write_money(ws, 5, 2, report.closing_balance_kurus)
 
     header_row = 7
-    amount_label = format_kurus_label()
+    amount_label = money_header()
     headers = [
         "Tarih",
         "Hareket",
         "Belge / ref",
         "Açıklama",
-        "Matrah",
-        "KDV",
+        money_header("Matrah"),
+        money_header("KDV"),
         amount_label,
         "Banka",
         "Dekont",
-        "Bakiye",
+        money_header("Bakiye"),
     ]
     for col, header in enumerate(headers, start=1):
         ws.cell(row=header_row, column=col, value=header)
@@ -50,17 +51,14 @@ def build_supplier_activity_xlsx(report: SupplierActivityRead) -> bytes:
         ws.cell(row=row, column=2, value=item.movement_label)
         ws.cell(row=row, column=3, value=item.document_ref)
         ws.cell(row=row, column=4, value=item.detail)
-        if item.net_kurus is not None:
-            ws.cell(row=row, column=5, value=item.net_kurus)
-        if item.vat_kurus is not None:
-            ws.cell(row=row, column=6, value=item.vat_kurus)
-        if item.amount_kurus is not None:
-            ws.cell(row=row, column=7, value=item.amount_kurus)
+        write_money(ws, row, 5, item.net_kurus)
+        write_money(ws, row, 6, item.vat_kurus)
+        write_money(ws, row, 7, item.amount_kurus)
         if item.bank_name:
             ws.cell(row=row, column=8, value=item.bank_name)
         if item.dekont_ref:
             ws.cell(row=row, column=9, value=item.dekont_ref)
-        ws.cell(row=row, column=10, value=item.balance_kurus)
+        write_money(ws, row, 10, item.balance_kurus)
         row += 1
 
     autosize_columns(ws)

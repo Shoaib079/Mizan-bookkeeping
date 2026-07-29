@@ -184,6 +184,57 @@ def test_the_ledger_sheet_names_accounts_not_ids(db_session, books):
     assert not any(label.count("-") == 4 for label in labels if label != "None")
 
 
+def test_amounts_are_lira_not_kurus(db_session, books):
+    """A column of raw kuruş can't be checked against a statement without
+    dividing every figure by 100 by hand (2026-07-29)."""
+    _sale(db_session, books, date(2026, 6, 10), 123_456)
+    wb, _ = _pack(db_session, books)
+
+    summary = wb["Summary"]
+    values = [
+        summary.cell(row=r, column=2).value for r in range(1, summary.max_row + 1)
+    ]
+    assert 1234.56 in values, "1.234,56 ₺ should read as 1234.56, not 123456"
+    assert 123_456 not in values
+
+
+def test_money_stays_a_number_so_excel_can_total_it(db_session, books):
+    """Formatting as text would look right and break every SUM()."""
+    _sale(db_session, books, date(2026, 6, 10), 100_000)
+    wb, _ = _pack(db_session, books)
+
+    summary = wb["Summary"]
+    money = [
+        summary.cell(row=r, column=2)
+        for r in range(1, summary.max_row + 1)
+        if isinstance(summary.cell(row=r, column=2).value, (int, float))
+    ]
+    assert money, "expected at least one numeric money cell"
+    assert all(cell.number_format == "#,##0.00" for cell in money)
+
+
+def test_the_pack_shows_foreign_currency_held(db_session, books):
+    """It was missing entirely — 'what you hold' wasn't answering the question."""
+    wb, _ = _pack(db_session, books)
+    assert "Foreign currency" in wb.sheetnames
+
+    fx = wb["Foreign currency"]
+    heading = str(fx.cell(row=1, column=1).value)
+    assert "Foreign currency held" in heading
+
+
+def test_the_summary_counts_forex_in_what_you_hold(db_session, books):
+    _sale(db_session, books, date(2026, 6, 10), 100_000)
+    wb, _ = _pack(db_session, books)
+
+    summary = wb["Summary"]
+    labels = [
+        str(summary.cell(row=r, column=1).value)
+        for r in range(1, summary.max_row + 1)
+    ]
+    assert any("Foreign currency" in label for label in labels)
+
+
 def test_an_unknown_entity_is_a_lookup_error(db_session):
     with pytest.raises(LookupError):
         month_pack.build_month_pack_xlsx(

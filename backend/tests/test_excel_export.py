@@ -219,3 +219,62 @@ def test_period_comparison_export_invalid_date_range(
         params={"from": "2026-02-01", "to": "2026-01-01"},
     )
     assert response.status_code == 422
+
+
+def test_exported_amounts_are_lira(
+    db_session, client: TestClient, export_setup
+) -> None:
+    """Exports used to carry raw kuruş, so 1.000 ₺ of rent read as 100000 and
+    no figure could be checked against a statement without dividing by hand
+    (2026-07-29)."""
+    setup = export_setup
+    _post_rent_expense(
+        db_session, setup, amount_kurus=100_000, expense_date=date(2026, 1, 16)
+    )
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/reports/profit-and-loss/export",
+        params={"from": "2026-01-01", "to": "2026-01-31"},
+    )
+    ws = _load_sheet(response.content)
+    numbers = [
+        ws.cell(row=r, column=c)
+        for r in range(1, ws.max_row + 1)
+        for c in range(1, ws.max_column + 1)
+        if isinstance(ws.cell(row=r, column=c).value, (int, float))
+    ]
+    values = [cell.value for cell in numbers]
+    assert 1000.0 in values, "1.000,00 ₺ of rent should read as 1000.0"
+    assert 100_000 not in values
+
+    # A number, not a formatted string — otherwise every SUM() in the file breaks.
+    assert all(cell.number_format == "#,##0.00" for cell in numbers)
+
+
+def test_money_columns_are_marked_as_lira(client: TestClient, export_setup) -> None:
+    """Without the ₺ in the heading, a reader can't tell which unit they're
+    looking at — the exact ambiguity that hid the kuruş bug."""
+    response = client.get(
+        f"/entities/{export_setup['entity_id']}/reports/profit-and-loss/export",
+        params={"from": "2026-01-01", "to": "2026-01-31"},
+    )
+    ws = _load_sheet(response.content)
+    text = " ".join(
+        str(ws.cell(row=r, column=c).value)
+        for r in range(1, ws.max_row + 1)
+        for c in range(1, ws.max_column + 1)
+    )
+    assert "₺" in text
+
+
+def test_every_exporter_still_imports() -> None:
+    """These four modules share the workbook helpers, and renaming one helper
+    broke three of them at import time without any test noticing — the export
+    endpoints would have 500'd on first use (2026-07-29)."""
+    from app.features.delivery import excel_export as delivery_export
+    from app.features.payables import activity_excel
+    from app.features.pos import excel_export as pos_export
+    from app.features.reports import month_pack
+
+    for module in (delivery_export, activity_excel, pos_export, month_pack):
+        assert module is not None

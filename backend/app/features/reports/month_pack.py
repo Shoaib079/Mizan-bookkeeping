@@ -27,8 +27,10 @@ from app.core.excel.workbook import (
     autosize_columns,
     bold_row,
     create_workbook,
-    format_kurus_label,
+    money_header,
     save_workbook_to_bytes,
+    write_money,
+    write_quantity,
 )
 from app.core.listing import ListParams
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
@@ -99,7 +101,7 @@ def _write_summary(ws, ctx: MonthPackContext, dashboard) -> None:
     bold_row(ws, 1, end_col=2)
 
     row = 5
-    row = _headers(ws, row, ["", format_kurus_label()])
+    row = _headers(ws, row, ["", money_header()])
     figures = [
         ("Cash sales", dashboard.sales.cash_sales_kurus),
         ("Card sales", dashboard.sales.pos_card_sales_kurus),
@@ -113,13 +115,20 @@ def _write_summary(ws, ctx: MonthPackContext, dashboard) -> None:
         ("", None),
         ("Cash in hand", dashboard.cash_in_hand_kurus),
         ("Bank balance", dashboard.bank_balance_kurus),
+        # TRY cost of the foreign currency held, so "what you hold" is complete.
+        # The Foreign currency sheet breaks it down by wallet.
+        (
+            "Foreign currency (TRY cost)",
+            sum(fx.try_cost_kurus for fx in dashboard.fx_balances),
+        ),
         ("Owed to suppliers", dashboard.total_payables_kurus),
         ("Owed by customers", dashboard.total_receivables_kurus),
     ]
     for label, value in figures:
         ws.cell(row=row, column=1, value=label)
-        if value is not None:
-            ws.cell(row=row, column=2, value=value)
+        # write_money already skips None, which is how the blank spacer rows
+        # between blocks stay blank.
+        write_money(ws, row, 2, value)
         if label.isupper() and label:
             bold_row(ws, row, end_col=2)
         row += 1
@@ -134,6 +143,7 @@ def _write_summary(ws, ctx: MonthPackContext, dashboard) -> None:
         "Salaries — accruals, payments and advances",
         "Cash book — each drawer's movements",
         "Bank book — each bank account's movements",
+        "Foreign currency — what you hold in each wallet",
         "Card clearing — sales, deposits and commission",
         "Profit and loss",
         "General ledger — every journal entry",
@@ -150,13 +160,13 @@ def _write_sales(ws, series, dashboard) -> None:
     row = _headers(
         ws,
         3,
-        ["Date", format_kurus_label("Sales"), format_kurus_label("Expenses"), format_kurus_label("Net")],
+        ["Date", money_header("Sales"), money_header("Expenses"), money_header("Net")],
     )
     for point in series.daily:
         ws.cell(row=row, column=1, value=point.date)
-        ws.cell(row=row, column=2, value=point.sales_kurus)
-        ws.cell(row=row, column=3, value=point.expenses_kurus)
-        ws.cell(row=row, column=4, value=point.net_kurus)
+        write_money(ws, row, 2, point.sales_kurus)
+        write_money(ws, row, 3, point.expenses_kurus)
+        write_money(ws, row, 4, point.net_kurus)
         row += 1
 
     row += 1
@@ -171,7 +181,7 @@ def _write_sales(ws, series, dashboard) -> None:
         ("Other", dashboard.sales.other_sales_kurus),
     ]:
         ws.cell(row=row, column=1, value=label)
-        ws.cell(row=row, column=2, value=value)
+        write_money(ws, row, 2, value)
         row += 1
     autosize_columns(ws)
 
@@ -180,30 +190,30 @@ def _write_expenses(ws, register) -> None:
     ws.cell(row=1, column=1, value="Every expense in the period")
     bold_row(ws, 1, end_col=1)
     row = _headers(
-        ws, 3, ["Date", "Account", "Description", "Recorded as", format_kurus_label()]
+        ws, 3, ["Date", "Account", "Description", "Recorded as", money_header()]
     )
     for line in register.rows:
         ws.cell(row=row, column=1, value=line.entry_date)
         ws.cell(row=row, column=2, value=f"{line.account_code} — {line.account_name}")
         ws.cell(row=row, column=3, value=line.description)
         ws.cell(row=row, column=4, value=line.source)
-        ws.cell(row=row, column=5, value=line.amount_kurus)
+        write_money(ws, row, 5, line.amount_kurus)
         row += 1
 
     row += 1
     ws.cell(row=row, column=1, value="TOTAL")
-    ws.cell(row=row, column=5, value=register.total_kurus)
+    write_money(ws, row, 5, register.total_kurus)
     bold_row(ws, row, end_col=5)
 
     row += 2
     ws.cell(row=row, column=1, value="By category")
     bold_row(ws, row, end_col=1)
     row += 1
-    row = _headers(ws, row, ["Account", "Entries", format_kurus_label()])
+    row = _headers(ws, row, ["Account", "Entries", money_header()])
     for total in register.account_totals:
         ws.cell(row=row, column=1, value=f"{total.account_code} — {total.account_name}")
         ws.cell(row=row, column=2, value=total.entry_count)
-        ws.cell(row=row, column=3, value=total.amount_kurus)
+        write_money(ws, row, 3, total.amount_kurus)
         row += 1
     autosize_columns(ws)
 
@@ -214,7 +224,7 @@ def _write_salaries(
     ws.cell(row=1, column=1, value="Staff — accruals, payments and advances")
     bold_row(ws, 1, end_col=1)
     row = _headers(
-        ws, 3, ["Date", "Employee", "Movement", "Description", format_kurus_label()]
+        ws, 3, ["Date", "Employee", "Movement", "Description", money_header()]
     )
 
     employees, _ = staff_service.list_employees(
@@ -229,7 +239,7 @@ def _write_salaries(
             ws.cell(row=row, column=2, value=employee.name)
             ws.cell(row=row, column=3, value=entry.movement_type.value)
             ws.cell(row=row, column=4, value=entry.description)
-            ws.cell(row=row, column=5, value=entry.amount_minor)
+            write_money(ws, row, 5, entry.amount_minor)
             row += 1
     autosize_columns(ws)
 
@@ -238,9 +248,9 @@ def _write_account_book(ws, book, *, heading: str) -> None:
     ws.cell(row=1, column=1, value=f"{heading} — {book.money_account_name}")
     bold_row(ws, 1, end_col=1)
     ws.cell(row=2, column=1, value="Opening")
-    ws.cell(row=2, column=2, value=book.opening_kurus)
+    write_money(ws, 2, 2, book.opening_kurus)
     ws.cell(row=3, column=1, value="Closing (what should be there)")
-    ws.cell(row=3, column=2, value=book.closing_kurus)
+    write_money(ws, 3, 2, book.closing_kurus)
     bold_row(ws, 3, end_col=2)
 
     row = _headers(
@@ -250,26 +260,69 @@ def _write_account_book(ws, book, *, heading: str) -> None:
             "Date",
             "Description",
             "Recorded as",
-            format_kurus_label("In"),
-            format_kurus_label("Out"),
-            format_kurus_label("Balance"),
+            money_header("In"),
+            money_header("Out"),
+            money_header("Balance"),
         ],
     )
     for line in book.rows:
         ws.cell(row=row, column=1, value=line.entry_date)
         ws.cell(row=row, column=2, value=line.description)
         ws.cell(row=row, column=3, value=line.source)
-        ws.cell(row=row, column=4, value=line.in_kurus or None)
-        ws.cell(row=row, column=5, value=line.out_kurus or None)
-        ws.cell(row=row, column=6, value=line.balance_kurus)
+        write_money(ws, row, 4, line.in_kurus or None)
+        write_money(ws, row, 5, line.out_kurus or None)
+        write_money(ws, row, 6, line.balance_kurus)
         row += 1
+    autosize_columns(ws)
+
+
+def _write_fx(ws, fx_balances) -> None:
+    """Foreign currency held, by wallet.
+
+    Two different numbers, and conflating them is the usual mistake: the
+    quantity is what's actually in the wallet, the TRY cost is what was paid
+    for it. The gain or loss between them isn't realised until it's converted,
+    so no rate is applied here — that would invent a figure the books don't
+    hold.
+    """
+    ws.cell(row=1, column=1, value="Foreign currency held")
+    bold_row(ws, 1, end_col=1)
+
+    if not fx_balances:
+        ws.cell(row=3, column=1, value="No foreign currency wallets.")
+        autosize_columns(ws)
+        return
+
+    row = _headers(
+        ws, 3, ["Wallet", "Currency", "Amount held", money_header("TRY cost")]
+    )
+    for fx in fx_balances:
+        ws.cell(row=row, column=1, value=fx.name)
+        ws.cell(row=row, column=2, value=fx.currency)
+        write_quantity(ws, row, 3, fx.native_quantity)
+        write_money(ws, row, 4, fx.try_cost_kurus)
+        row += 1
+
+    ws.cell(row=row, column=1, value="TOTAL TRY COST")
+    write_money(ws, row, 4, sum(fx.try_cost_kurus for fx in fx_balances))
+    bold_row(ws, row, end_col=4)
+
+    row += 2
+    ws.cell(
+        row=row,
+        column=1,
+        value=(
+            "Amount held is the currency itself; TRY cost is what was paid for "
+            "it. Any gain or loss between them is realised only on conversion."
+        ),
+    )
     autosize_columns(ws)
 
 
 def _write_card_clearing(ws, reconciliation) -> None:
     ws.cell(row=1, column=1, value="Card clearing — where card money sat")
     bold_row(ws, 1, end_col=1)
-    row = _headers(ws, 3, ["", format_kurus_label()])
+    row = _headers(ws, 3, ["", money_header()])
     for label, value in [
         ("Opening in transit", reconciliation.opening_in_transit_kurus),
         ("Card sales in period", reconciliation.period_card_sales_kurus),
@@ -279,7 +332,7 @@ def _write_card_clearing(ws, reconciliation) -> None:
         ("Total card sales (all time)", reconciliation.total_card_sales_kurus),
     ]:
         ws.cell(row=row, column=1, value=label)
-        ws.cell(row=row, column=2, value=value)
+        write_money(ws, row, 2, value)
         row += 1
 
     if reconciliation.aging:
@@ -287,10 +340,10 @@ def _write_card_clearing(ws, reconciliation) -> None:
         ws.cell(row=row, column=1, value="Undeposited card money by age")
         bold_row(ws, row, end_col=1)
         row += 1
-        row = _headers(ws, row, ["Age", format_kurus_label()])
+        row = _headers(ws, row, ["Age", money_header()])
         for bucket in reconciliation.aging:
             ws.cell(row=row, column=1, value=bucket.label)
-            ws.cell(row=row, column=2, value=bucket.amount_kurus)
+            write_money(ws, row, 2, bucket.amount_kurus)
             row += 1
     autosize_columns(ws)
 
@@ -317,8 +370,8 @@ def _write_ledger(ws, entries, account_labels: dict[uuid.UUID, str]) -> None:
                 value=account_labels.get(line.account_id, str(line.account_id)),
             )
             debit = line.side.value.lower() == "debit"
-            ws.cell(row=row, column=6, value=line.amount_kurus if debit else None)
-            ws.cell(row=row, column=7, value=None if debit else line.amount_kurus)
+            write_money(ws, row, 6, line.amount_kurus if debit else None)
+            write_money(ws, row, 7, None if debit else line.amount_kurus)
             row += 1
     autosize_columns(ws)
 
@@ -407,6 +460,7 @@ def build_month_pack_xlsx(
             add_sheet(wb, f"Bank — {name}"), book, heading="Bank book"
         )
 
+    _write_fx(add_sheet(wb, "Foreign currency"), dashboard.fx_balances)
     _write_card_clearing(add_sheet(wb, "Card clearing"), clearing)
     write_profit_and_loss_sheet(add_sheet(wb, "Profit and loss"), profit_and_loss)
     _write_ledger(add_sheet(wb, "General ledger"), entries, account_labels)
