@@ -49,6 +49,7 @@ RLS_TABLES = (
     "entity_memberships",
     "period_locks",
     "period_lock_audit_events",
+    "period_close_snapshots",
 )
 
 

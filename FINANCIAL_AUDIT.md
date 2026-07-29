@@ -53,11 +53,22 @@ Sales post **gross** (KDV dahil) to `4000`; there is no output-VAT liability acc
 
 DECISIONS.md records this as a deliberate deferral ("gross-only revenue posting for now"), so it's a known scope cut, not a hidden bug — but it is the single biggest gap between "internally consistent books" and "credible financial statements." Until built: label the P&L "KDV dahil revenue / mixed-basis expenses — management view, not tax basis," and keep the accountant workflow external.
 
-### F3 — MEDIUM · Voids rewrite historical reports
+### F3 — ✅ RESOLVED 2026-07-27 · Voids rewrite historical reports
 
 `balances.py` excludes **both** the voided original (status) and its reversal (`reverses_entry_id is not null`). So voiding a January entry in March makes January's P&L/balance sheet change retroactively — as if the entry never existed. The reversal entry exists only for audit; it never hits any report.
 
 This is internally consistent and period locks gate it (void checks the original's entry date), but protection only exists **if the owner actually locks months**. A reviewed/exported month can silently change under the current flow. Options: auto-lock past months on report export/sign-off, or switch to the standard convention (include original + reversal in balances) so history is append-only by construction.
+
+**Fix shipped 2026-07-27 (month close slice 2).** Neither option above, but a third: closing a month writes a `period_close_snapshots` row per account — closing balance, period activity, debits, credits — in the same transaction as the lock. P&L and balance sheet then serve the sealed figures for a closed month, so what was exported keeps reading the way it was exported. `view=live` shows how the books read today, and when an owner writes into a sealed month the lock goes `dirty` and the report reports the drift ("the live books now differ by −1.000,00 ₺") instead of silently swapping one number for another.
+
+Deliberate limits, documented so they aren't mistaken for bugs:
+
+- **Exact month ranges only.** A P&L for 15 June–15 July straddles two months and no single snapshot can answer it honestly, so it falls through to live. Same for a balance sheet dated mid-month.
+- **A month closed before this shipped has no snapshot** and serves live rather than reporting an empty statement.
+- **Only P&L and balance sheet** consult snapshots — the two you'd actually send an accountant. Cash flow, period comparison, the general ledger and the registers stay live by design; they're working views, not filings.
+- Deactivating an account after a close does **not** drop it from that month's sealed figures (the as-closed account set comes from the snapshot, not from `is_active`).
+
+Guarding tests: `backend/tests/test_period_close_snapshot.py` (14, including the direct F3 reproduction: close June, void a June entry, June must not move).
 
 ### F4 — MEDIUM · No year-end close
 

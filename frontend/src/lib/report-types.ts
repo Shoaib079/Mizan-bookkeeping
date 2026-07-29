@@ -70,6 +70,21 @@ export type ProfitAndLossRead = {
   total_revenue_kurus: number;
   total_expenses_kurus: number;
   net_income_kurus: number;
+  source: ReportSource;
+  sealed: SealedPeriodInfo | null;
+};
+
+export type ReportSource = "live" | "as_closed";
+
+/** Present when the figures are the ones the month was sealed with. */
+export type SealedPeriodInfo = {
+  period_start: string;
+  period_end: string;
+  closed_at: string;
+  /** Something was posted into the month after it was closed. */
+  drifted: boolean;
+  /** Headline total, signed live-minus-sealed. Null unless drifted. */
+  drift_kurus: number | null;
 };
 
 export type BalanceSheetRead = {
@@ -87,6 +102,8 @@ export type BalanceSheetRead = {
   total_equity_kurus: number;
   total_liabilities_and_equity_kurus: number;
   accounting_equation_balanced: boolean;
+  source: ReportSource;
+  sealed: SealedPeriodInfo | null;
 };
 
 type BalanceSheetAccountRow = {

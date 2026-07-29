@@ -4,7 +4,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-27
 
-✅ **Verified: backend `pytest` green (owner-run), `tsc` clean, frontend vitest 563/563, `py_compile` clean.**
+⚠️ **Month-close slice 2 (below) adds migration `083_period_close_snapshots` and changes what P&L and balance sheet return — `tsc` clean, frontend vitest 568/568, `py_compile` clean, but backend `pytest` NOT run in the working session. Run `cd backend && .venv/bin/pytest -q` before relying on it.** Everything above slice 2 was already pytest-green.
 
 **Month close — seal a month once you're happy with it.**
 - New **Reports → Month close**. Pick a month, see a checklist of everything that might be unfinished, then close it.
@@ -14,7 +14,14 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 - Statement lines count towards the month they're **dated**, not the month of the file they arrived in — imports often straddle a month end.
 - **Last weekend's card sales don't hold the month open.** Friday–Sunday card money is still with the bank on the 30th and lands on the 1st or 2nd — that's how card clearing is supposed to work, so it reads as normal. Only card money older than about four days gets flagged, with the oldest date named. That older kind is what quietly grew into the 184k problem.
 
-**Not yet:** closing doesn't freeze the reported figures. A closed month's P&L can still move if something is amended. That's the next slice (audit finding F3).
+**Closing a month now freezes its figures.**
+- Until now, voiding a June entry in August quietly changed June's profit & loss — a month you'd already sent your accountant could become a different month without anyone knowing. That's fixed.
+- Closing a month records what every account read at that moment. Open a closed month's **profit & loss** or **balance sheet** and you see the figures it was sealed with, marked *"As closed on 02.07.2026"*. Exports give you the same sealed figures.
+- Amend something in a sealed month and the report says so: *"Entries have changed since... the live books now differ by −1.000,00 ₺"* — with a **Show live** button to see today's version. You get both, and neither replaces the other behind your back.
+- **Reopening** a month puts it back to live. Closing it again reseals at the corrected figures.
+- Only exact months are sealed: a report covering 15 June–15 July, or a balance sheet dated mid-month, always shows live figures — no single sealed month can honestly answer those.
+- Months you closed before this update have nothing frozen to show, so they read live as before.
+- Cash flow, period comparison, the general ledger and the registers stay live throughout. They're working views, not filings.
 
 **"Income to bank" — money in that isn't a customer or a settlement now has a home.**
 - Bank interest, a supplier refund, an insurance payout: previously **no classification fit**, so the line stayed in the review queue and the bank account could never reach "Reconciled". Outflows have always had a catch-all ("Expense from bank"); inflows had none. Now they do.

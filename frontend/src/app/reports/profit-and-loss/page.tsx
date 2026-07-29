@@ -23,13 +23,15 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
-import type { ProfitAndLossRead } from "@/lib/report-types";
+import type { ProfitAndLossRead, ReportSource } from "@/lib/report-types";
+import { SealedPeriodBanner } from "@/components/reports/sealed-period-banner";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
 
 function ProfitAndLossContent() {
   const { entityId } = useEntity();
   const { from, to, setRange, queryString } = useReportRangeFromUrl();
   const [report, setReport] = useState<ProfitAndLossRead | null>(null);
+  const [view, setView] = useState<ReportSource>("as_closed");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -44,7 +46,7 @@ function ProfitAndLossContent() {
     setForbidden(false);
     try {
       const res = await apiFetch<ProfitAndLossRead>(
-        `/entities/${entityId}/reports/profit-and-loss?${queryString}`,
+        `/entities/${entityId}/reports/profit-and-loss?${queryString}&view=${view}`,
       );
       setReport(res);
     } catch (err) {
@@ -58,7 +60,7 @@ function ProfitAndLossContent() {
     } finally {
       setLoading(false);
     }
-  }, [entityId, queryString]);
+  }, [entityId, queryString, view]);
 
   useEffect(() => {
     void reload();
@@ -93,6 +95,15 @@ function ProfitAndLossContent() {
       {forbidden && <ForbiddenMessage />}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <PageSkeleton />}
+
+      {report && !loading && (
+        <SealedPeriodBanner
+          source={report.source}
+          sealed={report.sealed}
+          view={view}
+          onViewChange={setView}
+        />
+      )}
 
       {report && (
         <div className="space-y-6">

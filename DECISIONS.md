@@ -4,7 +4,7 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 ## 2026-07-27 — Month close: soft lock + close-time snapshot (design agreed — NOT BUILT)
 
-**Status:** 🟡 **SLICE 1 BUILT 2026-07-27** (month close page + readiness checks + blocking enforcement). Slices 2 (snapshot) and 3 (dirty drill-down) NOT built. This entry exists so the design isn't re-litigated and the existing backend isn't rebuilt by mistake.
+**Status:** 🟢 **SLICES 1 + 2 BUILT 2026-07-27** (month close page + readiness checks + blocking enforcement; close-time snapshot + as-closed reports, which resolves FINANCIAL_AUDIT F3). Slice 3 (dirty drill-down — *which* entries changed) NOT built. This entry exists so the design isn't re-litigated and the existing backend isn't rebuilt by mistake.
 
 ### What already exists — do NOT rebuild
 
@@ -50,10 +50,23 @@ The **engine is complete and tested**; only the front of it is missing.
 ### Slices (build in this order)
 
 1. ✅ **Month close UI + readiness checklist** over the existing backend. No migration. Immediately useful, low risk.
-2. ⛔ **Snapshot** — migration 083, write-on-close, report integration, as-closed/live banner. Own session: touches every financial report on a live app.
+2. ✅ **Snapshot** — migration 083, write-on-close, report integration, as-closed/live banner.
 3. ⛔ **Dirty surfacing** — which entries changed a closed month (join `UNLOCK_WRITE` audit events with entries posted after `closed_at` in range). Slice 1 shows the "Changed since close" badge; it does not yet show *what* changed.
 
 **Why sliced:** slice 1 is UI over tested code; slice 2 changes what every financial report returns and must ship with `pytest` green.
+
+### Slice 2 as built (2026-07-27)
+
+- Migration `083_period_close_snapshots` + `PeriodCloseSnapshot` (RLS-registered). One row per account per closed month: closing balance, period activity, period debits, period credits.
+- `core/period_locks/snapshot.py` — `write_close_snapshot` / `active_month_lock` / `snapshot_figures_by_account`.
+- Written **inside `close_period`'s transaction**, MONTH kind only. A lock that committed without its snapshot would claim the month is sealed while still serving figures that can move.
+- `get_profit_and_loss` and `get_balance_sheet` take `view="as_closed" | "live"`, default sealed, and return `source` + `sealed` (with `drifted` and `drift_kurus`). Exports inherit the default, so exporting a closed month gives the sealed figures.
+- **The as-closed account set comes from the snapshot, not `is_active`** — deactivating an account later must not drop it from a month already sent out.
+- **Balance-sheet `unclosed_net_income` is rebuilt from the same frozen figures**, or the sheet wouldn't balance (sealed assets against a live net income).
+- Re-closing **replaces** the snapshot rather than versioning it; the close/reopen audit events already record the reseal.
+- Frontend: `SealedPeriodBanner` on P&L and balance sheet, backed by pure `lib/sealed-period.ts` (5 tests). Zero drift is not printed — "differs by 0,00 ₺" reads as a bug.
+
+**Scope limits (deliberate, not gaps):** exact month ranges only; a mid-month balance sheet is live; months closed before this shipped serve live; only P&L and balance sheet consult snapshots — cash flow, period comparison, ledger and registers are working views and stay live.
 
 ### Slice 1 as built (2026-07-27)
 

@@ -26,13 +26,15 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
-import type { BalanceSheetRead } from "@/lib/report-types";
+import type { BalanceSheetRead, ReportSource } from "@/lib/report-types";
+import { SealedPeriodBanner } from "@/components/reports/sealed-period-banner";
 import { useReportAsOfFromUrl } from "@/lib/use-report-url";
 
 function BalanceSheetContent() {
   const { entityId } = useEntity();
   const { asOf, setAsOf, queryString } = useReportAsOfFromUrl();
   const [report, setReport] = useState<BalanceSheetRead | null>(null);
+  const [view, setView] = useState<ReportSource>("as_closed");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -47,7 +49,7 @@ function BalanceSheetContent() {
     setForbidden(false);
     try {
       const res = await apiFetch<BalanceSheetRead>(
-        `/entities/${entityId}/reports/balance-sheet?${queryString}`,
+        `/entities/${entityId}/reports/balance-sheet?${queryString}&view=${view}`,
       );
       setReport(res);
     } catch (err) {
@@ -61,7 +63,7 @@ function BalanceSheetContent() {
     } finally {
       setLoading(false);
     }
-  }, [entityId, queryString]);
+  }, [entityId, queryString, view]);
 
   useEffect(() => {
     void reload();
@@ -103,6 +105,15 @@ function BalanceSheetContent() {
       {forbidden && <ForbiddenMessage />}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <PageSkeleton />}
+
+      {report && !loading && (
+        <SealedPeriodBanner
+          source={report.source}
+          sealed={report.sealed}
+          view={view}
+          onViewChange={setView}
+        />
+      )}
 
       {report && (
         <div className="space-y-6">

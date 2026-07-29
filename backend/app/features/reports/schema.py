@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -40,6 +40,21 @@ class ProfitAndLossAccountRow(BaseModel):
     amount_kurus: int
 
 
+class SealedPeriodInfo(BaseModel):
+    """Present when these figures are the ones the month was sealed with."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    period_start: date
+    period_end: date
+    closed_at: datetime
+    #: Something was posted into the month after it was closed.
+    drifted: bool = False
+    #: How far the live books have moved from the sealed figures — the headline
+    #: total, signed live-minus-sealed. None unless drifted.
+    drift_kurus: int | None = None
+
+
 class ProfitAndLossRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -50,6 +65,9 @@ class ProfitAndLossRead(BaseModel):
     total_revenue_kurus: int
     total_expenses_kurus: int
     net_income_kurus: int
+    #: "as_closed" when served from a closed month's snapshot, else "live".
+    source: str = "live"
+    sealed: SealedPeriodInfo | None = None
 
 
 class BalanceSheetAccountRow(BaseModel):
@@ -86,6 +104,8 @@ class BalanceSheetRead(BaseModel):
     total_equity_kurus: int
     total_liabilities_and_equity_kurus: int
     accounting_equation_balanced: bool
+    source: str = "live"
+    sealed: SealedPeriodInfo | None = None
 
 
 class CashFlowCategoryRead(BaseModel):

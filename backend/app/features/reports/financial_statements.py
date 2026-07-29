@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountType
 from app.core.ledger.balances import balance_as_of_kurus, period_activity_kurus
+from app.core.period_locks import snapshot as period_snapshot
+from app.core.period_locks.models import PeriodLock
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.reports.schema import (
@@ -20,10 +22,17 @@ from app.features.reports.schema import (
     BalanceSheetSection,
     ProfitAndLossAccountRow,
     ProfitAndLossRead,
+    SealedPeriodInfo,
 )
 from app.features.reports.service import InvalidDateRangeError
 
 __all__ = ["get_balance_sheet", "get_profit_and_loss"]
+
+#: Ask for the sealed figures when the period is a closed month, or force the
+#: live books. Default is sealed — a month you exported should keep reading the
+#: way you exported it.
+VIEW_AS_CLOSED = "as_closed"
+VIEW_LIVE = "live"
 
 
 def _require_entity(session: Session, entity_id: uuid.UUID) -> None:
@@ -47,6 +56,50 @@ def _active_accounts(
     )
 
 
+def _sealed_context(
+    session: Session,
+    *,
+    view: str,
+    period_start: date,
+    period_end: date,
+) -> tuple[PeriodLock | None, dict[uuid.UUID, period_snapshot.SnapshotFigures]]:
+    """The lock and frozen figures to serve, or (None, {}) to serve live.
+
+    A lock with no snapshot rows means the month was closed before snapshots
+    existed. There is nothing frozen to show, so it falls through to live
+    rather than reporting an empty statement.
+    """
+    if view != VIEW_AS_CLOSED:
+        return None, {}
+    lock = period_snapshot.active_month_lock(
+        session, period_start=period_start, period_end=period_end
+    )
+    if lock is None:
+        return None, {}
+    figures = period_snapshot.snapshot_figures_by_account(session, lock.id)
+    if not figures:
+        return None, {}
+    return lock, figures
+
+
+def _accounts_by_id(
+    session: Session, account_ids: list[uuid.UUID]
+) -> list[Account]:
+    """Accounts a snapshot covers, active or not, in code order.
+
+    Deliberately not filtered by ``is_active``: deactivating an account after a
+    month closed must not silently drop its figures out of that month and
+    change a total the owner already sent to their accountant.
+    """
+    if not account_ids:
+        return []
+    return list(
+        session.scalars(
+            select(Account).where(Account.id.in_(account_ids)).order_by(Account.code)
+        )
+    )
+
+
 def _unclosed_net_income_kurus(session: Session, as_of_date: date) -> int:
     revenue_total = 0
     expense_total = 0
@@ -59,11 +112,25 @@ def _unclosed_net_income_kurus(session: Session, as_of_date: date) -> int:
     return revenue_total - expense_total
 
 
+def _live_net_income_kurus(session: Session, from_date: date, to_date: date) -> int:
+    revenue = 0
+    expenses = 0
+    for account in _active_accounts(session, (AccountType.REVENUE, AccountType.EXPENSE)):
+        amount = period_activity_kurus(session, account, from_date, to_date)
+        if account.account_type == AccountType.REVENUE:
+            revenue += amount
+        else:
+            expenses += amount
+    return revenue - expenses
+
+
 def get_profit_and_loss(
     session: Session,
     entity_id: uuid.UUID,
     from_date: date,
     to_date: date,
+    *,
+    view: str = VIEW_AS_CLOSED,
 ) -> ProfitAndLossRead:
     if from_date > to_date:
         raise InvalidDateRangeError("from must be on or before to")
@@ -73,12 +140,37 @@ def get_profit_and_loss(
     rows: list[ProfitAndLossAccountRow] = []
     total_revenue = 0
     total_expenses = 0
+    sealed: SealedPeriodInfo | None = None
 
     with entity_context(session, entity_id):
         require_entity_context()
 
-        for account in _active_accounts(session, (AccountType.REVENUE, AccountType.EXPENSE)):
-            amount = period_activity_kurus(session, account, from_date, to_date)
+        lock, figures = _sealed_context(
+            session, view=view, period_start=from_date, period_end=to_date
+        )
+
+        if lock is not None:
+            accounts = [
+                a
+                for a in _accounts_by_id(session, list(figures))
+                if a.account_type in (AccountType.REVENUE, AccountType.EXPENSE)
+            ]
+        else:
+            accounts = _active_accounts(
+                session, (AccountType.REVENUE, AccountType.EXPENSE)
+            )
+
+        for account in accounts:
+            if lock is not None:
+                # An account created after the close isn't in the snapshot; it
+                # contributed nothing to the month as reported, so 0 is right.
+                amount = (
+                    figures[account.id].period_activity_kurus
+                    if account.id in figures
+                    else 0
+                )
+            else:
+                amount = period_activity_kurus(session, account, from_date, to_date)
             rows.append(
                 ProfitAndLossAccountRow(
                     account_id=account.id,
@@ -93,6 +185,21 @@ def get_profit_and_loss(
             else:
                 total_expenses += amount
 
+        if lock is not None:
+            net_income = total_revenue - total_expenses
+            drift = (
+                _live_net_income_kurus(session, from_date, to_date) - net_income
+                if lock.dirty
+                else None
+            )
+            sealed = SealedPeriodInfo(
+                period_start=lock.period_start,
+                period_end=lock.period_end,
+                closed_at=lock.closed_at,
+                drifted=lock.dirty,
+                drift_kurus=drift,
+            )
+
     return ProfitAndLossRead(
         entity_id=entity_id,
         from_date=from_date,
@@ -101,6 +208,8 @@ def get_profit_and_loss(
         total_revenue_kurus=total_revenue,
         total_expenses_kurus=total_expenses,
         net_income_kurus=total_revenue - total_expenses,
+        source=VIEW_AS_CLOSED if sealed is not None else VIEW_LIVE,
+        sealed=sealed,
     )
 
 
@@ -108,21 +217,48 @@ def get_balance_sheet(
     session: Session,
     entity_id: uuid.UUID,
     as_of_date: date,
+    *,
+    view: str = VIEW_AS_CLOSED,
 ) -> BalanceSheetRead:
     _require_entity(session, entity_id)
 
     asset_rows: list[BalanceSheetAccountRow] = []
     liability_rows: list[BalanceSheetAccountRow] = []
     equity_rows: list[BalanceSheetAccountRow] = []
+    sealed: SealedPeriodInfo | None = None
 
     with entity_context(session, entity_id):
         require_entity_context()
 
-        for account in _active_accounts(
-            session,
-            (AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY),
-        ):
-            balance = balance_as_of_kurus(session, account, as_of_date)
+        # A balance sheet is asked "as of" a date, so the sealed figures apply
+        # when that date is exactly a closed month's last day.
+        month_start = as_of_date.replace(day=1)
+        lock, figures = _sealed_context(
+            session, view=view, period_start=month_start, period_end=as_of_date
+        )
+
+        if lock is not None:
+            accounts = [
+                a
+                for a in _accounts_by_id(session, list(figures))
+                if a.account_type
+                in (AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY)
+            ]
+        else:
+            accounts = _active_accounts(
+                session,
+                (AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY),
+            )
+
+        for account in accounts:
+            if lock is not None:
+                balance = (
+                    figures[account.id].closing_balance_kurus
+                    if account.id in figures
+                    else 0
+                )
+            else:
+                balance = balance_as_of_kurus(session, account, as_of_date)
             row = BalanceSheetAccountRow(
                 account_id=account.id,
                 code=account.code,
@@ -137,7 +273,35 @@ def get_balance_sheet(
             else:
                 equity_rows.append(row)
 
-        unclosed_net_income = _unclosed_net_income_kurus(session, as_of_date)
+        if lock is not None:
+            # Rebuild from the same frozen figures, or the sheet wouldn't
+            # balance: sealed assets against a live net income.
+            sealed_net_income = 0
+            for account in _accounts_by_id(session, list(figures)):
+                if account.account_type == AccountType.REVENUE:
+                    sealed_net_income += figures[account.id].closing_balance_kurus
+                elif account.account_type == AccountType.EXPENSE:
+                    sealed_net_income -= figures[account.id].closing_balance_kurus
+            unclosed_net_income = sealed_net_income
+        else:
+            unclosed_net_income = _unclosed_net_income_kurus(session, as_of_date)
+
+        if lock is not None:
+            sealed_assets = sum(row.balance_kurus for row in asset_rows)
+            drift = None
+            if lock.dirty:
+                live_assets = sum(
+                    balance_as_of_kurus(session, account, as_of_date)
+                    for account in _active_accounts(session, (AccountType.ASSET,))
+                )
+                drift = live_assets - sealed_assets
+            sealed = SealedPeriodInfo(
+                period_start=lock.period_start,
+                period_end=lock.period_end,
+                closed_at=lock.closed_at,
+                drifted=lock.dirty,
+                drift_kurus=drift,
+            )
 
     total_assets = sum(row.balance_kurus for row in asset_rows)
     total_liabilities = sum(row.balance_kurus for row in liability_rows)
@@ -167,4 +331,6 @@ def get_balance_sheet(
         total_equity_kurus=total_equity_gl,
         total_liabilities_and_equity_kurus=total_liabilities_and_equity,
         accounting_equation_balanced=total_assets == total_liabilities_and_equity,
+        source=VIEW_AS_CLOSED if sealed is not None else VIEW_LIVE,
+        sealed=sealed,
     )

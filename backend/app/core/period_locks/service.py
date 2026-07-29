@@ -15,6 +15,7 @@ from app.core.period_locks.models import (
     PeriodLockAuditEvent,
     PeriodLockKind,
 )
+from app.core.period_locks.snapshot import write_close_snapshot
 from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
@@ -110,6 +111,14 @@ def close_period(
             reason=reason,
             detail=f"{lock_kind.value}:{period_start.isoformat()}..{period_end.isoformat()}",
         )
+        # Freeze the figures in the same transaction as the lock: a lock that
+        # committed without its snapshot would claim the month is sealed while
+        # still serving numbers that can move (FINANCIAL_AUDIT F3). Month only
+        # — a day close is a drawer procedure, not a reporting boundary.
+        if lock_kind == PeriodLockKind.MONTH:
+            write_close_snapshot(
+                session, lock, period_start=period_start, period_end=period_end
+            )
         session.commit()
         session.refresh(lock)
         return lock

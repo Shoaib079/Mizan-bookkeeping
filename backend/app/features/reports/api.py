@@ -175,12 +175,15 @@ def get_profit_and_loss(
     entity_id: uuid.UUID,
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
+    # A closed month serves the figures it was sealed with; pass view=live to
+    # see how the books read today.
+    view: str = Query(financial_statements.VIEW_AS_CLOSED, pattern="^(as_closed|live)$"),
     session: Session = Depends(get_session),
     _: None = Depends(financial_reports_guard),
 ) -> ProfitAndLossRead:
     try:
         return financial_statements.get_profit_and_loss(
-            session, entity_id, from_date, to_date
+            session, entity_id, from_date, to_date, view=view
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -239,11 +242,14 @@ def export_profit_and_loss_pdf(
 def get_balance_sheet(
     entity_id: uuid.UUID,
     as_of: date = Query(...),
+    view: str = Query(financial_statements.VIEW_AS_CLOSED, pattern="^(as_closed|live)$"),
     session: Session = Depends(get_session),
     _: None = Depends(financial_reports_guard),
 ) -> BalanceSheetRead:
     try:
-        return financial_statements.get_balance_sheet(session, entity_id, as_of)
+        return financial_statements.get_balance_sheet(
+            session, entity_id, as_of, view=view
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
