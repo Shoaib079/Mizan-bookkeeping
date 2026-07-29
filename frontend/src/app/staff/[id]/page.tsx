@@ -35,6 +35,11 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
+import {
+  netPositionCaption,
+  netPositionReconciles,
+  staffNetPosition,
+} from "@/lib/staff-net-position";
 import { staffMovementLabels } from "@/lib/subledger-labels";
 import {
   canEditSubledgerRow,
@@ -195,10 +200,10 @@ export default function StaffDetailPage() {
     [employee?.pay_currency],
   );
 
-  /** What the business is really out of pocket for: salary owed less the
-   * advance already in the employee's hands. */
-  const netPositionMinor =
-    (ledger?.balance_minor ?? 0) - (ledger?.outstanding_advance_minor ?? 0);
+  /** `balance_minor` already nets advances against salary — see
+   * lib/staff-net-position.ts for why subtracting the advance from it counted
+   * the same money twice. */
+  const position = staffNetPosition(ledger);
 
   if (!entityId) {
     return (
@@ -236,22 +241,33 @@ export default function StaffDetailPage() {
             <div className="min-w-[15rem] rounded-lg border border-border bg-card p-4">
               <p className="text-sm text-muted-foreground">Net position</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatMinorAmount(netPositionMinor)}
+                {formatMinorAmount(position.netMinor)}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {netPositionCaption(position)}
               </p>
               <div className="mt-3 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
                 <div className="flex justify-between gap-4">
                   <span>Salary owed</span>
                   <span className="tabular-nums">
-                    {formatMinorAmount(ledger.balance_minor)}
+                    {formatMinorAmount(position.salaryOwedMinor)}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span>Advance held</span>
+                  <span>Less advance held</span>
                   <span className="tabular-nums">
-                    {ledger.outstanding_advance_minor > 0 ? "−" : ""}
-                    {formatMinorAmount(ledger.outstanding_advance_minor)}
+                    {position.advanceHeldMinor > 0 ? "−" : ""}
+                    {formatMinorAmount(position.advanceHeldMinor)}
                   </span>
                 </div>
+                {!netPositionReconciles(position) && (
+                  <div className="flex justify-between gap-4">
+                    <span>Other movements</span>
+                    <span className="tabular-nums">
+                      {formatMinorAmount(position.otherMinor)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

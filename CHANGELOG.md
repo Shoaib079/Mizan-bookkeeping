@@ -2,6 +2,14 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-07-29
+
+**Fixed: a staff member's net position was double-counting their advance.**
+- The card showed −5.460,00 ₺ when the real figure was −2.730,00 — it subtracted the advance from a balance that already had the advance in it.
+- **Your ledger was never wrong**, and neither was the staff list. Only the summary card on the employee's own page added it up incorrectly.
+- "Salary owed" now shows salary actually owed (it was showing the net balance under the wrong label), and the figure carries a plain-language line — *"The employee holds this much of your money"* — so the sign isn't ambiguous.
+- If anything else moves the balance (an incentive, directly-paid extra days, an opening balance) the card now shows it on an "Other movements" line instead of quietly not adding up.
+
 ## 2026-07-27
 
 ⚠️ **The year-end / cash-flow / late-night work below adds migration `084_journal_cash_flow_category` — `tsc` clean, frontend vitest 578/578, `py_compile` clean, but backend `pytest` NOT run in the working session. Run `cd backend && .venv/bin/pytest -q`.** Everything from month close slice 2 and earlier was already pytest-green.

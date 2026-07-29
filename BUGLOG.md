@@ -2,6 +2,23 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-29 — Staff net position counted the advance twice
+
+**Symptom:** An employee's card read **Net position −5.460,00 ₺** with "Salary owed −2.730,00" and "Advance held −2.730,00", while the ledger's own running balance ended at **−2.730,00**. Owner: *"they do not match… in summary i only owe 2730 not 5400 smth."*
+
+**Root cause:** the card computed `netPosition = balance_minor − outstanding_advance_minor`. But `balance_minor` is `current_balance_minor`, which **sums every staff ledger row including `ADVANCE_PAID`** — so the advance was already in it. Subtracting it again deducted the same 2.730 twice. The "Salary owed" line compounded the confusion by showing `balance_minor` (the net figure) under a label that means something else entirely.
+
+The data was never wrong; `balance_minor` was correct all along, and the staff **directory** column — which shows `balance_minor` raw — has always been right. Only the detail card mis-assembled it.
+
+**Fix:** `lib/staff-net-position.ts`.
+- **Net position = `balance_minor`.** It already nets everything; nothing more to do to it.
+- **Salary owed = `remaining_accrual_minor`** — accrued less paid, advances excluded. This field was already on the API and simply wasn't being used.
+- **Less advance held = `outstanding_advance_minor`.**
+- **The two lines are components, not a complete decomposition.** Incentives, directly-paid extra days and opening balances move the balance without belonging to either, so the card computes the residual and shows an **"Other movements"** line when it isn't zero, rather than presenting a subtraction that doesn't add up.
+- Added a caption under the figure — "The employee holds this much of your money" / "You owe this to the employee" — because a signed number alone never made the direction obvious.
+
+**Guarding test:** `frontend/src/lib/staff-net-position.test.ts` (7), including this exact reproduction (0 owed, 2.730 advance, −2.730 net) and the Latif case (13.440 owed against a 13.440 advance nets to zero while both components stay visible).
+
 ## 2026-07-27 — Money in with no home: bank accounts could never reach "Reconciled"
 
 **Symptom:** Certain inflows on an imported bank statement — bank interest, a supplier refund, an insurance payout, an owner depositing miscellaneous income — had **no classification that fit**. The line sat in the review queue permanently, so `unreconciled_count` never hit 0 and the account never showed as reconciled on Reports → Bank reconciliation.
