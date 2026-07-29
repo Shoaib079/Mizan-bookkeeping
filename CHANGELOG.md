@@ -4,7 +4,16 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-27
 
-✅ **Verified: backend `pytest` green (owner-run), `tsc` clean, full frontend vitest 546/546, `py_compile` clean.**
+⚠️ **`tsc` clean, frontend vitest 563/563, `py_compile` clean. Backend `pytest` NOT run in the working session for the month-close changes — run `cd backend && .venv/bin/pytest -q`.** (The "Income to bank" changes below were already pytest-green.)
+
+**Month close — seal a month once you're happy with it.**
+- New **Reports → Month close**. Pick a month, see a checklist of everything that might be unfinished, then close it.
+- After closing, **your staff can't post into that month at all**. You still can — you'll be asked why, the reason is kept, and the month is flagged **"Changed since close"** so a sealed month never quietly drifts. There's also **Reopen** when you have a batch of fixes rather than one late receipt.
+- **One thing stops a close: unclassified bank statement lines.** Those are real money movements missing from your books, so sealing the month would seal a wrong number. Everything else — an unswept card-clearing balance, an uncounted drawer, a missing bank closing balance, staff with no salary this month — is shown clearly but lets you through.
+- The month you're currently trading in isn't offered, since closing it would lock the books against today's own sales.
+- Statement lines count towards the month they're **dated**, not the month of the file they arrived in — imports often straddle a month end.
+
+**Not yet:** closing doesn't freeze the reported figures. A closed month's P&L can still move if something is amended. That's the next slice (audit finding F3).
 
 **"Income to bank" — money in that isn't a customer or a settlement now has a home.**
 - Bank interest, a supplier refund, an insurance payout: previously **no classification fit**, so the line stayed in the review queue and the bank account could never reach "Reconciled". Outflows have always had a catch-all ("Expense from bank"); inflows had none. Now they do.

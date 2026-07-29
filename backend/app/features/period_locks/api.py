@@ -14,6 +14,7 @@ from app.features.auth.models import User
 from app.features.period_locks import service
 from app.features.period_locks.schema import (
     ClosePeriodLockRequest,
+    MonthCloseReadinessOut,
     PeriodLockListOut,
     PeriodLockOut,
     ReopenPeriodLockRequest,
@@ -42,8 +43,28 @@ def close_period_lock(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.MonthNotReadyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except PeriodLockConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/readiness", response_model=MonthCloseReadinessOut)
+def month_close_readiness(
+    entity_id: uuid.UUID,
+    year: int,
+    month: int,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> MonthCloseReadinessOut:
+    try:
+        return service.get_entity_month_close_readiness(
+            session, entity_id, year=year, month=month
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/{lock_id}/reopen", response_model=PeriodLockOut)

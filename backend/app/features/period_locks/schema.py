@@ -37,3 +37,29 @@ class PeriodLockOut(BaseModel):
 
 class PeriodLockListOut(BaseModel):
     items: list[PeriodLockOut]
+
+
+class ReadinessCheckOut(BaseModel):
+    key: str
+    label: str
+    severity: str
+    passed: bool
+    detail: str = ""
+    count: int = 0
+    amount_kurus: int | None = None
+    href: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class MonthCloseReadinessOut(BaseModel):
+    year: int
+    month: int
+    period_start: date
+    period_end: date
+    checks: list[ReadinessCheckOut]
+    #: False when a blocking check failed — the month can't be closed yet.
+    can_close: bool
+    warning_count: int
+    #: Set when this month has already been closed and not reopened.
+    existing_lock: PeriodLockOut | None = None

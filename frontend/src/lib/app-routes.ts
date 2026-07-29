@@ -210,6 +210,14 @@ export const appRoutes: AppRoute[] = [
     nestedUnder: "/reports",
   },
   {
+    href: "/reports/month-close",
+    label: "Month close",
+    keywords: "close month lock period seal finalise finalize reopen sign off",
+    icon: BookOpen,
+    group: "Reports",
+    nestedUnder: "/reports",
+  },
+  {
     href: "/reports/cash-book",
     label: "Cash book",
     keywords: "cash drawer till money in out should have count reconcile",

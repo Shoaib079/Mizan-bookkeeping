@@ -290,3 +290,39 @@ export type BankReconciliationRead = {
   as_of: string | null;
   accounts: BankReconciliationAccount[];
 };
+
+export type PeriodLockRead = {
+  id: string;
+  entity_id: string;
+  lock_kind: "day" | "month";
+  period_start: string;
+  period_end: string;
+  closed_at: string;
+  closed_by: string;
+  reopened_at: string | null;
+  reopened_by: string | null;
+  /** Something was posted into this period after it was closed. */
+  dirty: boolean;
+};
+
+export type ReadinessCheck = {
+  key: string;
+  label: string;
+  severity: "block" | "warn";
+  passed: boolean;
+  detail: string;
+  count: number;
+  amount_kurus: number | null;
+  href: string | null;
+};
+
+export type MonthCloseReadinessRead = {
+  year: number;
+  month: number;
+  period_start: string;
+  period_end: string;
+  checks: ReadinessCheck[];
+  can_close: boolean;
+  warning_count: number;
+  existing_lock: PeriodLockRead | null;
+};

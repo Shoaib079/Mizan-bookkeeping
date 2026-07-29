@@ -4,7 +4,7 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 ## 2026-07-27 — Month close: soft lock + close-time snapshot (design agreed — NOT BUILT)
 
-**Status:** ⛔ **NOT IMPLEMENTED.** Design agreed with owner 2026-07-27. This entry exists so the design isn't re-litigated and the existing backend isn't rebuilt by mistake.
+**Status:** 🟡 **SLICE 1 BUILT 2026-07-27** (month close page + readiness checks + blocking enforcement). Slices 2 (snapshot) and 3 (dirty drill-down) NOT built. This entry exists so the design isn't re-litigated and the existing backend isn't rebuilt by mistake.
 
 ### What already exists — do NOT rebuild
 
@@ -49,11 +49,24 @@ The **engine is complete and tested**; only the front of it is missing.
 
 ### Slices (build in this order)
 
-1. **Month close UI + readiness checklist** over the existing backend. No migration. Immediately useful, low risk.
-2. **Snapshot** — migration 083, write-on-close, report integration, as-closed/live banner. Own session: touches every financial report on a live app.
-3. **Dirty surfacing** — which entries changed a closed month (join `UNLOCK_WRITE` audit events with entries posted after `closed_at` in range).
+1. ✅ **Month close UI + readiness checklist** over the existing backend. No migration. Immediately useful, low risk.
+2. ⛔ **Snapshot** — migration 083, write-on-close, report integration, as-closed/live banner. Own session: touches every financial report on a live app.
+3. ⛔ **Dirty surfacing** — which entries changed a closed month (join `UNLOCK_WRITE` audit events with entries posted after `closed_at` in range). Slice 1 shows the "Changed since close" badge; it does not yet show *what* changed.
 
 **Why sliced:** slice 1 is UI over tested code; slice 2 changes what every financial report returns and must ship with `pytest` green.
+
+### Slice 1 as built (2026-07-27)
+
+- `features/period_locks/readiness.py` — six checks; only `unclassified_statement_lines` is `BLOCK`
+- `GET /entities/{id}/period-locks/readiness?year=&month=` (member read)
+- `close_entity_period` refuses a `MONTH` close while a blocking check fails → `MonthNotReadyError` → **409**. Enforced in the *feature* service, not `core.close_period`, so day-close and the lock primitive stay generic.
+- Page `/reports/month-close` (Reports card): month picker, checklist split failed/passed with Fix links, close/reopen with an optional note, list of closed months with a "Changed since close" badge when `dirty`.
+- `lib/month-close.ts` — pure month/label/state helpers, 17 unit tests.
+- **The current month is deliberately not offerable.** Closing a month you're still trading in would lock the books against today's own sales, and every remaining entry that month would demand an unlock reason.
+- **Statement lines are scoped by `transaction_date`, not by the statement's period** — an import can straddle a month boundary, and it's the transaction that belongs to the month, not the file.
+- **The hard block is only fair because `other_income` shipped first.** Before it, an inflow with no matching classification could never be cleared, and such a month would have been uncloseable forever (BUGLOG 2026-07-27).
+
+**Known limit of the guarantee:** the blocking check only sees lines that were *imported*. A bank account with no statement import for the month has nothing to say and the month closes clean. The promise is "nothing imported is unexplained", not "nothing happened that I missed". The `bank_balance_confirmed` warn-check is the partial counterweight.
 
 ## 2026-07-13 — Forex-only group sales (design agreed, implementation DEFERRED — NOT BUILT)
 
