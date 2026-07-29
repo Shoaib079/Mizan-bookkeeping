@@ -149,14 +149,17 @@ def test_missing_bank_closing_balance_warns_but_never_blocks(db_session, setup):
     assert result.warning_count >= 1
 
 
-def _card_sale(db_session, entity_id, sales_date: str, gross: int):
+def _card_sale(db_session, setup, sales_date: str, gross: int):
+    # actor_id is NOT NULL on card_sales_batches, and the schema defaults it to
+    # None — omitting it fails at the insert, not at validation.
     return pos_service.create_card_sales_batch(
         db_session,
-        entity_id,
+        setup["entity_id"],
         CardSalesBatchCreate(
             sales_date=date.fromisoformat(sales_date),
             gross_amount_kurus=gross,
             description=f"Card sales {sales_date}",
+            actor_id=setup["owner_id"],
         ),
     )
 
@@ -168,8 +171,8 @@ def test_last_weekends_card_sales_do_not_hold_the_month_open(db_session, setup):
     make every month look wrong and train the owner to ignore the check.
     """
     entity_id = setup["entity_id"]
-    _card_sale(db_session, entity_id, "2026-06-27", 400_000)  # Saturday
-    _card_sale(db_session, entity_id, "2026-06-28", 350_000)  # Sunday
+    _card_sale(db_session, setup, "2026-06-27", 400_000)  # Saturday
+    _card_sale(db_session, setup, "2026-06-28", 350_000)  # Sunday
 
     result = readiness_module.get_month_close_readiness(
         db_session, entity_id, year=2026, month=6
@@ -185,7 +188,7 @@ def test_last_weekends_card_sales_do_not_hold_the_month_open(db_session, setup):
 def test_card_money_older_than_a_weekend_is_flagged(db_session, setup):
     """The 184k signature: sales sitting in clearing for weeks, never deposited."""
     entity_id = setup["entity_id"]
-    _card_sale(db_session, entity_id, "2026-06-03", 900_000)
+    _card_sale(db_session, setup, "2026-06-03", 900_000)
 
     result = readiness_module.get_month_close_readiness(
         db_session, entity_id, year=2026, month=6
@@ -203,7 +206,7 @@ def test_card_money_older_than_a_weekend_is_flagged(db_session, setup):
 def test_clearing_age_is_measured_from_month_end_not_today(db_session, setup):
     """Asked of June, the question is what was in transit on 30 June."""
     entity_id = setup["entity_id"]
-    _card_sale(db_session, entity_id, "2026-06-29", 500_000)
+    _card_sale(db_session, setup, "2026-06-29", 500_000)
 
     june = readiness_module.get_month_close_readiness(
         db_session, entity_id, year=2026, month=6
@@ -213,7 +216,7 @@ def test_clearing_age_is_measured_from_month_end_not_today(db_session, setup):
 
 def test_a_sale_after_month_end_does_not_count_against_the_month(db_session, setup):
     entity_id = setup["entity_id"]
-    _card_sale(db_session, entity_id, "2026-07-02", 500_000)
+    _card_sale(db_session, setup, "2026-07-02", 500_000)
 
     june = readiness_module.get_month_close_readiness(
         db_session, entity_id, year=2026, month=6
