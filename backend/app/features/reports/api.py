@@ -17,6 +17,7 @@ from app.features.reports import bank_reconciliation
 from app.features.reports import cash_book
 from app.features.reports import cash_flow
 from app.features.reports import excel_export
+from app.features.reports import month_pack
 from app.features.reports import expense_register
 from app.features.reports import financial_statements
 from app.features.reports import kdv_input
@@ -236,6 +237,26 @@ def export_profit_and_loss_pdf(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InvalidDateRangeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/month-pack")
+def download_month_pack(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
+) -> StreamingResponse:
+    """Every book for the period in one workbook — the file you send partners."""
+    if to_date < from_date:
+        raise HTTPException(status_code=422, detail="to must be on or after from")
+    try:
+        data, ctx = month_pack.build_month_pack_xlsx(
+            session, entity_id, from_date, to_date
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return excel_export.xlsx_response(data, month_pack.month_pack_filename(ctx))
 
 
 @router.get("/balance-sheet", response_model=BalanceSheetRead)

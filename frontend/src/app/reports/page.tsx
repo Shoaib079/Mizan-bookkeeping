@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { MonthPackButton } from "@/components/reports/month-pack-button";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
 import { apiFetch } from "@/lib/api";
@@ -216,12 +217,26 @@ function ReportsBody() {
   return (
     <>
       <div className="mb-6 space-y-4">
-        <ReportDateRange
-          from={range.from}
-          to={range.to}
-          disabled={!entityId || loading}
-          onChange={(from, to) => setRange({ from, to })}
-        />
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <ReportDateRange
+            from={range.from}
+            to={range.to}
+            disabled={!entityId || loading}
+            onChange={(from, to) => setRange({ from, to })}
+          />
+          {entityId && (
+            <MonthPackButton
+              entityId={entityId}
+              queryString={buildRangeQuery(range.from, range.to)}
+              disabled={loading}
+            />
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          One workbook with every book for the period — sales, expenses,
+          salaries, cash, banks, card clearing and the full ledger. A closed
+          month exports the figures it was sealed with.
+        </p>
         {summaryError && (
           <p className="text-sm text-destructive">{summaryError}</p>
         )}

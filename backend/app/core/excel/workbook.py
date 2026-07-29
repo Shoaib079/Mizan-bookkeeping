@@ -17,6 +17,15 @@ def create_workbook(sheet_title: str = "Report") -> tuple[Workbook, Worksheet]:
     return wb, ws
 
 
+def add_sheet(wb: Workbook, title: str) -> Worksheet:
+    """Append a sheet to an existing workbook.
+
+    Sheet titles are capped at 31 characters by the format itself, and Excel
+    silently mangles anything longer rather than telling you.
+    """
+    return wb.create_sheet(title=title[:31])
+
+
 def format_kurus_label(column_name: str = "Amount") -> str:
     return f"{column_name} (kuruş)"
 

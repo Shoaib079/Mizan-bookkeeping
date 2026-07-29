@@ -4,6 +4,12 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-29
 
+**Download all your books for a period in one file.**
+- **Reports → Download all books** gives you one Excel workbook with a sheet for each: Summary, Sales day by day, Expenses, Salaries, a Cash book per drawer, a Bank book per account, Card clearing, Profit & loss, and the full General ledger.
+- Built for sending to partners: one file instead of six downloads, and four of those books (expenses, cash, bank, ledger) had no export at all before.
+- **A closed month exports the figures it was sealed with**, and the Summary sheet says so. Two people downloading the same month on different days get the same file — and it still matches what you sent when you closed it. An open month is labelled "Live", and the filename ends `-live` or `-as-closed` so you can tell at a glance.
+- Excel rather than PDF on purpose: someone checking your numbers wants to filter a column and total it.
+
 **Card commission: you now type what the bank charged.**
 - The button used to book whatever was left sitting in card clearing, assuming the leftover *was* the commission. It isn't — it's commission plus any sales the bank hasn't deposited yet, which is how a month of undeposited sales once became a 184.628,82 ₺ expense.
 - Enter the figure from your statement. Whatever stays in clearing afterwards is genuinely undeposited sales, and the month-close check flags it if it gets old.

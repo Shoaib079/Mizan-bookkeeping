@@ -51,8 +51,12 @@ def _write_metadata(
     return 3
 
 
-def build_profit_and_loss_xlsx(report: ProfitAndLossRead) -> bytes:
-    wb, ws = create_workbook("Profit and Loss")
+def write_profit_and_loss_sheet(ws, report: ProfitAndLossRead) -> None:
+    """Lay out a P&L on the given worksheet.
+
+    Shared by the standalone export and the month pack so the two can never
+    drift into showing the same period differently.
+    """
     header_row = _write_metadata(
         ws,
         title="Profit and Loss",
@@ -88,6 +92,11 @@ def build_profit_and_loss_xlsx(report: ProfitAndLossRead) -> bytes:
     bold_row(ws, row, end_col=4)
 
     autosize_columns(ws)
+
+
+def build_profit_and_loss_xlsx(report: ProfitAndLossRead) -> bytes:
+    wb, ws = create_workbook("Profit and Loss")
+    write_profit_and_loss_sheet(ws, report)
     return save_workbook_to_bytes(wb)
 
 
