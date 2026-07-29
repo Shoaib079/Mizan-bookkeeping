@@ -39,6 +39,44 @@ class PeriodLockListOut(BaseModel):
     items: list[PeriodLockOut]
 
 
+class ChangedEntryOut(BaseModel):
+    journal_entry_id: uuid.UUID
+    entry_date: date
+    description: str
+    source: str
+    status: str
+    amount_kurus: int
+    changed_at: datetime
+    #: "posted" (new entry in the month), "voided" (an original removed) or
+    #: "reversal" (the void's other half).
+    change_kind: str
+    reverses_entry_id: uuid.UUID | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class UnlockReasonOut(BaseModel):
+    actor_id: uuid.UUID
+    reason: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class SealedMonthChangesOut(BaseModel):
+    lock_id: uuid.UUID
+    period_start: date
+    period_end: date
+    closed_at: datetime
+    dirty: bool
+    entries: list[ChangedEntryOut]
+    #: Reasons given for writing into the sealed month, newest first. Not
+    #: joined to the entries — the guard records them before the entry exists.
+    reasons: list[UnlockReasonOut]
+
+    model_config = {"from_attributes": True}
+
+
 class YearEndLineOut(BaseModel):
     account_id: uuid.UUID
     code: str

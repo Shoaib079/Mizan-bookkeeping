@@ -21,7 +21,7 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 ## 2026-07-27 — Month close: soft lock + close-time snapshot (design agreed — NOT BUILT)
 
-**Status:** 🟢 **SLICES 1 + 2 BUILT 2026-07-27** (month close page + readiness checks + blocking enforcement; close-time snapshot + as-closed reports, which resolves FINANCIAL_AUDIT F3). Slice 3 (dirty drill-down — *which* entries changed) NOT built. This entry exists so the design isn't re-litigated and the existing backend isn't rebuilt by mistake.
+**Status:** ✅ **COMPLETE — slices 1, 2 and 3 built 2026-07-27.** Month close page + readiness checks + blocking enforcement; close-time snapshot + as-closed reports (resolves FINANCIAL_AUDIT F3); drill-down showing *which* entries moved a sealed month. This entry exists so the design isn't re-litigated and the existing backend isn't rebuilt by mistake.
 
 ### What already exists — do NOT rebuild
 
@@ -68,7 +68,7 @@ The **engine is complete and tested**; only the front of it is missing.
 
 1. ✅ **Month close UI + readiness checklist** over the existing backend. No migration. Immediately useful, low risk.
 2. ✅ **Snapshot** — migration 083, write-on-close, report integration, as-closed/live banner.
-3. ⛔ **Dirty surfacing** — which entries changed a closed month (join `UNLOCK_WRITE` audit events with entries posted after `closed_at` in range). Slice 1 shows the "Changed since close" badge; it does not yet show *what* changed.
+3. ✅ **Dirty surfacing** — which entries changed a closed month.
 
 **Why sliced:** slice 1 is UI over tested code; slice 2 changes what every financial report returns and must ship with `pytest` green.
 
@@ -84,6 +84,20 @@ The **engine is complete and tested**; only the front of it is missing.
 - Frontend: `SealedPeriodBanner` on P&L and balance sheet, backed by pure `lib/sealed-period.ts` (5 tests). Zero drift is not printed — "differs by 0,00 ₺" reads as a bug.
 
 **Scope limits (deliberate, not gaps):** exact month ranges only; a mid-month balance sheet is live; months closed before this shipped serve live; only P&L and balance sheet consult snapshots — cash flow, period comparison, ledger and registers are working views and stay live.
+
+### Slice 3 as built (2026-07-27)
+
+`features/period_locks/changes.py` + `GET /period-locks/{lock_id}/changes`, rendered on the Month close page whenever the selected month is closed **and** dirty.
+
+**Two things move a sealed month and both are caught, by different columns:**
+- Something **posted** into it — `entry_date` inside the period, `created_at` after `closed_at`.
+- Something already in it **voided** — the original keeps its creation date, so it was there when the month closed; only `voided_at` reveals it. The `created_at <= closed_at` filter on that query is what stops an entry that was added *and then* voided appearing twice.
+
+A void's **reversal** is a separate entry that also lands in the month, so it appears too — labelled rather than hidden, because seeing both halves is the point of an audit trail.
+
+**The stated reasons are listed alongside, not joined to the entries.** `UNLOCK_WRITE` audit events are written by the posting guard *before* the entry exists, so they carry no journal entry id. Correlating them by timestamp would look precise and occasionally be wrong. The UI says so in one line rather than implying a link that isn't there.
+
+**The summary counts additions and removals separately** — "3 changes" hides whether someone added a forgotten invoice or deleted one, and those are very different conversations. Reversals are excluded from the addition count, or every deletion would read as "1 added, 1 removed".
 
 ### Slice 1 as built (2026-07-27)
 

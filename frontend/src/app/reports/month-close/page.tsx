@@ -34,6 +34,7 @@ import {
   passedChecks,
   readinessSummary,
 } from "@/lib/month-close";
+import { SealedMonthChanges } from "@/components/reports/sealed-month-changes";
 import { YearEndClose } from "@/components/reports/year-end-close";
 import type {
   MonthCloseReadinessRead,
@@ -331,6 +332,10 @@ function MonthCloseContent() {
               transactions missing from your books. The rest are for your eye.
             </p>
           </section>
+
+          {entityId && state.kind === "closed" && state.dirty && (
+            <SealedMonthChanges entityId={entityId} lockId={state.lock.id} />
+          )}
 
           {entityId && <YearEndClose entityId={entityId} isOwner={isOwner} />}
 

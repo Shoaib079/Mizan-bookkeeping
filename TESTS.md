@@ -101,13 +101,15 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `frontend/src/lib/sealed-period.test.ts` | Sealed-vs-live banner state; zero drift is not printed ("differs by 0,00 ₺" reads as a bug) | pass |
 | `backend/tests/test_year_end_close.py` | **Year-end close (F4)** — result moves to Retained Earnings, loss reduces it, the closing entry is kept OUT of the P&L, next year starts from zero, balance sheet stops stacking years, double-close refused, void reopens the year, an uncorrected prior year is swept in, December must be closed first, the entry is non-cash (2026-07-27) | pass |
 | `backend/tests/test_cash_flow_category_override.py` | **Cash-flow category override (F5)** — manual defaults to operating, override moves it, a junk value is ignored rather than trusted, one source can appear in two categories, totals never move | pass |
+| `backend/tests/test_sealed_month_changes.py` | **What changed a sealed month (slice 3)** — entries from before the close are not changes; posted-after listed; a void shows both the removed original and its reversal; an entry added then voided is never listed twice; changes dated outside the month excluded; newest first; reasons returned (2026-07-27) | pass |
+| `frontend/src/lib/sealed-month-changes.test.ts` | Additions and removals counted separately; reversals excluded from the addition count, or every deletion would read "1 added, 1 removed" | pass |
 | `frontend/src/lib/year-end.test.ts` | Year picker excludes the current year; year-end wording; **late-night date hint** (F6) fires only before 04:00 on today's date | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed. Backup restore E2E tests skip locally when `pg_dump`/`pg_restore` absent; install via `brew install libpq` or rely on CI.
 
 **Pre-go-live security gate (Slice 12.5):** After full pytest, run `bash backend/scripts/security_production_pytest.sh` (or CI production-guard job). Must include `test_security_invariants.py` green under production-like auth env. Also run `security_dependency_scan.sh` and `security_secrets_audit.sh` — see `DEPLOY.md` §14.
 
-**Count:** 1261 pytest + 578 vitest (last full run 2026-07-27, both green).
+**Count:** 1271 pytest + 583 vitest (last full run 2026-07-27; vitest green, pytest green through slice 2 — slice 3's 9 backend tests pending the owner's run).
 
 **Registry-completeness guards — read this before adding a `JournalEntrySource`.** Several registries assert every enum member is classified and fail the suite if not. Adding a source means updating *all* of them in the same commit:
 - `core/ledger/correction.py::verify_correction_source_registry_complete` — generic-correctable / dedicated route / void-and-re-enter

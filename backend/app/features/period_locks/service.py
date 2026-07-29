@@ -13,11 +13,15 @@ from app.core.period_locks.models import PeriodLock, PeriodLockKind
 from app.core.period_locks import year_end
 from app.core.period_locks.service import close_period, list_period_locks, reopen_period
 from app.db.session import entity_context, require_entity_context
+from app.features.period_locks import changes as changes_module
 from app.features.period_locks import readiness as readiness_module
 from app.features.period_locks.schema import (
+    ChangedEntryOut,
     MonthCloseReadinessOut,
     PeriodLockOut,
     ReadinessCheckOut,
+    SealedMonthChangesOut,
+    UnlockReasonOut,
     YearEndLineOut,
     YearEndPreviewOut,
 )
@@ -41,6 +45,21 @@ def _december_is_closed(session: Session, year: int) -> bool:
             )
         )
         is not None
+    )
+
+
+def get_entity_sealed_month_changes(
+    session: Session, entity_id: uuid.UUID, lock_id: uuid.UUID
+) -> SealedMonthChangesOut:
+    result = changes_module.get_sealed_month_changes(session, entity_id, lock_id)
+    return SealedMonthChangesOut(
+        lock_id=result.lock_id,
+        period_start=result.period_start,
+        period_end=result.period_end,
+        closed_at=result.closed_at,
+        dirty=result.dirty,
+        entries=[ChangedEntryOut.model_validate(e) for e in result.entries],
+        reasons=[UnlockReasonOut.model_validate(r) for r in result.reasons],
     )
 
 

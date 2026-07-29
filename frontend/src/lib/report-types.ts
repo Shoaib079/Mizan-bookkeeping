@@ -322,6 +322,36 @@ export type PeriodLockRead = {
   dirty: boolean;
 };
 
+export type ChangedEntry = {
+  journal_entry_id: string;
+  entry_date: string;
+  description: string;
+  source: string;
+  status: string;
+  amount_kurus: number;
+  changed_at: string;
+  /** "posted" — new entry in the month · "voided" — an original removed ·
+   *  "reversal" — the void's other half. */
+  change_kind: "posted" | "voided" | "reversal";
+  reverses_entry_id: string | null;
+};
+
+export type UnlockReason = {
+  actor_id: string;
+  reason: string | null;
+  created_at: string;
+};
+
+export type SealedMonthChangesRead = {
+  lock_id: string;
+  period_start: string;
+  period_end: string;
+  closed_at: string;
+  dirty: boolean;
+  entries: ChangedEntry[];
+  reasons: UnlockReason[];
+};
+
 export type YearEndLine = {
   account_id: string;
   code: string;

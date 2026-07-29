@@ -6,6 +6,11 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ⚠️ **The year-end / cash-flow / late-night work below adds migration `084_journal_cash_flow_category` — `tsc` clean, frontend vitest 578/578, `py_compile` clean, but backend `pytest` NOT run in the working session. Run `cd backend && .venv/bin/pytest -q`.** Everything from month close slice 2 and earlier was already pytest-green.
 
+**See what changed a closed month.**
+- When a sealed month shows "Changed since close", the Month close page now lists **which entries** — what was added, what was removed, when, and for how much, each linking through to the ledger.
+- A deletion shows both halves: the entry that was removed and the reversal that removed it.
+- The reasons you typed are listed underneath, in order. They aren't matched to individual entries — the system records the reason before the entry exists, so pairing them up would look precise and sometimes be wrong.
+
 **Close the year.**
 - New **Close the year** on the Month close page. Pick a year, see exactly which accounts will be zeroed and what the profit comes to, and close it. Posts one entry dated 31 December.
 - Until now your sales and expense accounts never reset — they just kept adding up. By your third year the balance sheet's "profit not yet distributed" would have been three years mixed together.

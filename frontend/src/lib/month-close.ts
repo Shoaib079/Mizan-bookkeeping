@@ -4,8 +4,10 @@
  */
 
 import type {
+  ChangedEntry,
   MonthCloseReadinessRead,
   PeriodLockRead,
+  SealedMonthChangesRead,
   YearEndPreviewRead,
 } from "@/lib/report-types";
 
@@ -142,6 +144,32 @@ export function yearEndSummary(preview: YearEndPreviewRead): string {
   return preview.net_result_kurus >= 0
     ? `Ready. ${preview.year}'s profit will move into Retained Earnings, where partner distributions draw from.`
     : `Ready. ${preview.year} made a loss, which will reduce Retained Earnings.`;
+}
+
+/** What a changed-entry row is telling you, in words. */
+export function changeKindLabel(kind: ChangedEntry["change_kind"]): string {
+  if (kind === "voided") return "Removed";
+  if (kind === "reversal") return "Reversal";
+  return "Added";
+}
+
+/**
+ * One-line account of what moved a sealed month.
+ *
+ * Deliberately counts additions and removals separately rather than giving a
+ * single total: "3 changes" hides whether someone added a forgotten invoice or
+ * deleted one, and those are very different conversations.
+ */
+export function changesSummary(changes: SealedMonthChangesRead): string {
+  const added = changes.entries.filter((e) => e.change_kind === "posted").length;
+  const removed = changes.entries.filter((e) => e.change_kind === "voided").length;
+  if (added === 0 && removed === 0) {
+    return "No entries have changed since this month was closed.";
+  }
+  const parts: string[] = [];
+  if (added) parts.push(`${added} ${added === 1 ? "entry" : "entries"} added`);
+  if (removed) parts.push(`${removed} removed`);
+  return `${parts.join(", ")} since the close.`;
 }
 
 export function failedChecks(readiness: MonthCloseReadinessRead) {

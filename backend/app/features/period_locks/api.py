@@ -20,6 +20,7 @@ from app.features.period_locks.schema import (
     PeriodLockListOut,
     PeriodLockOut,
     ReopenPeriodLockRequest,
+    SealedMonthChangesOut,
     YearEndPreviewOut,
 )
 
@@ -108,6 +109,19 @@ def close_year(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except year_end.NothingToCloseError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/{lock_id}/changes", response_model=SealedMonthChangesOut)
+def sealed_month_changes(
+    entity_id: uuid.UUID,
+    lock_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> SealedMonthChangesOut:
+    try:
+        return service.get_entity_sealed_month_changes(session, entity_id, lock_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/{lock_id}/reopen", response_model=PeriodLockOut)
