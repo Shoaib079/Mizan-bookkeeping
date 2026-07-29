@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import threading
 import uuid
 
@@ -23,6 +24,68 @@ from app.db.provisioning import APP_DB_ROLE, provision_database_via_alembic
 from app.db.session import get_session
 from app.features.entities.models import Entity, EntitySetting
 from app.main import app
+
+
+def _dependencies_missing_from_environment() -> list[str]:
+    """Distribution names pyproject declares that this interpreter can't see."""
+    import tomllib
+    from importlib.metadata import PackageNotFoundError, version
+    from pathlib import Path
+
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    if not pyproject.exists():  # installed elsewhere; nothing to compare against
+        return []
+
+    project = tomllib.loads(pyproject.read_text()).get("project", {})
+    declared = list(project.get("dependencies", []))
+    declared += list(project.get("optional-dependencies", {}).get("dev", []))
+
+    missing = []
+    for requirement in declared:
+        # "sentry-sdk[fastapi]>=2.0" -> "sentry-sdk"; also handles bare names,
+        # extras, and environment markers ("pkg; python_version < '3.12'").
+        name = re.split(r"[\[<>=!~;\s]", requirement, maxsplit=1)[0].strip()
+        if not name:
+            continue
+        try:
+            version(name)
+        except PackageNotFoundError:
+            missing.append(name)
+    return missing
+
+
+def pytest_sessionstart(session) -> None:
+    """Refuse to run against an environment that doesn't match pyproject.toml.
+
+    A dependency added to pyproject but never installed locally doesn't fail
+    loudly — it fails as a handful of unrelated-looking tests deep in the run
+    (`No module named 'xlrd'` inside a bank-statement parser test), which reads
+    like a code regression rather than a stale venv. That cost a debugging
+    round on 2026-07-29, and the real risk is the opposite mistake: shrugging
+    off a failure as "just my environment" when it's a genuinely missing
+    dependency that will break production too.
+
+    Read from pyproject rather than the installed metadata on purpose —
+    `importlib.metadata.requires()` reports what was declared *at install
+    time*, so it goes stale in exactly the case this is meant to catch.
+    """
+    try:
+        missing = _dependencies_missing_from_environment()
+    except Exception:
+        # A convenience check must never be the reason the suite can't run.
+        # If reading or parsing pyproject fails, say nothing and let the tests
+        # speak for themselves.
+        return
+
+    if missing:
+        raise pytest.UsageError(
+            "Environment is out of date with pyproject.toml — not installed: "
+            + ", ".join(sorted(missing))
+            + "\n  Fix:  python3 -m pip install -e \".[dev]\""
+            + "\n  If that reports success but this still fires, pip is installing"
+            + " into a different interpreter than pytest is using;"
+            + " run both through `python3 -m` from an activated venv (see DEV.md)."
+        )
 
 
 @pytest.fixture(scope="session", autouse=True)

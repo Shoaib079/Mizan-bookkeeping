@@ -36,7 +36,7 @@ cp .env backend/.env
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+python3 -m pip install -e ".[dev]"
 # Uses schema owner (mizan) via DATABASE_ADMIN_URL — see Migrations section
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
@@ -89,6 +89,10 @@ Leave `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` unset unless you have real Clerk keys.
 cd backend && .venv/bin/pytest -v
 cd frontend && npm run build
 ```
+
+**Run pytest through the venv, not the system Python.** `.venv/bin/pytest` (or `source .venv/bin/activate` first) — a bare `python3 -m pytest` picks up whatever interpreter is on `PATH`, which on macOS is the python.org or Homebrew one and has none of this project's packages. The symptom is a handful of unrelated-looking failures (`No module named 'xlrd'`, `sentry_sdk`) that read like a code regression. `tests/conftest.py` now checks the environment against `pyproject.toml` at session start and stops with an explanation rather than letting you debug the wrong thing.
+
+If that check fires after a successful-looking install, `pip` and `pytest` are different interpreters. `python3 -m pip install …` always installs into the interpreter you're running.
 
 **Fresh-install guard** (clean venv → editable install → boot → full pytest). Export `DATABASE_ADMIN_URL` before running verify/bootstrap scripts (e.g. `export DATABASE_ADMIN_URL='postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres'`).
 
