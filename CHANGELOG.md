@@ -4,6 +4,11 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-29
 
+**Fixed: period comparison compared a month against the wrong dates.**
+- Comparing July was showing the prior period as 31.05 – 30.06. It stepped back 31 days (July's length) instead of going to the previous month.
+- A whole month now compares against the **whole previous month**, and a whole year against the previous year. February, leap years and January rolling back to December all come out right.
+- Picking a part-month — say 1–15 July — still compares against the same number of days immediately before, since there's no "previous month" answer for half a month.
+
 **Fixed: a staff member's net position was double-counting their advance.**
 - The card showed −5.460,00 ₺ when the real figure was −2.730,00 — it subtracted the advance from a balance that already had the advance in it.
 - **Your ledger was never wrong**, and neither was the staff list. Only the summary card on the employee's own page added it up incorrectly.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import calendar
 import uuid
 from datetime import date, timedelta
 
@@ -38,7 +39,45 @@ def _require_entity(session: Session, entity_id: uuid.UUID) -> None:
         raise LookupError("Entity not found")
 
 
+def _last_day_of_month(any_day: date) -> date:
+    return date(
+        any_day.year, any_day.month, calendar.monthrange(any_day.year, any_day.month)[1]
+    )
+
+
+def is_whole_month(from_date: date, to_date: date) -> bool:
+    return (
+        from_date.day == 1
+        and (from_date.year, from_date.month) == (to_date.year, to_date.month)
+        and to_date == _last_day_of_month(from_date)
+    )
+
+
+def is_whole_year(from_date: date, to_date: date) -> bool:
+    return (
+        from_date == date(from_date.year, 1, 1)
+        and to_date == date(from_date.year, 12, 31)
+    )
+
+
 def _prior_period(from_date: date, to_date: date) -> tuple[date, date]:
+    """The period a reader would naturally compare this one against.
+
+    Shifting back by the same number of days is right for an arbitrary window,
+    but wrong for a calendar month: July is 31 days, so the day-shift landed on
+    31 May – 30 June and called it the prior month. Months are not equal-length,
+    so a month compares against the *previous month*, not the previous 31 days
+    (BUGLOG 2026-07-29). Same for a whole year, where leap days would shift it.
+
+    Anything else keeps the equal-length window, which is the only defensible
+    answer for a range that isn't a calendar period.
+    """
+    if is_whole_month(from_date, to_date):
+        prior_to = from_date - timedelta(days=1)
+        return prior_to.replace(day=1), prior_to
+    if is_whole_year(from_date, to_date):
+        return date(from_date.year - 1, 1, 1), date(from_date.year - 1, 12, 31)
+
     period_days = (to_date - from_date).days + 1
     prior_to = from_date - timedelta(days=1)
     prior_from = prior_to - timedelta(days=period_days - 1)

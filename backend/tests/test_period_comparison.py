@@ -82,7 +82,12 @@ def _post_card_sale(
     )
 
 
-def test_auto_prior_period_same_length_as_current(db_session, comparison_setup) -> None:
+def test_a_whole_month_compares_against_the_previous_month(
+    db_session, comparison_setup
+) -> None:
+    """Was: shift back 31 days, landing on 29 Jan – 28 Feb, which is not a
+    month. Months differ in length, so equal-length was the wrong rule for
+    them (BUGLOG 2026-07-29). Date-rule edge cases live in test_prior_period.py."""
     report = period_comparison.get_period_comparison(
         db_session,
         comparison_setup["entity_id"],
@@ -90,11 +95,24 @@ def test_auto_prior_period_same_length_as_current(db_session, comparison_setup) 
         date(2026, 3, 31),
     )
 
-    assert report.prior_from == date(2026, 1, 29)
+    assert report.prior_from == date(2026, 2, 1)
     assert report.prior_to == date(2026, 2, 28)
+
+
+def test_a_partial_range_still_gets_an_equal_length_prior(
+    db_session, comparison_setup
+) -> None:
+    report = period_comparison.get_period_comparison(
+        db_session,
+        comparison_setup["entity_id"],
+        date(2026, 3, 5),
+        date(2026, 3, 20),
+    )
+
     current_days = (report.current_to - report.current_from).days + 1
     prior_days = (report.prior_to - report.prior_from).days + 1
-    assert current_days == prior_days == 31
+    assert current_days == prior_days == 16
+    assert report.prior_to < report.current_from
 
 
 def test_metrics_differ_when_activity_in_one_period_only(
@@ -209,7 +227,7 @@ def test_period_comparison_api_e2e(
     assert body["entity_id"] == str(setup["entity_id"])
     assert body["current_from"] == "2026-03-01"
     assert body["current_to"] == "2026-03-31"
-    assert body["prior_from"] == "2026-01-29"
+    assert body["prior_from"] == "2026-02-01"
     assert body["prior_to"] == "2026-02-28"
 
     sales = next(m for m in body["metrics"] if m["key"] == "total_sales_kurus")

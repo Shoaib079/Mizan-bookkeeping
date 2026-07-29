@@ -2,6 +2,23 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-29 — Period comparison compared a month against the wrong dates
+
+**Symptom:** Reports → Period comparison for **01.07.2026 – 31.07.2026** showed *"Prior: 31.05.2026 – 30.06.2026"*. Owner: *"prior month date must be 01.06 to 30.06 not 31.05 thats not month."*
+
+**Root cause:** `_prior_period` shifted back by the **same number of days** as the current range. July is 31 days, so it stepped back 31 days from 30 June and landed on 31 May. Equal-length is a sound rule for an arbitrary window and the wrong one for a calendar month, because **months are not equal length**. The same flaw would have shifted a whole-year comparison by a day whenever a leap year was involved.
+
+**Fix:** `_prior_period` now recognises calendar periods.
+- **Whole calendar month → the previous whole calendar month.** Derived as `from_date − 1 day` (the last day of the previous month) then `.replace(day=1)`, so February, leap years and the January→December rollover all come out right without special cases.
+- **Whole calendar year → the previous whole calendar year.**
+- **Anything else keeps the equal-length window** — there is no calendar answer for 1–15 July, so same-length-immediately-before remains the only defensible rule.
+
+`is_whole_month` / `is_whole_year` are exported so the intent is testable rather than buried in a branch. The explicit `prior_from` / `prior_to` query params already on the API are unaffected — they still override everything.
+
+**Two existing tests asserted the buggy behaviour** (`prior_from == 2026-01-29` in both the service and API tests) and were updated; a second test was added alongside to keep the equal-length rule covered for partial ranges.
+
+**Guarding test:** `backend/tests/test_prior_period.py` (14, pure date logic — no DB): the reported case, March→short February, leap February, January→December, whole year, partial month, arbitrary window, single day, and an invariant that the prior period never overlaps the current one.
+
 ## 2026-07-29 — Staff net position counted the advance twice
 
 **Symptom:** An employee's card read **Net position −5.460,00 ₺** with "Salary owed −2.730,00" and "Advance held −2.730,00", while the ledger's own running balance ended at **−2.730,00**. Owner: *"they do not match… in summary i only owe 2730 not 5400 smth."*
