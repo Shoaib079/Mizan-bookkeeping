@@ -9,10 +9,24 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | Agency group sales v2 — owner sign-off pending (money-critical) |
-| **Last completed slice** | Agency group sales v2 — backend + frontend (`v0.agency-group-sales-be` / `v0.agency-group-sales-fe`) |
-| **Last tag** | `v0.agency-group-sales-fe` |
-| **Next up** | P5 — Delete company UI; follow-up: per-menu group/agency period report |
+| **Active slice** | (none — period close work complete and pytest-green) |
+| **Last completed slice** | Accounting-audit closeout: month close (readiness + snapshot), year-end close, cash-flow category override, late-night date hint (2026-07-27) |
+| **Last tag** | `v0.month-close-snapshot` |
+| **Unpushed** | 3 commits after `v0.month-close-snapshot` — `662de25`, `bf0071d`, `8c9fb41`. Push with `git push origin main --follow-tags` |
+| **Next up** | **GS-FX** — forex-only group sales (design locked 2026-07-13, NOT built; the biggest deferred item) · P5 — Delete company UI |
+
+## FINANCIAL_AUDIT status (2026-07-27)
+
+| Finding | State |
+|---------|-------|
+| F1 — Turkish thousands-dot parser | ✅ resolved |
+| F2 — no output VAT (P&L not tax-credible) | ⛔ **open, deliberate deferral** — the only substantive one left |
+| F3 — voids rewrite historical reports | ✅ resolved (close-time snapshot) |
+| F4 — no year-end close | ✅ resolved |
+| F5 — coarse cash-flow classification | ✅ resolved (override; picker has no UI home yet — deliberate) |
+| F6 — UTC dates near midnight | ✅ mitigated (hint, no behaviour change) |
+
+Fixed assets / depreciation are **knowingly absent** — owner decision 2026-07-27, see DECISIONS.md. A capital purchase is expensed, so the month of a big purchase understates profit. Cash figures stay correct.
 
 ## Invoice classification — owner audit (Spice Corner May 2026)
 
@@ -64,7 +78,7 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 **`v0.73.25-settings-reorg`** — dissolve Set up sidebar; workspace settings in profile menu (Your profile, Restaurant settings, Add restaurant); Team nested under Restaurant settings; domain config moved to mother sections (opening balances, expense items, delivery platforms, manual journals). Prior: **`v0.73.24`** salary period + advance UX (FS).
 
-**Deploy:** `alembic upgrade head` through **`060`** on Railway.
+**Deploy:** `alembic upgrade head` through **`084`** on Railway (pre-deploy step; auto-deploys from `main`).
 
 **Next build:** **`POST_LAUNCH_PLAN.md` § P3** (upload backup). **IC-D** deferred until stable.
 

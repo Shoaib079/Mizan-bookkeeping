@@ -45,6 +45,16 @@ main / app entry      ← ONLY wires routes + startup. No business logic. Ever.
 
 **The single posting boundary:** every change to the ledger goes through `core/ledger`. No feature writes journal entries directly. Double-entry integrity (debits = credits, correct accounts, correct entity) is enforced there, once.
 
+**Adding a `JournalEntrySource` is never a one-line change.** Several registries assert that *every* enum member is classified and fail the test suite if one isn't — that is deliberate, so a new posting flow can't quietly fall through a default. Update all of these in the same commit:
+
+- `core/ledger/correction.py` — generic-correctable, a dedicated correction route, or void-and-re-enter
+- `features/reports/cash_flow.py` — operating / investing / financing / excluded / non-cash / opening-balance
+- `frontend/src/lib/transaction-registry.ts` — `JOURNAL_SOURCES` and `SOURCE_FLOWS` (a vitest asserts every non-system source maps to a flow page), plus `GENERIC_VOID_SAFE_SOURCES` if the entry should be voidable from the General ledger
+
+That last one is easy to forget and matters: an entry with no void route can be posted and never undone from the UI.
+
+**Period close lives in `core/period_locks`.** `service.py` (close/reopen), `guards.py` (the go-live floor and the soft lock, called from every posting path), `snapshot.py` (freeze the figures a closed month reported), `year_end.py` (move the year's result to Retained Earnings). The readiness rules that decide whether a month is *safe* to close are a product decision and live in `features/period_locks/readiness.py` — core stays the generic lock primitive that day-close and tests also use.
+
 ---
 
 ## Frontend structure (Next.js)

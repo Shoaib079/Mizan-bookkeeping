@@ -134,6 +134,8 @@ The **engine is complete and tested**; only the front of it is missing.
 
 ## 2026-07 — Frontend hosting moved Netlify → Vercel (supersedes 2026-06-27 hosting stack)
 
+> ⚠️ **HISTORICAL — superseded 2026-07 by "Production stack of record: Neon + Railway + Vercel + R2" above.** The backend is on **Railway**, not Render, and Railway **auto-deploys from `main`** and runs `alembic upgrade head` pre-deploy. Every "Render" and "manual deploy" statement in this entry is obsolete; it is kept only so the Netlify→Vercel reasoning isn't lost.
+
 **Choice:** Frontend now deploys on **Vercel** (was Netlify). Backend stays **Render** (FastAPI web + Celery worker + beat). This SUPERSEDES the "Production hosting stack (Phase 12 Slice 12.1)" entry below wherever it says Netlify.
 
 **Consequences (do not re-add Netlify):**
@@ -142,7 +144,7 @@ The **engine is complete and tested**; only the front of it is missing.
 - Render services are `autoDeploy: false` → API deploys are MANUAL. A GitHub push runs CI only, not a deploy.
 - The stale "Railway CORS_ORIGINS" hint in `frontend/src/lib/api.ts` should read Render.
 
-**Deploy reality (2026-07):** last successful prod deploy is `68a262a` (old Netlify build) — ~72 commits behind `main`. All work since (SEC-1→4, telecom/ÖİV, invoice learning pipeline, `/review` fix) is pushed but unshipped pending a working deploy path + credits. See `PRE_DEPLOY_CHECKLIST.md`.
+~~**Deploy reality (2026-07):** last successful prod deploy is `68a262a` — ~72 commits behind `main`.~~ **Resolved.** Railway auto-deploys from `main`; the backlog is shipped. See `PRE_DEPLOY_CHECKLIST.md` for current state.
 
 ## 2026-06-25 — Delivery monthly gross sales + platform-linked commission (Decisions §9; migration `059`)
 

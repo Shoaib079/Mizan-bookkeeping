@@ -9,20 +9,27 @@ items marked **BLOCKER** will break the live site if skipped.
 - **Frontend:** Vercel (Next.js). Auto-deploys from `main` once the build compiles. (Was Render, was Netlify — both retired.)
 - **Auth:** Clerk. **Backups:** Cloudflare R2 (nightly `pg_dump`).
 
-**STATUS (2026-07):** Production DB is at migration `072` (head) — backend + Neon fully current; all backend fixes are live. Frontend on Vercel builds green again (was frozen at `b259d22` on a failed build). Remaining items below are per-deploy hygiene, not a backlog.
+**STATUS (2026-07-27):** Alembic head is **`084_journal_cash_flow_category`**. The current push carries **`083`** (period close snapshots — `CREATE TABLE`, RLS-registered) and **`084`** (`journal_entries.cash_flow_category` — nullable `ADD COLUMN`). Both additive, no backfill, no changes to existing rows. Railway migrates Neon in its pre-deploy step, so pushing `main` is the whole deploy. Remaining items below are per-deploy hygiene, not a backlog.
+
+**Before every commit that adds a migration:** confirm a **single Alembic head**. Two `077` heads once slipped through and had to be untangled by hand.
 
 ---
 
 ## 0. Know what's unshipped
 
-Everything since the IE invoice slices is **committed locally only** — production
-still runs the old code. This deploy ships, at minimum:
-- SEC-1→4 security fixes (POS route guards, /users auth, actor_id from token,
-  entity-switch reset, FX parser, idempotency, prod API-URL guard).
-- Telecom/ÖİV invoice extraction + migrations 068/069.
-- Invoice learning-pipeline slice (one-click, commission one-click, rule keying).
+The sandbox cannot reach GitHub, so **the owner pushes**. Check what's waiting:
 
-Confirm nothing is stranded: `git status` clean, `git log` shows the slices.
+```
+git log --oneline origin/main..HEAD
+git push origin main --follow-tags
+```
+
+`origin/main` in the working copy only moves when the owner pushes from their
+machine — the folder is mounted, so the remote-tracking ref updates then.
+
+As of 2026-07-27 this is 3 commits after `v0.month-close-snapshot`: year-end
+close + cash-flow category override + late-night date hint, the fixed-assets
+deferral note, and the `YEAR_END_CLOSE` registry registration.
 
 ---
 

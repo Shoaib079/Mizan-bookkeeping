@@ -10,6 +10,12 @@ Everything we worked out, in one place. Read in this order.
 5. **`DESIGN_SYSTEM.md`** — **HOW it looks.** The locked visual system: white background, **blue** accent, Inter type, Lucide icons, components, the app shell, and the page archetypes (including the Reports card-library layout). **§0** has copy-paste Cursor prompts: standing theme rule (structure first) and theme-refinement-only.
 6. **`app_preview.html`** — **a live, openable preview.** Double-click to open in a browser and click through the pages (dashboard, list, supplier ledger, review, reports, settings, login) in the real look.
 
+## Where the reasoning lives (read before changing accounting behaviour)
+- **`FINANCIAL_AUDIT.md`** — an outside review of the accounting engine, finding by finding, each marked resolved / mitigated / deliberately open. **F2 (no output VAT) is the only substantive one still open**, and it's a knowing choice: these books are a management view, not a tax basis.
+- **`DECISIONS.md`** — the significant technical choices and *why*, including the things deliberately **not** built (forex-only group sales, fixed assets and depreciation, a create-manual-journal form). Read it before "fixing" something that looks missing — it may be missing on purpose.
+- **`BUGLOG.md`** — every real bug: symptom, root cause, fix, guarding test. Several of these are subtle and were expensive to find once.
+- **`TESTS.md`** — what each test file guards, and the registry-completeness rules that will fail the suite if a new `JournalEntrySource` isn't classified everywhere.
+
 ## Ideas for later
 - **`FUTURE_IDEAS.md`** — pocket backlog of features to add as the business grows (deeper accounting, bank feeds, recipe costing, receipt AI learning, etc.). Not part of the current slice until promoted into the Decisions doc. Cautionary lessons from the previous app are in **`ARCHITECTURE.md`**, not here.
 

@@ -93,12 +93,28 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `frontend/src/lib/review-status.test.ts` | Review screens — `isReviewTerminalStatus()` for posted/rejected guard | pass |
 | `backend/tests/test_idempotency.py` | Mutation idempotency — repeated key dedups, different keys both succeed, enforcement requires header, auth-scoped keys, client retry contract (Slice 11.19) | pass |
 | `backend/tests/test_backups.py` | Automated backups — bundle manifest/checksum, retention, `@requires_pg_tools` restore+integrity E2E (runs in CI with postgresql-client) | pass |
+| `backend/tests/test_statement_other_income.py` | **"Income to bank"** — Dr bank / Cr income shape, outflow rejected, missing account rejected, non-revenue account rejected (crediting an expense records a refund), correction keeps the account (2026-07-27) | pass |
+| `frontend/src/lib/statement-other-income.test.ts` | Inflow catch-all exists and is inflow-only; payload carries `income_account_id`; revenue-only picker excludes system-owned 4300/4400 | pass |
+| `backend/tests/test_month_close_readiness.py` | **Month close readiness** — only unclassified statement lines BLOCK; lines scoped by `transaction_date` not statement period; last weekend's card money reads as normal while older money is flagged with its oldest date; day close ungated by month readiness (2026-07-27) | pass |
+| `frontend/src/lib/month-close.test.ts` | Month picker never offers the current month; TR month labels; closed/dirty state wording | pass |
+| `backend/tests/test_period_close_snapshot.py` | **Close-time snapshot (F3)** — row per account, day close writes none, **the F3 reproduction** (close June, void a June entry, June must not move), drift reported once dirty, reopen returns to live, re-close replaces, straddling ranges stay live, deactivated account still counts, lock+snapshot commit together (2026-07-27) | pass |
+| `frontend/src/lib/sealed-period.test.ts` | Sealed-vs-live banner state; zero drift is not printed ("differs by 0,00 ₺" reads as a bug) | pass |
+| `backend/tests/test_year_end_close.py` | **Year-end close (F4)** — result moves to Retained Earnings, loss reduces it, the closing entry is kept OUT of the P&L, next year starts from zero, balance sheet stops stacking years, double-close refused, void reopens the year, an uncorrected prior year is swept in, December must be closed first, the entry is non-cash (2026-07-27) | pass |
+| `backend/tests/test_cash_flow_category_override.py` | **Cash-flow category override (F5)** — manual defaults to operating, override moves it, a junk value is ignored rather than trusted, one source can appear in two categories, totals never move | pass |
+| `frontend/src/lib/year-end.test.ts` | Year picker excludes the current year; year-end wording; **late-night date hint** (F6) fires only before 04:00 on today's date | pass |
 
 **Requires:** PostgreSQL (`docker compose up -d` or local Postgres). Tests auto-create `mizan` role/DBs via `postgres` admin user if needed. Backup restore E2E tests skip locally when `pg_dump`/`pg_restore` absent; install via `brew install libpq` or rely on CI.
 
 **Pre-go-live security gate (Slice 12.5):** After full pytest, run `bash backend/scripts/security_production_pytest.sh` (or CI production-guard job). Must include `test_security_invariants.py` green under production-like auth env. Also run `security_dependency_scan.sh` and `security_secrets_audit.sh` — see `DEPLOY.md` §14.
 
-**Count:** 673 pytest + 221 vitest (last run 2026-06-21).
+**Count:** 1261 pytest + 578 vitest (last full run 2026-07-27, both green).
+
+**Registry-completeness guards — read this before adding a `JournalEntrySource`.** Several registries assert every enum member is classified and fail the suite if not. Adding a source means updating *all* of them in the same commit:
+- `core/ledger/correction.py::verify_correction_source_registry_complete` — generic-correctable / dedicated route / void-and-re-enter
+- `features/reports/cash_flow.py::verify_cash_flow_source_registry_complete` — operating / investing / financing / excluded / non-cash / opening-balance
+- `frontend/src/lib/transaction-registry.ts` — `JOURNAL_SOURCES`, `SOURCE_FLOWS` (its own vitest asserts every non-system source maps to a flow page), and `GENERIC_VOID_SAFE_SOURCES` if the entry should be voidable from the General ledger
+
+These caught `year_end_close` twice in 2026-07-27 — once server-side, once in the frontend. That is the guards working, but the cost is a failed run; check them up front.
 
 Run: `cd backend && PYTHONPATH=. python3 -m pytest -v`
 Run frontend: `cd frontend && npm test && npm run build`
