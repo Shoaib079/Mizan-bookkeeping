@@ -115,7 +115,7 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **Pre-go-live security gate (Slice 12.5):** After full pytest, run `bash backend/scripts/security_production_pytest.sh` (or CI production-guard job). Must include `test_security_invariants.py` green under production-like auth env. Also run `security_dependency_scan.sh` and `security_secrets_audit.sh` — see `DEPLOY.md` §14.
 
-**Count:** 1271 pytest + 605 vitest (vitest green 2026-07-29; the newest backend tests — month pack, lira formatting, exporter imports — are pending the owner's pytest run).
+**Count:** 1317 pytest + 605 vitest — **full suite green 2026-07-29** (owner-run), covering month close, the month pack, lira formatting and the exporter-import guard. The seven failures in that run's first pass were a stale local venv, not code; see the environment note below.
 
 **Don't hold an entity-scoped ORM object across a `commit()`.** A commit expires loaded instances, so the next attribute read reloads the row — and if that read happens outside an `entity_context`, RLS hides it. SQLAlchemy finds nothing and raises `ObjectDeletedError`, which reads as "the row was deleted" when it is merely invisible. In tests, grab the id (`lock.id`) while the instance is still valid and carry the UUID. This cost a CI run on 2026-07-27; product code is safe because every path either reads inside the context or returns plain dataclasses.
 
