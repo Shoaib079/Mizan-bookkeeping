@@ -34,6 +34,7 @@ import {
   passedChecks,
   readinessSummary,
 } from "@/lib/month-close";
+import { YearEndClose } from "@/components/reports/year-end-close";
 import type {
   MonthCloseReadinessRead,
   PeriodLockRead,
@@ -330,6 +331,8 @@ function MonthCloseContent() {
               transactions missing from your books. The rest are for your eye.
             </p>
           </section>
+
+          {entityId && <YearEndClose entityId={entityId} isOwner={isOwner} />}
 
           {closedMonths.length > 0 && (
             <section>

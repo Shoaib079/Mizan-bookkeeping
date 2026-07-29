@@ -10,6 +10,33 @@ export function todayTrDate(): string {
   return `${day}.${month}.${year}`;
 }
 
+/** The hour a restaurant's trading day is treated as rolling over.
+ *
+ * Service runs past midnight, so an entry typed at 01:30 is nearly always
+ * about the night that just ended, not the day that just started. We don't
+ * silently redate it — guessing on someone's books is worse than asking — but
+ * we say which date is about to be used (FINANCIAL_AUDIT F6).
+ */
+const LATE_NIGHT_ROLLOVER_HOUR = 4;
+
+/**
+ * Warning to show when a date field is sitting on today's date in the small
+ * hours. Null the rest of the time.
+ *
+ * Returns the wording rather than a boolean so the message and the rule that
+ * triggers it stay in one testable place.
+ */
+export function lateNightDateHint(
+  displayValue: string,
+  now = new Date(),
+): string | null {
+  if (now.getHours() >= LATE_NIGHT_ROLLOVER_HOUR) return null;
+  if (displayValue.trim() !== todayTrDate()) return null;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  return `It's after midnight — this will be dated ${todayTrDate()}. For last night's trading, use ${displayFromDate(yesterday)}.`;
+}
+
 /** Calendar month for salary period pickers (month is 1–12). */
 export function calendarMonth(
   reference = new Date(),

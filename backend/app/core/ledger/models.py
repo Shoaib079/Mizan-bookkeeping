@@ -76,6 +76,9 @@ class JournalEntrySource(str, enum.Enum):
     FX_CONVERSION = "fx_conversion"
     FX_EXPENSE_SPEND = "fx_expense_spend"
     EXPENSE_ENTRY = "expense_entry"
+    #: The 31 December entry that zeroes revenue and expenses into Retained
+    #: Earnings. Excluded from the P&L — including it would net the year to nil.
+    YEAR_END_CLOSE = "year_end_close"
     SYSTEM = "system"
     RULE_AUTO = "rule_auto"
 
@@ -101,6 +104,13 @@ class JournalEntry(EntityScopedMixin, Base):
         Enum(JournalEntrySource, name="journal_entry_source", native_enum=False, length=32),
         nullable=False,
         default=JournalEntrySource.MANUAL,
+    )
+    #: Overrides the category inferred from ``source`` on the cash-flow
+    #: statement. Only meaningful for MANUAL/SYSTEM entries, where the source
+    #: says nothing about whether the money was operating, investing or
+    #: financing (FINANCIAL_AUDIT F5). NULL means "infer it".
+    cash_flow_category: Mapped[str | None] = mapped_column(
+        String(16), nullable=True
     )
     reverses_entry_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),

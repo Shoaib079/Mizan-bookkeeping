@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from app.core.schema_types import OptionalActorId
@@ -20,6 +21,10 @@ class CreateManualJournalRequest(BaseModel):
     lines: list[PostingLineIn] = Field(min_length=2)
     actor_id: OptionalActorId = None
     period_unlock_reason: str | None = Field(default=None, max_length=512)
+    #: Which cash-flow activity this is. Omit and it's treated as operating,
+    #: which is right for most manual entries but wrong for a loan repayment
+    #: or an equipment purchase (FINANCIAL_AUDIT F5).
+    cash_flow_category: Literal["operating", "investing", "financing"] | None = None
 
 
 class ManualJournalLineOut(BaseModel):
@@ -45,6 +50,7 @@ class ManualJournalOut(BaseModel):
     amended_by_entry_id: uuid.UUID | None
     voided_at: datetime | None
     created_at: datetime
+    cash_flow_category: str | None = None
     lines: list[ManualJournalLineOut]
 
 

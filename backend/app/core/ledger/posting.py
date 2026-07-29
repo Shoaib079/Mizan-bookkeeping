@@ -126,6 +126,7 @@ def _persist_journal_entry(
     source: JournalEntrySource,
     reverses_entry_id: uuid.UUID | None = None,
     amends_entry_id: uuid.UUID | None = None,
+    cash_flow_category: str | None = None,
 ) -> JournalEntry:
     entry = JournalEntry(
         entry_date=entry_date,
@@ -133,6 +134,7 @@ def _persist_journal_entry(
         source=source,
         reverses_entry_id=reverses_entry_id,
         amends_entry_id=amends_entry_id,
+        cash_flow_category=cash_flow_category,
     )
     session.add(entry)
     session.flush()
@@ -178,6 +180,7 @@ def prepare_journal_entry(
     actor_id: uuid.UUID,
     source: JournalEntrySource,
     period_unlock_reason: str | None = None,
+    cash_flow_category: str | None = None,
 ) -> JournalEntry:
     """Validate and persist a journal entry without committing — caller owns the transaction."""
     from app.core.period_locks.guards import assert_entry_dates_allowed, mark_periods_dirty_for_dates
@@ -193,7 +196,12 @@ def prepare_journal_entry(
     )
     _validate_accounts(session, entity_id, lines)
     entry = _persist_journal_entry(
-        session, entry_date, description, lines, source=source
+        session,
+        entry_date,
+        description,
+        lines,
+        source=source,
+        cash_flow_category=cash_flow_category,
     )
     _record_audit_event(session, entry.id, LedgerAuditAction.POST, actor_id)
     session.flush()
@@ -212,6 +220,7 @@ def post_journal_entry(
     actor_id: uuid.UUID,
     source: JournalEntrySource,
     period_unlock_reason: str | None = None,
+    cash_flow_category: str | None = None,
 ) -> JournalEntry:
     """The ONE posting boundary. Requires entity_context(entity_id) via wrapper."""
     with entity_context(session, entity_id):
@@ -224,6 +233,7 @@ def post_journal_entry(
             actor_id=actor_id,
             source=source,
             period_unlock_reason=period_unlock_reason,
+            cash_flow_category=cash_flow_category,
         )
         session.commit()
         session.refresh(entry)

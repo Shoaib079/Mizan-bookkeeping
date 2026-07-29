@@ -3,7 +3,11 @@
  * Pure helpers — the page reads them, the tests pin them.
  */
 
-import type { MonthCloseReadinessRead, PeriodLockRead } from "@/lib/report-types";
+import type {
+  MonthCloseReadinessRead,
+  PeriodLockRead,
+  YearEndPreviewRead,
+} from "@/lib/report-types";
 
 export type MonthOption = {
   /** "2026-06" — what the select carries. */
@@ -111,6 +115,33 @@ export function readinessSummary(readiness: MonthCloseReadinessRead): string {
     } worth a look first.`;
   }
   return "Everything checks out. Ready to close.";
+}
+
+/**
+ * Years available to close, newest first, starting from last year.
+ *
+ * The current year is absent for the same reason the current month is: you
+ * can't close a year you're still trading in.
+ */
+export function closableYears(today: Date, count = 5): number[] {
+  const start = today.getFullYear() - 1;
+  return Array.from({ length: count }, (_, i) => start - i);
+}
+
+/** The one-line verdict on the year-end card. */
+export function yearEndSummary(preview: YearEndPreviewRead): string {
+  if (preview.already_closed) {
+    return `${preview.year} is closed. Its profit sits in Retained Earnings and the year's accounts start from zero.`;
+  }
+  if (!preview.december_closed) {
+    return `Close December ${preview.year} first — a year can't be sealed over a month that might still change.`;
+  }
+  if (preview.lines.length === 0) {
+    return `Nothing to close for ${preview.year} — no revenue or expense balances.`;
+  }
+  return preview.net_result_kurus >= 0
+    ? `Ready. ${preview.year}'s profit will move into Retained Earnings, where partner distributions draw from.`
+    : `Ready. ${preview.year} made a loss, which will reduce Retained Earnings.`;
 }
 
 export function failedChecks(readiness: MonthCloseReadinessRead) {

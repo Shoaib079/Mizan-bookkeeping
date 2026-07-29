@@ -76,6 +76,8 @@ _NON_CASH_SOURCES = frozenset(
         JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
         JournalEntrySource.CUSTOMER_CREDIT_SALE,
         JournalEntrySource.GROUP_SALE,
+        # Pure bookkeeping — moves P&L balances into equity, touches no money.
+        JournalEntrySource.YEAR_END_CLOSE,
     }
 )
 
@@ -154,6 +156,9 @@ def verify_cash_flow_source_registry_complete() -> None:
                 )
 
 
+CASH_FLOW_CATEGORIES: tuple[str, ...] = ("operating", "investing", "financing")
+
+
 def _source_category(source: JournalEntrySource) -> str:
     if source in _FINANCING_SOURCES:
         return "financing"
@@ -162,6 +167,20 @@ def _source_category(source: JournalEntrySource) -> str:
     if source in _OPERATING_SOURCES or source in _NON_CASH_SOURCES:
         return "operating"
     return "operating"
+
+
+def entry_category(source: JournalEntrySource, override: str | None) -> str:
+    """The entry's own answer, falling back to what its source implies.
+
+    MANUAL and SYSTEM both land in "operating" by inference, so a manual
+    journal that is really a loan repayment or an equipment purchase would be
+    filed wrong (FINANCIAL_AUDIT F5). The override exists for exactly those.
+    An unrecognised value is ignored rather than trusted — a bad string must
+    not silently move money between categories.
+    """
+    if override in CASH_FLOW_CATEGORIES:
+        return override
+    return _source_category(source)
 
 
 def _empty_category() -> CashFlowCategoryRead:
@@ -199,8 +218,10 @@ def get_cash_flow(
     operating = _empty_category()
     investing = _empty_category()
     financing = _empty_category()
-    by_source_net: dict[str, int] = defaultdict(int)
-    by_source_category: dict[str, str] = {}
+    # Keyed by (source, category), not source alone: with per-entry overrides
+    # one source can legitimately land in two categories, and a source-only key
+    # would let the last entry seen decide the label for all of them.
+    by_source_net: dict[tuple[str, str], int] = defaultdict(int)
     opening_balance_cash_kurus = 0
 
     with entity_context(session, entity_id):
@@ -250,8 +271,7 @@ def get_cash_flow(
             if entry.source in _EXCLUDED_SOURCES:
                 continue
 
-            category_name = _source_category(entry.source)
-            source_key = entry.source.value
+            category_name = entry_category(entry.source, entry.cash_flow_category)
 
             if category_name == "operating":
                 operating = _apply_net(operating, net_cash)
@@ -260,8 +280,7 @@ def get_cash_flow(
             else:
                 financing = _apply_net(financing, net_cash)
 
-            by_source_net[source_key] += net_cash
-            by_source_category[source_key] = category_name
+            by_source_net[(entry.source.value, category_name)] += net_cash
 
         opening_cash_kurus += opening_balance_cash_kurus
 
@@ -271,10 +290,10 @@ def get_cash_flow(
     by_source = [
         CashFlowSourceRow(
             source=source,
-            category=by_source_category[source],
+            category=category,
             net_cash_kurus=net,
         )
-        for source, net in sorted(by_source_net.items())
+        for (source, category), net in sorted(by_source_net.items())
     ]
 
     return CashFlowRead(

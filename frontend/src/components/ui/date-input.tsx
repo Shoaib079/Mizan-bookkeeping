@@ -15,6 +15,7 @@ import {
   formatMonthYear,
   getCalendarDays,
   isSameDay,
+  lateNightDateHint,
   parseDisplayToDate,
   weekdayLabels,
 } from "@/lib/dates";
@@ -45,6 +46,9 @@ export function DateInput({
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
+  // Computed on the client after mount: the server has no idea what time it is
+  // where the user is, and rendering the hint during SSR would mismatch.
+  const [lateNightHint, setLateNightHint] = useState<string | null>(null);
 
   const selected = parseDisplayToDate(value);
   const today = new Date();
@@ -61,6 +65,10 @@ export function DateInput({
       setViewYear(parsed.getFullYear());
       setViewMonth(parsed.getMonth());
     }
+  }, [value]);
+
+  useEffect(() => {
+    setLateNightHint(lateNightDateHint(value));
   }, [value]);
 
   useEffect(() => {
@@ -248,6 +256,10 @@ export function DateInput({
             Today
           </button>
         </div>
+      )}
+
+      {lateNightHint && (
+        <p className="mt-1 text-xs text-warning">{lateNightHint}</p>
       )}
     </div>
   );

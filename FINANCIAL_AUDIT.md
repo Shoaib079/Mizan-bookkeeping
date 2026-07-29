@@ -70,17 +70,49 @@ Deliberate limits, documented so they aren't mistaken for bugs:
 
 Guarding tests: `backend/tests/test_period_close_snapshot.py` (14, including the direct F3 reproduction: close June, void a June entry, June must not move).
 
-### F4 — MEDIUM · No year-end close
+### F4 — ✅ RESOLVED 2026-07-27 · No year-end close
 
 Revenue/expense accounts never close to Retained Earnings (`3100` is seeded but never posted to). The balance sheet stays balanced via a computed all-time `unclosed_net_income` line, which is correct math — but after year 2+, that line mixes all years' results and `3100` stays at zero. Fine for v1; add a closing-entry (or virtual year-partition) mechanism before multi-year use, and document the current behavior for the accountant.
 
-### F5 — LOW · Cash-flow classification is per-entry source, coarse for MANUAL/SYSTEM
+**Fix shipped 2026-07-27.** Standard closing entry, not a virtual partition. `Close the year` on the Month close page posts one entry dated 31 December (`JournalEntrySource.YEAR_END_CLOSE`) that debits every revenue balance, credits every expense balance, and puts the difference to Retained Earnings — credit for a profit, debit for a loss.
+
+**This was worse than a presentation problem.** Partner profit allocation already *debits* 3100 to distribute profit to partners; nothing ever credited it, so that flow has always drawn on a permanently empty account. The year-end close is its missing half.
+
+Design notes worth keeping:
+
+- **The closing entry is excluded from the P&L** (`balances.P_AND_L_EXCLUDED_SOURCES`, applied via `period_activity_kurus(exclude_sources=…)`). Counting it would net every closed year to nil.
+- **`_unclosed_net_income_kurus` deliberately does NOT exclude it.** That entry zeroes the revenue/expense balances, so once a year is closed the balance-sheet line naturally falls back to the current year's result alone — which is the whole point. Excluding it there would leave every past year permanently stacked.
+- **It is non-cash** for the cash-flow statement.
+- **Balances are read cumulatively to 31 December**, not as the year's own activity: a prior year that was never closed is still sitting in those accounts and belongs in equity too.
+- **Requires December closed first** — a year can't be sealed over a month that might still change. The entry then posts through the sealed December with `period_unlock_reason="Year-end close {year}"`, so it appears in the audit trail as the system's own bookkeeping.
+- **Voiding the closing entry reopens the year** for re-closing; `year_end_entry` ignores voided entries and reversals.
+- Temporary accounts are gathered **regardless of `is_active`** — a mid-year deactivation would otherwise strand a balance in a P&L account forever.
+
+Guarding tests: `backend/tests/test_year_end_close.py` (15), `frontend/src/lib/year-end.test.ts`.
+
+### F5 — ✅ RESOLVED 2026-07-27 · Cash-flow classification is per-entry source, coarse for MANUAL/SYSTEM
 
 Manual journals and SYSTEM entries touching cash are always "operating," even if financing/investing in nature. The `reconciled_to_categories` flag keeps totals honest; classification within categories can be wrong. Acceptable; note it in the report UI.
 
-### F6 — LOW · UTC dates near midnight
+**Fix shipped 2026-07-27.** Migration 084 adds a nullable `journal_entries.cash_flow_category`; `cash_flow.entry_category(source, override)` prefers it and falls back to source inference. An **unrecognised value is ignored rather than trusted** — a bad string must not silently move money between categories.
+
+The by-source rows now key on **(source, category)**, not source alone. With per-entry overrides one source can legitimately land in two categories, and a source-only key let the last entry seen relabel all the others — a bug the override would have introduced.
+
+**Known gap:** the override is accepted on `POST /manual-journals` but there is **no create-journal form in the frontend yet** (manual journals are list + void only), so today it's reachable by API only. When that form is built, add the picker.
+
+Guarding tests: `backend/tests/test_cash_flow_category_override.py` (7).
+
+### F6 — ✅ MITIGATED 2026-07-27 · UTC dates near midnight
 
 `utc_today()` is used for default entry/void dates; Turkey is UTC+3, so entries made 00:00–03:00 local default to the previous day. Deliberate per code comment; worth a UI hint on late-night closes.
+
+**Narrower than the finding implies.** The frontend's `todayTrDate()` uses the *browser-local* date and every form sends an explicit date, so `utc_today()` only fires for direct API calls and backend-filled defaults. No behaviour was changed (owner's choice: show the date, don't guess).
+
+**Mitigation shipped 2026-07-27:** `lateNightDateHint()` and a warning line inside `DateInput`. Between midnight and 04:00, a date field sitting on today's date says: *"It's after midnight — this will be dated 29.07.2026. For last night's trading, use 28.07.2026."* It self-suppresses once another date is picked, so it never nags. Computed after mount — the server can't know the user's local time and rendering it during SSR would mismatch.
+
+**Newly relevant with month close:** an entry recorded at 01:00 on 1 July defaults to 30 June, and if June is sealed that write demands an unlock reason and flags the month as changed. Nothing breaks silently, but the hint is what makes it obvious.
+
+Guarding tests: `frontend/src/lib/year-end.test.ts` (`lateNightDateHint` block).
 
 ---
 

@@ -71,6 +71,7 @@ def _to_manual_journal_out(
         amended_by_entry_id=entry.amended_by_entry_id,
         voided_at=entry.voided_at,
         created_at=entry.created_at,
+        cash_flow_category=entry.cash_flow_category,
         lines=lines,
     )
 
@@ -96,6 +97,7 @@ def create_manual_journal(
         actor_id=payload.actor_id,
         source=JournalEntrySource.MANUAL,
         period_unlock_reason=payload.period_unlock_reason,
+        cash_flow_category=payload.cash_flow_category,
     )
     with entity_context(session, entity_id):
         accounts = _account_map(session, {line.account_id for line in entry.lines})

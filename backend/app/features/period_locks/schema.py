@@ -39,6 +39,38 @@ class PeriodLockListOut(BaseModel):
     items: list[PeriodLockOut]
 
 
+class YearEndLineOut(BaseModel):
+    account_id: uuid.UUID
+    code: str
+    name: str
+    account_type: str
+    balance_kurus: int
+
+    model_config = {"from_attributes": True}
+
+
+class YearEndPreviewOut(BaseModel):
+    year: int
+    closing_date: date
+    revenue_total_kurus: int
+    expense_total_kurus: int
+    net_result_kurus: int
+    lines: list[YearEndLineOut]
+    already_closed: bool
+    journal_entry_id: uuid.UUID | None = None
+    #: False while December is still open — you can't close a year over a month
+    #: that might still change.
+    december_closed: bool = False
+    can_close: bool = False
+
+    model_config = {"from_attributes": True}
+
+
+class CloseYearRequest(BaseModel):
+    year: int = Field(ge=2000, le=2200)
+    description: str | None = Field(default=None, max_length=512)
+
+
 class ReadinessCheckOut(BaseModel):
     key: str
     label: str

@@ -4,7 +4,21 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-27
 
-✅ **Verified: backend `pytest` green (owner-run, includes migration `083_period_close_snapshots`), `tsc` clean, frontend vitest 568/568, `py_compile` clean.**
+⚠️ **The year-end / cash-flow / late-night work below adds migration `084_journal_cash_flow_category` — `tsc` clean, frontend vitest 578/578, `py_compile` clean, but backend `pytest` NOT run in the working session. Run `cd backend && .venv/bin/pytest -q`.** Everything from month close slice 2 and earlier was already pytest-green.
+
+**Close the year.**
+- New **Close the year** on the Month close page. Pick a year, see exactly which accounts will be zeroed and what the profit comes to, and close it. Posts one entry dated 31 December.
+- Until now your sales and expense accounts never reset — they just kept adding up. By your third year the balance sheet's "profit not yet distributed" would have been three years mixed together.
+- It also fixes something quieter: **distributing profit to partners draws on Retained Earnings, and nothing ever put anything there.** Closing the year is what fills it.
+- Closing a year needs December closed first. Your profit & loss for that year doesn't change — the closing entry is bookkeeping, not trading, so it's kept out of the P&L and out of the cash flow statement.
+- If you closed too early, void the entry and the year opens up again.
+
+**A manual journal can now say what kind of cash movement it is.**
+- The cash flow statement guesses from the type of entry, and manual journals were always guessed as "operating". A manual loan repayment showed up in the wrong section. Your totals were never wrong, only the split.
+- Manual entries can now be marked operating, investing or financing. (Available via the API today — there's no create-journal screen in the app yet.)
+
+**A note when you're recording after midnight.**
+- Record something at 1am and the date field will tell you: *"It's after midnight — this will be dated 29.07.2026. For last night's trading, use 28.07.2026."* It disappears as soon as you pick a date yourself.
 
 **Month close — seal a month once you're happy with it.**
 - New **Reports → Month close**. Pick a month, see a checklist of everything that might be unfinished, then close it.

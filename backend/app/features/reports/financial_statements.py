@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountType
-from app.core.ledger.balances import balance_as_of_kurus, period_activity_kurus
+from app.core.ledger.balances import (
+    P_AND_L_EXCLUDED_SOURCES,
+    balance_as_of_kurus,
+    period_activity_kurus,
+)
 from app.core.period_locks import snapshot as period_snapshot
 from app.core.period_locks.models import PeriodLock
 from app.db.session import entity_context, require_entity_context
@@ -101,6 +105,14 @@ def _accounts_by_id(
 
 
 def _unclosed_net_income_kurus(session: Session, as_of_date: date) -> int:
+    """Result not yet moved into equity.
+
+    Deliberately does NOT exclude the year-end entry, unlike the P&L. That
+    entry zeroes the revenue and expense balances, so once a year is closed
+    this figure naturally falls back to the current year's result alone —
+    which is the whole point of closing (FINANCIAL_AUDIT F4). Excluding it here
+    would leave every past year permanently stacked in this one line.
+    """
     revenue_total = 0
     expense_total = 0
     for account in _active_accounts(session, (AccountType.REVENUE, AccountType.EXPENSE)):
@@ -116,7 +128,13 @@ def _live_net_income_kurus(session: Session, from_date: date, to_date: date) -> 
     revenue = 0
     expenses = 0
     for account in _active_accounts(session, (AccountType.REVENUE, AccountType.EXPENSE)):
-        amount = period_activity_kurus(session, account, from_date, to_date)
+        amount = period_activity_kurus(
+            session,
+            account,
+            from_date,
+            to_date,
+            exclude_sources=P_AND_L_EXCLUDED_SOURCES,
+        )
         if account.account_type == AccountType.REVENUE:
             revenue += amount
         else:
@@ -170,7 +188,13 @@ def get_profit_and_loss(
                     else 0
                 )
             else:
-                amount = period_activity_kurus(session, account, from_date, to_date)
+                amount = period_activity_kurus(
+                    session,
+                    account,
+                    from_date,
+                    to_date,
+                    exclude_sources=P_AND_L_EXCLUDED_SOURCES,
+                )
             rows.append(
                 ProfitAndLossAccountRow(
                     account_id=account.id,

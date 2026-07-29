@@ -10,7 +10,12 @@ from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
-from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntryStatus
+from app.core.ledger.models import (
+    JournalEntry,
+    JournalEntryLine,
+    JournalEntrySource,
+    JournalEntryStatus,
+)
 
 __all__ = [
     "balance_as_of_kurus",
@@ -27,6 +32,7 @@ def _debit_credit_totals_kurus(
     from_date: date | None = None,
     to_date: date | None = None,
     as_of_date: date | None = None,
+    exclude_sources: tuple[JournalEntrySource, ...] = (),
 ) -> tuple[int, int]:
     query = (
         select(
@@ -47,6 +53,10 @@ def _debit_credit_totals_kurus(
         query = query.where(JournalEntry.entry_date <= to_date)
     if as_of_date is not None:
         query = query.where(JournalEntry.entry_date <= as_of_date)
+    if exclude_sources:
+        query = query.where(
+            JournalEntry.source.not_in([s.value for s in exclude_sources])
+        )
 
     debits = credits = 0
     for side, total in session.execute(query).all():
@@ -65,11 +75,21 @@ def _signed_balance_kurus(
     return credits - debits
 
 
+#: The year-end entry zeroes revenue and expenses into Retained Earnings. It is
+#: real and posted, but it describes the *closing of* the year rather than the
+#: year's trading — counting it in the P&L would net every closed year to nil.
+P_AND_L_EXCLUDED_SOURCES: tuple[JournalEntrySource, ...] = (
+    JournalEntrySource.YEAR_END_CLOSE,
+)
+
+
 def period_activity_kurus(
     session: Session,
     account: Account,
     from_date: date,
     to_date: date,
+    *,
+    exclude_sources: tuple[JournalEntrySource, ...] = (),
 ) -> int:
     """Natural signed activity for one account within an inclusive date range."""
     debits, credits = _debit_credit_totals_kurus(
@@ -77,6 +97,7 @@ def period_activity_kurus(
         account.id,
         from_date=from_date,
         to_date=to_date,
+        exclude_sources=exclude_sources,
     )
     return _signed_balance_kurus(debits, credits, account.normal_balance)
 

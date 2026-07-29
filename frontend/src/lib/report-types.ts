@@ -322,6 +322,27 @@ export type PeriodLockRead = {
   dirty: boolean;
 };
 
+export type YearEndLine = {
+  account_id: string;
+  code: string;
+  name: string;
+  account_type: string;
+  balance_kurus: number;
+};
+
+export type YearEndPreviewRead = {
+  year: number;
+  closing_date: string;
+  revenue_total_kurus: number;
+  expense_total_kurus: number;
+  net_result_kurus: number;
+  lines: YearEndLine[];
+  already_closed: boolean;
+  journal_entry_id: string | null;
+  december_closed: boolean;
+  can_close: boolean;
+};
+
 export type ReadinessCheck = {
   key: string;
   label: string;
