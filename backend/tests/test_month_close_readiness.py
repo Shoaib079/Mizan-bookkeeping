@@ -150,8 +150,12 @@ def test_missing_bank_closing_balance_warns_but_never_blocks(db_session, setup):
 
 
 def _card_sale(db_session, setup, sales_date: str, gross: int):
-    # actor_id is NOT NULL on card_sales_batches, and the schema defaults it to
-    # None — omitting it fails at the insert, not at validation.
+    # actor_id must be supplied when calling the service directly. The API
+    # resolves it from the token (`resolve_actor_id`, which returns a UUID or
+    # raises 422), so only tests can reach the schema's `None` default — and it
+    # then fails at the INSERT, not at validation. `ledger_audit_events.actor_id`
+    # trips first (the journal entry is written before the batch row), so the
+    # error names a table you weren't thinking about.
     return pos_service.create_card_sales_batch(
         db_session,
         setup["entity_id"],
