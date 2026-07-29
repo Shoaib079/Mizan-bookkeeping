@@ -98,7 +98,9 @@ Manual journals and SYSTEM entries touching cash are always "operating," even if
 
 The by-source rows now key on **(source, category)**, not source alone. With per-entry overrides one source can legitimately land in two categories, and a source-only key let the last entry seen relabel all the others — a bug the override would have introduced.
 
-**Known gap:** the override is accepted on `POST /manual-journals` but there is **no create-journal form in the frontend yet** (manual journals are list + void only), so today it's reachable by API only. When that form is built, add the picker.
+**Known gap, accepted 2026-07-27:** the override is accepted on `POST /manual-journals` but there is **no create-journal form in the frontend** (manual journals are list + void only), so today it's reachable by API only. Deliberately not built: a free-form double-entry screen is the easiest way to unbalance a subledger against its control account or post into a clearing account by hand, and every dedicated flow exists so that can't happen. Wire the picker if that form is ever added.
+
+**The bigger practical gap is not this one.** A restaurant's real investing transaction is buying equipment, and the chart has **no fixed-asset accounts at all**, so such a purchase is recorded as an expense — wrong account, not merely wrong category. Owner has knowingly deferred fixed assets and depreciation; see DECISIONS.md 2026-07-27.
 
 Guarding tests: `backend/tests/test_cash_flow_category_override.py` (7).
 

@@ -2,6 +2,23 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-07-27 — No fixed assets or depreciation (deliberate, NOT a gap to fix)
+
+**Status:** ⛔ **WON'T BUILD for now.** Owner decision 2026-07-27: *"i do not know how depreciation works in turkey. and i do not really care about them rn. bcz i am just using this to keep record and profits nothing more for now."*
+
+**What's absent:** the chart has no fixed-asset accounts (no equipment, furniture, vehicles, accumulated depreciation). Assets stop at cash, bank, receivables, employee advances and clearing accounts. So a capital purchase — an oven, refrigeration — has nowhere to go and is recorded as an expense.
+
+**Consequences, accepted knowingly:**
+- The month of a large purchase shows a sharply understated profit; later months are correspondingly overstated because nothing depreciates. **Cash figures stay correct** — the money really did leave.
+- The balance sheet doesn't show the business owns the asset.
+- The cash-flow statement files the purchase as *operating* when it is *investing*. This is the practical face of FINANCIAL_AUDIT F5, and no category override fixes it: the entry is in the wrong account, not merely the wrong category.
+
+**Why this is coherent rather than sloppy:** these books are already a **management view, not a tax basis** — F2 (no output VAT, mixed-basis expenses) says so explicitly. Fixed assets would be a fourth thing that only matters when producing tax-credible statements. The owner's mali müşavir files from invoices, not from this app.
+
+**Turkish context, for whoever picks this up** (verify before building — the figures change annually): the tax authority publishes a lira threshold below which a purchase may be expensed outright, and useful lives above it (kitchen equipment and furniture are typically five years). Straight-line and declining-balance methods both exist, and inflation adjustment applies in some years. This is a real accounting-policy question, not a schema question.
+
+**Revisit when:** the owner starts producing statements for a bank, an investor or the tax authority; or buys equipment large enough that a single month's profit becomes misleading to *him*. At that point it is a proper slice — asset accounts, a purchase flow, a monthly depreciation run, and disposal — not a patch.
+
 ## 2026-07-27 — Month close: soft lock + close-time snapshot (design agreed — NOT BUILT)
 
 **Status:** 🟢 **SLICES 1 + 2 BUILT 2026-07-27** (month close page + readiness checks + blocking enforcement; close-time snapshot + as-closed reports, which resolves FINANCIAL_AUDIT F3). Slice 3 (dirty drill-down — *which* entries changed) NOT built. This entry exists so the design isn't re-litigated and the existing backend isn't rebuilt by mistake.
