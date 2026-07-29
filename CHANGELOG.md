@@ -4,6 +4,11 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-29
 
+**Balances now shows staff and partner totals.**
+- Those two cards were blank — they only linked through to the directory, so the hub couldn't answer "what do I owe my staff" without a click.
+- Both now show the grand total, with the number of people it covers. A negative staff total means your employees are holding advances rather than being owed, and it's coloured differently to make that obvious.
+- The totals sum the same per-person balances the directories show, so the card and the page can never disagree.
+
 **Download all your books for a period in one file.**
 - **Reports → Download all books** gives you one Excel workbook with a sheet for each: Summary, Sales day by day, Expenses, Salaries, a Cash book per drawer, a Bank book per account, Card clearing, Profit & loss, and the full General ledger.
 - Built for sending to partners: one file instead of six downloads, and four of those books (expenses, cash, bank, ledger) had no export at all before.

@@ -23,6 +23,11 @@ import {
   useCustomerBalances,
   useSupplierBalances,
 } from "@/lib/use-balance-map";
+import { subledgerCountLabel } from "@/lib/subledger-total";
+import {
+  usePartnerBalanceTotal,
+  useStaffBalanceTotal,
+} from "@/lib/use-subledger-total";
 import { cn } from "@/lib/utils";
 
 type CardProps = {
@@ -70,6 +75,8 @@ export function BalancesOverview() {
   const { entityId } = useEntity();
   const payables = useSupplierBalances(entityId ?? "");
   const receivables = useCustomerBalances(entityId ?? "");
+  const staff = useStaffBalanceTotal(entityId);
+  const partners = usePartnerBalanceTotal(entityId);
 
   // Money actually held, across every bank, cash drawer and FX wallet.
   const [cashAndBankKurus, setCashAndBankKurus] = useState(0);
@@ -145,14 +152,34 @@ export function BalancesOverview() {
         <BalanceCard
           href="/staff"
           title="Staff balances"
-          hint="Advances and amounts owed to employees"
+          hint={
+            staff.totalKurus < 0
+              ? `Staff hold this much of your money — ${subledgerCountLabel(staff.count, "employee")}`
+              : `Owed to employees — ${subledgerCountLabel(staff.count, "employee")}`
+          }
           icon={Users}
+          amount={formatTry(staff.totalKurus)}
+          // Owed to staff is money out of the business; a negative total means
+          // they are holding advances, which is the other way round.
+          amountClass={
+            staff.totalKurus > 0
+              ? "text-destructive"
+              : staff.totalKurus < 0
+                ? "text-success"
+                : undefined
+          }
+          loading={staff.loading}
         />
         <BalanceCard
           href="/partners"
           title="Partner balances"
-          hint="Partner loans, drawings, and capital"
+          hint={`Loans, drawings and capital — ${subledgerCountLabel(partners.count, "partner")}`}
           icon={Banknote}
+          amount={formatTry(partners.totalKurus)}
+          amountClass={
+            partners.totalKurus > 0 ? "text-destructive" : undefined
+          }
+          loading={partners.loading}
         />
       </div>
     </>
