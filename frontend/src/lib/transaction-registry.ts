@@ -41,6 +41,7 @@ export const JOURNAL_SOURCES = [
   "fx_conversion",
   "fx_expense_spend",
   "expense_entry",
+  "year_end_close",
   "system",
 ] as const;
 
@@ -59,12 +60,18 @@ export const GENERIC_CORRECTABLE_SOURCES = new Set<string>(["manual", "bank_fee"
 export const GENERIC_VOID_SAFE_SOURCES = new Set<string>([
   ...GENERIC_CORRECTABLE_SOURCES,
   "pos_commission_sweep",
+  // A year-end close is a plain journal entry with no subledger rows, so the
+  // generic reversal is complete. It belongs here because voiding it IS the
+  // undo — it restores the revenue and expense balances and reopens the year
+  // for re-closing. Without it the owner could seal a year and never unseal it.
+  "year_end_close",
 ]);
 
 const SOURCE_LABELS: Record<string, string> = {
   bank_fee: "bank charges",
   pos_commission_sweep: "bank commission",
   pos_commission_statement: "card commission (statement)",
+  year_end_close: "year-end close",
 };
 
 export function sourceLabel(source: string): string {
@@ -80,6 +87,7 @@ export type SourceFlow = {
 
 const SOURCE_FLOWS: Record<string, SourceFlow> = {
   manual: { href: "/review/manual-journals", label: "Manual journals" },
+  year_end_close: { href: "/reports/month-close", label: "Month close" },
   opening_balance: {
     href: "/onboarding/opening-balances",
     label: "Opening balances",
