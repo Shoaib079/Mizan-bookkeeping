@@ -4,7 +4,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-27
 
-⚠️ **`tsc` + full frontend vitest (546 tests) + `py_compile` green in this session — backend `pytest` NOT run here (sandbox lacks Python 3.11 + Postgres). Run `cd backend && .venv/bin/pytest -q` before relying on the backend changes below.**
+✅ **Verified: backend `pytest` green (owner-run), `tsc` clean, full frontend vitest 546/546, `py_compile` clean.**
 
 **"Income to bank" — money in that isn't a customer or a settlement now has a home.**
 - Bank interest, a supplier refund, an insurance payout: previously **no classification fit**, so the line stayed in the review queue and the bank account could never reach "Reconciled". Outflows have always had a catch-all ("Expense from bank"); inflows had none. Now they do.

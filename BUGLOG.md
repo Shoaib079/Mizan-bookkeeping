@@ -18,7 +18,7 @@ Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
 **Deliberate asymmetry with expenses:** the income picker has **no first-in-list default**, unlike the expense picker. The first revenue account is Sales Revenue, so a silent default would book bank interest as food sales and quietly inflate the top line. The user must pick.
 
-**Guarding tests:** `backend/tests/test_statement_other_income.py` (5: Dr bank / Cr income shape, outflow rejected, missing account rejected, non-revenue account rejected, correction keeps the account) and `frontend/src/lib/statement-other-income.test.ts` (8). ⚠️ **Owner: run `cd backend && .venv/bin/pytest -q` before merge — money-critical, sandbox cannot run pytest.**
+**Guarding tests:** `backend/tests/test_statement_other_income.py` (5: Dr bank / Cr income shape, outflow rejected, missing account rejected, non-revenue account rejected, correction keeps the account) and `frontend/src/lib/statement-other-income.test.ts` (8). ✅ **Backend pytest run green by owner 2026-07-27** (sandbox can't run it — Python 3.11 + Postgres absent). `tsc` + 546 frontend tests + `py_compile` also green.
 
 ## 2026-07-13 — Staff advance can't be applied against extra-days owed (OPEN — handed to Cursor)
 
