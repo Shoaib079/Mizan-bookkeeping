@@ -1,7 +1,34 @@
 /** Salary payment advance + period preview (mirrors backend posting). */
 
+import { formatKurus } from "@/lib/money";
+
 /** Generic picker placeholder — not a real employee name. */
 export const STAFF_SALARY_EMPLOYEE_PLACEHOLDER = "Employee";
+
+/** Whole days only — reject "1.5", "2abc", empty, zero. */
+export function parseStrictExtraDays(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (!/^\d+$/.test(trimmed)) return null;
+  const n = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(n) || n <= 0 || n > 31) return null;
+  return n;
+}
+
+/** Prefill cash field with net-to-pay (Turkish grouping for TRY). */
+export function formatCashPrefill(netToPayMinor: number, isTry: boolean): string {
+  if (netToPayMinor <= 0) return "";
+  if (isTry) return formatKurus(netToPayMinor);
+  return (netToPayMinor / 100).toFixed(2);
+}
+
+/** Cash the owner should pay: max(0, total owed − advance held). */
+export function netToPayMinor(
+  totalOwedMinor: number,
+  outstandingAdvanceMinor: number,
+): number {
+  return Math.max(0, totalOwedMinor - Math.max(0, outstandingAdvanceMinor));
+}
 
 export function isValidStaffSalaryEmployee(
   employeeId: string | undefined,

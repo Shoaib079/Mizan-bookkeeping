@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 from app.core.ledger.subledger_display import SubledgerDisplayKind
@@ -140,6 +140,9 @@ class StaffPaymentCreate(AcknowledgeDuplicateMixin):
         gt=0,
         description="Month salary total — accrues at pay time if not already recorded",
     )
+    # Optional same-request extra days (accrue then settle with cash/advance).
+    extra_days: int | None = Field(default=None, gt=0, le=31)
+    per_day_minor: int | None = Field(default=None, gt=0)
 
     @field_validator("period_month")
     @classmethod
@@ -147,6 +150,12 @@ class StaffPaymentCreate(AcknowledgeDuplicateMixin):
         if not 1 <= value <= 12:
             raise ValueError("period_month must be 1–12")
         return value
+
+    @model_validator(mode="after")
+    def extra_days_pair(self) -> "StaffPaymentCreate":
+        if (self.extra_days is None) ^ (self.per_day_minor is None):
+            raise ValueError("extra_days and per_day_minor must be sent together")
+        return self
 
 
 class SalaryPeriodStatusRead(BaseModel):

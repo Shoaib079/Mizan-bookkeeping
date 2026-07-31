@@ -45,12 +45,17 @@ export function useLedgerBalanceMap(
             );
             return [id, extract(res)] as const;
           } catch {
-            return [id, 0] as const;
+            // Never invent ₺0 on failure — omit so the UI can show "—".
+            return null;
           }
         }),
       );
       if (cancelled) return;
-      setBalances(new Map(entries));
+      setBalances(
+        new Map(
+          entries.filter((row): row is readonly [string, number] => row !== null),
+        ),
+      );
       setLoading(false);
     })();
     return () => {

@@ -46,6 +46,42 @@ def test_extra_days_paid_posts_total_and_day_count(db_session, staff_setup) -> N
     assert extra_rows[0].extra_days == 3
 
 
+def test_period_payment_accrues_extra_days_in_same_request(db_session, staff_setup) -> None:
+    """Pay salary + extra days is one posting call (no second client hop)."""
+    from app.core.subledger.control_account_tie import assert_entity_control_accounts_tied
+    from app.features.staff.schema import StaffPaymentCreate
+    from app.features.staff.service import record_payment
+
+    entity_id = staff_setup["entity_id"]
+    employee_id = staff_setup["employee_id"]
+    drawer = staff_setup["drawer"]
+
+    result = record_payment(
+        db_session,
+        entity_id,
+        employee_id,
+        StaffPaymentCreate(
+            payment_date=date(2026, 5, 31),
+            amount_minor=3_400_000,
+            description="May salary",
+            actor_id=ACTOR_ID,
+            payment_account_id=drawer.gl_account_id,
+            period_year=2026,
+            period_month=5,
+            period_salary_minor=3_000_000,
+            extra_days=2,
+            per_day_minor=200_000,
+        ),
+    )
+    assert result.advance_applied_minor == 0
+    ledger = get_staff_ledger(db_session, entity_id, employee_id)
+    types = {row.movement_type for row in ledger.entries}
+    assert StaffMovementType.SALARY_ACCRUED in types
+    assert StaffMovementType.EXTRA_DAYS_ACCRUED in types
+    assert StaffMovementType.SALARY_PAYMENT in types
+    assert_entity_control_accounts_tied(db_session, entity_id)
+
+
 def test_extra_days_accrue_without_cash_payment(db_session, staff_setup) -> None:
     entity_id = staff_setup["entity_id"]
     employee_id = staff_setup["employee_id"]

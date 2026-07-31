@@ -86,6 +86,8 @@ type LedgerResponse = {
   entries: LedgerEntry[];
 };
 
+/** TRY rows the correct form can rewrite. FX rows and paired advance payments
+ * are void-only — Edit is never offered when the backend would refuse. */
 const correctableStaffTypes = new Set([
   "salary_accrued",
   "advance_paid",
@@ -94,9 +96,11 @@ const correctableStaffTypes = new Set([
   "extra_days_paid",
 ]);
 
-/** Void-only rows: companion entries void the whole journal, and editing one
- * half of a pair in isolation would unbalance it. */
-const staffVoidCompanionTypes = new Set(["advance_applied"]);
+/** Void-only: paired settlement halves, or cash-in with no edit path yet. */
+const staffVoidCompanionTypes = new Set([
+  "advance_applied",
+  "advance_returned",
+]);
 
 function extraDaysLabel(entry: LedgerEntry): string | null {
   if (
@@ -146,6 +150,8 @@ export default function StaffDetailPage() {
     setEditOpen(false);
     setAccrualOpen(false);
     setAdvanceOpen(false);
+    setReturnOpen(false);
+    setApplyAdvanceOpen(false);
     setExtraDaysOpen(false);
     setPaymentOpen(false);
     setCorrectEntry(null);
@@ -238,10 +244,10 @@ export default function StaffDetailPage() {
                 </p>
               )}
             </div>
-            <div className="min-w-[15rem] rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">Net position</p>
+            <div className="min-w-[16rem] rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Net to pay</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatMinorAmount(position.netMinor)}
+                {formatMinorAmount(position.netToPayMinor)}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {netPositionCaption(position)}
@@ -254,7 +260,7 @@ export default function StaffDetailPage() {
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span>Less advance held</span>
+                  <span>Advance held</span>
                   <span className="tabular-nums">
                     {position.advanceHeldMinor > 0 ? "−" : ""}
                     {formatMinorAmount(position.advanceHeldMinor)}
@@ -274,14 +280,14 @@ export default function StaffDetailPage() {
 
           <div className="mb-6 flex flex-wrap items-center gap-2">
             <Button type="button" onClick={() => setPaymentOpen(true)}>
-              Salary payment
+              Pay salary
             </Button>
             <OverflowMenu
               items={[
                 { label: "Edit employee", onSelect: () => setEditOpen(true) },
-                { label: "Advance", onSelect: () => setAdvanceOpen(true) },
+                { label: "Give advance", onSelect: () => setAdvanceOpen(true) },
                 {
-                  label: "Extra days pay",
+                  label: "Extra days",
                   show: employee.pay_currency === "TRY",
                   onSelect: () => setExtraDaysOpen(true),
                 },
@@ -295,16 +301,17 @@ export default function StaffDetailPage() {
                   onSelect: () => setReturnOpen(true),
                 },
                 {
-                  label: "Apply advance to salary",
+                  label: "Apply advance (no cash)",
                   title:
-                    "Net the outstanding advance against unpaid salary — normally automatic at the next salary payment",
+                    "Net advance against unpaid salary without paying cash — normally automatic at Pay salary",
                   show:
                     employee.pay_currency === "TRY" &&
-                    ledger.outstanding_advance_minor > 0,
+                    ledger.outstanding_advance_minor > 0 &&
+                    ledger.remaining_accrual_minor > 0,
                   onSelect: () => setApplyAdvanceOpen(true),
                 },
                 {
-                  label: "Adjust accrual (advanced)",
+                  label: "Adjust accrual",
                   onSelect: () => setAccrualOpen(true),
                 },
               ]}
@@ -339,14 +346,22 @@ export default function StaffDetailPage() {
               <DataTableBody>
                 {displayRows.map((group) => {
                   const entry = group.primary;
+                  const isTryEmployee = employee.pay_currency === "TRY";
+                  // Edit only when the TRY correct form can succeed — never for
+                  // FX rows or a payment that also applied an advance.
                   const canEdit =
+                    isTryEmployee &&
                     !group.isAdvanceOffset &&
+                    group.advanceAppliedMinor <= 0 &&
                     correctableStaffTypes.has(entry.movement_type);
-                  const canAct =
-                    canEdit ||
-                    group.isAdvanceOffset ||
-                    staffVoidCompanionTypes.has(entry.movement_type) ||
-                    correctableStaffTypes.has(entry.movement_type);
+                  const canVoid =
+                    Boolean(entry.journal_entry_id) &&
+                    (canEdit ||
+                      group.isAdvanceOffset ||
+                      group.advanceAppliedMinor > 0 ||
+                      staffVoidCompanionTypes.has(entry.movement_type) ||
+                      correctableStaffTypes.has(entry.movement_type));
+                  const canAct = canEdit || canVoid;
                   return (
                     <DataTableRow
                       key={entry.id}

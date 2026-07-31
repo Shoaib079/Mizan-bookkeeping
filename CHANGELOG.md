@@ -4,6 +4,13 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-31
 
+**Staff pay is simpler: Net to pay, advance shown, one click settles.**
+- Employee card shows **Salary owed**, **Advance held**, and **Net to pay** (what cash to send next).
+- **Pay salary** prefills that net and preview says how much cash vs advance will clear the month. Overpay still becomes advance.
+- Extra days in the same pay request (one save). Standalone Extra days defaults to **accrue**, not pay-from-cash.
+- Mistakes: Void for advance returns and for payments that used advance; Edit only where it can succeed.
+- Books stay tied after advance returns and extra-days accruals; FX accruals respect month locks; partial FX advances take a fair share of the lira cost.
+
 **Fixed: saving a bank statement closing balance (and month/year close) failed with Idempotency-Key required.**
 - Reports → Bank reconciliation, Month close, and Year-end close were posting without the header the API requires on every write.
 - They now use the same stable per-submit key pattern as the other money forms, so Save / Close works and a double-click still posts once.

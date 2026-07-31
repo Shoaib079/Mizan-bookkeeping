@@ -358,6 +358,25 @@ def test_fx_partial_salary_payment_applies_advance_only_once(db_session, staff_s
     assert_entity_control_accounts_tied(db_session, entity_id)
 
 
+def test_fx_advance_applied_try_is_pro_rata() -> None:
+    """Partial FX advance must take a proportional slice of TRY cost, not all of it."""
+    assert staff_posting.fx_advance_applied_try_kurus(
+        advance_try_kurus=1_750_000,
+        advance_native_minor=50_000,
+        applied_native_minor=20_000,
+    ) == 700_000
+    assert staff_posting.fx_advance_applied_try_kurus(
+        advance_try_kurus=1_750_000,
+        advance_native_minor=50_000,
+        applied_native_minor=50_000,
+    ) == 1_750_000
+    assert staff_posting.fx_advance_applied_try_kurus(
+        advance_try_kurus=1_750_000,
+        advance_native_minor=50_000,
+        applied_native_minor=0,
+    ) == 0
+
+
 def test_salary_payment_without_advance(db_session, staff_setup) -> None:
     entity_id = staff_setup["entity_id"]
     employee_id = staff_setup["employee_id"]

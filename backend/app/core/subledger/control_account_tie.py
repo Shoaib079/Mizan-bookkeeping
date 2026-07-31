@@ -118,6 +118,8 @@ def staff_salaries_payable_subledger_total(db_session: Session, entity_id: uuid.
         StaffMovementType.OPENING_BALANCE,
         StaffMovementType.SALARY_ACCRUED,
         StaffMovementType.SALARY_PAYMENT,
+        # Extra-days accrued credits 2250 exactly like salary accrual.
+        StaffMovementType.EXTRA_DAYS_ACCRUED,
     )
     with entity_context(db_session, entity_id):
         require_entity_context()
@@ -142,6 +144,8 @@ def staff_employee_advances_subledger_total(db_session: Session, entity_id: uuid
     advance_types = (
         StaffMovementType.ADVANCE_PAID,
         StaffMovementType.ADVANCE_APPLIED,
+        # Cash returned by the employee credits 1300; must reduce the tie.
+        StaffMovementType.ADVANCE_RETURNED,
     )
     with entity_context(db_session, entity_id):
         require_entity_context()

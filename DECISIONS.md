@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-07-31 — Staff settlement: accrue full, net at pay (no accrual popup)
+
+**Status:** Built in `v0.staff-net-pay` (this session).
+
+**Owner intent:** Accrue the full month salary always. Do not ask “apply advance into accrual?” Overpay parks as advance; next month the card shows **Net to pay** = salary owed − advance held; **Pay salary** prefills that net and applies the advance automatically (already the 2026-07-13 rule — keep it).
+
+**Presentation:** Employee card hero = Net to pay; lines for Salary owed and Advance held; pay dialog preview “Pay X cash · use Y advance · clear Z salary.” Ledger payment lines still note advance used.
+
+**Corrections:** TRY accrual / advance / extra days / simple payment → Edit or Void. Payment that also applied an advance → Void then re-pay (no half-edit). Advance return → Void. FX staff rows → Void (no fake Edit until FX correction fields exist).
+
+**Out of scope here:** staff opening balances (Decisions §19) — separate onboarding slice.
+
 ## 2026-07-27 — No fixed assets or depreciation (deliberate, NOT a gap to fix)
 
 **Status:** ⛔ **WON'T BUILD for now.** Owner decision 2026-07-27: *"i do not know how depreciation works in turkey. and i do not really care about them rn. bcz i am just using this to keep record and profits nothing more for now."*

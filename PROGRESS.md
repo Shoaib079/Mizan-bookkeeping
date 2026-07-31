@@ -10,10 +10,10 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Bug fix: Reports writes missing Idempotency-Key (bank recon closing balance, month close/reopen, year-end) — 2026-07-31 |
-| **Last tag** | `v0.reports-idempotency` |
+| **Last completed slice** | Staff net-pay UX + integrity — 2026-07-31 |
+| **Last tag** | `v0.staff-net-pay` |
 | **Unpushed** | (cleared on push) |
-| **Next up** | **GS-FX** — forex-only group sales (design locked 2026-07-13, NOT built; the biggest deferred item) · P5 — Delete company UI |
+| **Next up** | **GS-FX** · Staff opening balances (§19) · P5 |
 
 ## FINANCIAL_AUDIT status (2026-07-27)
 

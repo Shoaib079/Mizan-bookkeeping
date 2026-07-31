@@ -2,6 +2,19 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-31 — Staff control ties, compound pay, extra-days default
+
+**Symptoms / gaps:**
+1. Advance return and extra-days accrual broke `1300` / `2250` control-account ties (types omitted from the subledger totals).
+2. Pay salary + extra days was two POSTs with two idempotency keys — salary could stick while extra days failed.
+3. Extra-days form auto-selected cash, so “leave empty to accrue” was unreachable.
+4. FX salary accrual skipped period-lock / go-live; FX advance apply could take all TRY cost of `1300` on a partial native apply.
+5. Fake ₺0 balances on ledger fetch failure; dead Edit on FX / paired advance payments; advance return not voidable in UI.
+
+**Fix:** include `ADVANCE_RETURNED` / `EXTRA_DAYS_ACCRUED` in control ties; one `/payments` body with optional `extra_days`; extra-days defaults to accrue; FX accrual uses `assert_entry_dates_allowed`; pro-rata `fx_advance_applied_try_kurus`; omit failed balance fetches; Edit/Void rules aligned with backend; employee card **Net to pay**.
+
+**Guarding tests:** `test_control_account_tie.py` (return + extra-days), `test_fx_advance_applied_try_is_pro_rata`, `test_period_payment_accrues_extra_days_in_same_request`, frontend `staff-net-position` / `staff-salary-extra-days` guards.
+
 ## 2026-07-31 — Reports writes missing Idempotency-Key
 
 **Symptom:** Bank reconciliation → enter closing balance → Save failed with `Idempotency-Key header required`. Same class of failure on Month close / reopen and Year-end close.

@@ -505,6 +505,8 @@ def record_payment(
         payment_account_id=payload.payment_account_id,
         fx_money_account_id=payload.fx_money_account_id,
         try_cost_kurus=payload.try_cost_kurus,
+        extra_days=payload.extra_days,
+        per_day_minor=payload.per_day_minor,
     )
     return StaffPaymentResponse(
         journal_entry_id=result.journal_entry.id,
@@ -660,11 +662,9 @@ def _build_staff_correction_lines(
             )
         )
         if sibling is not None:
-            # Legacy rows only: payments no longer auto-apply advances
-            # (decoupled 2026-07-13), so new payments never hit this. A paired
-            # payment+advance-applied can't be partially rewritten — voiding is
-            # the safe correction (it reverses both rows together and restores
-            # the advance).
+            # Payments auto-apply advances when cash is below total owed
+            # (owner decision 2026-07-13). A paired payment+advance-applied
+            # can't be partially rewritten — voiding reverses both together.
             raise ValueError(
                 "This payment also applied an advance. Void it instead — the "
                 "void reverses both entries together and restores the advance "

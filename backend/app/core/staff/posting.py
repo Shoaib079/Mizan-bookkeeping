@@ -78,9 +78,24 @@ def _chart_account(session: Session, code: str) -> Account:
     return account
 
 
+def fx_advance_applied_try_kurus(
+    *,
+    advance_try_kurus: int,
+    advance_native_minor: int,
+    applied_native_minor: int,
+) -> int:
+    """Pro-rata TRY cost for a partial FX advance application (integer kuruş)."""
+    if applied_native_minor <= 0 or advance_native_minor <= 0 or advance_try_kurus <= 0:
+        return 0
+    if applied_native_minor >= advance_native_minor:
+        return advance_try_kurus
+    return (advance_try_kurus * applied_native_minor) // advance_native_minor
+
+
 def _validate_try_payment_account(
     session: Session, entity_id: uuid.UUID, account_id: uuid.UUID
 ) -> Account:
+    """Require an active cash/bank money account — not any asset GL."""
     account = session.get(Account, account_id)
     if account is None or account.entity_id != entity_id:
         raise InvalidAccountError("payment account not found for this entity")
@@ -89,6 +104,21 @@ def _validate_try_payment_account(
     if account.account_type != AccountType.ASSET:
         raise InvalidAccountError(
             f"account {account.code} is not an asset (bank/cash) account"
+        )
+    money = session.scalar(
+        select(MoneyAccount).where(
+            MoneyAccount.entity_id == entity_id,
+            MoneyAccount.gl_account_id == account_id,
+            MoneyAccount.is_active.is_(True),
+        )
+    )
+    if money is None:
+        raise InvalidAccountError(
+            "payment account must be a cash or bank money account"
+        )
+    if money.account_kind not in (MoneyAccountKind.CASH, MoneyAccountKind.BANK):
+        raise InvalidAccountError(
+            "payment account must be a cash or bank money account"
         )
     return account
 
@@ -317,6 +347,20 @@ def post_salary_accrual(
                 actor_id=actor_id,
                 source=JournalEntrySource.STAFF_ACCRUAL,
             )
+        else:
+            # FX accruals have no journal — still enforce go-live / period locks.
+            from app.core.period_locks.guards import (
+                assert_entry_dates_allowed,
+                mark_periods_dirty_for_dates,
+            )
+
+            assert_entry_dates_allowed(
+                session,
+                entity_id,
+                [accrual_date],
+                actor_id=actor_id,
+            )
+            mark_periods_dirty_for_dates(session, entity_id, [accrual_date])
 
         staff_entry = staff_ledger.persist_staff_ledger_entry(
             session,
@@ -743,7 +787,11 @@ def post_salary_payment(
             )
 
             advance_try = staff_ledger.outstanding_advance_try_kurus(session, employee_id)
-            advance_applied_try = advance_try if advance_applied_minor > 0 else 0
+            advance_applied_try = fx_advance_applied_try_kurus(
+                advance_try_kurus=advance_try,
+                advance_native_minor=advance_minor,
+                applied_native_minor=advance_applied_minor,
+            )
 
             expense_try = try_cost_kurus + advance_applied_try
             lines = build_fx_salary_payment_lines(
@@ -988,6 +1036,57 @@ def _ensure_period_accrual_up_to(
     )
 
 
+def _accrue_extra_days_try_in_context(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    *,
+    payment_date: date,
+    extra_days: int,
+    per_day_minor: int,
+    description: str,
+    actor_id: uuid.UUID,
+) -> StaffLedgerEntry:
+    """Accrue extra days to 2250 without committing — caller owns the transaction."""
+    if extra_days <= 0:
+        raise ValueError("extra_days must be positive")
+    if per_day_minor <= 0:
+        raise ValueError("per_day_minor must be positive")
+    amount_minor = extra_days * per_day_minor
+    employee = _get_employee(session, entity_id, employee_id)
+    if employee.pay_currency != PayCurrency.TRY:
+        raise InvalidStaffPostingError(
+            "FX extra days accrual is not supported — use Advance"
+        )
+    salary_expense = _chart_account(session, SALARY_EXPENSE_CODE)
+    salaries_payable = _chart_account(session, SALARIES_PAYABLE_CODE)
+    lines = build_try_salary_accrual_lines(
+        salary_expense_id=salary_expense.id,
+        salaries_payable_id=salaries_payable.id,
+        amount_kurus=amount_minor,
+    )
+    journal_entry = prepare_journal_entry(
+        session,
+        entity_id,
+        payment_date,
+        description,
+        lines,
+        actor_id=actor_id,
+        source=JournalEntrySource.STAFF_ACCRUAL,
+    )
+    return staff_ledger.persist_staff_ledger_entry(
+        session,
+        employee_id,
+        movement_date=payment_date,
+        movement_type=StaffMovementType.EXTRA_DAYS_ACCRUED,
+        amount_minor=amount_minor,
+        description=description,
+        actor_id=actor_id,
+        journal_entry_id=journal_entry.id,
+        extra_days=extra_days,
+    )
+
+
 def post_period_salary_payment(
     session: Session,
     entity_id: uuid.UUID,
@@ -1003,12 +1102,20 @@ def post_period_salary_payment(
     payment_account_id: uuid.UUID | None = None,
     fx_money_account_id: uuid.UUID | None = None,
     try_cost_kurus: int | None = None,
+    extra_days: int | None = None,
+    per_day_minor: int | None = None,
 ) -> StaffPaymentPostResult:
     """Accrue-at-pay salary for one month — partial pay, prior months, excess → advance."""
     if cash_minor < 0:
         raise ValueError("cash_minor cannot be negative")
     if period_salary_minor <= 0:
         raise ValueError("period_salary_minor must be positive")
+    if (extra_days is None) ^ (per_day_minor is None):
+        raise ValueError("extra_days and per_day_minor must be sent together")
+    if extra_days is not None and (extra_days <= 0 or extra_days > 31):
+        raise ValueError("extra_days must be between 1 and 31")
+    if per_day_minor is not None and per_day_minor <= 0:
+        raise ValueError("per_day_minor must be positive")
 
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -1032,6 +1139,19 @@ def post_period_salary_payment(
                 period_salary_minor=period_salary_minor,
                 actor_id=actor_id,
             )
+            if extra_days is not None and per_day_minor is not None:
+                per_day_lira = per_day_minor / 100
+                extra_desc = f"Extra days ({extra_days} × {per_day_lira:,.2f} ₺/day)"
+                _accrue_extra_days_try_in_context(
+                    session,
+                    entity_id,
+                    employee_id,
+                    payment_date=payment_date,
+                    extra_days=extra_days,
+                    per_day_minor=per_day_minor,
+                    description=extra_desc,
+                    actor_id=actor_id,
+                )
             from app.core.staff.ledger_effective import effective_accrual_rows_for_period
 
             effective_rows = effective_accrual_rows_for_period(
@@ -1066,6 +1186,10 @@ def post_period_salary_payment(
             )
 
         if employee.pay_currency != PayCurrency.TRY:
+            if extra_days is not None:
+                raise InvalidStaffPostingError(
+                    "Extra days on FX salary payment are not supported"
+                )
             _ensure_period_accrual_up_to(
                 session,
                 entity_id,
@@ -1104,6 +1228,20 @@ def post_period_salary_payment(
             period_salary_minor=period_salary_minor,
             actor_id=actor_id,
         )
+
+        if extra_days is not None and per_day_minor is not None:
+            per_day_lira = per_day_minor / 100
+            extra_desc = f"Extra days ({extra_days} × {per_day_lira:,.2f} ₺/day)"
+            _accrue_extra_days_try_in_context(
+                session,
+                entity_id,
+                employee_id,
+                payment_date=payment_date,
+                extra_days=extra_days,
+                per_day_minor=per_day_minor,
+                description=extra_desc,
+                actor_id=actor_id,
+            )
 
         # Advances net automatically (owner decision 2026-07-13). Cash settles
         # everything still owed — this period AND anything else outstanding
@@ -1275,38 +1413,18 @@ def post_extra_days_paid(
 
     with entity_context(session, entity_id):
         require_entity_context()
-        employee = _get_employee(session, entity_id, employee_id)
-        if employee.pay_currency != PayCurrency.TRY:
-            raise InvalidStaffPostingError(
-                "FX extra days accrual is not supported — use Advance"
-            )
-        salary_expense = _chart_account(session, SALARY_EXPENSE_CODE)
-        salaries_payable = _chart_account(session, SALARIES_PAYABLE_CODE)
-        lines = build_try_salary_accrual_lines(
-            salary_expense_id=salary_expense.id,
-            salaries_payable_id=salaries_payable.id,
-            amount_kurus=amount_minor,
-        )
-        journal_entry = prepare_journal_entry(
+        staff_entry = _accrue_extra_days_try_in_context(
             session,
             entity_id,
-            payment_date,
-            description,
-            lines,
-            actor_id=actor_id,
-            source=JournalEntrySource.STAFF_ACCRUAL,
-        )
-        staff_entry = staff_ledger.persist_staff_ledger_entry(
-            session,
             employee_id,
-            movement_date=payment_date,
-            movement_type=StaffMovementType.EXTRA_DAYS_ACCRUED,
-            amount_minor=amount_minor,
+            payment_date=payment_date,
+            extra_days=extra_days,
+            per_day_minor=per_day_minor,
             description=description,
             actor_id=actor_id,
-            journal_entry_id=journal_entry.id,
-            extra_days=extra_days,
         )
+        journal_entry = session.get(JournalEntry, staff_entry.journal_entry_id)
+        assert journal_entry is not None
         session.commit()
         session.refresh(journal_entry)
         session.refresh(staff_entry)

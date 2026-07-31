@@ -1,5 +1,7 @@
 "use client";
 
+/** Extra days — default accrues to salaries payable; optional cash/bank pays now. */
+
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,7 @@ import {
 } from "@/lib/load-money-accounts";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
+import { parseStrictExtraDays } from "@/lib/staff-salary";
 
 type Props = {
   open: boolean;
@@ -28,6 +31,8 @@ type Props = {
   embedded?: boolean;
   onSaved?: () => void;
 };
+
+const ACCRUE_VALUE = "";
 
 export function StaffExtraDaysForm({
   open,
@@ -43,7 +48,7 @@ export function StaffExtraDaysForm({
     useDuplicateRecordSubmit();
 
   const [tryAccounts, setTryAccounts] = useState<MoneyAccountOption[]>([]);
-  const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
+  const [paymentGlAccountId, setPaymentGlAccountId] = useState(ACCRUE_VALUE);
   const [dateText, setDateText] = useState("");
   const [extraDaysText, setExtraDaysText] = useState("1");
   const [perDayText, setPerDayText] = useState("");
@@ -51,15 +56,17 @@ export function StaffExtraDaysForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const extraDays = useMemo(() => {
-    const parsed = Number.parseInt(extraDaysText, 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-  }, [extraDaysText]);
+  const extraDays = useMemo(
+    () => parseStrictExtraDays(extraDaysText),
+    [extraDaysText],
+  );
 
   const perDayMinor = useMemo(() => parseTryToKurus(perDayText), [perDayText]);
 
   const totalMinor = useMemo(() => {
-    if (extraDays <= 0 || perDayMinor === null || perDayMinor <= 0) return null;
+    if (extraDays === null || perDayMinor === null || perDayMinor <= 0) {
+      return null;
+    }
     return extraDays * perDayMinor;
   }, [extraDays, perDayMinor]);
 
@@ -67,10 +74,8 @@ export function StaffExtraDaysForm({
     if (!entityId) return;
     const merged = await loadBankAndCashAccounts(entityId);
     setTryAccounts(merged);
-    const cash = merged.find((a) => a.account_kind === "cash");
-    setPaymentGlAccountId(
-      cash?.gl_account_id ?? merged[0]?.gl_account_id ?? "",
-    );
+    // Default accrue — do not auto-select a cash account.
+    setPaymentGlAccountId(ACCRUE_VALUE);
   }, [entityId]);
 
   useEffect(() => {
@@ -80,6 +85,7 @@ export function StaffExtraDaysForm({
       setExtraDaysText("1");
       setPerDayText("");
       setDescription("");
+      setPaymentGlAccountId(ACCRUE_VALUE);
       setError(null);
       void loadAccounts().catch(() => undefined);
     }
@@ -96,8 +102,8 @@ export function StaffExtraDaysForm({
       setError("Date must be DD.MM.YYYY.");
       return;
     }
-    if (extraDays <= 0 || extraDays > 31) {
-      setError("Enter extra days (1–31).");
+    if (extraDays === null) {
+      setError("Enter extra days as a whole number from 1 to 31.");
       return;
     }
     if (perDayMinor === null || perDayMinor <= 0) {
@@ -136,7 +142,11 @@ export function StaffExtraDaysForm({
         ),
       );
       submitIdempotency.completeSubmit();
-      toast("Extra days payment recorded.");
+      toast(
+        paymentGlAccountId
+          ? "Extra days paid."
+          : "Extra days accrued — pay with salary later.",
+      );
       onSaved?.();
       onClose();
     } catch (err) {
@@ -146,94 +156,103 @@ export function StaffExtraDaysForm({
     }
   }
 
+  const payOptions = [
+    { value: ACCRUE_VALUE, label: "Accrue — pay cash later" },
+    ...tryAccounts.map((account) => ({
+      value: account.gl_account_id,
+      label: `${account.name} (${account.account_kind})`,
+    })),
+  ];
+
   return (
     <>
-    <FormDialogShell
-      open={open}
-      onClose={onClose}
-      title="Extra days pay"
-      embedded={embedded}
-    >
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="extra-days-date">Payment date</Label>
-          <DateInput
-            id="extra-days-date"
-            value={dateText}
-            onChange={setDateText}
-          />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Pay for work on days off. Total is days × per-day rate. Leave pay-from
-          empty to accrue now and pay cash later.
-        </p>
-
-        <div className="grid gap-4 sm:grid-cols-2">
+      <FormDialogShell
+        open={open}
+        onClose={onClose}
+        title="Extra days"
+        embedded={embedded}
+      >
+        <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="extra-days-count">Extra days worked</Label>
-            <Input
-              id="extra-days-count"
-              type="number"
-              min={1}
-              max={31}
-              step={1}
-              value={extraDaysText}
-              onChange={(event) => setExtraDaysText(event.target.value)}
+            <Label htmlFor="extra-days-date">Date</Label>
+            <DateInput
+              id="extra-days-date"
+              value={dateText}
+              onChange={setDateText}
             />
           </div>
-          <div>
-            <Label htmlFor="extra-days-rate">Pay per day (₺)</Label>
-            <MoneyInput
-              id="extra-days-rate"
-              value={perDayText}
-              onChange={setPerDayText}
-            />
-          </div>
-        </div>
-
-        {totalMinor !== null && (
-          <p className="text-sm font-medium tabular-nums">
-            Total: {formatTry(totalMinor)}
+          <p className="text-sm text-muted-foreground">
+            Days off worked × per-day rate. Defaults to accruing (adds to salary
+            owed); pick a cash or bank account only if paying now.
           </p>
-        )}
 
-        <div>
-          <Label htmlFor="extra-days-account">Pay from (optional)</Label>
-          <Combobox
-            id="extra-days-account"
-            value={paymentGlAccountId}
-            onValueChange={setPaymentGlAccountId}
-            options={tryAccounts.map((account) => ({
-              value: account.gl_account_id,
-              label: `${account.name} (${account.account_kind})`,
-            }))}
-            placeholder="Cash or bank account"
-          />
-        </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="extra-days-count">Extra days worked</Label>
+              <Input
+                id="extra-days-count"
+                type="number"
+                min={1}
+                max={31}
+                step={1}
+                value={extraDaysText}
+                onChange={(event) => setExtraDaysText(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="extra-days-rate">Pay per day (₺)</Label>
+              <MoneyInput
+                id="extra-days-rate"
+                value={perDayText}
+                onChange={setPerDayText}
+              />
+            </div>
+          </div>
 
-        <div>
-          <Label htmlFor="extra-days-note">Note (optional)</Label>
-          <Input
-            id="extra-days-note"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="e.g. Weekend cover — May 2026"
-          />
-        </div>
+          {totalMinor !== null && (
+            <p className="text-sm font-medium tabular-nums">
+              Total: {formatTry(totalMinor)}
+            </p>
+          )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+          <div>
+            <Label htmlFor="extra-days-account">Pay from</Label>
+            <Combobox
+              id="extra-days-account"
+              value={paymentGlAccountId}
+              onValueChange={setPaymentGlAccountId}
+              options={payOptions}
+              placeholder="Accrue — pay cash later"
+            />
+          </div>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Saving…" : "Record payment"}
-          </Button>
-        </div>
-      </form>
-    </FormDialogShell>
-    <DuplicateRecordDialog />
+          <div>
+            <Label htmlFor="extra-days-note">Note (optional)</Label>
+            <Input
+              id="extra-days-note"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="e.g. Weekend cover — May 2026"
+            />
+          </div>
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting
+                ? "Saving…"
+                : paymentGlAccountId
+                  ? "Pay now"
+                  : "Accrue"}
+            </Button>
+          </div>
+        </form>
+      </FormDialogShell>
+      <DuplicateRecordDialog />
     </>
   );
 }

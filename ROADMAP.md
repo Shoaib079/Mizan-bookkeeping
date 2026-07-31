@@ -15,9 +15,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none) |
-| **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI |
-| **Last completed slice** | **Bugfix (2026-07-31)** — Reports writes missing Idempotency-Key (bank reconciliation closing balance, month close/reopen, year-end close). Guard test `reports-idempotency-guard.test.ts`. |
-| **Last commit/tag**      | `v0.reports-idempotency` — push with `git push origin main --follow-tags` |
+| **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI · Staff opening balances (§19) |
+| **Last completed slice** | **Staff net-pay UX + integrity (2026-07-31)** — Net to pay card, pay prefills net + shows advance, atomic pay+extra days, control ties for return/extra-days, FX lock + pro-rata TRY, correction/void hygiene. **1321 pytest + vitest + tsc green.** |
+| **Last commit/tag**      | `v0.staff-net-pay` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 

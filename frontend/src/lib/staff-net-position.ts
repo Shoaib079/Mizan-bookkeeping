@@ -1,16 +1,14 @@
-/** The staff net position card — what the business is actually owed or owes.
+/** The staff settlement card — what to pay next, without double-counting advances.
  *
  * `balance_minor` is the sum of every ledger row, so it ALREADY nets advances
  * against salary. Subtracting the outstanding advance from it counts the same
  * money twice: an employee holding a 2.730 advance with nothing owed showed a
  * net of −5.460 instead of −2.730 (BUGLOG 2026-07-29).
  *
- * The two component lines are `remaining_accrual_minor` (salary accrued but not
- * yet paid, advances excluded) and `outstanding_advance_minor`. They are
- * components, **not** a complete decomposition: incentives, directly-paid extra
- * days and opening balances are real ledger rows that move the balance without
- * belonging to either. So the card shows the residual rather than quietly
- * presenting a subtraction that doesn't add up.
+ * Settlement UX (owner 2026-07-31): accrue full salary always; at pay time show
+ * **Net to pay** = max(0, salary owed − advance held). Direct-paid extras and
+ * incentives may leave an "Other movements" residual on the ledger balance —
+ * that is not "the employee holds your money."
  */
 
 export type StaffLedgerTotals = {
@@ -20,12 +18,14 @@ export type StaffLedgerTotals = {
 };
 
 export type StaffNetPosition = {
-  /** The truth: every ledger row summed. Negative = the employee holds our money. */
+  /** Ledger running balance (every row). Used for residual / other movements. */
   netMinor: number;
   /** Accrued salary not yet paid. Advances are not part of this. */
   salaryOwedMinor: number;
   /** Advance in the employee's hands, not yet worked off. Always ≥ 0. */
   advanceHeldMinor: number;
+  /** Cash to pay next: max(0, owed − advance). Hero figure on the employee page. */
+  netToPayMinor: number;
   /** Anything in the balance the two lines above don't explain. Usually 0. */
   otherMinor: number;
 };
@@ -40,6 +40,7 @@ export function staffNetPosition(
     netMinor,
     salaryOwedMinor,
     advanceHeldMinor,
+    netToPayMinor: Math.max(0, salaryOwedMinor - advanceHeldMinor),
     otherMinor: netMinor - (salaryOwedMinor - advanceHeldMinor),
   };
 }
@@ -49,9 +50,17 @@ export function netPositionReconciles(position: StaffNetPosition): boolean {
   return position.otherMinor === 0;
 }
 
-/** Plain-language reading of the net figure, so the sign is never ambiguous. */
+/** Plain-language reading of the settlement card. */
 export function netPositionCaption(position: StaffNetPosition): string {
-  if (position.netMinor > 0) return "You owe this to the employee";
-  if (position.netMinor < 0) return "The employee holds this much of your money";
+  if (position.netToPayMinor > 0) return "Pay this to settle";
+  if (position.advanceHeldMinor > 0 && position.salaryOwedMinor === 0) {
+    return "Employee holds this advance";
+  }
+  if (position.salaryOwedMinor > 0 && position.advanceHeldMinor >= position.salaryOwedMinor) {
+    return "Settled by advance — nothing to pay in cash";
+  }
+  if (!netPositionReconciles(position) && position.otherMinor !== 0) {
+    return "See other movements below";
+  }
   return "Settled — nothing owed either way";
 }

@@ -101,6 +101,60 @@ def test_staff_control_accounts_tie_after_partial_payments_with_advance(
     assert_entity_control_accounts_tied(db_session, entity_id)
 
 
+def test_staff_control_ties_after_advance_return(
+    db_session, tie_setup, staff_employee
+) -> None:
+    """ADVANCE_RETURNED must reduce the 1300 control total (BUGLOG 2026-07-31)."""
+    entity_id = tie_setup["entity_id"]
+    employee_id = staff_employee
+    drawer = tie_setup["drawer"]
+
+    staff_posting.post_advance_paid(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 5),
+        amount_minor=50_000_00,
+        description="Avans",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    staff_posting.post_advance_returned(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 10),
+        amount_minor=20_000_00,
+        description="Returned cash",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert_entity_control_accounts_tied(db_session, entity_id)
+
+
+def test_staff_control_ties_after_extra_days_accrued(
+    db_session, tie_setup, staff_employee
+) -> None:
+    """EXTRA_DAYS_ACCRUED credits 2250 and must be in the payable control total."""
+    entity_id = tie_setup["entity_id"]
+    employee_id = staff_employee
+
+    staff_posting.post_extra_days_paid(
+        db_session,
+        entity_id,
+        employee_id,
+        payment_date=date(2026, 6, 12),
+        extra_days=2,
+        per_day_minor=200_000,
+        description="Extra days accrued",
+        actor_id=ACTOR_ID,
+        payment_account_id=None,
+    )
+
+    assert_entity_control_accounts_tied(db_session, entity_id)
+
+
 def test_supplier_adjustment_api_ties_ap_control(db_session, restaurant_a) -> None:
     """Repro Phase 8.6 Item 2 — subledger-only adjustment leaves AP GL untied."""
     seed_default_chart(db_session, restaurant_a.id)

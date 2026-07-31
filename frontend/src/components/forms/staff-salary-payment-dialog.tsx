@@ -25,7 +25,10 @@ import {
   advanceAppliedPreview,
   defaultPeriodFromDate,
   excessAdvancePreview,
+  formatCashPrefill,
   isValidStaffSalaryEmployee,
+  netToPayMinor,
+  parseStrictExtraDays,
   payableClearedPreview,
   type SalaryPeriodStatus,
 } from "@/lib/staff-salary";
@@ -125,6 +128,7 @@ export function StaffSalaryPaymentDialog({
   const [error, setError] = useState<string | null>(null);
 
   const loadedContextRef = useRef("");
+  const cashPrefillRef = useRef("");
 
   const confirming = confirmingProp || submitting;
   const dialogOpen =
@@ -143,10 +147,12 @@ export function StaffSalaryPaymentDialog({
     return parseFxNative(cashText);
   }, [cashText, defaultCashMinor, isTry]);
 
-  const extraDays = useMemo(() => {
-    const parsed = Number.parseInt(extraDaysText, 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-  }, [extraDaysText]);
+  const extraDays = useMemo(
+    () => parseStrictExtraDays(extraDaysText) ?? 0,
+    [extraDaysText],
+  );
+  const extraDaysInvalid =
+    extraDaysText.trim() !== "" && parseStrictExtraDays(extraDaysText) === null;
 
   const extraDayRateMinor = useMemo(
     () => parseTryToKurus(extraDayRateText),
@@ -201,16 +207,19 @@ export function StaffSalaryPaymentDialog({
       );
       setStatus(data);
       if (!salaryText.trim() && data.period_salary_minor > 0) {
-        if (isTry) {
-          setSalaryText(
-            (data.period_salary_minor / 100)
-              .toFixed(2)
-              .replace(".", ",")
-              .replace(/\B(?=(\d{3})+(?!\d))/g, "."),
-          );
-        } else {
-          setSalaryText((data.period_salary_minor / 100).toFixed(2));
-        }
+        setSalaryText(formatCashPrefill(data.period_salary_minor, isTry));
+      }
+      // Prefill cash with net-to-pay once per employee/period (don't fight edits).
+      const prefillKey = `${employeeId}:${year}:${month}`;
+      if (
+        defaultCashMinor == null &&
+        !lockCashAmount &&
+        cashPrefillRef.current !== prefillKey
+      ) {
+        cashPrefillRef.current = prefillKey;
+        const owed = data.total_owed_minor ?? data.period_remaining_minor;
+        const net = netToPayMinor(owed, data.outstanding_advance_minor);
+        setCashText(formatCashPrefill(net, isTry));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load period");
@@ -219,9 +228,11 @@ export function StaffSalaryPaymentDialog({
       setLoading(false);
     }
   }, [
+    defaultCashMinor,
     employeeId,
     entityId,
     isTry,
+    lockCashAmount,
     open,
     periodMonth,
     periodYear,
@@ -306,13 +317,12 @@ export function StaffSalaryPaymentDialog({
     const contextKey = `${employeeId}:${payCurrency}:${year}:${month}`;
     if (loadedContextRef.current === contextKey) return;
     loadedContextRef.current = contextKey;
+    cashPrefillRef.current = "";
     setSalaryText("");
     setCashText(
-      defaultCashMinor != null && isTry
-        ? formatTry(defaultCashMinor).replace(" TL", "")
-        : defaultCashMinor != null
-          ? (defaultCashMinor / 100).toFixed(2)
-          : "",
+      defaultCashMinor != null
+        ? formatCashPrefill(defaultCashMinor, isTry)
+        : "",
     );
     setExtraDaysText("");
     setExtraDayRateText("");
@@ -337,86 +347,45 @@ export function StaffSalaryPaymentDialog({
 
   const periodRemaining = status?.period_remaining_minor ?? 0;
   const outstandingAdvance = status?.outstanding_advance_minor ?? 0;
-  // Advances net against everything owed (incl. extra days), not just this
-  // period — mirrors the backend (BUGLOG 2026-07-13).
-  const owedPreview = status?.total_owed_minor ?? periodRemaining;
+  // Advances net against everything owed (incl. extra days typed in this form).
+  const owedPreview =
+    (status?.total_owed_minor ?? periodRemaining) + (extraDaysTotalMinor ?? 0);
   const cashPreview = cashMinor ?? 0;
-  const advancePreview =
-    cashPreview > 0
-      ? advanceAppliedPreview(cashPreview, owedPreview, outstandingAdvance)
-      : 0;
-  const payablePreview =
-    cashPreview > 0
-      ? payableClearedPreview(cashPreview, owedPreview, outstandingAdvance)
-      : 0;
+  const settlePreviewActive =
+    owedPreview > 0 || outstandingAdvance > 0 || cashPreview > 0;
+  const advancePreview = settlePreviewActive
+    ? advanceAppliedPreview(cashPreview, owedPreview, outstandingAdvance)
+    : 0;
+  const payablePreview = settlePreviewActive
+    ? payableClearedPreview(cashPreview, owedPreview, outstandingAdvance)
+    : 0;
   const excessPreview =
     cashPreview > 0
       ? excessAdvancePreview(cashPreview, owedPreview, outstandingAdvance)
       : 0;
+  const suggestedNet = netToPayMinor(owedPreview, outstandingAdvance);
 
   function formatMinor(minor: number): string {
     if (isTry) return formatTry(minor);
     return `${(minor / 100).toFixed(2)} ${payCurrency}`;
   }
 
-  async function postExtraDaysAccrual() {
+  async function postStaffPayment(payload: PeriodPayload & {
+    extra_days?: number;
+    per_day_minor?: number;
+  }) {
     const paymentDateParsed = parseTrDate(resolvedDateText);
     if (!paymentDateParsed) {
       setError("Date must be DD.MM.YYYY.");
       return false;
-    }
-    if (extraDays <= 0 || extraDays > 31) {
-      setError("Enter extra days (1–31).");
-      return false;
-    }
-    if (extraDayRateMinor === null || extraDayRateMinor <= 0) {
-      setError("Enter a valid per-day pay for extra days.");
-      return false;
-    }
-
-    const idempotencyKey = submitIdempotency.beginSubmit();
-    try {
-      await submitWithDuplicateGuard(async (acknowledgedDuplicate) =>
-        apiFetch(
-          `/entities/${entityId}/staff/employees/${employeeId}/extra-days`,
-          {
-            method: "POST",
-            idempotencyKey,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(
-              withAcknowledgeDuplicate(
-                {
-                  payment_date: paymentDateParsed,
-                  extra_days: extraDays,
-                  per_day_minor: extraDayRateMinor,
-                  actor_id: actorId,
-                },
-                acknowledgedDuplicate,
-              ),
-            ),
-          },
-        ),
-      );
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Extra days save failed");
-      return false;
-    }
-  }
-
-  async function postStaffPayment(payload: PeriodPayload) {
-    const paymentDateParsed = parseTrDate(resolvedDateText);
-    if (!paymentDateParsed) {
-      setError("Date must be DD.MM.YYYY.");
-      return;
     }
     if (payload.amount_minor > 0 && isTry && !paymentGlAccountId) {
       setError("Choose a cash or bank account.");
-      return;
+      return false;
     }
     if (payload.amount_minor > 0 && !isTry && !fxWalletId) {
       setError(`No ${payCurrency} wallet found.`);
-      return;
+      return false;
     }
 
     const body: Record<string, unknown> = {
@@ -428,13 +397,17 @@ export function StaffSalaryPaymentDialog({
       period_month: payload.period_month,
       period_salary_minor: payload.period_salary_minor,
     };
+    if (payload.extra_days != null && payload.per_day_minor != null) {
+      body.extra_days = payload.extra_days;
+      body.per_day_minor = payload.per_day_minor;
+    }
     if (isTry && payload.amount_minor > 0) {
       body.payment_account_id = paymentGlAccountId;
     } else if (payload.amount_minor > 0) {
       const tryCostKurus = parseTryToKurus(tryCostText);
       if (tryCostKurus === null || tryCostKurus <= 0) {
         setError("Enter a valid TRY cost for this payment.");
-        return;
+        return false;
       }
       body.fx_money_account_id = fxWalletId;
       body.try_cost_kurus = tryCostKurus;
@@ -475,39 +448,37 @@ export function StaffSalaryPaymentDialog({
       extraDayRateMinor !== null &&
       extraDayRateMinor > 0;
 
-    if (!hasSalary && !hasExtra) {
-      setError("Enter salary for this month and/or extra days.");
+    if (extraDaysInvalid) {
+      setError("Extra days must be a whole number from 1 to 31.");
       return;
     }
-    if (hasSalary) {
-      if (!Number.isFinite(year) || year < 2000) {
-        setError("Enter a valid salary year.");
-        return;
-      }
-      if (!Number.isFinite(month) || month < 1 || month > 12) {
-        setError("Choose a salary month.");
-        return;
-      }
-      if (
-        !isStatement &&
-        cash > 0 &&
-        isTry &&
-        !paymentGlAccountId
-      ) {
-        setError("Choose a cash or bank account.");
-        return;
-      }
-      if (!isStatement && cash > 0 && !isTry && !fxWalletId) {
-        setError(`No ${payCurrency} wallet found.`);
-        return;
-      }
-    } else if (cash > 0) {
-      setError("Enter salary for this month when paying cash.");
+    if (!hasSalary) {
+      setError("Enter salary for this month.");
+      return;
+    }
+    if (!Number.isFinite(year) || year < 2000) {
+      setError("Enter a valid salary year.");
+      return;
+    }
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      setError("Choose a salary month.");
+      return;
+    }
+    if (!isStatement && cash > 0 && isTry && !paymentGlAccountId) {
+      setError("Choose a cash or bank account.");
+      return;
+    }
+    if (!isStatement && cash > 0 && !isTry && !fxWalletId) {
+      setError(`No ${payCurrency} wallet found.`);
+      return;
+    }
+    if (hasExtra && (extraDayRateMinor === null || extraDayRateMinor <= 0)) {
+      setError("Enter a valid per-day pay for extra days.");
       return;
     }
 
     setError(null);
-    if (isStatement && onConfirm && hasSalary) {
+    if (isStatement && onConfirm) {
       await onConfirm({
         period_year: year,
         period_month: month,
@@ -520,28 +491,18 @@ export function StaffSalaryPaymentDialog({
     setSubmitting(true);
     setError(null);
     try {
-      if (hasSalary) {
-        const salaryOk = await postStaffPayment({
-          period_year: year,
-          period_month: month,
-          period_salary_minor: salaryMinor!,
-          amount_minor: cash,
-        });
-        if (!salaryOk) return;
-        submitIdempotency.completeSubmit();
-      }
-      if (hasExtra) {
-        const extraOk = await postExtraDaysAccrual();
-        if (!extraOk) return;
-        submitIdempotency.completeSubmit();
-      }
-      toast(
-        cash > 0 || !hasSalary
-          ? hasExtra && !hasSalary
-            ? "Extra days recorded"
-            : "Payment recorded"
-          : "Salary recorded",
-      );
+      const ok = await postStaffPayment({
+        period_year: year,
+        period_month: month,
+        period_salary_minor: salaryMinor!,
+        amount_minor: cash,
+        ...(hasExtra
+          ? { extra_days: extraDays, per_day_minor: extraDayRateMinor! }
+          : {}),
+      });
+      if (!ok) return;
+      submitIdempotency.completeSubmit();
+      toast(cash > 0 ? "Payment recorded" : "Salary recorded");
       onSaved?.();
       setCashText("");
       setExtraDaysText("");
@@ -573,8 +534,8 @@ export function StaffSalaryPaymentDialog({
         )}
 
         <p className="text-xs text-muted-foreground">
-          Mizan accrues this month&apos;s salary when needed — no separate accrual
-          step. Pay any prior month; pay in parts as cash comes in; extra becomes
+          Accrues this month&apos;s salary when needed. Cash defaults to net to
+          pay (owed minus advance). Paying more than owed parks the rest as
           advance.
         </p>
 
@@ -697,7 +658,8 @@ export function StaffSalaryPaymentDialog({
         </div>
         <div>
           <Label htmlFor="pay-cash-amount">
-            Paying now ({payCurrency}) — optional
+            Paying now ({payCurrency})
+            {suggestedNet > 0 ? " — net to pay" : " — optional"}
           </Label>
           {isTry ? (
             <MoneyInput
@@ -716,7 +678,8 @@ export function StaffSalaryPaymentDialog({
             />
           )}
           <p className="mt-1 text-xs text-muted-foreground">
-            Leave empty to record salary accrual only — pay cash later.
+            Leave empty to record salary only — pay cash later. Prefills with
+            net to pay when an advance is held.
           </p>
         </div>
         {isTry && (
@@ -734,6 +697,11 @@ export function StaffSalaryPaymentDialog({
                   onChange={(e) => setExtraDaysText(e.target.value)}
                   placeholder="e.g. 3"
                 />
+                {extraDaysInvalid && (
+                  <p className="mt-1 text-xs text-destructive">
+                    Whole number from 1 to 31 only.
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="pay-extra-day-rate">Extra day pay (₺)</Label>
@@ -747,8 +715,8 @@ export function StaffSalaryPaymentDialog({
             </div>
             {extraDaysTotalMinor !== null && (
               <p className="text-sm font-medium tabular-nums">
-                Extra days total: {formatTry(extraDaysTotalMinor)} (accrued —
-                no cash needed now)
+                Extra days total: {formatTry(extraDaysTotalMinor)} — accrued in
+                this same payment
               </p>
             )}
           </>
@@ -756,47 +724,69 @@ export function StaffSalaryPaymentDialog({
         {status && (
           <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
             <p>
-              Already paid this month:{" "}
+              Salary owed:{" "}
               <span className="font-medium tabular-nums">
-                {formatMinor(status.period_paid_minor)}
+                {formatMinor(owedPreview)}
               </span>
-            </p>
-            <p className="mt-1">
-              Still owed for month:{" "}
-              <span className="font-medium tabular-nums">
-                {formatMinor(periodRemaining)}
-              </span>
+              {periodRemaining !== owedPreview && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  (month remaining {formatMinor(periodRemaining)})
+                </span>
+              )}
             </p>
             {outstandingAdvance > 0 && (
-              <p className="mt-1 text-muted-foreground">
-                Outstanding advance:{" "}
-                <span className="tabular-nums">{formatMinor(outstandingAdvance)}</span>
-                {" — "}applied automatically against salary owed (including
-                extra days) when you record this payment.
+              <p className="mt-1">
+                Advance held:{" "}
+                <span className="font-medium tabular-nums">
+                  {formatMinor(outstandingAdvance)}
+                </span>
               </p>
             )}
-            {cashPreview > 0 && payablePreview > 0 && (
+            <p className="mt-1">
+              Net to pay:{" "}
+              <span className="font-medium tabular-nums">
+                {formatMinor(suggestedNet)}
+              </span>
+            </p>
+            {settlePreviewActive && payablePreview > 0 && (
               <p className="mt-2 text-muted-foreground">
-                Salary payable cleared:{" "}
-                <span className="font-medium tabular-nums text-foreground">
-                  {formatMinor(payablePreview)}
-                </span>
-                {advancePreview > 0 && (
+                {cashPreview > 0 || advancePreview > 0 ? (
                   <>
-                    {" "}
-                    (includes{" "}
-                    <span className="tabular-nums">{formatMinor(advancePreview)}</span>{" "}
-                    advance)
+                    Pay{" "}
+                    <span className="font-medium tabular-nums text-foreground">
+                      {formatMinor(cashPreview)}
+                    </span>{" "}
+                    cash
+                    {advancePreview > 0 && (
+                      <>
+                        {" · use "}
+                        <span className="font-medium tabular-nums text-foreground">
+                          {formatMinor(advancePreview)}
+                        </span>{" "}
+                        advance
+                      </>
+                    )}
+                    {" · clear "}
+                    <span className="font-medium tabular-nums text-foreground">
+                      {formatMinor(payablePreview)}
+                    </span>{" "}
+                    salary
                   </>
-                )}
+                ) : null}
               </p>
             )}
             {excessPreview > 0 && (
               <p className="mt-1 text-muted-foreground">
-                Excess recorded as advance:{" "}
+                Extra becomes advance:{" "}
                 <span className="font-medium tabular-nums text-foreground">
                   {formatMinor(excessPreview)}
                 </span>
+              </p>
+            )}
+            {status.period_paid_minor > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Already paid this month: {formatMinor(status.period_paid_minor)}
               </p>
             )}
           </div>

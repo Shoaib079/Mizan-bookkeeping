@@ -73,7 +73,7 @@ export function StaffBalancesTable() {
             setRows((prev) =>
               prev.map((row) =>
                 row.id === employee.id
-                  ? { ...row, balance_minor: 0, balanceLoading: false }
+                  ? { ...row, balance_minor: null, balanceLoading: false }
                   : row,
               ),
             );
@@ -148,10 +148,12 @@ export function StaffBalancesTable() {
                 <DataTableCell align="right" className="tabular-nums">
                   {row.balanceLoading
                     ? "…"
-                    : formatStaffBalanceMinor(
-                        row.balance_minor ?? 0,
-                        row.pay_currency,
-                      )}
+                    : row.balance_minor === null
+                      ? "—"
+                      : formatStaffBalanceMinor(
+                          row.balance_minor,
+                          row.pay_currency,
+                        )}
                 </DataTableCell>
               </DataTableRow>
             ))}

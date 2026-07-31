@@ -146,7 +146,7 @@ export default function PartnersPage() {
                 </DataTableCell>
                 <DataTableCell align="right" className="tabular-nums">
                   {balances.has(row.id)
-                    ? formatTry(balances.get(row.id) ?? 0)
+                    ? formatTry(balances.get(row.id)!)
                     : balancesLoading
                       ? "…"
                       : "—"}
