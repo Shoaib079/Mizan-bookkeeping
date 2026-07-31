@@ -2,6 +2,19 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-31 — Balances hub cards showed wrong totals
+
+**Symptom:** Balances sidebar overview cards did not match real cash / staff / partner detail — looked “disconnected.”
+
+**Root cause:**
+1. **Cash & bank** summed every active money account from `…/accounts?limit=100`, including **credit cards** (liabilities) and truncating past 100 rows — while Banking uses `/accounts/tree` and separates cards.
+2. **Staff** summed every employee’s `balance_minor` and formatted as ₺, mixing **FX cents** with TRY kuruş.
+3. **Partner** amount was reimbursement/loan only, but the hint said “capital.”
+
+**Fix:** Cash from account tree via `cashAndBankHeldKurus` (banks + cash + FX TRY cost, never cards); staff hub total = TRY employees only + FX count in hint; partner hint says reimbursement/loans, capital on each partner.
+
+**Guarding tests:** `banking-tree-helpers.test.ts` (`cashAndBankHeldKurus`), `staff-balance-total.test.ts`.
+
 ## 2026-07-31 — Staff control ties, compound pay, extra-days default
 
 **Symptoms / gaps:**

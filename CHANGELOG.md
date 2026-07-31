@@ -4,6 +4,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-31
 
+**Balances hub totals were wrong:** Cash & bank now uses the banking account tree and excludes credit-card debt; Staff shows a TRY-only total (FX employees called out in the hint); Partner hint no longer pretends the figure includes capital. Cards still open the directories for detail.
+
 **Staff pay is simpler: Net to pay, advance shown, one click settles.**
 - Employee card shows **Salary owed**, **Advance held**, and **Net to pay** (what cash to send next).
 - **Pay salary** prefills that net and preview says how much cash vs advance will clear the month. Overpay still becomes advance.

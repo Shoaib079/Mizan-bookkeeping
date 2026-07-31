@@ -6,16 +6,17 @@ import {
   accountSubtitle,
   allFxAccounts,
   canDeactivateFxWallet,
+  cashAndBankHeldKurus,
   formatFxTileSummary,
   mergeFxLedgerEntries,
 } from "@/lib/banking-tree-helpers";
 
-function branch(accounts: MoneyAccountLeaf[]) {
+function branch(accounts: MoneyAccountLeaf[], balance_kurus = 0) {
   return {
     bucket_code: "1100",
     bucket_name_en: "Bank",
     bucket_name_tr: "Banka",
-    balance_kurus: 0,
+    balance_kurus,
     accounts,
   };
 }
@@ -139,5 +140,33 @@ describe("banking-tree-helpers", () => {
         fxAccount({ id: "2", currency: "USD", native_quantity: 100, balance_kurus: 0 }),
       ),
     ).toBe(false);
+  });
+
+  it("sums banks, cash and FX TRY cost — never credit cards", () => {
+    const tree: MoneyAccountTree = {
+      banks: branch([], 100_000),
+      cash: branch([], 25_000),
+      credit_cards: branch([], 80_000),
+      foreign_currency: {
+        usd: { ...branch([], 10_000), bucket_code: "1010", bucket_name_en: "USD" },
+        eur: { ...branch([], 5_000), bucket_code: "1020", bucket_name_en: "EUR" },
+        gbp: { ...branch([], 1_000), bucket_code: "1030", bucket_name_en: "GBP" },
+      },
+    };
+    expect(cashAndBankHeldKurus(tree)).toBe(141_000);
+  });
+
+  it("treats credit-card-only position as zero cash held", () => {
+    const tree: MoneyAccountTree = {
+      banks: branch([]),
+      cash: branch([]),
+      credit_cards: branch([], 50_000),
+      foreign_currency: {
+        usd: { ...branch([]), bucket_code: "1010", bucket_name_en: "USD" },
+        eur: { ...branch([]), bucket_code: "1020", bucket_name_en: "EUR" },
+        gbp: { ...branch([]), bucket_code: "1030", bucket_name_en: "GBP" },
+      },
+    };
+    expect(cashAndBankHeldKurus(tree)).toBe(0);
   });
 });

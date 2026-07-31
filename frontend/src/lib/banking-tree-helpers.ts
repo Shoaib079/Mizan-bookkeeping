@@ -51,6 +51,18 @@ export function formatTryTileBalance(kurus: number): string {
   return formatTry(kurus);
 }
 
+/** TRY cash position for the Balances hub — banks + cash + FX wallets at TRY cost.
+ * Credit-card balances are liabilities (what you owe), so they must not be added in. */
+export function cashAndBankHeldKurus(tree: MoneyAccountTree): number {
+  return (
+    tree.banks.balance_kurus +
+    tree.cash.balance_kurus +
+    tree.foreign_currency.usd.balance_kurus +
+    tree.foreign_currency.eur.balance_kurus +
+    tree.foreign_currency.gbp.balance_kurus
+  );
+}
+
 export function mergeFxLedgerEntries(
   wallets: MoneyAccountLeaf[],
   entriesByWallet: Map<string, FxLedgerEntryRead[]>,

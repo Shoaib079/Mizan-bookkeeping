@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Staff net-pay UX + integrity — 2026-07-31 |
-| **Last tag** | `v0.staff-net-pay` |
+| **Last completed slice** | Balances hub totals fix — 2026-07-31 |
+| **Last tag** | `v0.balances-hub-totals` |
 | **Unpushed** | (cleared on push) |
 | **Next up** | **GS-FX** · P5 — Delete company UI |
 

@@ -17,6 +17,8 @@ import {
   Wallet,
 } from "lucide-react";
 
+import type { MoneyAccountTree } from "@/lib/banking-types";
+import { cashAndBankHeldKurus } from "@/lib/banking-tree-helpers";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import {
@@ -71,6 +73,18 @@ function BalanceCard({
   );
 }
 
+function staffHint(totalKurus: number, count: number, fxCount: number): string {
+  const people = subledgerCountLabel(count, "employee");
+  const fxNote =
+    fxCount > 0
+      ? ` · TRY staff only — ${subledgerCountLabel(fxCount, "FX employee")} on Staff`
+      : "";
+  if (totalKurus < 0) {
+    return `Staff hold this much of your money — ${people}${fxNote}`;
+  }
+  return `Owed to employees — ${people}${fxNote}`;
+}
+
 export function BalancesOverview() {
   const { entityId } = useEntity();
   const payables = useSupplierBalances(entityId ?? "");
@@ -78,7 +92,7 @@ export function BalancesOverview() {
   const staff = useStaffBalanceTotal(entityId);
   const partners = usePartnerBalanceTotal(entityId);
 
-  // Money actually held, across every bank, cash drawer and FX wallet.
+  // Money actually held (banks + cash + FX at TRY cost) — never credit cards.
   const [cashAndBankKurus, setCashAndBankKurus] = useState(0);
   const [moneyLoading, setMoneyLoading] = useState(false);
 
@@ -89,18 +103,16 @@ export function BalancesOverview() {
     }
     let cancelled = false;
     setMoneyLoading(true);
-    void apiFetch<{ items: { balance_kurus: number; is_active: boolean }[] }>(
-      `/entities/${entityId}/banking/accounts?limit=100`,
+    void apiFetch<MoneyAccountTree>(
+      `/entities/${entityId}/banking/accounts/tree`,
     )
-      .then((res) => {
+      .then((tree) => {
         if (cancelled) return;
-        setCashAndBankKurus(
-          res.items
-            .filter((a) => a.is_active)
-            .reduce((sum, a) => sum + (a.balance_kurus ?? 0), 0),
-        );
+        setCashAndBankKurus(cashAndBankHeldKurus(tree));
       })
-      .catch(() => undefined)
+      .catch(() => {
+        if (!cancelled) setCashAndBankKurus(0);
+      })
       .finally(() => {
         if (!cancelled) setMoneyLoading(false);
       });
@@ -144,7 +156,7 @@ export function BalancesOverview() {
         <BalanceCard
           href="/banking"
           title="Cash & bank"
-          hint="Money you hold — open Banking for each account"
+          hint="Money you hold (banks, cash, FX) — cards are under Banking"
           icon={Wallet}
           amount={formatTry(cashAndBankKurus)}
           loading={moneyLoading}
@@ -152,11 +164,7 @@ export function BalancesOverview() {
         <BalanceCard
           href="/staff"
           title="Staff balances"
-          hint={
-            staff.totalKurus < 0
-              ? `Staff hold this much of your money — ${subledgerCountLabel(staff.count, "employee")}`
-              : `Owed to employees — ${subledgerCountLabel(staff.count, "employee")}`
-          }
+          hint={staffHint(staff.totalKurus, staff.count, staff.fxCount)}
           icon={Users}
           amount={formatTry(staff.totalKurus)}
           // Owed to staff is money out of the business; a negative total means
@@ -173,7 +181,7 @@ export function BalancesOverview() {
         <BalanceCard
           href="/partners"
           title="Partner balances"
-          hint={`Loans, drawings and capital — ${subledgerCountLabel(partners.count, "partner")}`}
+          hint={`Reimbursement / loans owed — ${subledgerCountLabel(partners.count, "partner")} (capital is on each partner)`}
           icon={Banknote}
           amount={formatTry(partners.totalKurus)}
           amountClass={

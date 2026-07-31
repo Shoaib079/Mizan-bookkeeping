@@ -14,10 +14,19 @@
  *
  * The N+1 is affordable here: a restaurant has a handful of staff and two or
  * three partners, and the directories already fan out exactly these calls.
+ *
+ * Staff totals are TRY-only — FX `balance_minor` is in foreign cents and must
+ * not be mixed into a ₺ figure (Balances hub fix 2026-07-31).
  */
 
 import { useMemo } from "react";
 
+import {
+  fxStaffCount,
+  sumTryStaffBalances,
+  tryStaffIds,
+  type StaffPayCurrencyRow,
+} from "@/lib/staff-balance-total";
 import { sumBalances } from "@/lib/subledger-total";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
@@ -31,23 +40,52 @@ export type SubledgerTotal = {
   loading: boolean;
 };
 
-function useTotal(
-  entityId: string | null,
-  listPath: string,
-  ledgerPath: (id: string) => string,
-  extract: (res: unknown) => number,
-): SubledgerTotal {
+export type StaffSubledgerTotal = SubledgerTotal & {
+  /** FX-paid employees excluded from totalKurus (see directory for their balances). */
+  fxCount: number;
+};
+
+/** Net across TRY-paid employees: positive = owed to staff, negative = advances held. */
+export function useStaffBalanceTotal(entityId: string | null): StaffSubledgerTotal {
   // useEntityList wants a string; an empty id keeps it idle until one arrives.
+  const { items, loading: listLoading } = useEntityList<StaffPayCurrencyRow>(
+    // Inactive employees can still carry a balance — leaving them out would
+    // understate what's owed.
+    "/staff/employees?include_inactive=true&limit=500",
+    entityId ?? "",
+  );
+  const tryIds = useMemo(() => tryStaffIds(items), [items]);
+  const { balances, loading: balancesLoading } = useLedgerBalanceMap(
+    entityId,
+    tryIds,
+    (id) => `/staff/employees/${id}/ledger`,
+    (res) => (res as { balance_minor: number }).balance_minor,
+  );
+
+  const totalKurus = useMemo(
+    () => sumTryStaffBalances(items, balances),
+    [items, balances],
+  );
+
+  return {
+    totalKurus,
+    count: items.length,
+    fxCount: fxStaffCount(items),
+    loading: listLoading || balancesLoading,
+  };
+}
+
+export function usePartnerBalanceTotal(entityId: string | null): SubledgerTotal {
   const { items, loading: listLoading } = useEntityList<Row>(
-    listPath,
+    "/partners?limit=500",
     entityId ?? "",
   );
   const ids = useMemo(() => items.map((row) => row.id), [items]);
   const { balances, loading: balancesLoading } = useLedgerBalanceMap(
     entityId,
     ids,
-    ledgerPath,
-    extract,
+    (id) => `/partners/${id}/ledger`,
+    (res) => (res as { balance_kurus: number }).balance_kurus,
   );
 
   const totalKurus = useMemo(() => sumBalances(balances), [balances]);
@@ -57,25 +95,4 @@ function useTotal(
     count: ids.length,
     loading: listLoading || balancesLoading,
   };
-}
-
-/** Net across all employees: positive = owed to staff, negative = advances held. */
-export function useStaffBalanceTotal(entityId: string | null): SubledgerTotal {
-  return useTotal(
-    entityId,
-    // Inactive employees can still carry a balance — leaving them out would
-    // understate what's owed.
-    "/staff/employees?include_inactive=true&limit=500",
-    (id) => `/staff/employees/${id}/ledger`,
-    (res) => (res as { balance_minor: number }).balance_minor,
-  );
-}
-
-export function usePartnerBalanceTotal(entityId: string | null): SubledgerTotal {
-  return useTotal(
-    entityId,
-    "/partners?limit=500",
-    (id) => `/partners/${id}/ledger`,
-    (res) => (res as { balance_kurus: number }).balance_kurus,
-  );
 }
