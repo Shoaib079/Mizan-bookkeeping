@@ -64,12 +64,15 @@ const STAFF_DATE_ACTIONS = new Set<RecordActionKey>([
   "staffPayment",
 ]);
 
-const NEEDS_LEDGER_BALANCE = new Set<RecordActionKey>([
+const NEEDS_REIMBURSEMENT_BALANCE = new Set<RecordActionKey>([
   "partnerReimbursement",
-  "partnerDrawing",
-  "partnerDrawingRepayment",
   "customerPayment",
   "supplierPayment",
+]);
+
+const NEEDS_CAPITAL_BALANCE = new Set<RecordActionKey>([
+  "partnerDrawing",
+  "partnerDrawingRepayment",
 ]);
 
 export function PeopleRecordDialog({
@@ -147,14 +150,14 @@ export function PeopleRecordDialog({
   useEffect(() => {
     if (!open || !entityId || !selectedId) {
       setBalanceKurus(undefined);
-    setCapitalBalanceKurus(undefined);
+      setCapitalBalanceKurus(undefined);
       setBalanceError(null);
       setBalanceLoading(false);
       return;
     }
-    if (!NEEDS_LEDGER_BALANCE.has(action)) {
+    if (!NEEDS_REIMBURSEMENT_BALANCE.has(action) && !NEEDS_CAPITAL_BALANCE.has(action)) {
       setBalanceKurus(undefined);
-    setCapitalBalanceKurus(undefined);
+      setCapitalBalanceKurus(undefined);
       setBalanceError(null);
       setBalanceLoading(false);
       return;
@@ -199,9 +202,12 @@ export function PeopleRecordDialog({
   );
 
   const selected = items.find((item) => item.id === selectedId) ?? null;
+  const needsReimbursementBalance = NEEDS_REIMBURSEMENT_BALANCE.has(action);
+  const needsCapitalBalance = NEEDS_CAPITAL_BALANCE.has(action);
   const formReady =
     Boolean(selected) &&
-    (!NEEDS_LEDGER_BALANCE.has(action) || (!balanceLoading && !balanceError));
+    (!needsReimbursementBalance || (!balanceLoading && !balanceError)) &&
+    (!needsCapitalBalance || (!balanceLoading && !balanceError));
 
   function handleClose() {
     reset();
@@ -340,7 +346,7 @@ function renderEmbeddedForm(
           {...formProps}
           partnerId={person.id}
           kind="drawing"
-          balanceKurus={balanceKurus}
+          balanceKurus={capitalBalanceKurus}
         />
       );
     case "partnerDrawingRepayment":
@@ -349,7 +355,7 @@ function renderEmbeddedForm(
           {...formProps}
           partnerId={person.id}
           kind="repayment"
-          balanceKurus={capitalBalanceKurus ?? balanceKurus}
+          balanceKurus={capitalBalanceKurus}
         />
       );
     case "customerCreditSale":

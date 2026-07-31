@@ -102,14 +102,6 @@ export function RecordActionModals({ active, onClose }: Props) {
       <ManualDailySalesForm open={effectiveModal === "sales"} onClose={closeAll} />
       <TransferForm open={effectiveModal === "transfer"} onClose={closeAll} />
       <ManualExpenseForm open={effectiveModal === "expense"} onClose={closeAll} />
-      <ManualExpenseForm
-        open={effectiveModal === "storePurchase"}
-        onClose={closeAll}
-        defaultExpenseAccountCode="5220"
-        paymentSource="bank_card"
-        title="Store / card purchase"
-        showRecordKindToggle={false}
-      />
       <FxPurchaseQuickAction open={effectiveModal === "buyFx"} onClose={closeAll} />
       <PosSummaryUploadForm
         open={effectiveModal === "posPhoto"}

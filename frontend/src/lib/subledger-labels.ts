@@ -16,6 +16,9 @@ export const partnerMovementLabels: Record<string, string> = {
   reimbursement_paid: "Reimbursement paid",
   drawing: "Drawing",
   drawing_repayment: "Drawing repayment",
+  capital_contribution: "Capital contribution",
+  partner_loan_received: "Partner loan received",
+  partner_loan_repaid: "Partner loan repaid",
   profit_allocation: "Profit allocation",
 };
 

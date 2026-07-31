@@ -84,6 +84,11 @@ describe("record-actions", () => {
     expect(ids).not.toContain("receipt");
     expect(ids).not.toContain("efatura");
     expect(ids).not.toContain("bankStatement");
+
+    const peopleCards = recordActionsBySection("people", { deliveryEnabled: true });
+    const peopleIds = peopleCards.map((a) => a.id);
+    expect(peopleIds).not.toContain("staffPayment");
+    expect(peopleIds).not.toContain("partnerExpenseFronted");
   });
 
   it("still resolves hidden actions by key via recordActionById", () => {

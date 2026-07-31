@@ -38,7 +38,7 @@ describe("unified record dialogs", () => {
     expect(people).not.toContain("onContinue");
   });
 
-  it("routes staff salary payment through the rich dialog with a picked employee", () => {
+  it("routes staff salary payment through the rich dialog with a picked employee (hidden from Add hub)", () => {
     const people = read("record/people-record-dialog.tsx");
     const salaryDialog = read("forms/staff-salary-payment-dialog.tsx");
     const cashForm = read("forms/staff-cash-movement-form.tsx");
@@ -46,6 +46,7 @@ describe("unified record dialogs", () => {
     const actions = read("../lib/record-actions.ts");
 
     expect(actions).toContain('id: "staffPayment"');
+    expect(actions).toContain("hidden: true");
     expect(actions).toContain('personKind: "staff"');
     expect(people).toContain('case "staffPayment"');
     expect(people).toContain("StaffSalaryPaymentDialog");
@@ -79,13 +80,15 @@ describe("unified record dialogs", () => {
     expect(dialog).toContain("document.body");
   });
 
-  it("manual expense can record salary payments", () => {
+  it("manual expense can record salary payments from one daily intake dialog", () => {
     const form = read("forms/manual-expense-form.tsx");
     const reviewPanel = read("review/expenses-review-panel.tsx");
     expect(form).toContain("ExpenseRecordKindToggle");
     expect(form).toContain("StaffSalaryPaymentDialog");
+    expect(form).toMatch(/bank statement/i);
     expect(reviewPanel).toContain("ManualExpenseForm");
     expect(reviewPanel).toContain("Record expense");
+    expect(reviewPanel).not.toContain("showRecordKindToggle={false}");
   });
 
   it("opens invoice and receipt review in a dialog on the record page", () => {

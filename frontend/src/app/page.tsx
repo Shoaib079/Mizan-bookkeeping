@@ -133,7 +133,7 @@ function DashboardBody() {
               onClick={() => openQuickAction("expense")}
             >
               <Wallet className="size-4" />
-              Add expense
+              Daily expenses
             </Button>
             <Button
               type="button"

@@ -12,7 +12,7 @@ export default function RecordPage() {
     <AppShell title="Add">
       <p className="mb-6 text-sm text-muted-foreground">
         {entityId
-          ? "Post sales, expenses, payments, and uploads from one place."
+          ? "Cash and partner-fronted daily expenses, salary, payments, and uploads — bank and card outflows come from the bank statement."
           : "Select a restaurant in the sidebar to add transactions."}
       </p>
       <RecordReviewPanel />

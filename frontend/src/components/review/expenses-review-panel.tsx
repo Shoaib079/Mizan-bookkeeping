@@ -157,15 +157,16 @@ export function ExpensesReviewPanel() {
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Cash and bank outflows posted as expenses — correct mistakes here.
-          Receipt photos are in{" "}
+          Cash and partner-fronted expenses posted here — correct mistakes below.
+          Bank and card charges are classified on the bank statement (not entered
+          manually). Receipt photos are in{" "}
           <Link
             href={REVIEW_TAB_HREFS.receipts}
             className="text-primary hover:underline"
           >
             Receipts
           </Link>
-          ; salary is under Staff.
+          .
         </p>
         <Button type="button" onClick={() => setRecordOpen(true)}>
           Record expense
@@ -279,7 +280,7 @@ export function ExpensesReviewPanel() {
             <EmptyState
               icon={Wallet}
               title="No expenses in this view"
-              hint="Change the dates or filter, or record a manual expense from Add."
+              hint="Change the dates or filter, or record daily expenses from Add."
             />
           )}
 
@@ -382,7 +383,6 @@ export function ExpensesReviewPanel() {
 
       <ManualExpenseForm
         open={recordOpen}
-        showRecordKindToggle={false}
         onClose={() => setRecordOpen(false)}
         onSaved={onSaved}
       />
