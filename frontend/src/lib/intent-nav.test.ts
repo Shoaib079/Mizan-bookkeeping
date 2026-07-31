@@ -36,7 +36,7 @@ describe("intent sidebar highlighting", () => {
     expect(sidebarHrefActiveForPathname("/record", "/sales")).toBe(false);
     expect(sidebarHrefActiveForPathname("/sales", "/sales")).toBe(true);
     expect(sidebarHrefActiveForPathname("/sales", "/cards")).toBe(true);
-    expect(sidebarHrefActiveForPathname("/sales", "/close-day")).toBe(true);
+    expect(sidebarHrefActiveForPathname("/sales", "/close-day")).toBe(false);
     expect(sidebarHrefActiveForPathname("/balances", "/balances/staff")).toBe(
       true,
     );

@@ -9,11 +9,13 @@ from fastapi.responses import StreamingResponse
 from io import BytesIO
 
 from app.core.excel.workbook import (
-    autosize_columns,
     bold_row,
     create_workbook,
+    finish_data_table,
     money_header,
+    write_header_row,
     write_money,
+    write_sheet_title,
     save_workbook_to_bytes,
 )
 from app.features.reports.schema import (
@@ -45,11 +47,16 @@ def _write_metadata(
     entity_id: uuid.UUID,
     date_label: str,
     date_value: str,
+    end_col: int = 4,
 ) -> int:
-    ws.cell(row=1, column=1, value=title)
-    ws.cell(row=2, column=1, value=f"Entity: {entity_id}")
-    ws.cell(row=2, column=2, value=f"{date_label}: {date_value}")
-    return 3
+    """Title block; returns the header row index (caller writes headers there)."""
+    next_row = write_sheet_title(
+        ws,
+        title,
+        subtitles=[f"Entity: {entity_id}", f"{date_label}: {date_value}"],
+        end_col=end_col,
+    )
+    return next_row
 
 
 def write_profit_and_loss_sheet(ws, report: ProfitAndLossRead) -> None:
@@ -64,14 +71,14 @@ def write_profit_and_loss_sheet(ws, report: ProfitAndLossRead) -> None:
         entity_id=report.entity_id,
         date_label="Period",
         date_value=f"{report.from_date} to {report.to_date}",
+        end_col=4,
     )
     amount_label = money_header()
-    headers = ["Code", "Name", "Type", amount_label]
-    for col, header in enumerate(headers, start=1):
-        ws.cell(row=header_row, column=col, value=header)
-    bold_row(ws, header_row, end_col=len(headers))
+    data_start = write_header_row(
+        ws, header_row, ["Code", "Name", "Type", amount_label]
+    )
 
-    row = header_row + 1
+    row = data_start
     for account in report.accounts:
         ws.cell(row=row, column=1, value=account.code)
         ws.cell(row=row, column=2, value=account.name_en)
@@ -92,7 +99,12 @@ def write_profit_and_loss_sheet(ws, report: ProfitAndLossRead) -> None:
     bold_row(ws, row - 1, end_col=4)
     bold_row(ws, row, end_col=4)
 
-    autosize_columns(ws)
+    finish_data_table(
+        ws,
+        header_row=header_row,
+        last_data_row=row,
+        end_col=4,
+    )
 
 
 def build_profit_and_loss_xlsx(report: ProfitAndLossRead) -> bytes:
@@ -116,10 +128,7 @@ def _write_balance_sheet_section(
     row += 1
 
     amount_label = money_header("Balance")
-    for col, header in enumerate(["Code", "Name", "Type", amount_label], start=1):
-        ws.cell(row=row, column=col, value=header)
-    bold_row(ws, row, end_col=4)
-    row += 1
+    row = write_header_row(ws, row, ["Code", "Name", "Type", amount_label])
 
     for account in accounts:
         ws.cell(row=row, column=1, value=account.code)
@@ -147,6 +156,7 @@ def build_balance_sheet_xlsx(report: BalanceSheetRead) -> bytes:
         entity_id=report.entity_id,
         date_label="As of",
         date_value=str(report.as_of),
+        end_col=4,
     )
 
     row = _write_balance_sheet_section(
@@ -188,25 +198,25 @@ def build_balance_sheet_xlsx(report: BalanceSheetRead) -> bytes:
     bold_row(ws, row - 2, end_col=4)
     bold_row(ws, row - 1, end_col=4)
 
-    autosize_columns(ws)
+    finish_data_table(
+        ws, header_row=row, last_data_row=row, end_col=4, autofilter=False
+    )
     return save_workbook_to_bytes(wb)
 
 
 def build_cash_flow_xlsx(report: CashFlowRead) -> bytes:
     wb, ws = create_workbook("Cash Flow")
-    row = _write_metadata(
+    header_row = _write_metadata(
         ws,
         title="Cash Flow Statement",
         entity_id=report.entity_id,
         date_label="Period",
         date_value=f"{report.from_date} to {report.to_date}",
+        end_col=3,
     )
 
-    summary_headers = ["Metric", money_header()]
-    for col, header in enumerate(summary_headers, start=1):
-        ws.cell(row=row, column=col, value=header)
-    bold_row(ws, row, end_col=2)
-    row += 1
+    data_start = write_header_row(ws, header_row, ["Metric", money_header()])
+    row = data_start
 
     summary_rows = [
         ("Opening cash", report.opening_cash_kurus),
@@ -228,11 +238,10 @@ def build_cash_flow_xlsx(report: CashFlowRead) -> bytes:
         row += 1
 
     row += 1
-    source_headers = ["Source", "Category", money_header("Net cash")]
-    for col, header in enumerate(source_headers, start=1):
-        ws.cell(row=row, column=col, value=header)
-    bold_row(ws, row, end_col=3)
-    row += 1
+    src_header = row
+    row = write_header_row(
+        ws, src_header, ["Source", "Category", money_header("Net cash")]
+    )
 
     for source_row in report.by_source:
         ws.cell(row=row, column=1, value=source_row.source)
@@ -240,30 +249,37 @@ def build_cash_flow_xlsx(report: CashFlowRead) -> bytes:
         write_money(ws, row, 3, source_row.net_cash_kurus)
         row += 1
 
-    autosize_columns(ws)
+    finish_data_table(
+        ws,
+        header_row=header_row,
+        last_data_row=max(row - 1, data_start),
+        end_col=3,
+    )
     return save_workbook_to_bytes(wb)
 
 
 def build_kdv_input_xlsx(report: KdvInputReportRead) -> bytes:
     wb, ws = create_workbook("KDV Input")
-    row = _write_metadata(
+    header_row = _write_metadata(
         ws,
         title="KDV Input Report",
         entity_id=report.entity_id,
         date_label="Period",
         date_value=f"{report.from_date} to {report.to_date}",
+        end_col=4,
     )
 
-    headers = [
-        "Rate (%)",
-        money_header("Base"),
-        money_header("VAT"),
-        "Invoice count",
-    ]
-    for col, header in enumerate(headers, start=1):
-        ws.cell(row=row, column=col, value=header)
-    bold_row(ws, row, end_col=len(headers))
-    row += 1
+    data_start = write_header_row(
+        ws,
+        header_row,
+        [
+            "Rate (%)",
+            money_header("Base"),
+            money_header("VAT"),
+            "Invoice count",
+        ],
+    )
+    row = data_start
 
     for rate_row in report.rates:
         ws.cell(row=row, column=1, value=rate_row.rate_percent)
@@ -279,30 +295,34 @@ def build_kdv_input_xlsx(report: KdvInputReportRead) -> bytes:
     ws.cell(row=row, column=4, value=report.invoice_count)
     bold_row(ws, row, end_col=4)
 
-    autosize_columns(ws)
+    finish_data_table(
+        ws, header_row=header_row, last_data_row=row, end_col=4
+    )
     return save_workbook_to_bytes(wb)
 
 
 def build_delivery_sales_xlsx(report: DeliverySalesReportRead) -> bytes:
     wb, ws = create_workbook("Delivery Sales")
-    row = _write_metadata(
+    header_row = _write_metadata(
         ws,
         title="Delivery Sales Report",
         entity_id=report.entity_id,
         date_label="Period",
         date_value=f"{report.from_date} to {report.to_date}",
+        end_col=4,
     )
 
-    headers = [
-        "Platform",
-        "Active",
-        money_header("Gross"),
-        "Report count",
-    ]
-    for col, header in enumerate(headers, start=1):
-        ws.cell(row=row, column=col, value=header)
-    bold_row(ws, row, end_col=len(headers))
-    row += 1
+    data_start = write_header_row(
+        ws,
+        header_row,
+        [
+            "Platform",
+            "Active",
+            money_header("Gross"),
+            "Report count",
+        ],
+    )
+    row = data_start
 
     for platform in report.platforms:
         ws.cell(row=row, column=1, value=platform.platform_name)
@@ -316,18 +336,21 @@ def build_delivery_sales_xlsx(report: DeliverySalesReportRead) -> bytes:
     write_money(ws, row, 3, report.total_gross_kurus)
     bold_row(ws, row, end_col=4)
 
-    autosize_columns(ws)
+    finish_data_table(
+        ws, header_row=header_row, last_data_row=row, end_col=4
+    )
     return save_workbook_to_bytes(wb)
 
 
 def build_period_comparison_xlsx(report: PeriodComparisonRead) -> bytes:
     wb, ws = create_workbook("Period Comparison")
-    row = _write_metadata(
+    header_row = _write_metadata(
         ws,
         title="Period Comparison",
         entity_id=report.entity_id,
         date_label="Current period",
         date_value=f"{report.current_from} to {report.current_to}",
+        end_col=5,
     )
     ws.cell(row=2, column=3, value="Prior period")
     ws.cell(
@@ -336,17 +359,18 @@ def build_period_comparison_xlsx(report: PeriodComparisonRead) -> bytes:
         value=f"{report.prior_from} to {report.prior_to}",
     )
 
-    headers = [
-        "Metric",
-        money_header("Current"),
-        money_header("Prior"),
-        money_header("Change"),
-        "Change (%)",
-    ]
-    for col, header in enumerate(headers, start=1):
-        ws.cell(row=row, column=col, value=header)
-    bold_row(ws, row, end_col=len(headers))
-    row += 1
+    data_start = write_header_row(
+        ws,
+        header_row,
+        [
+            "Metric",
+            money_header("Current"),
+            money_header("Prior"),
+            money_header("Change"),
+            "Change (%)",
+        ],
+    )
+    row = data_start
 
     for metric in report.metrics:
         ws.cell(row=row, column=1, value=metric.label)
@@ -360,7 +384,9 @@ def build_period_comparison_xlsx(report: PeriodComparisonRead) -> bytes:
         )
         row += 1
 
-    autosize_columns(ws)
+    finish_data_table(
+        ws, header_row=header_row, last_data_row=max(row - 1, data_start), end_col=5
+    )
     return save_workbook_to_bytes(wb)
 
 

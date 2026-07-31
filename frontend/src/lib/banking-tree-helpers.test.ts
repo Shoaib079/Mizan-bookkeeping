@@ -8,6 +8,7 @@ import {
   canDeactivateFxWallet,
   cashAndBankHeldKurus,
   formatFxTileSummary,
+  fxHoldingsNativeSummary,
   mergeFxLedgerEntries,
 } from "@/lib/banking-tree-helpers";
 
@@ -142,7 +143,7 @@ describe("banking-tree-helpers", () => {
     ).toBe(false);
   });
 
-  it("sums banks, cash and FX TRY cost — never credit cards", () => {
+  it("sums banks and cash only — never FX TRY cost or credit cards", () => {
     const tree: MoneyAccountTree = {
       banks: branch([], 100_000),
       cash: branch([], 25_000),
@@ -153,20 +154,35 @@ describe("banking-tree-helpers", () => {
         gbp: { ...branch([], 1_000), bucket_code: "1030", bucket_name_en: "GBP" },
       },
     };
-    expect(cashAndBankHeldKurus(tree)).toBe(141_000);
+    expect(cashAndBankHeldKurus(tree)).toBe(125_000);
   });
 
-  it("treats credit-card-only position as zero cash held", () => {
+  it("treats credit-card-only or FX-only position as zero cash held", () => {
     const tree: MoneyAccountTree = {
       banks: branch([]),
       cash: branch([]),
       credit_cards: branch([], 50_000),
       foreign_currency: {
-        usd: { ...branch([]), bucket_code: "1010", bucket_name_en: "USD" },
+        usd: {
+          ...branch(
+            [
+              fxAccount({
+                id: "1",
+                currency: "USD",
+                native_quantity: 100_00,
+                balance_kurus: 35_000,
+              }),
+            ],
+            35_000,
+          ),
+          bucket_code: "1010",
+          bucket_name_en: "USD",
+        },
         eur: { ...branch([]), bucket_code: "1020", bucket_name_en: "EUR" },
         gbp: { ...branch([]), bucket_code: "1030", bucket_name_en: "GBP" },
       },
     };
     expect(cashAndBankHeldKurus(tree)).toBe(0);
+    expect(fxHoldingsNativeSummary(tree)).toBe("$100.00");
   });
 });

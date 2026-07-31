@@ -2,6 +2,30 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-31 — Balances staff showed 0 employees / ₺0 owed; FX mixed into cash
+
+**Symptoms:** Staff balances card said 0 employees and/or 0,00 ₺ even when staff are owed. Cash & bank included FX as TRY.
+
+**Root cause:**
+1. Hub list used `limit=500` > API `MAX_LIST_LIMIT` (200) → 422 → empty list.
+2. Hub summed **TRY-only** ledger balances, so FX-paid staff (or a TRY filter miss) showed as ₺0 even when wages were owed in USD/EUR.
+3. Cash helper rolled FX TRY book cost into cash & bank.
+
+**Fix:** Cap list limits at 200; fetch every employee ledger; show TRY + native FX on the Staff card; Cash & bank = banks + cash only with a separate FX holdings card.
+
+**Guarding tests:** `balances-hub-limits-guard.test.ts`, `staff-balance-total.test.ts` (hub amount formatting), `banking-tree-helpers.test.ts`.
+
+## 2026-07-31 — Reports / Download all hid real forex
+
+**Symptoms:**
+1. Reports landing loaded dashboard FX but never showed USD/EUR/GBP held — only Sales/Expenses/Net.
+2. Month pack had a Foreign currency sheet with weak assertions; no per-wallet movement books (unlike cash/bank).
+3. Salaries sheet wrote FX `amount_minor` under `Amount (₺)` — foreign cents labelled as lira.
+
+**Fix:** Show `fx_balances` (native + book TRY) on Reports; clearer FX holdings + FX movement sheets in the month pack; salaries get Currency / Amount / TRY cost columns; shared professional Excel styling (header band, freeze, filter, unique sheet titles).
+
+**Guarding tests:** `test_foreign_currency_sheet_shows_native_quantity_and_try_cost`, `test_each_fx_wallet_gets_a_movement_book`, `test_fx_staff_salary_is_not_labelled_as_lira`, `test_excel_workbook.py`.
+
 ## 2026-07-31 — Balances hub cards showed wrong totals
 
 **Symptom:** Balances sidebar overview cards did not match real cash / staff / partner detail — looked “disconnected.”

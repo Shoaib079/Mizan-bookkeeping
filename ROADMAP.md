@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none) |
 | **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI |
-| **Last completed slice** | **Balances hub totals fix (2026-07-31)** — Cash & bank from account tree (no credit cards); Staff TRY-only total + FX note; Partner hint accurate. Vitest + tsc green. |
-| **Last commit/tag**      | `v0.balances-hub-totals` — Balances overview card totals |
+| **Last completed slice** | **Reports FX + Excel polish; Balances FX/staff hub; Sales Close day removed (2026-07-31)** — native FX on Reports/pack; Cash & bank excludes FX; staff hub shows TRY+FX owed; Close day only under Add. |
+| **Last commit/tag**      | `v0.reports-fx-balances` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 

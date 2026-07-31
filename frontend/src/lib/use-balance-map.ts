@@ -54,7 +54,8 @@ type PayablesResponse = {
 };
 
 export function useSupplierBalances(entityId: string) {
-  return useBalanceMap(entityId, "payables", "/payables?limit=500", (res) => {
+  // API max list limit is 200 — higher values 422 and the hub shows ₺0.
+  return useBalanceMap(entityId, "payables", "/payables?limit=200", (res) => {
     const data = res as PayablesResponse;
     return {
       rows: data.suppliers.map((s) => ({
@@ -72,7 +73,7 @@ type ReceivablesResponse = {
 };
 
 export function useCustomerBalances(entityId: string) {
-  return useBalanceMap(entityId, "receivables", "/receivables?limit=500", (res) => {
+  return useBalanceMap(entityId, "receivables", "/receivables?limit=200", (res) => {
     const data = res as ReceivablesResponse;
     return {
       rows: data.customers.map((c) => ({

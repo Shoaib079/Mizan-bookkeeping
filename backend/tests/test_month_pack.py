@@ -19,10 +19,14 @@ from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
+from app.core.excel.workbook import money_header
+from app.core.fx import posting as fx_posting
 from app.core.ledger.models import JournalEntrySource
 from app.core.ledger.posting import PostingLine, post_journal_entry
 from app.core.period_locks.models import PeriodLockKind
 from app.core.period_locks.service import close_period
+from app.core.staff import posting as staff_posting
+from app.core.staff.types import PayCurrency
 from app.db.session import entity_context
 from app.features.auth import service as auth_service
 from app.features.auth.schema import MembershipCreate, UserCreate
@@ -30,6 +34,7 @@ from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
 from app.features.reports import month_pack
+from app.features.staff.models import Employee
 
 CASH_CODE = "1000"
 JUNE_START = date(2026, 6, 1)
@@ -233,6 +238,117 @@ def test_the_summary_counts_forex_in_what_you_hold(db_session, books):
         for r in range(1, summary.max_row + 1)
     ]
     assert any("Foreign currency" in label for label in labels)
+
+
+def _buy_usd(db_session, books, *, native: int, try_cost: int, on: date):
+    wallet = banking_service.create_money_account(
+        db_session,
+        books["entity_id"],
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.FOREIGN_CURRENCY,
+            currency="USD",
+            name="USD Wallet",
+        ),
+    )
+    drawers = banking_service.list_money_accounts(
+        db_session,
+        books["entity_id"],
+        account_kind=MoneyAccountKind.CASH,
+    )[0]
+    drawer = drawers[0]
+    fx_posting.post_fx_purchase(
+        db_session,
+        books["entity_id"],
+        fx_money_account_id=wallet.id,
+        try_cash_money_account_id=drawer.id,
+        native_quantity=native,
+        try_cost_kurus=try_cost,
+        purchase_date=on,
+        description="Buy USD for pack",
+        actor_id=books["owner_id"],
+    )
+    return wallet
+
+
+def test_foreign_currency_sheet_shows_native_quantity_and_try_cost(db_session, books):
+    """Partners need the real USD/EUR held — not only a lira book-cost line."""
+    _buy_usd(db_session, books, native=10_000, try_cost=350_000, on=date(2026, 6, 5))
+    wb, _ = _pack(db_session, books)
+
+    fx = wb["Foreign currency"]
+    natives = [
+        fx.cell(row=r, column=3).value for r in range(1, fx.max_row + 1)
+    ]
+    try_costs = [
+        fx.cell(row=r, column=4).value for r in range(1, fx.max_row + 1)
+    ]
+    assert 100.0 in natives  # $100.00, not 10000 kuruş-style cents left raw
+    assert 3500.0 in try_costs  # ₺3.500,00 book cost
+
+
+def test_each_fx_wallet_gets_a_movement_book(db_session, books):
+    wallet = _buy_usd(
+        db_session, books, native=10_000, try_cost=350_000, on=date(2026, 6, 5)
+    )
+    wb, _ = _pack(db_session, books)
+
+    sheet_name = next(n for n in wb.sheetnames if n.startswith("FX — "))
+    assert wallet.name.split()[0] in sheet_name or "USD" in sheet_name
+
+    book = wb[sheet_name]
+    types = [
+        str(book.cell(row=r, column=2).value)
+        for r in range(1, book.max_row + 1)
+    ]
+    assert any("purchase" in t for t in types)
+    natives = [
+        book.cell(row=r, column=4).value for r in range(1, book.max_row + 1)
+    ]
+    assert 100.0 in natives
+
+
+def test_fx_staff_salary_is_not_labelled_as_lira(db_session, books):
+    """FX amount_minor is foreign cents — writing it under Amount (₺) lied."""
+    _buy_usd(db_session, books, native=200_000, try_cost=7_000_000, on=date(2026, 6, 1))
+    with entity_context(db_session, books["entity_id"]):
+        employee = Employee(name="FX Cook", pay_currency=PayCurrency.USD)
+        db_session.add(employee)
+        db_session.commit()
+        db_session.refresh(employee)
+        employee_id = employee.id
+
+    staff_posting.post_salary_accrual(
+        db_session,
+        books["entity_id"],
+        employee_id,
+        accrual_date=date(2026, 6, 10),
+        amount_minor=100_000,
+        description="USD salary",
+        actor_id=books["owner_id"],
+        period_year=2026,
+        period_month=6,
+    )
+
+    wb, _ = _pack(db_session, books)
+    salaries = wb["Salaries"]
+    headers = [
+        salaries.cell(row=5, column=c).value for c in range(1, 8)
+    ]
+    assert headers[4] == "Currency"
+    assert headers[5] == "Amount"
+    assert headers[5] != money_header()
+    assert headers[6] == money_header("TRY cost")
+
+    currencies = [
+        salaries.cell(row=r, column=5).value
+        for r in range(6, salaries.max_row + 1)
+    ]
+    amounts = [
+        salaries.cell(row=r, column=6).value
+        for r in range(6, salaries.max_row + 1)
+    ]
+    assert "USD" in currencies
+    assert 1000.0 in amounts  # $1,000.00 — must not appear as ₺1.000,00 under a ₺ header
 
 
 def test_an_unknown_entity_is_a_lookup_error(db_session):

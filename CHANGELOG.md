@@ -4,6 +4,18 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-31
 
+**Close day removed from Sales.** It only lives under **Add** (count the drawer). The old Sales tab / day-closeout page redirects to Add.
+
+**Balances: FX is separate; staff card shows what you owe again.**
+- Cash & bank is TRY drawers and banks only — foreign currency is its own card with real USD/EUR/GBP amounts (not converted into that cash total).
+- Staff card was empty because (1) `limit=500` is rejected by the API (max 200), and (2) it only summed TRY wages, so FX-paid staff looked like ₺0. It now lists TRY and native FX amounts owed.
+
+
+**Reports and Download all now show the forex you actually hold.**
+- Reports summary lists each FX wallet with the native amount (and book cost in ₺).
+- Download all: clearer **Foreign currency** holdings sheet, plus an **FX movement book** per wallet (buys/converts/spends). Salaries no longer label FX cents as lira.
+- Excel workbooks get a cleaner professional look — title, header band, freeze panes, filters — shared by the month pack and standalone exports.
+
 **Balances hub totals were wrong:** Cash & bank now uses the banking account tree and excludes credit-card debt; Staff shows a TRY-only total (FX employees called out in the hint); Partner hint no longer pretends the figure includes capital. Cards still open the directories for detail.
 
 **Staff pay is simpler: Net to pay, advance shown, one click settles.**

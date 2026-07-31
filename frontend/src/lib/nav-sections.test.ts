@@ -67,7 +67,6 @@ function entryPointForStaticRoute(
 /** Tab routes that must not also appear as their own sidebar row. */
 const TAB_ONLY_HREFS = [
   "/cards",
-  "/close-day",
   "/payables",
   "/receivables",
   "/review/bank",

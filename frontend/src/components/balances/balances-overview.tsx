@@ -11,6 +11,7 @@ import { apiFetch } from "@/lib/api";
 import {
   ArrowRight,
   Banknote,
+  Coins,
   HandCoins,
   Receipt,
   Users,
@@ -18,7 +19,10 @@ import {
 } from "lucide-react";
 
 import type { MoneyAccountTree } from "@/lib/banking-types";
-import { cashAndBankHeldKurus } from "@/lib/banking-tree-helpers";
+import {
+  cashAndBankHeldKurus,
+  fxHoldingsNativeSummary,
+} from "@/lib/banking-tree-helpers";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import {
@@ -64,7 +68,13 @@ function BalanceCard({
         <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
       </div>
       {amount !== undefined && (
-        <div className={cn("mb-1 text-2xl font-semibold tabular-nums", amountClass)}>
+        <div
+          className={cn(
+            "mb-1 text-2xl font-semibold tabular-nums",
+            amount.length > 18 && "text-lg",
+            amountClass,
+          )}
+        >
           {loading ? "…" : amount}
         </div>
       )}
@@ -73,13 +83,20 @@ function BalanceCard({
   );
 }
 
-function staffHint(totalKurus: number, count: number, fxCount: number): string {
+function staffHint(
+  netSign: number,
+  count: number,
+  fxCount: number,
+  loadFailed: boolean,
+): string {
   const people = subledgerCountLabel(count, "employee");
+  if (count === 0) return "No employees yet";
+  if (loadFailed) return `Could not load balances — ${people}`;
   const fxNote =
     fxCount > 0
-      ? ` · TRY staff only — ${subledgerCountLabel(fxCount, "FX employee")} on Staff`
+      ? ` · includes ${subledgerCountLabel(fxCount, "FX employee")} in their currency`
       : "";
-  if (totalKurus < 0) {
+  if (netSign < 0) {
     return `Staff hold this much of your money — ${people}${fxNote}`;
   }
   return `Owed to employees — ${people}${fxNote}`;
@@ -92,13 +109,15 @@ export function BalancesOverview() {
   const staff = useStaffBalanceTotal(entityId);
   const partners = usePartnerBalanceTotal(entityId);
 
-  // Money actually held (banks + cash + FX at TRY cost) — never credit cards.
+  // Cash & bank = TRY drawers + bank accounts only. FX is a separate card.
   const [cashAndBankKurus, setCashAndBankKurus] = useState(0);
+  const [fxNativeSummary, setFxNativeSummary] = useState("No holdings");
   const [moneyLoading, setMoneyLoading] = useState(false);
 
   useEffect(() => {
     if (!entityId) {
       setCashAndBankKurus(0);
+      setFxNativeSummary("No holdings");
       return;
     }
     let cancelled = false;
@@ -109,9 +128,13 @@ export function BalancesOverview() {
       .then((tree) => {
         if (cancelled) return;
         setCashAndBankKurus(cashAndBankHeldKurus(tree));
+        setFxNativeSummary(fxHoldingsNativeSummary(tree));
       })
       .catch(() => {
-        if (!cancelled) setCashAndBankKurus(0);
+        if (!cancelled) {
+          setCashAndBankKurus(0);
+          setFxNativeSummary("No holdings");
+        }
       })
       .finally(() => {
         if (!cancelled) setMoneyLoading(false);
@@ -132,7 +155,8 @@ export function BalancesOverview() {
   return (
     <>
       <p className="mb-4 text-sm text-muted-foreground">
-        Grand totals and cash position. Open any card for the per-entity detail.
+        Grand totals and cash position. Foreign currency is listed on its own —
+        not mixed into cash & bank. Open any card for detail.
       </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <BalanceCard
@@ -156,23 +180,34 @@ export function BalancesOverview() {
         <BalanceCard
           href="/banking"
           title="Cash & bank"
-          hint="Money you hold (banks, cash, FX) — cards are under Banking"
+          hint="TRY cash drawers and bank accounts only — cards under Banking"
           icon={Wallet}
           amount={formatTry(cashAndBankKurus)}
           loading={moneyLoading}
         />
         <BalanceCard
+          href="/banking/fx"
+          title="Foreign currency"
+          hint="Held as FX (not converted to ₺ here) — open Banking → FX"
+          icon={Coins}
+          amount={fxNativeSummary}
+          loading={moneyLoading}
+        />
+        <BalanceCard
           href="/staff"
           title="Staff balances"
-          hint={staffHint(staff.totalKurus, staff.count, staff.fxCount)}
+          hint={staffHint(
+            staff.netSign,
+            staff.count,
+            staff.fxCount,
+            staff.loadFailed,
+          )}
           icon={Users}
-          amount={formatTry(staff.totalKurus)}
-          // Owed to staff is money out of the business; a negative total means
-          // they are holding advances, which is the other way round.
+          amount={staff.amountLabel}
           amountClass={
-            staff.totalKurus > 0
+            staff.netSign > 0
               ? "text-destructive"
-              : staff.totalKurus < 0
+              : staff.netSign < 0
                 ? "text-success"
                 : undefined
           }

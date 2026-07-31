@@ -71,7 +71,7 @@ export const appRoutes: AppRoute[] = [
   {
     href: "/sales",
     label: "Sales",
-    keywords: "daily sales pos summaries card clearing close day",
+    keywords: "daily sales pos summaries card clearing",
     icon: ShoppingBag,
     group: "Money in",
   },
@@ -116,13 +116,6 @@ export const appRoutes: AppRoute[] = [
     keywords: "bank accounts cash drawer transfers statements",
     icon: Building2,
     group: "Money held",
-  },
-  {
-    href: "/close-day",
-    label: "Close day",
-    keywords: "day close-out sales expenses",
-    icon: ShoppingBag,
-    group: "Sales",
   },
   { href: "/cards", label: "Card clearing", icon: CreditCard, group: "Sales" },
   {

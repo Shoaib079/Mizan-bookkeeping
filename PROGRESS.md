@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Balances hub totals fix — 2026-07-31 |
-| **Last tag** | `v0.balances-hub-totals` |
+| **Last completed slice** | Reports FX + Excel polish; Balances FX/staff hub; Sales Close day removed — 2026-07-31 |
+| **Last tag** | `v0.reports-fx-balances` |
 | **Unpushed** | (cleared on push) |
 | **Next up** | **GS-FX** · P5 — Delete company UI |
 

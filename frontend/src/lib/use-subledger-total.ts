@@ -15,16 +15,20 @@
  * The N+1 is affordable here: a restaurant has a handful of staff and two or
  * three partners, and the directories already fan out exactly these calls.
  *
- * Staff totals are TRY-only — FX `balance_minor` is in foreign cents and must
- * not be mixed into a ₺ figure (Balances hub fix 2026-07-31).
+ * Staff: TRY and FX are both shown — FX as native currency, never converted
+ * into the cash ₺ total (2026-07-31).
  */
 
 import { useMemo } from "react";
 
+import { formatFxNative } from "@/lib/fx-money";
+import { formatTry } from "@/lib/money";
 import {
+  formatStaffHubAmount,
   fxStaffCount,
+  staffHubNetSign,
+  sumFxStaffBalancesByCurrency,
   sumTryStaffBalances,
-  tryStaffIds,
   type StaffPayCurrencyRow,
 } from "@/lib/staff-balance-total";
 import { sumBalances } from "@/lib/subledger-total";
@@ -41,43 +45,81 @@ export type SubledgerTotal = {
 };
 
 export type StaffSubledgerTotal = SubledgerTotal & {
-  /** FX-paid employees excluded from totalKurus (see directory for their balances). */
+  /** FX-paid employees (balances shown in native currency on amountLabel). */
   fxCount: number;
+  /** Display string: TRY and/or native FX amounts. */
+  amountLabel: string;
+  /** Sign for colouring — positive = owed to staff. */
+  netSign: number;
+  /** True when employees exist but every ledger fetch failed. */
+  loadFailed: boolean;
 };
 
-/** Net across TRY-paid employees: positive = owed to staff, negative = advances held. */
+function extractStaffBalanceMinor(res: unknown): number {
+  const raw = (res as { balance_minor?: unknown }).balance_minor;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) {
+    throw new Error("staff ledger missing balance_minor");
+  }
+  return n;
+}
+
+/** Net across employees: TRY in ₺, FX in native — never mixed into one ₺ figure. */
 export function useStaffBalanceTotal(entityId: string | null): StaffSubledgerTotal {
   // useEntityList wants a string; an empty id keeps it idle until one arrives.
   const { items, loading: listLoading } = useEntityList<StaffPayCurrencyRow>(
     // Inactive employees can still carry a balance — leaving them out would
     // understate what's owed.
-    "/staff/employees?include_inactive=true&limit=500",
+    // API max list limit is 200 (MAX_LIST_LIMIT); 500 returned 422 and the
+    // card showed "0 employees" with a fake ₺0 total.
+    "/staff/employees?include_inactive=true&limit=200",
     entityId ?? "",
   );
-  const tryIds = useMemo(() => tryStaffIds(items), [items]);
+  // Fetch every employee's ledger (TRY and FX) — filtering to TRY-only hid FX
+  // wages and looked like ₺0 when the restaurant pays staff in forex.
+  const ids = useMemo(() => items.map((row) => row.id), [items]);
   const { balances, loading: balancesLoading } = useLedgerBalanceMap(
     entityId,
-    tryIds,
+    ids,
     (id) => `/staff/employees/${id}/ledger`,
-    (res) => (res as { balance_minor: number }).balance_minor,
+    extractStaffBalanceMinor,
   );
 
   const totalKurus = useMemo(
     () => sumTryStaffBalances(items, balances),
     [items, balances],
   );
+  const fxByCurrency = useMemo(
+    () => sumFxStaffBalancesByCurrency(items, balances),
+    [items, balances],
+  );
+  const amountLabel = useMemo(
+    () =>
+      formatStaffHubAmount(totalKurus, fxByCurrency, formatTry, formatFxNative),
+    [totalKurus, fxByCurrency],
+  );
+  const netSign = useMemo(
+    () => staffHubNetSign(totalKurus, fxByCurrency),
+    [totalKurus, fxByCurrency],
+  );
+  const loading = listLoading || balancesLoading;
+  const loadFailed =
+    !loading && items.length > 0 && balances.size === 0;
 
   return {
     totalKurus,
+    amountLabel: loadFailed ? "—" : amountLabel,
+    netSign,
     count: items.length,
     fxCount: fxStaffCount(items),
-    loading: listLoading || balancesLoading,
+    loading,
+    loadFailed,
   };
 }
 
 export function usePartnerBalanceTotal(entityId: string | null): SubledgerTotal {
   const { items, loading: listLoading } = useEntityList<Row>(
-    "/partners?limit=500",
+    "/partners?limit=200",
     entityId ?? "",
   );
   const ids = useMemo(() => items.map((row) => row.id), [items]);
@@ -85,7 +127,12 @@ export function usePartnerBalanceTotal(entityId: string | null): SubledgerTotal 
     entityId,
     ids,
     (id) => `/partners/${id}/ledger`,
-    (res) => (res as { balance_kurus: number }).balance_kurus,
+    (res) => {
+      const raw = (res as { balance_kurus?: unknown }).balance_kurus;
+      const n = typeof raw === "number" ? raw : Number(raw);
+      if (!Number.isFinite(n)) throw new Error("partner ledger missing balance_kurus");
+      return n;
+    },
   );
 
   const totalKurus = useMemo(() => sumBalances(balances), [balances]);

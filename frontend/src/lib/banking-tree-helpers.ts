@@ -51,16 +51,19 @@ export function formatTryTileBalance(kurus: number): string {
   return formatTry(kurus);
 }
 
-/** TRY cash position for the Balances hub — banks + cash + FX wallets at TRY cost.
- * Credit-card balances are liabilities (what you owe), so they must not be added in. */
+/** TRY cash + bank only for the Balances hub.
+ *
+ * FX wallets are separate holdings (savings-style) — never rolled into this
+ * figure and never converted into a fake ₺ “cash” total. Credit cards are
+ * liabilities, so they stay out too.
+ */
 export function cashAndBankHeldKurus(tree: MoneyAccountTree): number {
-  return (
-    tree.banks.balance_kurus +
-    tree.cash.balance_kurus +
-    tree.foreign_currency.usd.balance_kurus +
-    tree.foreign_currency.eur.balance_kurus +
-    tree.foreign_currency.gbp.balance_kurus
-  );
+  return tree.banks.balance_kurus + tree.cash.balance_kurus;
+}
+
+/** Native FX lines for a separate Balances card — not TRY-converted. */
+export function fxHoldingsNativeSummary(tree: MoneyAccountTree): string {
+  return formatFxTileSummary(allFxAccounts(tree));
 }
 
 export function mergeFxLedgerEntries(

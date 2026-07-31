@@ -92,7 +92,6 @@ describe("navGroups", () => {
       "/balances",
       "/review",
       "/sales",
-      "/close-day",
       "/cards",
       "/delivery",
       "/delivery/platforms",
@@ -280,7 +279,7 @@ describe("intent sidebar highlighting", () => {
     expect(sales).toBeDefined();
     expect(isNavItemActive("/sales", sales!)).toBe(true);
     expect(isNavItemActive("/cards", sales!)).toBe(true);
-    expect(isNavItemActive("/close-day", sales!)).toBe(true);
+    expect(isNavItemActive("/close-day", sales!)).toBe(false);
 
     const record = navGroups
       .find((group) => group.label === "Overview")

@@ -59,11 +59,7 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Card clearing",
         match: (path) => path === "/cards" || path.startsWith("/cards/"),
       },
-      {
-        href: "/close-day",
-        label: "Close day",
-        match: (path) => path === "/close-day",
-      },
+      // Close day lives in Add only (drawer count) — Sales tab removed 2026-07-31.
     ],
   },
   {
@@ -327,7 +323,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/sales", kind: "tab" },
   { pattern: "/sales/[id]", kind: "drill-down" },
   { pattern: "/cards", kind: "tab" },
-  { pattern: "/close-day", kind: "tab" },
+  { pattern: "/close-day", kind: "redirect" },
   { pattern: "/delivery", kind: "sidebar" },
   { pattern: "/delivery/platforms", kind: "tab" },
   { pattern: "/delivery/reports", kind: "tab" },

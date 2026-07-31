@@ -6,10 +6,15 @@ from app.core.excel.workbook import (
     autosize_columns,
     bold_row,
     create_workbook,
+    finish_data_table,
     money_header,
+    quantity_header,
     save_workbook_to_bytes,
+    unique_sheet_title,
+    write_header_row,
     write_money,
     write_quantity,
+    write_sheet_title,
 )
 
 __all__ = [
@@ -18,8 +23,13 @@ __all__ = [
     "autosize_columns",
     "bold_row",
     "create_workbook",
+    "finish_data_table",
     "money_header",
+    "quantity_header",
     "save_workbook_to_bytes",
+    "unique_sheet_title",
+    "write_header_row",
     "write_money",
     "write_quantity",
+    "write_sheet_title",
 ]
