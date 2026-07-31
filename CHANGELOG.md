@@ -2,6 +2,12 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-07-31
+
+**Fixed: saving a bank statement closing balance (and month/year close) failed with Idempotency-Key required.**
+- Reports → Bank reconciliation, Month close, and Year-end close were posting without the header the API requires on every write.
+- They now use the same stable per-submit key pattern as the other money forms, so Save / Close works and a double-click still posts once.
+
 ## 2026-07-29
 
 **Every download is now in lira, not kuruş.**

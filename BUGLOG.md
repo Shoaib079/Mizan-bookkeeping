@@ -2,6 +2,19 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-07-31 — Reports writes missing Idempotency-Key
+
+**Symptom:** Bank reconciliation → enter closing balance → Save failed with `Idempotency-Key header required`. Same class of failure on Month close / reopen and Year-end close.
+
+**Root cause:** `IdempotencyMiddleware` requires the header on every mutation when `idempotency_enforcement` is on. `apiFetch` only attaches it when the caller passes `idempotencyKey`. These Reports UI paths shipped without `useSubmitIdempotency` (unlike the money forms that already do).
+
+**Fix:** wire `useSubmitIdempotency` — `beginSubmit()` → pass `idempotencyKey` → `completeSubmit()` on success — on:
+- `PATCH …/statements/{id}/closing-balance` (bank reconciliation)
+- `POST …/period-locks/close` and `…/reopen` (month close)
+- `POST …/period-locks/year-end` (year-end close)
+
+**Guarding test:** `frontend/src/lib/reports-idempotency-guard.test.ts` — source asserts each path uses `beginSubmit` / `idempotencyKey` / `completeSubmit`.
+
 ## 2026-07-29 — Every Excel export was in kuruş
 
 **Symptom:** downloads showed `18462882` where the owner expected `184.628,82`. Owner: *"the downloaded excel shows amounts in kuruş that is hard to read or not possible to convert."* Not a display nit — a partner can't tick a figure off against a bank statement without dividing every cell by 100 by hand, which defeats the point of sending them the file.

@@ -41,6 +41,7 @@ import type {
   PeriodLockRead,
   ReadinessCheck,
 } from "@/lib/report-types";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { cn } from "@/lib/utils";
 
 function CheckRow({ check }: { check: ReadinessCheck }) {
@@ -92,6 +93,8 @@ function MonthCloseContent() {
   const { entityId } = useEntity();
   const { role } = useEntityAccess();
   const { toast } = useToast();
+  const closeIdempotency = useSubmitIdempotency();
+  const reopenIdempotency = useSubmitIdempotency();
   const isOwner = role === "owner";
 
   const months = useMemo(() => closableMonths(new Date()), []);
@@ -147,8 +150,10 @@ function MonthCloseContent() {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = closeIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/period-locks/close`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           lock_kind: "month",
@@ -156,6 +161,7 @@ function MonthCloseContent() {
           reason: note.trim() || null,
         }),
       });
+      closeIdempotency.completeSubmit();
       setNote("");
       toast(`${monthLabel(parsed.year, parsed.month)} closed`);
       await reload();
@@ -171,11 +177,14 @@ function MonthCloseContent() {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = reopenIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/period-locks/${lockId}/reopen`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: note.trim() || null }),
       });
+      reopenIdempotency.completeSubmit();
       setNote("");
       toast("Month reopened");
       await reload();

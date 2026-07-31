@@ -36,6 +36,7 @@ import type {
   BankReconciliationAccount,
   BankReconciliationRead,
 } from "@/lib/report-types";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { cn } from "@/lib/utils";
 
 function AccountCard({
@@ -47,6 +48,7 @@ function AccountCard({
   entityId: string;
   onSaved: () => void;
 }) {
+  const submitIdempotency = useSubmitIdempotency();
   const [balanceText, setBalanceText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,14 +66,17 @@ function AccountCard({
     setSaving(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(
         `/entities/${entityId}/banking/statements/${account.latest_statement_id}/closing-balance`,
         {
           method: "PATCH",
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ closing_balance_kurus: kurus }),
         },
       );
+      submitIdempotency.completeSubmit();
       setBalanceText("");
       onSaved();
     } catch (err) {

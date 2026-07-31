@@ -9,10 +9,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | (none — period close work complete and pytest-green) |
-| **Last completed slice** | Accounting-audit closeout: month close (readiness + snapshot), year-end close, cash-flow category override, late-night date hint (2026-07-27) |
-| **Last tag** | `v0.month-close-snapshot` |
-| **Unpushed** | 3 commits after `v0.month-close-snapshot` — `662de25`, `bf0071d`, `8c9fb41`. Push with `git push origin main --follow-tags` |
+| **Active slice** | (none) |
+| **Last completed slice** | Bug fix: Reports writes missing Idempotency-Key (bank recon closing balance, month close/reopen, year-end) — 2026-07-31 |
+| **Last tag** | `v0.reports-idempotency` |
+| **Unpushed** | (cleared on push) |
 | **Next up** | **GS-FX** — forex-only group sales (design locked 2026-07-13, NOT built; the biggest deferred item) · P5 — Delete company UI |
 
 ## FINANCIAL_AUDIT status (2026-07-27)

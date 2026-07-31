@@ -27,6 +27,7 @@ import { apiFetch } from "@/lib/api";
 import { formatTrDate, formatTry } from "@/lib/money";
 import type { YearEndPreviewRead } from "@/lib/report-types";
 import { closableYears, yearEndSummary } from "@/lib/month-close";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -36,6 +37,7 @@ type Props = {
 
 export function YearEndClose({ entityId, isOwner }: Props) {
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const years = useMemo(() => closableYears(new Date()), []);
   const [year, setYear] = useState(years[0] ?? new Date().getFullYear() - 1);
   const [preview, setPreview] = useState<YearEndPreviewRead | null>(null);
@@ -69,11 +71,14 @@ export function YearEndClose({ entityId, isOwner }: Props) {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/period-locks/year-end`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ year }),
       });
+      submitIdempotency.completeSubmit();
       toast(`${year} closed`);
       await reload();
     } catch (err) {
