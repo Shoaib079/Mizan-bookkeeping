@@ -4,27 +4,31 @@
 
 - Python 3.11+
 - Node.js 20+
-- Docker (for PostgreSQL)
+- **PostgreSQL** — prefer **Homebrew** on this Mac (`brew install postgresql@17` then `brew services start postgresql@17`). Docker Compose is optional and not required for day-to-day work or pytest.
 
 ## Quick start
 
 Run each block in its **own terminal**. Do not paste inline `# comments` on command lines — zsh may pass them as arguments.
 
-### Terminal 1 — database
+### Terminal 1 — database (Homebrew Postgres)
+
+Confirm it is up:
+
+```bash
+pg_isready -h localhost
+psql -h localhost -d postgres -c '\du'
+```
+
+You want a superuser you can connect as (often your macOS username, e.g. `shoaib`, and/or role `mizan`). No Docker needed if port 5432 answers.
+
+**Optional Docker** (only if you are not using brew Postgres):
 
 ```bash
 cd /Users/shoaib/Documents/NEW_APP_PLAN
 docker compose up -d
 ```
 
-If you see **port 5432 already allocated**, another Postgres container is running (often `erp-pytest-pg`). Either stop it:
-
-```bash
-docker stop erp-pytest-pg
-docker compose up -d
-```
-
-…or skip `mizan-db` if you already have `mizan` / `mizan_dev` on localhost:5432 from another dev database.
+If brew already owns 5432, do **not** start Docker Postgres — they conflict.
 
 ### Terminal 2 — backend
 
@@ -83,35 +87,66 @@ Leave `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` unset unless you have real Clerk keys.
 - **API:** http://localhost:8000 — docs at `/docs`
 - **App:** http://localhost:3000
 
-## Tests
+## Tests (local Homebrew Postgres — no Docker)
+
+Your machine already has **PostgreSQL 17 (Homebrew)** on `localhost:5432`. Agents should **not** start Docker for pytest on this Mac.
+
+### One-time / when roles are missing
 
 ```bash
-cd backend && .venv/bin/pytest -v
-cd frontend && npm run build
+# Superuser is usually your macOS user (peer/trust on localhost)
+psql -h localhost -d postgres -c '\du'
 ```
 
-**Run pytest through the venv, not the system Python.** `.venv/bin/pytest` (or `source .venv/bin/activate` first) — a bare `python3 -m pytest` picks up whatever interpreter is on `PATH`, which on macOS is the python.org or Homebrew one and has none of this project's packages. The symptom is a handful of unrelated-looking failures (`No module named 'xlrd'`, `sentry_sdk`) that read like a code regression. `tests/conftest.py` now checks the environment against `pyproject.toml` at session start and stops with an explanation rather than letting you debug the wrong thing.
-
-If that check fires after a successful-looking install, `pip` and `pytest` are different interpreters. `python3 -m pip install …` always installs into the interpreter you're running.
-
-**Fresh-install guard** (clean venv → editable install → boot → full pytest). Export `DATABASE_ADMIN_URL` before running verify/bootstrap scripts (e.g. `export DATABASE_ADMIN_URL='postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres'`).
+If role `mizan` is missing, create it (as your superuser):
 
 ```bash
+psql -h localhost -d postgres <<'SQL'
+CREATE ROLE mizan WITH LOGIN SUPERUSER PASSWORD 'mizan_dev';
+SQL
+```
+
+(`mizan_app` / `mizan_test` are created by the test bootstrap on first pytest.)
+
+### Backend pytest (copy-paste)
+
+```bash
+cd /Users/shoaib/Documents/NEW_APP_PLAN/backend
+source .venv/bin/activate
+
+# Admin URL = brew superuser that can CREATE ROLE / CREATE DATABASE.
+# Use your macOS user (no password) OR mizan:mizan_dev if that role exists:
+export DATABASE_ADMIN_URL='postgresql+psycopg://shoaib@localhost:5432/postgres'
+# export DATABASE_ADMIN_URL='postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres'
+
+# Always the venv binary — never bare `python3 -m pytest`
+.venv/bin/pytest -q
+```
+
+Focused (faster):
+
+```bash
+.venv/bin/pytest tests/test_staff.py tests/test_control_account_tie.py -q
+```
+
+### Frontend
+
+```bash
+cd /Users/shoaib/Documents/NEW_APP_PLAN/frontend
+npx vitest run
+npx tsc --noEmit
+```
+
+**Run pytest through the venv, not the system Python.** A bare `python3 -m pytest` on macOS often hits Homebrew/python.org and lacks project packages (`No module named 'xlrd'`, `sentry_sdk`). `tests/conftest.py` fails fast if the wrong interpreter is used.
+
+Tests use database **`mizan_test`**. Bootstrap creates it on first run when `DATABASE_ADMIN_URL` can create DBs.
+
+**Fresh-install guard** (optional; still needs `DATABASE_ADMIN_URL` set as above):
+
+```bash
+export DATABASE_ADMIN_URL='postgresql+psycopg://shoaib@localhost:5432/postgres'
 bash backend/scripts/verify_fresh_install.sh
 ```
-
-CI runs the same script on every push/PR (`.github/workflows/ci.yml`).
-
-Tests use `mizan_test` database. On first run, bootstrap creates the `mizan` role and databases.
-
-**With Docker Compose** (`POSTGRES_USER=mizan`), pass the admin URL so bootstrap can create DBs and apply `NOBYPASSRLS` on the app role (required for entity-isolation tests):
-
-```bash
-cd backend && source .venv/bin/activate
-DATABASE_ADMIN_URL='postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres' pytest -q
-```
-
-Without Docker, default `DATABASE_ADMIN_URL` is `postgres@localhost` (see `.env.example`).
 
 ## Migrations
 

@@ -13,7 +13,7 @@
 | **Last completed slice** | Staff net-pay UX + integrity — 2026-07-31 |
 | **Last tag** | `v0.staff-net-pay` |
 | **Unpushed** | (cleared on push) |
-| **Next up** | **GS-FX** · Staff opening balances (§19) · P5 |
+| **Next up** | **GS-FX** · P5 — Delete company UI |
 
 ## FINANCIAL_AUDIT status (2026-07-27)
 

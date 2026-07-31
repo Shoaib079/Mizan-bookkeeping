@@ -12,7 +12,11 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Corrections:** TRY accrual / advance / extra days / simple payment → Edit or Void. Payment that also applied an advance → Void then re-pay (no half-edit). Advance return → Void. FX staff rows → Void (no fake Edit until FX correction fields exist).
 
-**Out of scope here:** staff opening balances (Decisions §19) — separate onboarding slice.
+**Out of scope here:** staff opening balances — **won't build** (owner 2026-07-31: not wanted). Opening balances for suppliers/partners/customers/banks/cash/FX remain; staff start at zero and accrue/pay from go-live.
+
+## 2026-07-31 — No staff opening balances (owner)
+
+**Status:** ⛔ **WON'T BUILD.** Owner: do not add per-employee opening balances. Staff ledgers start empty; day-one salary/advances are recorded as normal movements after go-live. Do not put this on the roadmap as next work. Product Decisions §19 still lists “staff balances” historically — this entry overrides for implementation.
 
 ## 2026-07-27 — No fixed assets or depreciation (deliberate, NOT a gap to fix)
 
