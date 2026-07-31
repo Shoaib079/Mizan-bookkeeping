@@ -1,5 +1,5 @@
-import { PayablesTable } from "@/components/balances/payables-table";
+import { redirect } from "next/navigation";
 
-export default function BalancesSuppliersPage() {
-  return <PayablesTable />;
+export default function BalancesSuppliersRedirect() {
+  redirect("/suppliers");
 }

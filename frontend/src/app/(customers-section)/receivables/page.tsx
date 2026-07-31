@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Legacy URL — UX2 redirect to Balances hub. */
-export default function ReceivablesRedirectPage() {
-  redirect("/balances/customers");
+/** Legacy URL — receivables live on the Customers directory. */
+export default function ReceivablesRedirect() {
+  redirect("/customers");
 }

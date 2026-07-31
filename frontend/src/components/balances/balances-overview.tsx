@@ -1,8 +1,7 @@
 "use client";
 
-/** Balances overview (audit M4) — the single Balances door. Directories carry
- * the per-entity detail; this hub shows the grand totals and cash position and
- * links straight to the directory that owns each number. */
+/** Dashboard snapshot cards — payables, receivables, cash, FX, staff, partners.
+ * Embedded on the home dashboard; cards link to the owning directory. */
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -102,7 +101,12 @@ function staffHint(
   return `Owed to employees — ${people}${fxNote}`;
 }
 
-export function BalancesOverview() {
+type Props = {
+  /** When embedded on the dashboard, omit the page intro (section heading lives above). */
+  embedded?: boolean;
+};
+
+export function BalancesOverview({ embedded = false }: Props) {
   const { entityId } = useEntity();
   const payables = useSupplierBalances(entityId ?? "");
   const receivables = useCustomerBalances(entityId ?? "");
@@ -154,10 +158,12 @@ export function BalancesOverview() {
 
   return (
     <>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Grand totals and cash position. Foreign currency is listed on its own —
-        not mixed into cash & bank. Open any card for detail.
-      </p>
+      {!embedded && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Grand totals and cash position. Foreign currency is listed on its own —
+          not mixed into cash & bank. Open any card for detail.
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <BalanceCard
           href="/suppliers"

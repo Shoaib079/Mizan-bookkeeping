@@ -232,8 +232,7 @@ export function PeopleRecordDialog({
 
       {entityId && !loading && !loadError && items.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No {kindLabel(kind)} found — add one from Balances or the directory
-          first.
+          No {kindLabel(kind)} found — add one from the directory first.
         </p>
       )}
 

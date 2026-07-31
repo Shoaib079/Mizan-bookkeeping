@@ -3,8 +3,10 @@
 /** Dashboard — live KPIs from GET .../dashboard (Phase 9 Slice 8). */
 
 import Link from "next/link";
-import { ArrowRightLeft, ShoppingBag, TrendingUp, Wallet } from "lucide-react";
+import { ShoppingBag, TrendingUp, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+
+import { BalancesOverview } from "@/components/balances/balances-overview";
 
 import { useQuickActions } from "@/components/quick-actions";
 import {
@@ -20,7 +22,6 @@ import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
 import { shouldShowWriteChrome } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
-import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead, TimeSeriesRead } from "@/lib/report-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
@@ -187,111 +188,38 @@ function DashboardBody() {
       {data && (
         <>
           {canReadFinancialReports ? (
-            <div className="grid gap-4 lg:grid-cols-3">
-              {/* This period — profit is the headline */}
-              <Link
-                href="/reports"
-                className="block rounded-xl border border-border bg-card p-5 transition-colors hover:bg-muted/40"
+            <Link
+              href="/reports"
+              className="block rounded-xl border border-border bg-card p-5 transition-colors hover:bg-muted/40"
+            >
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <TrendingUp className="size-4" /> This period
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">Net result</p>
+              <p
+                className={`mt-0.5 text-2xl font-semibold tabular-nums ${
+                  data.net_result_kurus >= 0
+                    ? "text-success"
+                    : "text-destructive"
+                }`}
               >
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TrendingUp className="size-4" /> This period
+                {formatTry(data.net_result_kurus)}
+              </p>
+              <div className="mt-3 border-t border-border pt-3 text-sm">
+                <div className="flex justify-between py-0.5">
+                  <span className="text-muted-foreground">Sales</span>
+                  <span className="tabular-nums">
+                    {formatTry(data.sales.total_sales_kurus)}
+                  </span>
                 </div>
-                <p className="mt-3 text-xs text-muted-foreground">Net result</p>
-                <p
-                  className={`mt-0.5 text-2xl font-semibold tabular-nums ${
-                    data.net_result_kurus >= 0
-                      ? "text-success"
-                      : "text-destructive"
-                  }`}
-                >
-                  {formatTry(data.net_result_kurus)}
-                </p>
-                <div className="mt-3 border-t border-border pt-3 text-sm">
-                  <div className="flex justify-between py-0.5">
-                    <span className="text-muted-foreground">Sales</span>
-                    <span className="tabular-nums">
-                      {formatTry(data.sales.total_sales_kurus)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-0.5">
-                    <span className="text-muted-foreground">Expenses</span>
-                    <span className="tabular-nums text-destructive">
-                      {formatTry(data.total_expenses_kurus)}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-
-              {/* Money on hand — liquidity in one place */}
-              <Link
-                href="/banking"
-                className="block rounded-xl border border-border bg-card p-5 transition-colors hover:bg-muted/40"
-              >
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Wallet className="size-4" /> Money on hand
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">Cash + bank</p>
-                <p className="mt-0.5 text-2xl font-semibold tabular-nums">
-                  {formatTry(data.cash_in_hand_kurus + data.bank_balance_kurus)}
-                </p>
-                <div className="mt-3 border-t border-border pt-3 text-sm">
-                  <div className="flex justify-between py-0.5">
-                    <span className="text-muted-foreground">Cash in hand</span>
-                    <span className="tabular-nums">
-                      {formatTry(data.cash_in_hand_kurus)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-0.5">
-                    <span className="text-muted-foreground">Bank</span>
-                    <span className="tabular-nums">
-                      {formatTry(data.bank_balance_kurus)}
-                    </span>
-                  </div>
-                  {data.fx_balances.length > 0 && (
-                    <div className="flex justify-between gap-2 py-0.5 text-muted-foreground">
-                      <span>FX wallets</span>
-                      <span className="truncate tabular-nums">
-                        {data.fx_balances
-                          .map((r) => formatFxNative(r.native_quantity, r.currency))
-                          .join(" · ")}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </Link>
-
-              {/* Owed — in vs out at a glance */}
-              <div className="rounded-xl border border-border bg-card p-5">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <ArrowRightLeft className="size-4" /> Owed
-                </div>
-                <div className="mt-3 flex items-stretch gap-2">
-                  <Link
-                    href="/receivables"
-                    className="flex-1 rounded-lg p-2 transition-colors hover:bg-muted/40"
-                  >
-                    <p className="text-xs text-muted-foreground">They owe you</p>
-                    <p className="whitespace-nowrap text-lg font-semibold tabular-nums text-success">
-                      {formatTry(data.total_receivables_kurus)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      Receivables
-                    </p>
-                  </Link>
-                  <div className="w-px self-stretch bg-border" />
-                  <Link
-                    href="/suppliers"
-                    className="flex-1 rounded-lg p-2 transition-colors hover:bg-muted/40"
-                  >
-                    <p className="text-xs text-muted-foreground">You owe</p>
-                    <p className="whitespace-nowrap text-lg font-semibold tabular-nums text-destructive">
-                      {formatTry(Math.abs(data.total_payables_kurus))}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Payables</p>
-                  </Link>
+                <div className="flex justify-between py-0.5">
+                  <span className="text-muted-foreground">Expenses</span>
+                  <span className="tabular-nums text-destructive">
+                    {formatTry(data.total_expenses_kurus)}
+                  </span>
                 </div>
               </div>
-            </div>
+            </Link>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-border bg-card p-5">
@@ -307,6 +235,16 @@ function DashboardBody() {
                 </p>
               </div>
             </div>
+          )}
+
+          {canReadFinancialReports && entityId && (
+            <section className="mt-6">
+              <h2 className="mb-1 text-sm font-semibold">Right now</h2>
+              <p className="mb-4 text-sm text-muted-foreground">
+                What you owe, hold, and are owed today — open a card for detail.
+              </p>
+              <BalancesOverview embedded />
+            </section>
           )}
 
           {canReadFinancialReports && (

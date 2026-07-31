@@ -1,5 +1,6 @@
-import { BalancesOverview } from "@/components/balances/balances-overview";
+import { redirect } from "next/navigation";
 
-export default function BalancesIndexPage() {
-  return <BalancesOverview />;
+/** Legacy URL — balances overview lives on the dashboard. */
+export default function BalancesIndexRedirect() {
+  redirect("/");
 }

@@ -1,5 +1,5 @@
-import { PartnersBalancesTable } from "@/components/balances/partners-balances-table";
+import { redirect } from "next/navigation";
 
-export default function BalancesPartnersPage() {
-  return <PartnersBalancesTable />;
+export default function BalancesPartnersRedirect() {
+  redirect("/partners");
 }

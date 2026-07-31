@@ -46,7 +46,6 @@ describe("navGroups", () => {
       "/",
       "/record",
       "/review",
-      "/balances",
     ]);
   });
 
@@ -80,6 +79,7 @@ describe("navGroups", () => {
     expect(sidebarHrefs).toContain("/customers");
     expect(sidebarHrefs).toContain("/staff");
     expect(sidebarHrefs).toContain("/partners");
+    expect(sidebarHrefs).not.toContain("/balances");
     expect(sidebarHrefs).toContain("/banking");
     expect(sidebarHrefs).toContain("/delivery");
   });
@@ -89,7 +89,6 @@ describe("navGroups", () => {
     const expected = [
       "/",
       "/record",
-      "/balances",
       "/review",
       "/sales",
       "/cards",
@@ -100,11 +99,9 @@ describe("navGroups", () => {
       "/review/expenses",
       "/uploads",
       "/suppliers",
-      "/balances/suppliers",
       "/staff",
       "/partners",
       "/customers",
-      "/balances/customers",
       "/banking",
       "/banking/transfers",
       "/banking/cash",

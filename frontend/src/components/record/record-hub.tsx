@@ -49,7 +49,7 @@ export function RecordHub() {
   if (!shouldShowNewMenu(role)) {
     return (
       <p className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-        View only — you can review figures under Reports and Balances, but
+        View only — you can review figures under Reports and the dashboard, but
         recording is limited to users with operations access.
       </p>
     );

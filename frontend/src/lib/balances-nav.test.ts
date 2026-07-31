@@ -2,31 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import {
   LEGACY_BALANCE_REDIRECTS,
-  navSectionForPathname,
   sidebarHrefActiveForPathname,
 } from "@/lib/nav-sections";
 
-describe("balances hub navigation", () => {
-  it("maps legacy payables and receivables URLs to balances tabs", () => {
-    expect(LEGACY_BALANCE_REDIRECTS["/payables"]).toBe("/balances/suppliers");
-    expect(LEGACY_BALANCE_REDIRECTS["/receivables"]).toBe("/balances/customers");
+describe("balances on dashboard (legacy redirects)", () => {
+  it("redirects legacy payables, receivables, and balances URLs to directories or home", () => {
+    expect(LEGACY_BALANCE_REDIRECTS["/payables"]).toBe("/suppliers");
+    expect(LEGACY_BALANCE_REDIRECTS["/receivables"]).toBe("/customers");
+    expect(LEGACY_BALANCE_REDIRECTS["/balances"]).toBe("/");
+    expect(LEGACY_BALANCE_REDIRECTS["/balances/staff"]).toBe("/staff");
   });
 
-  it("highlights Balances sidebar on hub and tab routes", () => {
-    expect(sidebarHrefActiveForPathname("/balances", "/balances/suppliers")).toBe(
-      true,
-    );
-    expect(sidebarHrefActiveForPathname("/balances", "/balances/staff")).toBe(true);
-    expect(sidebarHrefActiveForPathname("/balances", "/payables")).toBe(true);
-  });
-
-  it("resolves the balances overview for legacy per-entity routes", () => {
-    // M4: the per-entity balances pages fold into the single Overview tab;
-    // directories (Suppliers/Customers/…) own the per-entity detail now.
-    const section = navSectionForPathname("/balances/customers");
-    expect(section?.id).toBe("balances");
-    expect(section?.tabs.find((tab) => tab.match("/balances/customers"))?.label).toBe(
-      "Overview",
-    );
+  it("highlights Suppliers and Customers for legacy balance URLs", () => {
+    expect(sidebarHrefActiveForPathname("/suppliers", "/payables")).toBe(true);
+    expect(sidebarHrefActiveForPathname("/customers", "/receivables")).toBe(true);
+    expect(sidebarHrefActiveForPathname("/", "/balances")).toBe(true);
   });
 });

@@ -1,5 +1,5 @@
-import { StaffBalancesTable } from "@/components/balances/staff-balances-table";
+import { redirect } from "next/navigation";
 
-export default function BalancesStaffPage() {
-  return <StaffBalancesTable />;
+export default function BalancesStaffRedirect() {
+  redirect("/staff");
 }

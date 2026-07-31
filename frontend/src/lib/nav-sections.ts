@@ -3,7 +3,6 @@
 import {
   LEGACY_UPLOADS_REDIRECT,
   LEGACY_UPLOADS_REDIRECTS,
-  pathnameMatchesBalancesIntent,
   pathnameMatchesRecordIntent,
 } from "@/lib/intent-nav";
 import { LEGACY_REVIEW_REDIRECTS } from "@/lib/review-routes";
@@ -33,7 +32,6 @@ export type NavSectionId =
   | "customers"
   | "staff"
   | "partners"
-  | "balances"
   | "review"
   | "delivery";
 
@@ -119,7 +117,10 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         href: "/suppliers",
         label: "Suppliers",
-        match: (path) => path === "/suppliers" || path.startsWith("/suppliers/"),
+        match: (path) =>
+          path === "/suppliers" ||
+          path.startsWith("/suppliers/") ||
+          path === "/payables",
       },
     ],
   },
@@ -132,6 +133,7 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Customers",
         match: (path) =>
           path === "/customers" ||
+          path === "/receivables" ||
           (/^\/customers\/[0-9a-f-]{36}$/i.test(path) &&
             !path.startsWith("/customers/group-")),
       },
@@ -166,28 +168,6 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/partners",
         label: "Partners",
         match: (path) => path === "/partners" || path.startsWith("/partners/"),
-      },
-    ],
-  },
-  {
-    id: "balances",
-    sidebarHref: "/balances",
-    tabs: [
-      {
-        href: "/balances",
-        label: "Overview",
-        // The overview is the single Balances door; per-entity detail lives in
-        // the directories (Suppliers/Customers/Staff/Partners). The legacy
-        // /balances/* pages stay reachable by URL but are no longer sidebar tabs.
-        match: (path) =>
-          path === "/balances" ||
-          path === "/balances/suppliers" ||
-          path === "/balances/customers" ||
-          path === "/balances/staff" ||
-          path === "/balances/partners" ||
-          path === "/payables" ||
-          path === "/receivables" ||
-          path === "/balances/cash",
       },
     ],
   },
@@ -246,11 +226,6 @@ export const SIDEBAR_HIDDEN_HREFS = new Set([
   "/cards",
   "/payables",
   "/receivables",
-  "/balances/suppliers",
-  "/balances/customers",
-  "/balances/staff",
-  "/balances/partners",
-  "/balances/cash",
   "/review/bank",
   "/review/sales",
   "/review/receipts",
@@ -294,11 +269,15 @@ export type RouteEntryKind =
   | "page";
 
 /** Static page routes — used by reachability guard test. */
-/** Old bookmark URLs that redirect into the Balances hub (UX2). */
+/** Old bookmark URLs — redirect to directories or dashboard. */
 export const LEGACY_BALANCE_REDIRECTS: Record<string, string> = {
-  "/payables": "/balances/suppliers",
-  "/receivables": "/balances/customers",
-  // Was a signpost page of links into Banking — go straight to the real thing.
+  "/payables": "/suppliers",
+  "/receivables": "/customers",
+  "/balances": "/",
+  "/balances/suppliers": "/suppliers",
+  "/balances/customers": "/customers",
+  "/balances/staff": "/staff",
+  "/balances/partners": "/partners",
   "/balances/cash": "/banking",
 };
 
@@ -314,11 +293,11 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/review/delivery", kind: "tab" },
   { pattern: "/review/posted", kind: "redirect" },
   { pattern: "/review/manual-journals", kind: "tab" },
-  { pattern: "/balances", kind: "tab" },
-  { pattern: "/balances/suppliers", kind: "page" },
-  { pattern: "/balances/customers", kind: "page" },
-  { pattern: "/balances/staff", kind: "page" },
-  { pattern: "/balances/partners", kind: "page" },
+  { pattern: "/balances", kind: "redirect" },
+  { pattern: "/balances/suppliers", kind: "redirect" },
+  { pattern: "/balances/customers", kind: "redirect" },
+  { pattern: "/balances/staff", kind: "redirect" },
+  { pattern: "/balances/partners", kind: "redirect" },
   { pattern: "/balances/cash", kind: "redirect" },
   { pattern: "/sales", kind: "tab" },
   { pattern: "/sales/[id]", kind: "drill-down" },
@@ -411,28 +390,22 @@ export function sidebarHrefActiveForPathname(
   const section = NAV_SECTIONS.find((entry) => entry.sidebarHref === sidebarHref);
   if (section) {
     if (pathname === section.sidebarHref) return true;
-    if (section.id === "balances") {
-      return (
-        section.tabs.some((tab) => tab.match(pathname)) ||
-        pathnameMatchesBalancesIntent(pathname)
-      );
-    }
     return section.tabs.some((tab) => tab.match(pathname));
   }
-  if (sidebarHref === "/") return pathname === "/";
-  if (sidebarHref === "/record") return pathnameMatchesRecordIntent(pathname);
-  if (sidebarHref === "/suppliers") {
-    return pathname === "/suppliers" || pathname.startsWith("/suppliers/");
+  if (sidebarHref === "/") {
+    return (
+      pathname === "/" ||
+      pathname === "/balances" ||
+      pathname.startsWith("/balances/")
+    );
   }
+  if (sidebarHref === "/record") return pathnameMatchesRecordIntent(pathname);
   if (sidebarHref === "/review") {
     return (
       pathname === "/review" ||
       pathname.startsWith("/review/") ||
       pathname === "/banking/review"
     );
-  }
-  if (sidebarHref === "/balances") {
-    return pathnameMatchesBalancesIntent(pathname);
   }
   if (sidebarHref === "/reports") {
     return pathname === "/reports" || pathname.startsWith("/reports/");
@@ -467,12 +440,6 @@ export function pageTitleForPathname(pathname: string): string {
     "/review/delivery": "Review",
     "/review/manual-journals": "Manual journals",
     "/reports/ledger": "General ledger",
-    "/balances": "Balances",
-    "/balances/suppliers": "Payables",
-    "/balances/customers": "Receivables",
-    "/balances/staff": "Staff balances",
-    "/balances/partners": "Partner balances",
-    "/balances/cash": "Balances",
     "/expenses": "Expenses",
     "/expenses/items": "Expense items",
     "/uploads": "Documents",

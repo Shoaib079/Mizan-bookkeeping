@@ -215,16 +215,6 @@ describe("tab + sidebar highlighting", () => {
     expect(section?.id).toBe("delivery");
   });
 
-  it("highlights Balances sidebar row on the hub and on tab pages", () => {
-    expect(sidebarHrefActiveForPathname("/balances", "/balances")).toBe(true);
-    expect(sidebarHrefActiveForPathname("/balances", "/balances/partners")).toBe(
-      true,
-    );
-
-    const section = navSectionForPathname("/balances/staff");
-    expect(section?.id).toBe("balances");
-  });
-
   it("highlights Review sidebar row on the hub and on tab pages", () => {
     expect(sidebarHrefActiveForPathname("/review", "/review")).toBe(true);
     expect(sidebarHrefActiveForPathname("/review", "/review/sales")).toBe(true);

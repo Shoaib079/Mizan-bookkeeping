@@ -1,5 +1,5 @@
-import { ReceivablesTable } from "@/components/balances/receivables-table";
+import { redirect } from "next/navigation";
 
-export default function BalancesCustomersPage() {
-  return <ReceivablesTable />;
+export default function BalancesCustomersRedirect() {
+  redirect("/customers");
 }

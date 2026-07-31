@@ -1,15 +1,9 @@
-"use client";
-
-import { SectionShell } from "@/components/layout/section-shell";
+/** Legacy /balances/* routes redirect — no section tabs. */
 
 export default function BalancesLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <SectionShell sectionId="balances" ariaLabel="Balances sections">
-      {children}
-    </SectionShell>
-  );
+  return children;
 }
