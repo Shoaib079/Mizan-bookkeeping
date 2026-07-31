@@ -31,6 +31,8 @@ export type DateInputProps = {
   className?: string;
   placeholder?: string;
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  /** Off for report filters where today's date is normal (avoids clutter/overlap). */
+  showLateNightHint?: boolean;
 };
 
 export function DateInput({
@@ -42,6 +44,7 @@ export function DateInput({
   className,
   placeholder = "DD.MM.YYYY",
   onKeyDown,
+  showLateNightHint = true,
 }: DateInputProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,8 +71,12 @@ export function DateInput({
   }, [value]);
 
   useEffect(() => {
+    if (!showLateNightHint) {
+      setLateNightHint(null);
+      return;
+    }
     setLateNightHint(lateNightDateHint(value));
-  }, [value]);
+  }, [value, showLateNightHint]);
 
   useEffect(() => {
     if (!open) return;

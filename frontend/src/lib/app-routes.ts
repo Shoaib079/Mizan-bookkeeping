@@ -46,8 +46,8 @@ export const appRoutes: AppRoute[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
   {
     href: "/record",
-    label: "Add",
-    keywords: "post new record expense sales payment upload",
+    label: "Record",
+    keywords: "post record expense sales payment upload daily",
     icon: ClipboardList,
     group: "Overview",
   },

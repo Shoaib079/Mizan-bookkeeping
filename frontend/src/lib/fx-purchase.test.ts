@@ -6,33 +6,31 @@ async function readSource(relativePath: string) {
   );
 }
 
-describe("FX purchase Add hub", () => {
-  it("registers buyFx in record actions and opens FxPurchaseQuickAction", async () => {
+describe("FX unified Add hub", () => {
+  it("registers fx in record actions and opens FxUnifiedDialog", async () => {
     const registry = await readSource("./record-actions.ts");
     const modals = await readSource("../components/record-action-modals.tsx");
-    expect(registry).toContain('"buyFx"');
-    expect(modals).toContain("FxPurchaseQuickAction");
+    expect(registry).toContain('"fx"');
+    expect(registry).toContain("Foreign exchange");
+    expect(modals).toContain("FxUnifiedDialog");
+    expect(modals).toContain('effectiveModal === "fx"');
+  });
+
+  it("combines buy, sell, and spend on one screen", async () => {
+    const unified = await readSource("../components/record/fx-unified-dialog.tsx");
+    expect(unified).toContain("loadAllForeignCurrencyAccounts");
+    expect(unified).toContain("FxPurchaseFormFields");
+    expect(unified).toContain("FxConversionForm");
+    expect(unified).toContain("FxExpenseSpendForm");
+    expect(unified).toContain('"buy"');
+    expect(unified).toContain('"convert"');
+    expect(unified).toContain('"spend"');
+    expect(unified).toContain("Sell");
+  });
+
+  it("keeps legacy buyFx key wired to the unified dialog", async () => {
+    const modals = await readSource("../components/record-action-modals.tsx");
     expect(modals).toContain('effectiveModal === "buyFx"');
-  });
-
-  it("lists Buy foreign currency in record actions (Add hub)", async () => {
-    const registry = await readSource("./record-actions.ts");
-    expect(registry).toContain('"buyFx"');
-    expect(registry).toContain("Buy foreign currency");
-    expect(registry).toContain('"cashFx"');
-  });
-
-  it("shows currency toggles and form on one screen", async () => {
-    const quickAction = await readSource(
-      "../components/forms/fx-purchase-quick-action.tsx",
-    );
-    expect(quickAction).toContain("loadAllForeignCurrencyAccounts");
-    expect(quickAction).toContain("FxPurchaseFormFields");
-    expect(quickAction).toContain("fxWalletToggleLabel");
-    expect(quickAction).toContain("aria-pressed");
-    expect(quickAction).not.toContain("Combobox");
-    expect(quickAction).not.toMatch(/<FxPurchaseForm[\s/>]/);
-    expect(quickAction).toContain("Foreign currency wallet");
   });
 });
 
@@ -55,25 +53,5 @@ describe("FX purchase form", () => {
     const form = await readSource("../components/forms/fx-purchase-form.tsx");
     expect(form).toContain("clearFxAmountFieldsOnCurrencySwitch");
     expect(form).toContain("fxAccountId");
-  });
-});
-
-describe("FX purchase currency toggles", () => {
-  it("renders one toggle per wallet and drives form props", async () => {
-    const quickAction = await readSource(
-      "../components/forms/fx-purchase-quick-action.tsx",
-    );
-    expect(quickAction).toContain("accounts.map");
-    expect(quickAction).toContain("fxAccountId={selected.id}");
-    expect(quickAction).toContain("currency={selectedCurrency}");
-    expect(quickAction).toContain("setSelectedId(account.id)");
-  });
-
-  it("keeps the zero-wallet Banking message", async () => {
-    const quickAction = await readSource(
-      "../components/forms/fx-purchase-quick-action.tsx",
-    );
-    expect(quickAction).toContain("accounts.length === 0");
-    expect(quickAction).toContain('href="/banking"');
   });
 });

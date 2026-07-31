@@ -22,7 +22,7 @@ import {
 export type QuickActionKey =
   | "expense"
   | "sales"
-  | "buyFx"
+  | "fx"
   | "posPhoto"
   | "deliveryReport"
   | "receipt"
@@ -34,9 +34,11 @@ export type RecordActionKey =
   | "addDocument"
   | "closeDay"
   | "cashMovement"
-  | "transfer"
+  | "staffSalary"
+  | "buyFx"
   | "fxConvert"
   | "fxSpend"
+  | "transfer"
   | "bankStatement"
   | "cardSalesBatch"
   | "posSettlement"
@@ -56,10 +58,9 @@ export type RecordActionKey =
 export type RecordSectionId =
   | "today"
   | "upload"
-  | "cashFx"
-  | "salesCards"
-  | "people"
-  | "suppliers";
+  | "payments"
+  | "occasional"
+  | "salesCards";
 
 export type PersonPickerKind = "staff" | "partner" | "customer" | "supplier";
 
@@ -69,8 +70,6 @@ export type RecordActionDef = {
   description: string;
   icon: LucideIcon;
   section: RecordSectionId;
-  /** Hidden under collapsible "Advanced" in Sales & cards. */
-  advanced?: boolean;
   requiresDelivery?: boolean;
   /** Opens person picker before the form. */
   personKind?: PersonPickerKind;
@@ -79,43 +78,69 @@ export type RecordActionDef = {
 };
 
 export const RECORD_SECTION_LABELS: Record<RecordSectionId, string> = {
-  today: "Today",
-  upload: "Upload & extract",
-  cashFx: "Cash & FX",
+  today: "Every day",
+  upload: "Upload",
+  payments: "Partner cash",
+  occasional: "Less often",
   salesCards: "Sales & cards",
-  people: "People",
-  suppliers: "Suppliers",
 };
+
+/** Primary Add hub cards — one click, no digging. */
+export const PRIMARY_RECORD_ACTION_IDS: RecordActionKey[] = [
+  "sales",
+  "expense",
+  "staffSalary",
+  "fx",
+  "addDocument",
+  "closeDay",
+];
+
+/** Always-visible sections below the primary row (Add → More menu). */
+export const DAILY_VISIBLE_SECTIONS: RecordSectionId[] = ["payments"];
 
 export const RECORD_ACTIONS: RecordActionDef[] = [
   {
-    id: "closeDay",
-    label: "Close day",
-    description: "Count the drawer and post over/short for a business day.",
-    icon: CalendarCheck,
-    section: "today",
-  },
-  {
-    id: "sales",
-    label: "Daily sales (manual)",
-    description: "Enter POS totals when you do not have a Z photo.",
-    icon: ShoppingBag,
-    section: "today",
-  },
-  {
     id: "expense",
     label: "Daily expenses",
-    description:
-      "Cash, partner-fronted, and salary. Bank and card charges — classify on the bank statement.",
+    description: "Cash or partner-fronted — groceries, supplies, petty cash. Bank/card on the statement.",
     icon: Wallet,
     section: "today",
   },
   {
+    id: "staffSalary",
+    label: "Staff salary",
+    description: "Pay salary from cash or a partner. Accruals and advances on Staff.",
+    icon: Users,
+    section: "today",
+  },
+  {
+    id: "sales",
+    label: "Daily sales",
+    description: "POS totals when you do not have a Z photo.",
+    icon: ShoppingBag,
+    section: "today",
+  },
+  {
+    id: "fx",
+    label: "Foreign exchange",
+    description: "Buy, sell, or spend USD, EUR, or GBP.",
+    icon: Banknote,
+    section: "today",
+  },
+  {
     id: "addDocument",
-    label: "Add document",
-    description: "Drop any file — auto-detected and routed to the right form.",
+    label: "Upload",
+    description:
+      "Receipts, bank or card statements, invoices, Z reports — one drop zone, auto-routed.",
     icon: Upload,
-    section: "upload",
+    section: "today",
+  },
+  {
+    id: "closeDay",
+    label: "Close day",
+    description: "Count the drawer and post over/short.",
+    icon: CalendarCheck,
+    section: "today",
   },
   {
     id: "posPhoto",
@@ -144,10 +169,11 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
   {
     id: "deliveryReport",
     label: "Delivery report",
-    description: "Upload a platform sales report for review.",
+    description: "Platform sales report for review.",
     icon: Upload,
     section: "upload",
     requiresDelivery: true,
+    hidden: true,
   },
   {
     id: "bankStatement",
@@ -159,38 +185,78 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
   },
   {
     id: "cashMovement",
-    label: "Cash movement",
-    description: "Pay in or pay out of a cash drawer.",
+    label: "Cash in / out",
+    description: "Move cash into or out of the drawer.",
     icon: Wallet,
-    section: "cashFx",
+    section: "payments",
+    hidden: true,
+  },
+  {
+    id: "staffAdvance",
+    label: "Staff advance",
+    description: "Pay an advance from cash or FX wallet.",
+    icon: Users,
+    section: "payments",
+    personKind: "staff",
+    hidden: true,
+  },
+  {
+    id: "partnerReimbursement",
+    label: "Partner reimbursement",
+    description: "Repay a partner for expenses they fronted.",
+    icon: Handshake,
+    section: "payments",
+    personKind: "partner",
+  },
+  {
+    id: "supplierPayment",
+    label: "Pay supplier (cash)",
+    description: "Cash at delivery — bank payments come from the statement.",
+    icon: HandCoins,
+    section: "payments",
+    personKind: "supplier",
+    hidden: true,
+  },
+  {
+    id: "customerPayment",
+    label: "Customer payment",
+    description: "Collect cash or FX against customer balance.",
+    icon: UserCircle,
+    section: "payments",
+    personKind: "customer",
+    hidden: true,
   },
   {
     id: "buyFx",
     label: "Buy foreign currency",
     description: "Purchase USD, EUR, or GBP into an FX wallet.",
     icon: Banknote,
-    section: "cashFx",
+    section: "occasional",
+    hidden: true,
   },
   {
     id: "fxConvert",
     label: "Convert FX to TRY",
     description: "Sell foreign currency back to lira.",
     icon: Banknote,
-    section: "cashFx",
+    section: "occasional",
+    hidden: true,
   },
   {
     id: "fxSpend",
     label: "Spend from FX wallet",
     description: "Pay an expense directly from a foreign currency wallet.",
     icon: Banknote,
-    section: "cashFx",
+    section: "occasional",
+    hidden: true,
   },
   {
     id: "transfer",
     label: "Transfer",
     description: "Move money between bank and cash accounts.",
     icon: ArrowLeftRight,
-    section: "cashFx",
+    section: "occasional",
+    hidden: true,
   },
   {
     id: "cardSalesBatch",
@@ -198,7 +264,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     description: "Record card takings before settlement clears.",
     icon: CreditCard,
     section: "salesCards",
-    advanced: true,
+    hidden: true,
   },
   {
     id: "posSettlement",
@@ -206,7 +272,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     description: "Record card processor deposit to the bank.",
     icon: CreditCard,
     section: "salesCards",
-    advanced: true,
+    hidden: true,
   },
   {
     id: "clearCommission",
@@ -214,30 +280,23 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     description: "Reconcile bank commission against clearing.",
     icon: CreditCard,
     section: "salesCards",
-    advanced: true,
+    hidden: true,
   },
   {
     id: "staffAccrual",
     label: "Staff salary accrual",
-    description: "Accrue salary owed to an employee.",
+    description: "Accrue salary owed — usually once a month.",
     icon: Users,
-    section: "people",
+    section: "occasional",
     personKind: "staff",
-  },
-  {
-    id: "staffAdvance",
-    label: "Staff advance",
-    description: "Pay an advance from cash or FX wallet.",
-    icon: Users,
-    section: "people",
-    personKind: "staff",
+    hidden: true,
   },
   {
     id: "staffPayment",
     label: "Staff salary payment",
     description: "Pay salary from cash or FX wallet.",
     icon: Users,
-    section: "people",
+    section: "occasional",
     personKind: "staff",
     hidden: true,
   },
@@ -246,78 +305,59 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     label: "Partner expense (fronted)",
     description: "Partner paid a business expense from personal funds.",
     icon: Handshake,
-    section: "people",
+    section: "occasional",
     personKind: "partner",
     hidden: true,
-  },
-  {
-    id: "partnerReimbursement",
-    label: "Partner reimbursement",
-    description: "Repay a partner for fronted expenses.",
-    icon: Handshake,
-    section: "people",
-    personKind: "partner",
   },
   {
     id: "partnerDrawing",
     label: "Partner drawing",
     description: "Partner withdraws cash — they owe the business.",
     icon: Handshake,
-    section: "people",
+    section: "occasional",
     personKind: "partner",
+    hidden: true,
   },
   {
     id: "partnerDrawingRepayment",
     label: "Partner drawing repayment",
     description: "Partner repays an outstanding drawing.",
     icon: Handshake,
-    section: "people",
+    section: "occasional",
     personKind: "partner",
+    hidden: true,
   },
   {
     id: "partnerProfitAllocation",
     label: "Allocate profit to partners",
-    description: "Distribute net profit to partners by ownership share.",
+    description: "Distribute net profit by ownership share.",
     icon: Handshake,
-    section: "people",
+    section: "occasional",
+    hidden: true,
   },
   {
     id: "customerCreditSale",
     label: "Customer group sale",
-    description: "Record a group or credit sale on customer account.",
+    description: "Group or credit sale on customer account.",
     icon: UserCircle,
-    section: "people",
+    section: "occasional",
     personKind: "customer",
-  },
-  {
-    id: "customerPayment",
-    label: "Customer payment",
-    description: "Collect payment against customer balance.",
-    icon: UserCircle,
-    section: "people",
-    personKind: "customer",
+    hidden: true,
   },
   {
     id: "supplier",
     label: "New supplier",
     description: "Add a supplier to the directory.",
     icon: Users,
-    section: "suppliers",
-  },
-  {
-    id: "supplierPayment",
-    label: "Record supplier payment",
-    description: "Pay a supplier from bank or cash.",
-    icon: HandCoins,
-    section: "suppliers",
-    personKind: "supplier",
+    section: "occasional",
+    hidden: true,
   },
 ];
 
 export const QUICK_ACTION_KEYS = new Set<QuickActionKey>([
   "expense",
   "sales",
-  "buyFx",
+  "fx",
   "posPhoto",
   "deliveryReport",
   "receipt",
@@ -348,13 +388,42 @@ export function filterRecordActions(
   );
 }
 
+export function primaryRecordActions(
+  opts: { deliveryEnabled: boolean },
+): RecordActionDef[] {
+  const available = filterRecordActions(RECORD_ACTIONS, opts);
+  return PRIMARY_RECORD_ACTION_IDS.map((id) =>
+    available.find((action) => action.id === id),
+  ).filter((action): action is RecordActionDef => action !== undefined);
+}
+
 export function recordActionsBySection(
   section: RecordSectionId,
   opts: { deliveryEnabled: boolean },
 ): RecordActionDef[] {
+  const primary = new Set<RecordActionKey>(PRIMARY_RECORD_ACTION_IDS);
   return filterRecordActions(
-    RECORD_ACTIONS.filter((action) => action.section === section && !action.hidden),
+    RECORD_ACTIONS.filter(
+      (action) =>
+        action.section === section &&
+        !action.hidden &&
+        !primary.has(action.id),
+    ),
     opts,
   );
 }
 
+export function dailyVisibleSections(
+  opts: { deliveryEnabled: boolean },
+): { section: RecordSectionId; actions: RecordActionDef[] }[] {
+  return DAILY_VISIBLE_SECTIONS.map((section) => ({
+    section,
+    actions: recordActionsBySection(section, opts),
+  })).filter((entry) => entry.actions.length > 0);
+}
+
+export function occasionalRecordActions(
+  opts: { deliveryEnabled: boolean },
+): RecordActionDef[] {
+  return recordActionsBySection("occasional", opts);
+}

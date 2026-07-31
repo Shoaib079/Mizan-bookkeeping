@@ -47,6 +47,21 @@ describe("AddDocumentDialog (UX-C)", () => {
     expect(source).toContain("onConfirm(selectedType, file)");
   });
 
+  it("includes delivery report entry from the Upload dialog when delivery is on", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(new URL("./add-document-dialog.tsx", import.meta.url), "utf8"),
+    );
+    expect(source).toContain("onOpenDeliveryReport");
+    expect(source).toContain("Upload delivery platform report");
+    const modals = await import("fs/promises").then((fs) =>
+      fs.readFile(
+        new URL("../record-action-modals.tsx", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(modals).toContain('openRecordAction("deliveryReport")');
+  });
+
   it("has labels for all four document types", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./add-document-dialog.tsx", import.meta.url), "utf8"),
@@ -154,6 +169,7 @@ describe("record-actions addDocument entry", () => {
     );
     expect(source).toContain('"addDocument"');
     expect(source).toContain('id: "addDocument"');
-    expect(source).toContain('section: "upload"');
+    expect(source).toContain('label: "Upload"');
+    expect(source).toContain('section: "today"');
   });
 });

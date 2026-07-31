@@ -39,6 +39,7 @@ export {
 type QuickActionsContextValue = {
   active: RecordActionKey | null;
   openRecordAction: (key: RecordActionKey) => void;
+  openRecordActionWithFile: (key: RecordActionKey, file: File) => void;
   openQuickAction: (key: QuickActionKey) => void;
   closeQuickAction: () => void;
   deliveryEnabled: boolean;
@@ -61,6 +62,10 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   const { isAuthReady } = useApiAuth();
   const { canWriteOperations } = useEntityAccess();
   const [active, setActive] = useState<RecordActionKey | null>(null);
+  const [documentRoute, setDocumentRoute] = useState<{
+    key: RecordActionKey;
+    file: File;
+  } | null>(null);
   const [deliveryEnabled, setDeliveryEnabled] = useState(() => {
     if (!entityId) return false;
     return getCachedDeliveryEnabled(entityId) ?? false;
@@ -115,16 +120,31 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
       if (!canWriteOperations) return;
       if (key === "deliveryReport" && !deliveryEnabled) return;
       if (entityId) recordActionUsage(entityId, key);
-      // M3: page-owned actions navigate; the page opens its own form (?new=1).
       const pageHref = RECORD_ACTION_PAGE_HREFS[key];
       if (pageHref) {
         router.push(pageHref);
         return;
       }
+      setDocumentRoute(null);
       setActive(key);
     },
     [canWriteOperations, deliveryEnabled, entityId, router],
   );
+
+  const openRecordActionWithFile = useCallback(
+    (key: RecordActionKey, file: File) => {
+      if (!canWriteOperations) return;
+      if (entityId) recordActionUsage(entityId, key);
+      setDocumentRoute({ key, file });
+      setActive(key);
+    },
+    [canWriteOperations, entityId],
+  );
+
+  const closeQuickAction = useCallback(() => {
+    setActive(null);
+    setDocumentRoute(null);
+  }, []);
 
   const openQuickAction = useCallback(
     (key: QuickActionKey) => {
@@ -133,12 +153,11 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     [openRecordAction],
   );
 
-  const closeQuickAction = useCallback(() => setActive(null), []);
-
   const value = useMemo(
     () => ({
       active,
       openRecordAction,
+      openRecordActionWithFile,
       openQuickAction,
       closeQuickAction: closeQuickAction,
       deliveryEnabled,
@@ -147,6 +166,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     [
       active,
       openRecordAction,
+      openRecordActionWithFile,
       openQuickAction,
       closeQuickAction,
       deliveryEnabled,
@@ -157,7 +177,12 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   return (
     <QuickActionsContext.Provider value={value}>
       {children}
-      <RecordActionModals active={active} onClose={closeQuickAction} />
+      <RecordActionModals
+        active={active}
+        onClose={closeQuickAction}
+        routedFile={documentRoute?.file ?? null}
+        routedTo={documentRoute?.key ?? null}
+      />
     </QuickActionsContext.Provider>
   );
 }

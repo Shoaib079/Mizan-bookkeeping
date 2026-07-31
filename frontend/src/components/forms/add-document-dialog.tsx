@@ -45,9 +45,19 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onConfirm: (type: DetectedDocumentType, file: File) => void;
+  deliveryEnabled?: boolean;
+  onOpenDeliveryReport?: () => void;
+  embedded?: boolean;
 };
 
-export function AddDocumentDialog({ open, onClose, onConfirm }: Props) {
+export function AddDocumentDialog({
+  open,
+  onClose,
+  onConfirm,
+  deliveryEnabled = false,
+  onOpenDeliveryReport,
+  embedded = false,
+}: Props) {
   const { entityId } = useEntity();
   const [file, setFile] = useState<File | null>(null);
   const [detecting, setDetecting] = useState(false);
@@ -103,14 +113,21 @@ export function AddDocumentDialog({ open, onClose, onConfirm }: Props) {
 
   const handleConfirm = useCallback(() => {
     if (!file || !selectedType) return;
-    handleClose();
     onConfirm(selectedType, file);
-  }, [file, selectedType, handleClose, onConfirm]);
+    reset();
+    if (!embedded) handleClose();
+  }, [file, selectedType, handleClose, onConfirm, embedded, reset]);
 
-  return (
-    <Dialog open={open} title="Add document" onClose={handleClose}>
+  if (!open) return null;
+
+  const panelBody = (
+    <>
       <RecordingForBanner />
       <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Drop a file — we detect receipt, invoice, bank statement, or Z report
+          and send it to the right review flow.
+        </p>
         <div>
           <FileUpload
             id="add-document-file"
@@ -177,7 +194,33 @@ export function AddDocumentDialog({ open, onClose, onConfirm }: Props) {
             </div>
           </div>
         )}
+
+        {deliveryEnabled && onOpenDeliveryReport && (
+          <div className="border-t border-border pt-4">
+            <p className="mb-2 text-sm text-muted-foreground">
+              Not a file drop?
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                reset();
+                onOpenDeliveryReport();
+              }}
+            >
+              Upload delivery platform report
+            </Button>
+          </div>
+        )}
       </div>
+    </>
+  );
+
+  if (embedded) return panelBody;
+
+  return (
+    <Dialog open={open} title="Upload" onClose={handleClose}>
+      {panelBody}
     </Dialog>
   );
 }

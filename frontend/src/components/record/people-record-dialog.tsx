@@ -215,7 +215,7 @@ export function PeopleRecordDialog({
   }
 
   return (
-    <Dialog open={open} title={title} onClose={handleClose}>
+    <Dialog open={open} title={title} size="compact" onClose={handleClose}>
       {!entityId && (
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar first.
@@ -237,7 +237,7 @@ export function PeopleRecordDialog({
       )}
 
       {entityId && !loading && items.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {showStaffDate && (
             <div>
               <Label htmlFor="people-record-date">Date (DD.MM.YYYY)</Label>
@@ -267,7 +267,7 @@ export function PeopleRecordDialog({
           )}
 
           {formReady && selected && (
-            <div className="border-t border-border pt-4">
+            <div className="border-t border-border pt-3">
               {renderEmbeddedForm(
                 action,
                 selected,

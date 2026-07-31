@@ -430,7 +430,7 @@ export function pageTitleForPathname(pathname: string): string {
   }
   const titles: Record<string, string> = {
     "/": "Dashboard",
-    "/record": "Add",
+    "/record": "Record",
     "/review": "Review",
     "/review/bank": "Review",
     "/review/sales": "Review",

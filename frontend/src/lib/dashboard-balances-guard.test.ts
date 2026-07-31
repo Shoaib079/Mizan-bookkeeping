@@ -16,12 +16,21 @@ describe("balances on dashboard", () => {
     expect(overview?.items.map((item) => item.href)).not.toContain("/balances");
   });
 
-  it("embeds BalancesOverview on the dashboard with a Right now section", () => {
+  it("shows cash and bank together beside This period", () => {
     const page = read("app/page.tsx");
-    expect(page).toContain("BalancesOverview");
+    const overview = read("components/balances/balances-overview.tsx");
+    const snapshot = read("components/dashboard/cash-bank-snapshot-card.tsx");
+    expect(page).toContain("CashBankSnapshotCard");
+    expect(page).toContain("lg:grid-cols-2");
+    expect(page).toContain("cash_in_hand_kurus");
+    expect(page).toContain("bank_balance_kurus");
+    expect(snapshot).toContain("Cash & bank");
+    expect(snapshot).toContain("Cash");
+    expect(snapshot).toContain("Bank");
     expect(page).toContain("Right now");
-    expect(page).toContain("embedded");
-    expect(page).not.toContain("Money on hand");
+    expect(page).toContain("BalancesOverview");
+    expect(overview).not.toContain('title="Cash"');
+    expect(overview).not.toContain('title="Bank"');
   });
 
   it("redirects legacy /balances routes", () => {

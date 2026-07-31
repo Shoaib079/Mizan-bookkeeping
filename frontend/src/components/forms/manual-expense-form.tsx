@@ -78,6 +78,7 @@ type Props = {
   defaultRecordKind?: ExpenseRecordKind;
   /** Hide in-dialog expense/salary toggle (e.g. when mode is fixed externally). */
   showRecordKindToggle?: boolean;
+  embedded?: boolean;
   onSaved?: () => void;
 };
 
@@ -87,6 +88,7 @@ export function ManualExpenseForm({
   title = "Daily expenses",
   defaultRecordKind = "expense",
   showRecordKindToggle = true,
+  embedded = false,
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
@@ -457,18 +459,14 @@ export function ManualExpenseForm({
   const selectedEmployee = employees.find((e) => e.id === employeeId);
   const dialogTitle =
     recordKind === "salary" ? "Record salary payment" : title;
+  const singleCashDrawer = paymentMode === "cash" && cashAccounts.length === 1;
 
-  return (
+  if (!open) return null;
+
+  const formBody = (
     <>
-    <Dialog
-      open={open}
-      title={dialogTitle}
-      onClose={onClose}
-      dirty={recordKind === "expense" ? dirty : false}
-      onDiscard={recordKind === "expense" ? handleDiscard : undefined}
-    >
-      <RecordingForBanner />
-      {recordKind === "expense" && (
+      {!embedded && <RecordingForBanner />}
+      {recordKind === "expense" && !embedded && (
         <p className="mb-4 text-xs text-muted-foreground">
           Cash and partner-fronted only — bank and card charges are classified
           when the bank statement arrives (never record them here).
@@ -480,30 +478,46 @@ export function ManualExpenseForm({
           onDismiss={handleDeclineResume}
         />
       )}
-      <div className="mb-4">
-        <Label htmlFor="exp-date">Date (DD.MM.YYYY)</Label>
-        <DateInput
-          id="exp-date"
-          value={dateText}
-          onChange={setDateText}
-          required
-        />
-      </div>
+      {!embedded && (
+        <div className="mb-4">
+          <Label htmlFor="exp-date">Date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="exp-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
+      )}
       {allowSalaryMode && (
         <ExpenseRecordKindToggle
           value={recordKind}
           onChange={setRecordKind}
-          className="mb-4"
+          className={embedded ? "mb-2" : "mb-4"}
         />
       )}
 
       {recordKind === "salary" ? (
         <>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Posts through staff salary payable (same as Staff → Pay salary). Pick
-            the salary month separately from the payment date.
-          </p>
-          <div className="mb-3">
+          {!embedded && (
+            <p className="mb-3 text-xs text-muted-foreground">
+              Posts through staff salary payable (same as Staff → Pay salary). Pick
+              the salary month separately from the payment date.
+            </p>
+          )}
+          {embedded && (
+            <div className="mb-3">
+              <Label htmlFor="exp-date">Date</Label>
+              <DateInput
+                id="exp-date"
+                value={dateText}
+                onChange={setDateText}
+                required
+                showLateNightHint
+              />
+            </div>
+          )}
+          <div className={embedded ? "mb-3" : "mb-3"}>
             <Label htmlFor="exp-salary-employee">Employee</Label>
             <Combobox
               id="exp-salary-employee"
@@ -534,7 +548,134 @@ export function ManualExpenseForm({
           )}
         </>
       ) : (
-      <form onSubmit={onSubmit} className="space-y-3">
+      <form
+        onSubmit={onSubmit}
+        className={embedded ? "space-y-3" : "space-y-3"}
+      >
+        {embedded ? (
+          <>
+            <div>
+              <Label htmlFor="exp-date">Date</Label>
+              <DateInput
+                id="exp-date"
+                value={dateText}
+                onChange={setDateText}
+                required
+                showLateNightHint
+              />
+            </div>
+            <ExpenseItemTypeahead
+              entityId={entityId}
+              value={itemName}
+              onValueChange={handleItemNameChange}
+              onPickItem={handlePickExpenseItem}
+              disabled={submitting}
+            />
+            <div>
+              <Label htmlFor="exp-amount">Amount (TRY)</Label>
+              <MoneyInput
+                id="exp-amount"
+                placeholder="150,00"
+                value={amountText}
+                onChange={setAmountText}
+                required
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="exp-account">Expense account</Label>
+                {entityId && (
+                  <AddExpenseCategoryButton
+                    entityId={entityId}
+                    onCreated={async (account) => {
+                      setExpenseAccounts((prev) =>
+                        mergeExpenseAccounts(prev, account),
+                      );
+                      setExpenseAccountId(account.id);
+                      userPickedAccountRef.current = true;
+                      setSuggestedAccountId(null);
+                      setSuggestedSource(null);
+                    }}
+                  />
+                )}
+              </div>
+              <Select
+                id="exp-account"
+                value={expenseAccountId}
+                onChange={(e) => {
+                  userPickedAccountRef.current = true;
+                  setExpenseAccountId(e.target.value);
+                  setSuggestedAccountId(null);
+                  setSuggestedSource(null);
+                }}
+              >
+                <option value="">Select category…</option>
+                {expenseAccounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {formatExpenseAccountLabel(a)}
+                  </option>
+                ))}
+              </Select>
+              {isSuggestedAccountActive(expenseAccountId, suggestedAccountId) && (
+                <p className="text-xs text-muted-foreground">
+                  Suggested account
+                  {suggestedSource === "ai"
+                    ? " (AI)"
+                    : suggestedSource === "learned"
+                      ? " (learned)"
+                      : ""}
+                </p>
+              )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="exp-payment">Payment</Label>
+                <Select
+                  id="exp-payment"
+                  value={paymentMode}
+                  onChange={(e) =>
+                    setPaymentMode(e.target.value as PaymentMode)
+                  }
+                >
+                  <option value="cash">Cash drawer</option>
+                  <option value="partner">Partner paid (owe partner)</option>
+                </Select>
+              </div>
+              {paymentMode === "cash" && !singleCashDrawer ? (
+                <div>
+                  <Label htmlFor="exp-cash">Cash drawer</Label>
+                  <Combobox
+                    id="exp-cash"
+                    value={moneyAccountId}
+                    onValueChange={setMoneyAccountId}
+                    options={cashAccounts.map((a) => ({
+                      value: a.id,
+                      label: a.name,
+                    }))}
+                    placeholder="Cash drawer…"
+                  />
+                </div>
+              ) : paymentMode === "partner" ? (
+                <div>
+                  <Label htmlFor="exp-partner">Partner</Label>
+                  <Combobox
+                    id="exp-partner"
+                    value={partnerId}
+                    onValueChange={setPartnerId}
+                    options={partners.map((p) => ({
+                      value: p.id,
+                      label: p.name,
+                    }))}
+                    placeholder="Partner…"
+                  />
+                </div>
+              ) : (
+                <div className="hidden sm:block" aria-hidden />
+              )}
+            </div>
+          </>
+        ) : (
+          <>
         <ExpenseItemTypeahead
           entityId={entityId}
           value={itemName}
@@ -634,10 +775,11 @@ export function ManualExpenseForm({
               placeholder="Partner…"
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Repay the partner later under Add → People → Partner
-              reimbursement.
+              Repay the partner later under Record → Partner reimb.
             </p>
           </div>
+        )}
+          </>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
@@ -645,8 +787,25 @@ export function ManualExpenseForm({
         </Button>
       </form>
       )}
-    </Dialog>
-    <DuplicateRecordDialog />
+    </>
+  );
+
+  return (
+    <>
+      {embedded ? (
+        formBody
+      ) : (
+        <Dialog
+          open={open}
+          title={dialogTitle}
+          onClose={onClose}
+          dirty={recordKind === "expense" ? dirty : false}
+          onDiscard={recordKind === "expense" ? handleDiscard : undefined}
+        >
+          {formBody}
+        </Dialog>
+      )}
+      <DuplicateRecordDialog />
     </>
   );
 }

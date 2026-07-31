@@ -31,11 +31,17 @@ type ManualDailySalesResponse = {
 type Props = {
   open: boolean;
   onClose: () => void;
+  embedded?: boolean;
   /** Called after a successful post (M3: lets the owning page reload its list). */
   onSaved?: () => void;
 };
 
-export function ManualDailySalesForm({ open, onClose, onSaved }: Props) {
+export function ManualDailySalesForm({
+  open,
+  onClose,
+  embedded = false,
+  onSaved,
+}: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -165,7 +171,7 @@ export function ManualDailySalesForm({ open, onClose, onSaved }: Props) {
         return;
       }
 
-      onClose();
+      if (!embedded) onClose();
       onSaved?.();
       toast("Daily sales posted");
       setCashText("");
@@ -178,9 +184,11 @@ export function ManualDailySalesForm({ open, onClose, onSaved }: Props) {
     }
   }
 
-  return (
-    <Dialog open={open} title="Daily sales (manual)" onClose={onClose}>
-      <RecordingForBanner />
+  if (!open) return null;
+
+  const formBody = (
+    <>
+      {!embedded && <RecordingForBanner />}
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="sales-date">Date (DD.MM.YYYY)</Label>
@@ -275,6 +283,14 @@ export function ManualDailySalesForm({ open, onClose, onSaved }: Props) {
           {submitting ? "Posting…" : "Post daily sales"}
         </Button>
       </form>
+    </>
+  );
+
+  if (embedded) return formBody;
+
+  return (
+    <Dialog open={open} title="Daily sales (manual)" onClose={onClose}>
+      {formBody}
     </Dialog>
   );
 }

@@ -31,7 +31,7 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
+    <div className="flex flex-wrap items-start gap-x-3 gap-y-4">
       <div>
         <Label htmlFor="report-from">From</Label>
         <DateInput
@@ -39,6 +39,7 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
           className="mt-1 w-36"
           value={fromDisplay}
           disabled={disabled}
+          showLateNightHint={false}
           onChange={setFromDisplay}
           onKeyDown={(e) => {
             if (e.key === "Enter") apply();
@@ -52,26 +53,29 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
           className="mt-1 w-36"
           value={toDisplay}
           disabled={disabled}
+          showLateNightHint={false}
           onChange={setToDisplay}
           onKeyDown={(e) => {
             if (e.key === "Enter") apply();
           }}
         />
       </div>
-      <Button type="button" variant="secondary" disabled={disabled} onClick={apply}>
-        Apply
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        disabled={disabled}
-        onClick={() => {
-          const range = currentMonthRange();
-          onChange(range.from, range.to);
-        }}
-      >
-        This month
-      </Button>
+      <div className="flex flex-wrap items-end gap-2 pt-6">
+        <Button type="button" variant="secondary" disabled={disabled} onClick={apply}>
+          Apply
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={disabled}
+          onClick={() => {
+            const range = currentMonthRange();
+            onChange(range.from, range.to);
+          }}
+        >
+          This month
+        </Button>
+      </div>
     </div>
   );
 }

@@ -79,16 +79,16 @@ describe("action-usage", () => {
   });
 });
 
-describe("RecordHub integration", () => {
-  it("imports getTopActions and shows Most used section", async () => {
+describe("RecordDesk integration", () => {
+  it("uses primaryRecordActions for the mode rail", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
-        new URL("../components/record/record-hub.tsx", import.meta.url),
+        new URL("../components/record/record-desk.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("getTopActions");
-    expect(source).toContain("Most used");
+    expect(source).toContain("primaryRecordActions");
+    expect(source).toContain("DeskModeButton");
   });
 
   it("records usage on openRecordAction", async () => {
@@ -102,28 +102,26 @@ describe("RecordHub integration", () => {
     expect(source).toContain("recordActionUsage(entityId, key)");
   });
 
-  it("shows Most used section with Star icon and 4-col grid", async () => {
+  it("gates the desk behind entity access", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
-        new URL("../components/record/record-hub.tsx", import.meta.url),
+        new URL("../components/record/record-desk.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("Star");
-    expect(source).toContain("Most used");
-    expect(source).toContain("topActions");
-    expect(source).toContain("lg:grid-cols-4");
+    expect(source).toContain("useEntityAccess");
+    expect(source).toContain("shouldShowNewMenu");
   });
 
-  it("filters top actions through delivery gating and excludes hidden", async () => {
+  it("filters extra actions through dailyVisibleSections", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
-        new URL("../components/record/record-hub.tsx", import.meta.url),
+        new URL("../components/record/record-desk.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("!a.hidden");
-    expect(source).toContain("filterRecordActions");
+    expect(source).toContain("dailyVisibleSections");
+    expect(source).toContain("openRecordAction");
   });
 
   it("always shows Most used when entity selected (defaults fill it)", () => {

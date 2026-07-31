@@ -18,6 +18,7 @@ export function Dialog({
   onClose,
   children,
   className,
+  size = "default",
   dirty = false,
   onDiscard,
 }: {
@@ -26,6 +27,8 @@ export function Dialog({
   onClose: () => void;
   children: React.ReactNode;
   className?: string;
+  /** Compact fits short person-picker + payment forms. */
+  size?: "default" | "compact";
   /** When true, Esc/backdrop/X paths ask before closing. */
   dirty?: boolean;
   /** Called when the user confirms discarding unsaved changes. */
@@ -116,15 +119,29 @@ export function Dialog({
       <div
         ref={panelRef}
         className={cn(
-          "relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-pop)]",
+          "relative w-full overflow-y-auto rounded-lg border border-border bg-card shadow-[var(--shadow-pop)]",
+          size === "compact"
+            ? "max-h-[85vh] max-w-sm p-4"
+            : "max-h-[90vh] max-w-lg p-5",
           className,
         )}
         role="dialog"
         aria-modal
         aria-labelledby={titleId}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 id={titleId} className="text-base font-semibold">
+        <div
+          className={cn(
+            "flex items-center justify-between",
+            size === "compact" ? "mb-3" : "mb-4",
+          )}
+        >
+          <h2
+            id={titleId}
+            className={cn(
+              "font-semibold",
+              size === "compact" ? "text-sm" : "text-base",
+            )}
+          >
             {title}
           </h2>
           <Button

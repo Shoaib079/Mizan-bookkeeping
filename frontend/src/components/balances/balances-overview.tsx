@@ -14,12 +14,10 @@ import {
   HandCoins,
   Receipt,
   Users,
-  Wallet,
 } from "lucide-react";
 
 import type { MoneyAccountTree } from "@/lib/banking-types";
 import {
-  cashAndBankHeldKurus,
   fxHoldingsNativeSummary,
 } from "@/lib/banking-tree-helpers";
 import { useEntity } from "@/lib/entity-context";
@@ -113,35 +111,29 @@ export function BalancesOverview({ embedded = false }: Props) {
   const staff = useStaffBalanceTotal(entityId);
   const partners = usePartnerBalanceTotal(entityId);
 
-  // Cash & bank = TRY drawers + bank accounts only. FX is a separate card.
-  const [cashAndBankKurus, setCashAndBankKurus] = useState(0);
+  // FX wallets fetched separately — not mixed into cash or bank.
   const [fxNativeSummary, setFxNativeSummary] = useState("No holdings");
-  const [moneyLoading, setMoneyLoading] = useState(false);
+  const [fxLoading, setFxLoading] = useState(false);
 
   useEffect(() => {
     if (!entityId) {
-      setCashAndBankKurus(0);
       setFxNativeSummary("No holdings");
       return;
     }
     let cancelled = false;
-    setMoneyLoading(true);
+    setFxLoading(true);
     void apiFetch<MoneyAccountTree>(
       `/entities/${entityId}/banking/accounts/tree`,
     )
       .then((tree) => {
         if (cancelled) return;
-        setCashAndBankKurus(cashAndBankHeldKurus(tree));
         setFxNativeSummary(fxHoldingsNativeSummary(tree));
       })
       .catch(() => {
-        if (!cancelled) {
-          setCashAndBankKurus(0);
-          setFxNativeSummary("No holdings");
-        }
+        if (!cancelled) setFxNativeSummary("No holdings");
       })
       .finally(() => {
-        if (!cancelled) setMoneyLoading(false);
+        if (!cancelled) setFxLoading(false);
       });
     return () => {
       cancelled = true;
@@ -184,20 +176,12 @@ export function BalancesOverview({ embedded = false }: Props) {
           loading={receivables.loading}
         />
         <BalanceCard
-          href="/banking"
-          title="Cash & bank"
-          hint="TRY cash drawers and bank accounts only — cards under Banking"
-          icon={Wallet}
-          amount={formatTry(cashAndBankKurus)}
-          loading={moneyLoading}
-        />
-        <BalanceCard
           href="/banking/fx"
           title="Foreign currency"
           hint="Held as FX (not converted to ₺ here) — open Banking → FX"
           icon={Coins}
           amount={fxNativeSummary}
-          loading={moneyLoading}
+          loading={fxLoading}
         />
         <BalanceCard
           href="/staff"

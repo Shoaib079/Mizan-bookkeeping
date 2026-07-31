@@ -31,10 +31,11 @@ export function lateNightDateHint(
   now = new Date(),
 ): string | null {
   if (now.getHours() >= LATE_NIGHT_ROLLOVER_HOUR) return null;
-  if (displayValue.trim() !== todayTrDate()) return null;
+  const todayDisplay = displayFromDate(now);
+  if (displayValue.trim() !== todayDisplay) return null;
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  return `It's after midnight — this will be dated ${todayTrDate()}. For last night's trading, use ${displayFromDate(yesterday)}.`;
+  return `It's after midnight — this will be dated ${todayDisplay}. For last night's trading, use ${displayFromDate(yesterday)}.`;
 }
 
 /** Calendar month for salary period pickers (month is 1–12). */

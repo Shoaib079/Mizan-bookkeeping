@@ -22,6 +22,7 @@ import { todayTrDate } from "@/lib/dates";
 type Props = {
   open: boolean;
   onClose: () => void;
+  embedded?: boolean;
   defaultCashAccountId?: string;
   defaultSessionDate?: string;
   onClosed?: () => void;
@@ -30,6 +31,7 @@ type Props = {
 export function CashDrawerCloseDayForm({
   open,
   onClose,
+  embedded = false,
   defaultCashAccountId,
   defaultSessionDate,
   onClosed,
@@ -114,7 +116,7 @@ export function CashDrawerCloseDayForm({
       setConfirmWarning(null);
       onClosed?.();
       toast("Drawer day closed");
-      onClose();
+      if (!embedded) onClose();
       setCountedText("");
     } catch (err) {
       // 409 = variance guard: offer confirmation instead of a dead error.
@@ -135,9 +137,10 @@ export function CashDrawerCloseDayForm({
     void submitClose(false);
   }
 
-  return (
-    <Dialog open={open} title="Close drawer day" onClose={onClose}>
-      <form onSubmit={onSubmit} className="space-y-3">
+  if (!open) return null;
+
+  const formBody = (
+    <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="close-day-date">Session date (DD.MM.YYYY)</Label>
           <DateInput
@@ -247,6 +250,13 @@ export function CashDrawerCloseDayForm({
           </Button>
         )}
       </form>
+  );
+
+  if (embedded) return formBody;
+
+  return (
+    <Dialog open={open} title="Close drawer day" onClose={onClose}>
+      {formBody}
     </Dialog>
   );
 }

@@ -458,8 +458,8 @@ describe("command palette (UX-B data-first search)", () => {
   });
 });
 
-describe("top-bar Add button", () => {
-  it("renders a + Add link to /record gated by shouldShowNewMenu", async () => {
+describe("top-bar Record button", () => {
+  it("renders a + Record link to /record gated by shouldShowNewMenu", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/layout/app-shell.tsx", import.meta.url),
@@ -470,6 +470,6 @@ describe("top-bar Add button", () => {
     expect(source).toContain('href="/record"');
     expect(source).toContain("Plus");
     expect(source).toContain("bg-primary");
-    expect(source).toMatch(/Plus[\s\S]*Add/);
+    expect(source).toMatch(/Plus[\s\S]*Record/);
   });
 });

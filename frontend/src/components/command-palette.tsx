@@ -427,6 +427,6 @@ function rowBadge(
     case "page":
       return row.group;
     case "action":
-      return "Add";
+      return "Record";
   }
 }

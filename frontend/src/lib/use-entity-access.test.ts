@@ -89,7 +89,7 @@ describe("providers.tsx wiring", () => {
   it("hub and provider share the same role source", async () => {
     const hubSource = await import("fs/promises").then((fs) =>
       fs.readFile(
-        new URL("../components/record/record-hub.tsx", import.meta.url),
+        new URL("../components/record/record-desk.tsx", import.meta.url),
         "utf8",
       ),
     );

@@ -6,23 +6,22 @@ async function readDashboardPage() {
   );
 }
 
-describe("dashboard recent entries", () => {
-  it("places RecentEntriesCard below KPIs", async () => {
+describe("dashboard is status-only (recording lives on Add)", () => {
+  it("does not show recent entries or daily recording shortcuts", async () => {
     const source = await readDashboardPage();
-    expect(source).toContain("<RecentEntriesCard");
-    const kpiGridEnd = source.indexOf("</div>", source.indexOf("kpis.map"));
-    const cardPos = source.indexOf("<RecentEntriesCard");
-    expect(kpiGridEnd).toBeGreaterThan(-1);
-    expect(cardPos).toBeGreaterThan(kpiGridEnd);
+    expect(source).not.toContain("<RecentEntriesCard");
+    expect(source).not.toContain('openQuickAction("sales")');
+    expect(source).not.toContain('openQuickAction("expense")');
+    expect(source).not.toContain('openRecordAction("closeDay")');
+    expect(source).not.toMatch(/Daily sales/);
+    expect(source).not.toMatch(/Daily expenses/);
   });
-});
 
-describe("dashboard shortcut buttons use one action source (UX-A)", () => {
-  it("all three buttons use openQuickAction or openRecordAction, not Link", async () => {
+  it("still shows period KPIs and balances", async () => {
     const source = await readDashboardPage();
-    expect(source).toContain('openQuickAction("sales")');
-    expect(source).toContain('openQuickAction("expense")');
-    expect(source).toContain('openRecordAction("closeDay")');
-    expect(source).not.toMatch(/href="\/close-day"/);
+    expect(source).toContain("This period");
+    expect(source).toContain("CashBankSnapshotCard");
+    expect(source).toContain("<BalancesOverview");
+    expect(source).toContain("<WeeklyChart");
   });
 });

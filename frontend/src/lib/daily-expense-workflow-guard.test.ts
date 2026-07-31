@@ -23,17 +23,27 @@ describe("daily expense workflow (cash/partner/salary only)", () => {
   });
 
   it("hides duplicate People cards for salary and partner-fronted", () => {
-    const people = recordActionsBySection("people", { deliveryEnabled: true });
-    const ids = people.map((action) => action.id);
-    expect(ids).not.toContain("staffPayment");
-    expect(ids).not.toContain("partnerExpenseFronted");
-    expect(ids).toContain("partnerReimbursement");
+    const payments = recordActionsBySection("payments", { deliveryEnabled: true });
+    const paymentIds = payments.map((action) => action.id);
+    expect(paymentIds).toEqual(["partnerReimbursement"]);
+    expect(paymentIds).not.toContain("staffPayment");
+    expect(paymentIds).not.toContain("staffAdvance");
+    expect(paymentIds).not.toContain("supplierPayment");
+    expect(paymentIds).not.toContain("partnerExpenseFronted");
+  });
+
+  it("keeps staff accrual and advances off Add (Staff page owns salary workflow)", () => {
+    const hidden = RECORD_ACTIONS.filter((a) => a.hidden).map((a) => a.id);
+    expect(hidden).toContain("staffAccrual");
+    expect(hidden).toContain("staffAdvance");
+    expect(hidden).toContain("supplierPayment");
   });
 
   it("labels the hub card Daily expenses with statement guidance", () => {
     const expense = RECORD_ACTIONS.find((action) => action.id === "expense");
     expect(expense?.label).toBe("Daily expenses");
-    expect(expense?.description).toMatch(/bank statement/i);
+    expect(expense?.description).toMatch(/statement/i);
+    expect(expense?.description).not.toMatch(/salary/i);
   });
 
   it("manual expense form has no bank/card payment path", () => {

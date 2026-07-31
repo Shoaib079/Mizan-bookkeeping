@@ -100,5 +100,6 @@ describe("unified record dialogs", () => {
     expect(efatura).toContain("/record?invoice=");
     expect(receipt).toContain("/record?receipt=");
     expect(recordPage).toContain("RecordReviewPanel");
+    expect(recordPage).toContain("RecordDesk");
   });
 });

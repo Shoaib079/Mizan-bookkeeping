@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none) |
 | **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI |
-| **Last completed slice** | **Balances on dashboard (2026-07-31)** — `BalancesOverview` embedded on home under “Right now”; Balances removed from Overview sidebar; `/balances/*` and legacy payables/receivables redirect to dashboard or directories. |
-| **Last commit/tag**      | `v0.balances-on-dashboard` |
+| **Last completed slice** | **Record desk + dashboard split (2026-07-31)** — `/record` icon rail + inline forms (Sales default, date-first); dashboard status-only with delivery before chart; Add → Record; pruned page-owned actions. |
+| **Last commit/tag**      | `v0.record-desk` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
@@ -1878,6 +1878,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-31 | Record desk + dashboard status split     | `v0.record-desk`                                       | **RecordDesk** on `/record` (left icon rail, inline forms, Sales default, date-first, Recorded today); dashboard status-only (no daily shortcuts; delivery before chart; Cash/Bank snapshot); Add → Record label; hide supplier/staff/bank actions from hub; unified FX/upload; guard + vitest |
 | 2026-07-31 | Balances on dashboard                           | `v0.balances-on-dashboard`                             | `BalancesOverview` embedded on home (“Right now”); removed Balances from Overview sidebar; `/balances/*` → dashboard or directories; legacy `/payables`/`/receivables` redirects; sidebar highlight + guard tests |
 | 2026-07-31 | Daily expense workflow                          | `v0.daily-expense-workflow`                            | **Daily expenses** = cash + partner + salary only; removed Store/card manual purchase; hidden duplicate People cards; bank/card outflows statement-only; partner drawing capital balance fix; guard tests |
 | 2026-07-07 | Duplicate expense guard — item + acknowledge retry | `v0.duplicate-expense-item-ack`                    | `find_duplicate_expense` matches expense item not just category; duplicate 409 not idempotency-cached so "Yes, record anyway" works; pytest |

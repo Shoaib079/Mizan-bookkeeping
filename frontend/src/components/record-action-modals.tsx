@@ -2,10 +2,10 @@
 
 /** All record-action modals — shared by New menu, command palette, and Record hub. */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 
 import { BankAccountPickerDialog } from "@/components/record/bank-account-picker-dialog";
-import { FxWalletActionDialog } from "@/components/record/fx-wallet-action-dialog";
+import { FxUnifiedDialog, type FxUnifiedMode } from "@/components/record/fx-unified-dialog";
 import { PeopleRecordDialog } from "@/components/record/people-record-dialog";
 import {
   AddDocumentDialog,
@@ -18,7 +18,6 @@ import { ClearCommissionForm } from "@/components/forms/clear-commission-form";
 import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { EfaturaUploadForm } from "@/components/forms/efatura-upload-form";
 import { ExpenseReceiptUploadForm } from "@/components/forms/expense-receipt-upload-form";
-import { FxPurchaseQuickAction } from "@/components/forms/fx-purchase-quick-action";
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
 import { TransferForm } from "@/components/forms/transfer-form";
@@ -37,19 +36,21 @@ import { useEntityAccess } from "@/lib/use-entity-access";
 type Props = {
   active: RecordActionKey | null;
   onClose: () => void;
+  routedFile?: File | null;
+  routedTo?: RecordActionKey | null;
 };
 
-export function RecordActionModals({ active, onClose }: Props) {
+export function RecordActionModals({
+  active,
+  onClose,
+  routedFile = null,
+  routedTo = null,
+}: Props) {
   const { canWriteOperations } = useEntityAccess();
-  const { deliveryEnabled } = useQuickActions();
-
-  // UX-C: file passthrough from AddDocumentDialog → specific form
-  const [routedFile, setRoutedFile] = useState<File | null>(null);
-  const [routedTo, setRoutedTo] = useState<RecordActionKey | null>(null);
+  const { deliveryEnabled, openRecordAction, openRecordActionWithFile } =
+    useQuickActions();
 
   const closeAll = useCallback(() => {
-    setRoutedFile(null);
-    setRoutedTo(null);
     onClose();
   }, [onClose]);
 
@@ -61,10 +62,9 @@ export function RecordActionModals({ active, onClose }: Props) {
         expense_receipt: "receipt",
         pos_daily_summary: "posPhoto",
       };
-      setRoutedFile(file);
-      setRoutedTo(actionMap[type]);
+      openRecordActionWithFile(actionMap[type], file);
     },
-    [],
+    [openRecordActionWithFile],
   );
 
   const personAction = useMemo((): RecordActionKey | null => {
@@ -78,6 +78,18 @@ export function RecordActionModals({ active, onClose }: Props) {
   }, [active]);
 
   const effectiveModal = routedTo ?? modalAction;
+
+  const fxInitialMode = useMemo((): FxUnifiedMode => {
+    if (effectiveModal === "fxConvert") return "convert";
+    if (effectiveModal === "fxSpend") return "spend";
+    return "buy";
+  }, [effectiveModal]);
+
+  const fxOpen =
+    effectiveModal === "fx" ||
+    effectiveModal === "buyFx" ||
+    effectiveModal === "fxConvert" ||
+    effectiveModal === "fxSpend";
 
   if (!canWriteOperations) return null;
 
@@ -97,12 +109,32 @@ export function RecordActionModals({ active, onClose }: Props) {
         open={modalAction === "addDocument"}
         onClose={closeAll}
         onConfirm={handleDocumentConfirm}
+        deliveryEnabled={deliveryEnabled}
+        onOpenDeliveryReport={() => {
+          openRecordAction("deliveryReport");
+        }}
       />
 
       <ManualDailySalesForm open={effectiveModal === "sales"} onClose={closeAll} />
       <TransferForm open={effectiveModal === "transfer"} onClose={closeAll} />
-      <ManualExpenseForm open={effectiveModal === "expense"} onClose={closeAll} />
-      <FxPurchaseQuickAction open={effectiveModal === "buyFx"} onClose={closeAll} />
+      <ManualExpenseForm
+        open={effectiveModal === "expense"}
+        onClose={closeAll}
+        defaultRecordKind="expense"
+        showRecordKindToggle={false}
+      />
+      <ManualExpenseForm
+        open={effectiveModal === "staffSalary"}
+        onClose={closeAll}
+        title="Staff salary"
+        defaultRecordKind="salary"
+        showRecordKindToggle={false}
+      />
+      <FxUnifiedDialog
+        open={fxOpen}
+        initialMode={fxInitialMode}
+        onClose={closeAll}
+      />
       <PosSummaryUploadForm
         open={effectiveModal === "posPhoto"}
         onClose={closeAll}
@@ -128,16 +160,6 @@ export function RecordActionModals({ active, onClose }: Props) {
 
       <CashDrawerCloseDayForm open={effectiveModal === "closeDay"} onClose={closeAll} />
       <CashMovementForm open={effectiveModal === "cashMovement"} onClose={closeAll} />
-      <FxWalletActionDialog
-        open={effectiveModal === "fxConvert"}
-        mode="convert"
-        onClose={closeAll}
-      />
-      <FxWalletActionDialog
-        open={effectiveModal === "fxSpend"}
-        mode="spend"
-        onClose={closeAll}
-      />
       <BankAccountPickerDialog
         open={effectiveModal === "bankStatement"}
         onClose={closeAll}

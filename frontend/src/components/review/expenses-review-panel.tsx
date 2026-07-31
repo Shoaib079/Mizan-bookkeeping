@@ -280,7 +280,7 @@ export function ExpensesReviewPanel() {
             <EmptyState
               icon={Wallet}
               title="No expenses in this view"
-              hint="Change the dates or filter, or record daily expenses from Add."
+              hint="Change the dates or filter, or record daily expenses from Record."
             />
           )}
 
@@ -341,7 +341,7 @@ export function ExpensesReviewPanel() {
                         />
                       ) : isPendingReviewStatus(row.status) ? (
                         <span className="text-xs text-muted-foreground">
-                          Confirm via Add
+                          Confirm via Record
                         </span>
                       ) : null}
                     </DataTableCell>

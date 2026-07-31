@@ -1,8 +1,6 @@
 "use client";
 
-/** Dashboard card — latest journal entries; rows open the transaction drawer.
- * Query-backed (phase 6): the global ledger-changed invalidation refreshes it
- * after any void/correction — no manual event listener needed. */
+/** Journal entry list — Add “Recorded today” and legacy dashboard card. */
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -20,15 +18,31 @@ import {
 type Props = {
   entityId: string;
   className?: string;
+  title?: string;
+  listUrl?: string;
+  queryKey?: readonly unknown[];
+  emptyMessage?: string;
+  viewAllHref?: string;
 };
 
-export function RecentEntriesCard({ entityId, className }: Props) {
+export function RecentEntriesCard({
+  entityId,
+  className,
+  title = "Recent entries",
+  listUrl,
+  queryKey,
+  emptyMessage = "No entries yet",
+  viewAllHref = "/reports/ledger",
+}: Props) {
   const { openTransaction } = useTransactionPeek();
+  const resolvedListUrl = listUrl ?? recentEntriesListUrl(entityId);
+  const resolvedQueryKey = queryKey ?? ["recent-entries", entityId];
+
   const query = useQuery({
-    queryKey: ["recent-entries", entityId],
+    queryKey: resolvedQueryKey,
     enabled: Boolean(entityId),
     queryFn: () =>
-      apiFetch<RecentEntriesListResponse>(recentEntriesListUrl(entityId)),
+      apiFetch<RecentEntriesListResponse>(resolvedListUrl),
   });
 
   const items = query.data?.items ?? [];
@@ -42,9 +56,9 @@ export function RecentEntriesCard({ entityId, className }: Props) {
       className={`rounded-lg border border-border bg-card p-4${className ? ` ${className}` : ""}`}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">Recent entries</h2>
+        <h2 className="text-sm font-semibold">{title}</h2>
         <Link
-          href="/reports/ledger"
+          href={viewAllHref}
           className="text-xs text-primary hover:underline"
         >
           View all
@@ -60,7 +74,7 @@ export function RecentEntriesCard({ entityId, className }: Props) {
       )}
 
       {!loading && !error && items.length === 0 && (
-        <p className="text-sm text-muted-foreground">No entries yet</p>
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       )}
 
       {!loading && items.length > 0 && (

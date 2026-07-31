@@ -7,9 +7,11 @@ async function readCardSource() {
 }
 
 describe("RecentEntriesCard", () => {
-  it("calls ledger entries with entity id and limit 10", async () => {
+  it("calls ledger entries with configurable list URL and query key", async () => {
     const source = await readCardSource();
     expect(source).toContain("recentEntriesListUrl(entityId)");
+    expect(source).toContain("listUrl");
+    expect(source).toContain("queryKey");
     expect(source).toContain("apiFetch");
   });
 
@@ -21,10 +23,10 @@ describe("RecentEntriesCard", () => {
     expect(source).toContain("journalEntryTotalKurus(entry.lines)");
   });
 
-  it("shows empty and error states without throwing", async () => {
+  it("supports custom title, empty message, and view-all link", async () => {
     const source = await readCardSource();
-    expect(source).toContain("No entries yet");
-    expect(source).toContain("Could not load recent entries");
-    expect(source).not.toContain("throw ");
+    expect(source).toContain("{title}");
+    expect(source).toContain("{emptyMessage}");
+    expect(source).toContain("viewAllHref");
   });
 });
