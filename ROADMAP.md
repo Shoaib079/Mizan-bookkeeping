@@ -17,7 +17,7 @@
 | **Active slice**         | (none) |
 | **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI |
 | **Last completed slice** | **Daily expense workflow (2026-07-31)** — Add/Review/⌘K/dashboard: **Daily expenses** = cash + partner + salary only; removed Store/card manual purchase; hidden duplicate People cards (staff salary, partner fronted); bank/card outflows statement-only copy; partner drawing capital balance fix; guard tests. |
-| **Last commit/tag**      | (pending — owner commit) |
+| **Last commit/tag**      | `v0.daily-expense-workflow` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
