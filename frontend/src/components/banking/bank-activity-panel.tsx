@@ -62,8 +62,9 @@ export function BankActivityPanel({ accountId, accountName }: Props) {
         <div>
           <h2 className="text-sm font-semibold">Account activity</h2>
           <p className="text-xs text-muted-foreground">
-            Money in and out on {accountName ?? "this account"} — from imported
-            statement lines. Posted rows update the book balance.
+            Opening balance entries and imported statement lines on{" "}
+            {accountName ?? "this account"}. Posted rows update the book
+            balance.
           </p>
         </div>
         <ReportDateRange

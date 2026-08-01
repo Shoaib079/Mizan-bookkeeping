@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import date
 
 import pytest
@@ -9,6 +10,7 @@ from sqlalchemy import select
 
 from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig
 from app.core.chart_of_accounts.seed import seed_default_chart
+from app.core.onboarding.posting import post_opening_balances
 from app.features.banking import bank_activity
 from app.features.banking import statements as statement_service
 from app.features.banking import service as banking_service
@@ -16,6 +18,10 @@ from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
 from app.db.session import entity_context
 from app.features.banking.statement_models import BankStatementLine, StatementLineStatus
+from app.features.onboarding.opening_balances import OpeningBalanceLineInput
+
+ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
+GO_LIVE = date(2026, 1, 1)
 
 SIMPLE_PROFILE = BankImportProfileConfig(
     header_row=1,
@@ -115,3 +121,59 @@ def test_unposted_lines_count_in_statement_totals_not_posted(db_session, setup) 
     assert report.total_in_kurus == 500_000
     assert report.posted_in_kurus == 0
     assert report.rows[1].affects_balance is False
+
+
+def test_opening_balance_before_period_included_in_opening_not_timeline(
+    db_session, setup
+) -> None:
+    entity_id, bank = setup["entity_id"], setup["bank"]
+    post_opening_balances(
+        db_session,
+        entity_id,
+        go_live_date=GO_LIVE,
+        lines=[OpeningBalanceLineInput(money_account_id=bank.id, amount_kurus=750_000)],
+        actor_id=ACTOR_ID,
+    )
+
+    report = bank_activity.get_bank_account_activity(
+        db_session,
+        entity_id,
+        bank.id,
+        from_date=date(2026, 6, 1),
+        to_date=date(2026, 6, 30),
+    )
+
+    assert report.opening_balance_kurus == 750_000
+    assert report.closing_balance_kurus == 750_000
+    assert report.posted_in_kurus == 0
+    assert not any(row.movement_kind == "opening_balance" for row in report.rows)
+
+
+def test_opening_balance_in_period_shows_row_and_running_balance(
+    db_session, setup
+) -> None:
+    entity_id, bank = setup["entity_id"], setup["bank"]
+    post_opening_balances(
+        db_session,
+        entity_id,
+        go_live_date=date(2026, 6, 1),
+        lines=[OpeningBalanceLineInput(money_account_id=bank.id, amount_kurus=500_000)],
+        actor_id=ACTOR_ID,
+    )
+
+    report = bank_activity.get_bank_account_activity(
+        db_session,
+        entity_id,
+        bank.id,
+        from_date=date(2026, 6, 1),
+        to_date=date(2026, 6, 30),
+    )
+
+    ob_rows = [row for row in report.rows if row.movement_kind == "opening_balance"]
+    assert len(ob_rows) == 1
+    assert ob_rows[0].amount_kurus == 500_000
+    assert ob_rows[0].balance_kurus == 500_000
+    assert report.posted_in_kurus == 500_000
+    assert report.closing_balance_kurus == 500_000
+    assert report.rows[-1].balance_kurus == report.closing_balance_kurus
+    assert report.rows[0].balance_kurus == 0

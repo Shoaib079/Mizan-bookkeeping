@@ -1,15 +1,28 @@
-"""Bank account activity — chronological inflows/outflows (Decisions §12)."""
+"""Bank account activity — chronological inflows/outflows (Decisions §12).
+
+Statement lines drive deposits/out/net-on-statements totals. Opening balance
+journal lines on this bank's GL account appear in the timeline and in posted
+in/out so the running book balance matches the GL closing row.
+"""
 
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.models import Account
+from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.balances import balance_as_of_kurus
+from app.core.ledger.models import (
+    JournalEntry,
+    JournalEntryLine,
+    JournalEntrySource,
+    JournalEntryStatus,
+)
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.banking.schema import BankActivityRead, BankActivityRow
@@ -50,6 +63,74 @@ _CLASSIFICATION_LABELS: dict[StatementLineClassification, str] = {
     StatementLineClassification.LOAN_RECEIPT: "Loan receipt",
     StatementLineClassification.UNKNOWN: "Unknown",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class _OpeningBalanceMovement:
+    movement_date: date
+    amount_kurus: int
+    detail: str
+    journal_entry_id: uuid.UUID
+
+
+@dataclass(frozen=True, slots=True)
+class _StatementMovement:
+    line: BankStatementLine
+
+
+def _signed_gl_amount_kurus(
+    amount_kurus: int,
+    side: AccountNormalBalance,
+    *,
+    normal_balance: AccountNormalBalance,
+) -> int:
+    """Signed inflow/outflow for a money-account GL line (debit-normal asset)."""
+    is_in = side == normal_balance
+    return amount_kurus if is_in else -amount_kurus
+
+
+def _opening_balance_movements(
+    session: Session,
+    gl_account: Account,
+    *,
+    from_date: date,
+    to_date: date,
+) -> list[_OpeningBalanceMovement]:
+    records = session.execute(
+        select(
+            JournalEntry.entry_date,
+            JournalEntry.description,
+            JournalEntry.id,
+            JournalEntryLine.amount_kurus,
+            JournalEntryLine.side,
+        )
+        .join(JournalEntry, JournalEntry.id == JournalEntryLine.journal_entry_id)
+        .where(
+            JournalEntryLine.account_id == gl_account.id,
+            JournalEntry.status == JournalEntryStatus.POSTED.value,
+            JournalEntry.reverses_entry_id.is_(None),
+            JournalEntry.source == JournalEntrySource.OPENING_BALANCE,
+            JournalEntry.entry_date >= from_date,
+            JournalEntry.entry_date <= to_date,
+        )
+        .order_by(JournalEntry.entry_date, JournalEntry.id)
+    ).all()
+
+    movements: list[_OpeningBalanceMovement] = []
+    for entry_date, description, journal_entry_id, amount_kurus, side in records:
+        movements.append(
+            _OpeningBalanceMovement(
+                movement_date=entry_date,
+                amount_kurus=_signed_gl_amount_kurus(
+                    amount_kurus,
+                    side,
+                    normal_balance=gl_account.normal_balance,
+                ),
+                detail=description or "Opening balances",
+                journal_entry_id=journal_entry_id,
+            )
+        )
+    return movements
 
 
 def _require_bank_account(session: Session, money_account_id: uuid.UUID) -> MoneyAccount:
@@ -101,6 +182,29 @@ def get_bank_account_activity(
             )
         )
 
+        opening_balance_movements = _opening_balance_movements(
+            session,
+            gl_account,
+            from_date=from_date,
+            to_date=to_date,
+        )
+
+        timeline: list[
+            tuple[date, int, uuid.UUID, _OpeningBalanceMovement | _StatementMovement]
+        ] = []
+        for movement in opening_balance_movements:
+            timeline.append(
+                (
+                    movement.movement_date,
+                    0,
+                    movement.journal_entry_id,
+                    movement,
+                )
+            )
+        for line in lines:
+            timeline.append((line.transaction_date, 1, line.id, _StatementMovement(line=line)))
+        timeline.sort(key=lambda item: (item[0], item[1], item[2]))
+
         total_in = 0
         total_out = 0
         posted_in = 0
@@ -123,7 +227,32 @@ def get_bank_account_activity(
             )
         )
 
-        for line in lines:
+        for _, _, _, event in timeline:
+            if isinstance(event, _OpeningBalanceMovement):
+                amount = event.amount_kurus
+                running_book += amount
+                if amount > 0:
+                    posted_in += amount
+                elif amount < 0:
+                    posted_out += abs(amount)
+
+                rows.append(
+                    BankActivityRow(
+                        movement_date=event.movement_date,
+                        movement_kind="opening_balance",
+                        movement_label="Opening balance",
+                        detail=event.detail,
+                        amount_kurus=amount,
+                        balance_kurus=running_book,
+                        affects_balance=True,
+                        statement_line_id=None,
+                        classification=None,
+                        status=None,
+                    )
+                )
+                continue
+
+            line = event.line
             amount = line.amount_kurus
             if amount > 0:
                 total_in += amount
@@ -151,7 +280,7 @@ def get_bank_account_activity(
                     movement_label=label,
                     detail=line.description,
                     amount_kurus=amount,
-                    balance_kurus=running_book if settled else running_book,
+                    balance_kurus=running_book,
                     affects_balance=settled,
                     statement_line_id=line.id,
                     classification=line.classification.value,
