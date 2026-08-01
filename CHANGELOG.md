@@ -4,6 +4,12 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-01
 
+**Bank statement closing balance auto-read + account activity.**
+- Import detects **Bakiye** column (auto-suggest or manual map) and saves **closing balance** on the statement — feeds Reports → Bank reconciliation without typing it by hand.
+- **Banking → account detail** shows **Account activity**: deposits, payments, net flow, and timeline from statement lines (posted rows move the book balance).
+- Dashboard and **Balances → Right now** list each bank with its balance (not İş Bank only).
+- Statement bulk post no longer exits silently when actor id is missing in local dev.
+
 **Local dev — restore live data from Cloudflare R2 backup.**
 - New `backend/scripts/restore_local_from_backup.sh` downloads latest `mizan-backup-*.tar.gz` (or uses a local file) and replaces local Homebrew `mizan` — no re-entering sales for reconciliation testing.
 - Step-by-step in `DEV.md` (R2 creds or dashboard download; never restores to Neon).

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-
+import { BankAccountBalanceRow } from "@/components/banking/bank-account-balance-rows";
 import { MoneyAccountForm } from "@/components/forms/money-account-form";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -26,20 +26,7 @@ type Props = {
 };
 
 function AccountRow({ account }: { account: MoneyAccountLeaf }) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-3">
-      <Link
-        href={`/banking/accounts/${account.id}`}
-        className="text-sm text-primary hover:underline"
-      >
-        {account.name}
-        {account.last_four && ` ···${account.last_four}`}
-      </Link>
-      <span className="tabular-nums text-sm">
-        {formatTry(account.balance_kurus)}
-      </span>
-    </div>
-  );
+  return <BankAccountBalanceRow account={account} />;
 }
 
 export function BankingBranchListContent({

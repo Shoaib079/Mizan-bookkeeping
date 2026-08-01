@@ -38,6 +38,7 @@ _ROLE_PATTERNS: dict[str, tuple[tuple[str, ...], float]] = {
     "debit": (("borc", "debit", "cikis", "odeme"), 2.0),
     "credit": (("alacak", "credit", "giris", "tahsilat"), 2.0),
     "amount": (("tutar", "miktar", "amount", "islem tutari"), 2.0),
+    "balance": (("bakiye", "balance", "guncel bakiye", "kalan"), 1.5),
 }
 
 _EXCLUDE_PATTERNS = ("bakiye", "balance", "doviz", "kur ", " sube", "branch")
@@ -54,6 +55,12 @@ def _matches_role(norm_cell: str, keywords: tuple[str, ...]) -> bool:
     if not norm_cell:
         return False
     if any(ex in norm_cell for ex in _EXCLUDE_PATTERNS):
+        return False
+    return any(kw in norm_cell or norm_cell == kw for kw in keywords)
+
+
+def _matches_balance_header(norm_cell: str, keywords: tuple[str, ...]) -> bool:
+    if not norm_cell:
         return False
     return any(kw in norm_cell or norm_cell == kw for kw in keywords)
 
@@ -197,6 +204,15 @@ def suggest_import_profile(
     data_start = best_row + 1
     date_format = _detect_date_format(grid, data_start, date_col)
 
+    balance_col: int | None = None
+    for idx, cell in enumerate(header_row):
+        if idx in best_roles.values():
+            continue
+        norm = _norm_header(cell)
+        if _matches_balance_header(norm, _ROLE_PATTERNS["balance"][0]):
+            balance_col = idx
+            break
+
     return BankImportProfileConfig(
         header_row=best_row,
         data_start_row=data_start,
@@ -207,6 +223,7 @@ def suggest_import_profile(
         amount_col=amount_col,
         debit_col=debit_col,
         credit_col=credit_col,
+        balance_col=balance_col,
         date_format=date_format,
         decimal_format="tr",
         debit_is_outflow=True,

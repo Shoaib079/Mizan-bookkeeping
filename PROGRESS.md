@@ -10,9 +10,9 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Dev local restore from R2 — clone live backup to local Postgres — 2026-08-01 |
-| **Last tag** | `v0.dev-local-restore` |
-| **Unpushed** | (cleared on push) |
+| **Last completed slice** | Bank closing balance auto-read + account activity — 2026-08-01 |
+| **Last tag** | `v0.bank-closing-activity` |
+| **Unpushed** | (none) |
 | **Next up** | **GS-FX** · P5 — Delete company UI |
 
 ## FINANCIAL_AUDIT status (2026-07-27)

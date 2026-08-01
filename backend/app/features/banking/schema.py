@@ -207,6 +207,7 @@ class BankImportProfileRead(BaseModel):
     amount_col: int | None = Field(default=None, ge=0)
     debit_col: int | None = Field(default=None, ge=0)
     credit_col: int | None = Field(default=None, ge=0)
+    balance_col: int | None = Field(default=None, ge=0)
     date_format: str
     decimal_format: str
     debit_is_outflow: bool
@@ -226,6 +227,7 @@ class BankImportProfileUpsert(BaseModel):
     amount_col: int | None = Field(default=None, ge=0)
     debit_col: int | None = Field(default=None, ge=0)
     credit_col: int | None = Field(default=None, ge=0)
+    balance_col: int | None = Field(default=None, ge=0)
     date_format: str
     decimal_format: str = "tr"
     debit_is_outflow: bool = True
@@ -239,6 +241,7 @@ class BankStatementPreview(BaseModel):
     csv_encoding: str | None = None
     csv_delimiter: str | None = None
     suggested_profile: BankImportProfileUpsert | None = None
+    detected_closing_balance_kurus: int | None = None
 
 
 class ClassifyStatementLineRequest(BaseModel):
@@ -370,3 +373,31 @@ class SetStatementClosingBalanceRequest(BaseModel):
     """Record the closing balance printed on the bank's own statement."""
 
     closing_balance_kurus: int
+
+
+class BankActivityRow(BaseModel):
+    movement_date: date
+    movement_kind: str
+    movement_label: str
+    detail: str
+    amount_kurus: int | None = None
+    balance_kurus: int
+    affects_balance: bool = True
+    statement_line_id: uuid.UUID | None = None
+    classification: str | None = None
+    status: str | None = None
+
+
+class BankActivityRead(BaseModel):
+    money_account_id: uuid.UUID
+    account_name: str
+    from_date: date
+    to_date: date
+    opening_balance_kurus: int
+    closing_balance_kurus: int
+    total_in_kurus: int
+    total_out_kurus: int
+    net_flow_kurus: int
+    posted_in_kurus: int
+    posted_out_kurus: int
+    rows: list[BankActivityRow]

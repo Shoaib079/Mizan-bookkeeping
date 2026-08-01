@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ReportDateRange } from "@/components/reports/report-date-range";
+import { BankActivityPanel } from "@/components/banking/bank-activity-panel";
 import { TransferForm } from "@/components/forms/transfer-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -195,6 +196,9 @@ export function AccountDetailPageContent() {
                       <DataTableHeaderCell align="right">
                         Lines
                       </DataTableHeaderCell>
+                      <DataTableHeaderCell align="right">
+                        Closing
+                      </DataTableHeaderCell>
                     </tr>
                   </DataTableHead>
                   <DataTableBody>
@@ -213,12 +217,21 @@ export function AccountDetailPageContent() {
                         <DataTableCell align="right">
                           {stmt.line_count}
                         </DataTableCell>
+                        <DataTableCell align="right" className="tabular-nums">
+                          {stmt.closing_balance_kurus != null
+                            ? formatTry(stmt.closing_balance_kurus)
+                            : "—"}
+                        </DataTableCell>
                       </DataTableRow>
                     ))}
                   </DataTableBody>
                 </DataTable>
               )}
             </section>
+          )}
+
+          {account.account_kind === "bank" && (
+            <BankActivityPanel accountId={accountId} accountName={account.name} />
           )}
 
           {account.account_kind === "credit_card" && (

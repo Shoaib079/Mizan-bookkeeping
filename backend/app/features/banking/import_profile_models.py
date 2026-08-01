@@ -38,6 +38,7 @@ class BankImportProfile(EntityScopedMixin, Base):
     amount_col: Mapped[int | None] = mapped_column(Integer, nullable=True)
     debit_col: Mapped[int | None] = mapped_column(Integer, nullable=True)
     credit_col: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    balance_col: Mapped[int | None] = mapped_column(Integer, nullable=True)
     date_format: Mapped[str] = mapped_column(String(16), nullable=False)
     decimal_format: Mapped[str] = mapped_column(String(8), nullable=False, default="tr")
     debit_is_outflow: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

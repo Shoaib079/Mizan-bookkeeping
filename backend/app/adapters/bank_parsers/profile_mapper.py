@@ -129,6 +129,11 @@ class BankImportProfileConfig(BaseModel):
     amount_col: int | None = Field(default=None, ge=0)
     debit_col: int | None = Field(default=None, ge=0)
     credit_col: int | None = Field(default=None, ge=0)
+    balance_col: int | None = Field(
+        default=None,
+        ge=0,
+        description="Optional 0-based running balance column (Bakiye) — last row used as closing",
+    )
     date_format: DateFormat
     decimal_format: DecimalFormat = "tr"
     debit_is_outflow: bool = Field(
@@ -176,6 +181,8 @@ class BankImportProfileConfig(BaseModel):
         cols = [self.date_col, self.description_col, *self.description_extra_cols]
         if self.reference_col is not None:
             cols.append(self.reference_col)
+        if self.balance_col is not None:
+            cols.append(self.balance_col)
         if self.amount_col is not None:
             cols.append(self.amount_col)
         else:
@@ -199,6 +206,7 @@ class BankImportProfileConfig(BaseModel):
                 self.amount_col,
                 self.debit_col,
                 self.credit_col,
+                self.balance_col,
             }
             for idx, cell in enumerate(header):
                 if idx in indices or idx in used:
@@ -385,6 +393,45 @@ def _map_row(
     )
 
 
+def extract_closing_balance_kurus(
+    grid: list[list[object]],
+    profile: BankImportProfileConfig,
+    parsed_lines: list[ParsedStatementLine],
+) -> int | None:
+    """Read the bank's printed closing balance from the last mapped row with a date."""
+    if profile.balance_col is None or not parsed_lines:
+        return None
+
+    last_row = profile.data_end_row if profile.data_end_row is not None else len(grid)
+    last_date: date | None = None
+    closing: int | None = None
+
+    for row_idx in range(profile.data_start_row - 1, min(last_row, len(grid))):
+        row = grid[row_idx]
+        row_num = row_idx + 1
+        if _row_is_blank(row, profile):
+            continue
+        try:
+            txn_date = parse_date_with_format(
+                _cell(row, profile.date_col), row_num, profile.date_format
+            )
+        except BankParseError:
+            continue
+        balance_raw = _cell(row, profile.balance_col)
+        balance_kurus = _parse_optional_amount(
+            balance_raw,
+            row_num,
+            decimal_format=profile.decimal_format,
+        )
+        if balance_kurus is None:
+            continue
+        if last_date is None or txn_date >= last_date:
+            last_date = txn_date
+            closing = balance_kurus
+
+    return closing
+
+
 def parse_with_profile(
     content: bytes,
     profile: BankImportProfileConfig,
@@ -411,4 +458,5 @@ def parse_with_profile(
         if mapped is not None:
             lines.append(mapped)
 
-    return build_parsed_statement(lines)
+    closing_balance_kurus = extract_closing_balance_kurus(grid, profile, lines)
+    return build_parsed_statement(lines, closing_balance_kurus=closing_balance_kurus)

@@ -99,7 +99,11 @@ def parse_statement_line(
     )
 
 
-def build_parsed_statement(lines: list[ParsedStatementLine]) -> ParsedStatement:
+def build_parsed_statement(
+    lines: list[ParsedStatementLine],
+    *,
+    closing_balance_kurus: int | None = None,
+) -> ParsedStatement:
     if not lines:
         raise BankParseError("Statement contains no transaction rows")
     dates = [line.transaction_date for line in lines]
@@ -107,4 +111,5 @@ def build_parsed_statement(lines: list[ParsedStatementLine]) -> ParsedStatement:
         lines=lines,
         period_start=min(dates),
         period_end=max(dates),
+        closing_balance_kurus=closing_balance_kurus,
     )

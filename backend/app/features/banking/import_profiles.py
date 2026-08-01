@@ -7,8 +7,13 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig
+from app.adapters.bank_parsers.profile_mapper import (
+    BankImportProfileConfig,
+    extract_closing_balance_kurus,
+    parse_with_profile,
+)
 from app.adapters.bank_parsers.profile_suggest import suggest_import_profile
+from app.adapters.bank_parsers.types import BankParseError
 from app.adapters.bank_parsers.raw_grid import (
     STATEMENT_PREVIEW_ROW_LIMIT,
     grid_preview_rows,
@@ -51,6 +56,7 @@ def profile_to_config(model: BankImportProfile) -> BankImportProfileConfig:
         amount_col=model.amount_col,
         debit_col=model.debit_col,
         credit_col=model.credit_col,
+        balance_col=model.balance_col,
         date_format=model.date_format,  # type: ignore[arg-type]
         decimal_format=model.decimal_format,  # type: ignore[arg-type]
         debit_is_outflow=model.debit_is_outflow,
@@ -122,6 +128,7 @@ def upsert_import_profile(
         existing.amount_col = config.amount_col
         existing.debit_col = config.debit_col
         existing.credit_col = config.credit_col
+        existing.balance_col = config.balance_col
         existing.date_format = config.date_format
         existing.decimal_format = config.decimal_format
         existing.debit_is_outflow = config.debit_is_outflow
@@ -161,10 +168,21 @@ def preview_statement_upload(
     )
     suggestion = suggest_import_profile(grid)
     suggested_profile = None
+    detected_closing: int | None = None
     if suggestion is not None:
         suggested_profile = BankImportProfileUpsert.model_validate(
             suggestion.model_dump()
         )
+        try:
+            parsed = parse_with_profile(
+                content,
+                suggestion,
+                original_filename=original_filename,
+                content_type=content_type,
+            )
+            detected_closing = parsed.closing_balance_kurus
+        except BankParseError:
+            detected_closing = extract_closing_balance_kurus(grid, suggestion, [])
 
     return BankStatementPreview(
         rows=grid_preview_rows(grid, limit=STATEMENT_PREVIEW_ROW_LIMIT),
@@ -172,4 +190,5 @@ def preview_statement_upload(
         csv_encoding=csv_encoding,
         csv_delimiter=csv_delimiter,
         suggested_profile=suggested_profile,
+        detected_closing_balance_kurus=detected_closing,
     )

@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none) |
 | **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI |
-| **Last completed slice** | **Dev local restore from R2 (2026-08-01)** — script + DEV.md to clone production backup into local Postgres (owner verified). |
-| **Last commit/tag**      | `v0.dev-local-restore` |
+| **Last completed slice** | **Bank closing balance auto-read + account activity (2026-08-01)** — Bakiye column on import → stated closing for reconciliation; bank account activity timeline (deposits/out/net). |
+| **Last commit/tag**      | `v0.bank-closing-activity` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
@@ -1878,6 +1878,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-01 | Bank closing balance + account activity        | `v0.bank-closing-activity`                             | Import **Bakiye** column → stated closing on statement; **Account activity** API + panel (deposits/out/net/book balance); per-bank rows on dashboard + Balances; bulk post no longer silent-fails without actor; migration `085`; pytest + build green |
 | 2026-08-01 | Money out + cash drawer UX                   | `v0.money-out-ux`                                      | **`CashDrawerPicker`** + `shouldShowCashDrawerPicker` — hide drawer when one TRY account; banking hub "TRY cash"; opening-balance labels; partner reimbursement **cash-only** (bank → statement classify); Edit beside name on partner/staff/supplier detail; ledger Edit/Void inline on description; staff actions on page (removed overflow ⋯); vitest + build green |
 | 2026-07-31 | Record desk build typefix                      | `v0.record-desk-typefix`                               | `PrimaryRecordActionId` const type — Record desk modes no longer widen to all action keys; Vercel build green |
 | 2026-07-31 | Record desk + dashboard status split     | `v0.record-desk`                                       | **RecordDesk** on `/record` (left icon rail, inline forms, Sales default, date-first, Recorded today); dashboard status-only (no daily shortcuts; delivery before chart; Cash/Bank snapshot); Add → Record label; hide supplier/staff/bank actions from hub; unified FX/upload; guard + vitest |

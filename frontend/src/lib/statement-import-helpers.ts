@@ -23,6 +23,7 @@ export type MappingState = {
   amountCol: number | null;
   debitCol: number | null;
   creditCol: number | null;
+  balanceCol: number | null;
   dateFormat: DateFormat;
   decimalFormat: DecimalFormat;
   csvEncoding: CsvEncoding;
@@ -56,6 +57,7 @@ export const DEFAULT_MAPPING: MappingState = {
   amountCol: null,
   debitCol: 2,
   creditCol: 3,
+  balanceCol: null,
   dateFormat: "DD.MM.YYYY",
   decimalFormat: "tr",
   csvEncoding: "auto",
@@ -142,7 +144,8 @@ export type ColumnAssignRole =
   | "reference"
   | "amount"
   | "debit"
-  | "credit";
+  | "credit"
+  | "balance";
 
 export const COLUMN_ASSIGN_ROLES: { id: ColumnAssignRole; label: string }[] = [
   { id: "date", label: "Date" },
@@ -152,6 +155,7 @@ export const COLUMN_ASSIGN_ROLES: { id: ColumnAssignRole; label: string }[] = [
   { id: "debit", label: "Borç" },
   { id: "credit", label: "Alacak" },
   { id: "amount", label: "Amount" },
+  { id: "balance", label: "Bakiye (closing)" },
 ];
 
 export function applyColumnAssignment(
@@ -184,6 +188,8 @@ export function applyColumnAssignment(
         amountCol: null,
         creditCol: colIdx,
       };
+    case "balance":
+      return { ...mapping, balanceCol: colIdx };
     default:
       return mapping;
   }
@@ -200,6 +206,7 @@ export function roleForColumn(
   if (mapping.amountMode === "signed" && mapping.amountCol === colIdx) return "amount";
   if (mapping.amountMode === "debit_credit" && mapping.debitCol === colIdx) return "debit";
   if (mapping.amountMode === "debit_credit" && mapping.creditCol === colIdx) return "credit";
+  if (mapping.balanceCol === colIdx) return "balance";
   return null;
 }
 
@@ -222,6 +229,7 @@ export function profileToMapping(profile: BankImportProfileRead): MappingState {
     amountCol: profile.amount_col,
     debitCol: profile.debit_col,
     creditCol: profile.credit_col,
+    balanceCol: profile.balance_col ?? null,
     dateFormat: profile.date_format as DateFormat,
     decimalFormat: profile.decimal_format as DecimalFormat,
     csvEncoding: (profile.csv_encoding ?? "auto") as CsvEncoding,
@@ -250,6 +258,7 @@ export function suggestedProfileToMapping(
     amountCol: profile.amount_col,
     debitCol: profile.debit_col,
     creditCol: profile.credit_col,
+    balanceCol: profile.balance_col ?? null,
     dateFormat: profile.date_format as DateFormat,
     decimalFormat: profile.decimal_format as DecimalFormat,
     csvEncoding: (profile.csv_encoding ?? csvEncoding) as CsvEncoding,
@@ -272,6 +281,7 @@ export function mappingToProfilePayload(mapping: MappingState) {
     amount_col: mapping.amountMode === "signed" ? mapping.amountCol : null,
     debit_col: mapping.amountMode === "debit_credit" ? mapping.debitCol : null,
     credit_col: mapping.amountMode === "debit_credit" ? mapping.creditCol : null,
+    balance_col: mapping.balanceCol,
     date_format: mapping.dateFormat,
     decimal_format: mapping.decimalFormat,
     csv_encoding: mapping.csvEncoding,

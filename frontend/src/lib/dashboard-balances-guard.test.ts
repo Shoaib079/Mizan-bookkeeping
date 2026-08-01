@@ -26,7 +26,8 @@ describe("balances on dashboard", () => {
     expect(page).toContain("bank_balance_kurus");
     expect(snapshot).toContain("Cash & bank");
     expect(snapshot).toContain("Cash");
-    expect(snapshot).toContain("Bank");
+    expect(snapshot).toContain("Bank accounts");
+    expect(snapshot).toContain("BankAccountBalanceRows");
     expect(page).toContain("Right now");
     expect(page).toContain("BalancesOverview");
     expect(overview).not.toContain('title="Cash"');

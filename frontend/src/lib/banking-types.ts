@@ -141,6 +141,7 @@ export type BankStatementRead = {
   period_end: string;
   original_filename: string;
   line_count: number;
+  closing_balance_kurus?: number | null;
   skipped_duplicate_count?: number;
   imported_at: string;
   lines: BankStatementLine[];
@@ -152,6 +153,7 @@ export type BankStatementPreview = {
   csv_encoding: string | null;
   csv_delimiter: string | null;
   suggested_profile: BankImportProfileUpsert | null;
+  detected_closing_balance_kurus?: number | null;
 };
 
 export type BankImportProfileUpsert = {
@@ -165,6 +167,7 @@ export type BankImportProfileUpsert = {
   amount_col: number | null;
   debit_col: number | null;
   credit_col: number | null;
+  balance_col?: number | null;
   date_format: string;
   decimal_format: string;
   debit_is_outflow: boolean;
@@ -186,12 +189,41 @@ export type BankImportProfileRead = {
   amount_col: number | null;
   debit_col: number | null;
   credit_col: number | null;
+  balance_col?: number | null;
   date_format: string;
   decimal_format: string;
   debit_is_outflow: boolean;
   csv_encoding: string;
   csv_delimiter: string;
   updated_at: string;
+};
+
+export type BankActivityRow = {
+  movement_date: string;
+  movement_kind: string;
+  movement_label: string;
+  detail: string;
+  amount_kurus: number | null;
+  balance_kurus: number;
+  affects_balance: boolean;
+  statement_line_id: string | null;
+  classification: string | null;
+  status: string | null;
+};
+
+export type BankActivityRead = {
+  money_account_id: string;
+  account_name: string;
+  from_date: string;
+  to_date: string;
+  opening_balance_kurus: number;
+  closing_balance_kurus: number;
+  total_in_kurus: number;
+  total_out_kurus: number;
+  net_flow_kurus: number;
+  posted_in_kurus: number;
+  posted_out_kurus: number;
+  rows: BankActivityRow[];
 };
 
 export type AccountTransferRead = {

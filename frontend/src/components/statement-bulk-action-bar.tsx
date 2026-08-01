@@ -235,7 +235,10 @@ export function StatementBulkActionBar({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!entityId || !actorId || !mode || submitting) return;
+    if (!entityId || !mode || submitting) {
+      if (!entityId) setError("Select a restaurant in the sidebar first.");
+      return;
+    }
 
     const validation = validateBulkSelection(lines, classification);
     if (!validation.ok) {
@@ -413,6 +416,14 @@ export function StatementBulkActionBar({
         )}
 
         {error && <p className="text-xs text-destructive">{error}</p>}
+
+        {!submitting &&
+          selectionCheck.ok &&
+          targetsRequiredForClassification(classification, targets) && (
+            <p className="text-xs text-muted-foreground">
+              Choose the linked account or party before posting.
+            </p>
+          )}
 
         <div className="flex flex-wrap items-center gap-2">
           <Button

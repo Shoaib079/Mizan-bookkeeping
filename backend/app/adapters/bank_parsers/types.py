@@ -23,3 +23,4 @@ class ParsedStatement:
     lines: list[ParsedStatementLine]
     period_start: date
     period_end: date
+    closing_balance_kurus: int | None = None

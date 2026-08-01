@@ -10,13 +10,14 @@ import { apiFetch } from "@/lib/api";
 import {
   ArrowRight,
   Banknote,
+  Building2,
   Coins,
   HandCoins,
   Receipt,
   Users,
 } from "lucide-react";
 
-import type { MoneyAccountTree } from "@/lib/banking-types";
+import type { MoneyAccountLeaf, MoneyAccountTree } from "@/lib/banking-types";
 import {
   fxHoldingsNativeSummary,
 } from "@/lib/banking-tree-helpers";
@@ -114,26 +115,37 @@ export function BalancesOverview({ embedded = false }: Props) {
   // FX wallets fetched separately — not mixed into cash or bank.
   const [fxNativeSummary, setFxNativeSummary] = useState("No holdings");
   const [fxLoading, setFxLoading] = useState(false);
+  const [bankAccounts, setBankAccounts] = useState<MoneyAccountLeaf[]>([]);
+  const [banksLoading, setBanksLoading] = useState(false);
 
   useEffect(() => {
     if (!entityId) {
       setFxNativeSummary("No holdings");
+      setBankAccounts([]);
       return;
     }
     let cancelled = false;
     setFxLoading(true);
+    setBanksLoading(true);
     void apiFetch<MoneyAccountTree>(
       `/entities/${entityId}/banking/accounts/tree`,
     )
       .then((tree) => {
         if (cancelled) return;
         setFxNativeSummary(fxHoldingsNativeSummary(tree));
+        setBankAccounts(tree.banks.accounts.filter((account) => account.is_active));
       })
       .catch(() => {
-        if (!cancelled) setFxNativeSummary("No holdings");
+        if (!cancelled) {
+          setFxNativeSummary("No holdings");
+          setBankAccounts([]);
+        }
       })
       .finally(() => {
-        if (!cancelled) setFxLoading(false);
+        if (!cancelled) {
+          setFxLoading(false);
+          setBanksLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -175,6 +187,17 @@ export function BalancesOverview({ embedded = false }: Props) {
           amountClass={receivables.totalKurus > 0 ? "text-success" : undefined}
           loading={receivables.loading}
         />
+        {bankAccounts.map((account) => (
+          <BalanceCard
+            key={account.id}
+            href={`/banking/accounts/${account.id}`}
+            title={account.name}
+            hint="Book balance · statements, activity, reconciliation"
+            icon={Building2}
+            amount={formatTry(account.balance_kurus)}
+            loading={banksLoading}
+          />
+        ))}
         <BalanceCard
           href="/banking/fx"
           title="Foreign currency"

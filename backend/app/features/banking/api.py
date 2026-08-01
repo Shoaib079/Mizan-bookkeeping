@@ -12,9 +12,12 @@ from app.core.listing import ListParams, PaginatedListOut, list_params_dependenc
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard
 from app.features.banking import credit_card_payments as cc_payment_service
+from app.features.banking import bank_activity as bank_activity_service
 from app.features.banking import service
+from app.features.banking.statements import NotBankAccountError
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import (
+    BankActivityRead,
     CreditCardPaymentRead,
     MoneyAccountCreate,
     MoneyAccountRead,
@@ -101,6 +104,31 @@ def get_money_account(
         return service.get_money_account(session, entity_id, money_account_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/{money_account_id}/activity", response_model=BankActivityRead)
+def get_bank_account_activity(
+    entity_id: uuid.UUID,
+    money_account_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+    from_date: date = Query(alias="from"),
+    to_date: date = Query(alias="to"),
+) -> BankActivityRead:
+    try:
+        return bank_activity_service.get_bank_account_activity(
+            session,
+            entity_id,
+            money_account_id,
+            from_date=from_date,
+            to_date=to_date,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except NotBankAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get(

@@ -90,7 +90,14 @@ function AccountCard({
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-medium">{account.name}</p>
+          <p className="font-medium">
+            <Link
+              href={`/banking/accounts/${account.money_account_id}`}
+              className="text-primary hover:underline"
+            >
+              {account.name}
+            </Link>
+          </p>
           {account.statement_period_end ? (
             <p className="text-xs text-muted-foreground">
               Latest statement to {formatTrDate(account.statement_period_end)}

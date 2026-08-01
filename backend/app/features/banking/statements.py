@@ -886,6 +886,7 @@ def _persist_parsed_statement(
         original_filename=original_filename,
         storage_path=None,
         line_count=len(to_import),
+        closing_balance_kurus=parsed.closing_balance_kurus,
     )
     session.add(statement)
     try:

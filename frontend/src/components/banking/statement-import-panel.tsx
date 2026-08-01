@@ -61,6 +61,7 @@ import {
   type StatementPreviewLoadResult,
 } from "@/lib/statement-import-preview-inflight";
 import { useToast } from "@/lib/toast";
+import { formatTry } from "@/lib/money";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { cn } from "@/lib/utils";
@@ -159,6 +160,7 @@ function MappingAtAGlance({
     rows.push({ role: "Borç", col: mapping.debitCol });
     rows.push({ role: "Alacak", col: mapping.creditCol });
   }
+  rows.push({ role: "Bakiye", col: mapping.balanceCol });
 
   return (
     <dl className="space-y-1 rounded-md border border-border/80 bg-muted/40 px-2.5 py-2 text-[11px]">
@@ -209,6 +211,9 @@ function mappedColumnClass(mapping: MappingState, colIdx: number): string {
     (mapping.debitCol === colIdx || mapping.creditCol === colIdx)
   ) {
     return "ring-1 ring-inset ring-primary/50 bg-primary/5";
+  }
+  if (mapping.balanceCol === colIdx) {
+    return "ring-1 ring-inset ring-emerald-500/40 bg-emerald-500/5";
   }
   return "";
 }
@@ -355,6 +360,9 @@ export function StatementImportPanel({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [autoDetected, setAutoDetected] = useState(false);
+  const [detectedClosingBalance, setDetectedClosingBalance] = useState<number | null>(
+    null,
+  );
   const [assignTarget, setAssignTarget] = useState<ColumnAssignRole | null>(null);
   const [expectedFileName, setExpectedFileName] = useState<string | null>(null);
   const previewRequestRef = useRef(0);
@@ -377,6 +385,7 @@ export function StatementImportPanel({
     setStep("pick");
     setError(null);
     setAutoDetected(false);
+    setDetectedClosingBalance(null);
     setAssignTarget(null);
     setExpectedFileName(null);
     submitIdempotency.resetSubmit();
@@ -436,6 +445,9 @@ export function StatementImportPanel({
       setAutoDetected(result.autoDetected);
       setPreview(result.preview);
       setMapping(result.mapping);
+      setDetectedClosingBalance(
+        result.preview.detected_closing_balance_kurus ?? null,
+      );
       setStep("map");
       setExpectedFileName(fileMeta.name);
       persistSession(fileMeta, result.preview, result.mapping);
@@ -699,6 +711,14 @@ export function StatementImportPanel({
               preview — adjust header row and column letters if needed.
             </p>
           )}
+          {detectedClosingBalance !== null && (
+            <p className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm">
+              Closing balance read from statement:{" "}
+              <strong>{formatTry(detectedClosingBalance)}</strong> — saved on
+              import for bank reconciliation (map the <strong>Bakiye</strong>{" "}
+              column if this looks wrong).
+            </p>
+          )}
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
             <section className="min-w-0 space-y-3">
@@ -917,6 +937,18 @@ export function StatementImportPanel({
                       dataStartRow={mapping.dataStartRow}
                       allowEmpty
                       onChange={(v) => setMapping((m) => ({ ...m, referenceCol: v }))}
+                    />
+                    <ColumnSelect
+                      label="Bakiye / closing balance (optional)"
+                      value={mapping.balanceCol}
+                      maxCol={maxCol}
+                      preview={preview}
+                      headerRow={mapping.headerRow}
+                      dataStartRow={mapping.dataStartRow}
+                      allowEmpty
+                      onChange={(v) =>
+                        setMapping((m) => ({ ...m, balanceCol: v }))
+                      }
                     />
 
                     <div className="space-y-0.5">
