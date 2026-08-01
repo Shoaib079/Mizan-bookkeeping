@@ -67,25 +67,16 @@ export function advanceAppliedPreview(
   return Math.max(0, Math.min(outstandingAdvanceMinor, owedMinor - salaryCash));
 }
 
-export function salaryCashPreview(
-  cashMinor: number,
-  owedMinor: number,
-  _outstandingAdvanceMinor: number,
-): number {
-  // Cash settles owed first; the advance only clears what cash didn't.
+export function salaryCashPreview(cashMinor: number, owedMinor: number): number {
+  // Cash settles owed first; advance clearing is computed separately.
   return Math.min(cashMinor, Math.max(0, owedMinor));
 }
 
 export function excessAdvancePreview(
   cashMinor: number,
   periodRemainingMinor: number,
-  outstandingAdvanceMinor: number,
 ): number {
-  const salaryCash = salaryCashPreview(
-    cashMinor,
-    periodRemainingMinor,
-    outstandingAdvanceMinor,
-  );
+  const salaryCash = salaryCashPreview(cashMinor, periodRemainingMinor);
   return cashMinor - salaryCash;
 }
 
@@ -99,11 +90,7 @@ export function payableClearedPreview(
     periodRemainingMinor,
     outstandingAdvanceMinor,
   );
-  const salaryCash = salaryCashPreview(
-    cashMinor,
-    periodRemainingMinor,
-    outstandingAdvanceMinor,
-  );
+  const salaryCash = salaryCashPreview(cashMinor, periodRemainingMinor);
   return salaryCash + applied;
 }
 

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  canCorrectSubledgerRow,
   canEditSubledgerRow,
   countHiddenLedgerHistory,
   filterLedgerRows,
@@ -29,9 +28,8 @@ describe("ledger-display", () => {
   });
 
   it("styles non-effective history rows", () => {
-    expect(subledgerRowClassName("void_reversal", true)).toContain("line-through");
-    expect(subledgerRowClassName("void_reversal", false)).toContain("line-through");
-    expect(subledgerRowClassName("effective", true)).toBe("");
+    expect(subledgerRowClassName("void_reversal")).toContain("line-through");
+    expect(subledgerRowClassName("effective")).toBe("");
   });
 
   it("allows edit only on effective rows with journal id", () => {

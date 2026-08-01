@@ -45,7 +45,6 @@ export function canEditSubledgerRow(
 
 export function subledgerRowClassName(
   kind: SubledgerDisplayKind | undefined,
-  showHistory: boolean,
 ): string {
   if (!kind || kind === "effective") return "";
   return "text-muted-foreground line-through opacity-70";

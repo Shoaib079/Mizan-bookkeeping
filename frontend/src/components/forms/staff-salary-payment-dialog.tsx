@@ -361,7 +361,7 @@ export function StaffSalaryPaymentDialog({
     : 0;
   const excessPreview =
     cashPreview > 0
-      ? excessAdvancePreview(cashPreview, owedPreview, outstandingAdvance)
+      ? excessAdvancePreview(cashPreview, owedPreview)
       : 0;
   const suggestedNet = netToPayMinor(owedPreview, outstandingAdvance);
 

@@ -265,10 +265,7 @@ export default function CustomerDetailPage() {
                 {visibleRows.map((entry) => (
                   <DataTableRow
                     key={entry.id}
-                    className={subledgerRowClassName(
-                      entry.display_kind,
-                      showHistory,
-                    )}
+                    className={subledgerRowClassName(entry.display_kind)}
                   >
                     <DataTableCell>
                       {formatTrDate(entry.movement_date)}

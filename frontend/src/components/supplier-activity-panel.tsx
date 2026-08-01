@@ -238,10 +238,7 @@ export function SupplierActivityPanel({
               {visibleRows.map((row, index) => (
                 <DataTableRow
                   key={`${row.movement_date}-${row.movement_kind}-${index}`}
-                  className={subledgerRowClassName(
-                    row.display_kind,
-                    showHistory,
-                  )}
+                  className={subledgerRowClassName(row.display_kind)}
                 >
                   <DataTableCell>{formatTrDate(row.movement_date)}</DataTableCell>
                   <DataTableCell>{row.movement_label}</DataTableCell>

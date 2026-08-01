@@ -208,10 +208,7 @@ export function FxWalletPageContent() {
                   {visibleRows.map((row) => (
                     <DataTableRow
                       key={row.id}
-                      className={subledgerRowClassName(
-                        row.display_kind,
-                        showHistory,
-                      )}
+                      className={subledgerRowClassName(row.display_kind)}
                     >
                       <DataTableCell>
                         {formatTrDate(row.movement_date)}

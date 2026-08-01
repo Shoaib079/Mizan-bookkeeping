@@ -44,7 +44,6 @@ import {
   classificationLabel,
   classificationOptionsForAmount,
   STATEMENT_CLASSIFICATION_OPTIONS,
-  suggestClassificationForLine,
   suggestSupplierId,
 } from "@/lib/statement-classification-options";
 
