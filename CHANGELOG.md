@@ -4,6 +4,11 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-01
 
+**Create cash drawers and FX wallets in the right place.**
+- **Add bank account** is bank/card only — no cash drawer or FX wallet type picker there.
+- **Banking → Cash**: **Add cash drawer** creates TRY drawers; empty state links here instead of Banks.
+- **Banking → FX**: FX wallet creation stays on the FX hub (`fixedKind` locks each form to its kind).
+
 **One cash drawer — stop asking which drawer.**
 - When a restaurant has a single TRY drawer, record forms no longer show a "Main Drawer" picker; the app auto-selects it. Pickers appear only when multiple cash accounts exist.
 - Banking hub shows **TRY cash** instead of repeating the internal account name.
