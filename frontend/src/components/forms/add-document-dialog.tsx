@@ -115,8 +115,8 @@ export function AddDocumentDialog({
     if (!file || !selectedType) return;
     onConfirm(selectedType, file);
     reset();
-    if (!embedded) handleClose();
-  }, [file, selectedType, handleClose, onConfirm, embedded, reset]);
+    // Parent switches to the routed modal; do not call handleClose — it clears routed file state.
+  }, [file, selectedType, onConfirm, reset]);
 
   if (!open) return null;
 

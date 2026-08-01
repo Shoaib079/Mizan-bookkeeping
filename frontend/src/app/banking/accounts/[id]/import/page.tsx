@@ -87,21 +87,19 @@ export default function StatementImportPage() {
     );
   }
 
-  if (phase === "wait-entities" || phase === "wait-account") {
+  if (phase === "wait-entities") {
     return (
-      <p className="text-sm text-muted-foreground">
-        {phase === "wait-entities" ? "Loading restaurants…" : "Loading account…"}
-      </p>
+      <p className="text-sm text-muted-foreground">Loading restaurants…</p>
     );
   }
 
-  if (phase === "error" || !account) {
+  if (phase === "error") {
     return (
       <p className="text-sm text-destructive">{error ?? "Account not found"}</p>
     );
   }
 
-  if (account.account_kind !== "bank") {
+  if (!loading && account && account.account_kind !== "bank") {
     return (
       <p className="text-sm text-muted-foreground">
         Statements can only be imported for bank accounts.
@@ -109,10 +107,21 @@ export default function StatementImportPage() {
     );
   }
 
+  if (phase === "wait-account" || phase === "ready") {
+    return (
+      <div className="space-y-4">
+        {phase === "wait-account" && (
+          <p className="text-sm text-muted-foreground">Loading account…</p>
+        )}
+        <StatementImportPanel
+          moneyAccountId={accountId}
+          accountName={account?.name}
+        />
+      </div>
+    );
+  }
+
   return (
-    <StatementImportPanel
-      moneyAccountId={accountId}
-      accountName={account.name}
-    />
+    <p className="text-sm text-destructive">{error ?? "Account not found"}</p>
   );
 }

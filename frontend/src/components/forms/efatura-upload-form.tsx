@@ -37,11 +37,16 @@ export function EfaturaUploadForm({ open, onClose, supplierId, initialFile }: Pr
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
-  const [file, setFile] = useState<File | null>(initialFile ?? null);
+  const [file, setFile] = useState<File | null>(null);
 
   useEffect(() => {
+    if (!open) {
+      setFile(null);
+      setError(null);
+      return;
+    }
     if (initialFile) setFile(initialFile);
-  }, [initialFile]);
+  }, [open, initialFile]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 

@@ -40,11 +40,16 @@ export function ExpenseReceiptUploadForm({ open, onClose, initialFile }: Props) 
   }, [open, submitIdempotency]);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
   const [moneyAccountId, setMoneyAccountId] = useState("");
-  const [file, setFile] = useState<File | null>(initialFile ?? null);
+  const [file, setFile] = useState<File | null>(null);
 
   useEffect(() => {
+    if (!open) {
+      setFile(null);
+      setError(null);
+      return;
+    }
     if (initialFile) setFile(initialFile);
-  }, [initialFile]);
+  }, [open, initialFile]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 

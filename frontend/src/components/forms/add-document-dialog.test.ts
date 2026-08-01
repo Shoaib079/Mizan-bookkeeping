@@ -47,6 +47,16 @@ describe("AddDocumentDialog (UX-C)", () => {
     expect(source).toContain("onConfirm(selectedType, file)");
   });
 
+  it("does not close parent on confirm so routed file survives", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(new URL("./add-document-dialog.tsx", import.meta.url), "utf8"),
+    );
+    expect(source).toContain(
+      "do not call handleClose — it clears routed file state",
+    );
+    expect(source).not.toContain("if (!embedded) handleClose()");
+  });
+
   it("includes delivery report entry from the Upload dialog when delivery is on", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./add-document-dialog.tsx", import.meta.url), "utf8"),
@@ -121,7 +131,8 @@ describe("initialFile prop on upload forms", () => {
       ),
     );
     expect(source).toContain("initialFile?: File");
-    expect(source).toContain("initialFile ?? null");
+    expect(source).toContain("if (initialFile) setFile(initialFile)");
+    expect(source).toContain("if (!open)");
   });
 
   it("expense-receipt-upload-form accepts initialFile", async () => {
@@ -132,7 +143,8 @@ describe("initialFile prop on upload forms", () => {
       ),
     );
     expect(source).toContain("initialFile?: File");
-    expect(source).toContain("initialFile ?? null");
+    expect(source).toContain("if (initialFile) setFile(initialFile)");
+    expect(source).toContain("if (!open)");
   });
 
   it("pos-summary-upload-form accepts initialFile", async () => {
@@ -143,19 +155,21 @@ describe("initialFile prop on upload forms", () => {
       ),
     );
     expect(source).toContain("initialFile?: File");
-    expect(source).toContain("initialFile ?? null");
+    expect(source).toContain("if (initialFile) setFile(initialFile)");
+    expect(source).toContain("if (!open)");
   });
 });
 
 describe("bank statement path (UX-C stated step)", () => {
-  it("shows explicit note about continuing on the import page", async () => {
+  it("hands off uploaded files to the import page", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../../components/record/bank-account-picker-dialog.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("Continue on the import page to upload your file and map columns");
+    expect(source).toContain("beginStatementImportHandoff");
+    expect(source).toContain("Your file carries over");
   });
 });
 

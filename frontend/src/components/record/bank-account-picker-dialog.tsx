@@ -11,6 +11,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { beginStatementImportHandoff } from "@/lib/statement-import-handoff";
 import { useEntity } from "@/lib/entity-context";
 
 type MoneyAccountRow = {
@@ -23,9 +24,10 @@ type MoneyAccountRow = {
 type Props = {
   open: boolean;
   onClose: () => void;
+  initialFile?: File;
 };
 
-export function BankAccountPickerDialog({ open, onClose }: Props) {
+export function BankAccountPickerDialog({ open, onClose, initialFile }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
   const [loading, setLoading] = useState(false);
@@ -85,8 +87,16 @@ export function BankAccountPickerDialog({ open, onClose }: Props) {
   }
 
   function openImportPage() {
-    if (!selectedId) return;
-    handleClose();
+    if (!selectedId || !entityId) return;
+    if (initialFile) {
+      beginStatementImportHandoff({
+        entityId,
+        moneyAccountId: selectedId,
+        file: initialFile,
+      });
+    }
+    reset();
+    onClose();
     router.push(`/banking/accounts/${selectedId}/import`);
   }
 
@@ -130,8 +140,9 @@ export function BankAccountPickerDialog({ open, onClose }: Props) {
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            Continue on the import page to upload your file and map columns
-            (Excel-style preview with columns A, B, C…).
+            {initialFile
+              ? "Your file carries over — preview loads on the next screen so you can map columns (A, B, C…)."
+              : "Continue on the import page to upload your file and map columns (Excel-style preview with columns A, B, C…)."}
           </p>
           <Button type="button" disabled={!selectedId} onClick={openImportPage}>
             Continue to import

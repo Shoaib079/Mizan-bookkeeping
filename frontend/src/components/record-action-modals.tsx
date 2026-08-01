@@ -163,6 +163,9 @@ export function RecordActionModals({
       <BankAccountPickerDialog
         open={effectiveModal === "bankStatement"}
         onClose={closeAll}
+        initialFile={
+          routedTo === "bankStatement" ? routedFile ?? undefined : undefined
+        }
       />
 
       <CardSalesForm open={effectiveModal === "cardSalesBatch"} onClose={closeAll} />

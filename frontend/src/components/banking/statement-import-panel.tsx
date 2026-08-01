@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import type {
-  BankImportProfileRead,
   BankStatementPreview,
   BankStatementRead,
 } from "@/lib/banking-types";
@@ -26,13 +25,11 @@ import {
   DEFAULT_MAPPING,
   headerCellAt,
   mappingToProfilePayload,
-  profileToMapping,
   roleForColumn,
   roleLabel,
   sampleCellAt,
   statementImportSessionKey,
   STATEMENT_FILE_ACCEPT,
-  suggestedProfileToMapping,
   type AmountMode,
   type ColumnAssignRole,
   type CsvDelimiter,
@@ -41,6 +38,11 @@ import {
   type DecimalFormat,
   type MappingState,
 } from "@/lib/statement-import-helpers";
+import {
+  takeStatementImportFileHandoff,
+  takeStatementImportPreviewResult,
+} from "@/lib/statement-import-handoff";
+import { fetchStatementPreviewResult } from "@/lib/statement-import-preview-fetch";
 import {
   clearStatementImportPending,
   clearStatementImportSession,
@@ -356,6 +358,7 @@ export function StatementImportPanel({
   const [assignTarget, setAssignTarget] = useState<ColumnAssignRole | null>(null);
   const [expectedFileName, setExpectedFileName] = useState<string | null>(null);
   const previewRequestRef = useRef(0);
+  const resumeHandoffRef = useRef<string | null>(null);
   const storageKey = entityId
     ? statementImportStorageKey(entityId, moneyAccountId)
     : "";
@@ -443,51 +446,10 @@ export function StatementImportPanel({
   async function fetchPreviewResult(
     selected: File,
   ): Promise<StatementPreviewLoadResult> {
-    const body = new FormData();
-    body.append("file", selected);
-
-    const [previewRes, profileRes] = await Promise.all([
-      apiFetch<BankStatementPreview>(
-        `/entities/${entityId}/banking/accounts/${moneyAccountId}/statements/preview`,
-        { method: "POST", body },
-      ),
-      apiFetch<BankImportProfileRead>(
-        `/entities/${entityId}/banking/accounts/${moneyAccountId}/import-profile`,
-      ).catch(() => null),
-    ]);
-
-    if (!previewRes.rows?.length) {
-      throw new Error(
-        "Could not read any rows from this file — check the format is CSV or Excel",
-      );
+    if (!entityId) {
+      throw new Error("Select a restaurant in the sidebar first.");
     }
-
-    const csvEncoding = (previewRes.csv_encoding ?? "auto") as CsvEncoding;
-    const csvDelimiter = (previewRes.csv_delimiter ?? "auto") as CsvDelimiter;
-    let nextMapping: MappingState;
-    let autoDetectedResult = false;
-    if (profileRes) {
-      nextMapping = profileToMapping(profileRes);
-    } else if (previewRes.suggested_profile) {
-      nextMapping = suggestedProfileToMapping(
-        previewRes.suggested_profile,
-        csvEncoding,
-        csvDelimiter,
-      );
-      autoDetectedResult = true;
-    } else {
-      nextMapping = {
-        ...DEFAULT_MAPPING,
-        csvEncoding,
-        csvDelimiter,
-      };
-    }
-
-    return {
-      preview: previewRes,
-      mapping: nextMapping,
-      autoDetected: autoDetectedResult,
-    };
+    return fetchStatementPreviewResult(entityId, moneyAccountId, selected);
   }
 
   const awaitPreviewLoad = useCallback(
@@ -550,9 +512,33 @@ export function StatementImportPanel({
   );
 
   useEffect(() => {
+    resumeHandoffRef.current = null;
+  }, [storageKey]);
+
+  useEffect(() => {
     if (!storageKey || preview) return;
+    if (resumeHandoffRef.current === storageKey) return;
+
     const saved = readStatementImportSession(storageKey);
     if (saved) return;
+
+    const handoffFile = takeStatementImportFileHandoff(storageKey);
+    if (handoffFile) {
+      resumeHandoffRef.current = storageKey;
+      const completed = takeStatementImportPreviewResult(storageKey);
+      const fileMeta = {
+        name: handoffFile.name,
+        size: handoffFile.size,
+        lastModified: handoffFile.lastModified,
+      };
+      if (completed) {
+        clearStatementImportPending(storageKey);
+        applyPreviewResult(completed, fileMeta, handoffFile);
+        return;
+      }
+      void loadPreview(handoffFile);
+      return;
+    }
 
     const pending = readStatementImportPending(storageKey);
     if (!pending) return;
@@ -563,10 +549,11 @@ export function StatementImportPanel({
     );
     if (!getInflightStatementPreview(inflightKey)) return;
 
+    resumeHandoffRef.current = storageKey;
     const requestId = previewRequestRef.current + 1;
     previewRequestRef.current = requestId;
-    void awaitPreviewLoad(pendingFileMeta(pending), requestId);
-  }, [storageKey, preview, awaitPreviewLoad]);
+    void awaitPreviewLoad(pendingFileMeta(pending), requestId, null);
+  }, [storageKey, preview, applyPreviewResult, awaitPreviewLoad]);
 
   async function loadPreview(selected: File) {
     if (!entityId) {

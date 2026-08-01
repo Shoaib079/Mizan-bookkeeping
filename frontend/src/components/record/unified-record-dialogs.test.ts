@@ -17,10 +17,14 @@ describe("unified record dialogs", () => {
     expect(modals).not.toContain("handlePersonContinue");
   });
 
-  it("routes bank statement import to the full-page mapper", () => {
+  it("routes bank statement import to the full-page mapper with file handoff", () => {
     const bank = read("record/bank-account-picker-dialog.tsx");
+    const modals = read("record-action-modals.tsx");
     expect(bank).toContain("/import");
     expect(bank).toContain("Continue to import");
+    expect(bank).toContain("beginStatementImportHandoff");
+    expect(bank).toContain("initialFile");
+    expect(modals).toContain('routedTo === "bankStatement"');
     expect(bank).not.toContain("StatementUploadForm");
   });
 
