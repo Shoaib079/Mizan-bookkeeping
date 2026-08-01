@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2, Coins, CreditCard, Wallet } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { BankingHubTile } from "@/components/banking/banking-hub-tile";
@@ -114,8 +115,11 @@ export function BankingHubContent() {
       {tree && tree.cash.accounts.length === 0 && (
         <p className="mt-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           No cash drawer for this restaurant — one is created automatically when
-          you add a restaurant. If this is missing, check Restaurant settings or
-          add a cash account under Banking → Banks (advanced).
+          you add a restaurant. If this is missing, open{" "}
+          <Link href="/banking/cash" className="text-primary hover:underline">
+            Cash drawer
+          </Link>{" "}
+          and use Add cash drawer.
         </p>
       )}
 

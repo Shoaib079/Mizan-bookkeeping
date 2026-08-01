@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CashDrawerCloseDayForm } from "@/components/forms/cash-drawer-close-day-form";
 import { CashDrawerCloseForm } from "@/components/forms/cash-drawer-close-form";
 import { CashMovementForm } from "@/components/forms/cash-movement-form";
+import { MoneyAccountForm } from "@/components/forms/money-account-form";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -28,6 +29,8 @@ import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 import type {
   CashDrawerSessionDetail,
   CashDrawerSessionRead,
+  MoneyAccountLeaf,
+  MoneyAccountTree,
 } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
@@ -52,6 +55,23 @@ export default function CashDrawerPage() {
   const [reopenReason, setReopenReason] = useState("");
   const [reopenError, setReopenError] = useState<string | null>(null);
   const [reopening, setReopening] = useState(false);
+  const [cashAccounts, setCashAccounts] = useState<MoneyAccountLeaf[]>([]);
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
+
+  const reloadCashAccounts = useCallback(async () => {
+    if (!entityId) {
+      setCashAccounts([]);
+      return;
+    }
+    try {
+      const tree = await apiFetch<MoneyAccountTree>(
+        `/entities/${entityId}/banking/accounts/tree`,
+      );
+      setCashAccounts(tree.cash.accounts.filter((a) => a.is_active));
+    } catch {
+      setCashAccounts([]);
+    }
+  }, [entityId]);
 
   const resetPageState = useCallback(() => {
     setSessions([]);
@@ -66,6 +86,8 @@ export default function CashDrawerPage() {
     setReopenReason("");
     setReopenError(null);
     setReopening(false);
+    setCashAccounts([]);
+    setAddDrawerOpen(false);
   }, []);
 
   useEntitySwitchReset(entityId, resetPageState);
@@ -103,6 +125,10 @@ export default function CashDrawerPage() {
   }, [entityId, selectedId]);
 
   useEffect(() => {
+    void reloadCashAccounts();
+  }, [reloadCashAccounts]);
+
+  useEffect(() => {
     void reloadSessions();
   }, [reloadSessions]);
 
@@ -113,6 +139,7 @@ export default function CashDrawerPage() {
   function onSaved() {
     void reloadSessions();
     void reloadDetail();
+    void reloadCashAccounts();
   }
 
   async function onReopenSubmit(event: React.FormEvent) {
@@ -156,6 +183,14 @@ export default function CashDrawerPage() {
             type="button"
             variant="secondary"
             disabled={!entityId}
+            onClick={() => setAddDrawerOpen(true)}
+          >
+            Add cash drawer
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!entityId}
             onClick={() => setCloseDayOpen(true)}
           >
             Close drawer day
@@ -176,6 +211,33 @@ export default function CashDrawerPage() {
         </p>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+
+      {entityId && cashAccounts.length > 0 && (
+        <section className="mb-6 rounded-lg border border-border bg-card">
+          <div className="border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold">Cash drawers</h2>
+            <p className="text-xs text-muted-foreground">
+              {cashAccounts.length === 1
+                ? "One TRY drawer — created automatically with the restaurant."
+                : `${cashAccounts.length} drawers — choose which one when recording cash.`}
+            </p>
+          </div>
+          <ul className="divide-y divide-border px-4">
+            {cashAccounts.map((account) => (
+              <li
+                key={account.id}
+                className="flex items-center justify-between gap-4 py-3 text-sm"
+              >
+                <span>
+                  {cashAccounts.length === 1 ? "Cash drawer" : account.name}
+                </span>
+                <span className="tabular-nums">{formatTry(account.balance_kurus)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {loading && <TableSkeleton columns={2} rows={4} />}
 
       {sessions.length > 0 && (
@@ -374,6 +436,14 @@ export default function CashDrawerPage() {
           </Button>
         </form>
       </Dialog>
+
+      <MoneyAccountForm
+        open={addDrawerOpen}
+        onClose={() => setAddDrawerOpen(false)}
+        defaultKind="cash"
+        fixedKind="cash"
+        onSaved={() => void reloadCashAccounts()}
+      />
     </>
   );
 }

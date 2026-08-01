@@ -18,7 +18,16 @@ type Props = {
   onClose: () => void;
   defaultKind?: MoneyAccountKind;
   defaultCurrency?: string;
+  /** When set, hides the type picker — use on kind-specific banking pages only. */
+  fixedKind?: MoneyAccountKind;
   onSaved?: () => void;
+};
+
+const DIALOG_TITLE: Record<MoneyAccountKind, string> = {
+  bank: "New bank account",
+  credit_card: "New credit card",
+  cash: "New cash drawer",
+  foreign_currency: "New FX wallet",
 };
 
 export function MoneyAccountForm({
@@ -26,6 +35,7 @@ export function MoneyAccountForm({
   onClose,
   defaultKind = "bank",
   defaultCurrency,
+  fixedKind,
   onSaved,
 }: Props) {
   const { entityId } = useEntity();
@@ -35,7 +45,9 @@ export function MoneyAccountForm({
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
-  const [accountKind, setAccountKind] = useState<MoneyAccountKind>(defaultKind);
+  const [accountKind, setAccountKind] = useState<MoneyAccountKind>(
+    fixedKind ?? defaultKind,
+  );
   const [currency, setCurrency] = useState(defaultCurrency ?? "USD");
   const [name, setName] = useState("");
   const [bankName, setBankName] = useState("");
@@ -46,14 +58,16 @@ export function MoneyAccountForm({
 
   useEffect(() => {
     if (!open) return;
-    setAccountKind(defaultKind);
+    setAccountKind(fixedKind ?? defaultKind);
     setCurrency(defaultCurrency ?? "USD");
     setName("");
     setBankName("");
     setIban("");
     setLastFour("");
     setError(null);
-  }, [open, defaultKind, defaultCurrency]);
+  }, [open, defaultKind, defaultCurrency, fixedKind]);
+
+  const effectiveKind = fixedKind ?? accountKind;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -70,9 +84,9 @@ export function MoneyAccountForm({
         idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          account_kind: accountKind,
+          account_kind: effectiveKind,
           currency:
-            accountKind === "foreign_currency" ? currency.toUpperCase() : null,
+            effectiveKind === "foreign_currency" ? currency.toUpperCase() : null,
           name,
           bank_name: bankName || null,
           iban: iban || null,
@@ -81,7 +95,13 @@ export function MoneyAccountForm({
       });
       submitIdempotency.completeSubmit();
       onSaved?.();
-      toast("Account added");
+      toast(
+        effectiveKind === "cash"
+          ? "Cash drawer added"
+          : effectiveKind === "foreign_currency"
+            ? "FX wallet added"
+            : "Account added",
+      );
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
@@ -91,24 +111,30 @@ export function MoneyAccountForm({
   }
 
   return (
-    <Dialog open={open} title="New account" onClose={onClose}>
+    <Dialog open={open} title={DIALOG_TITLE[effectiveKind]} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <Label htmlFor="acct-kind">Account type</Label>
-          <Select
-            id="acct-kind"
-            value={accountKind}
-            onChange={(e) =>
-              setAccountKind(e.target.value as MoneyAccountKind)
-            }
-          >
-            <option value="bank">Bank</option>
-            <option value="cash">Cash</option>
-            <option value="credit_card">Credit card</option>
-            <option value="foreign_currency">Foreign currency wallet</option>
-          </Select>
-        </div>
-        {accountKind === "foreign_currency" && (
+        {effectiveKind === "cash" && (
+          <p className="text-xs text-muted-foreground">
+            Each restaurant gets one TRY drawer automatically. Add another only
+            if you track a separate cash float.
+          </p>
+        )}
+        {!fixedKind && (
+          <div>
+            <Label htmlFor="acct-kind">Account type</Label>
+            <Select
+              id="acct-kind"
+              value={accountKind}
+              onChange={(e) =>
+                setAccountKind(e.target.value as MoneyAccountKind)
+              }
+            >
+              <option value="bank">Bank</option>
+              <option value="credit_card">Credit card</option>
+            </Select>
+          </div>
+        )}
+        {effectiveKind === "foreign_currency" && (
           <div>
             <Label htmlFor="acct-currency">Currency</Label>
             <Select
@@ -131,10 +157,10 @@ export function MoneyAccountForm({
             required
           />
         </div>
-        {(accountKind === "bank" || accountKind === "credit_card") && (
+        {(effectiveKind === "bank" || effectiveKind === "credit_card") && (
           <div>
             <Label htmlFor="acct-bank">
-              {accountKind === "credit_card" ? "Issuer" : "Bank name"}
+              {effectiveKind === "credit_card" ? "Issuer" : "Bank name"}
             </Label>
             <Input
               id="acct-bank"
@@ -143,7 +169,7 @@ export function MoneyAccountForm({
             />
           </div>
         )}
-        {accountKind === "bank" && (
+        {effectiveKind === "bank" && (
           <div>
             <Label htmlFor="acct-iban">IBAN (optional)</Label>
             <Input
@@ -153,7 +179,7 @@ export function MoneyAccountForm({
             />
           </div>
         )}
-        {accountKind === "credit_card" && (
+        {effectiveKind === "credit_card" && (
           <div>
             <Label htmlFor="acct-last4">Last four digits</Label>
             <Input

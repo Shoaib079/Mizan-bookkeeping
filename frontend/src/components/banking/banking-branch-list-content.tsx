@@ -135,6 +135,7 @@ export function BankingBranchListContent({
         open={accountFormOpen}
         onClose={() => setAccountFormOpen(false)}
         defaultKind={defaultKind}
+        fixedKind={defaultKind}
         onSaved={() => void reload()}
       />
     </>

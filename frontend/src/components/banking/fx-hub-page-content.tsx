@@ -398,6 +398,7 @@ export function FxHubPageContent() {
         open={addWalletOpen}
         onClose={() => setAddWalletOpen(false)}
         defaultKind="foreign_currency"
+        fixedKind="foreign_currency"
         defaultCurrency={addWalletCurrency}
         onSaved={onReload}
       />
