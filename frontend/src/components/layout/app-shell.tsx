@@ -10,14 +10,12 @@ import { Suspense, useEffect } from "react";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { PageBackLink } from "@/components/layout/page-back-link";
 import { TransactionPeekProvider } from "@/components/ledger/transaction-drawer";
-import { SidebarEntitySwitcher } from "@/components/layout/sidebar-entity-switcher";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { CommandPalette } from "@/components/command-palette";
 import { useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
-import { Label } from "@/components/ui/input";
 import { navGroups, isNavItemActive } from "@/lib/app-routes";
 import { shouldShowNewMenu } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
@@ -83,12 +81,6 @@ function AppShellInner({
         <div className="border-b border-border px-4 py-4">
           <p className="text-lg font-semibold text-primary">Mizan</p>
           <p className="text-xs text-muted-foreground">Restaurant bookkeeping</p>
-        </div>
-        <div className="border-b border-border px-3 py-3">
-          <Label htmlFor="sidebar-active-restaurant">Restaurant</Label>
-          <div className="mt-1" id="sidebar-active-restaurant">
-            <SidebarEntitySwitcher />
-          </div>
         </div>
         <SidebarNav
           pathname={pathname}

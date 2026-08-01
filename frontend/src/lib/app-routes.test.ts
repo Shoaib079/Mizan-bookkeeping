@@ -162,16 +162,15 @@ describe("app shell header", () => {
     expect(source).not.toMatch(/authOn && <AccountMenu/);
   });
 
-  it("renders the sidebar restaurant switcher (audit A5)", async () => {
+  it("keeps restaurant switching in the account menu, not the sidebar", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/layout/app-shell.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("SidebarEntitySwitcher");
-    expect(source).not.toContain("Combobox");
-    expect(source).not.toContain("actor-id");
+    expect(source).not.toContain("SidebarEntitySwitcher");
+    expect(source).toContain("AccountMenu");
   });
 
   it("renders six sidebar intents as direct links", async () => {

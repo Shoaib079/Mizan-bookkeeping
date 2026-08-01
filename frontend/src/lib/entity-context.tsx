@@ -69,13 +69,19 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
   const routerRef = useRef(router);
   routerRef.current = router;
   const { clerkEnabled, isAuthReady } = useApiAuth();
-  const [entityId, setEntityIdState] = useState(readStoredEntityId);
-  const [actorId, setActorIdState] = useState(readStoredActorId);
+  // Empty on first render so SSR and hydration match; restored from storage after mount.
+  const [entityId, setEntityIdState] = useState("");
+  const [actorId, setActorIdState] = useState("");
   const [entities, setEntities] = useState<Entity[]>([]);
   const [entitiesLoading, setEntitiesLoading] = useState(false);
   const [entitiesLoaded, setEntitiesLoaded] = useState(false);
   const [entitiesError, setEntitiesError] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    setEntityIdState(readStoredEntityId());
+    setActorIdState(readStoredActorId());
+  }, []);
 
   useEffect(() => {
     if (clerkEnabled) return;
