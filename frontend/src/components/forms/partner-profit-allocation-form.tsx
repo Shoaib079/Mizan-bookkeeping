@@ -27,10 +27,15 @@ type PreviewLine = {
   partner_name: string;
   ownership_share_pct: string;
   amount_kurus: number;
+  gross_amount_kurus: number;
+  net_balance_before_kurus: number;
+  offset_kurus: number;
 };
 
 type PreviewResponse = {
   total_profit_kurus: number;
+  total_allocated_kurus: number;
+  net_against_drawings: boolean;
   lines: PreviewLine[];
 };
 
@@ -50,6 +55,7 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
   const [periodFromText, setPeriodFromText] = useState("");
   const [periodToText, setPeriodToText] = useState("");
   const [description, setDescription] = useState("Partner profit allocation");
+  const [netAgainstDrawings, setNetAgainstDrawings] = useState(true);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +65,7 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
     if (open) {
       submitIdempotency.resetSubmit();
       setAllocationDateText(todayTrDate());
+      setNetAgainstDrawings(true);
       setPreview(null);
       setError(null);
     }
@@ -93,7 +100,10 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(profitPayload),
+          body: JSON.stringify({
+            ...profitPayload,
+            net_against_drawings: netAgainstDrawings,
+          }),
         },
       );
       setPreview(body);
@@ -137,6 +147,7 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
           allocation_date: allocationDate,
           description: description.trim(),
           actor_id: actorId,
+          net_against_drawings: netAgainstDrawings,
           ...profitPayload,
         }),
       });
@@ -206,6 +217,22 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
           />
         </div>
 
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={netAgainstDrawings}
+            onChange={(e) => {
+              setNetAgainstDrawings(e.target.checked);
+              setPreview(null);
+            }}
+          />
+          <span>
+            Net against amount already taken — reduce each partner&apos;s share when
+            their net balance is negative (drawings exceed fronted expenses).
+          </span>
+        </label>
+
         <Button
           type="button"
           variant="secondary"
@@ -222,7 +249,13 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
                 <DataTableRow>
                   <DataTableHeaderCell>Partner</DataTableHeaderCell>
                   <DataTableHeaderCell>Share</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  {preview.net_against_drawings && (
+                    <>
+                      <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
+                      <DataTableHeaderCell align="right">Offset</DataTableHeaderCell>
+                    </>
+                  )}
+                  <DataTableHeaderCell align="right">Allocate</DataTableHeaderCell>
                 </DataTableRow>
               </DataTableHead>
               <DataTableBody>
@@ -230,6 +263,18 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
                   <DataTableRow key={line.partner_id}>
                     <DataTableCell>{line.partner_name}</DataTableCell>
                     <DataTableCell>{line.ownership_share_pct}%</DataTableCell>
+                    {preview.net_against_drawings && (
+                      <>
+                        <DataTableCell align="right" className="tabular-nums">
+                          {formatTry(line.gross_amount_kurus)}
+                        </DataTableCell>
+                        <DataTableCell align="right" className="tabular-nums">
+                          {line.offset_kurus > 0
+                            ? `−${formatTry(line.offset_kurus)}`
+                            : "—"}
+                        </DataTableCell>
+                      </>
+                    )}
                     <DataTableCell align="right" className="tabular-nums">
                       {formatTry(line.amount_kurus)}
                     </DataTableCell>
@@ -238,8 +283,16 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
                 <DataTableRow>
                   <DataTableCell className="font-medium">Total</DataTableCell>
                   <DataTableCell>{""}</DataTableCell>
+                  {preview.net_against_drawings && (
+                    <>
+                      <DataTableCell align="right" className="font-medium tabular-nums">
+                        {formatTry(preview.total_profit_kurus)}
+                      </DataTableCell>
+                      <DataTableCell>{""}</DataTableCell>
+                    </>
+                  )}
                   <DataTableCell align="right" className="font-medium tabular-nums">
-                    {formatTry(preview.total_profit_kurus)}
+                    {formatTry(preview.total_allocated_kurus)}
                   </DataTableCell>
                 </DataTableRow>
               </DataTableBody>

@@ -6,9 +6,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
+import { ClassificationPicker } from "@/components/banking/classification-picker";
 import { Combobox } from "@/components/ui/combobox";
 import { DataTableCell } from "@/components/ui/data-table";
-import { Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type {
   BankStatementLine,
@@ -348,20 +348,13 @@ export function StatementLineClassifyRow({
         {formatTry(line.amount_kurus)}
       </DataTableCell>
       <DataTableCell className="py-1.5">
-        <Select
+        <ClassificationPicker
           id={`cls-${line.id}`}
-          className="h-8 min-w-[11rem] text-xs"
+          amountKurus={line.amount_kurus}
           value={classification}
-          onChange={(e) =>
-            setClassification(e.target.value as StatementLineClassification)
-          }
-        >
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
+          onValueChange={setClassification}
+          className="h-8 min-w-[11rem] text-xs"
+        />
       </DataTableCell>
       <DataTableCell className="py-1.5">{targetControl()}</DataTableCell>
       <DataTableCell className="py-1.5">

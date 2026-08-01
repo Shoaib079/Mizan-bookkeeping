@@ -12,6 +12,7 @@ from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import (
     CAPITAL_MOVEMENT_TYPES,
     LOAN_MOVEMENT_TYPES,
+    NET_BALANCE_MOVEMENT_TYPES,
     REIMBURSEMENT_MOVEMENT_TYPES,
     WRITABLE_MOVEMENT_TYPES,
     PartnerMovementType,
@@ -233,6 +234,69 @@ def capital_balance_kurus(
         return _read()
 
 
+def _partner_balance_by_types(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    movement_types: frozenset[PartnerMovementType],
+) -> int:
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    def _read() -> int:
+        partner = session.get(Partner, partner_id)
+        if partner is None:
+            raise LookupError("Partner not found")
+        return _sum_balance(session, partner_id, movement_types)
+
+    if get_current_entity_id() == entity_id:
+        return _read()
+
+    with entity_context(session, entity_id):
+        return _read()
+
+
+def capital_contribution_kurus(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    """Total capital contributions — permanent equity, not reduced by drawings."""
+    return _partner_balance_by_types(
+        session,
+        entity_id,
+        partner_id,
+        frozenset({PartnerMovementType.CAPITAL_CONTRIBUTION}),
+    )
+
+
+def profit_allocated_kurus(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    """Total profit allocated to partner on 3300."""
+    return _partner_balance_by_types(
+        session,
+        entity_id,
+        partner_id,
+        frozenset({PartnerMovementType.PROFIT_ALLOCATION}),
+    )
+
+
+def drawings_net_kurus(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    """Net drawings — negative when partner has taken cash out."""
+    return _partner_balance_by_types(
+        session,
+        entity_id,
+        partner_id,
+        frozenset(
+            {
+                PartnerMovementType.DRAWING,
+                PartnerMovementType.DRAWING_REPAYMENT,
+            }
+        ),
+    )
+
+
 def loan_balance_kurus(
     session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
 ) -> int:
@@ -245,6 +309,32 @@ def loan_balance_kurus(
         if partner is None:
             raise LookupError("Partner not found")
         return _sum_balance(session, partner_id, LOAN_MOVEMENT_TYPES)
+
+    if get_current_entity_id() == entity_id:
+        return _read()
+
+    with entity_context(session, entity_id):
+        return _read()
+
+
+def net_balance_kurus(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    """Operational partner position — cash-settleable movements only.
+
+    Includes fronted expenses, drawings, and partner loans. Excludes permanent
+    equity (capital contributions and profit allocations on 3300).
+
+    Positive = business owes the partner; negative = partner owes the business.
+    """
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    def _read() -> int:
+        partner = session.get(Partner, partner_id)
+        if partner is None:
+            raise LookupError("Partner not found")
+        return _sum_balance(session, partner_id, NET_BALANCE_MOVEMENT_TYPES)
 
     if get_current_entity_id() == entity_id:
         return _read()

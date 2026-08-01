@@ -476,6 +476,38 @@ def test_drawing_reduces_reimbursement_balance_first(db_session, partner_setup) 
     test_drawing_does_not_reduce_reimbursement_balance(db_session, partner_setup)
 
 
+def test_net_balance_unifies_drawing_and_fronted(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    accounts = partner_setup["accounts"]
+    drawer = partner_setup["drawer"]
+
+    partner_posting.post_expense_fronted(
+        db_session,
+        entity_id,
+        partner_id,
+        expense_date=date(2026, 6, 1),
+        amount_kurus=200_000,
+        description="Fronted",
+        actor_id=ACTOR_ID,
+        expense_account_id=accounts["5000"],
+    )
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 6, 10),
+        amount_kurus=250_000,
+        description="Drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert partner_ledger.reimbursement_balance_kurus(db_session, entity_id, partner_id) == 200_000
+    assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == -250_000
+    assert partner_ledger.net_balance_kurus(db_session, entity_id, partner_id) == -50_000
+
+
 def test_partners_api_e2e(client: TestClient, db_session, partner_setup) -> None:
     entity_id = partner_setup["entity_id"]
     drawer = partner_setup["drawer"]

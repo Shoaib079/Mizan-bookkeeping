@@ -67,6 +67,7 @@ class PartnerLedgerEntryRead(BaseModel):
     journal_entry_id: uuid.UUID | None
     # GL account a reimbursement was paid from — restores the picker.
     payment_account_id: uuid.UUID | None = None
+    running_balance_kurus: int | None = None
     created_at: datetime
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
     was_corrected: bool = False
@@ -76,6 +77,11 @@ class PartnerLedgerRead(BaseModel):
     partner_id: uuid.UUID
     balance_kurus: int
     capital_balance_kurus: int = 0
+    capital_contribution_kurus: int = 0
+    profit_allocated_kurus: int = 0
+    drawings_net_kurus: int = 0
+    net_balance_kurus: int = 0
+    loan_balance_kurus: int = 0
     entries: list[PartnerLedgerEntryRead]
 
 
@@ -160,10 +166,15 @@ class ProfitAllocationPreviewLine(BaseModel):
     partner_name: str
     ownership_share_pct: Decimal
     amount_kurus: int
+    gross_amount_kurus: int = 0
+    net_balance_before_kurus: int = 0
+    offset_kurus: int = 0
 
 
 class ProfitAllocationPreviewRead(BaseModel):
     total_profit_kurus: int
+    total_allocated_kurus: int = 0
+    net_against_drawings: bool = True
     lines: list[ProfitAllocationPreviewLine]
 
 
@@ -171,6 +182,7 @@ class ProfitAllocationPreviewRequest(BaseModel):
     profit_kurus: int | None = Field(default=None, gt=0)
     period_from: date | None = None
     period_to: date | None = None
+    net_against_drawings: bool = True
 
 
 class ProfitAllocationPost(BaseModel):
@@ -180,11 +192,14 @@ class ProfitAllocationPost(BaseModel):
     period_to: date | None = None
     description: str = Field(min_length=1, max_length=512)
     actor_id: OptionalActorId = None
+    net_against_drawings: bool = True
 
 
 class ProfitAllocationPostOut(BaseModel):
     journal_entry_id: uuid.UUID
     total_profit_kurus: int
+    total_allocated_kurus: int = 0
+    net_against_drawings: bool = True
     partner_ledger_entries: list[PartnerLedgerEntryRead]
 
 

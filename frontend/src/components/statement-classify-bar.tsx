@@ -7,10 +7,11 @@ import { ArrowRight } from "lucide-react";
 
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
+import { ClassificationPicker } from "@/components/banking/classification-picker";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type {
   BankStatementLine,
@@ -23,7 +24,6 @@ import {
   classificationLabel,
   classificationMatchesAmount,
   classificationOption,
-  classificationOptionGroups,
   deliveryPlatformPickerHint,
 } from "@/lib/statement-classification-options";
 import {
@@ -71,8 +71,6 @@ export function StatementClassifyBar({
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
-
-  const optionGroups = useMemo(() => classificationOptionGroups(), []);
 
   const [classification, setClassification] = useState<StatementLineClassification>(
     "supplier_payment",
@@ -472,38 +470,6 @@ export function StatementClassifyBar({
     return null;
   }
 
-  function renderClassificationSelect(id: string, disabled: boolean) {
-    const renderGroup = (
-      label: string,
-      items: { value: string; label: string }[],
-    ) =>
-      items.length > 0 ? (
-        <optgroup key={label} label={label}>
-          {items.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </optgroup>
-      ) : null;
-
-    return (
-      <Select
-        id={id}
-        className="h-9 w-full min-w-0 text-xs"
-        value={classification}
-        onChange={(e) =>
-          setClassification(e.target.value as StatementLineClassification)
-        }
-        disabled={disabled}
-      >
-        {renderGroup("Money in (credit to bank)", optionGroups.inflows)}
-        {renderGroup("Money out (debit from bank)", optionGroups.outflows)}
-        {renderGroup("Other", optionGroups.other)}
-      </Select>
-    );
-  }
-
   if (!line) {
     return (
       <div className="sticky top-0 z-10 mb-4 rounded-lg border border-border bg-card p-4 shadow-sm">
@@ -577,7 +543,15 @@ export function StatementClassifyBar({
           {inQueue ? (
             <>
               <div className="min-w-0 flex-[1_1_12rem] basis-[12rem]">
-                {renderClassificationSelect("classify-type", false)}
+                <ClassificationPicker
+                  id="classify-type"
+                  amountKurus={line.amount_kurus}
+                  value={classification}
+                  onValueChange={setClassification}
+                  className="h-9 w-full min-w-0 text-xs"
+                  placement="below"
+                  showHint
+                />
               </div>
               <div className="min-w-0 flex-[2_1_10rem] basis-[10rem]">
                 {targetControl("classify")}
@@ -703,7 +677,13 @@ export function StatementClassifyBar({
           <div>
             <Label htmlFor="correct-classification">New classification</Label>
             <div className="mt-1">
-              {renderClassificationSelect("correct-classification", false)}
+              <ClassificationPicker
+                id="correct-classification"
+                amountKurus={line.amount_kurus}
+                value={classification}
+                onValueChange={setClassification}
+                showHint
+              />
             </div>
           </div>
           {targetControl("correct")}

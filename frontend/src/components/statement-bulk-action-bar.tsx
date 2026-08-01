@@ -5,9 +5,10 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
+import { ClassificationPicker } from "@/components/banking/classification-picker";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import type {
   BankStatementLine,
   ClassifyStatementLineResult,
@@ -20,7 +21,6 @@ import {
 } from "@/lib/expense-accounts";
 import { formatTry } from "@/lib/money";
 import {
-  classificationOptionGroups,
   classificationOptionsForAmount,
 } from "@/lib/statement-classification-options";
 import { targetsRequiredForClassification } from "@/lib/statement-classify-payload";
@@ -70,7 +70,6 @@ export function StatementBulkActionBar({
   const { toast } = useToast();
   const mode = bulkModeForLines(lines);
   const direction = amountDirectionForLines(lines);
-  const optionGroups = useMemo(() => classificationOptionGroups(), []);
 
   const [classification, setClassification] = useState<StatementLineClassification>(
     "bank_fee",
@@ -339,43 +338,14 @@ export function StatementBulkActionBar({
             <Label htmlFor="bulk-classification" className="text-[11px]">
               Classification
             </Label>
-            <Select
+            <ClassificationPicker
               id="bulk-classification"
-              className="mt-1 h-9 w-full text-xs"
+              amountKurus={amountSample}
               value={classification}
-              onChange={(e) =>
-                setClassification(e.target.value as StatementLineClassification)
-              }
+              onValueChange={setClassification}
               disabled={submitting}
-            >
-              {optionGroups.inflows
-                .filter((opt) =>
-                  classificationOptions.some((o) => o.value === opt.value),
-                )
-                .map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              {optionGroups.outflows
-                .filter((opt) =>
-                  classificationOptions.some((o) => o.value === opt.value),
-                )
-                .map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              {optionGroups.other
-                .filter((opt) =>
-                  classificationOptions.some((o) => o.value === opt.value),
-                )
-                .map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-            </Select>
+              className="mt-1 h-9 w-full text-xs"
+            />
           </div>
           <div className="min-w-[10rem] flex-[2]">
             <Label className="text-[11px]">Target</Label>

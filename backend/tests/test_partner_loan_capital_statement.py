@@ -135,6 +135,67 @@ def test_partner_capital_contribution_posts_to_3300(db_session, partner_setup) -
     assert partner_ledger.loan_balance_kurus(db_session, entity_id, partner_id) == 0
 
 
+def test_capital_contribution_not_in_net_balance(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    accounts = partner_setup["accounts"]
+    bank = _bank_with_balance(db_session, entity_id)
+
+    statement = _import_inflow_line(
+        db_session, entity_id, bank, 1_000_000, "ORTAK SERMAYE"
+    )
+    line_id = statement.lines[0].id
+
+    statement_service.classify_statement_line(
+        db_session,
+        entity_id,
+        statement.id,
+        line_id,
+        classification=StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION,
+        partner_id=partner_id,
+        actor_id=ACTOR_ID,
+    )
+
+    assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == 1_000_000
+    assert partner_ledger.capital_contribution_kurus(db_session, entity_id, partner_id) == 1_000_000
+    assert partner_ledger.net_balance_kurus(db_session, entity_id, partner_id) == 0
+    assert partner_ledger.reimbursement_balance_kurus(db_session, entity_id, partner_id) == 0
+
+
+def test_capital_contribution_shown_separate_from_drawings(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    drawer = partner_setup["drawer"]
+
+    from app.core.partners import posting as partner_posting
+
+    partner_posting.post_capital_contribution(
+        db_session,
+        entity_id,
+        partner_id,
+        contribution_date=date(2026, 6, 1),
+        amount_kurus=210_000,
+        description="Capital",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 6, 10),
+        amount_kurus=80_000,
+        description="Drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert partner_ledger.capital_contribution_kurus(db_session, entity_id, partner_id) == 210_000
+    assert partner_ledger.drawings_net_kurus(db_session, entity_id, partner_id) == -80_000
+    assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == 130_000
+    assert partner_ledger.net_balance_kurus(db_session, entity_id, partner_id) == -80_000
+
+
 def test_partner_loan_receipt_and_repayment_tracked_per_partner(
     db_session, partner_setup
 ) -> None:

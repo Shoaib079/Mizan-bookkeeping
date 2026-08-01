@@ -6,9 +6,10 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
+import { ClassificationPicker } from "@/components/banking/classification-picker";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type {
   StatementLineClassification,
@@ -42,8 +43,6 @@ type Customer = { id: string; name: string };
 
 import {
   classificationLabel,
-  classificationOptionsForAmount,
-  STATEMENT_CLASSIFICATION_OPTIONS,
   suggestSupplierId,
 } from "@/lib/statement-classification-options";
 
@@ -411,21 +410,13 @@ export function StatementLineReviewRow({
               <form onSubmit={handleClassify} className="space-y-3">
                 <div>
                   <Label htmlFor={`cls-${line.id}`}>Classification</Label>
-                  <Select
+                  <ClassificationPicker
                     id={`cls-${line.id}`}
+                    amountKurus={line.amount_kurus}
                     value={classification}
-                    onChange={(event) =>
-                      setClassification(
-                        event.target.value as StatementLineClassification,
-                      )
-                    }
-                  >
-                    {classificationOptionsForAmount(line.amount_kurus).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
+                    onValueChange={setClassification}
+                    showHint
+                  />
                 </div>
 
                 {classification === "supplier_payment" && (
@@ -602,21 +593,13 @@ export function StatementLineReviewRow({
           </div>
           <div>
             <Label htmlFor={`correct-cls-${line.id}`}>New classification</Label>
-            <Select
+            <ClassificationPicker
               id={`correct-cls-${line.id}`}
+              amountKurus={line.amount_kurus}
               value={correctClassification}
-              onChange={(event) =>
-                setCorrectClassification(
-                  event.target.value as StatementLineClassification,
-                )
-              }
-            >
-              {STATEMENT_CLASSIFICATION_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
+              onValueChange={setCorrectClassification}
+              showHint
+            />
           </div>
           {correctClassification === "supplier_payment" && (
             <div>

@@ -41,6 +41,16 @@ LOAN_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
     }
 )
 
+# Cash-settleable partner position (excludes permanent equity on 3300).
+NET_BALANCE_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
+    REIMBURSEMENT_MOVEMENT_TYPES
+    | {
+        PartnerMovementType.DRAWING,
+        PartnerMovementType.DRAWING_REPAYMENT,
+    }
+    | LOAN_MOVEMENT_TYPES
+)
+
 WRITABLE_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
     {
         PartnerMovementType.EXPENSE_FRONTED,

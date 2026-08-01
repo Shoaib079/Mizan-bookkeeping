@@ -4,6 +4,7 @@ import type {
   StatementLineClassification,
   StatementLineStatus,
 } from "@/lib/banking-types";
+import type { ComboboxOption } from "@/components/ui/combobox";
 import { isQueueLine } from "@/lib/statement-line-filters";
 
 export type ClassificationTarget =
@@ -194,6 +195,51 @@ export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
     target: null,
   },
 ];
+
+/** Aliases for the searchable classification picker (English + Turkish bank text). */
+const CLASSIFICATION_SEARCH_KEYWORDS: Partial<
+  Record<StatementLineClassification, string>
+> = {
+  pos_settlement:
+    "card acquirer pos kart net satış deposit settlement clearing bkm sanal visa mastercard ökc",
+  pos_commission: "card commission komisyon pos kart bkm acquirer",
+  delivery_settlement:
+    "delivery trendyol getir yemeksepeti migros yemek platform marketplace",
+  customer_payment: "customer receivable alacak tahsilat",
+  loan_receipt: "loan kredi borç alınan",
+  partner_capital_contribution: "partner capital ortak sermaye yatırım",
+  partner_loan_receipt: "partner loan ortak borç",
+  partner_drawing_repayment: "partner repayment drawing geri ödeme ortak",
+  transfer: "transfer virman between accounts cash drawer bank",
+  supplier_payment:
+    "supplier tedarikçi invoice fatura payment ödeme havale eft metro",
+  staff_payment: "salary maaş maas payroll ücret personel",
+  staff_incentive: "staff incentive bonus yemek yol prim",
+  staff_advance: "salary advance avans personel",
+  partner_drawing: "partner withdrawal drawing ortak çekim",
+  partner_reimbursement: "partner reimbursement masraf ortak geri ödeme",
+  partner_loan_payment: "partner loan repay ortak borç ödeme",
+  loan_payment: "loan repay kredi taksit faiz bank loan",
+  credit_card_payment: "credit card kredi kartı bill ödeme",
+  store_purchase: "store grocery migros bim a101 şok market alışveriş",
+  rent_utility:
+    "expense rent utility kira elektrik su gider vergi tax sgk gib muhtasar belediye resmi ödeme government statutory",
+  other_income: "income interest refund gelir faiz iade",
+  bank_fee: "bank fee charge masraf havale eft bsm ücret commission masraf",
+  unknown: "decide later review unknown",
+};
+
+/** Searchable options for the bank statement classification Combobox. */
+export function classificationComboboxOptionsForAmount(
+  amountKurus: number,
+): ComboboxOption[] {
+  return classificationOptionsForAmount(amountKurus).map((opt) => ({
+    value: opt.value,
+    label: opt.label,
+    description: opt.hint,
+    keywords: CLASSIFICATION_SEARCH_KEYWORDS[opt.value] ?? opt.hint,
+  }));
+}
 
 export type ClassificationOptionGroups = {
   inflows: ClassificationOption[];

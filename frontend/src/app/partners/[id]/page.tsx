@@ -35,6 +35,7 @@ import {
   partnerBalanceAmount,
   partnerBalanceHeading,
   partnerDrawingRepaymentAllowed,
+  formatPartnerNetBalance,
 } from "@/lib/partner-balance";
 import { partnerMovementLabels } from "@/lib/subledger-labels";
 import {
@@ -53,6 +54,7 @@ type LedgerEntry = {
   payment_account_id: string | null;
   display_kind: SubledgerDisplayKind;
   was_corrected?: boolean;
+  running_balance_kurus?: number | null;
 };
 
 const correctablePartnerTypes = new Set(["expense_fronted", "reimbursement_paid"]);
@@ -60,6 +62,11 @@ const correctablePartnerTypes = new Set(["expense_fronted", "reimbursement_paid"
 type LedgerResponse = {
   balance_kurus: number;
   capital_balance_kurus: number;
+  capital_contribution_kurus: number;
+  profit_allocated_kurus: number;
+  drawings_net_kurus: number;
+  net_balance_kurus: number;
+  loan_balance_kurus?: number;
   entries: LedgerEntry[];
 };
 
@@ -178,15 +185,47 @@ export default function PartnerDetailPage() {
             </div>
             <div className="rounded-lg border border-border bg-card p-4">
               <p className="text-sm text-muted-foreground">
-                {partnerBalanceHeading(ledger.balance_kurus)}
+                {partnerBalanceHeading(ledger.net_balance_kurus)}
               </p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {partnerBalanceAmount(ledger.balance_kurus)}
+                {partnerBalanceAmount(ledger.net_balance_kurus)}
               </p>
-              <p className="mt-3 text-sm text-muted-foreground">Partner capital</p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">
-                {formatTry(ledger.capital_balance_kurus)}
-              </p>
+              {(ledger.balance_kurus !== 0 ||
+                ledger.capital_contribution_kurus !== 0 ||
+                ledger.profit_allocated_kurus !== 0 ||
+                ledger.drawings_net_kurus !== 0 ||
+                (ledger.loan_balance_kurus ?? 0) !== 0) && (
+                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  {ledger.balance_kurus !== 0 && (
+                    <p>
+                      Fronted expenses: {formatTry(ledger.balance_kurus)}
+                    </p>
+                  )}
+                  {ledger.capital_contribution_kurus !== 0 && (
+                    <p>
+                      Capital contributed:{" "}
+                      {formatTry(ledger.capital_contribution_kurus)}
+                    </p>
+                  )}
+                  {ledger.profit_allocated_kurus !== 0 && (
+                    <p>
+                      Profit allocated:{" "}
+                      {formatTry(ledger.profit_allocated_kurus)}
+                    </p>
+                  )}
+                  {ledger.drawings_net_kurus !== 0 && (
+                    <p>
+                      Drawings (net):{" "}
+                      {formatPartnerNetBalance(ledger.drawings_net_kurus)}
+                    </p>
+                  )}
+                  {(ledger.loan_balance_kurus ?? 0) !== 0 && (
+                    <p>
+                      Partner loan: {formatTry(ledger.loan_balance_kurus!)}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -234,6 +273,7 @@ export default function PartnerDetailPage() {
                   <DataTableHeaderCell>Type</DataTableHeaderCell>
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
                 </tr>
               </DataTableHead>
               <DataTableBody>
@@ -282,6 +322,11 @@ export default function PartnerDetailPage() {
                     <DataTableCell align="right">
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
+                    <DataTableCell align="right" className="tabular-nums">
+                      {entry.running_balance_kurus != null
+                        ? formatPartnerNetBalance(entry.running_balance_kurus)
+                        : "—"}
+                    </DataTableCell>
                   </DataTableRow>
                 ))}
               </DataTableBody>
@@ -315,7 +360,7 @@ export default function PartnerDetailPage() {
             open={drawingOpen}
             partnerId={partnerId}
             kind="drawing"
-            balanceKurus={ledger?.balance_kurus}
+            balanceKurus={ledger?.net_balance_kurus}
             onClose={() => setDrawingOpen(false)}
             onSaved={() => void reload()}
           />

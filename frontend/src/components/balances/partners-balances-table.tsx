@@ -19,13 +19,21 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
+import {
+  extractPartnerNetBalanceKurus,
+  formatPartnerNetBalance,
+  partnerBalanceHeading,
+} from "@/lib/partner-balance";
 
 type PartnerRowWithBalance = PartnerRow & {
   balance_kurus: number | null;
   balanceLoading: boolean;
 };
 
-type LedgerResponse = { balance_kurus: number };
+type LedgerResponse = {
+  net_balance_kurus: number;
+  balance_kurus: number;
+};
 
 function formatSharePct(value: string | null): string {
   if (value == null || value === "") return "—";
@@ -67,12 +75,13 @@ export function PartnersBalancesTable() {
             const ledger = await apiFetch<LedgerResponse>(
               `/entities/${entityId}/partners/${partner.id}/ledger`,
             );
+            const net = extractPartnerNetBalanceKurus(ledger);
             setRows((prev) =>
               prev.map((row) =>
                 row.id === partner.id
                   ? {
                       ...row,
-                      balance_kurus: ledger.balance_kurus,
+                      balance_kurus: net,
                       balanceLoading: false,
                     }
                   : row,
@@ -110,7 +119,7 @@ export function PartnersBalancesTable() {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? "Amount the business owes each partner (fronted expenses)"
+            ? "Cash-settleable position with each partner (fronted expenses, drawings, loans — not equity)"
             : "Select a restaurant in the sidebar"}
         </p>
         {entityId && (
@@ -167,9 +176,13 @@ export function PartnersBalancesTable() {
                   <StatusBadge status={row.is_active ? "active" : "inactive"} />
                 </DataTableCell>
                 <DataTableCell align="right" className="tabular-nums">
-                  {row.balanceLoading
-                    ? "…"
-                    : formatTry(row.balance_kurus ?? 0)}
+                  {row.balanceLoading ? (
+                    "…"
+                  ) : (
+                    <span title={partnerBalanceHeading(row.balance_kurus ?? 0)}>
+                      {formatPartnerNetBalance(row.balance_kurus ?? 0)}
+                    </span>
+                  )}
                 </DataTableCell>
               </DataTableRow>
             ))}

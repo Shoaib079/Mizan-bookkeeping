@@ -232,3 +232,40 @@ def test_capital_balance_allocation_minus_drawings(db_session, three_partner_set
     assert _gl_balance(
         db_session, entity_id, accounts[PARTNER_REIMBURSEMENT_PAYABLE_CODE], AccountNormalBalance.CREDIT
     ) == 0
+
+
+def test_profit_allocation_nets_prior_drawing(db_session, three_partner_setup) -> None:
+    entity_id = three_partner_setup["entity_id"]
+    partner_id = three_partner_setup["partner_ids"][0]
+    drawer = three_partner_setup["drawer"]
+    accounts = three_partner_setup["accounts"]
+
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 6, 15),
+        amount_kurus=200_000,
+        description="Early drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    result = pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=1_000_000,
+        description="Profit with netting",
+        actor_id=ACTOR_ID,
+        net_against_drawings=True,
+    )
+
+    by_partner = {e.partner_id: e.amount_kurus for e in result.partner_ledger_entries}
+    assert by_partner[partner_id] == 300_000  # 500k gross − 200k already taken
+    assert sum(by_partner.values()) == 800_000
+
+    assert _gl_balance(
+        db_session, entity_id, accounts[PARTNER_CAPITAL_CODE], AccountNormalBalance.CREDIT
+    ) == 800_000
+    assert partner_ledger.net_balance_kurus(db_session, entity_id, partner_id) == -200_000

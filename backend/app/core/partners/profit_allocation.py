@@ -45,6 +45,9 @@ class ProfitAllocationSplit:
     partner_name: str
     ownership_share_pct: Decimal
     amount_kurus: int
+    gross_amount_kurus: int = 0
+    net_balance_before_kurus: int = 0
+    offset_kurus: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,8 +99,15 @@ def _active_partners_with_shares(session: Session) -> list[Partner]:
 def split_profit_by_ownership(
     total_kurus: int,
     partners: list[Partner],
+    *,
+    net_balances: dict[uuid.UUID, int] | None = None,
+    net_against_drawings: bool = False,
 ) -> list[ProfitAllocationSplit]:
-    """Floor each share; last partner (by stable sort) absorbs rounding remainder."""
+    """Floor each share; last partner (by stable sort) absorbs rounding remainder.
+
+    When ``net_against_drawings`` is set, partners with a negative unified net
+    balance (money already taken) receive a reduced allocation — never below zero.
+    """
     if total_kurus <= 0:
         raise ValueError("profit amount must be positive kuruş")
 
@@ -107,24 +117,35 @@ def split_profit_by_ownership(
         pct = partner.ownership_share_pct
         assert pct is not None
         if index == len(partners) - 1:
-            amount = total_kurus - allocated
+            gross = total_kurus - allocated
         else:
-            amount = int(
+            gross = int(
                 (Decimal(total_kurus) * pct / HUNDRED).quantize(
                     Decimal("1"), rounding=ROUND_DOWN
                 )
             )
-            allocated += amount
+            allocated += gross
+
+        net_before = (net_balances or {}).get(partner.id, 0)
+        effective = gross
+        offset = 0
+        if net_against_drawings and net_before < 0:
+            effective = max(0, gross + net_before)
+            offset = gross - effective
+
         splits.append(
             ProfitAllocationSplit(
                 partner_id=partner.id,
                 partner_name=partner.name,
                 ownership_share_pct=pct,
-                amount_kurus=amount,
+                amount_kurus=effective,
+                gross_amount_kurus=gross,
+                net_balance_before_kurus=net_before,
+                offset_kurus=offset,
             )
         )
 
-    assert sum(s.amount_kurus for s in splits) == total_kurus
+    assert sum(s.amount_kurus for s in splits) <= total_kurus
     return splits
 
 
@@ -133,6 +154,7 @@ def preview_profit_allocation(
     entity_id: uuid.UUID,
     *,
     profit_kurus: int,
+    net_against_drawings: bool = True,
 ) -> ProfitAllocationPreview:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -140,7 +162,16 @@ def preview_profit_allocation(
     with entity_context(session, entity_id):
         require_entity_context()
         partners = _active_partners_with_shares(session)
-        splits = split_profit_by_ownership(profit_kurus, partners)
+        net_balances = {
+            p.id: partner_ledger.net_balance_kurus(session, entity_id, p.id)
+            for p in partners
+        }
+        splits = split_profit_by_ownership(
+            profit_kurus,
+            partners,
+            net_balances=net_balances,
+            net_against_drawings=net_against_drawings,
+        )
         return ProfitAllocationPreview(
             total_profit_kurus=profit_kurus,
             splits=tuple(splits),
@@ -182,6 +213,7 @@ def post_profit_allocation(
     profit_kurus: int,
     description: str,
     actor_id: uuid.UUID,
+    net_against_drawings: bool = True,
 ) -> ProfitAllocationPostResult:
     """Allocate net profit to partners — one JE, one subledger row per partner."""
     if profit_kurus <= 0:
@@ -193,7 +225,16 @@ def post_profit_allocation(
     with entity_context(session, entity_id):
         require_entity_context()
         partners = _active_partners_with_shares(session)
-        splits = split_profit_by_ownership(profit_kurus, partners)
+        net_balances = {
+            p.id: partner_ledger.net_balance_kurus(session, entity_id, p.id)
+            for p in partners
+        }
+        splits = split_profit_by_ownership(
+            profit_kurus,
+            partners,
+            net_balances=net_balances,
+            net_against_drawings=net_against_drawings,
+        )
 
         retained = _chart_account(session, RETAINED_EARNINGS_CODE)
         capital = _chart_account(session, PARTNER_CAPITAL_CODE)

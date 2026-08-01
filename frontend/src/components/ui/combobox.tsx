@@ -20,6 +20,10 @@ import { cn } from "@/lib/utils";
 export type ComboboxOption = {
   value: string;
   label: string;
+  /** Extra text for type-to-filter (hint, aliases — not required in the visible label). */
+  keywords?: string;
+  /** Secondary line shown in the dropdown list. */
+  description?: string;
 };
 
 const MAX_MENU_HEIGHT_PX = 240;
@@ -73,9 +77,10 @@ export function Combobox({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return options;
-    return options.filter((option) =>
-      option.label.toLowerCase().includes(q),
-    );
+    return options.filter((option) => {
+      const haystack = `${option.label} ${option.keywords ?? ""} ${option.description ?? ""}`.toLowerCase();
+      return haystack.includes(q);
+    });
   }, [options, query]);
 
   const close = useCallback(() => {
@@ -313,7 +318,12 @@ export function Combobox({
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => select(option.value)}
                 >
-                  {option.label}
+                  <span className="block">{option.label}</span>
+                  {option.description ? (
+                    <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                      {option.description}
+                    </span>
+                  ) : null}
                 </button>
               ))
             )}

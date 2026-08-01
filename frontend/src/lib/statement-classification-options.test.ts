@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  classificationComboboxOptionsForAmount,
   classificationMatchesAmount,
   classificationOptionGroups,
   classificationOptionsForAmount,
@@ -10,6 +11,24 @@ import {
   suggestDeliveryPlatformId,
   suggestSupplierId,
 } from "@/lib/statement-classification-options";
+
+describe("classificationComboboxOptionsForAmount", () => {
+  it("includes search keywords for supplier and card acquirer", () => {
+    const outflow = classificationComboboxOptionsForAmount(-100_00);
+    const supplier = outflow.find((o) => o.value === "supplier_payment");
+    expect(supplier?.keywords).toMatch(/supplier/i);
+
+    const inflow = classificationComboboxOptionsForAmount(100_00);
+    const pos = inflow.find((o) => o.value === "pos_settlement");
+    expect(pos?.keywords).toMatch(/acquirer|pos/i);
+  });
+
+  it("finds tax-related expense via search keywords", () => {
+    const outflow = classificationComboboxOptionsForAmount(-50_00);
+    const expense = outflow.find((o) => o.value === "rent_utility");
+    expect(expense?.keywords).toMatch(/sgk|vergi|tax/i);
+  });
+});
 
 describe("classificationOptionGroups", () => {
   it("lists staff, partner, loan, and bank fee in the full chart", () => {

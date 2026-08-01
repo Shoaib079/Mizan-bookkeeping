@@ -32,6 +32,7 @@ import {
   type StaffPayCurrencyRow,
 } from "@/lib/staff-balance-total";
 import { sumBalances } from "@/lib/subledger-total";
+import { extractPartnerNetBalanceKurus } from "@/lib/partner-balance";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
 
@@ -127,12 +128,7 @@ export function usePartnerBalanceTotal(entityId: string | null): SubledgerTotal 
     entityId,
     ids,
     (id) => `/partners/${id}/ledger`,
-    (res) => {
-      const raw = (res as { balance_kurus?: unknown }).balance_kurus;
-      const n = typeof raw === "number" ? raw : Number(raw);
-      if (!Number.isFinite(n)) throw new Error("partner ledger missing balance_kurus");
-      return n;
-    },
+    (res) => extractPartnerNetBalanceKurus(res),
   );
 
   const totalKurus = useMemo(() => sumBalances(balances), [balances]);

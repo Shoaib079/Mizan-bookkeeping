@@ -4,6 +4,7 @@ import {
   partnerBalanceAmount,
   partnerBalanceHeading,
   partnerDrawingRepaymentAllowed,
+  formatPartnerNetBalance,
 } from "@/lib/partner-balance";
 
 describe("partnerBalanceHeading", () => {
@@ -25,5 +26,13 @@ describe("partnerDrawingRepaymentAllowed", () => {
 describe("partnerBalanceAmount", () => {
   it("formats absolute value", () => {
     expect(partnerBalanceAmount(-123_456)).toContain("1.234,56");
+  });
+});
+
+describe("formatPartnerNetBalance", () => {
+  it("shows signed net for tables", () => {
+    expect(formatPartnerNetBalance(50_000)).toContain("500,00");
+    expect(formatPartnerNetBalance(-50_000)).toMatch(/^−/);
+    expect(formatPartnerNetBalance(0)).toContain("0,00");
   });
 });

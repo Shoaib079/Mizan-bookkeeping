@@ -13,19 +13,24 @@ from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.partners import posting as partner_posting
 from app.core.partners.ledger import (
     capital_balance_kurus,
+    capital_contribution_kurus,
     current_balance_kurus,
+    drawings_net_kurus,
     list_ledger_entries,
+    loan_balance_kurus,
+    net_balance_kurus,
+    profit_allocated_kurus,
     reimbursement_balance_kurus,
 )
 from app.core.partners.models import PartnerLedgerEntry
-from app.core.partners.types import PartnerMovementType
+from app.core.partners.types import NET_BALANCE_MOVEMENT_TYPES, PartnerMovementType
 from app.core.ledger.correction import (
     CorrectionNotFoundError,
     correct_partner_journal_entry,
     void_partner_journal_entry,
 )
 from app.core.ledger.posting import PostingLine
-from app.core.ledger.subledger_display import enrich_entry_models
+from app.core.ledger.subledger_display import enrich_entry_models, SubledgerDisplayKind
 from app.core.chart_of_accounts.default_chart import (
     OWNER_DRAWINGS_CODE,
     PARTNER_REIMBURSEMENT_PAYABLE_CODE,
@@ -224,12 +229,32 @@ def get_partner_ledger(
         require_entity_context()
         reimbursement = reimbursement_balance_kurus(session, entity_id, partner_id)
         capital = capital_balance_kurus(session, entity_id, partner_id)
+        contribution = capital_contribution_kurus(session, entity_id, partner_id)
+        profit_allocated = profit_allocated_kurus(session, entity_id, partner_id)
+        drawings = drawings_net_kurus(session, entity_id, partner_id)
+        loan = loan_balance_kurus(session, entity_id, partner_id)
+        net = net_balance_kurus(session, entity_id, partner_id)
         entries = list_ledger_entries(session, entity_id, partner_id)
         reads = _partner_entry_reads(session, entries)
+        running = 0
+        for read in reads:
+            if read.display_kind == SubledgerDisplayKind.EFFECTIVE:
+                try:
+                    movement = PartnerMovementType(read.movement_type)
+                except ValueError:
+                    movement = None
+                if movement in NET_BALANCE_MOVEMENT_TYPES:
+                    running += read.amount_kurus
+            read.running_balance_kurus = running
     return PartnerLedgerRead(
         partner_id=partner_id,
         balance_kurus=reimbursement,
         capital_balance_kurus=capital,
+        capital_contribution_kurus=contribution,
+        profit_allocated_kurus=profit_allocated,
+        drawings_net_kurus=drawings,
+        net_balance_kurus=net,
+        loan_balance_kurus=loan,
         entries=reads,
     )
 
@@ -564,16 +589,24 @@ def preview_profit_allocation(
         period_to=payload.period_to,
     )
     preview = partner_profit_allocation.preview_profit_allocation(
-        session, entity_id, profit_kurus=profit_kurus
+        session,
+        entity_id,
+        profit_kurus=profit_kurus,
+        net_against_drawings=payload.net_against_drawings,
     )
     return ProfitAllocationPreviewRead(
         total_profit_kurus=preview.total_profit_kurus,
+        total_allocated_kurus=sum(line.amount_kurus for line in preview.splits),
+        net_against_drawings=payload.net_against_drawings,
         lines=[
             ProfitAllocationPreviewLine(
                 partner_id=line.partner_id,
                 partner_name=line.partner_name,
                 ownership_share_pct=line.ownership_share_pct,
                 amount_kurus=line.amount_kurus,
+                gross_amount_kurus=line.gross_amount_kurus,
+                net_balance_before_kurus=line.net_balance_before_kurus,
+                offset_kurus=line.offset_kurus,
             )
             for line in preview.splits
         ],
@@ -599,6 +632,7 @@ def post_profit_allocation(
         profit_kurus=profit_kurus,
         description=payload.description,
         actor_id=payload.actor_id,
+        net_against_drawings=payload.net_against_drawings,
     )
     with entity_context(session, entity_id):
         require_entity_context()
@@ -608,6 +642,10 @@ def post_profit_allocation(
     return ProfitAllocationPostOut(
         journal_entry_id=result.journal_entry.id,
         total_profit_kurus=profit_kurus,
+        total_allocated_kurus=sum(
+            entry.amount_kurus for entry in result.partner_ledger_entries
+        ),
+        net_against_drawings=payload.net_against_drawings,
         partner_ledger_entries=partner_reads,
     )
 
