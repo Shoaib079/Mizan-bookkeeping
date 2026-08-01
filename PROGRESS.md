@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Bank closing balance auto-read + account activity — 2026-08-01 |
-| **Last tag** | `v0.bank-closing-activity` |
+| **Last completed slice** | Review bank queue visibility — 2026-08-01 |
+| **Last tag** | `v0.review-bank-queue-fix` |
 | **Unpushed** | (none) |
 | **Next up** | **GS-FX** · P5 — Delete company UI |
 

@@ -55,14 +55,30 @@ export function filterLinesByDateRange(
   );
 }
 
+/** Needs-review queue ignores the date picker — must match sidebar review-counts. */
+export function filterLinesForReviewTab(
+  lines: StatementLineReview[],
+  tab: StatementReviewTab,
+  from: string,
+  to: string,
+): StatementLineReview[] {
+  const scoped =
+    tab === "needs_review" ? lines : filterLinesByDateRange(lines, from, to);
+  return filterLinesByTab(scoped, tab);
+}
+
 export function countLinesByTab(
   lines: StatementLineReview[],
+  range?: { from: string; to: string },
 ): Record<StatementReviewTab, number> {
+  const inRange = range
+    ? filterLinesByDateRange(lines, range.from, range.to)
+    : lines;
   return {
     needs_review: filterLinesByTab(lines, "needs_review").length,
-    rule_auto: filterLinesByTab(lines, "rule_auto").length,
-    posted: filterLinesByTab(lines, "posted").length,
-    linked: filterLinesByTab(lines, "linked").length,
+    rule_auto: filterLinesByTab(inRange, "rule_auto").length,
+    posted: filterLinesByTab(inRange, "posted").length,
+    linked: filterLinesByTab(inRange, "linked").length,
   };
 }
 

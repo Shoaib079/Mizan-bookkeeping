@@ -5,6 +5,7 @@ import {
   countLinesByTab,
   filterLinesByDateRange,
   filterLinesByTab,
+  filterLinesForReviewTab,
   matchesReviewTab,
   suggestMatchToken,
 } from "@/lib/statement-review";
@@ -100,6 +101,28 @@ describe("filterLinesByTab", () => {
       posted: 1,
       linked: 1,
     });
+  });
+
+  it("keeps needs_review count outside the selected date range", () => {
+    const pending = line({
+      id: "pending",
+      status: "needs_review",
+      transaction_date: "2026-01-15",
+    });
+    const all = [...lines, pending];
+    expect(
+      countLinesByTab(all, { from: "2026-03-01", to: "2026-03-31" }).needs_review,
+    ).toBe(2);
+    expect(
+      filterLinesForReviewTab(all, "needs_review", "2026-03-01", "2026-03-31").map(
+        (row) => row.id,
+      ),
+    ).toEqual(expect.arrayContaining(["pending", "1"]));
+    expect(
+      filterLinesForReviewTab(all, "posted", "2026-03-01", "2026-03-31").map(
+        (row) => row.id,
+      ),
+    ).toEqual(["3"]);
   });
 });
 

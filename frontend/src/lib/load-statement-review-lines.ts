@@ -17,6 +17,13 @@ const RESOLVED_STATUSES = new Set([
   "needs_review",
 ]);
 
+/** Statement import/list is bank-only — credit cards must not hit that API. */
+export function bankAccountsForStatementReview(
+  accounts: MoneyAccountRead[],
+): MoneyAccountRead[] {
+  return accounts.filter((account) => account.account_kind === "bank");
+}
+
 export async function loadStatementReviewLines(
   entityId: string,
   options?: { from: string; to: string },
@@ -37,30 +44,31 @@ export async function loadStatementReviewLines(
   const accounts = await apiFetch<Paginated<MoneyAccountRead>>(
     `/entities/${entityId}/banking/accounts?limit=100`,
   );
-  const statementAccounts = accounts.items.filter(
-    (account) =>
-      account.account_kind === "bank" || account.account_kind === "credit_card",
-  );
 
-  for (const account of statementAccounts) {
-    const statements = await apiFetch<Paginated<BankStatementRead>>(
-      `/entities/${entityId}/banking/accounts/${account.id}/statements?limit=50${rangeQuery}`,
-    );
-    for (const statement of statements.items) {
-      for (const line of statement.lines) {
-        if (byId.has(line.id)) continue;
-        if (
-          !RESOLVED_STATUSES.has(line.status) &&
-          line.classification_source !== "rule_auto"
-        ) {
-          continue;
+  for (const account of bankAccountsForStatementReview(accounts.items)) {
+    try {
+      const statements = await apiFetch<Paginated<BankStatementRead>>(
+        `/entities/${entityId}/banking/accounts/${account.id}/statements?limit=50${rangeQuery}`,
+      );
+      for (const statement of statements.items) {
+        for (const line of statement.lines) {
+          if (byId.has(line.id)) continue;
+          if (
+            !RESOLVED_STATUSES.has(line.status) &&
+            line.classification_source !== "rule_auto"
+          ) {
+            continue;
+          }
+          byId.set(line.id, {
+            ...line,
+            money_account_id: statement.money_account_id,
+            original_filename: statement.original_filename,
+          });
         }
-        byId.set(line.id, {
-          ...line,
-          money_account_id: statement.money_account_id,
-          original_filename: statement.original_filename,
-        });
       }
+    } catch {
+      // Keep needs-review rows already loaded; one bad account must not blank the hub.
+      continue;
     }
   }
 

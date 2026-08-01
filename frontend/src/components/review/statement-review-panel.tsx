@@ -16,8 +16,7 @@ import {
 } from "@/lib/statement-bulk-selection";
 import {
   countLinesByTab,
-  filterLinesByDateRange,
-  filterLinesByTab,
+  filterLinesForReviewTab,
   STATEMENT_REVIEW_TABS,
 } from "@/lib/statement-review";
 import { replaceStatementLine } from "@/lib/statement-line-filters";
@@ -69,9 +68,8 @@ export function StatementReviewPanel() {
     void reload();
   }, [reload]);
 
-  const linesInRange = filterLinesByDateRange(lines, from, to);
-  const tabCounts = countLinesByTab(linesInRange);
-  const visibleLines = filterLinesByTab(linesInRange, activeTab);
+  const tabCounts = countLinesByTab(lines, { from, to });
+  const visibleLines = filterLinesForReviewTab(lines, activeTab, from, to);
 
   const bulkSelectedLines = useMemo(
     () => visibleLines.filter((line) => selectedLineIds.has(line.id)),
@@ -203,7 +201,9 @@ export function StatementReviewPanel() {
 
       {!loading && visibleLines.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No lines in this filter for the selected dates.
+          {activeTab === "needs_review"
+            ? "No statement lines need review."
+            : "No lines in this filter for the selected dates."}
         </p>
       )}
 

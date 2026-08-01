@@ -4,6 +4,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-01
 
+**Review → Bank & card queue fix.**
+- **Needs review** tab no longer hides pending lines outside the selected date range — matches the sidebar badge count.
+- Statement review loader skips **credit card** accounts (bank statements API is bank-only) and no longer blanks the whole page when one account fetch fails.
+
 **Bank statement closing balance auto-read + account activity.**
 - Import detects **Bakiye** column (auto-suggest or manual map) and saves **closing balance** on the statement — feeds Reports → Bank reconciliation without typing it by hand.
 - **Banking → account detail** shows **Account activity**: deposits, payments, net flow, and timeline from statement lines (posted rows move the book balance).
