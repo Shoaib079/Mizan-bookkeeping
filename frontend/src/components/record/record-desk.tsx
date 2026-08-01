@@ -21,6 +21,7 @@ import {
   PRIMARY_RECORD_ACTION_IDS,
   primaryRecordActions,
   RECORD_SECTION_LABELS,
+  type PrimaryRecordActionId,
   type RecordActionDef,
   type RecordActionKey,
   type RecordSectionId,
@@ -30,7 +31,7 @@ import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
-export type RecordDeskMode = (typeof PRIMARY_RECORD_ACTION_IDS)[number];
+export type RecordDeskMode = PrimaryRecordActionId;
 
 const DESK_HINTS: Record<RecordDeskMode, string> = {
   expense: "Cash or partner-fronted — bank and card on the statement.",

@@ -86,14 +86,16 @@ export const RECORD_SECTION_LABELS: Record<RecordSectionId, string> = {
 };
 
 /** Primary Add hub cards — one click, no digging. */
-export const PRIMARY_RECORD_ACTION_IDS: RecordActionKey[] = [
+export const PRIMARY_RECORD_ACTION_IDS = [
   "sales",
   "expense",
   "staffSalary",
   "fx",
   "addDocument",
   "closeDay",
-];
+] as const satisfies readonly RecordActionKey[];
+
+export type PrimaryRecordActionId = (typeof PRIMARY_RECORD_ACTION_IDS)[number];
 
 /** Always-visible sections below the primary row (Add → More menu). */
 export const DAILY_VISIBLE_SECTIONS: RecordSectionId[] = ["payments"];
