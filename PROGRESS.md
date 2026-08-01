@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Review bank queue visibility — 2026-08-01 |
-| **Last tag** | `v0.review-bank-queue-fix` |
+| **Last completed slice** | Suppliers total payables summary — 2026-08-01 |
+| **Last tag** | `v0.suppliers-payables-summary` |
 | **Unpushed** | (none) |
 | **Next up** | **GS-FX** · P5 — Delete company UI |
 

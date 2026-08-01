@@ -4,6 +4,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-01
 
+**Suppliers — total payables at top.**
+- Supplier directory shows **Total payables** in a summary card under the search bar (same pattern as Balances → Payables); removed the small footnote at the bottom of the page.
+
 **Review → Bank & card queue fix.**
 - **Needs review** tab no longer hides pending lines outside the selected date range — matches the sidebar badge count.
 - Statement review loader skips **credit card** accounts (bank statements API is bank-only) and no longer blanks the whole page when one account fetch fails.

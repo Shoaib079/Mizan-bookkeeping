@@ -17,7 +17,7 @@
 | **Active slice**         | (none) |
 | **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI |
 | **Last completed slice** | **Bank closing balance auto-read + account activity (2026-08-01)** — Bakiye column on import → stated closing for reconciliation; bank account activity timeline (deposits/out/net). |
-| **Last commit/tag**      | `v0.review-bank-queue-fix` |
+| **Last commit/tag**      | `v0.suppliers-payables-summary` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
@@ -1878,6 +1878,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-01 | Suppliers total payables summary               | `v0.suppliers-payables-summary`                        | Total payables card at top of supplier directory (matches Balances payables styling); removed easy-to-miss footnote at bottom |
 | 2026-08-01 | Review bank queue visibility                   | `v0.review-bank-queue-fix`                             | Needs-review tab ignores date filter (matches sidebar count); statement loader skips credit-card accounts and no longer blanks the hub on one failed fetch; vitest |
 | 2026-08-01 | Bank closing balance + account activity        | `v0.bank-closing-activity`                             | Import **Bakiye** column → stated closing on statement; **Account activity** API + panel (deposits/out/net/book balance); per-bank rows on dashboard + Balances; bulk post no longer silent-fails without actor; migration `085`; pytest + build green |
 | 2026-08-01 | Money out + cash drawer UX                   | `v0.money-out-ux`                                      | **`CashDrawerPicker`** + `shouldShowCashDrawerPicker` — hide drawer when one TRY account; banking hub "TRY cash"; opening-balance labels; partner reimbursement **cash-only** (bank → statement classify); Edit beside name on partner/staff/supplier detail; ledger Edit/Void inline on description; staff actions on page (removed overflow ⋯); vitest + build green |

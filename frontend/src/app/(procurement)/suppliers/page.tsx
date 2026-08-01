@@ -144,6 +144,18 @@ export default function SuppliersPage() {
         </div>
       </div>
 
+      {entityId && !forbidden && (
+        <div className="mb-6 rounded-lg border border-border bg-card p-4 sm:max-w-xs">
+          <p className="text-sm text-muted-foreground">Total payables</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">
+            {balancesState.loading ? "…" : formatTry(balancesState.totalKurus)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Across all suppliers — any month until paid.
+          </p>
+        </div>
+      )}
+
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {entityId && forbidden && <ForbiddenMessage context="supplier list" />}
       {loading && <TableSkeleton columns={4} />}
@@ -194,16 +206,6 @@ export default function SuppliersPage() {
           disabled={loading}
           onOffsetChange={setOffset}
         />
-      )}
-
-      {entityId && !forbidden && (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Total payable across all suppliers:{" "}
-          <span className="font-medium tabular-nums text-foreground">
-            {balancesState.loading ? "…" : formatTry(balancesState.totalKurus)}
-          </span>
-          .
-        </p>
       )}
 
       <SupplierForm
