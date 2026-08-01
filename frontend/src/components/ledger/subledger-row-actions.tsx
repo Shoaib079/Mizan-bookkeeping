@@ -14,12 +14,26 @@ type Props = {
   onVoid: () => void;
   /** When false, only Void is shown (e.g. advance_applied companion rows). */
   showEdit?: boolean;
+  /** Inline next to description — default keeps actions in a trailing column. */
+  inline?: boolean;
 };
 
-export function SubledgerRowActions({ row, onEdit, onVoid, showEdit = true }: Props) {
+export function SubledgerRowActions({
+  row,
+  onEdit,
+  onVoid,
+  showEdit = true,
+  inline = false,
+}: Props) {
   if (!canEditSubledgerRow(row)) return null;
   return (
-    <div className="flex justify-end gap-1">
+    <div
+      className={
+        inline
+          ? "ml-2 inline-flex shrink-0 gap-1 align-middle"
+          : "flex justify-end gap-1"
+      }
+    >
       {showEdit && (
         <Button
           type="button"

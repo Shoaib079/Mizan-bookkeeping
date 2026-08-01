@@ -1,7 +1,6 @@
 "use client";
 
 import { Building2, Coins, CreditCard, Wallet } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { BankingHubTile } from "@/components/banking/banking-hub-tile";
@@ -14,6 +13,7 @@ import {
   accountCountLabel,
   accountSubtitle,
   allFxAccounts,
+  cashDrawerHubSubtitle,
   formatFxTileSummary,
   formatTryTileBalance,
 } from "@/lib/banking-tree-helpers";
@@ -99,7 +99,7 @@ export function BankingHubContent() {
             icon={Wallet}
             title="Cash drawer"
             balance={formatTryTileBalance(tree.cash.balance_kurus)}
-            subtitle={`${accountCountLabel(tree.cash.accounts.length, "drawer", "drawers")} · ${accountSubtitle(tree.cash.accounts)}`}
+            subtitle={cashDrawerHubSubtitle(tree.cash.accounts)}
           />
           <BankingHubTile
             href="/banking/fx"
@@ -113,11 +113,9 @@ export function BankingHubContent() {
 
       {tree && tree.cash.accounts.length === 0 && (
         <p className="mt-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          No cash drawer yet — add one from{" "}
-          <Link href="/banking/cash" className="text-primary hover:underline">
-            Cash drawer
-          </Link>{" "}
-          or Restaurant settings.
+          No cash drawer for this restaurant — one is created automatically when
+          you add a restaurant. If this is missing, check Restaurant settings or
+          add a cash account under Banking → Banks (advanced).
         </p>
       )}
 

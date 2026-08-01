@@ -8,7 +8,6 @@ import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
 import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
 import { StaffAdvanceReturnForm } from "@/components/forms/staff-advance-return-form";
 import { StaffApplyAdvanceForm } from "@/components/forms/staff-apply-advance-form";
-import { OverflowMenu } from "@/components/ui/overflow-menu";
 import { staffDisplayRows } from "@/lib/staff-ledger-display";
 import { StaffExtraDaysForm } from "@/components/forms/staff-extra-days-form";
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
@@ -231,6 +230,17 @@ export default function StaffDetailPage() {
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold">{employee.name}</h1>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-8"
+                  onClick={() => setEditOpen(true)}
+                >
+                  Edit
+                </Button>
+              </div>
               <p className="text-sm text-muted-foreground">
                 Pay currency: {employee.pay_currency}
               </p>
@@ -277,44 +287,56 @@ export default function StaffDetailPage() {
             </div>
           </div>
 
-          <div className="mb-6 flex flex-wrap items-center gap-2">
+          <div className="mb-6 flex flex-wrap gap-2">
             <Button type="button" onClick={() => setPaymentOpen(true)}>
               Pay salary
             </Button>
-            <OverflowMenu
-              items={[
-                { label: "Edit employee", onSelect: () => setEditOpen(true) },
-                { label: "Give advance", onSelect: () => setAdvanceOpen(true) },
-                {
-                  label: "Extra days",
-                  show: employee.pay_currency === "TRY",
-                  onSelect: () => setExtraDaysOpen(true),
-                },
-                {
-                  label: "Return advance",
-                  title:
-                    "Record cash returned by the employee for an advance/overpayment",
-                  show:
-                    employee.pay_currency === "TRY" &&
-                    ledger.outstanding_advance_minor > 0,
-                  onSelect: () => setReturnOpen(true),
-                },
-                {
-                  label: "Apply advance (no cash)",
-                  title:
-                    "Net advance against unpaid salary without paying cash — normally automatic at Pay salary",
-                  show:
-                    employee.pay_currency === "TRY" &&
-                    ledger.outstanding_advance_minor > 0 &&
-                    ledger.remaining_accrual_minor > 0,
-                  onSelect: () => setApplyAdvanceOpen(true),
-                },
-                {
-                  label: "Adjust accrual",
-                  onSelect: () => setAccrualOpen(true),
-                },
-              ]}
-            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setAdvanceOpen(true)}
+            >
+              Give advance
+            </Button>
+            {employee.pay_currency === "TRY" && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setExtraDaysOpen(true)}
+              >
+                Extra days
+              </Button>
+            )}
+            {employee.pay_currency === "TRY" &&
+              ledger.outstanding_advance_minor > 0 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  title="Record cash returned by the employee for an advance/overpayment"
+                  onClick={() => setReturnOpen(true)}
+                >
+                  Return advance
+                </Button>
+              )}
+            {employee.pay_currency === "TRY" &&
+              ledger.outstanding_advance_minor > 0 &&
+              ledger.remaining_accrual_minor > 0 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  title="Net advance against unpaid salary without paying cash — normally automatic at Pay salary"
+                  onClick={() => setApplyAdvanceOpen(true)}
+                >
+                  Apply advance (no cash)
+                </Button>
+              )}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setAccrualOpen(true)}
+            >
+              Adjust accrual
+            </Button>
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
@@ -339,7 +361,6 @@ export default function StaffDetailPage() {
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
-                  <DataTableHeaderCell>Actions</DataTableHeaderCell>
                 </tr>
               </DataTableHead>
               <DataTableBody>
@@ -407,18 +428,9 @@ export default function StaffDetailPage() {
                             <EditedBadge />
                           </span>
                         )}
-                      </DataTableCell>
-                      <DataTableCell align="right">
-                        {formatMinorAmount(group.netMinor)}
-                      </DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums text-muted-foreground">
-                        {group.balanceMinor === null
-                          ? "—"
-                          : formatMinorAmount(group.balanceMinor)}
-                      </DataTableCell>
-                      <DataTableCell align="right">
                         {canAct && (
                           <SubledgerRowActions
+                            inline
                             row={entry}
                             showEdit={canEdit}
                             onEdit={() =>
@@ -440,6 +452,14 @@ export default function StaffDetailPage() {
                             }
                           />
                         )}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        {formatMinorAmount(group.netMinor)}
+                      </DataTableCell>
+                      <DataTableCell align="right" className="tabular-nums text-muted-foreground">
+                        {group.balanceMinor === null
+                          ? "—"
+                          : formatMinorAmount(group.balanceMinor)}
                       </DataTableCell>
                     </DataTableRow>
                   );

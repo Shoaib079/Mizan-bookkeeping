@@ -3,9 +3,9 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
-import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -14,6 +14,7 @@ import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
+import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { useEntity } from "@/lib/entity-context";
 import {
   formatKurus,
@@ -61,9 +62,19 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
     setSummary(summaryRes);
     setCashAccounts(accountsRes.items);
     setZReportEnabled(zEnabled);
-    setMoneyAccountId(
-      summaryRes.money_account_id ?? accountsRes.items[0]?.id ?? "",
-    );
+    const drawerId =
+      summaryRes.money_account_id ??
+      defaultMainDrawerId(
+        accountsRes.items.map((a) => ({
+          id: a.id,
+          gl_account_id: "",
+          name: a.name,
+          account_kind: "cash",
+        })),
+      ) ??
+      accountsRes.items[0]?.id ??
+      "";
+    setMoneyAccountId(drawerId);
     if (summaryRes.summary_date) {
       setDateText(formatTrDate(summaryRes.summary_date));
     }
@@ -308,19 +319,12 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
                 {formatTry(cardKurusLive)}). The day will route to Needs Review.
               </ValidationHint>
             )}
-            <div>
-              <Label htmlFor="pos-drawer">Cash drawer</Label>
-              <Combobox
-                id="pos-drawer"
-                value={moneyAccountId}
-                onValueChange={setMoneyAccountId}
-                options={cashAccounts.map((a) => ({
-                  value: a.id,
-                  label: a.name,
-                }))}
-                placeholder="Cash drawer…"
-              />
-            </div>
+            <CashDrawerPicker
+              id="pos-drawer"
+              accounts={cashAccounts}
+              value={moneyAccountId}
+              onValueChange={setMoneyAccountId}
+            />
           </div>
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
           <div className="mt-4 flex flex-wrap gap-2">

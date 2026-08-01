@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/expense-accounts";
 import { useEntity } from "@/lib/entity-context";
 import {
-  loadBankAndCashAccounts,
+  defaultMainDrawerId,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
 import { formatKurus, formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -58,9 +59,9 @@ export function CorrectPartnerLedgerForm({
   const { submitWithPeriodUnlock, PeriodUnlockDialog } = usePeriodUnlockSubmit();
 
   const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccountOption[]>([]);
-  const [paymentAccounts, setPaymentAccounts] = useState<MoneyAccountOption[]>([]);
+  const [cashAccounts, setCashAccounts] = useState<MoneyAccountOption[]>([]);
   const [expenseAccountId, setExpenseAccountId] = useState("");
-  const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
+  const [cashAccountId, setCashAccountId] = useState("");
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("");
@@ -73,19 +74,31 @@ export function CorrectPartnerLedgerForm({
   const loadOptions = useCallback(
     async (recorded: CorrectablePartnerLedgerRow) => {
       if (!entityId) return;
-      const [expenses, payments] = await Promise.all([
-        fetchExpenseAccounts(entityId),
-        loadBankAndCashAccounts(entityId),
-      ]);
+      const expenses = await fetchExpenseAccounts(entityId);
       setExpenseAccounts(expenses);
-      setPaymentAccounts(payments);
       if (expenses[0]) setExpenseAccountId(expenses[0].id);
-      // Restore the account the reimbursement was actually paid from.
-      const chosen =
-        (recorded.payment_account_id &&
-          payments.find((a) => a.gl_account_id === recorded.payment_account_id)) ||
-        payments[0];
-      setPaymentGlAccountId(chosen?.gl_account_id ?? "");
+
+      if (recorded.movement_type === "expense_fronted") {
+        setCashAccounts([]);
+        setCashAccountId("");
+        return;
+      }
+
+      const cashRes = await apiFetch<{ items: MoneyAccountOption[] }>(
+        `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
+      );
+      const accounts = cashRes.items;
+      setCashAccounts(accounts);
+      const drawerId = defaultMainDrawerId(accounts);
+      const restored =
+        (recorded.payment_account_id
+          ? accounts.find(
+              (a) => a.gl_account_id === recorded.payment_account_id,
+            )
+          : undefined) ??
+        (drawerId ? accounts.find((a) => a.id === drawerId) : undefined) ??
+        accounts[0];
+      setCashAccountId(restored?.id ?? "");
     },
     [entityId],
   );
@@ -118,6 +131,11 @@ export function CorrectPartnerLedgerForm({
       setError("Enter a valid amount.");
       return;
     }
+    const paymentAccount = cashAccounts.find((a) => a.id === cashAccountId);
+    if (!isExpenseFronted && !paymentAccount) {
+      setError("Choose a cash drawer.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -137,7 +155,9 @@ export function CorrectPartnerLedgerForm({
                   description: description.trim() || entry.description,
                   actor_id: actorId,
                   expense_account_id: isExpenseFronted ? expenseAccountId : null,
-                  payment_account_id: isExpenseFronted ? null : paymentGlAccountId,
+                  payment_account_id: isExpenseFronted
+                    ? null
+                    : paymentAccount!.gl_account_id,
                   reason: reason.trim() || null,
                 },
                 periodUnlockReason,
@@ -184,19 +204,13 @@ export function CorrectPartnerLedgerForm({
               />
             </div>
           ) : (
-            <div>
-              <Label htmlFor="cpl-pay">Pay from</Label>
-              <Combobox
-                id="cpl-pay"
-                value={paymentGlAccountId}
-                onValueChange={setPaymentGlAccountId}
-                options={paymentAccounts.map((a) => ({
-                  value: a.gl_account_id,
-                  label: `${a.name} (${a.account_kind})`,
-                }))}
-                placeholder="Cash or bank…"
-              />
-            </div>
+            <CashDrawerPicker
+              id="cpl-pay"
+              accounts={cashAccounts}
+              value={cashAccountId}
+              onValueChange={setCashAccountId}
+              label="Cash drawer"
+            />
           )}
           <div>
             <Label htmlFor="cpl-desc">Description</Label>

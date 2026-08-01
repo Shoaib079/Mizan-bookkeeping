@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ValidationHint } from "@/components/ui/validation-hint";
@@ -251,19 +251,12 @@ export function ManualDailySalesForm({
             {formatTry(cardKurus)}). The day will route to Needs Review.
           </ValidationHint>
         )}
-        <div>
-          <Label htmlFor="sales-drawer">Cash drawer</Label>
-          <Combobox
-            id="sales-drawer"
-            value={moneyAccountId}
-            onValueChange={setMoneyAccountId}
-            options={cashAccounts.map((a) => ({
-              value: a.id,
-              label: a.name,
-            }))}
-            placeholder="Cash drawer…"
-          />
-        </div>
+        <CashDrawerPicker
+          id="sales-drawer"
+          accounts={cashAccounts}
+          value={moneyAccountId}
+          onValueChange={setMoneyAccountId}
+        />
         {error && (
           <div className="space-y-1">
             <p className="text-sm text-destructive">{error}</p>

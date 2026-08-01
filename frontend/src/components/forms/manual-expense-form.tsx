@@ -13,6 +13,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { ExpenseItemTypeahead } from "@/components/forms/expense-item-typeahead";
 import { type EmployeeRow } from "@/components/forms/employee-form";
 import { type PartnerRow } from "@/components/forms/partner-form";
@@ -29,7 +30,7 @@ import {
   type ChartAccount,
 } from "@/lib/expense-accounts";
 import { statesDiffer, useFormDraft } from "@/lib/form-draft";
-import { defaultMainDrawerId } from "@/lib/load-money-accounts";
+import { defaultMainDrawerId, shouldShowCashDrawerPicker } from "@/lib/load-money-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
@@ -459,7 +460,8 @@ export function ManualExpenseForm({
   const selectedEmployee = employees.find((e) => e.id === employeeId);
   const dialogTitle =
     recordKind === "salary" ? "Record salary payment" : title;
-  const singleCashDrawer = paymentMode === "cash" && cashAccounts.length === 1;
+  const showCashDrawerPicker =
+    paymentMode === "cash" && shouldShowCashDrawerPicker(cashAccounts);
 
   if (!open) return null;
 
@@ -641,20 +643,13 @@ export function ManualExpenseForm({
                   <option value="partner">Partner paid (owe partner)</option>
                 </Select>
               </div>
-              {paymentMode === "cash" && !singleCashDrawer ? (
-                <div>
-                  <Label htmlFor="exp-cash">Cash drawer</Label>
-                  <Combobox
-                    id="exp-cash"
-                    value={moneyAccountId}
-                    onValueChange={setMoneyAccountId}
-                    options={cashAccounts.map((a) => ({
-                      value: a.id,
-                      label: a.name,
-                    }))}
-                    placeholder="Cash drawer…"
-                  />
-                </div>
+              {showCashDrawerPicker ? (
+                <CashDrawerPicker
+                  id="exp-cash"
+                  accounts={cashAccounts}
+                  value={moneyAccountId}
+                  onValueChange={setMoneyAccountId}
+                />
               ) : paymentMode === "partner" ? (
                 <div>
                   <Label htmlFor="exp-partner">Partner</Label>
@@ -748,19 +743,12 @@ export function ManualExpenseForm({
           </Select>
         </div>
         {paymentMode === "cash" ? (
-          <div>
-            <Label htmlFor="exp-cash">Cash drawer</Label>
-            <Combobox
-              id="exp-cash"
-              value={moneyAccountId}
-              onValueChange={setMoneyAccountId}
-              options={cashAccounts.map((a) => ({
-                value: a.id,
-                label: a.name,
-              }))}
-              placeholder="Cash drawer…"
-            />
-          </div>
+          <CashDrawerPicker
+            id="exp-cash"
+            accounts={cashAccounts}
+            value={moneyAccountId}
+            onValueChange={setMoneyAccountId}
+          />
         ) : (
           <div>
             <Label htmlFor="exp-partner">Partner</Label>

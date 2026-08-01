@@ -7,6 +7,7 @@ import {
   allFxAccounts,
   canDeactivateFxWallet,
   cashAndBankHeldKurus,
+  cashDrawerHubSubtitle,
   formatFxTileSummary,
   fxHoldingsNativeSummary,
   mergeFxLedgerEntries,
@@ -128,6 +129,21 @@ describe("banking-tree-helpers", () => {
         fxAccount({ id: "2", currency: "EUR", name: "EUR Petty" }),
       ]),
     ).toBe("USD Main, EUR Petty");
+  });
+
+  it("hides internal drawer name on banking hub when only one drawer", () => {
+    expect(cashDrawerHubSubtitle([])).toBe("None yet");
+    expect(
+      cashDrawerHubSubtitle([
+        fxAccount({ id: "1", currency: "USD", name: "Main Drawer", account_kind: "cash" }),
+      ]),
+    ).toBe("TRY cash");
+    expect(
+      cashDrawerHubSubtitle([
+        fxAccount({ id: "1", currency: "USD", name: "Main Drawer", account_kind: "cash" }),
+        fxAccount({ id: "2", currency: "USD", name: "Petty", account_kind: "cash" }),
+      ]),
+    ).toBe("2 drawers · Main Drawer, Petty");
   });
 
   it("allows deactivate only when FX wallet has zero balance", () => {

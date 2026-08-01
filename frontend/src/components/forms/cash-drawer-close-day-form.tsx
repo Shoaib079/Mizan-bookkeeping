@@ -4,10 +4,10 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ApiError, apiFetch } from "@/lib/api";
@@ -15,6 +15,7 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
+import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { todayTrDate } from "@/lib/dates";
@@ -59,7 +60,18 @@ export function CashDrawerCloseDayForm({
     );
     setCashAccounts(cashRes.items.filter((a) => a.is_active));
     if (defaultCashAccountId) setMoneyAccountId(defaultCashAccountId);
-    else if (cashRes.items[0]) setMoneyAccountId(cashRes.items[0].id);
+    else {
+      const drawerId = defaultMainDrawerId(
+        cashRes.items.map((a) => ({
+          id: a.id,
+          gl_account_id: "",
+          name: a.name,
+          account_kind: a.account_kind,
+        })),
+      );
+      if (drawerId) setMoneyAccountId(drawerId);
+      else if (cashRes.items[0]) setMoneyAccountId(cashRes.items[0].id);
+    }
   }, [entityId, defaultCashAccountId]);
 
   useEffect(() => {
@@ -154,19 +166,14 @@ export function CashDrawerCloseDayForm({
           Count the drawer for a day, compare to the ledger balance, and post
           over/short to 5400. Links any movements recorded that day.
         </p>
-        <div>
-          <Label htmlFor="close-day-acct">Cash account</Label>
-          <Combobox
-            id="close-day-acct"
-            value={moneyAccountId}
-            onValueChange={setMoneyAccountId}
-            options={cashAccounts.map((a) => ({
-              value: a.id,
-              label: a.name,
-            }))}
-            placeholder="Cash account…"
-          />
-        </div>
+        <CashDrawerPicker
+          id="close-day-acct"
+          accounts={cashAccounts}
+          value={moneyAccountId}
+          onValueChange={setMoneyAccountId}
+          label="Cash account"
+          placeholder="Cash account…"
+        />
         {expectedKurus !== null && (
           <div className="rounded-md border border-border bg-muted/40 p-3">
             <div className="flex items-baseline justify-between gap-4">

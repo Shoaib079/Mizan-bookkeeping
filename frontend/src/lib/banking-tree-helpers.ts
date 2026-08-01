@@ -47,6 +47,13 @@ export function accountSubtitle(accounts: MoneyAccountLeaf[], max = 2): string {
   return names.join(", ") + extra;
 }
 
+/** Banking hub tile — hide internal drawer name when there is only one. */
+export function cashDrawerHubSubtitle(accounts: MoneyAccountLeaf[]): string {
+  if (accounts.length === 0) return "None yet";
+  if (accounts.length === 1) return "TRY cash";
+  return `${accountCountLabel(accounts.length, "drawer", "drawers")} · ${accountSubtitle(accounts)}`;
+}
+
 export function formatTryTileBalance(kurus: number): string {
   return formatTry(kurus);
 }

@@ -153,6 +153,17 @@ export default function PartnerDetailPage() {
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold">{partner.name}</h1>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-8"
+                  onClick={() => setEditOpen(true)}
+                >
+                  Edit
+                </Button>
+              </div>
               <StatusBadge status={partner.is_active ? "active" : "inactive"} />
               {partner.ownership_share_pct != null && (
                 <span className="text-sm text-muted-foreground">
@@ -180,9 +191,6 @@ export default function PartnerDetailPage() {
           </div>
 
           <div className="mb-6 flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
-              Edit
-            </Button>
             <Button type="button" onClick={() => setExpenseOpen(true)}>
               Expense fronted
             </Button>
@@ -226,7 +234,6 @@ export default function PartnerDetailPage() {
                   <DataTableHeaderCell>Type</DataTableHeaderCell>
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                  <DataTableHeaderCell>Actions</DataTableHeaderCell>
                 </tr>
               </DataTableHead>
               <DataTableBody>
@@ -243,19 +250,15 @@ export default function PartnerDetailPage() {
                         entry.movement_type}
                     </DataTableCell>
                     <DataTableCell>
-                      {entry.description}
+                      <span>{entry.description}</span>
                       {entry.was_corrected && (
                         <span className="ml-2">
                           <EditedBadge />
                         </span>
                       )}
-                    </DataTableCell>
-                    <DataTableCell align="right">
-                      {formatTry(entry.amount_kurus)}
-                    </DataTableCell>
-                    <DataTableCell align="right">
                       {correctablePartnerTypes.has(entry.movement_type) && (
                         <SubledgerRowActions
+                          inline
                           row={entry}
                           onEdit={() =>
                             setCorrectEntry({
@@ -275,6 +278,9 @@ export default function PartnerDetailPage() {
                           }
                         />
                       )}
+                    </DataTableCell>
+                    <DataTableCell align="right">
+                      {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                   </DataTableRow>
                 ))}

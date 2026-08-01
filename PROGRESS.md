@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Reports FX + Excel polish; Balances FX/staff hub; Sales Close day removed — 2026-07-31 |
-| **Last tag** | `v0.reports-fx-balances` |
+| **Last completed slice** | Money out + cash drawer UX — single-drawer pickers hidden; partner reimb cash-only; Edit inline; staff actions visible — 2026-08-01 |
+| **Last tag** | `v0.money-out-ux` |
 | **Unpushed** | (cleared on push) |
 | **Next up** | **GS-FX** · P5 — Delete company UI |
 

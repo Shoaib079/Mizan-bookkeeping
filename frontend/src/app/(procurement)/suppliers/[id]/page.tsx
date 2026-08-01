@@ -163,7 +163,16 @@ export default function SupplierDetailPage() {
         <>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold">{supplier.name}</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold">{supplier.name}</h1>
+                <Button
+                  variant="secondary"
+                  className="h-8"
+                  onClick={() => setEditOpen(true)}
+                >
+                  Edit
+                </Button>
+              </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 VKN {supplier.vkn}
                 {supplier.iban && ` · ${supplier.iban}`}
@@ -183,9 +192,6 @@ export default function SupplierDetailPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => setEditOpen(true)}>
-                Edit
-              </Button>
               <Link
                 href="/record"
                 className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted"

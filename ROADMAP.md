@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none) |
 | **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI |
-| **Last completed slice** | **Record desk + dashboard split (2026-07-31)** — `/record` icon rail + inline forms (Sales default, date-first); dashboard status-only with delivery before chart; Add → Record; pruned page-owned actions. |
-| **Last commit/tag**      | `v0.record-desk` |
+| **Last completed slice** | **Money out + cash drawer UX (2026-08-01)** — hide single-drawer pickers; partner reimbursement cash-only; Edit beside name + inline on ledger; staff actions visible (no ⋯ menu). |
+| **Last commit/tag**      | `v0.money-out-ux` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
@@ -1878,6 +1878,8 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-01 | Money out + cash drawer UX                   | `v0.money-out-ux`                                      | **`CashDrawerPicker`** + `shouldShowCashDrawerPicker` — hide drawer when one TRY account; banking hub "TRY cash"; opening-balance labels; partner reimbursement **cash-only** (bank → statement classify); Edit beside name on partner/staff/supplier detail; ledger Edit/Void inline on description; staff actions on page (removed overflow ⋯); vitest + build green |
+| 2026-07-31 | Record desk build typefix                      | `v0.record-desk-typefix`                               | `PrimaryRecordActionId` const type — Record desk modes no longer widen to all action keys; Vercel build green |
 | 2026-07-31 | Record desk + dashboard status split     | `v0.record-desk`                                       | **RecordDesk** on `/record` (left icon rail, inline forms, Sales default, date-first, Recorded today); dashboard status-only (no daily shortcuts; delivery before chart; Cash/Bank snapshot); Add → Record label; hide supplier/staff/bank actions from hub; unified FX/upload; guard + vitest |
 | 2026-07-31 | Balances on dashboard                           | `v0.balances-on-dashboard`                             | `BalancesOverview` embedded on home (“Right now”); removed Balances from Overview sidebar; `/balances/*` → dashboard or directories; legacy `/payables`/`/receivables` redirects; sidebar highlight + guard tests |
 | 2026-07-31 | Daily expense workflow                          | `v0.daily-expense-workflow`                            | **Daily expenses** = cash + partner + salary only; removed Store/card manual purchase; hidden duplicate People cards; bank/card outflows statement-only; partner drawing capital balance fix; guard tests |

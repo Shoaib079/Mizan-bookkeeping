@@ -38,6 +38,21 @@ export function defaultMainDrawerId(
   return (named ?? cash[0])?.id ?? null;
 }
 
+/** Show a drawer picker only when the owner must choose between multiple drawers. */
+export function shouldShowCashDrawerPicker(
+  cashAccounts: readonly unknown[],
+): boolean {
+  return cashAccounts.length > 1;
+}
+
+/** Option label for drawer pickers — generic when there is only one drawer. */
+export function formatCashDrawerOptionLabel(
+  accountName: string,
+  cashAccounts: readonly unknown[],
+): string {
+  return shouldShowCashDrawerPicker(cashAccounts) ? accountName : "Cash drawer";
+}
+
 export function formatMoneyAccountKindLabel(kind: string): string {
   switch (kind) {
     case "bank":
@@ -51,7 +66,16 @@ export function formatMoneyAccountKindLabel(kind: string): string {
   }
 }
 
-export function formatMoneyAccountOptionLabel(account: MoneyAccountOption): string {
+export function formatMoneyAccountOptionLabel(
+  account: MoneyAccountOption,
+  opts?: { cashAccountCount?: number },
+): string {
+  if (
+    account.account_kind === "cash" &&
+    (opts?.cashAccountCount ?? 1) <= 1
+  ) {
+    return formatMoneyAccountKindLabel(account.account_kind);
+  }
   return `${account.name} (${formatMoneyAccountKindLabel(account.account_kind)})`;
 }
 

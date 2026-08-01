@@ -2,6 +2,17 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-08-01
+
+**One cash drawer — stop asking which drawer.**
+- When a restaurant has a single TRY drawer, record forms no longer show a "Main Drawer" picker; the app auto-selects it. Pickers appear only when multiple cash accounts exist.
+- Banking hub shows **TRY cash** instead of repeating the internal account name.
+
+**Money out pages are easier to scan and act on.**
+- **Partners / Staff / Suppliers** detail: **Edit** sits next to the name; ledger **Edit** and **Void** sit on the description line (not a far-right Actions column).
+- **Partner reimbursement** is **cash from the drawer only** — paying a partner from the bank is classified on the bank statement, not recorded manually here.
+- **Staff** detail: all actions (**Pay salary**, **Give advance**, **Extra days**, **Return advance**, **Apply advance**, **Adjust accrual**) are visible buttons; nothing hidden behind **⋯**.
+
 ## 2026-07-31
 
 **Close day removed from Sales.** It only lives under **Add** (count the drawer). The old Sales tab / day-closeout page redirects to Add.

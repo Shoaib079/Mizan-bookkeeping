@@ -18,7 +18,6 @@ import { emitLedgerChanged } from "@/lib/ledger-events";
 import {
   dailyVisibleSections,
   occasionalRecordActions,
-  PRIMARY_RECORD_ACTION_IDS,
   primaryRecordActions,
   RECORD_SECTION_LABELS,
   type PrimaryRecordActionId,

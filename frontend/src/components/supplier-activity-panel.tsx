@@ -231,7 +231,6 @@ export function SupplierActivityPanel({
                 <DataTableHeaderCell>Dekont</DataTableHeaderCell>
                 <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
                 <DataTableHeaderCell>Doc</DataTableHeaderCell>
-                <DataTableHeaderCell>Actions</DataTableHeaderCell>
               </tr>
             </DataTableHead>
             <DataTableBody>
@@ -256,6 +255,71 @@ export function SupplierActivityPanel({
                         <EditedBadge />
                       </span>
                     )}
+                    {row.movement_kind === "payment" && onCorrectPayment && (
+                      <SubledgerRowActions
+                        inline
+                        row={row}
+                        onEdit={() =>
+                          onCorrectPayment({
+                            journal_entry_id: row.journal_entry_id!,
+                            movement_date: row.movement_date,
+                            amount_kurus: row.amount_kurus ?? 0,
+                            description: row.detail,
+                            payment_account_id: row.payment_account_id,
+                          })
+                        }
+                        onVoid={() =>
+                          setVoidTarget({
+                            journal_entry_id: row.journal_entry_id!,
+                            description: row.detail,
+                            kind: "payment",
+                          })
+                        }
+                      />
+                    )}
+                    {row.movement_kind === "invoice" &&
+                      row.can_edit &&
+                      onEditInvoice && (
+                        <SubledgerRowActions
+                          inline
+                          row={row}
+                          onEdit={() =>
+                            onEditInvoice({
+                              journal_entry_id: row.journal_entry_id!,
+                              movement_date: row.movement_date,
+                              amount_kurus: row.amount_kurus ?? 0,
+                              description: row.detail,
+                              expense_account_id: row.expense_account_id,
+                            })
+                          }
+                          onVoid={() =>
+                            setVoidTarget({
+                              journal_entry_id: row.journal_entry_id!,
+                              description: row.detail,
+                              kind: "invoice",
+                            })
+                          }
+                        />
+                      )}
+                    {row.invoice_draft_id &&
+                      row.movement_kind === "unposted_invoice" && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="ml-2 inline-flex h-8 px-2 text-xs align-middle"
+                          onClick={() =>
+                            setReviewDraftId(
+                              reviewDraftId === row.invoice_draft_id
+                                ? null
+                                : row.invoice_draft_id,
+                            )
+                          }
+                        >
+                          {reviewDraftId === row.invoice_draft_id
+                            ? "Hide"
+                            : "Review"}
+                        </Button>
+                      )}
                   </DataTableCell>
                   <DataTableCell align="right">
                     {row.net_kurus != null ? formatTry(row.net_kurus) : "—"}
@@ -292,71 +356,6 @@ export function SupplierActivityPanel({
                     ) : (
                       "—"
                     )}
-                  </DataTableCell>
-                  <DataTableCell align="right">
-                    {row.movement_kind === "payment" && onCorrectPayment && (
-                      <SubledgerRowActions
-                        row={row}
-                        onEdit={() =>
-                          onCorrectPayment({
-                            journal_entry_id: row.journal_entry_id!,
-                            movement_date: row.movement_date,
-                            amount_kurus: row.amount_kurus ?? 0,
-                            description: row.detail,
-                            payment_account_id: row.payment_account_id,
-                          })
-                        }
-                        onVoid={() =>
-                          setVoidTarget({
-                            journal_entry_id: row.journal_entry_id!,
-                            description: row.detail,
-                            kind: "payment",
-                          })
-                        }
-                      />
-                    )}
-                    {row.movement_kind === "invoice" &&
-                      row.can_edit &&
-                      onEditInvoice && (
-                        <SubledgerRowActions
-                          row={row}
-                          onEdit={() =>
-                            onEditInvoice({
-                              journal_entry_id: row.journal_entry_id!,
-                              movement_date: row.movement_date,
-                              amount_kurus: row.amount_kurus ?? 0,
-                              description: row.detail,
-                              expense_account_id: row.expense_account_id,
-                            })
-                          }
-                          onVoid={() =>
-                            setVoidTarget({
-                              journal_entry_id: row.journal_entry_id!,
-                              description: row.detail,
-                              kind: "invoice",
-                            })
-                          }
-                        />
-                      )}
-                    {row.invoice_draft_id &&
-                      row.movement_kind === "unposted_invoice" && (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="h-8 px-2 text-xs"
-                          onClick={() =>
-                            setReviewDraftId(
-                              reviewDraftId === row.invoice_draft_id
-                                ? null
-                                : row.invoice_draft_id,
-                            )
-                          }
-                        >
-                          {reviewDraftId === row.invoice_draft_id
-                            ? "Hide"
-                            : "Review"}
-                        </Button>
-                      )}
                   </DataTableCell>
                 </DataTableRow>
               ))}

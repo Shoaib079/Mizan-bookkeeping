@@ -5,6 +5,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
@@ -25,6 +26,7 @@ import {
   formatExpenseAccountLabel,
   type ChartAccount,
 } from "@/lib/expense-accounts";
+import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 
@@ -73,7 +75,18 @@ export function CashMovementForm({
     setCashAccounts(cashRes.items.filter((a) => a.is_active));
     setChartAccounts(chartRes.items);
     if (defaultCashAccountId) setMoneyAccountId(defaultCashAccountId);
-    else if (cashRes.items[0]) setMoneyAccountId(cashRes.items[0].id);
+    else {
+      const drawerId = defaultMainDrawerId(
+        cashRes.items.map((a) => ({
+          id: a.id,
+          gl_account_id: "",
+          name: a.name,
+          account_kind: a.account_kind,
+        })),
+      );
+      if (drawerId) setMoneyAccountId(drawerId);
+      else if (cashRes.items[0]) setMoneyAccountId(cashRes.items[0].id);
+    }
   }, [entityId, defaultCashAccountId]);
 
   useEffect(() => {
@@ -181,19 +194,14 @@ export function CashMovementForm({
             Posts to the cash account immediately. An EOD drawer session is optional
             — use Close drawer day when you want to reconcile a count.
           </p>
-          <div>
-            <Label htmlFor="cash-acct">Cash account</Label>
-            <Combobox
-              id="cash-acct"
-              value={moneyAccountId}
-              onValueChange={setMoneyAccountId}
-              options={cashAccounts.map((a) => ({
-                value: a.id,
-                label: a.name,
-              }))}
-              placeholder="Cash account…"
-            />
-          </div>
+          <CashDrawerPicker
+            id="cash-acct"
+            accounts={cashAccounts}
+            value={moneyAccountId}
+            onValueChange={setMoneyAccountId}
+            label="Cash account"
+            placeholder="Cash account…"
+          />
           <div>
             <Label htmlFor="cash-dir">Direction</Label>
             <Select

@@ -2,17 +2,20 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { FormDialogShell } from "@/components/ui/form-dialog-shell";
-import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
-import { loadBankAndCashAccounts, type MoneyAccountOption } from "@/lib/load-money-accounts";
+import {
+  defaultMainDrawerId,
+  type MoneyAccountOption,
+} from "@/lib/load-money-accounts";
 import {
   partnerBalanceAmount,
   partnerBalanceHeading,
@@ -44,8 +47,8 @@ export function PartnerReimbursementForm({
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
-  const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
-  const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
+  const [cashAccounts, setCashAccounts] = useState<MoneyAccountOption[]>([]);
+  const [cashAccountId, setCashAccountId] = useState("");
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState("Partner reimbursement");
@@ -54,9 +57,14 @@ export function PartnerReimbursementForm({
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
-    const merged = await loadBankAndCashAccounts(entityId);
-    setAccounts(merged);
-    if (merged[0]) setPaymentGlAccountId(merged[0].gl_account_id);
+    const res = await apiFetch<{ items: MoneyAccountOption[] }>(
+      `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
+    );
+    const accounts = res.items;
+    setCashAccounts(accounts);
+    const drawerId = defaultMainDrawerId(accounts);
+    if (drawerId) setCashAccountId(drawerId);
+    else if (accounts[0]) setCashAccountId(accounts[0].id);
   }, [entityId]);
 
   useEffect(() => {
@@ -74,6 +82,7 @@ export function PartnerReimbursementForm({
     }
     const amountKurus = parseTryToKurus(amountText);
     const paymentDate = parseTrDate(dateText);
+    const paymentAccount = cashAccounts.find((a) => a.id === cashAccountId);
     if (amountKurus === null || amountKurus <= 0) {
       setError("Enter a valid amount.");
       return;
@@ -82,8 +91,8 @@ export function PartnerReimbursementForm({
       setError("Date must be DD.MM.YYYY.");
       return;
     }
-    if (!paymentGlAccountId) {
-      setError("Choose a cash or bank account.");
+    if (!paymentAccount) {
+      setError("Choose a cash drawer.");
       return;
     }
     setSubmitting(true);
@@ -94,14 +103,14 @@ export function PartnerReimbursementForm({
         `/entities/${entityId}/partners/${partnerId}/reimbursements`,
         {
           method: "POST",
-        idempotencyKey,
+          idempotencyKey,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             payment_date: paymentDate,
             amount_kurus: amountKurus,
             description,
             actor_id: actorId,
-            payment_account_id: paymentGlAccountId,
+            payment_account_id: paymentAccount.gl_account_id,
           }),
         },
       );
@@ -125,6 +134,10 @@ export function PartnerReimbursementForm({
       onClose={onClose}
     >
       <form onSubmit={onSubmit} className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Cash from the drawer only. Paying a partner from the bank is classified
+          when the bank statement arrives — do not record it here.
+        </p>
         <div>
           <Label htmlFor="pr-date">Payment date (DD.MM.YYYY)</Label>
           <DateInput
@@ -158,19 +171,13 @@ export function PartnerReimbursementForm({
             required
           />
         </div>
-        <div>
-          <Label htmlFor="pr-account">Pay from</Label>
-          <Combobox
-            id="pr-account"
-            value={paymentGlAccountId}
-            onValueChange={setPaymentGlAccountId}
-            options={accounts.map((a) => ({
-              value: a.gl_account_id,
-              label: `${a.name} (${a.account_kind})`,
-            }))}
-            placeholder="Pay from account…"
-          />
-        </div>
+        <CashDrawerPicker
+          id="pr-cash"
+          accounts={cashAccounts}
+          value={cashAccountId}
+          onValueChange={setCashAccountId}
+          label="Cash drawer"
+        />
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Recording…" : "Record reimbursement"}

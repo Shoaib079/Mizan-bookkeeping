@@ -2,10 +2,10 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
@@ -185,19 +185,13 @@ export function CorrectFxPurchaseForm({
               required
             />
           </div>
-          <div>
-            <Label htmlFor="cfp-from">Pay from cash drawer</Label>
-            <Combobox
-              id="cfp-from"
-              value={tryCashId}
-              onValueChange={setTryCashId}
-              options={tryCashAccounts.map((a) => ({
-                value: a.id,
-                label: a.name,
-              }))}
-              placeholder="Cash drawer…"
-            />
-          </div>
+          <CashDrawerPicker
+            id="cfp-from"
+            accounts={tryCashAccounts}
+            value={tryCashId}
+            onValueChange={setTryCashId}
+            label="Pay from cash drawer"
+          />
           <div>
             <Label htmlFor="cfp-desc">Description</Label>
             <Input

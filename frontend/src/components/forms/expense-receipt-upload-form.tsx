@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FileUpload } from "@/components/ui/file-upload";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
-import { Combobox } from "@/components/ui/combobox";
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useRegisterUnsaved } from "@/lib/unsaved-work";
@@ -55,7 +56,16 @@ export function ExpenseReceiptUploadForm({ open, onClose, initialFile }: Props) 
       `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
     );
     setCashAccounts(res.items);
-    if (res.items[0]) setMoneyAccountId(res.items[0].id);
+    const drawerId = defaultMainDrawerId(
+      res.items.map((a) => ({
+        id: a.id,
+        gl_account_id: "",
+        name: a.name,
+        account_kind: "cash",
+      })),
+    );
+    if (drawerId) setMoneyAccountId(drawerId);
+    else if (res.items[0]) setMoneyAccountId(res.items[0].id);
   }, [entityId]);
 
   useEffect(() => {
@@ -110,19 +120,12 @@ export function ExpenseReceiptUploadForm({ open, onClose, initialFile }: Props) 
             onFileChange={setFile}
           />
         </div>
-        <div>
-          <Label htmlFor="receipt-cash">Cash drawer</Label>
-          <Combobox
-            id="receipt-cash"
-            value={moneyAccountId}
-            onValueChange={setMoneyAccountId}
-            options={cashAccounts.map((a) => ({
-              value: a.id,
-              label: a.name,
-            }))}
-            placeholder="Cash drawer…"
-          />
-        </div>
+        <CashDrawerPicker
+          id="receipt-cash"
+          accounts={cashAccounts}
+          value={moneyAccountId}
+          onValueChange={setMoneyAccountId}
+        />
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Uploading…" : "Upload & review"}

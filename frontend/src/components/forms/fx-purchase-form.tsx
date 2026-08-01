@@ -4,10 +4,10 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
@@ -21,6 +21,7 @@ import {
   computeTryCostKurusFromRate,
   fxPurchaseDescriptionForApi,
 } from "@/lib/fx-purchase-helpers";
+import { defaultMainDrawerId } from "@/lib/load-money-accounts";
 import { formatKurus, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 
@@ -62,7 +63,16 @@ export function FxPurchaseFormFields({
     );
     const accounts = cashRes.items.filter((a) => a.is_active);
     setTryCashAccounts(accounts);
-    if (accounts[0]) setTryCashId(accounts[0].id);
+    const drawerId = defaultMainDrawerId(
+      accounts.map((a) => ({
+        id: a.id,
+        gl_account_id: "",
+        name: a.name,
+        account_kind: a.account_kind,
+      })),
+    );
+    if (drawerId) setTryCashId(drawerId);
+    else if (accounts[0]) setTryCashId(accounts[0].id);
   }, [entityId]);
 
   useEffect(() => {
@@ -185,19 +195,13 @@ export function FxPurchaseFormFields({
           required
         />
       </div>
-      <div>
-        <Label htmlFor="fx-buy-from">Pay from cash drawer</Label>
-        <Combobox
-          id="fx-buy-from"
-          value={tryCashId}
-          onValueChange={setTryCashId}
-          options={tryCashAccounts.map((a) => ({
-            value: a.id,
-            label: a.name,
-          }))}
-          placeholder="Cash drawer…"
-        />
-      </div>
+      <CashDrawerPicker
+        id="fx-buy-from"
+        accounts={tryCashAccounts}
+        value={tryCashId}
+        onValueChange={setTryCashId}
+        label="Pay from cash drawer"
+      />
       <div>
         <Label htmlFor="fx-buy-desc">Description (optional)</Label>
         <Input

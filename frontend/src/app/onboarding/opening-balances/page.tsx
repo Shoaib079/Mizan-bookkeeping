@@ -394,6 +394,11 @@ export default function OpeningBalancesPage() {
     }
   }
 
+  const cashAccountCount = useMemo(
+    () => moneyAccounts.filter((a) => a.account_kind === "cash").length,
+    [moneyAccounts],
+  );
+
   function targetPicker(line: OpeningBalanceLineDraft) {
     switch (line.target) {
       case "account":
@@ -445,7 +450,7 @@ export default function OpeningBalancesPage() {
               { value: "", label: "Bank / cash…" },
               ...moneyAccounts.map((a) => ({
                 value: a.id,
-                label: formatMoneyAccountOptionLabel(a),
+                label: formatMoneyAccountOptionLabel(a, { cashAccountCount }),
               })),
             ]}
             placeholder="Bank / cash…"
