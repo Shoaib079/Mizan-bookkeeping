@@ -4,6 +4,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-01
 
+**Local dev — restore live data from Cloudflare R2 backup.**
+- New `backend/scripts/restore_local_from_backup.sh` downloads latest `mizan-backup-*.tar.gz` (or uses a local file) and replaces local Homebrew `mizan` — no re-entering sales for reconciliation testing.
+- Step-by-step in `DEV.md` (R2 creds or dashboard download; never restores to Neon).
+
 **Record Upload — files no longer lost on routing.**
 - **Bank statement**: after Add Document + bank pick, the file carries into the import mapper (column preview loads automatically — no second upload on the bank page).
 - **Add → Upload dialog**: confirming no longer clears the routed file before invoice/receipt/POS modals open.

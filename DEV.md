@@ -167,3 +167,76 @@ docs/        Planning markdown at repo root (Decisions, ROADMAP, etc.)
 ```
 
 Build rules: `CURSOR_RULES.md`. Progress: `ROADMAP.md`. Opening balances: `docs/OPENING_BALANCES.md`.
+
+## Restore live data on local (Cloudflare R2 backup)
+
+Use this to clone production into **local Homebrew Postgres** so you do not re-enter sales or statements by hand. **Never** set `DATABASE_URL` to Neon/Railway for this — only `localhost`.
+
+### Before you start
+
+1. **Stop** local `uvicorn` if it is running (Terminal 2).
+2. Confirm local DB: `pg_isready -h localhost`
+3. `backend/.env` must use local URLs:
+
+```
+DATABASE_URL=postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan
+DATABASE_ADMIN_URL=postgresql+psycopg://shoaib@localhost:5432/postgres
+AUTH_ENFORCEMENT=false
+IDEMPOTENCY_ENFORCEMENT=false
+```
+
+(`DATABASE_ADMIN_URL` = your macOS superuser, or `mizan:mizan_dev` if that role exists.)
+
+### Option A — Download from R2 in the script (recommended)
+
+Copy these from **Railway → worker/cron service → Variables** into `backend/.env` (same values as production backup job):
+
+```
+BACKUP_S3_BUCKET=...
+BACKUP_S3_ENDPOINT_URL=https://....r2.cloudflarestorage.com
+BACKUP_S3_ACCESS_KEY_ID=...
+BACKUP_S3_SECRET_ACCESS_KEY=...
+BACKUP_S3_PREFIX=mizan
+BACKUP_S3_REGION=auto
+```
+
+Then run:
+
+```bash
+cd /Users/shoaib/Documents/NEW_APP_PLAN/backend
+source .venv/bin/activate
+./scripts/restore_local_from_backup.sh --yes
+```
+
+The script downloads the latest `mizan-backup-*.tar.gz`, replaces local `mizan`, copies uploads, runs migrations.
+
+### Option B — Download in Cloudflare dashboard
+
+1. Cloudflare → R2 → your bucket → download latest `mizan-backup-YYYYMMDDTHHMMSSZ.tar.gz`
+2. Restore:
+
+```bash
+cd /Users/shoaib/Documents/NEW_APP_PLAN/backend
+source .venv/bin/activate
+./scripts/restore_local_from_backup.sh --artifact ~/Downloads/mizan-backup-YYYYMMDDTHHMMSSZ.tar.gz --yes
+```
+
+### After restore
+
+```bash
+# Terminal 2 — backend
+cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --port 8000
+
+# Terminal 3 — frontend
+cd frontend && npm run dev
+```
+
+Open http://localhost:3000 — you should see the same restaurant data as on backup night. Test new statement imports on local without touching live.
+
+### Safety
+
+- Restores **only** into local database `mizan` on `localhost`.
+- Does **not** modify Neon or Railway.
+- Do **not** paste R2 secret keys into chat; keep them in `backend/.env` only.
+
+See also `OPS_RESTORE.md` for production disaster recovery (different procedure).

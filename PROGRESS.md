@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Record upload file handoff — bank statement import carry-over; Add Document + modal fixes — 2026-08-01 |
-| **Last tag** | `v0.record-upload-handoff` |
+| **Last completed slice** | Dev local restore from R2 — clone live backup to local Postgres — 2026-08-01 |
+| **Last tag** | `v0.dev-local-restore` |
 | **Unpushed** | (cleared on push) |
 | **Next up** | **GS-FX** · P5 — Delete company UI |
 
