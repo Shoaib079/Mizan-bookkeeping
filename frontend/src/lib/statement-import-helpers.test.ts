@@ -8,8 +8,10 @@ import {
   columnSelectionHint,
   DEFAULT_MAPPING,
   headerCellAt,
+  isBalanceHeaderText,
   roleForColumn,
   sampleCellAt,
+  sanitizeStatementMapping,
   statementImportSessionKey,
   truncateCell,
 } from "@/lib/statement-import-helpers";
@@ -60,5 +62,32 @@ describe("statementImportSessionKey", () => {
     expect(statementImportSessionKey("ent-1", "acct-2")).not.toBe(
       statementImportSessionKey("ent-1", "acct-1"),
     );
+  });
+});
+
+describe("sanitizeStatementMapping", () => {
+  const preview = {
+    rows: [
+      ["Tarih", "Aciklama", "Borc", "Alacak", "Güncel Bakiye"],
+      ["01.02.2026", "Odeme", "100,00", "", "9.900,00"],
+    ],
+  };
+
+  it("detects Turkish balance headers", () => {
+    expect(isBalanceHeaderText("Güncel Bakiye")).toBe(true);
+    expect(isBalanceHeaderText("Bakiye")).toBe(true);
+    expect(isBalanceHeaderText("Aciklama")).toBe(false);
+  });
+
+  it("clears extra description when it points at Bakiye", () => {
+    const dirty = {
+      ...DEFAULT_MAPPING,
+      headerRow: 1,
+      dataStartRow: 2,
+      descriptionExtraCol: 4,
+      balanceCol: 4,
+    };
+    const clean = sanitizeStatementMapping(preview, dirty);
+    expect(clean.descriptionExtraCol).toBeNull();
   });
 });

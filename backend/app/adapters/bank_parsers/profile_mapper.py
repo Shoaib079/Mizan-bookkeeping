@@ -49,6 +49,21 @@ _DESC_HEADER_KEYWORDS = (
 )
 _DESC_HEADER_EXCLUDE = ("bakiye", "balance", "doviz", "kur ", " sube", "branch", "tarih", "date", "tutar", "amount", "borc", "alacak", "referans", "ref")
 
+_BALANCE_HEADER_KEYWORDS = (
+    "bakiye",
+    "balance",
+    "guncel bakiye",
+    "kalan",
+    "running balance",
+)
+
+
+def _is_balance_header(norm: str) -> bool:
+    """True when a header names the per-row running balance column (not description)."""
+    if not norm:
+        return False
+    return any(kw in norm or norm == kw for kw in _BALANCE_HEADER_KEYWORDS)
+
 
 def _norm_header(text: object) -> str:
     raw = cell_to_str(text).strip().lower()
@@ -175,6 +190,12 @@ class BankImportProfileConfig(BaseModel):
             and self.data_end_row < self.data_start_row
         ):
             raise ValueError("data_end_row must be >= data_start_row")
+        if self.balance_col is not None:
+            self.description_extra_cols = [
+                col
+                for col in self.description_extra_cols
+                if col != self.balance_col
+            ]
         return self
 
     def required_columns(self) -> list[int]:
@@ -193,11 +214,20 @@ class BankImportProfileConfig(BaseModel):
         self,
         grid: list[list[object]] | None = None,
     ) -> list[int]:
-        """Primary + saved extras + auto-detected description headers."""
+        """Primary + saved extras + auto-detected description headers.
+
+        Running-balance columns (Bakiye / Güncel Bakiye) are never merged into
+        description — they are mapped via ``balance_col`` only.
+        """
         indices = [self.description_col]
         for col in self.description_extra_cols:
             if col not in indices:
                 indices.append(col)
+
+        balance_cols: set[int] = set()
+        if self.balance_col is not None:
+            balance_cols.add(self.balance_col)
+
         if grid is not None and self.header_row <= len(grid):
             header = grid[self.header_row - 1]
             used = {
@@ -209,11 +239,17 @@ class BankImportProfileConfig(BaseModel):
                 self.balance_col,
             }
             for idx, cell in enumerate(header):
-                if idx in indices or idx in used:
+                norm = _norm_header(cell)
+                if _is_balance_header(norm):
+                    balance_cols.add(idx)
+                if idx in indices or idx in used or idx in balance_cols:
                     continue
-                if _is_description_header(_norm_header(cell)):
+                if _is_description_header(norm):
                     indices.append(idx)
-        return sorted(indices)
+        else:
+            balance_cols.discard(self.description_col)
+
+        return sorted(col for col in indices if col not in balance_cols)
 
     def max_column_index(self) -> int:
         return max(self.required_columns())

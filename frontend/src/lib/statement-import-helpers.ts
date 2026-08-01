@@ -137,10 +137,52 @@ export function columnSelectionHint(
   return letter;
 }
 
+/** Header names for the running-balance column — never merge into transaction description. */
+const BALANCE_HEADER_KEYWORDS = [
+  "bakiye",
+  "balance",
+  "guncel bakiye",
+  "kalan",
+  "running balance",
+];
+
+function normalizeHeaderText(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/\s+/g, " ");
+}
+
+export function isBalanceHeaderText(text: string): boolean {
+  const norm = normalizeHeaderText(text);
+  if (!norm) return false;
+  return BALANCE_HEADER_KEYWORDS.some((kw) => norm.includes(kw) || norm === kw);
+}
+
+/** Drop stale manual extra-description mapping (Bakiye is balance-only). */
+export function sanitizeStatementMapping(
+  preview: { rows: string[][] },
+  mapping: MappingState,
+): MappingState {
+  let extra = mapping.descriptionExtraCol;
+  if (extra != null) {
+    const header = headerCellAt(preview, mapping.headerRow, extra);
+    if (
+      extra === mapping.balanceCol ||
+      extra === mapping.descriptionCol ||
+      isBalanceHeaderText(header)
+    ) {
+      extra = null;
+    }
+  }
+  return { ...mapping, descriptionExtraCol: null };
+}
+
 export type ColumnAssignRole =
   | "date"
   | "description"
-  | "description_extra"
   | "reference"
   | "amount"
   | "debit"
@@ -150,7 +192,6 @@ export type ColumnAssignRole =
 export const COLUMN_ASSIGN_ROLES: { id: ColumnAssignRole; label: string }[] = [
   { id: "date", label: "Date" },
   { id: "description", label: "Description" },
-  { id: "description_extra", label: "Extra description" },
   { id: "reference", label: "Reference" },
   { id: "debit", label: "Borç" },
   { id: "credit", label: "Alacak" },
@@ -168,8 +209,6 @@ export function applyColumnAssignment(
       return { ...mapping, dateCol: colIdx };
     case "description":
       return { ...mapping, descriptionCol: colIdx };
-    case "description_extra":
-      return { ...mapping, descriptionExtraCol: colIdx };
     case "reference":
       return { ...mapping, referenceCol: colIdx };
     case "amount":
@@ -189,7 +228,12 @@ export function applyColumnAssignment(
         creditCol: colIdx,
       };
     case "balance":
-      return { ...mapping, balanceCol: colIdx };
+      return {
+        ...mapping,
+        balanceCol: colIdx,
+        descriptionExtraCol:
+          mapping.descriptionExtraCol === colIdx ? null : mapping.descriptionExtraCol,
+      };
     default:
       return mapping;
   }
@@ -201,7 +245,6 @@ export function roleForColumn(
 ): ColumnAssignRole | null {
   if (mapping.dateCol === colIdx) return "date";
   if (mapping.descriptionCol === colIdx) return "description";
-  if (mapping.descriptionExtraCol === colIdx) return "description_extra";
   if (mapping.referenceCol === colIdx) return "reference";
   if (mapping.amountMode === "signed" && mapping.amountCol === colIdx) return "amount";
   if (mapping.amountMode === "debit_credit" && mapping.debitCol === colIdx) return "debit";
@@ -223,7 +266,7 @@ export function profileToMapping(profile: BankImportProfileRead): MappingState {
     dataEndRow: profile.data_end_row ?? null,
     dateCol: profile.date_col,
     descriptionCol: profile.description_col,
-    descriptionExtraCol: profile.description_extra_cols?.[0] ?? null,
+    descriptionExtraCol: null,
     referenceCol: profile.reference_col,
     amountMode,
     amountCol: profile.amount_col,
@@ -252,7 +295,7 @@ export function suggestedProfileToMapping(
     dataEndRow: profile.data_end_row ?? null,
     dateCol: profile.date_col,
     descriptionCol: profile.description_col,
-    descriptionExtraCol: profile.description_extra_cols?.[0] ?? null,
+    descriptionExtraCol: null,
     referenceCol: profile.reference_col,
     amountMode,
     amountCol: profile.amount_col,
@@ -275,8 +318,7 @@ export function mappingToProfilePayload(mapping: MappingState) {
     data_end_row: mapping.dataEndRow,
     date_col: mapping.dateCol,
     description_col: mapping.descriptionCol,
-    description_extra_cols:
-      mapping.descriptionExtraCol != null ? [mapping.descriptionExtraCol] : [],
+    description_extra_cols: [],
     reference_col: mapping.referenceCol,
     amount_col: mapping.amountMode === "signed" ? mapping.amountCol : null,
     debit_col: mapping.amountMode === "debit_credit" ? mapping.debitCol : null,

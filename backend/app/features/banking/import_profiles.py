@@ -45,13 +45,16 @@ def _require_bank_money_account(
 
 
 def profile_to_config(model: BankImportProfile) -> BankImportProfileConfig:
+    extra = list(model.description_extra_cols or [])
+    if model.balance_col is not None:
+        extra = [col for col in extra if col != model.balance_col]
     return BankImportProfileConfig(
         header_row=model.header_row,
         data_start_row=model.data_start_row,
         data_end_row=model.data_end_row,
         date_col=model.date_col,
         description_col=model.description_col,
-        description_extra_cols=list(model.description_extra_cols or []),
+        description_extra_cols=extra,
         reference_col=model.reference_col,
         amount_col=model.amount_col,
         debit_col=model.debit_col,

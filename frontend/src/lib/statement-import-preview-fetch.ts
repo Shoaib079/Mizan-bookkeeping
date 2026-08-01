@@ -8,6 +8,7 @@ import type {
 import {
   DEFAULT_MAPPING,
   profileToMapping,
+  sanitizeStatementMapping,
   suggestedProfileToMapping,
   type CsvDelimiter,
   type CsvEncoding,
@@ -62,7 +63,7 @@ export async function fetchStatementPreviewResult(
 
   return {
     preview: previewRes,
-    mapping: nextMapping,
+    mapping: sanitizeStatementMapping(previewRes, nextMapping),
     autoDetected: autoDetectedResult,
   };
 }

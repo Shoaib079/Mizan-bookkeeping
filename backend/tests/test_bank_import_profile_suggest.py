@@ -166,3 +166,60 @@ def test_parse_auto_merges_second_description_header_without_saved_extra() -> No
     )
     parsed = parse_with_profile(csv.encode(), profile, original_filename="bank.csv")
     assert parsed.lines[0].description == "GORUNEN · TAM METIN FORMUL CUBUGUNDAN"
+
+
+def test_bakiye_column_not_merged_into_description() -> None:
+    csv = """Tarih,Aciklama,Referans,Borc,Alacak,Bakiye
+01.02.2026,Odeme tedarikci,REF-OUT,"100,00",,"9.900,00"
+02.02.2026,Musteri tahsilat,REF-IN,,"250,50","10.150,50"
+"""
+    parsed = parse_with_profile(
+        csv.encode(),
+        BankImportProfileConfig(
+            header_row=1,
+            data_start_row=2,
+            date_col=0,
+            description_col=1,
+            reference_col=2,
+            debit_col=3,
+            credit_col=4,
+            balance_col=5,
+            date_format="DD.MM.YYYY",
+        ),
+        original_filename="bank.csv",
+    )
+    assert parsed.lines[0].description == "Odeme tedarikci"
+    assert parsed.lines[1].description == "Musteri tahsilat"
+    assert parsed.closing_balance_kurus == 1_015_050
+
+
+def test_guncel_bakiye_column_suggested_and_excluded_from_description() -> None:
+    csv = """Tarih,Aciklama,Borc,Alacak,Güncel Bakiye
+01.02.2026,POS komisyon,"25,00",,"1.975,00"
+"""
+    grid = read_raw_grid(csv.encode(), original_filename="isbank.csv")
+    suggested = suggest_import_profile(grid)
+    assert suggested is not None
+    assert suggested.balance_col == 4
+    parsed = parse_with_profile(csv.encode(), suggested, original_filename="isbank.csv")
+    assert parsed.lines[0].description == "POS komisyon"
+    assert parsed.closing_balance_kurus == 197_500
+
+
+def test_balance_col_stripped_from_saved_description_extra_cols() -> None:
+    csv = """Tarih,Aciklama,Borc,Alacak,Bakiye
+01.02.2026,Only text,"10,00",,"990,00"
+"""
+    profile = BankImportProfileConfig(
+        header_row=1,
+        data_start_row=2,
+        date_col=0,
+        description_col=1,
+        description_extra_cols=[4],
+        debit_col=2,
+        credit_col=3,
+        balance_col=4,
+        date_format="DD.MM.YYYY",
+    )
+    parsed = parse_with_profile(csv.encode(), profile, original_filename="bank.csv")
+    assert parsed.lines[0].description == "Only text"

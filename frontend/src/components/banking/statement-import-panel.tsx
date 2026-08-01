@@ -28,6 +28,7 @@ import {
   roleForColumn,
   roleLabel,
   sampleCellAt,
+  sanitizeStatementMapping,
   statementImportSessionKey,
   STATEMENT_FILE_ACCEPT,
   type AmountMode,
@@ -151,7 +152,6 @@ function MappingAtAGlance({
   const rows: { role: string; col: number | null }[] = [
     { role: "Date", col: mapping.dateCol },
     { role: "Description", col: mapping.descriptionCol },
-    { role: "Extra description", col: mapping.descriptionExtraCol },
     { role: "Reference", col: mapping.referenceCol },
   ];
   if (mapping.amountMode === "signed") {
@@ -201,7 +201,6 @@ function MappingAtAGlance({
 function mappedColumnClass(mapping: MappingState, colIdx: number): string {
   if (mapping.dateCol === colIdx) return "ring-1 ring-inset ring-primary/50 bg-primary/5";
   if (mapping.descriptionCol === colIdx) return "ring-1 ring-inset ring-primary/40 bg-primary/5";
-  if (mapping.descriptionExtraCol === colIdx) return "ring-1 ring-inset ring-primary/35 bg-primary/5";
   if (mapping.referenceCol === colIdx) return "ring-1 ring-inset ring-primary/30";
   if (mapping.amountMode === "signed" && mapping.amountCol === colIdx) {
     return "ring-1 ring-inset ring-primary/50 bg-primary/5";
@@ -396,7 +395,7 @@ export function StatementImportPanel({
     const saved = readStatementImportSession(storageKey);
     if (!saved) return;
     setPreview(saved.preview);
-    setMapping(saved.mapping);
+    setMapping(sanitizeStatementMapping(saved.preview, saved.mapping));
     setStep("map");
     setAutoDetected(false);
     setError(null);
@@ -409,7 +408,7 @@ export function StatementImportPanel({
     if (!saved || !fileMatchesSession(selected, saved)) return false;
     setFile(selected);
     setPreview(saved.preview);
-    setMapping(saved.mapping);
+    setMapping(sanitizeStatementMapping(saved.preview, saved.mapping));
     setStep("map");
     setAutoDetected(false);
     setError(null);
@@ -444,13 +443,14 @@ export function StatementImportPanel({
       setFile(selectedFile);
       setAutoDetected(result.autoDetected);
       setPreview(result.preview);
-      setMapping(result.mapping);
+      const nextMapping = sanitizeStatementMapping(result.preview, result.mapping);
+      setMapping(nextMapping);
       setDetectedClosingBalance(
         result.preview.detected_closing_balance_kurus ?? null,
       );
       setStep("map");
       setExpectedFileName(fileMeta.name);
-      persistSession(fileMeta, result.preview, result.mapping);
+      persistSession(fileMeta, result.preview, nextMapping);
     },
     [persistSession],
   );
@@ -491,9 +491,10 @@ export function StatementImportPanel({
         } else {
           setAutoDetected(result.autoDetected);
           setPreview(result.preview);
-          setMapping(result.mapping);
+          const nextMapping = sanitizeStatementMapping(result.preview, result.mapping);
+          setMapping(nextMapping);
           setStep("map");
-          persistSession(fileMeta, result.preview, result.mapping);
+          persistSession(fileMeta, result.preview, nextMapping);
         }
         return true;
       } catch (err) {
@@ -911,22 +912,9 @@ export function StatementImportPanel({
                         v != null && setMapping((m) => ({ ...m, descriptionCol: v }))
                       }
                     />
-                    <ColumnSelect
-                      label="Extra description (optional)"
-                      value={mapping.descriptionExtraCol}
-                      maxCol={maxCol}
-                      preview={preview}
-                      headerRow={mapping.headerRow}
-                      dataStartRow={mapping.dataStartRow}
-                      allowEmpty
-                      onChange={(v) =>
-                        setMapping((m) => ({ ...m, descriptionExtraCol: v }))
-                      }
-                    />
                     <p className="text-[11px] text-muted-foreground -mt-1">
-                      Turkish exports often split text across Açıklama + Detay columns.
-                      Both are merged into one full description on import. Auto-detect
-                      also merges other description headers when you leave this empty.
+                      A second description column (e.g. Detay) is merged automatically
+                      when the bank splits text — map Bakiye separately below, not here.
                     </p>
                     <ColumnSelect
                       label="Reference (optional)"
@@ -939,7 +927,7 @@ export function StatementImportPanel({
                       onChange={(v) => setMapping((m) => ({ ...m, referenceCol: v }))}
                     />
                     <ColumnSelect
-                      label="Bakiye / closing balance (optional)"
+                      label="Bakiye / running balance (optional)"
                       value={mapping.balanceCol}
                       maxCol={maxCol}
                       preview={preview}
@@ -947,9 +935,15 @@ export function StatementImportPanel({
                       dataStartRow={mapping.dataStartRow}
                       allowEmpty
                       onChange={(v) =>
-                        setMapping((m) => ({ ...m, balanceCol: v }))
+                        setMapping((m) =>
+                          sanitizeStatementMapping(preview, { ...m, balanceCol: v }),
+                        )
                       }
                     />
+                    <p className="text-[11px] text-muted-foreground -mt-1">
+                      Per-row balance column (Bakiye / Güncel Bakiye) — used only for
+                      stated closing on the statement, not merged into descriptions.
+                    </p>
 
                     <div className="space-y-0.5">
                       <Label className="text-xs">Amount layout</Label>

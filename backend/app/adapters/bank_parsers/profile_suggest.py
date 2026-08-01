@@ -9,6 +9,7 @@ from app.adapters.bank_parsers.profile_mapper import (
     BankImportProfileConfig,
     DateFormat,
     normalize_transaction_date_cell,
+    _is_balance_header,
 )
 from app.adapters.bank_parsers.row_parse import cell_to_str
 
@@ -114,9 +115,14 @@ def _pick_description_columns(
     extras: list[int] = []
     used = set(roles.values())
 
+    if primary is not None and _is_balance_header(_norm_header(_cell(header_row, primary))):
+        primary = None
+
     if primary is None:
-        for candidate in (date_col + 1, date_col + 2, date_col - 1):
+        for candidate in (date_col + 1, date_col + 2, date_col - 1, date_col + 3):
             if candidate >= 0 and candidate not in used:
+                if _is_balance_header(_norm_header(_cell(header_row, candidate))):
+                    continue
                 primary = candidate
                 break
     if primary is None:
@@ -126,20 +132,21 @@ def _pick_description_columns(
         if idx == primary or idx in used:
             continue
         norm = _norm_header(cell)
+        if _is_balance_header(norm):
+            continue
         if _matches_role(norm, _ROLE_PATTERNS["description"][0]):
             extras.append(idx)
 
     return primary, extras
 
 
-def _pick_description_col(roles: dict[str, int], date_col: int) -> int | None:
-    if "description" in roles:
-        return roles["description"]
-    used = set(roles.values())
-    for candidate in (date_col + 1, date_col + 2, date_col - 1):
-        if candidate >= 0 and candidate not in used:
-            return candidate
-    return None
+def _pick_description_col(
+    roles: dict[str, int],
+    date_col: int,
+    header_row: list[object],
+) -> int | None:
+    primary, _ = _pick_description_columns(roles, date_col, header_row)
+    return primary
 
 
 def suggest_import_profile(
@@ -163,7 +170,7 @@ def suggest_import_profile(
             or "debit" in roles
             or "credit" in roles
         )
-        desc_col = _pick_description_col(roles, roles["date"])
+        desc_col = _pick_description_col(roles, roles["date"], grid[row_idx])
         if desc_col is None and not has_amount_mode:
             continue
         if score >= _MIN_HEADER_SCORE:
