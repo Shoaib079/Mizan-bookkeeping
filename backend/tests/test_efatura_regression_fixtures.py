@@ -36,6 +36,11 @@ REGRESSION_CASES = (
         InvoiceKind.SUPPLIER.value,
         id="trendyol-retail-feb",
     ),
+    pytest.param(
+        "bbd_mango_supply_92.pdf",
+        InvoiceKind.SUPPLIER.value,
+        id="bbd-mango-supply-jul",
+    ),
 )
 
 TURKTELEKOM_FIXTURE = FIXTURES / "turktelekom_oiv_55.pdf"

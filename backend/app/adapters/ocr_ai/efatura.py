@@ -94,8 +94,7 @@ def _find_all(root: ET.Element, path: str) -> list[ET.Element]:
 
 
 def _parse_tr_date_token(raw_date: str) -> date:
-    cleaned = re.sub(r"\s+", "", raw_date.strip())
-    cleaned = cleaned.replace("/", "-").replace(".", "-")
+    cleaned = _normalize_tr_date_token(raw_date)
     parts = cleaned.split("-")
     if len(parts) == 3 and len(parts[0]) == 4:
         year, month, day = parts
@@ -296,7 +295,15 @@ def _extract_pdf_text(content: bytes) -> tuple[str, str]:
     return "\n".join(parts), "pypdf"
 
 
-_TR_DATE_TOKEN = r"\d{2}\s*[./-]\s*\d{2}\s*[./-]\s*\d{4}"
+# GİB PDF text layers sometimes use soft hyphen (U+00AD) or other Unicode dashes.
+_DATE_SEP_CHAR = r".\/\-\u00ad\u2010\u2011\u2012\u2013\u2014\u2212"
+_DATE_SEPARATORS_RE = re.compile(rf"[{_DATE_SEP_CHAR}]")
+_TR_DATE_TOKEN = rf"\d{{2}}\s*[{_DATE_SEP_CHAR}]\s*\d{{2}}\s*[{_DATE_SEP_CHAR}]\s*\d{{4}}"
+
+
+def _normalize_tr_date_token(raw_date: str) -> str:
+    cleaned = re.sub(r"\s+", "", raw_date.strip())
+    return _DATE_SEPARATORS_RE.sub("-", cleaned)
 
 
 def _parse_referenced_invoice_pdf(text: str) -> tuple[str | None, date | None]:
@@ -370,8 +377,7 @@ def _parse_pdf_tr_date(text: str) -> date:
             prefix = text[max(0, match.start() - 24) : match.start()]
             if re.search(r"Sonraki\s*$", prefix, re.IGNORECASE):
                 continue
-            raw_date = re.sub(r"\s+", "", match.group(1))
-            raw_date = raw_date.replace("/", "-").replace(".", "-")
+            raw_date = _normalize_tr_date_token(match.group(1))
             day, month, year = raw_date.split("-")
             return date(int(year), int(month), int(day))
     raise EfaturaPdfUnsupportedError("Could not find invoice date in PDF text")
@@ -1012,6 +1018,9 @@ def _parse_pdf_heuristics(
                 if rate > 0:
                     line["base_kurus"] = round(line["vat_kurus"] * 100 / rate)
             raw_flags["net_adjusted"] = True
+
+    if len(vat_breakdown) == 1 and net_match is not None:
+        vat_breakdown[0]["base_kurus"] = net_kurus
 
     validate_invoice_totals(
         net_kurus, gross_kurus, vat_breakdown, other_taxes_kurus=other_taxes_kurus

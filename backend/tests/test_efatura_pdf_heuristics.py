@@ -225,3 +225,31 @@ def test_parse_trendyol_retail_ara_tutar_layout() -> None:
     assert extraction.net_kurus == 97_083
     assert extraction.gross_kurus == 116_500
     assert extraction.supplier_vkn == "8590921777"
+
+
+# Soft hyphen (U+00AD) date separators — common in some GİB PDF text layers.
+BBD_MANGO_SUPPLY_SNIPPET = """
+Fatura No: BBD2026000000092
+Fatura Tarihi: 30\u00ad07\u00ad2026
+BB YÖNETİM DANIŞMANLIĞI OTOMOTİV İNŞAAT SANAYİ VE TİCARET LİMİTED ŞİRKETİ
+VKN: 5280155097
+ZAİNA TURİZM VE RESTORAN LİMİTED ŞİRKETİ
+VKN: 9961294365
+Mal Hizmet Toplam Tutarı 3.861,39 TL
+KDV Matrahı 3.861,39 TL
+Hesaplanan KDV(%1) 38,61 TL
+Vergiler Dahil Toplam Tutar 3.900,00 TL
+Ödenecek Tutar 3.900,00 TL
+"""
+
+
+def test_parse_soft_hyphen_invoice_date_and_one_percent_vat() -> None:
+    extraction = _parse_pdf_heuristics(BBD_MANGO_SUPPLY_SNIPPET, buyer_vkn="9961294365")
+    assert extraction.invoice_number == "BBD2026000000092"
+    assert extraction.invoice_date == date(2026, 7, 30)
+    assert extraction.net_kurus == 386_139
+    assert extraction.gross_kurus == 390_000
+    assert extraction.vat_breakdown == [
+        {"rate_percent": 1.0, "base_kurus": 386_139, "vat_kurus": 3_861},
+    ]
+    assert extraction.supplier_vkn == "5280155097"
