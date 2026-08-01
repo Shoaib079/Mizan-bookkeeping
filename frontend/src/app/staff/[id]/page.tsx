@@ -42,7 +42,6 @@ import {
 } from "@/lib/staff-net-position";
 import { staffMovementLabels } from "@/lib/subledger-labels";
 import {
-  canEditSubledgerRow,
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";

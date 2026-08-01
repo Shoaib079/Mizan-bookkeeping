@@ -404,35 +404,41 @@ export function StatementImportPanel({
     return true;
   }
 
-  function persistSession(
-    fileMeta: { name: string; size: number; lastModified: number },
-    previewRes: BankStatementPreview,
-    nextMapping: MappingState,
-  ) {
-    if (!storageKey) return;
-    writeStatementImportSession(storageKey, {
-      step: "map",
-      preview: previewRes,
-      mapping: nextMapping,
-      fileName: fileMeta.name,
-      fileSize: fileMeta.size,
-      fileLastModified: fileMeta.lastModified,
-    });
-  }
+  const persistSession = useCallback(
+    (
+      fileMeta: { name: string; size: number; lastModified: number },
+      previewRes: BankStatementPreview,
+      nextMapping: MappingState,
+    ) => {
+      if (!storageKey) return;
+      writeStatementImportSession(storageKey, {
+        step: "map",
+        preview: previewRes,
+        mapping: nextMapping,
+        fileName: fileMeta.name,
+        fileSize: fileMeta.size,
+        fileLastModified: fileMeta.lastModified,
+      });
+    },
+    [storageKey],
+  );
 
-  function applyPreviewResult(
-    result: StatementPreviewLoadResult,
-    fileMeta: { name: string; size: number; lastModified: number },
-    selectedFile: File,
-  ) {
-    setFile(selectedFile);
-    setAutoDetected(result.autoDetected);
-    setPreview(result.preview);
-    setMapping(result.mapping);
-    setStep("map");
-    setExpectedFileName(fileMeta.name);
-    persistSession(fileMeta, result.preview, result.mapping);
-  }
+  const applyPreviewResult = useCallback(
+    (
+      result: StatementPreviewLoadResult,
+      fileMeta: { name: string; size: number; lastModified: number },
+      selectedFile: File,
+    ) => {
+      setFile(selectedFile);
+      setAutoDetected(result.autoDetected);
+      setPreview(result.preview);
+      setMapping(result.mapping);
+      setStep("map");
+      setExpectedFileName(fileMeta.name);
+      persistSession(fileMeta, result.preview, result.mapping);
+    },
+    [persistSession],
+  );
 
   async function fetchPreviewResult(
     selected: File,
@@ -484,50 +490,53 @@ export function StatementImportPanel({
     };
   }
 
-  async function awaitPreviewLoad(
-    fileMeta: { name: string; size: number; lastModified: number },
-    requestId: number,
-    selectedFile?: File | null,
-  ): Promise<boolean> {
-    if (!storageKey) return false;
-    const inflightKey = statementPreviewInflightKey(storageKey, fileMeta);
-    const pending = getInflightStatementPreview(inflightKey);
-    if (!pending) return false;
+  const awaitPreviewLoad = useCallback(
+    async (
+      fileMeta: { name: string; size: number; lastModified: number },
+      requestId: number,
+      selectedFile?: File | null,
+    ): Promise<boolean> => {
+      if (!storageKey) return false;
+      const inflightKey = statementPreviewInflightKey(storageKey, fileMeta);
+      const pending = getInflightStatementPreview(inflightKey);
+      if (!pending) return false;
 
-    setLoadingPreview(true);
-    setError(null);
-    try {
-      const result = await pending;
-      if (requestId !== previewRequestRef.current) {
-        toast(
-          "Preview finished but the page refreshed — try the same file again",
-          "error",
-        );
+      setLoadingPreview(true);
+      setError(null);
+      try {
+        const result = await pending;
+        if (requestId !== previewRequestRef.current) {
+          toast(
+            "Preview finished but the page refreshed — try the same file again",
+            "error",
+          );
+          return true;
+        }
+        if (selectedFile) {
+          applyPreviewResult(result, fileMeta, selectedFile);
+        } else {
+          setAutoDetected(result.autoDetected);
+          setPreview(result.preview);
+          setMapping(result.mapping);
+          setStep("map");
+          persistSession(fileMeta, result.preview, result.mapping);
+        }
         return true;
+      } catch (err) {
+        if (requestId !== previewRequestRef.current) return true;
+        const message = apiErrorMessage(err, "Preview failed");
+        setError(message);
+        toast(message, "error");
+        return true;
+      } finally {
+        if (storageKey) clearStatementImportPending(storageKey);
+        if (requestId === previewRequestRef.current) {
+          setLoadingPreview(false);
+        }
       }
-      if (selectedFile) {
-        applyPreviewResult(result, fileMeta, selectedFile);
-      } else {
-        setAutoDetected(result.autoDetected);
-        setPreview(result.preview);
-        setMapping(result.mapping);
-        setStep("map");
-        persistSession(fileMeta, result.preview, result.mapping);
-      }
-      return true;
-    } catch (err) {
-      if (requestId !== previewRequestRef.current) return true;
-      const message = apiErrorMessage(err, "Preview failed");
-      setError(message);
-      toast(message, "error");
-      return true;
-    } finally {
-      if (storageKey) clearStatementImportPending(storageKey);
-      if (requestId === previewRequestRef.current) {
-        setLoadingPreview(false);
-      }
-    }
-  }
+    },
+    [storageKey, toast, applyPreviewResult, persistSession],
+  );
 
   function handleAssignColumn(colIdx: number) {
     if (!assignTarget) return;
@@ -557,7 +566,7 @@ export function StatementImportPanel({
     const requestId = previewRequestRef.current + 1;
     previewRequestRef.current = requestId;
     void awaitPreviewLoad(pendingFileMeta(pending), requestId);
-  }, [storageKey, preview]);
+  }, [storageKey, preview, awaitPreviewLoad]);
 
   async function loadPreview(selected: File) {
     if (!entityId) {

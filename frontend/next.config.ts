@@ -3,16 +3,18 @@ import { fileURLToPath } from "url";
 import type { NextConfig } from "next";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const appRoot = join(__dirname);
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracingRoot: appRoot,
   // Reduce parallel static generation — avoids ENFILE on macOS with low maxfiles.
   experimental: {
     cpus: 1,
     workerThreads: false,
   },
   turbopack: {
-    root: join(__dirname),
+    root: appRoot,
   },
   async redirects() {
     return [
