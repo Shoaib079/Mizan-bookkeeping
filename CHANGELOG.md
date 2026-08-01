@@ -4,6 +4,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-01
 
+**npm audit clean — no more 3 high vulnerabilities.**
+- Next 15.5.22 bundled stale **postcss** and **sharp**; `npm audit fix --force` would downgrade Next to 9.x (never run that).
+- Added npm **overrides** to pin patched postcss (^8.5.25) and sharp (^0.35.0); `npm audit` now reports 0 issues.
+
 **Create cash drawers and FX wallets in the right place.**
 - **Add bank account** is bank/card only — no cash drawer or FX wallet type picker there.
 - **Banking → Cash**: **Add cash drawer** creates TRY drawers; empty state links here instead of Banks.

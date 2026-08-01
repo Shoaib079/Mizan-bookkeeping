@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Banking account creation routes — cash/FX off bank form; Add cash drawer on Cash hub; FX on FX hub — 2026-08-01 |
-| **Last tag** | `v0.banking-account-kinds` |
+| **Last completed slice** | Frontend npm audit clean — postcss/sharp overrides; 0 highs — 2026-08-01 |
+| **Last tag** | `v0.npm-audit-overrides` |
 | **Unpushed** | (cleared on push) |
 | **Next up** | **GS-FX** · P5 — Delete company UI |
 
