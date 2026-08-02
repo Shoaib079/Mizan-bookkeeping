@@ -292,6 +292,7 @@ export type BankReconciliationAccount = {
   name: string;
   account_kind: string;
   book_balance_kurus: number;
+  book_balance_as_of: string | null;
   imported_lines_total_kurus: number;
   unreconciled_count: number;
   unreconciled_total_kurus: number;

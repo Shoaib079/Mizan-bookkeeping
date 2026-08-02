@@ -122,7 +122,14 @@ function AccountCard({
 
       <dl className="space-y-1 text-sm">
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Your books say</dt>
+          <dt className="text-muted-foreground">
+            Your books say
+            {account.book_balance_as_of && (
+              <span className="block text-[11px] font-normal">
+                to {formatTrDate(account.book_balance_as_of)}
+              </span>
+            )}
+          </dt>
           <dd className="tabular-nums">{formatTry(account.book_balance_kurus)}</dd>
         </div>
         {account.unreconciled_total_kurus !== 0 && (
@@ -145,7 +152,13 @@ function AccountCard({
         )}
         {hasMissing && (
           <div className="flex justify-between gap-4 rounded-md bg-destructive/10 px-2 py-1 text-destructive">
-            <dt className="font-medium">Unexplained — lines missing from import?</dt>
+            <dt className="font-medium">
+              Unexplained vs statement closing
+              <span className="block text-[11px] font-normal text-destructive/90">
+                Check opening balance, missing import lines, or activity after the
+                statement period
+              </span>
+            </dt>
             <dd className="font-medium tabular-nums">{formatTry(missing)}</dd>
           </div>
         )}
@@ -266,8 +279,11 @@ function BankReconciliationContent() {
   return (
     <AppShell title="Bank reconciliation">
       <p className="mb-4 text-sm text-muted-foreground">
-        Whether each bank account agrees with the bank. Anything not yet
-        classified is money the books haven&apos;t seen.
+        Whether each bank account agrees with the bank. Unclassified lines are
+        still outstanding. If you already recorded an expense from that bank
+        (e.g. SGK), classify the matching statement line as{" "}
+        <strong>Expense from bank</strong> with the same expense account — Mizan
+        links it instead of posting twice.
       </p>
 
       {!entityId && (

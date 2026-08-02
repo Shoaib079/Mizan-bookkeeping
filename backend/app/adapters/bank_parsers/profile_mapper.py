@@ -434,13 +434,13 @@ def extract_closing_balance_kurus(
     profile: BankImportProfileConfig,
     parsed_lines: list[ParsedStatementLine],
 ) -> int | None:
-    """Read the bank's printed closing balance from the last mapped row with a date."""
+    """Walk Bakiye in file order; some banks show pre-transaction balances on outflows."""
     if profile.balance_col is None or not parsed_lines:
         return None
 
     last_row = profile.data_end_row if profile.data_end_row is not None else len(grid)
-    last_date: date | None = None
-    closing: int | None = None
+    description_cols = profile.description_column_indices(grid)
+    running: int | None = None
 
     for row_idx in range(profile.data_start_row - 1, min(last_row, len(grid))):
         row = grid[row_idx]
@@ -448,24 +448,35 @@ def extract_closing_balance_kurus(
         if _row_is_blank(row, profile):
             continue
         try:
-            txn_date = parse_date_with_format(
+            parse_date_with_format(
                 _cell(row, profile.date_col), row_num, profile.date_format
             )
         except BankParseError:
             continue
-        balance_raw = _cell(row, profile.balance_col)
+
+        amount_kurus = _signed_amount_from_row(row, row_num, profile)
+        if amount_kurus is None:
+            continue
+        if _map_row(row, row_num, profile, description_cols=description_cols) is None:
+            continue
+
         balance_kurus = _parse_optional_amount(
-            balance_raw,
+            _cell(row, profile.balance_col),
             row_num,
             decimal_format=profile.decimal_format,
         )
-        if balance_kurus is None:
-            continue
-        if last_date is None or txn_date >= last_date:
-            last_date = txn_date
-            closing = balance_kurus
+        if balance_kurus is not None:
+            if running is not None and amount_kurus != 0 and balance_kurus == running:
+                # İş Bank SGK: Bakiye is the balance before this outflow posts.
+                running = balance_kurus + amount_kurus
+            elif running is not None and balance_kurus == running + amount_kurus:
+                running = balance_kurus
+            else:
+                running = balance_kurus
+        elif running is not None:
+            running += amount_kurus
 
-    return closing
+    return running
 
 
 def parse_with_profile(

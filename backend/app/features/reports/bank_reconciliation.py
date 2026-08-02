@@ -28,6 +28,7 @@ from app.core.chart_of_accounts.models import Account
 from app.core.ledger.balances import balance_as_of_kurus
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
+from app.features.banking.statement_closing import effective_stated_closing_balance_kurus
 from app.features.banking.statement_models import (
     BankStatement,
     BankStatementLine,
@@ -82,12 +83,6 @@ def get_bank_reconciliation(
             if gl_account is None:
                 continue
 
-            book_balance = (
-                balance_as_of_kurus(session, gl_account, as_of)
-                if as_of is not None
-                else balance_as_of_kurus(session, gl_account, date.max)
-            )
-
             statements = list(
                 session.scalars(
                     select(BankStatement)
@@ -96,6 +91,18 @@ def get_bank_reconciliation(
                 )
             )
             statement_ids = [s.id for s in statements]
+            latest = statements[0] if statements else None
+
+            # Compare book to the latest statement's closing — not today's GL balance.
+            # Activity after period_end (e.g. August expenses) belongs in the next statement.
+            if as_of is not None:
+                book_as_of = as_of
+            elif latest is not None:
+                book_as_of = latest.period_end
+            else:
+                book_as_of = date.max
+
+            book_balance = balance_as_of_kurus(session, gl_account, book_as_of)
 
             pending_rows: list[BankStatementLine] = []
             pending_total = 0
@@ -121,8 +128,9 @@ def get_bank_reconciliation(
                 )
                 pending_total = sum(line.amount_kurus for line in pending_rows)
 
-            latest = statements[0] if statements else None
-            stated_balance = latest.closing_balance_kurus if latest is not None else None
+            stated_balance = effective_stated_closing_balance_kurus(
+                session, gl_account, statements, latest
+            )
             # Books + what's still unclassified should equal what the bank says.
             missing_from_import = (
                 stated_balance - (book_balance + pending_total)
@@ -136,6 +144,7 @@ def get_bank_reconciliation(
                     name=account.name,
                     account_kind=account.account_kind.value,
                     book_balance_kurus=book_balance,
+                    book_balance_as_of=book_as_of if book_as_of != date.max else None,
                     imported_lines_total_kurus=imported_total,
                     unreconciled_count=len(pending_rows),
                     unreconciled_total_kurus=pending_total,

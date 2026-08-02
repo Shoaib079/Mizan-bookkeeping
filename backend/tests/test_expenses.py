@@ -389,6 +389,73 @@ def test_rent_utility_classify_posts_dr_expense_cr_bank(
         assert entry.source == JournalEntrySource.EXPENSE_ENTRY
 
 
+def test_rent_utility_links_manual_bank_expense_without_new_journal(
+    db_session, expense_setup
+) -> None:
+    from app.features.expenses.schema import ExpenseCreate
+    from app.features.expenses.service import create_expense
+    from app.features.reports import bank_reconciliation
+
+    entity_id = expense_setup["entity_id"]
+    bank = expense_setup["bank"]
+    rent_id = expense_setup["accounts"][RENT_EXPENSE_CODE]
+
+    create_expense(
+        db_session,
+        entity_id,
+        ExpenseCreate(
+            expense_date=date(2026, 6, 15),
+            amount_kurus=120_000,
+            expense_account_id=rent_id,
+            money_account_id=bank.id,
+            description="SGK sicil odemesi",
+            actor_id=ACTOR_ID,
+        ),
+    )
+
+    csv = (
+        "transaction_date,amount,description,reference\n"
+        "2026-06-15,\"-1.200,00\",SGK SICIL ODEME,SGK-JUN\n"
+    ).encode()
+    statement = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank.id,
+        csv,
+        original_filename="sgk.csv",
+    )
+    sgk_line = statement.lines[0]
+
+    with entity_context(db_session, entity_id):
+        journal_before = db_session.scalar(select(func.count()).select_from(JournalEntry))
+
+    result = statement_service.classify_statement_line(
+        db_session,
+        entity_id,
+        statement.id,
+        sgk_line.id,
+        classification=StatementLineClassification.RENT_UTILITY,
+        actor_id=ACTOR_ID,
+        expense_account_id=rent_id,
+    )
+
+    assert result.line.status == StatementLineStatus.LINKED
+    assert result.line.expense_entry_id is not None
+    assert result.journal_entry_id is not None
+
+    with entity_context(db_session, entity_id):
+        journal_after = db_session.scalar(select(func.count()).select_from(JournalEntry))
+        entry = db_session.get(ExpenseEntry, result.line.expense_entry_id)
+    assert journal_after == journal_before
+    assert entry is not None
+    assert entry.bank_statement_line_id == sgk_line.id
+
+    report = bank_reconciliation.get_bank_reconciliation(db_session, entity_id)
+    account = next(a for a in report.accounts if a.money_account_id == bank.id)
+    assert account.unreconciled_count == 0
+    assert account.is_reconciled is True
+
+
 def test_rent_utility_rejects_inflow(db_session, expense_setup) -> None:
     entity_id = expense_setup["entity_id"]
     bank = expense_setup["bank"]

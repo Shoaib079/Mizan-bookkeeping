@@ -13,6 +13,10 @@ from app.adapters.bank_parsers.dispatch import parse_bank_statement
 from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig, parse_with_profile
 from app.adapters.bank_parsers.types import BankParseError, ParsedStatement
 from app.core.banking.line_dedup import plan_statement_line_imports
+from app.core.banking.expense_statement_link import (
+    find_matching_expense,
+    link_expense_to_line,
+)
 from app.core.content_fingerprint import file_fingerprint
 from app.core.banking import posting as banking_posting
 from app.core.banking import statement_posting
@@ -56,6 +60,7 @@ from app.features.banking.classification_learning import (
 )
 from app.features.banking.supplier_suggest_service import suggest_line_classification
 from app.features.banking.statement_rule_auto import apply_import_rule_auto
+from app.features.banking.statement_closing import resolve_import_closing_balance_kurus
 from app.features.banking.statement_models import (
     BankStatement,
     BankStatementLine,
@@ -878,6 +883,20 @@ def _persist_parsed_statement(
             "All transactions in this file are already imported for this bank account"
         )
 
+    money_account = session.get(MoneyAccount, money_account_id)
+    if money_account is None:
+        raise LookupError("Bank account not found")
+
+    imported_line_sum = sum(plan.amount_kurus for plan in to_import)
+    closing_balance_kurus = resolve_import_closing_balance_kurus(
+        session,
+        money_account.gl_account_id,
+        parsed_closing_balance_kurus=parsed.closing_balance_kurus,
+        parsed_period_start=parsed.period_start,
+        imported_line_sum_kurus=imported_line_sum,
+        money_account_id=money_account_id,
+    )
+
     statement = BankStatement(
         money_account_id=money_account_id,
         file_fingerprint=fingerprint,
@@ -886,7 +905,7 @@ def _persist_parsed_statement(
         original_filename=original_filename,
         storage_path=None,
         line_count=len(to_import),
-        closing_balance_kurus=parsed.closing_balance_kurus,
+        closing_balance_kurus=closing_balance_kurus,
     )
     session.add(statement)
     try:
@@ -1552,6 +1571,30 @@ def classify_statement_line(
                 raise InvalidClassificationError(
                     "expense_account_id is required for rent_utility"
                 )
+            existing_expense = find_matching_expense(
+                session,
+                money_account_id=statement.money_account_id,
+                amount_kurus=line.amount_kurus,
+                transaction_date=line.transaction_date,
+                expense_account_id=expense_account_id,
+                exclude_line_id=line.id,
+            )
+            if existing_expense is not None:
+                link_expense_to_line(
+                    line,
+                    expense_entry=existing_expense,
+                    classification=classification,
+                )
+                session.commit()
+                session.refresh(line)
+                return classified_result(
+                    line,
+                    learned_classification=StatementLineClassification.RENT_UTILITY,
+                    linked_existing_payment=False,
+                    linked_existing_transfer=False,
+                    routed_to_needs_review=False,
+                    journal_entry_id=existing_expense.journal_entry_id,
+                )
 
         elif classification == StatementLineClassification.STORE_PURCHASE:
             if line.amount_kurus >= 0:
@@ -1563,6 +1606,30 @@ def classify_statement_line(
             if expense_account_id is None:
                 raise InvalidClassificationError(
                     "expense_account_id is required for store_purchase"
+                )
+            existing_expense = find_matching_expense(
+                session,
+                money_account_id=statement.money_account_id,
+                amount_kurus=line.amount_kurus,
+                transaction_date=line.transaction_date,
+                expense_account_id=expense_account_id,
+                exclude_line_id=line.id,
+            )
+            if existing_expense is not None:
+                link_expense_to_line(
+                    line,
+                    expense_entry=existing_expense,
+                    classification=classification,
+                )
+                session.commit()
+                session.refresh(line)
+                return classified_result(
+                    line,
+                    learned_classification=StatementLineClassification.STORE_PURCHASE,
+                    linked_existing_payment=False,
+                    linked_existing_transfer=False,
+                    routed_to_needs_review=False,
+                    journal_entry_id=existing_expense.journal_entry_id,
                 )
 
         elif classification == StatementLineClassification.CREDIT_CARD_PAYMENT:

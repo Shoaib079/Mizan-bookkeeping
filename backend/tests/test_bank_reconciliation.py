@@ -151,3 +151,168 @@ def test_cash_drawers_are_not_bank_reconciled(db_session, setup):
 
     report = bank_reconciliation.get_bank_reconciliation(db_session, entity_id)
     assert all(a.account_kind != "cash" for a in report.accounts)
+
+
+def test_book_balance_uses_latest_statement_period_end(db_session, setup) -> None:
+    """Post-period GL activity must not skew comparison to a July closing."""
+    from app.core.expenses.posting import post_expense_entry
+    from app.core.chart_of_accounts.models import Account
+
+    entity_id, bank = setup["entity_id"], setup["bank"]
+    statement = _import(
+        db_session,
+        entity_id,
+        bank,
+        [("2026-07-15", "-1.000,00", "Bank fee")],
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.scalars(
+            select(BankStatementLine).where(
+                BankStatementLine.statement_id == statement.id
+            )
+        ).first()
+        assert line is not None
+        line.status = StatementLineStatus.POSTED
+        expense_account = db_session.scalar(
+            select(Account).where(Account.code == "5000")
+        )
+        assert expense_account is not None
+        expense_account_id = expense_account.id
+        post_expense_entry(
+            db_session,
+            entity_id,
+            expense_date=date(2026, 7, 15),
+            amount_kurus=100_000,
+            expense_account_id=expense_account_id,
+            money_account_id=bank.id,
+            description="Bank fee",
+            actor_id=ACTOR_ID,
+            bank_statement_line_id=line.id,
+        )
+        db_session.commit()
+
+    post_expense_entry(
+        db_session,
+        entity_id,
+        expense_date=date(2026, 8, 1),
+        amount_kurus=50_000,
+        expense_account_id=expense_account_id,
+        money_account_id=bank.id,
+        description="August expense",
+        actor_id=ACTOR_ID,
+    )
+
+    statement_service.set_statement_closing_balance(
+        db_session, entity_id, statement.id, -100_000
+    )
+
+    report = bank_reconciliation.get_bank_reconciliation(db_session, entity_id)
+    account = _account(report, bank.id)
+
+    assert account.book_balance_as_of == date(2026, 7, 15)
+    assert account.book_balance_kurus == -100_000
+    assert account.missing_from_import_kurus == 0
+    assert account.is_reconciled is True
+
+
+def test_stated_closing_uses_book_chain_when_bakiye_is_wrong(db_session, setup) -> None:
+    """Raw Bakiye can disagree with posted lines; reconciliation follows the books."""
+    from app.adapters.bank_parsers.profile_mapper import BankImportProfileConfig
+    from app.features.banking.statement_models import StatementLineClassification
+    from app.core.chart_of_accounts.models import Account
+
+    entity_id, bank = setup["entity_id"], setup["bank"]
+    profile = BankImportProfileConfig(
+        header_row=1,
+        data_start_row=2,
+        date_col=0,
+        description_col=1,
+        reference_col=2,
+        debit_col=3,
+        credit_col=4,
+        balance_col=5,
+        date_format="DD.MM.YYYY",
+        decimal_format="tr",
+        debit_is_outflow=True,
+    )
+    june_csv = (
+        "Tarih,Aciklama,Referans,Borc,Alacak,Bakiye\n"
+        "30.06.2026,Haziran kapanis,REF-JUN,,\"100.000,00\",\"100.000,00\"\n"
+    )
+    june = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank.id,
+        june_csv.encode(),
+        original_filename="june.csv",
+        profile_config=profile,
+    )
+
+    with entity_context(db_session, entity_id):
+        june_line = db_session.scalars(
+            select(BankStatementLine).where(
+                BankStatementLine.statement_id == june.id
+            )
+        ).first()
+        income_account = db_session.scalar(
+            select(Account).where(Account.code == "4000")
+        )
+        expense_account = db_session.scalar(
+            select(Account).where(Account.code == "5000")
+        )
+    assert june_line is not None
+    assert income_account is not None
+    assert expense_account is not None
+    income_account_id = income_account.id
+    expense_account_id = expense_account.id
+    statement_service.classify_statement_line(
+        db_session,
+        entity_id,
+        june.id,
+        june_line.id,
+        classification=StatementLineClassification.OTHER_INCOME,
+        income_account_id=income_account_id,
+        actor_id=ACTOR_ID,
+    )
+
+    july_csv = (
+        "Tarih,Aciklama,Referans,Borc,Alacak,Bakiye\n"
+        "31.07.2026,SGK ODEMESI,REF-SGK,\"33.410,15\",,\"152.060,81\"\n"
+    )
+    july = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank.id,
+        july_csv.encode(),
+        original_filename="july.csv",
+        profile_config=profile,
+    )
+    statement_service.set_statement_closing_balance(
+        db_session, entity_id, july.id, 15_206_081
+    )
+
+    with entity_context(db_session, entity_id):
+        line = db_session.scalars(
+            select(BankStatementLine).where(
+                BankStatementLine.statement_id == july.id
+            )
+        ).first()
+    assert line is not None
+    statement_service.classify_statement_line(
+        db_session,
+        entity_id,
+        july.id,
+        line.id,
+        classification=StatementLineClassification.RENT_UTILITY,
+        expense_account_id=expense_account_id,
+        actor_id=ACTOR_ID,
+    )
+
+    report = bank_reconciliation.get_bank_reconciliation(db_session, entity_id)
+    account = _account(report, bank.id)
+
+    assert account.stated_closing_balance_kurus == 66_589_85
+    assert account.book_balance_kurus == 66_589_85
+    assert account.missing_from_import_kurus == 0
+    assert account.is_reconciled is True

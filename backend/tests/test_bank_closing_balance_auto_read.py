@@ -53,6 +53,31 @@ def test_parse_reads_closing_balance_from_last_dated_row() -> None:
     assert parsed.period_end == date(2026, 2, 3)
 
 
+ISBANK_PRE_TXN_BALANCE = """junk1
+junk2
+junk3
+junk4
+junk5
+junk6
+junk7
+Tarih,Aciklama,Referans,Borc,Alacak,Bakiye
+30.07.2026,Gun basi,REF-0,,"130.661,43","130.661,43"
+31.07.2026,NET SATIS,REF-1,,"21.399,38",
+31.07.2026,SGK ODEMESI,REF-2,"33.410,15",,"152.060,81"
+"""
+
+
+def test_parse_handles_pre_transaction_bakiye_on_outflow() -> None:
+    """İş Bank SGK rows can show Bakiye before the debit; blank Bakiye on later rows."""
+    parsed = parse_with_profile(
+        ISBANK_PRE_TXN_BALANCE.encode(),
+        TR_PROFILE_WITH_BALANCE,
+        original_filename="isbank-jul.csv",
+    )
+    assert parsed.closing_balance_kurus == 11_865_066
+    assert parsed.period_end == date(2026, 7, 31)
+
+
 def test_preview_surfaces_detected_closing_balance() -> None:
     preview = import_profile_service.preview_statement_upload(
         TR_WITH_BALANCE.encode(),

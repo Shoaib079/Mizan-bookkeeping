@@ -289,6 +289,7 @@ class BankReconciliationAccount(BaseModel):
     name: str
     account_kind: str
     book_balance_kurus: int
+    book_balance_as_of: date | None = None
     imported_lines_total_kurus: int
     unreconciled_count: int
     unreconciled_total_kurus: int
