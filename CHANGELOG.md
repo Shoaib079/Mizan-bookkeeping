@@ -4,6 +4,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-03
 
+**Deploy — migrations need httpx in the runtime image.**
+- Clerk invite email uses `httpx`; it is now a normal install dependency (Docker does not install `[dev]`). Alembic bootstrap no longer pulls the invite HTTP client just by loading models.
+
 **CI — Production guard pytest no longer dies on fresh Postgres.**
 - Importing the API no longer inserts the local dev actor before the test DB role exists. (That seed still happens on the first local write when auth is off.)
 

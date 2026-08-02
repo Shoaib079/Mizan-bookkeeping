@@ -2,6 +2,14 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-08-03 — Deploy migrate crash: No module named 'httpx'
+
+**Symptom:** Railway/container start ran `alembic upgrade head` then died with `ModuleNotFoundError: No module named 'httpx'`. Container started and stopped.
+
+**Root cause:** Team invite code imported `httpx`, but `httpx` lived only under optional `[dev]` deps. The Docker image installs `pip install .` (no `[dev]`). Alembic’s `env.py` → `bootstrap` → `idempotency` package `__init__` also pulled middleware → auth → Clerk invites, so migrate needed `httpx` even though migrate never sends invites.
+
+**Fix:** Move `httpx` into runtime dependencies; keep idempotency package init free of middleware; lazy-import `httpx` inside the invite call. Guard: `tests/test_alembic_import_deps.py`.
+
 ## 2026-08-03 — CI Production guard pytest: password auth failed for mizan_app
 
 **Symptom:** GitHub Actions `security_production_pytest.sh` failed with `FATAL: password authentication failed for user "mizan_app"` on a fresh Postgres service.

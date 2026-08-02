@@ -6,8 +6,6 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Literal
 
-import httpx
-
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -71,6 +69,8 @@ def create_clerk_invitation(email: str) -> ClerkInviteResult:
     if redirect:
         body["redirect_url"] = redirect
 
+    import httpx
+
     try:
         with httpx.Client(timeout=15.0) as client:
             response = client.post(
@@ -113,7 +113,7 @@ def create_clerk_invitation(email: str) -> ClerkInviteResult:
     raise ClerkInviteError(detail or "Clerk could not send the invitation email.")
 
 
-def _clerk_error_detail(response: httpx.Response) -> str:
+def _clerk_error_detail(response: Any) -> str:
     try:
         data = response.json()
     except ValueError:
