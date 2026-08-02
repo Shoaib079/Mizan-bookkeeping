@@ -137,6 +137,21 @@ Without both, sign-in succeeds in Clerk but API calls fail with auth errors.
 - **Staging:** Clerk **test** keys are OK on a staging stack if `APP_ENV` is not `production`.
 - **Production:** use Clerk **live** keys (`sk_live_` / `pk_live_`); set `CLERK_JWKS_URL`, `CLERK_ISSUER`, `CLERK_AUDIENCE` (audience = your live publishable key).
 
+### Team invite emails (Settings → Team)
+
+Adding a member by email creates the Mizan membership **and** asks Clerk to email a sign-up link.
+
+On the **API** (Railway), set:
+
+| Variable | Purpose |
+|----------|---------|
+| `CLERK_SECRET_KEY` | Backend API — required to create invitations (`sk_test_` / `sk_live_`) |
+| `PUBLIC_APP_URL` | Frontend origin, e.g. `https://your-app.vercel.app` — invite opens `/sign-up` |
+
+Without `CLERK_SECRET_KEY`, the member is still added but **no email** is sent. Without `PUBLIC_APP_URL`, Clerk still emails; the link uses Clerk’s default Account Portal unless you set the redirect.
+
+Optional: Clerk Dashboard → **Restrictions** → sign-up mode **Restricted** so only invited emails can register.
+
 ---
 
 ## 7. S3-compatible backup bucket
@@ -399,7 +414,7 @@ Use this on **staging first**, then repeat on production after cutover. Chart + 
 1. **Sign in** — open the Vercel URL in a private window; complete Clerk sign-up or sign-in. If API returns 403 “invited”, ask the operator to provision your email first.
 2. **Create restaurant** — Settings → Restaurant & toggles → enter name → Create restaurant. Confirm chart count appears (auto-seeded). Save feature toggles → you land on the Dashboard setup checklist.
 3. **Opening balances** — Dashboard checklist → Post opening balances (or Settings → Opening balances). Enter go-live date and at least one cash/bank line + balancing equity/AP line → Validate → Post.
-4. **Invite staff** — Settings → Members → add by email (cashier or partner). They must be provisioned before they can sign in with Clerk.
+4. **Invite staff** — Settings → Team → add by email (cashier or partner). They get a Clerk invitation email; they open the link, finish sign-up, then sign in.
 5. **Record first day** — Sales → manual daily sales (cash + card) or record an expense via New menu. Checklist marks “first day” when a daily summary exists.
 6. **Run a report** — Reports → Profit & Loss (or Balance Sheet) for the go-live month; confirm numbers load without 403.
 

@@ -45,6 +45,7 @@ describe("record-actions", () => {
       "staffSalary",
       "fx",
       "addDocument",
+      "countCash",
       "closeDay",
     ]);
     expect(PRIMARY_RECORD_ACTION_IDS).toEqual(primary);
@@ -104,6 +105,7 @@ describe("record-actions", () => {
     expect(isQuickActionKey("fx")).toBe(true);
     expect(isQuickActionKey("efatura")).toBe(true);
     expect(isQuickActionKey("closeDay")).toBe(false);
+    expect(isQuickActionKey("countCash")).toBe(false);
     expect(isQuickActionKey("transfer")).toBe(false);
   });
 

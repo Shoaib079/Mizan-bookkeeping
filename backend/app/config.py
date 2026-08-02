@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     clerk_issuer: str | None = None
     clerk_audience: str | None = None
     clerk_test_mode: bool = False
+    #: Public frontend origin (e.g. https://app.example.com) — invite links land on /sign-up.
+    public_app_url: str | None = None
 
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/0"

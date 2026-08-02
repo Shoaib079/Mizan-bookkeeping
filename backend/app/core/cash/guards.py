@@ -23,6 +23,14 @@ from app.features.cash.models import (
 
 
 def _is_owner(session: Session, entity_id: uuid.UUID, actor_id: uuid.UUID) -> bool:
+    from app.config import settings
+    from app.core.schema_types import DEV_ACTOR_ID
+
+    # Local AUTH_ENFORCEMENT=false uses DEV_ACTOR_ID with no memberships —
+    # treat that placeholder as owner so Count cash / unlock works in dev.
+    if not settings.auth_enforcement and actor_id == DEV_ACTOR_ID:
+        return True
+
     with user_membership_lookup(session, actor_id):
         membership = session.scalar(
             select(EntityMembership).where(
@@ -33,6 +41,40 @@ def _is_owner(session: Session, entity_id: uuid.UUID, actor_id: uuid.UUID) -> bo
     if membership is None:
         return False
     return EntityRole(membership.role) == EntityRole.OWNER
+
+
+def owner_unlock_closed_session(
+    session: Session,
+    entity_id: uuid.UUID,
+    drawer_session: CashDrawerSession,
+    *,
+    actor_id: uuid.UUID,
+    unlock_reason: str | None,
+) -> CashDrawerSession:
+    """Reopen a CLOSED session for an owner write (flush only — no commit)."""
+    if not _is_owner(session, entity_id, actor_id):
+        raise DrawerDayClosedError("drawer day is closed; owner unlock required")
+
+    reason = (unlock_reason or "").strip()
+    if not reason:
+        raise DrawerUnlockRequiredError(
+            "period_unlock_reason is required for owner writes in a closed drawer day"
+        )
+
+    drawer_session.status = CashDrawerSessionStatus.OPEN
+    drawer_session.reopened_at = utcnow()
+    drawer_session.reopened_by = actor_id
+    drawer_session.reopen_reason = reason
+    _record_audit(
+        session,
+        drawer_session,
+        action=CashDrawerAuditAction.UNLOCK_WRITE,
+        actor_id=actor_id,
+        reason=reason,
+    )
+    session.flush()
+    session.refresh(drawer_session)
+    return drawer_session
 
 
 def _get_drawer_session(
@@ -89,10 +131,13 @@ def link_orphan_movements_to_session(
 def ensure_open_drawer_session_for_close(
     session: Session,
     *,
+    entity_id: uuid.UUID,
     money_account_id: uuid.UUID,
     session_date: date,
+    actor_id: uuid.UUID,
+    unlock_reason: str | None = None,
 ) -> CashDrawerSession:
-    """Create an OPEN session for EOD reconcile and link orphan movements."""
+    """Create/open a session for EOD reconcile; owner may unlock a closed day."""
     drawer_session = _get_drawer_session(
         session,
         money_account_id=money_account_id,
@@ -108,8 +153,12 @@ def ensure_open_drawer_session_for_close(
         session.flush()
         session.refresh(drawer_session)
     elif drawer_session.status == CashDrawerSessionStatus.CLOSED:
-        raise DrawerDayClosedError(
-            "drawer day is closed; owner unlock required"
+        drawer_session = owner_unlock_closed_session(
+            session,
+            entity_id,
+            drawer_session,
+            actor_id=actor_id,
+            unlock_reason=unlock_reason,
         )
 
     link_orphan_movements_to_session(session, drawer_session)
@@ -176,29 +225,13 @@ def assert_drawer_day_writable(
     if drawer_session is None or drawer_session.status == CashDrawerSessionStatus.OPEN:
         return drawer_session
 
-    if not _is_owner(session, entity_id, actor_id):
-        raise DrawerDayClosedError("drawer day is closed; owner unlock required")
-
-    reason = (unlock_reason or "").strip()
-    if not reason:
-        raise DrawerUnlockRequiredError(
-            "period_unlock_reason is required for owner writes in a closed drawer day"
-        )
-
-    drawer_session.status = CashDrawerSessionStatus.OPEN
-    drawer_session.reopened_at = utcnow()
-    drawer_session.reopened_by = actor_id
-    drawer_session.reopen_reason = reason
-    _record_audit(
+    return owner_unlock_closed_session(
         session,
+        entity_id,
         drawer_session,
-        action=CashDrawerAuditAction.UNLOCK_WRITE,
         actor_id=actor_id,
-        reason=reason,
+        unlock_reason=unlock_reason,
     )
-    session.flush()
-    session.refresh(drawer_session)
-    return drawer_session
 
 
 def resolve_session_for_movement(

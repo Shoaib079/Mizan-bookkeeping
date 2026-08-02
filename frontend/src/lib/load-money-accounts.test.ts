@@ -5,6 +5,7 @@ import {
   defaultMainDrawerId,
   formatCashDrawerOptionLabel,
   formatMoneyAccountOptionLabel,
+  preferCashHomeDrawerId,
   shouldShowCashDrawerPicker,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
@@ -62,6 +63,17 @@ describe("cash drawer UI helpers", () => {
   it("prefers seeded main drawer id", () => {
     expect(defaultMainDrawerId([pettyDrawer, mainDrawer])).toBe(mainDrawer.id);
     expect(defaultMainDrawerId([pettyDrawer])).toBe(pettyDrawer.id);
+  });
+
+  it("prefers Cash at home for post-close send destination", () => {
+    const home = { id: "home", name: "Cash at home" };
+    const other = { id: "other", name: "Petty" };
+    expect(preferCashHomeDrawerId([mainDrawer, home, other], mainDrawer.id)).toBe(
+      "home",
+    );
+    expect(preferCashHomeDrawerId([mainDrawer, other], mainDrawer.id)).toBe(
+      "other",
+    );
   });
 
   it("formats money account labels without internal drawer name when sole cash", () => {

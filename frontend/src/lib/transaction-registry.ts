@@ -65,6 +65,10 @@ export const GENERIC_VOID_SAFE_SOURCES = new Set<string>([
   // undo — it restores the revenue and expense balances and reopens the year
   // for re-closing. Without it the owner could seal a year and never unseal it.
   "year_end_close",
+  // Plain money-account journals (no feature subledger). Void from GL is the
+  // undo path for a mistaken count over/short or drawer-to-drawer transfer.
+  "transfer",
+  "cash_drawer_close",
 ]);
 
 /** Partner/owner books language — what the money is, not how the app posted it. */

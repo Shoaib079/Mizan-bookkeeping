@@ -85,8 +85,8 @@ describe("SEC-4: M4 — API_BASE fails loud in production browser", () => {
     expect(src).toContain('process.env.NODE_ENV === "production"');
   });
 
-  it("api.ts still falls back to localhost:8000 in development", async () => {
+  it("api.ts falls back to same-origin /backend-api in development", async () => {
     const src = await readSource("./api.ts");
-    expect(src).toContain("http://localhost:8000");
+    expect(src).toContain('"/backend-api"');
   });
 });

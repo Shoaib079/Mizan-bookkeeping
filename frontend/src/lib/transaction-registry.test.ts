@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   GENERIC_CORRECTABLE_SOURCES,
+  GENERIC_VOID_SAFE_SOURCES,
   JOURNAL_SOURCES,
   genericVoidPath,
   ledgerEntryHref,
@@ -19,6 +20,9 @@ describe("transaction registry (audit C1)", () => {
 
   it("keeps the generic void allowlist to accounting-safe sources only", () => {
     expect([...GENERIC_CORRECTABLE_SOURCES].sort()).toEqual(["bank_fee", "manual"]);
+    expect(GENERIC_VOID_SAFE_SOURCES.has("transfer")).toBe(true);
+    expect(GENERIC_VOID_SAFE_SOURCES.has("cash_drawer_close")).toBe(true);
+    expect(GENERIC_VOID_SAFE_SOURCES.has("cash_movement")).toBe(false);
   });
 
   it("labels sources with clear books language (no app jargon)", () => {

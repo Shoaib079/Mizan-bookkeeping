@@ -114,7 +114,11 @@ def close_cash_drawer_day_route(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except LargeCashVarianceError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except (InvalidCashDrawerError, DrawerDayClosedError) as exc:
+    except (
+        InvalidCashDrawerError,
+        DrawerDayClosedError,
+        DrawerUnlockRequiredError,
+    ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -138,12 +142,17 @@ def close_cash_drawer_session_route(
             actor_id=actor_id,
             description=payload.description,
             confirm_large_variance=payload.confirm_large_variance,
+            period_unlock_reason=payload.period_unlock_reason,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except LargeCashVarianceError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except InvalidCashDrawerError as exc:
+    except (
+        InvalidCashDrawerError,
+        DrawerDayClosedError,
+        DrawerUnlockRequiredError,
+    ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

@@ -1,14 +1,20 @@
+// Local default: same-origin `/backend-api` (Next rewrite → uvicorn). Direct
+// `http://127.0.0.1:8000` often fails in browsers (CORS / local-network blocks).
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "/backend-api";
 
 function assertApiBase(): void {
+  const pointsAtLocalApi =
+    API_BASE === "http://localhost:8000" ||
+    API_BASE === "http://127.0.0.1:8000" ||
+    API_BASE === "/backend-api";
   if (
-    API_BASE === "http://localhost:8000" &&
+    pointsAtLocalApi &&
     typeof window !== "undefined" &&
     process.env.NODE_ENV === "production"
   ) {
     throw new Error(
-      "NEXT_PUBLIC_API_URL must be set for production builds — the app is pointing at localhost:8000",
+      "NEXT_PUBLIC_API_URL must be set for production builds — the app is pointing at a local API",
     );
   }
 }

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Wallet } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CashCountForm } from "@/components/forms/cash-count-form";
 import { CashDrawerCloseDayForm } from "@/components/forms/cash-drawer-close-day-form";
 import { CashDrawerCloseForm } from "@/components/forms/cash-drawer-close-form";
 import { CashMovementForm } from "@/components/forms/cash-movement-form";
@@ -26,6 +27,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
+import { useToast } from "@/lib/toast";
 import type {
   CashDrawerSessionDetail,
   CashDrawerSessionRead,
@@ -38,6 +40,7 @@ import { formatTrDate, formatTry } from "@/lib/money";
 
 export default function CashDrawerPage() {
   const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
   const [sessions, setSessions] = useState<CashDrawerSessionRead[]>([]);
   /** Closed counts only — an open session has nothing counted yet. */
   const countHistory = useMemo(
@@ -50,6 +53,7 @@ export default function CashDrawerPage() {
   const [error, setError] = useState<string | null>(null);
   const [movementOpen, setMovementOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [countCashOpen, setCountCashOpen] = useState(false);
   const [closeDayOpen, setCloseDayOpen] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState("");
@@ -57,6 +61,10 @@ export default function CashDrawerPage() {
   const [reopening, setReopening] = useState(false);
   const [cashAccounts, setCashAccounts] = useState<MoneyAccountLeaf[]>([]);
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
 
   const reloadCashAccounts = useCallback(async () => {
     if (!entityId) {
@@ -81,6 +89,7 @@ export default function CashDrawerPage() {
     setError(null);
     setMovementOpen(false);
     setCloseOpen(false);
+    setCountCashOpen(false);
     setCloseDayOpen(false);
     setReopenOpen(false);
     setReopenReason("");
@@ -142,6 +151,37 @@ export default function CashDrawerPage() {
     void reloadCashAccounts();
   }
 
+  function startRename(account: MoneyAccountLeaf) {
+    setRenamingId(account.id);
+    setRenameText(account.name);
+    setRenameError(null);
+  }
+
+  async function saveRename(accountId: string) {
+    if (!entityId) return;
+    const name = renameText.trim();
+    if (!name) {
+      setRenameError("Name is required.");
+      return;
+    }
+    setRenaming(true);
+    setRenameError(null);
+    try {
+      await apiFetch(`/entities/${entityId}/banking/accounts/${accountId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      setRenamingId(null);
+      toast("Drawer renamed");
+      void reloadCashAccounts();
+    } catch (err) {
+      setRenameError(err instanceof Error ? err.message : "Rename failed");
+    } finally {
+      setRenaming(false);
+    }
+  }
+
   async function onReopenSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!entityId || !detail) return;
@@ -191,9 +231,17 @@ export default function CashDrawerPage() {
             type="button"
             variant="secondary"
             disabled={!entityId}
+            onClick={() => setCountCashOpen(true)}
+          >
+            Count cash
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!entityId}
             onClick={() => setCloseDayOpen(true)}
           >
-            Close drawer day
+            Close day
           </Button>
           <Button
             type="button"
@@ -226,12 +274,58 @@ export default function CashDrawerPage() {
             {cashAccounts.map((account) => (
               <li
                 key={account.id}
-                className="flex items-center justify-between gap-4 py-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
               >
-                <span>
-                  {cashAccounts.length === 1 ? "Cash drawer" : account.name}
+                {renamingId === account.id ? (
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                    <Input
+                      value={renameText}
+                      onChange={(e) => setRenameText(e.target.value)}
+                      className="max-w-xs"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void saveRename(account.id);
+                        }
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      disabled={renaming}
+                      onClick={() => void saveRename(account.id)}
+                    >
+                      {renaming ? "Saving…" : "Save"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setRenamingId(null)}
+                    >
+                      Cancel
+                    </Button>
+                    {renameError && (
+                      <p className="w-full text-xs text-destructive">
+                        {renameError}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="font-medium">{account.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => startRename(account)}
+                    >
+                      Rename
+                    </Button>
+                  </div>
+                )}
+                <span className="tabular-nums">
+                  {formatTry(account.balance_kurus)}
                 </span>
-                <span className="tabular-nums">{formatTry(account.balance_kurus)}</span>
               </li>
             ))}
           </ul>
@@ -381,7 +475,7 @@ export default function CashDrawerPage() {
         <EmptyState
           icon={Wallet}
           title="No drawer sessions yet"
-          hint="Record cash movements anytime. Use Close drawer day when you want an EOD count and over/short."
+          hint="Record cash movements anytime. Count cash to prepare a till total; Close day to post over/short and lock."
         />
       )}
 
@@ -390,6 +484,16 @@ export default function CashDrawerPage() {
         onClose={() => setMovementOpen(false)}
         defaultCashAccountId={detail?.money_account_id}
         onSaved={onSaved}
+      />
+      <CashCountForm
+        open={countCashOpen}
+        onClose={() => setCountCashOpen(false)}
+        defaultCashAccountId={detail?.money_account_id}
+        defaultSessionDate={detail?.session_date}
+        onContinueToCloseDay={() => {
+          setCountCashOpen(false);
+          setCloseDayOpen(true);
+        }}
       />
       <CashDrawerCloseDayForm
         open={closeDayOpen}

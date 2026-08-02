@@ -18,6 +18,7 @@ from app.core.auth.deps import (
 from app.core.auth.types import EntityRole
 from app.db.session import get_session
 from app.features.auth import service
+from app.features.auth.models import User
 from app.features.auth.schema import (
     MembershipCreate,
     MembershipRead,
@@ -146,20 +147,19 @@ def add_member(
     try:
         if payload.user_id is not None:
             membership = service.add_entity_member(session, entity_id, payload)
-        else:
-            assert payload.email is not None
-            membership = service.invite_member_by_email(
-                session,
-                entity_id,
-                email=payload.email,
-                role=payload.role,
-                display_name=payload.display_name,
-            )
+            return MembershipRead.model_validate(membership)
+        assert payload.email is not None
+        return service.invite_member_by_email(
+            session,
+            entity_id,
+            email=payload.email,
+            role=payload.role,
+            display_name=payload.display_name,
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.DuplicateMembershipError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return MembershipRead.model_validate(membership)
 
 
 @members_router.patch("/{membership_id}", response_model=MembershipRead)
@@ -177,3 +177,26 @@ def update_member(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return MembershipRead.model_validate(membership)
+
+
+@members_router.delete("/{membership_id}", status_code=204)
+def remove_member(
+    entity_id: uuid.UUID,
+    membership_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    actor: User | None = Depends(require_admin_members),
+) -> None:
+    """Remove a teammate from this restaurant so they can be re-invited later."""
+    try:
+        service.remove_entity_member(
+            session,
+            entity_id,
+            membership_id,
+            actor_user_id=actor.id if actor is not None else None,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.CannotRemoveSelfError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except service.LastOwnerError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

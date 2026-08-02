@@ -2,6 +2,50 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-08-03 — Clerk invitation email on Add member
+
+**Status:** Built (pending commit/tag).
+
+**Owner intent:** When an owner adds a teammate by email (Settings → Team), Mizan creates the local user + membership **and** Clerk emails a sign-up link. The invitee opens the link, completes sign-up, then signs in; first session links `external_auth_id` as today.
+
+**Config:** API needs `CLERK_SECRET_KEY` + optional `PUBLIC_APP_URL` (redirect to `/sign-up`). Missing secret → member added, email skipped (response flags `invite_status`).
+
+**Out of scope:** Clerk Organizations; custom SMTP; resend-invite button (can add later).
+
+## 2026-08-03 — Separate Count cash from Close day
+
+**Status:** Built (this session).
+
+**Owner choice:** Count cash = calculator + sticky draft only (posts nothing). Close day = post over/short + lock the drawer day. Send cash to another drawer only after Close day (not after Count).
+
+**Counter float (owner 2026-08-03):** Main Drawer always keeps some cash. After Close day, send **part** to Cash at home; cash left in Main is normal — not “uncleared.” Post-close UI prefills Cash at home and states the float explicitly on the done screen.
+
+**Record:** Two primary actions — **Count cash** and **Close day**. Count can **Continue to Close day** (draft shared). Banking → Cash has both buttons.
+
+**Aligns with** Decisions §14 — EOD close is the optional step that writes the books; counting prep sits in front without locking.
+
+## 2026-08-03 — Cash count: keep-here must not look unfinished
+
+**Status:** Built (this session).
+
+**Problem:** After post, “keep cash here” cleared the success step and showed the count form again (especially on Record). Cashiers thought the post failed, counted/transferred again, and created duplicate over/short + transfers.
+
+**Choice:** After a successful **Close day** post → explicit **choose** step → **Keep all cash here — done** or **Send some to another drawer**. Keep-here / send finish on a **done** screen; never return to the close form until “Close another day”.
+
+## 2026-08-02 — Cash count by notes + post-close drawer split
+
+**Status:** Built (`v0.cash-count-notes` pending tag); superseded in part by 2026-08-03 Count vs Close split.
+
+**Owner intent:** Cashier counts physical cash with a note/coin calculator (qty × denomination → total). No shift handover. Expected balance is shown; cashier compares by eye — no freeze/lock. **Close day** posts over/short and may send amounts to other drawers. Drawer names are editable (rename).
+
+**Home:** **Record → Count cash** (prep) then **Close day** (post). Banking → Cash keeps history, rename, and both dialogs.
+
+**Draft:** Mid-count note quantities / total autosave to localStorage per restaurant until Close day posts or discard — survives leaving Record or switching modes. No server draft in v1.
+
+**Books:** Only the **counted total** (and over/short) is posted. Note/coin lines are a calculator helper — not stored on the session or in the ledger. Manual total-only close still allowed.
+
+**Out of scope:** shift handover, dual control, FX in the TRY note count, per-note GL accounts, historical note breakdown.
+
 ## 2026-07-31 — Staff settlement: accrue full, net at pay (no accrual popup)
 
 **Status:** Built in `v0.staff-net-pay` (this session).

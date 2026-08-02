@@ -25,6 +25,19 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    // Same-origin proxy for local/dev — browsers often block or flake on
+    // cross-origin fetch to :8000 (CORS / local-network permission).
+    const api =
+      process.env.MIZAN_API_PROXY_TARGET?.replace(/\/$/, "") ||
+      "http://127.0.0.1:8000";
+    return [
+      {
+        source: "/backend-api/:path*",
+        destination: `${api}/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

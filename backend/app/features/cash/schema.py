@@ -69,6 +69,7 @@ class CashDrawerCloseRequest(BaseModel):
     description: str = Field(default="Cash drawer EOD close", max_length=512)
     # Set true to post an implausibly large over/short anyway.
     confirm_large_variance: bool = False
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
 class CashDrawerCloseDayRequest(BaseModel):
@@ -78,6 +79,7 @@ class CashDrawerCloseDayRequest(BaseModel):
     actor_id: OptionalActorId = None
     description: str = Field(default="Cash drawer EOD close", max_length=512)
     confirm_large_variance: bool = False
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
 class CashDrawerCloseResponse(BaseModel):

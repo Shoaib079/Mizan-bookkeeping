@@ -232,6 +232,57 @@ def test_membership_crud_api(
     assert deactivate_resp.status_code == 200
     assert deactivate_resp.json()["user"]["is_active"] is False
 
+    delete_resp = client.delete(
+        f"/entities/{restaurant_a.id}/members/{membership_id}",
+        headers=auth_headers(admin),
+    )
+    assert delete_resp.status_code == 204
+    list_after = client.get(
+        f"/entities/{restaurant_a.id}/members",
+        headers=auth_headers(admin),
+    )
+    assert list_after.status_code == 200
+    assert list_after.json()["total"] == 1
+
+
+def test_cannot_remove_last_owner(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    restaurant_a,
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    owner = _create_user(db_session, "solo-owner@example.com", "Owner")
+    membership = _add_member(db_session, restaurant_a.id, owner.id, EntityRole.OWNER)
+
+    response = client.delete(
+        f"/entities/{restaurant_a.id}/members/{membership.id}",
+        headers=auth_headers(owner),
+    )
+    assert response.status_code == 422
+    assert "last owner" in response.json()["detail"].lower()
+
+
+def test_cannot_remove_yourself(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    restaurant_a,
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    owner = _create_user(db_session, "self-owner@example.com", "Owner")
+    other = _create_user(db_session, "other-owner@example.com", "Other")
+    own = _add_member(db_session, restaurant_a.id, owner.id, EntityRole.OWNER)
+    own_id = own.id
+    _add_member(db_session, restaurant_a.id, other.id, EntityRole.OWNER)
+
+    response = client.delete(
+        f"/entities/{restaurant_a.id}/members/{own_id}",
+        headers=auth_headers(owner),
+    )
+    assert response.status_code == 422
+    assert "yourself" in response.json()["detail"].lower()
+
 
 def test_add_member_by_email_creates_user_and_membership(
     auth_enforced,
@@ -257,12 +308,46 @@ def test_add_member_by_email_creates_user_and_membership(
     assert body["role"] == "cashier"
     assert body["user"]["email"] == "brand-new@example.com"
     assert body["user"]["display_name"] == "Brand New"
+    # Pytest uses clerk_test_mode — membership succeeds; email is skipped.
+    assert body["invite_sent"] is False
+    assert body["invite_status"] == "skipped"
 
     user_count = db_session.scalar(
         select(User).where(User.email == "brand-new@example.com")
     )
     assert user_count is not None
 
+
+def test_add_member_by_email_sends_clerk_invite(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    restaurant_a,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.auth.clerk_invitations import ClerkInviteResult
+
+    seed_default_chart(db_session, restaurant_a.id)
+    owner = _create_user(db_session, "owner-invite@example.com", "Owner")
+    _add_member(db_session, restaurant_a.id, owner.id, EntityRole.OWNER)
+
+    # Keep clerk_test_mode for JWT; stub the invite call the service uses.
+    monkeypatch.setattr(
+        "app.features.auth.service.create_clerk_invitation",
+        lambda email: ClerkInviteResult(
+            outcome="sent", detail="Invitation email sent", invitation_id="inv_1"
+        ),
+    )
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/members",
+        json={"email": "new-cashier@example.com", "role": "cashier"},
+        headers=auth_headers(owner),
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["invite_sent"] is True
+    assert body["invite_status"] == "sent"
 
 def test_add_member_by_email_existing_user_second_restaurant(
     auth_enforced,

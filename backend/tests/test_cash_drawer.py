@@ -98,6 +98,7 @@ def _close_drawer_day(
     session_date: date,
     counted_balance_kurus: int,
     actor_id: uuid.UUID,
+    period_unlock_reason: str | None = None,
 ) -> cash_posting.CashDrawerCloseResult:
     return cash_posting.close_cash_drawer_session(
         db_session,
@@ -106,6 +107,7 @@ def _close_drawer_day(
         session_date=session_date,
         counted_balance_kurus=counted_balance_kurus,
         actor_id=actor_id,
+        period_unlock_reason=period_unlock_reason,
     )
 
 
@@ -498,6 +500,81 @@ def test_owner_post_with_unlock_reason_reopens_and_audits(db_session, cash_setup
     assert unlock_audits[0].reason == "Missed coin float"
 
 
+def test_owner_recount_close_day_requires_unlock_reason(db_session, cash_setup) -> None:
+    """Count cash again on a closed day — owner unlock, then re-close."""
+    entity_id = cash_setup["entity_id"]
+    drawer = cash_setup["drawer"]
+    revenue_id = cash_setup["accounts"][SALES_REVENUE_CODE]
+    owner_id = cash_setup["owner_id"]
+    movement_date = date(2026, 4, 12)
+
+    cash_posting.post_cash_movement(
+        db_session,
+        entity_id,
+        money_account_id=drawer.id,
+        movement_date=movement_date,
+        direction=CashMovementDirection.IN,
+        amount_kurus=30_000,
+        offset_account_id=revenue_id,
+        description="Sales",
+        actor_id=cash_setup["actor_id"],
+    )
+    first = _close_drawer_day(
+        db_session,
+        entity_id,
+        drawer_id=drawer.id,
+        session_date=movement_date,
+        counted_balance_kurus=30_000,
+        actor_id=cash_setup["actor_id"],
+    )
+    assert first.session.status == CashDrawerSessionStatus.CLOSED
+
+    with pytest.raises(DrawerUnlockRequiredError, match="period_unlock_reason"):
+        _close_drawer_day(
+            db_session,
+            entity_id,
+            drawer_id=drawer.id,
+            session_date=movement_date,
+            counted_balance_kurus=29_500,
+            actor_id=owner_id,
+        )
+
+    with pytest.raises(DrawerDayClosedError, match="owner unlock required"):
+        _close_drawer_day(
+            db_session,
+            entity_id,
+            drawer_id=drawer.id,
+            session_date=movement_date,
+            counted_balance_kurus=29_500,
+            actor_id=cash_setup["actor_id"],
+            period_unlock_reason="Cashier cannot unlock",
+        )
+
+    second = _close_drawer_day(
+        db_session,
+        entity_id,
+        drawer_id=drawer.id,
+        session_date=movement_date,
+        counted_balance_kurus=29_500,
+        actor_id=owner_id,
+        period_unlock_reason="Recount after till mix-up",
+    )
+    assert second.session.status == CashDrawerSessionStatus.CLOSED
+    assert second.session.id == first.session.id
+
+    with entity_context(db_session, entity_id):
+        unlock_audits = list(
+            db_session.scalars(
+                select(CashDrawerAuditEvent).where(
+                    CashDrawerAuditEvent.cash_drawer_session_id == first.session.id,
+                    CashDrawerAuditEvent.action == CashDrawerAuditAction.UNLOCK_WRITE,
+                )
+            )
+        )
+    assert len(unlock_audits) == 1
+    assert unlock_audits[0].reason == "Recount after till mix-up"
+
+
 def test_daily_sales_cash_without_session(db_session, cash_setup) -> None:
     entity_id = cash_setup["entity_id"]
     drawer = cash_setup["drawer"]
@@ -695,3 +772,4 @@ def test_cash_drawer_api_e2e(client: TestClient, db_session, cash_setup) -> None
         },
     )
     assert unlock_resp.status_code == 201
+

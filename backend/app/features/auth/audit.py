@@ -15,6 +15,9 @@ class AuthAuditAction(str, enum.Enum):
     LOGIN_DENIED = "login_denied"
     TOKEN_INVALID = "token_invalid"
     PERMISSION_DENIED = "permission_denied"
+    MEMBER_INVITED = "member_invited"
+    MEMBER_INVITE_FAILED = "member_invite_failed"
+    MEMBER_REMOVED = "member_removed"
 
 
 def record_auth_event(

@@ -74,18 +74,20 @@ DATABASE_URL=postgresql+psycopg://mizan_app:mizan_dev@localhost:5432/mizan
 
 With Docker Compose, also set `DATABASE_ADMIN_URL=postgresql+psycopg://mizan:mizan_dev@localhost:5432/postgres` so bootstrap can create DBs and the `mizan_app` role.
 
-Optional frontend env (create `frontend/.env.local` if you change the API URL):
+Frontend API URL — create `frontend/.env.local` (Next only reads env from `frontend/`):
 
 ```
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=/backend-api
 ```
 
-Leave `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` unset unless you have real Clerk keys.
+That path is a **same-origin proxy** (`next.config.ts` → `http://127.0.0.1:8000`). Do **not** point the browser straight at `:8000` in local dev — many browsers block or flake on that cross-origin call (`NetworkError`).
+
+Leave `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` unset unless you have real Clerk keys. Restart `npm run dev` after changing `.env.local`.
 
 ## URLs
 
-- **API:** http://localhost:8000 — docs at `/docs`
-- **App:** http://localhost:3000
+- **API (direct / docs):** http://127.0.0.1:8000/docs  
+- **App:** http://localhost:3000 (API calls go to `/backend-api/...`)
 
 ## Tests (local Homebrew Postgres — no Docker)
 

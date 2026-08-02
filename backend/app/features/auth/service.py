@@ -9,6 +9,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
+from app.core.auth.clerk_invitations import (
+    ClerkInviteError,
+    ClerkInviteResult,
+    create_clerk_invitation,
+)
 from app.core.auth.permissions import ROLE_PERMISSIONS
 from app.core.auth.types import EntityRole
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
@@ -16,7 +21,13 @@ from app.db.session import entity_context
 from app.features.auth.schema import MyMembershipRead
 from app.features.auth.audit import AuthAuditAction, record_auth_event
 from app.features.auth.models import EntityMembership, User
-from app.features.auth.schema import MembershipCreate, MembershipUpdate, UserCreate, UserUpdate
+from app.features.auth.schema import (
+    MembershipCreate,
+    MembershipRead,
+    MembershipUpdate,
+    UserCreate,
+    UserUpdate,
+)
 from app.features.entities import service as entity_service
 
 
@@ -28,6 +39,24 @@ class DuplicateMembershipError(Exception):
     """Raised when user is already a member of the entity."""
 
     def __init__(self, message: str = "Already a member of this restaurant.") -> None:
+        super().__init__(message)
+
+
+class LastOwnerError(Exception):
+    """Raised when removing or demoting the last owner would lock the restaurant."""
+
+    def __init__(
+        self, message: str = "Cannot remove the last owner of this restaurant."
+    ) -> None:
+        super().__init__(message)
+
+
+class CannotRemoveSelfError(Exception):
+    """Raised when an owner tries to remove their own membership."""
+
+    def __init__(
+        self, message: str = "You cannot remove yourself from the team."
+    ) -> None:
         super().__init__(message)
 
 
@@ -234,8 +263,9 @@ def invite_member_by_email(
     email: str,
     role: EntityRole,
     display_name: str | None = None,
-) -> EntityMembership:
-    """Look up user by email (create if missing), then add entity membership."""
+    send_clerk_invite: bool = True,
+) -> MembershipRead:
+    """Create/find user, add membership, then email a Clerk sign-up invite."""
     normalized_email = email.strip().lower()
     user = session.scalar(select(User).where(User.email == normalized_email))
     if user is None:
@@ -243,9 +273,46 @@ def invite_member_by_email(
         user = create_user(
             session, UserCreate(email=normalized_email, display_name=name)
         )
-    return add_entity_member(
+    already_signed_up = bool(user.external_auth_id)
+    membership = add_entity_member(
         session, entity_id, MembershipCreate(user_id=user.id, role=role)
     )
+
+    if not send_clerk_invite:
+        invite = ClerkInviteResult(outcome="skipped", detail="Invitation not requested")
+    elif already_signed_up:
+        invite = ClerkInviteResult(
+            outcome="skipped",
+            detail="Already signed up — they can sign in with this email",
+        )
+    else:
+        try:
+            invite = create_clerk_invitation(normalized_email)
+        except ClerkInviteError as exc:
+            invite = ClerkInviteResult(outcome="failed", detail=str(exc))
+
+    # Snapshot before audit commit (expires ORM instances / RLS context).
+    result = MembershipRead.model_validate(membership).model_copy(
+        update={
+            "invite_sent": invite.sent,
+            "invite_status": invite.outcome,
+            "invite_detail": invite.detail,
+        }
+    )
+
+    if invite.outcome in ("sent", "failed"):
+        record_auth_event(
+            session,
+            AuthAuditAction.MEMBER_INVITED
+            if invite.sent
+            else AuthAuditAction.MEMBER_INVITE_FAILED,
+            user_id=user.id,
+            entity_id=entity_id,
+            email=normalized_email,
+            detail=invite.detail,
+        )
+
+    return result
 
 
 def update_entity_member(
@@ -282,3 +349,54 @@ def update_entity_member(
         )
         assert membership is not None
         return membership
+
+
+def remove_entity_member(
+    session: Session,
+    entity_id: uuid.UUID,
+    membership_id: uuid.UUID,
+    *,
+    actor_user_id: uuid.UUID | None,
+) -> None:
+    """Remove a user from this restaurant (membership only — not the global user)."""
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        membership = session.scalar(
+            select(EntityMembership)
+            .options(joinedload(EntityMembership.user))
+            .where(
+                EntityMembership.id == membership_id,
+                EntityMembership.entity_id == entity_id,
+            )
+        )
+        if membership is None:
+            raise LookupError("Membership not found")
+
+        if membership.entity_role == EntityRole.OWNER:
+            owners = session.scalars(
+                select(EntityMembership).where(
+                    EntityMembership.entity_id == entity_id,
+                    EntityMembership.role == EntityRole.OWNER.value,
+                )
+            ).all()
+            if len(owners) <= 1:
+                raise LastOwnerError()
+
+        if actor_user_id is not None and membership.user_id == actor_user_id:
+            raise CannotRemoveSelfError()
+
+        email = membership.user.email
+        removed_user_id = membership.user_id
+        session.delete(membership)
+        session.commit()
+
+    record_auth_event(
+        session,
+        AuthAuditAction.MEMBER_REMOVED,
+        user_id=actor_user_id,
+        entity_id=entity_id,
+        email=email,
+        detail=f"Removed membership for user {removed_user_id}",
+    )

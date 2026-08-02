@@ -158,6 +158,7 @@ def close_cash_drawer(
     actor_id: uuid.UUID,
     description: str = "Cash drawer EOD close",
     confirm_large_variance: bool = False,
+    period_unlock_reason: str | None = None,
 ) -> CashDrawerCloseResponse:
     result = close_cash_drawer_session(
         session,
@@ -167,6 +168,7 @@ def close_cash_drawer(
         actor_id=actor_id,
         description=description,
         confirm_large_variance=confirm_large_variance,
+        period_unlock_reason=period_unlock_reason,
     )
     return CashDrawerCloseResponse(
         session=_to_session_read(result.session),
@@ -190,6 +192,7 @@ def close_cash_drawer_day(
         actor_id=payload.actor_id,
         description=payload.description,
         confirm_large_variance=payload.confirm_large_variance,
+        period_unlock_reason=payload.period_unlock_reason,
     )
     return CashDrawerCloseResponse(
         session=_to_session_read(result.session),

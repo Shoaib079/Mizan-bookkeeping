@@ -9,11 +9,11 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | (none) |
-| **Last completed slice** | Partner pack Summary roll-forward (Excel + PDF) — 2026-08-02 |
+| **Active slice** | Separate Count cash / Close day — tests → commit with cash WIP |
+| **Last completed slice** | Count cash (draft only) vs Close day (post + optional send) split |
 | **Last tag** | `v0.partner-pack-summary-roll-forward` |
-| **Unpushed** | (none after push) |
-| **Next up** | **GS-FX** · P5 |
+| **Unpushed** | cash-count WIP + invite WIP + unlock + count/close split (prefer separate commits) |
+| **Next up** | Run frontend guards; fix books for 4.700 over if still needed; Railway invite env; commit. |
 
 ## FINANCIAL_AUDIT status (2026-07-27)
 

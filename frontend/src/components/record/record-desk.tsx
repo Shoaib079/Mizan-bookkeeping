@@ -1,18 +1,20 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   AddDocumentDialog,
   type DetectedDocumentType,
 } from "@/components/forms/add-document-dialog";
+import { CashCountForm } from "@/components/forms/cash-count-form";
 import { CashDrawerCloseDayForm } from "@/components/forms/cash-drawer-close-day-form";
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
 import { RecordedTodayCard } from "@/components/record/recorded-today-card";
 import { FxUnifiedDialog } from "@/components/record/fx-unified-dialog";
 import { useQuickActions } from "@/components/quick-actions";
+import { hasCashCountDraft } from "@/lib/cash-count-draft";
 import { shouldShowNewMenu } from "@/lib/entity-access";
 import { emitLedgerChanged } from "@/lib/ledger-events";
 import {
@@ -38,7 +40,8 @@ const DESK_HINTS: Record<RecordDeskMode, string> = {
   sales: "POS totals when you do not have a Z photo.",
   fx: "Buy, sell, or spend USD, EUR, or GBP.",
   addDocument: "Receipts, statements, invoices, Z reports — auto-routed.",
-  closeDay: "Count the drawer and post over/short.",
+  countCash: "Count notes and compare to the books — does not post.",
+  closeDay: "Post over/short, lock the day, optionally send cash elsewhere.",
 };
 
 const DESK_SHORT_LABELS: Record<RecordDeskMode, string> = {
@@ -47,6 +50,7 @@ const DESK_SHORT_LABELS: Record<RecordDeskMode, string> = {
   sales: "Sales",
   fx: "FX",
   addDocument: "Upload",
+  countCash: "Count cash",
   closeDay: "Close day",
 };
 
@@ -67,13 +71,19 @@ export function RecordDesk() {
   } = useQuickActions();
   const [mode, setMode] = useState<RecordDeskMode>("sales");
   const [moreOpen, setMoreOpen] = useState(false);
+  const [cashCountDraftPending, setCashCountDraftPending] = useState(false);
   const moreRef = useRef<HTMLDivElement | null>(null);
   const closeMore = useCallback(() => setMoreOpen(false), []);
   useDismissOnOutsideClick(moreRef, moreOpen, closeMore);
 
+  useEffect(() => {
+    setCashCountDraftPending(hasCashCountDraft(entityId));
+  }, [entityId, mode]);
+
   const onRecorded = useCallback(() => {
     emitLedgerChanged();
-  }, []);
+    setCashCountDraftPending(hasCashCountDraft(entityId));
+  }, [entityId]);
 
   const handleDocumentConfirm = useCallback(
     (type: DetectedDocumentType, file: File) => {
@@ -131,6 +141,9 @@ export function RecordDesk() {
               action={action}
               label={DESK_SHORT_LABELS[action.id as RecordDeskMode]}
               active={mode === action.id}
+              showDraftDot={
+                action.id === "countCash" && cashCountDraftPending
+              }
               onSelect={() => {
                 setMode(action.id as RecordDeskMode);
                 setMoreOpen(false);
@@ -289,12 +302,23 @@ export function RecordDesk() {
                 />
               )}
 
+              {mode === "countCash" && (
+                <CashCountForm
+                  embedded
+                  open
+                  onClose={() => undefined}
+                  onContinueToCloseDay={() => setMode("closeDay")}
+                  onDraftChange={setCashCountDraftPending}
+                />
+              )}
+
               {mode === "closeDay" && (
                 <CashDrawerCloseDayForm
                   embedded
                   open
                   onClose={() => undefined}
                   onClosed={onRecorded}
+                  onDraftChange={setCashCountDraftPending}
                 />
               )}
             </div>
@@ -311,11 +335,13 @@ function DeskModeButton({
   action,
   label,
   active,
+  showDraftDot = false,
   onSelect,
 }: {
   action: RecordActionDef;
   label: string;
   active: boolean;
+  showDraftDot?: boolean;
   onSelect: () => void;
 }) {
   const Icon = action.icon;
@@ -324,6 +350,7 @@ function DeskModeButton({
       type="button"
       role="tab"
       aria-selected={active}
+      aria-description={showDraftDot ? "Saved count draft" : undefined}
       className={cn(
         "flex min-w-[8.5rem] shrink-0 items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors lg:min-w-0 lg:w-full",
         active
@@ -334,11 +361,17 @@ function DeskModeButton({
     >
       <span
         className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-md",
+          "relative flex size-8 shrink-0 items-center justify-center rounded-md",
           active ? "bg-primary/15 text-primary" : "bg-muted/60 text-muted-foreground",
         )}
       >
         <Icon className="size-4" aria-hidden />
+        {showDraftDot && (
+          <span
+            className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warning"
+            aria-hidden
+          />
+        )}
       </span>
       <span className="leading-tight">{label}</span>
     </button>

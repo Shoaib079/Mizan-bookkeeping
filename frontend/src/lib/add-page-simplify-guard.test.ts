@@ -18,7 +18,7 @@ function read(relativePath: string): string {
 }
 
 describe("Add page amount-first desk", () => {
-  it("surfaces expenses, salary, sales, forex, upload, and close day as mode pills", () => {
+  it("surfaces expenses, salary, sales, forex, upload, count cash, and close day as mode pills", () => {
     const primary = primaryRecordActions({ deliveryEnabled: true }).map(
       (action) => action.id,
     );
@@ -28,6 +28,7 @@ describe("Add page amount-first desk", () => {
       "staffSalary",
       "fx",
       "addDocument",
+      "countCash",
       "closeDay",
     ]);
     expect(PRIMARY_RECORD_ACTION_IDS).toEqual(primary);

@@ -74,6 +74,11 @@ class MembershipRead(BaseModel):
     role: EntityRole
     created_at: datetime
     user: UserRead
+    #: True when Clerk sent (or already had) an invitation email for this add.
+    invite_sent: bool = False
+    #: sent | skipped | failed — optional UI hint after add-by-email.
+    invite_status: str | None = None
+    invite_detail: str | None = None
 
     model_config = {"from_attributes": True}
 

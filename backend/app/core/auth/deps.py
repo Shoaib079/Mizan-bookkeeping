@@ -182,6 +182,9 @@ def resolve_actor_id(auth_user: User | None, body_actor_id: uuid.UUID | None) ->
     if body_actor_id is not None:
         return body_actor_id
     if not settings.auth_enforcement:
+        from app.core.auth.dev_actor import ensure_dev_actor_user
+
+        ensure_dev_actor_user()
         return DEV_ACTOR_ID
     raise HTTPException(status_code=422, detail="actor_id is required")
 

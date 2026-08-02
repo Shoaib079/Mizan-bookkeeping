@@ -20,6 +20,7 @@ import { Users } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
+import { useToast } from "@/lib/toast";
 import {
   ENTITY_ROLES,
   type EntityRole,
@@ -29,6 +30,7 @@ import { useEntityList } from "@/lib/use-entity-list";
 
 export function TeamPanel() {
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
   const { items, total, loading, error, forbidden, reload } =
     useEntityList<MembershipRow>("/members", entityId);
@@ -55,6 +57,38 @@ export function TeamPanel() {
         setActionError("You need owner access to manage members.");
       } else {
         setActionError(err instanceof Error ? err.message : "Update failed");
+      }
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function onRemove(membership: MembershipRow) {
+    if (!entityId) return;
+    const label = membership.user.email || membership.user.display_name;
+    if (
+      !window.confirm(
+        `Remove ${label} from this restaurant?\n\nThey will lose access. You can invite them again later.`,
+      )
+    ) {
+      return;
+    }
+    setUpdatingId(membership.id);
+    setActionError(null);
+    try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
+      await apiFetch(`/entities/${entityId}/members/${membership.id}`, {
+        method: "DELETE",
+        idempotencyKey,
+      });
+      submitIdempotency.completeSubmit();
+      toast(`Removed ${label}`);
+      await reload();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setActionError("You need owner access to manage members.");
+      } else {
+        setActionError(err instanceof Error ? err.message : "Remove failed");
       }
     } finally {
       setUpdatingId(null);
@@ -94,7 +128,7 @@ export function TeamPanel() {
         <p className="mb-4 text-sm text-destructive">{actionError}</p>
       )}
 
-      {loading && <TableSkeleton columns={4} />}
+      {loading && <TableSkeleton columns={5} />}
 
       {!loading && items.length > 0 && (
         <DataTable>
@@ -104,6 +138,7 @@ export function TeamPanel() {
               <DataTableHeaderCell>Email</DataTableHeaderCell>
               <DataTableHeaderCell>Role</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell> </DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
@@ -129,6 +164,16 @@ export function TeamPanel() {
                 </DataTableCell>
                 <DataTableCell>
                   {row.user.is_active ? "Active" : "Inactive"}
+                </DataTableCell>
+                <DataTableCell>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={updatingId === row.id}
+                    onClick={() => void onRemove(row)}
+                  >
+                    Remove
+                  </Button>
                 </DataTableCell>
               </DataTableRow>
             ))}

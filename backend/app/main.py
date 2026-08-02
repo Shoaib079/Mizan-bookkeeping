@@ -66,6 +66,10 @@ configure_logging(settings.app_env)
 init_sentry(settings.sentry_dsn, settings.app_env)
 validate_launch_settings()
 ensure_storage_roots()
+if not settings.auth_enforcement:
+    from app.core.auth.dev_actor import ensure_dev_actor_user
+
+    ensure_dev_actor_user()
 
 app = FastAPI(
     title="Mizan API",

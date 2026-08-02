@@ -2,7 +2,37 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-08-03
+
+**Count cash vs Close day — separated.**
+- **Record → Count cash:** note calculator + compare to books; saves on this device only (no post, no lock).
+- **Record → Close day:** posts over/short, locks the day, then **send part to Cash at home** (Main float left behind is normal).
+- Banking → Cash has both buttons. Count can **Continue to Close day** using the saved draft.
+
+**Close day — counter float workflow.**
+- After close, send step is primary (Cash at home prefilled). Leaving cash in Main is expected float, not an unfinished day.
+
+**Cash count — keep-here no longer looks like a failed post.**
+- After Close day posts, you get a clear choice: **Keep all cash here — done** or **Send some to another drawer**.
+- Keep-here ends on an “All done” screen (does not reopen the form), so you do not double-post or double-transfer by mistake.
+
+**Cash count — recount a closed day (owner unlock).**
+- If the drawer day is already closed, Count cash asks for an owner unlock reason, then reopens and posts the new count (same pattern as other closed-period writes).
+- Local auth-off: the dev actor can unlock so local recounting is not a dead end.
+
+**Team — remove member + invitation email.**
+- Settings → Team: **Remove** drops someone from this restaurant (they lose access; you can invite again). Cannot remove yourself or the last owner.
+- Add by email asks **Clerk** to email a sign-up link.
+- API env for invites: `CLERK_SECRET_KEY` + `PUBLIC_APP_URL`.
+
 ## 2026-08-02
+
+**Cash drawer — count by notes, rename, split after close.**
+- **Record → Count cash** is the primary place to count (note/coin calculator); Banking → Cash keeps history, rename, and the same dialog.
+- Mid-count **draft autosaves** on this device (per restaurant) until you post or discard — safe to leave Record mid-count.
+- Books store **counted total + over/short only** — note lines are a calculator, not kept after post.
+- After posting → **send cash to other drawers** (cash→cash transfers) from the same flow.
+- Banking → Cash: **Rename** drawers to match how you use them.
 
 **Partner books pack Summary — cash rolls so books balance.**
 - Summary (Excel + PDF): **Sales & result** → **Cash & bank** (opening = day before From, then real cash lines, then closing = To — no opaque “net movements” row) → **What we hold / owe** (cash in hand, bank, suppliers, customers, FX).

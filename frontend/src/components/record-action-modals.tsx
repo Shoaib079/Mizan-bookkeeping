@@ -12,6 +12,7 @@ import {
   type DetectedDocumentType,
 } from "@/components/forms/add-document-dialog";
 import { CardSalesForm } from "@/components/forms/card-sales-form";
+import { CashCountForm } from "@/components/forms/cash-count-form";
 import { CashDrawerCloseDayForm } from "@/components/forms/cash-drawer-close-day-form";
 import { CashMovementForm } from "@/components/forms/cash-movement-form";
 import { ClearCommissionForm } from "@/components/forms/clear-commission-form";
@@ -158,6 +159,11 @@ export function RecordActionModals({
         initialFile={routedTo === "efatura" ? routedFile ?? undefined : undefined}
       />
 
+      <CashCountForm
+        open={effectiveModal === "countCash"}
+        onClose={closeAll}
+        onContinueToCloseDay={() => openRecordAction("closeDay")}
+      />
       <CashDrawerCloseDayForm open={effectiveModal === "closeDay"} onClose={closeAll} />
       <CashMovementForm open={effectiveModal === "cashMovement"} onClose={closeAll} />
       <BankAccountPickerDialog

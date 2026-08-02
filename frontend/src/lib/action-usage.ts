@@ -11,10 +11,10 @@ const STORAGE_PREFIX = "mizan:action-usage:";
 const MAX_RECENT = 50;
 
 export const DEFAULT_TOP_ACTIONS: RecordActionKey[] = [
+  "countCash",
   "closeDay",
   "expense",
   "sales",
-  "addDocument",
 ];
 
 type UsageRecord = { counts: Record<string, number> };

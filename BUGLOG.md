@@ -2,6 +2,29 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-08-03 — Keep cash here looked like count failed → double post/transfer
+
+**Symptoms:** After Count cash posted, choosing keep-here put the count form back on screen. Owner thought it failed, posted/transferred again → phantom over (~4.700) and duplicate drawer transfers.
+
+**Root cause:** `finishAll()` set `closed` to null (and on Record `onClose` is a no-op), so the UI returned to the count form after a successful post.
+
+**Fix:** Post → choose (already posted) → keep-here or send → **done** screen. Never reopen the count form until “Count another drawer”.
+
+**Guarding tests:** `cash-count-post-flow-guard.test.ts`.
+
+## 2026-08-03 — Count cash said “owner unlock required” even for the owner
+
+**Symptoms:** After a drawer day was already closed, Record → Count cash (or a second count for that date) failed with “drawer day is closed; owner unlock required” with no unlock dialog. Local auth-off felt the same even when the signed-in person is the owner.
+
+**Root cause:**
+1. `ensure_open_drawer_session_for_close` hard-blocked CLOSED days and never accepted `period_unlock_reason` (unlike cash movements / period locks).
+2. Count cash UI did not use the owner unlock retry dialog.
+3. With `AUTH_ENFORCEMENT=false`, the actor is `DEV_ACTOR_ID`, which has no owner membership, so `_is_owner` was always false.
+
+**Fix:** Close-day accepts `period_unlock_reason` and reopens then re-closes (audited). Count cash uses `usePeriodUnlockSubmit`. Local `DEV_ACTOR_ID` counts as owner when auth is off.
+
+**Guarding tests:** `test_owner_recount_close_day_requires_unlock_reason`, `test_dev_actor_counts_as_owner_when_auth_off`.
+
 ## 2026-07-31 — Balances staff showed 0 employees / ₺0 owed; FX mixed into cash
 
 **Symptoms:** Staff balances card said 0 employees and/or 0,00 ₺ even when staff are owed. Cash & bank included FX as TRY.

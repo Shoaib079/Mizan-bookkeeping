@@ -13,6 +13,7 @@ from app.core.cash.guards import (
     assert_drawer_day_writable,
     ensure_open_drawer_session_for_close,
     link_orphan_movements_to_session,
+    owner_unlock_closed_session,
     reopen_cash_drawer_session,
     resolve_session_for_movement,
 )
@@ -328,6 +329,7 @@ def close_cash_drawer_session(
     actor_id: uuid.UUID,
     description: str = "Cash drawer EOD close",
     confirm_large_variance: bool = False,
+    period_unlock_reason: str | None = None,
 ) -> CashDrawerCloseResult:
     """Close drawer day — post over/short if needed and lock the session."""
     if counted_balance_kurus < 0:
@@ -345,14 +347,25 @@ def close_cash_drawer_session(
             drawer_session = session.get(CashDrawerSession, session_id)
             if drawer_session is None:
                 raise LookupError("Cash drawer session not found")
+            if drawer_session.status == CashDrawerSessionStatus.CLOSED:
+                drawer_session = owner_unlock_closed_session(
+                    session,
+                    entity_id,
+                    drawer_session,
+                    actor_id=actor_id,
+                    unlock_reason=period_unlock_reason,
+                )
             link_orphan_movements_to_session(session, drawer_session)
         else:
             assert money_account_id is not None and session_date is not None
             _validate_cash_money_account(session, entity_id, money_account_id)
             drawer_session = ensure_open_drawer_session_for_close(
                 session,
+                entity_id=entity_id,
                 money_account_id=money_account_id,
                 session_date=session_date,
+                actor_id=actor_id,
+                unlock_reason=period_unlock_reason,
             )
 
         if drawer_session.status == CashDrawerSessionStatus.CLOSED:

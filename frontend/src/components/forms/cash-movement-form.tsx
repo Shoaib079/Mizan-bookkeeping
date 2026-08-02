@@ -192,7 +192,7 @@ export function CashMovementForm({
           </div>
           <p className="text-sm text-muted-foreground">
             Posts to the cash account immediately. An EOD drawer session is optional
-            — use Close drawer day when you want to reconcile a count.
+            — use Close day when you want to post a counted total and lock.
           </p>
           <CashDrawerPicker
             id="cash-acct"

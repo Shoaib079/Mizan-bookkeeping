@@ -63,6 +63,7 @@ export function useFormDraft<T>({
 }: UseFormDraftOptions<T>) {
   const storageKey = formDraftStorageKey(entityId, formKey);
   const [resumeDraft, setResumeDraft] = useState<T | null>(null);
+  const [storageReady, setStorageReady] = useState(false);
   const resumeCheckedRef = useRef(false);
 
   const clearDraft = useCallback(() => {
@@ -74,26 +75,34 @@ export function useFormDraft<T>({
   useEffect(() => {
     resumeCheckedRef.current = false;
     setResumeDraft(null);
+    setStorageReady(false);
   }, [storageKey]);
 
   useEffect(() => {
-    if (!enabled || !storageKey || resumeCheckedRef.current) return;
+    if (!enabled || !storageKey) {
+      if (!enabled) setStorageReady(true);
+      return;
+    }
+    if (resumeCheckedRef.current) return;
     resumeCheckedRef.current = true;
     const stored = readDraft<T>(storageKey);
     if (stored !== null && !isEmpty(stored)) {
       setResumeDraft(stored);
     }
+    setStorageReady(true);
   }, [enabled, storageKey, isEmpty]);
 
   useEffect(() => {
-    if (!enabled || !storageKey || resumeDraft !== null) return;
+    // Wait until storage has been probed — otherwise an empty initial mount
+    // would delete a saved draft before Resume/auto-hydrate can run.
+    if (!enabled || !storageKey || !storageReady || resumeDraft !== null) return;
     if (isEmpty(value)) {
       removeDraft(storageKey);
       return;
     }
     const timer = window.setTimeout(() => writeDraft(storageKey, value), debounceMs);
     return () => window.clearTimeout(timer);
-  }, [enabled, storageKey, value, isEmpty, debounceMs, resumeDraft]);
+  }, [enabled, storageKey, storageReady, value, isEmpty, debounceMs, resumeDraft]);
 
   const acceptResume = useCallback(() => {
     const draft = resumeDraft;
@@ -108,6 +117,8 @@ export function useFormDraft<T>({
 
   return {
     resumeDraft,
+    /** True after the first localStorage read for the current entity/form key. */
+    storageReady,
     acceptResume,
     declineResume,
     clearDraft,

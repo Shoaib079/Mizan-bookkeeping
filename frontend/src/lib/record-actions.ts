@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   ArrowLeftRight,
   Banknote,
+  Calculator,
   CalendarCheck,
   CreditCard,
   FileText,
@@ -32,6 +33,7 @@ export type QuickActionKey =
 export type RecordActionKey =
   | QuickActionKey
   | "addDocument"
+  | "countCash"
   | "closeDay"
   | "cashMovement"
   | "staffSalary"
@@ -92,6 +94,7 @@ export const PRIMARY_RECORD_ACTION_IDS = [
   "staffSalary",
   "fx",
   "addDocument",
+  "countCash",
   "closeDay",
 ] as const satisfies readonly RecordActionKey[];
 
@@ -138,9 +141,18 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     section: "today",
   },
   {
+    id: "countCash",
+    label: "Count cash",
+    description:
+      "Count notes and compare to the books — saves on this device until Close day.",
+    icon: Calculator,
+    section: "today",
+  },
+  {
     id: "closeDay",
     label: "Close day",
-    description: "Count the drawer and post over/short.",
+    description:
+      "Post the counted total, over/short, and lock the drawer day. Optionally send cash to another drawer after.",
     icon: CalendarCheck,
     section: "today",
   },

@@ -38,6 +38,22 @@ export function defaultMainDrawerId(
   return (named ?? cash[0])?.id ?? null;
 }
 
+/** Prefer “Cash at home” / Safe-style drawer for post-close send (not the till). */
+export function preferCashHomeDrawerId(
+  accounts: { id: string; name: string }[],
+  excludeId?: string,
+): string | null {
+  const others = accounts.filter((a) => a.id !== excludeId);
+  if (others.length === 0) return null;
+  const scored = (name: string) => {
+    const n = name.trim().toLowerCase();
+    if (n.includes("home") || n.includes("ev")) return 0;
+    if (n.includes("safe") || n.includes("kasa")) return 1;
+    return 2;
+  };
+  return [...others].sort((a, b) => scored(a.name) - scored(b.name))[0]?.id ?? null;
+}
+
 /** Show a drawer picker only when the owner must choose between multiple drawers. */
 export function shouldShowCashDrawerPicker(
   cashAccounts: readonly unknown[],

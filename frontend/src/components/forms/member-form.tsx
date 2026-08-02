@@ -63,7 +63,11 @@ export function MemberForm({ open, onClose, onSaved }: Props) {
       const trimmedName = displayName.trim();
       if (trimmedName) body.display_name = trimmedName;
 
-      await apiFetch(`/entities/${entityId}/members`, {
+      const created = await apiFetch<{
+        invite_sent?: boolean;
+        invite_status?: string | null;
+        invite_detail?: string | null;
+      }>(`/entities/${entityId}/members`, {
         method: "POST",
         idempotencyKey,
         headers: { "Content-Type": "application/json" },
@@ -72,7 +76,26 @@ export function MemberForm({ open, onClose, onSaved }: Props) {
       submitIdempotency.completeSubmit();
       onSaved?.();
       onClose();
-      toast(`Added ${trimmedEmail} as ${roleLabel(role)}`);
+      if (created.invite_sent) {
+        toast(
+          `Added ${trimmedEmail} as ${roleLabel(role)} — invitation email sent`,
+        );
+      } else if (created.invite_status === "failed") {
+        toast(
+          `Added ${trimmedEmail} as ${roleLabel(role)}, but the invitation email failed: ${created.invite_detail ?? "try again from Clerk or ask them to use Sign up"}`,
+        );
+      } else if (
+        created.invite_detail?.toLowerCase().includes("already signed up") ||
+        created.invite_detail?.toLowerCase().includes("already has a clerk")
+      ) {
+        toast(
+          `Added ${trimmedEmail} as ${roleLabel(role)} — they can sign in with this email`,
+        );
+      } else {
+        toast(
+          `Added ${trimmedEmail} as ${roleLabel(role)}. Invitation email was not sent (${created.invite_detail ?? "check Clerk settings"}).`,
+        );
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setError("Already a member of this restaurant.");
@@ -87,6 +110,10 @@ export function MemberForm({ open, onClose, onSaved }: Props) {
   return (
     <Dialog open={open} title="Add member" onClose={onClose}>
       <form className="space-y-4" onSubmit={onSubmit}>
+        <p className="text-sm text-muted-foreground">
+          We add them to this restaurant and send a Clerk invitation email so
+          they can sign up with this address.
+        </p>
         <div>
           <Label htmlFor="member-email">Email</Label>
           <Input
@@ -126,7 +153,7 @@ export function MemberForm({ open, onClose, onSaved }: Props) {
             Cancel
           </Button>
           <Button type="submit" disabled={submitting}>
-            {submitting ? "Adding…" : "Add member"}
+            {submitting ? "Inviting…" : "Add & send invite"}
           </Button>
         </div>
       </form>
