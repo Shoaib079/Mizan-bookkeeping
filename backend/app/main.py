@@ -66,10 +66,9 @@ configure_logging(settings.app_env)
 init_sentry(settings.sentry_dsn, settings.app_env)
 validate_launch_settings()
 ensure_storage_roots()
-if not settings.auth_enforcement:
-    from app.core.auth.dev_actor import ensure_dev_actor_user
-
-    ensure_dev_actor_user()
+# Do not seed the local-dev actor at import time — pytest imports this module
+# before conftest provisions mizan_app / mizan_test (CI fresh Postgres).
+# Local AUTH_ENFORCEMENT=false seeds that row lazily in resolve_actor_id.
 
 app = FastAPI(
     title="Mizan API",

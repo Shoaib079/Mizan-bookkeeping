@@ -4,6 +4,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-03
 
+**CI — Production guard pytest no longer dies on fresh Postgres.**
+- Importing the API no longer inserts the local dev actor before the test DB role exists. (That seed still happens on the first local write when auth is off.)
+
 **Count cash / Close day — Main Drawer only.**
 - Both forms lock to **Main Drawer** (no drawer picker). **Cash at home** shows as a read-only balance so nobody counts or closes home by mistake. Sending *to* home after Close day is unchanged.
 

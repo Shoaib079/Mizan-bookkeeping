@@ -2,6 +2,14 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-08-03 — CI Production guard pytest: password auth failed for mizan_app
+
+**Symptom:** GitHub Actions `security_production_pytest.sh` failed with `FATAL: password authentication failed for user "mizan_app"` on a fresh Postgres service.
+
+**Root cause:** `app/main.py` called `ensure_dev_actor_user()` at import time when `AUTH_ENFORCEMENT=false`. Pytest’s conftest forces auth off, then imports `app.main` **before** provisioning `mizan_app` / `mizan_test`. Local machines already had the role (passed); CI did not.
+
+**Fix:** Remove import-time ensure (lazy seed stays in `resolve_actor_id`). Bootstrap also `ALTER ROLE … PASSWORD` so a stale local password cannot stick. Guard: `test_main_does_not_ensure_dev_actor_at_import`.
+
 ## 2026-08-03 — Keep cash here looked like count failed → double post/transfer
 
 **Symptoms:** After Count cash posted, choosing keep-here put the count form back on screen. Owner thought it failed, posted/transferred again → phantom over (~4.700) and duplicate drawer transfers.

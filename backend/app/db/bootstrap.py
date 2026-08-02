@@ -57,13 +57,17 @@ def ensure_mizan_app_role(conn) -> None:
             """
         )
     )
+    # Always reset password + flags — CREATE is a no-op when the role already
+    # exists (stale local password would otherwise break mizan_app login).
     conn.execute(
         text(
             f"""
             DO $$ BEGIN
-                ALTER ROLE {APP_DB_ROLE} NOSUPERUSER NOBYPASSRLS;
+                ALTER ROLE {APP_DB_ROLE} LOGIN PASSWORD '{APP_DB_PASSWORD}'
+                    NOSUPERUSER NOBYPASSRLS;
             EXCEPTION
                 WHEN insufficient_privilege THEN NULL;
+                WHEN undefined_object THEN NULL;
             END $$;
             """
         )
