@@ -38,6 +38,18 @@ export function defaultMainDrawerId(
   return (named ?? cash[0])?.id ?? null;
 }
 
+function cashHomeNameScore(name: string): number {
+  const n = name.trim().toLowerCase();
+  if (n.includes("home") || n.includes("ev")) return 0;
+  if (n.includes("safe") || n.includes("kasa")) return 1;
+  return 2;
+}
+
+/** True when the drawer is a home/safe holding place (not the counter till). */
+export function isCashHomeDrawerName(name: string): boolean {
+  return cashHomeNameScore(name) < 2;
+}
+
 /** Prefer “Cash at home” / Safe-style drawer for post-close send (not the till). */
 export function preferCashHomeDrawerId(
   accounts: { id: string; name: string }[],
@@ -45,13 +57,39 @@ export function preferCashHomeDrawerId(
 ): string | null {
   const others = accounts.filter((a) => a.id !== excludeId);
   if (others.length === 0) return null;
-  const scored = (name: string) => {
-    const n = name.trim().toLowerCase();
-    if (n.includes("home") || n.includes("ev")) return 0;
-    if (n.includes("safe") || n.includes("kasa")) return 1;
-    return 2;
-  };
-  return [...others].sort((a, b) => scored(a.name) - scored(b.name))[0]?.id ?? null;
+  return (
+    [...others].sort(
+      (a, b) => cashHomeNameScore(a.name) - cashHomeNameScore(b.name),
+    )[0]?.id ?? null
+  );
+}
+
+/** Counter till for Count cash / Close day — Main Drawer only (never home/safe). */
+export function mainTillAccount<T extends { id: string; name: string; account_kind?: string }>(
+  accounts: T[],
+): T | null {
+  const cash = accounts.filter(
+    (a) => !a.account_kind || a.account_kind === "cash",
+  );
+  const main =
+    cash.find((a) => a.name === DEFAULT_CASH_DRAWER_NAME) ??
+    cash.find((a) => !isCashHomeDrawerName(a.name)) ??
+    null;
+  return main;
+}
+
+/** Cash-at-home style account for read-only reference on Count/Close. */
+export function cashHomeReferenceAccount<
+  T extends { id: string; name: string; account_kind?: string },
+>(accounts: T[]): T | null {
+  const cash = accounts.filter(
+    (a) => !a.account_kind || a.account_kind === "cash",
+  );
+  const homeId = preferCashHomeDrawerId(cash);
+  if (!homeId) return null;
+  const home = cash.find((a) => a.id === homeId) ?? null;
+  if (home && isCashHomeDrawerName(home.name)) return home;
+  return null;
 }
 
 /** Show a drawer picker only when the owner must choose between multiple drawers. */

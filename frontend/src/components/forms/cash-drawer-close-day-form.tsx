@@ -12,11 +12,11 @@ import {
 } from "react";
 
 import { CashDenominationCounter } from "@/components/forms/cash-denomination-counter";
-import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import {
   CashDrawerSplitPanel,
   type CashDrawerSplitResult,
 } from "@/components/forms/cash-drawer-split-panel";
+import { MainTillReference } from "@/components/forms/main-till-reference";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
@@ -44,7 +44,10 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
-import { defaultMainDrawerId } from "@/lib/load-money-accounts";
+import {
+  cashHomeReferenceAccount,
+  mainTillAccount,
+} from "@/lib/load-money-accounts";
 import {
   formatKurus,
   formatTrDate,
@@ -86,11 +89,12 @@ export function CashDrawerCloseDayForm({
   open,
   onClose,
   embedded = false,
-  defaultCashAccountId,
+  defaultCashAccountId: _ignoredCashAccountId,
   defaultSessionDate,
   onClosed,
   onDraftChange,
 }: Props) {
+  void _ignoredCashAccountId;
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -132,7 +136,7 @@ export function CashDrawerCloseDayForm({
   });
 
   const applyDraft = useCallback((draft: CashCountDraft) => {
-    setMoneyAccountId(draft.moneyAccountId);
+    // Money account is always forced to Main till after accounts load.
     setDateText(draft.dateText);
     setCountedText(draft.countedText);
     setQuantities(normalizeDraftQuantities(draft.quantities));
@@ -191,21 +195,18 @@ export function CashDrawerCloseDayForm({
     );
     const active = cashRes.items.filter((a) => a.is_active);
     setCashAccounts(active);
-    setMoneyAccountId((current) => {
-      if (current) return current;
-      if (defaultCashAccountId) return defaultCashAccountId;
-      const drawerId = defaultMainDrawerId(
-        cashRes.items.map((a) => ({
-          id: a.id,
-          gl_account_id: "",
-          name: a.name,
-          account_kind: a.account_kind,
-        })),
-      );
-      return drawerId ?? cashRes.items[0]?.id ?? "";
-    });
+    const till = mainTillAccount(active);
+    setMoneyAccountId(till?.id ?? "");
     return active;
-  }, [entityId, defaultCashAccountId]);
+  }, [entityId]);
+
+  // Keep selection locked to Main even if a draft or prop pointed at home.
+  useEffect(() => {
+    const till = mainTillAccount(cashAccounts);
+    if (till && moneyAccountId !== till.id) {
+      setMoneyAccountId(till.id);
+    }
+  }, [cashAccounts, moneyAccountId]);
 
   useEffect(() => {
     if (!open) return;
@@ -230,7 +231,9 @@ export function CashDrawerCloseDayForm({
     onForm,
   ]);
 
-  const selectedAccount = cashAccounts.find((a) => a.id === moneyAccountId);
+  const tillAccount = mainTillAccount(cashAccounts);
+  const homeAccount = cashHomeReferenceAccount(cashAccounts);
+  const selectedAccount = tillAccount;
   const expectedKurus = selectedAccount?.balance_kurus ?? null;
   const noteLines = denominationLinesFromQuantities(quantities);
   const notesTotal = denominationTotalKurus(noteLines);
@@ -438,9 +441,10 @@ export function CashDrawerCloseDayForm({
           </div>
         )}
         <p className="text-sm text-muted-foreground">
-          Posts the counted total and over/short, then locks this drawer day.
-          Next you can send part to Cash at home and leave the rest as counter
-          float in Main.
+          Posts the counted total and over/short for the <strong>Main</strong>{" "}
+          till, then locks that drawer day. Next you can send part to Cash at
+          home (reference balance above) and leave the rest as counter float in
+          Main.
         </p>
         <div>
           <Label htmlFor="close-day-date">Session date (DD.MM.YYYY)</Label>
@@ -451,26 +455,11 @@ export function CashDrawerCloseDayForm({
             required
           />
         </div>
-        <CashDrawerPicker
-          id="close-day-acct"
-          accounts={cashAccounts}
-          value={moneyAccountId}
-          onValueChange={setMoneyAccountId}
-          label="Cash account"
-          placeholder="Cash account…"
+        <MainTillReference
+          till={tillAccount}
+          home={homeAccount}
+          expectedKurus={expectedKurus}
         />
-        {expectedKurus !== null && (
-          <div className="rounded-md border border-border bg-muted/40 p-3">
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="text-sm text-muted-foreground">
-                Should be in the drawer
-              </span>
-              <span className="text-lg font-semibold tabular-nums">
-                {formatTry(expectedKurus)}
-              </span>
-            </div>
-          </div>
-        )}
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium">How are you counting?</p>
           <Button

@@ -20,6 +20,10 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Counter float (owner 2026-08-03):** Main Drawer always keeps some cash. After Close day, send **part** to Cash at home; cash left in Main is normal — not “uncleared.” Post-close UI prefills Cash at home and states the float explicitly on the done screen.
 
+**Main till only (owner 2026-08-03):** Count cash and Close day operate on **Main Drawer only** — no drawer picker. **Cash at home** is shown as a read-only balance reference so nobody counts or closes home by mistake. Sending *to* home after Close day stays available.
+
+**Create drawers only in Banking (owner 2026-08-03):** New cash drawers are created only under **Banking → Cash**. Count cash / Close day / post-close send never create drawers — they only use drawers that already exist.
+
 **Record:** Two primary actions — **Count cash** and **Close day**. Count can **Continue to Close day** (draft shared). Banking → Cash has both buttons.
 
 **Aligns with** Decisions §14 — EOD close is the optional step that writes the books; counting prep sits in front without locking.

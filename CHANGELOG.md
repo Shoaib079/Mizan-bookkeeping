@@ -4,6 +4,12 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-03
 
+**Count cash / Close day — Main Drawer only.**
+- Both forms lock to **Main Drawer** (no drawer picker). **Cash at home** shows as a read-only balance so nobody counts or closes home by mistake. Sending *to* home after Close day is unchanged.
+
+**New cash drawers — Banking only.**
+- Create drawers only under **Banking → Cash**. Count cash / Close day never offer “Add cash drawer”; post-close send only picks existing places (and tells you to use Banking if Cash at home is missing).
+
 **Count cash vs Close day — separated.**
 - **Record → Count cash:** note calculator + compare to books; saves on this device only (no post, no lock).
 - **Record → Close day:** posts over/short, locks the day, then **send part to Cash at home** (Main float left behind is normal).

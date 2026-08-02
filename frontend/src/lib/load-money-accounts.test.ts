@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_CASH_DRAWER_NAME,
+  cashHomeReferenceAccount,
   defaultMainDrawerId,
   formatCashDrawerOptionLabel,
   formatMoneyAccountOptionLabel,
+  isCashHomeDrawerName,
+  mainTillAccount,
   preferCashHomeDrawerId,
   shouldShowCashDrawerPicker,
   type MoneyAccountOption,
@@ -74,6 +77,22 @@ describe("cash drawer UI helpers", () => {
     expect(preferCashHomeDrawerId([mainDrawer, other], mainDrawer.id)).toBe(
       "other",
     );
+  });
+
+  it("locks Count/Close to Main till and never picks home", () => {
+    const home: MoneyAccountOption = {
+      id: "home",
+      gl_account_id: "gh",
+      name: "Cash at home",
+      account_kind: "cash",
+    };
+    expect(isCashHomeDrawerName(home.name)).toBe(true);
+    expect(isCashHomeDrawerName(mainDrawer.name)).toBe(false);
+    expect(mainTillAccount([home, mainDrawer, pettyDrawer])).toEqual(mainDrawer);
+    expect(mainTillAccount([home, pettyDrawer])).toEqual(pettyDrawer);
+    expect(mainTillAccount([home])).toBeNull();
+    expect(cashHomeReferenceAccount([mainDrawer, home])).toEqual(home);
+    expect(cashHomeReferenceAccount([mainDrawer, pettyDrawer])).toBeNull();
   });
 
   it("formats money account labels without internal drawer name when sole cash", () => {

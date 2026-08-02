@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | Clerk member invite email (gate: Verify → commit/tag) · cash-count still uncommitted WIP |
-| **Next up**              | Commit/tag invite slice · then cash-count `v0.cash-count-notes` · **GS-FX** or P5 |
-| **Last completed slice** | **Count cash vs Close day split (2026-08-03)** — Count = draft/calculator only; Close day = post over/short + lock + optional send. Prior: cash count by notes. |
-| **Last commit/tag**      | `v0.partner-pack-summary-roll-forward` (cash-count + invite local, pending commit/tag) |
+| **Active slice**         | — (pick next: **GS-FX** or P5) |
+| **Next up**              | **GS-FX** or P5 |
+| **Last completed slice** | **Count/Close Main till only (`v0.count-close-main-till`)** — Main Drawer locked; Cash at home reference; create drawers only in Banking. |
+| **Last commit/tag**      | `v0.count-close-main-till` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 

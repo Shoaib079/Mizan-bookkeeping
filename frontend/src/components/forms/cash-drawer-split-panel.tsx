@@ -179,8 +179,10 @@ export function CashDrawerSplitPanel({
     return (
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Day is closed for <strong>{fromAccountName}</strong>. Add another cash
-          drawer (e.g. Cash at home) if you want to park part of the till there.
+          Day is closed for <strong>{fromAccountName}</strong>. There is no other
+          cash place to send to yet. Create <strong>Cash at home</strong> (or
+          another drawer) under <strong>Banking → Cash</strong> — not from Close
+          day — then come back to send part home.
         </p>
         <Button type="button" onClick={onKeepHere}>
           Leave float in counter — done
@@ -241,13 +243,15 @@ export function CashDrawerSplitPanel({
           </div>
         </div>
       ))}
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() => setRows((prev) => [...prev, newRow()])}
-      >
-        Add another drawer
-      </Button>
+      {destinations.length > 1 && (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setRows((prev) => [...prev, newRow()])}
+        >
+          Send to one more place
+        </Button>
+      )}
       {totalSendKurus > 0 && leftKurus !== null && (
         <p className="text-sm tabular-nums text-muted-foreground">
           Send {formatTry(totalSendKurus)} · float left in {fromAccountName}:{" "}
