@@ -300,7 +300,7 @@ def test_each_fx_wallet_gets_a_movement_book(db_session, books):
         str(book.cell(row=r, column=2).value)
         for r in range(1, book.max_row + 1)
     ]
-    assert any("purchase" in t for t in types)
+    assert any("purchase" in t.lower() for t in types)
     natives = [
         book.cell(row=r, column=4).value for r in range(1, book.max_row + 1)
     ]
@@ -356,3 +356,139 @@ def test_an_unknown_entity_is_a_lookup_error(db_session):
         month_pack.build_month_pack_xlsx(
             db_session, uuid.uuid4(), JUNE_START, JUNE_END
         )
+
+
+def _pdf_text(data: bytes) -> str:
+    from pypdf import PdfReader
+
+    reader = PdfReader(BytesIO(data))
+    return "".join(page.extract_text() or "" for page in reader.pages)
+
+
+def test_summary_cash_rollforward_balances(db_session, books):
+    """Opening (day before From) + period cash lines = closing (To)."""
+    drawers = banking_service.list_money_accounts(
+        db_session,
+        books["entity_id"],
+        account_kind=MoneyAccountKind.CASH,
+    )[0]
+    drawer_gl = drawers[0].gl_account_id
+    with entity_context(db_session, books["entity_id"]):
+        post_journal_entry(
+            db_session,
+            books["entity_id"],
+            date(2026, 6, 10),
+            "Cash sale via drawer",
+            [
+                PostingLine(drawer_gl, 50_000, AccountNormalBalance.DEBIT),
+                PostingLine(
+                    books["accounts"][SALES_REVENUE_CODE],
+                    50_000,
+                    AccountNormalBalance.CREDIT,
+                ),
+            ],
+            actor_id=books["owner_id"],
+            source=JournalEntrySource.CASH_MOVEMENT,
+        )
+        db_session.commit()
+
+    bundle = month_pack.load_month_pack_bundle(
+        db_session, books["entity_id"], JUNE_START, JUNE_END
+    )
+    bridge = bundle.cash_bridge
+    assert bridge.opening_date == date(2026, 5, 31)
+    assert bridge.closing_date == JUNE_END
+    assert bridge.closing_cash_bank_kurus == (
+        bridge.cash_in_hand_kurus + bridge.bank_balance_kurus
+    )
+    movement_total = sum(v for _, v in month_pack.cash_movement_rows(bundle.cash_flow))
+    assert bridge.balances_with_movements(movement_total)
+    assert bridge.balances_with_movements(bundle.cash_flow.net_change_kurus)
+
+
+def test_excel_summary_shows_rollforward_not_profit_walk(db_session, books):
+    drawers = banking_service.list_money_accounts(
+        db_session,
+        books["entity_id"],
+        account_kind=MoneyAccountKind.CASH,
+    )[0]
+    drawer_gl = drawers[0].gl_account_id
+    with entity_context(db_session, books["entity_id"]):
+        post_journal_entry(
+            db_session,
+            books["entity_id"],
+            date(2026, 6, 10),
+            "Cash sale via drawer",
+            [
+                PostingLine(drawer_gl, 50_000, AccountNormalBalance.DEBIT),
+                PostingLine(
+                    books["accounts"][SALES_REVENUE_CODE],
+                    50_000,
+                    AccountNormalBalance.CREDIT,
+                ),
+            ],
+            actor_id=books["owner_id"],
+            source=JournalEntrySource.CASH_MOVEMENT,
+        )
+        db_session.commit()
+
+    wb, _ = _pack(db_session, books)
+    labels = [
+        str(wb["Summary"].cell(row=r, column=1).value)
+        for r in range(1, wb["Summary"].max_row + 1)
+    ]
+    assert any("Sales & result" in label for label in labels)
+    assert any(label == "Cash & bank" for label in labels)
+    assert any("Opening cash & bank (2026-05-31)" in label for label in labels)
+    assert any("Closing cash & bank (2026-06-30)" in label for label in labels)
+    assert any(label == "Cash movement" for label in labels)
+    assert any("What we hold / owe" in label for label in labels)
+    assert any(label == "Cash in hand" for label in labels)
+    assert any(label == "Bank" for label in labels)
+    assert not any("From net result to cash" in label for label in labels)
+    assert not any("CHANGE IN CASH & BANK THIS PERIOD" in label for label in labels)
+    assert not any("Other movements" in label for label in labels)
+
+
+def test_month_pack_pdf_is_a_valid_readable_export(db_session, books):
+    _sale(db_session, books, date(2026, 6, 10), 100_000)
+    data, ctx = month_pack.build_month_pack_pdf(
+        db_session, books["entity_id"], JUNE_START, JUNE_END
+    )
+
+    assert data[:4] == b"%PDF"
+    assert month_pack.month_pack_pdf_filename(ctx).endswith("-live.pdf")
+    text = _pdf_text(data)
+    assert "2026-06-01 to 2026-06-30" in text
+    assert "Summary" in text
+    assert "Cash & bank" in text
+    assert "Opening cash" in text
+    assert "Closing cash" in text
+    assert "From net result to cash" not in text
+    assert "Expenses" in text
+    assert "Profit and loss" in text
+    assert "₺" in text
+
+
+def test_month_pack_pdf_api(db_session, client, books):
+    from app.features.reports import pdf_export
+
+    _sale(db_session, books, date(2026, 6, 10), 100_000)
+    response = client.get(
+        f"/entities/{books['entity_id']}/reports/month-pack/export/pdf",
+        params={"from": "2026-06-01", "to": "2026-06-30"},
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"] == pdf_export.PDF_CONTENT_TYPE
+    assert 'filename="books-2026-06-01-to-2026-06-30-live.pdf"' in response.headers.get(
+        "content-disposition", ""
+    )
+    assert response.content[:4] == b"%PDF"
+
+
+def test_month_pack_pdf_invalid_date_range(client, books):
+    response = client.get(
+        f"/entities/{books['entity_id']}/reports/month-pack/export/pdf",
+        params={"from": "2026-06-02", "to": "2026-06-01"},
+    )
+    assert response.status_code == 422

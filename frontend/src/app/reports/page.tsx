@@ -234,10 +234,9 @@ function ReportsBody() {
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          One workbook with every book for the period — sales, expenses,
-          salaries, cash, banks, foreign currency held and movements, card
-          clearing and the full ledger. A closed month exports the figures it
-          was sealed with.
+          Download all books for the period — Excel or PDF. Sales, expenses,
+          salaries, cash, banks, foreign currency, card clearing and the full
+          ledger. A closed month exports the figures it was sealed with.
         </p>
         {summaryError && (
           <p className="text-sm text-destructive">{summaryError}</p>

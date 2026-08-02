@@ -2,6 +2,16 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-08-02
+
+**Partner books pack Summary — cash rolls so books balance.**
+- Summary (Excel + PDF): **Sales & result** → **Cash & bank** (opening = day before From, then real cash lines, then closing = To — no opaque “net movements” row) → **What we hold / owe** (cash in hand, bank, suppliers, customers, FX).
+- Removed the profit→cash walk and “other movements” plug from page 1.
+- Journal labels: partner/books language only (e.g. `expense_entry` → **Miscellaneous expense**; auto-posted `RULE_AUTO` remaps to **Bank fee** / **Supplier payment**; no “rule/auto/system/sweep” wording). Guard test keeps future sources clear.
+- Excel/PDF styling: blue headers, green closing/profit, red outflows; PDF column **Description** (was Metric).
+- Reports download: one **Download all** button → Excel or PDF menu.
+- Tag: `v0.partner-pack-summary-roll-forward`.
+
 ## 2026-08-01
 
 **Suppliers — total payables at top.**

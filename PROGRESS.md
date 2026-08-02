@@ -10,10 +10,10 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | (none) |
-| **Last completed slice** | Suppliers total payables summary — 2026-08-01 |
-| **Last tag** | `v0.suppliers-payables-summary` |
-| **Unpushed** | (none) |
-| **Next up** | **GS-FX** · P5 — Delete company UI |
+| **Last completed slice** | Partner pack Summary roll-forward (Excel + PDF) — 2026-08-02 |
+| **Last tag** | `v0.partner-pack-summary-roll-forward` |
+| **Unpushed** | (none after push) |
+| **Next up** | **GS-FX** · P5 |
 
 ## FINANCIAL_AUDIT status (2026-07-27)
 

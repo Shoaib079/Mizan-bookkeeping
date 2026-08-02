@@ -7,6 +7,7 @@ from io import BytesIO
 
 from fastapi.responses import StreamingResponse
 
+from app.core.excel.labels import format_journal_source
 from app.core.money import format_try
 from app.core.pdf.fonts import (
     PDF_FONT_BOLD_NAME,
@@ -300,7 +301,7 @@ def build_cash_flow_pdf(report: CashFlowRead, entity_name: str) -> bytes:
     for source_row in report.by_source:
         source_rows.append(
             [
-                _cell(source_row.source),
+                _cell(format_journal_source(source_row.source)),
                 _cell(source_row.category),
                 _cell(format_try(source_row.net_cash_kurus)),
             ]

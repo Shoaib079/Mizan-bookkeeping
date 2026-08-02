@@ -67,15 +67,55 @@ export const GENERIC_VOID_SAFE_SOURCES = new Set<string>([
   "year_end_close",
 ]);
 
+/** Partner/owner books language — what the money is, not how the app posted it. */
 const SOURCE_LABELS: Record<string, string> = {
-  bank_fee: "bank charges",
-  pos_commission_sweep: "bank commission",
-  pos_commission_statement: "card commission (statement)",
-  year_end_close: "year-end close",
+  manual: "Adjustment",
+  opening_balance: "Opening balance",
+  invoice: "Supplier invoice",
+  payment: "Supplier payment",
+  transfer: "Transfer",
+  pos_settlement: "Card deposit",
+  card_sales: "Card sales",
+  pos_card_tip: "Card tip",
+  pos_commission_sweep: "Card commission",
+  pos_commission_statement: "Card commission",
+  delivery_report: "Delivery sales",
+  delivery_settlement: "Delivery deposit",
+  delivery_commission: "Delivery commission",
+  bank_fee: "Bank fee",
+  credit_card_payment: "Credit card payment",
+  cash_movement: "Cash movement",
+  cash_drawer_close: "Cash drawer count",
+  fx_purchase: "Foreign currency purchase",
+  staff_accrual: "Salary accrual",
+  staff_advance: "Staff advance",
+  staff_payment: "Salary payment",
+  partner_expense_fronted: "Partner paid expense",
+  partner_reimbursement_paid: "Partner reimbursement",
+  partner_drawing: "Partner drawing",
+  partner_drawing_repayment: "Partner drawing repayment",
+  partner_capital_contribution: "Partner capital",
+  partner_loan_received: "Partner loan received",
+  partner_loan_repaid: "Partner loan repaid",
+  partner_profit_allocation: "Partner profit share",
+  customer_credit_sale: "Customer credit sale",
+  group_sale: "Group sale",
+  customer_payment_received: "Customer payment",
+  fx_conversion: "Foreign currency conversion",
+  fx_expense_spend: "Foreign currency expense",
+  expense_entry: "Miscellaneous expense",
+  year_end_close: "Year-end close",
+  system: "Other income",
+  rule_auto: "Bank transaction",
 };
 
 export function sourceLabel(source: string): string {
-  return SOURCE_LABELS[source] ?? source.replaceAll("_", " ");
+  if (SOURCE_LABELS[source]) return SOURCE_LABELS[source];
+  return source
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 export type SourceFlow = {

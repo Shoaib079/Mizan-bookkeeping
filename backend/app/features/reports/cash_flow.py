@@ -15,6 +15,10 @@ from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntryS
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.entities import service as entity_service
+from app.features.reports.partner_sources import (
+    economic_source_value,
+    load_rule_auto_economic_sources,
+)
 from app.features.reports.schema import (
     CashFlowCategoryRead,
     CashFlowRead,
@@ -240,22 +244,25 @@ def get_cash_flow(
             for account in liquid_accounts
         )
 
-        entry_ids = session.scalars(
-            select(JournalEntry.id)
-            .join(
-                JournalEntryLine,
-                JournalEntryLine.journal_entry_id == JournalEntry.id,
-            )
-            .where(
-                JournalEntry.status == JournalEntryStatus.POSTED.value,
-                JournalEntry.reverses_entry_id.is_(None),
-                JournalEntry.entry_date >= from_date,
-                JournalEntry.entry_date <= to_date,
-                JournalEntryLine.account_id.in_(liquid_ids),
-            )
-            .distinct()
-            .order_by(JournalEntry.id)
-        ).all()
+        entry_ids = list(
+            session.scalars(
+                select(JournalEntry.id)
+                .join(
+                    JournalEntryLine,
+                    JournalEntryLine.journal_entry_id == JournalEntry.id,
+                )
+                .where(
+                    JournalEntry.status == JournalEntryStatus.POSTED.value,
+                    JournalEntry.reverses_entry_id.is_(None),
+                    JournalEntry.entry_date >= from_date,
+                    JournalEntry.entry_date <= to_date,
+                    JournalEntryLine.account_id.in_(liquid_ids),
+                )
+                .distinct()
+                .order_by(JournalEntry.id)
+            ).all()
+        )
+        rule_auto_map = load_rule_auto_economic_sources(session, entry_ids)
 
         for entry_id in entry_ids:
             entry = session.get(JournalEntry, entry_id)
@@ -280,7 +287,10 @@ def get_cash_flow(
             else:
                 financing = _apply_net(financing, net_cash)
 
-            by_source_net[(entry.source.value, category_name)] += net_cash
+            report_source = economic_source_value(
+                entry.source, entry.id, rule_auto_map
+            )
+            by_source_net[(report_source, category_name)] += net_cash
 
         opening_cash_kurus += opening_balance_cash_kurus
 

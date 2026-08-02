@@ -29,6 +29,10 @@ from app.core.ledger.models import (
 )
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
+from app.features.reports.partner_sources import (
+    economic_source_value,
+    load_rule_auto_economic_sources,
+)
 from app.features.reports.schema import (
     ExpenseRegisterAccountTotal,
     ExpenseRegisterRead,
@@ -87,6 +91,9 @@ def get_expense_register(
             .where(*filters)
             .order_by(JournalEntry.entry_date, JournalEntry.id)
         ).all()
+        rule_auto_map = load_rule_auto_economic_sources(
+            session, {row[3] for row in records}
+        )
 
     rows: list[ExpenseRegisterRow] = []
     totals: dict[uuid.UUID, ExpenseRegisterAccountTotal] = {}
@@ -118,7 +125,9 @@ def get_expense_register(
                 account_code=acct_code,
                 account_name=acct_name,
                 description=description,
-                source=source,
+                source=economic_source_value(
+                    source, journal_entry_id, rule_auto_map
+                ),
                 amount_kurus=signed,
                 journal_entry_id=journal_entry_id,
             )

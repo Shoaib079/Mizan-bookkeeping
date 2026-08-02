@@ -1,16 +1,14 @@
 "use client";
 
-/** Download every book for the period as one workbook.
- *
- * Checking a month used to mean six separate downloads, and four of the books
- * had no export at all. This is the file you send partners.
- */
+/** Download every book for the period — one colorful button, then Excel or PDF. */
 
-import { useState } from "react";
-import { Download } from "lucide-react";
+import { ChevronDown, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { apiDownload, triggerBlobDownload } from "@/lib/api";
+import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
+import { cn } from "@/lib/utils";
 
 type Props = {
   entityId: string;
@@ -19,37 +17,101 @@ type Props = {
   disabled?: boolean;
 };
 
-export function MonthPackButton({ entityId, queryString, disabled }: Props) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type Format = "xlsx" | "pdf";
 
-  async function download() {
+export function MonthPackButton({ entityId, queryString, disabled }: Props) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState<Format | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDismissOnOutsideClick(menuRef, open, close);
+
+  async function download(format: Format) {
     if (!entityId) return;
-    setBusy(true);
+    setBusy(format);
     setError(null);
+    setOpen(false);
     try {
-      const { blob, filename } = await apiDownload(
-        `/entities/${entityId}/reports/month-pack?${queryString}`,
-      );
+      const path =
+        format === "pdf"
+          ? `/entities/${entityId}/reports/month-pack/export/pdf?${queryString}`
+          : `/entities/${entityId}/reports/month-pack?${queryString}`;
+      const { blob, filename } = await apiDownload(path);
       triggerBlobDownload(blob, filename);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Download failed");
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="relative flex flex-col items-end gap-1" ref={menuRef}>
       <Button
         type="button"
-        disabled={disabled || !entityId || busy}
-        onClick={() => void download()}
+        variant="primary"
+        disabled={disabled || !entityId || busy !== null}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((value) => !value)}
         className="gap-1.5"
       >
         <Download className="size-4" />
-        {busy ? "Preparing…" : "Download all books"}
+        {busy ? "Preparing…" : "Download all"}
+        <ChevronDown
+          className={cn(
+            "size-4 opacity-80 transition",
+            open && "rotate-180",
+          )}
+        />
       </Button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-20 mt-1 min-w-[14rem] overflow-hidden rounded-lg border border-border bg-card py-1 shadow-[var(--shadow-pop)]"
+        >
+          <p className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Choose format
+          </p>
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
+            onClick={() => void download("xlsx")}
+          >
+            <FileSpreadsheet
+              className="mt-0.5 size-4 shrink-0 text-primary"
+              aria-hidden
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium">Excel</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                Full detail — filter, sort, total columns
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
+            onClick={() => void download("pdf")}
+          >
+            <FileText
+              className="mt-0.5 size-4 shrink-0 text-primary"
+              aria-hidden
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium">PDF</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                Readable partner copy for print or share
+              </span>
+            </span>
+          </button>
+        </div>
+      )}
+
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );

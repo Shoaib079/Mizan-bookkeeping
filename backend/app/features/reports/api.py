@@ -259,6 +259,28 @@ def download_month_pack(
     return excel_export.xlsx_response(data, month_pack.month_pack_filename(ctx))
 
 
+@router.get("/month-pack/export/pdf")
+def download_month_pack_pdf(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
+) -> StreamingResponse:
+    """Every book for the period as a readable PDF — partner copy."""
+    if to_date < from_date:
+        raise HTTPException(status_code=422, detail="to must be on or after from")
+    try:
+        data, ctx = month_pack.build_month_pack_pdf(
+            session, entity_id, from_date, to_date
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except pdf_export.PdfExportDependencyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return pdf_export.pdf_response(data, month_pack.month_pack_pdf_filename(ctx))
+
+
 @router.get("/balance-sheet", response_model=BalanceSheetRead)
 def get_balance_sheet(
     entity_id: uuid.UUID,

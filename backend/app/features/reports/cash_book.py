@@ -43,6 +43,10 @@ from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.cash.models import CashDrawerSession, CashDrawerSessionStatus
 from app.features.entities import service as entity_service
+from app.features.reports.partner_sources import (
+    economic_source_value,
+    load_rule_auto_economic_sources,
+)
 from app.features.reports.schema import (
     CashBookLastCount,
     CashBookRead,
@@ -113,6 +117,9 @@ def get_cash_book(
             )
             .order_by(JournalEntry.entry_date, JournalEntry.id)
         ).all()
+        rule_auto_map = load_rule_auto_economic_sources(
+            session, {row[3] for row in records}
+        )
 
         # Closed counts, newest first. One short day is noise; the same drawer
         # short repeatedly is a pattern, so the history lives with the
@@ -151,27 +158,30 @@ def get_cash_book(
         running += in_kurus - out_kurus
         total_in += in_kurus
         total_out += out_kurus
+        report_source = economic_source_value(
+            source, journal_entry_id, rule_auto_map
+        )
         rows.append(
             CashBookRow(
                 entry_date=entry_date,
                 description=description,
-                source=source,
+                source=report_source,
                 in_kurus=in_kurus,
                 out_kurus=out_kurus,
                 balance_kurus=running,
                 journal_entry_id=journal_entry_id,
             )
         )
-        bucket = totals.get(source)
+        bucket = totals.get(report_source)
         if bucket is None:
-            totals[source] = CashBookSourceTotal(
-                source=source,
+            totals[report_source] = CashBookSourceTotal(
+                source=report_source,
                 in_kurus=in_kurus,
                 out_kurus=out_kurus,
                 entry_count=1,
             )
         else:
-            totals[source] = bucket.model_copy(
+            totals[report_source] = bucket.model_copy(
                 update={
                     "in_kurus": bucket.in_kurus + in_kurus,
                     "out_kurus": bucket.out_kurus + out_kurus,

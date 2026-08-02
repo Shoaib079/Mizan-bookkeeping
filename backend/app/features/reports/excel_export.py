@@ -8,10 +8,12 @@ from datetime import date
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 
+from app.core.excel.labels import format_journal_source
 from app.core.excel.workbook import (
     bold_row,
     create_workbook,
     finish_data_table,
+    fit_columns_from_content,
     money_header,
     write_header_row,
     write_money,
@@ -48,23 +50,30 @@ def _write_metadata(
     date_label: str,
     date_value: str,
     end_col: int = 4,
+    entity_label: str | None = None,
 ) -> int:
     """Title block; returns the header row index (caller writes headers there)."""
     next_row = write_sheet_title(
         ws,
         title,
-        subtitles=[f"Entity: {entity_id}", f"{date_label}: {date_value}"],
+        subtitles=[
+            f"Entity: {entity_label if entity_label is not None else entity_id}",
+            f"{date_label}: {date_value}",
+        ],
         end_col=end_col,
     )
     return next_row
 
 
-def write_profit_and_loss_sheet(ws, report: ProfitAndLossRead) -> None:
+def write_profit_and_loss_sheet(
+    ws, report: ProfitAndLossRead, *, entity_label: str | None = None
+) -> None:
     """Lay out a P&L on the given worksheet.
 
     Shared by the standalone export and the month pack so the two can never
     drift into showing the same period differently.
     """
+    label = entity_label if entity_label is not None else str(report.entity_id)
     header_row = _write_metadata(
         ws,
         title="Profit and Loss",
@@ -72,6 +81,7 @@ def write_profit_and_loss_sheet(ws, report: ProfitAndLossRead) -> None:
         date_label="Period",
         date_value=f"{report.from_date} to {report.to_date}",
         end_col=4,
+        entity_label=label,
     )
     amount_label = money_header()
     data_start = write_header_row(
@@ -104,6 +114,16 @@ def write_profit_and_loss_sheet(ws, report: ProfitAndLossRead) -> None:
         header_row=header_row,
         last_data_row=row,
         end_col=4,
+        money_cols=(4,),
+    )
+    fit_columns_from_content(
+        ws,
+        first_row=header_row,
+        last_row=row,
+        last_col=4,
+        min_widths={1: 10, 2: 28, 3: 14, 4: 16},
+        max_widths={1: 12, 2: 52, 3: 18, 4: 18},
+        wrap_cols=(2,),
     )
 
 
@@ -244,7 +264,7 @@ def build_cash_flow_xlsx(report: CashFlowRead) -> bytes:
     )
 
     for source_row in report.by_source:
-        ws.cell(row=row, column=1, value=source_row.source)
+        ws.cell(row=row, column=1, value=format_journal_source(source_row.source))
         ws.cell(row=row, column=2, value=source_row.category)
         write_money(ws, row, 3, source_row.net_cash_kurus)
         row += 1

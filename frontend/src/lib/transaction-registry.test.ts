@@ -21,9 +21,22 @@ describe("transaction registry (audit C1)", () => {
     expect([...GENERIC_CORRECTABLE_SOURCES].sort()).toEqual(["bank_fee", "manual"]);
   });
 
-  it("labels sources with the shared vocabulary", () => {
-    expect(sourceLabel("bank_fee")).toBe("bank charges");
-    expect(sourceLabel("customer_credit_sale")).toBe("customer credit sale");
+  it("labels sources with clear books language (no app jargon)", () => {
+    expect(sourceLabel("bank_fee")).toBe("Bank fee");
+    expect(sourceLabel("customer_credit_sale")).toBe("Customer credit sale");
+    expect(sourceLabel("rule_auto")).toBe("Bank transaction");
+    expect(sourceLabel("system")).toBe("Other income");
+    expect(sourceLabel("manual")).toBe("Adjustment");
+    expect(sourceLabel("pos_commission_sweep")).toBe("Card commission");
+    for (const source of JOURNAL_SOURCES) {
+      const label = sourceLabel(source);
+      expect(label).toBeTruthy();
+      expect(label.includes("_")).toBe(false);
+      const lowered = label.toLowerCase();
+      for (const banned of ["auto", "rule", "system", "sweep", "batch"]) {
+        expect(lowered.split(/\s+/)).not.toContain(banned);
+      }
+    }
   });
 
   it("builds GL focus links and generic void paths", () => {

@@ -15,9 +15,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none) |
-| **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built; POST_LAUNCH § GS-FX + DECISIONS 2026-07-13) · P5 — Delete company UI |
-| **Last completed slice** | **Bank reconciliation closing balance fix (2026-08-02)** — İş Bank pre-transaction Bakiye + book-chain stated closing; compare books to statement period end; link manual expense on classify. |
-| **Last commit/tag**      | `v0.bank-reconciliation-closing-fix` |
+| **Next up**              | **GS-FX** or P5 — Delete company UI |
+| **Last completed slice** | **Partner pack Summary roll-forward (2026-08-02)** — Sales & result; cash open→movements→close; hold/owe; partner labels; color styling; Download all Excel/PDF. |
+| **Last commit/tag**      | `v0.partner-pack-summary-roll-forward` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
@@ -1879,6 +1879,8 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-02 | Partner pack Summary cash roll-forward         | `v0.partner-pack-summary-roll-forward`                 | Sales & result; opening (From−1) + cash lines + closing (To); hold/owe with cash split; partner labels (RULE_AUTO→Bank fee); color styling; Download all Excel/PDF; month-pack pytest |
+| 2026-08-02 | Partner pack — net result → cash bridge        | *(superseded same day)*                                | Earlier profit→cash walk; replaced by roll-forward Summary |
 | 2026-08-02 | Bank reconciliation closing balance fix        | `v0.bank-reconciliation-closing-fix`                   | Walk İş Bank Bakiye in file order (pre-transaction SGK outflows); stated closing from book chain when latest statement settled; import persists chain closing; book balance as-of period end; link existing manual expense on rent/store classify; UI copy; 1348 pytest |
 | 2026-08-02 | Dashboard Right now — drop duplicate bank cards  | `v0.dashboard-right-now-no-banks`                      | Per-bank cards removed from **Right now**; cash & bank stay in top **Cash & bank** snapshot beside This period; guard test; vitest |
 | 2026-08-01 | e-Fatura PDF soft-hyphen dates + 1% KDV | `v0.efatura-soft-hyphen-date`                          | Parse invoice dates with Unicode dash variants (soft hyphen U+00AD); BBD mango supply fixture; single-rate VAT base uses net matrah; pytest |
