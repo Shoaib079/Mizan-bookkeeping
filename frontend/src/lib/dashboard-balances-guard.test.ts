@@ -30,6 +30,7 @@ describe("balances on dashboard", () => {
     expect(snapshot).toContain("BankAccountBalanceRows");
     expect(page).toContain("Right now");
     expect(page).toContain("BalancesOverview");
+    expect(overview).not.toContain("bankAccounts.map");
     expect(overview).not.toContain('title="Cash"');
     expect(overview).not.toContain('title="Bank"');
   });

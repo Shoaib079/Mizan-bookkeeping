@@ -214,7 +214,8 @@ function DashboardBody() {
             <section className="mt-6">
               <h2 className="mb-1 text-sm font-semibold">Right now</h2>
               <p className="mb-4 text-sm text-muted-foreground">
-                What you owe, hold, and are owed today — open a card for detail.
+                Payables, receivables, FX, staff, and partners — open a card for
+                detail. Cash and bank are above beside This period.
               </p>
               <BalancesOverview embedded />
             </section>
