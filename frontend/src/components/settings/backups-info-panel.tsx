@@ -6,6 +6,7 @@ import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { Button } from "@/components/ui/button";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
 type EnqueueResult = {
@@ -27,6 +28,7 @@ const MAX_POLL_MS = 15 * 60 * 1000;
 export function BackupsInfoPanel() {
   const { entityId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const [forbidden, setForbidden] = useState(false);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,10 +90,12 @@ export function BackupsInfoPanel() {
     setError(null);
     setForbidden(false);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       const enqueued = await apiFetch<EnqueueResult>(
         `/entities/${entityId}/backups/run`,
-        { method: "POST" },
+        { method: "POST", idempotencyKey },
       );
+      submitIdempotency.completeSubmit();
       toast("Backup started — uploading to Cloudflare…");
       void pollUntilDone(enqueued.task_id, Date.now());
     } catch (err) {
