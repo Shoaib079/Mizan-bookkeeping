@@ -14,10 +14,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | Partner capital cash/note (gate: Verify → commit/tag) |
-| **Next up**              | Commit/tag partner capital · then **GS-FX** or P5 |
-| **Last completed slice** | **Deploy: httpx runtime dep (`v0.deploy-httpx-runtime`)**. Prior: CI dev-actor import fix. |
-| **Last commit/tag**      | `v0.deploy-httpx-runtime` · WIP partner capital cash + note |
+| **Active slice**         | (none) |
+| **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built) · P5 — Delete company UI |
+| **Last completed slice** | **Partner capital cash/bank + required note (2026-08-03)** — manual Record capital into cash/bank; statement classify requires note; partner page action. |
+| **Last commit/tag**      | `v0.partner-capital-cash-note` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
