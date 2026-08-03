@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -18,3 +20,16 @@ class BackupVerifyResult(BaseModel):
     scratch_database: str
     checks_passed: bool
     message: str
+
+
+class BackupEnqueueResult(BaseModel):
+    status: Literal["started"] = "started"
+    task_id: str
+
+
+class BackupTaskStatus(BaseModel):
+    status: Literal["pending", "success", "failed"]
+    task_id: str
+    artifact_key: str | None = None
+    timestamp: str | None = None
+    message: str | None = None

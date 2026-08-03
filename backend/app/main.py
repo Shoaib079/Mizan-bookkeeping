@@ -51,6 +51,7 @@ from app.features.review_counts.api import router as review_counts_router
 from app.features.auth.api import members_router as auth_members_router
 from app.features.auth.api import users_router as auth_users_router
 from app.features.documents.api import router as documents_router
+from app.features.backups.api import router as backups_router
 from app.adapters.storage import ensure_storage_roots
 from app.config import settings
 from app.core.duplicate_guard import DuplicateRecordError, duplicate_http_detail
@@ -132,6 +133,7 @@ app.include_router(review_counts_router)
 app.include_router(auth_users_router)
 app.include_router(auth_members_router)
 app.include_router(documents_router)
+app.include_router(backups_router)
 
 
 @app.get("/health")

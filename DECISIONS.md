@@ -12,6 +12,10 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 **Out of scope:** Clerk Organizations; custom SMTP; resend-invite button (can add later).
 
+## 2026-08-04 — Manual backup to Cloudflare R2
+
+**Choice:** Settings → **Backup now** (owner/admin) enqueues the same `run_backup()` pipeline as the nightly job and uploads immediately to Cloudflare R2 via the Celery worker. If any successful backup artifact already exists for that **UTC calendar day**, the nightly task **skips create/upload** and only runs retention prune. No restore UI.
+
 ## 2026-08-03 — Partner capital from cash (and bank) with a required note
 
 **Choice:** Partner capital can be recorded manually from **Record → Partner capital** (people picker) or **People → Partners →** open the partner → **Record capital**, into a cash drawer or bank account — same posting as bank-statement classify (`post_capital_contribution`). A **note is required** (why they invested) on both the manual form and statement classify as Partner capital; the note is stored on the journal and partner ledger.

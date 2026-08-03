@@ -176,6 +176,117 @@ def test_verify_latest_backup_service(db_session, restaurant_a, backup_settings)
     assert verify.checks_passed is True
 
 
+def test_has_backup_on_utc_date(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "backups"
+    root.mkdir()
+    monkeypatch.setattr(settings, "backup_local_dir", str(root))
+    monkeypatch.setattr(settings, "backup_s3_bucket", None)
+
+    day = date(2026, 8, 3)
+    ts = "20260803T140000Z"
+    (root / f"mizan-backup-{ts}.tar.gz").write_bytes(b"x")
+
+    assert service.has_backup_on_utc_date(day) is True
+    assert service.has_backup_on_utc_date(date(2026, 8, 2)) is False
+
+
+def test_daily_backup_skips_when_already_backed_up_today(tmp_path, monkeypatch) -> None:
+    from app.features.backups import tasks as backup_tasks
+
+    root = tmp_path / "backups"
+    root.mkdir()
+    monkeypatch.setattr(settings, "backup_local_dir", str(root))
+    monkeypatch.setattr(settings, "backup_s3_bucket", None)
+
+    today = datetime.now(UTC).date()
+    ts = datetime.combine(today, datetime.min.time(), tzinfo=UTC).strftime(
+        "%Y%m%dT%H%M%SZ"
+    )
+    (root / f"mizan-backup-{ts}.tar.gz").write_bytes(b"x")
+
+    called: list[str] = []
+
+    def fail_run() -> None:
+        called.append("run")
+        raise AssertionError("run_backup should be skipped")
+
+    monkeypatch.setattr(service, "run_backup", fail_run)
+    monkeypatch.setattr(service, "verify_latest_backup", lambda: (_ for _ in ()).throw(AssertionError()))
+    monkeypatch.setattr(service, "prune_old_backups", lambda: ["old.tar.gz"])
+
+    result = backup_tasks.run_daily_backup.run()
+    assert result["skipped"] is True
+    assert result["reason"] == "already_backed_up_today"
+    assert result["pruned"] == ["old.tar.gz"]
+    assert called == []
+
+
+def test_manual_backup_task_runs_upload_only(monkeypatch) -> None:
+    from app.features.backups import tasks as backup_tasks
+    from app.features.backups.schema import BackupRunResult
+
+    monkeypatch.setattr(
+        service,
+        "run_backup",
+        lambda: BackupRunResult(
+            artifact_key="mizan-backup-20260803T120000Z.tar.gz",
+            timestamp="20260803T120000Z",
+            git_tag="v0.test",
+            sha256="abc",
+            row_counts={"entities": 1},
+        ),
+    )
+    verify_called = {"n": 0}
+    monkeypatch.setattr(
+        service,
+        "verify_latest_backup",
+        lambda: verify_called.__setitem__("n", verify_called["n"] + 1),
+    )
+
+    result = backup_tasks.run_manual_backup.run()
+    assert result["artifact_key"] == "mizan-backup-20260803T120000Z.tar.gz"
+    assert verify_called["n"] == 0
+
+
+def test_enqueue_manual_backup_api(client, restaurant_a, monkeypatch) -> None:
+    from app.features.backups import api as backup_api
+
+    monkeypatch.setattr(backup_api, "_last_manual_enqueue_monotonic", None)
+
+    class FakeAsyncResult:
+        id = "task-123"
+
+    monkeypatch.setattr(
+        backup_api.run_manual_backup,
+        "delay",
+        lambda: FakeAsyncResult(),
+    )
+
+    response = client.post(f"/entities/{restaurant_a.id}/backups/run")
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status"] == "started"
+    assert body["task_id"] == "task-123"
+
+
+def test_enqueue_manual_backup_debounced(client, restaurant_a, monkeypatch) -> None:
+    from app.features.backups import api as backup_api
+
+    class FakeAsyncResult:
+        id = "task-456"
+
+    monkeypatch.setattr(
+        backup_api.run_manual_backup,
+        "delay",
+        lambda: FakeAsyncResult(),
+    )
+    monkeypatch.setattr(backup_api, "_last_manual_enqueue_monotonic", None)
+
+    assert client.post(f"/entities/{restaurant_a.id}/backups/run").status_code == 202
+    second = client.post(f"/entities/{restaurant_a.id}/backups/run")
+    assert second.status_code == 429
+
+
 def test_prune_removes_old_local_backups(tmp_path, monkeypatch) -> None:
     root = tmp_path / "backups"
     root.mkdir()

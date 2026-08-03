@@ -1,8 +1,9 @@
-"""Celery tasks for scheduled backups (Phase 8)."""
+"""Celery tasks for scheduled and manual backups (Phase 8)."""
 
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
 from app.features.backups import service
 from app.workers.celery_app import celery_app
@@ -13,6 +14,21 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="backups.run_daily_backup", bind=True)
 def run_daily_backup(self) -> dict:
     try:
+        today = datetime.now(UTC).date()
+        if service.has_backup_on_utc_date(today):
+            pruned = service.prune_old_backups()
+            logger.info(
+                "daily backup skipped — artifact already exists for UTC %s; pruned=%d",
+                today.isoformat(),
+                len(pruned),
+            )
+            return {
+                "skipped": True,
+                "reason": "already_backed_up_today",
+                "utc_date": today.isoformat(),
+                "pruned": pruned,
+            }
+
         result = service.run_backup()
         verify = service.verify_latest_backup()
         pruned = service.prune_old_backups()
@@ -29,10 +45,35 @@ def run_daily_backup(self) -> dict:
         len(pruned),
     )
     return {
+        "skipped": False,
         "artifact_key": result.artifact_key,
         "timestamp": result.timestamp,
         "verified": verify.checks_passed,
         "pruned": pruned,
+    }
+
+
+@celery_app.task(name="backups.run_manual_backup", bind=True)
+def run_manual_backup(self) -> dict:
+    """Owner-triggered backup — upload only (no verify/prune)."""
+    try:
+        result = service.run_backup()
+    except Exception:
+        logger.exception(
+            "manual backup task failed; task_id=%s",
+            self.request.id,
+        )
+        raise
+    logger.info(
+        "manual backup completed artifact=%s",
+        result.artifact_key,
+    )
+    return {
+        "artifact_key": result.artifact_key,
+        "timestamp": result.timestamp,
+        "git_tag": result.git_tag,
+        "sha256": result.sha256,
+        "row_counts": result.row_counts,
     }
 
 

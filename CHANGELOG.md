@@ -2,6 +2,12 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-08-04
+
+**Manual backup to Cloudflare.**
+- Settings → **Backup now** (owner/admin) uploads a full backup to R2 right away (same place as the nightly job).
+- If you already backed up that UTC day, the automatic nightly run skips creating another dump and only cleans old archives.
+
 ## 2026-08-03
 
 **Custom member access (Option B — owner-configured grants).**

@@ -158,8 +158,8 @@ Optional: Clerk Dashboard → **Restrictions** → sign-up mode **Restricted** s
 
 1. Create a private bucket (R2 or S3).
 2. Create access keys with write-only scope to that bucket.
-3. Set `BACKUP_S3_*` vars on **celery-worker** and **celery-beat** (see `.env.production.example`). The API service does not need S3 backup vars unless you run manual backups from the API shell.
-4. Scheduled backups run via Celery beat (default **03:00 UTC**): backup → restore-verify into scratch DB → retention prune.
+3. Set `BACKUP_S3_*` vars on **celery-worker** and **celery-beat** (see `.env.production.example`). The API service does **not** need S3 backup vars for Settings → **Backup now** — it enqueues Celery; the worker uploads to R2. The API does need Redis/Celery broker reachability.
+4. Scheduled backups run via Celery beat (default **03:00 UTC**): backup → restore-verify into scratch DB → retention prune. If a successful artifact already exists for that **UTC day** (e.g. owner used Backup now), the nightly job skips create/upload and only prunes.
 5. **Staging-first:** run the full drill on staging (§11) before trusting production backups.
 
 **Live checklist (Slice 12.3):**

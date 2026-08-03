@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 import shutil
 import tempfile
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from app.adapters.backup.archive import (
@@ -49,6 +50,15 @@ def resolve_git_tag() -> str:
         return result.stdout.strip()
     except (FileNotFoundError, subprocess.CalledProcessError):
         return "unknown"
+
+
+def has_backup_on_utc_date(day: date | None = None) -> bool:
+    """True when storage already has an artifact for the given UTC calendar day."""
+    target = day or datetime.now(UTC).date()
+    return any(
+        item.timestamp.astimezone(UTC).date() == target
+        for item in get_backup_storage().list_backups()
+    )
 
 
 def run_backup(*, timestamp: str | None = None) -> BackupRunResult:
