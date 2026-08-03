@@ -25,6 +25,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 
 export type CorrectableStaffLedgerRow = {
   journal_entry_id: string;
@@ -68,6 +69,7 @@ export function CorrectStaffLedgerForm({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<Record<string, string> | null>(null);
 
   const needsPaymentAccount =
     entry?.movement_type === "advance_paid" ||
@@ -97,11 +99,13 @@ export function CorrectStaffLedgerForm({
   }, [open, submitIdempotency]);
 
   useEffect(() => {
-    if (!open || !entry) return;
+    if (!open || !entry) {
+      setBaseline(null);
+      return;
+    }
     setDateText(formatTrDate(entry.movement_date));
     setAmountText(formatKurus(Math.abs(entry.amount_minor)));
     setDescription(entry.description);
-    // Extra-days rows reopen as days × rate, exactly as recorded.
     const days = entry.extra_days ?? null;
     setDaysText(days ? String(days) : "");
     setPerDayText(
@@ -111,8 +115,38 @@ export function CorrectStaffLedgerForm({
     );
     setReason("");
     setError(null);
+    setBaseline(null);
     void loadAccounts(entry).catch(() => undefined);
   }, [open, entry, loadAccounts]);
+
+  useEffect(() => {
+    if (!open || !entry || baseline !== null) return;
+    if (needsPaymentAccount && !paymentGlAccountId && paymentAccounts.length === 0) {
+      return;
+    }
+    setBaseline({
+      dateText,
+      amountText,
+      description,
+      daysText,
+      perDayText,
+      reason,
+      paymentGlAccountId,
+    });
+  }, [
+    open,
+    entry,
+    baseline,
+    needsPaymentAccount,
+    paymentAccounts.length,
+    paymentGlAccountId,
+    dateText,
+    amountText,
+    description,
+    daysText,
+    perDayText,
+    reason,
+  ]);
 
   const parsedDays = Number.parseInt(daysText, 10);
   const extraDaysValue = Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : null;
@@ -123,6 +157,20 @@ export function CorrectStaffLedgerForm({
       ? extraDaysValue * perDayMinor
       : null;
   const amountMinor = isExtraDays ? extraDaysTotalMinor : parseTryToKurus(amountText);
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-staff-ledger",
+    open && entry !== null,
+    baseline,
+    {
+      dateText,
+      amountText,
+      description,
+      daysText,
+      perDayText,
+      reason,
+      paymentGlAccountId,
+    },
+  );
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -182,8 +230,8 @@ export function CorrectStaffLedgerForm({
 
   return (
     <>
-      <Dialog open={open} title="Edit staff entry" onClose={onClose}>
-        <form onSubmit={onSubmit} className="space-y-3">
+      <Dialog open={open} title="Edit staff entry" onClose={onClose} dirty={dirty}>
+        <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
           <div>
             <Label htmlFor="csl-date">Date</Label>
             <DateInput id="csl-date" value={dateText} onChange={setDateText} required />

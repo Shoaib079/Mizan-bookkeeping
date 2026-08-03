@@ -12,15 +12,20 @@ import {
   type ReactNode,
 } from "react";
 
+import { UnsavedChangesConfirm } from "@/components/ui/unsaved-changes-confirm";
+
 type UnsavedWorkContextValue = {
   hasUnsavedWork: boolean;
   setDirty: (sourceId: string, dirty: boolean) => void;
+  /** Run an action now, or ask before leaving when any form is dirty. */
+  requestLeave: (action: () => void) => void;
 };
 
 const UnsavedWorkContext = createContext<UnsavedWorkContextValue | null>(null);
 
 export function UnsavedWorkProvider({ children }: { children: ReactNode }) {
   const [dirtySources, setDirtySources] = useState<Record<string, boolean>>({});
+  const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
 
   const setDirty = useCallback((sourceId: string, dirty: boolean) => {
     setDirtySources((prev) => {
@@ -40,14 +45,34 @@ export function UnsavedWorkProvider({ children }: { children: ReactNode }) {
     [dirtySources],
   );
 
+  const requestLeave = useCallback(
+    (action: () => void) => {
+      if (hasUnsavedWork) {
+        setPendingLeave(() => action);
+        return;
+      }
+      action();
+    },
+    [hasUnsavedWork],
+  );
+
   const value = useMemo(
-    () => ({ hasUnsavedWork, setDirty }),
-    [hasUnsavedWork, setDirty],
+    () => ({ hasUnsavedWork, setDirty, requestLeave }),
+    [hasUnsavedWork, setDirty, requestLeave],
   );
 
   return (
     <UnsavedWorkContext.Provider value={value}>
       {children}
+      {pendingLeave && (
+        <UnsavedChangesConfirm
+          onCancel={() => setPendingLeave(null)}
+          onConfirm={() => {
+            pendingLeave();
+            setPendingLeave(null);
+          }}
+        />
+      )}
     </UnsavedWorkContext.Provider>
   );
 }

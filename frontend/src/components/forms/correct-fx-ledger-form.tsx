@@ -26,6 +26,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 
 type ExpenseAccountOption = ChartAccount;
 
@@ -72,6 +73,7 @@ export function CorrectFxLedgerForm({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<Record<string, string> | null>(null);
 
   const isConversion = entry?.journal_source === "fx_conversion";
 
@@ -92,7 +94,10 @@ export function CorrectFxLedgerForm({
   }, [open, submitIdempotency]);
 
   useEffect(() => {
-    if (!open || !entry) return;
+    if (!open || !entry) {
+      setBaseline(null);
+      return;
+    }
     void loadOptions().catch(() => undefined);
     setDateText(formatTrDate(entry.movement_date));
     setNativeText(formatFxNativeInput(entry.native_quantity));
@@ -100,10 +105,54 @@ export function CorrectFxLedgerForm({
     setDescription(entry.description);
     setReason("");
     setError(null);
+    setBaseline(null);
   }, [open, entry, currency, loadOptions]);
+
+  useEffect(() => {
+    if (!open || !entry || baseline !== null) return;
+    if (isConversion && tryAccounts.length === 0) return;
+    if (!isConversion && expenseAccounts.length === 0) return;
+    setBaseline({
+      dateText,
+      nativeText,
+      tryReceivedText,
+      description,
+      reason,
+      tryMoneyAccountId,
+      expenseAccountId,
+    });
+  }, [
+    open,
+    entry,
+    baseline,
+    isConversion,
+    tryAccounts.length,
+    expenseAccounts.length,
+    dateText,
+    nativeText,
+    tryReceivedText,
+    description,
+    reason,
+    tryMoneyAccountId,
+    expenseAccountId,
+  ]);
 
   const nativeQuantity = parseFxNative(nativeText);
   const tryReceivedKurus = parseTryToKurus(tryReceivedText);
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-fx-ledger",
+    open && entry !== null,
+    baseline,
+    {
+      dateText,
+      nativeText,
+      tryReceivedText,
+      description,
+      reason,
+      tryMoneyAccountId,
+      expenseAccountId,
+    },
+  );
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -164,8 +213,8 @@ export function CorrectFxLedgerForm({
 
   return (
     <>
-      <Dialog open={open} title="Edit FX entry" onClose={onClose}>
-        <form onSubmit={onSubmit} className="space-y-3">
+      <Dialog open={open} title="Edit FX entry" onClose={onClose} dirty={dirty}>
+        <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
           <div>
             <Label htmlFor="cfx-date">Date</Label>
             <DateInput id="cfx-date" value={dateText} onChange={setDateText} required />

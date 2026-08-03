@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   devModeIdentityLabel,
+  discardChangesMessage,
+  discardChangesTitle,
   recordingForLabel,
   switchConfirmMessage,
   unsavedWorkWarningMessage,
@@ -17,9 +19,16 @@ describe("switchConfirmMessage", () => {
   });
 });
 
+describe("discard changes copy", () => {
+  it("warns before leaving with dirty forms", () => {
+    expect(discardChangesMessage()).toContain("not been saved");
+    expect(discardChangesTitle()).toContain("Discard");
+  });
+});
+
 describe("unsavedWorkWarningMessage", () => {
   it("warns before leaving with dirty forms", () => {
-    expect(unsavedWorkWarningMessage()).toContain("unsaved");
+    expect(unsavedWorkWarningMessage()).toContain("not been saved");
   });
 });
 

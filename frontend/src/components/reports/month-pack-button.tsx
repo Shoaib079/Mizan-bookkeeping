@@ -15,11 +15,13 @@ type Props = {
   /** Already-built `from=…&to=…` for the chosen period. */
   queryString: string;
   disabled?: boolean;
+  /** Compact sticky-bar style for mobile reports (C4.6). */
+  compact?: boolean;
 };
 
 type Format = "xlsx" | "pdf";
 
-export function MonthPackButton({ entityId, queryString, disabled }: Props) {
+export function MonthPackButton({ entityId, queryString, disabled, compact }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<Format | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,24 +49,32 @@ export function MonthPackButton({ entityId, queryString, disabled }: Props) {
   }
 
   return (
-    <div className="relative flex flex-col items-end gap-1" ref={menuRef}>
+    <div
+      className={cn(
+        "relative flex flex-col gap-1",
+        compact ? "shrink-0 items-stretch" : "items-end",
+      )}
+      ref={menuRef}
+    >
       <Button
         type="button"
-        variant="primary"
+        variant={compact ? "secondary" : "primary"}
         disabled={disabled || !entityId || busy !== null}
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((value) => !value)}
-        className="gap-1.5"
+        className={cn("gap-1.5", compact && "h-10 px-3")}
       >
-        <Download className="size-4" />
-        {busy ? "Preparing…" : "Download all"}
-        <ChevronDown
-          className={cn(
-            "size-4 opacity-80 transition",
-            open && "rotate-180",
-          )}
-        />
+        <Download className="size-4 shrink-0" />
+        {busy ? "Preparing…" : compact ? "Download" : "Download all"}
+        {!compact && (
+          <ChevronDown
+            className={cn(
+              "size-4 opacity-80 transition",
+              open && "rotate-180",
+            )}
+          />
+        )}
       </Button>
 
       {open && (

@@ -15,6 +15,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 import {
   filterExpenseAccounts,
   findExpenseAccountByCode,
@@ -72,6 +73,7 @@ export function CorrectSupplierInvoiceForm({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<Record<string, string> | null>(null);
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
@@ -82,14 +84,40 @@ export function CorrectSupplierInvoiceForm({
   }, [entityId]);
 
   useEffect(() => {
-    if (!open || !invoice) return;
+    if (!open || !invoice) {
+      setBaseline(null);
+      return;
+    }
     void loadAccounts().catch(() => undefined);
     setDateText(formatTrDate(invoice.movement_date));
     setGrossText(formatKurus(invoice.amount_kurus));
     setDescription(invoice.description);
     setReason("");
     setError(null);
+    setBaseline(null);
   }, [open, invoice, loadAccounts]);
+
+  useEffect(() => {
+    if (!open || !invoice || baseline !== null) return;
+    if (!expenseAccountId && accounts.length === 0) return;
+    setBaseline({
+      dateText,
+      grossText,
+      description,
+      reason,
+      expenseAccountId,
+    });
+  }, [
+    open,
+    invoice,
+    baseline,
+    accounts.length,
+    expenseAccountId,
+    dateText,
+    grossText,
+    description,
+    reason,
+  ]);
 
   useEffect(() => {
     if (!open || accounts.length === 0) return;
@@ -109,6 +137,12 @@ export function CorrectSupplierInvoiceForm({
   }, [open, submitIdempotency]);
 
   const grossKurus = parseTryToKurus(grossText);
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-supplier-invoice",
+    open && invoice !== null,
+    baseline,
+    { dateText, grossText, description, reason, expenseAccountId },
+  );
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -165,8 +199,8 @@ export function CorrectSupplierInvoiceForm({
 
   return (
     <>
-      <Dialog open={open} title="Edit supplier invoice" onClose={onClose}>
-        <form onSubmit={onSubmit} className="space-y-3">
+      <Dialog open={open} title="Edit supplier invoice" onClose={onClose} dirty={dirty}>
+        <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
           <div>
             <Label htmlFor="csi-date">Invoice date</Label>
             <DateInput id="csi-date" value={dateText} onChange={setDateText} required />

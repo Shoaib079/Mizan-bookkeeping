@@ -129,6 +129,19 @@ export function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
+/** Calendar day at local midnight — for date-only comparisons. */
+export function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+export function isAfterDay(a: Date, b: Date): boolean {
+  return startOfDay(a).getTime() > startOfDay(b).getTime();
+}
+
+export function isFutureDay(date: Date, reference = new Date()): boolean {
+  return isAfterDay(date, reference);
+}
+
 export function displayFromDate(d: Date): string {
   return formatTrDate(dateToIsoLocal(d));
 }

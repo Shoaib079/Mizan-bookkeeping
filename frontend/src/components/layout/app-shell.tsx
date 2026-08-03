@@ -1,6 +1,6 @@
 "use client";
 
-/** App shell — sidebar + top bar (DESIGN_SYSTEM.md §6, IA v2). */
+/** App shell — desktop sidebar or mobile bottom tabs (C4, DESIGN_SYSTEM.md §6). */
 
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
@@ -8,6 +8,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 
 import { AccountMenu } from "@/components/layout/account-menu";
+import { MobileBottomTabs } from "@/components/layout/mobile-bottom-tabs";
+import { MobileTopBar } from "@/components/layout/mobile-top-bar";
 import { PageBackLink } from "@/components/layout/page-back-link";
 import { TransactionPeekProvider } from "@/components/ledger/transaction-drawer";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
@@ -17,12 +19,15 @@ import { useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { navGroups, isNavItemActive } from "@/lib/app-routes";
+import { isMobileTabRoot } from "@/lib/mobile-shell";
 import { shouldShowNewMenu } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
 import { pushNavHistory } from "@/lib/nav-history";
 import { useEntityAccess } from "@/lib/use-entity-access";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { ReviewCountsProvider } from "@/lib/review-counts-context";
 import { useReviewCounts } from "@/lib/use-review-counts";
+import { cn } from "@/lib/utils";
 
 /** "Group / Section" crumb above the page title (audit A4/C3). */
 function breadcrumbForPathname(pathname: string, title: string): string | null {
@@ -66,6 +71,7 @@ function AppShellInner({
   title: string;
 }) {
   const pathname = usePathname();
+  const isMobile = useIsMobileShell();
   const { deliveryEnabled } = useQuickActions();
   const { entityId } = useEntity();
   const { role } = useEntityAccess();
@@ -74,6 +80,64 @@ function AppShellInner({
   const navSettings = { deliveryEnabled };
   const onReviewPage = pathname.startsWith("/review");
   const breadcrumb = breadcrumbForPathname(pathname, title);
+  const onMobileTabRoot = isMobile && isMobileTabRoot(pathname);
+  const showMobileTabs = isMobile;
+  const showRecordFab = shouldShowNewMenu(role);
+
+  const mobileTitle =
+    pathname === "/"
+      ? "Dashboard"
+      : title;
+
+  const mainChrome = (
+    <>
+      <Suspense fallback={null}>
+        <NavHistoryTracker />
+      </Suspense>
+      {!isMobile && <PageBackLink />}
+      {!isMobile && (
+        <div className="mb-5">
+          {breadcrumb && (
+            <p className="text-xs text-muted-foreground">{breadcrumb}</p>
+          )}
+          <h1 className="mt-0.5 truncate text-xl font-semibold">{title}</h1>
+        </div>
+      )}
+      <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>
+        <TransactionPeekProvider>{children}</TransactionPeekProvider>
+      </ReviewCountsProvider>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="flex min-h-dvh flex-col bg-background">
+        <MobileTopBar
+          title={mobileTitle}
+          reviewTotal={reviewCounts.total}
+          onReviewPage={onReviewPage}
+        />
+        <main
+          key={entityId}
+          className={cn(
+            "flex-1 overflow-y-auto overscroll-y-contain px-3.5 py-3",
+            isMobile &&
+              "pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]",
+            pathname === "/more" && "bg-[#f2f2f7] px-4",
+          )}
+        >
+          {mainChrome}
+        </main>
+        {showMobileTabs && (
+          <MobileBottomTabs
+            reviewTotal={reviewCounts.total}
+            showRecord={showRecordFab}
+          />
+        )}
+        <CommandPalette deliveryEnabled={deliveryEnabled} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -116,7 +180,7 @@ function AppShellInner({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {shouldShowNewMenu(role) && (
+            {showRecordFab && (
               <Link
                 href="/record"
                 className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
@@ -130,19 +194,7 @@ function AppShellInner({
           </div>
         </header>
         <main className="flex-1 p-6" key={entityId}>
-          <Suspense fallback={null}>
-            <NavHistoryTracker />
-          </Suspense>
-          <PageBackLink />
-          <div className="mb-5">
-            {breadcrumb && (
-              <p className="text-xs text-muted-foreground">{breadcrumb}</p>
-            )}
-            <h1 className="mt-0.5 truncate text-xl font-semibold">{title}</h1>
-          </div>
-          <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>
-            <TransactionPeekProvider>{children}</TransactionPeekProvider>
-          </ReviewCountsProvider>
+          {mainChrome}
         </main>
       </div>
       <CommandPalette deliveryEnabled={deliveryEnabled} />

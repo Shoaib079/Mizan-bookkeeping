@@ -61,7 +61,7 @@ const DOCUMENT_ROUTE: Record<DetectedDocumentType, RecordActionKey> = {
   pos_daily_summary: "posPhoto",
 };
 
-export function RecordDesk() {
+export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
   const { entityId } = useEntity();
   const { role } = useEntityAccess();
   const {
@@ -129,11 +129,21 @@ export function RecordDesk() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
+    <div className={cn("space-y-6", mobileQuick && "space-y-4")}>
+      <div
+        className={cn(
+          "flex flex-col gap-4",
+          !mobileQuick && "lg:flex-row lg:items-start lg:gap-5",
+        )}
+      >
         <nav
           aria-label="Record type"
-          className="flex shrink-0 gap-1 overflow-x-auto pb-1 lg:w-44 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0"
+          className={cn(
+            "flex shrink-0 gap-1 overflow-x-auto pb-1",
+            mobileQuick
+              ? "gap-2 pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              : "lg:w-44 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0",
+          )}
         >
           {primaryActions.map((action) => (
             <DeskModeButton
@@ -141,6 +151,7 @@ export function RecordDesk() {
               action={action}
               label={DESK_SHORT_LABELS[action.id as RecordDeskMode]}
               active={mode === action.id}
+              mobilePill={mobileQuick}
               showDraftDot={
                 action.id === "countCash" && cashCountDraftPending
               }
@@ -228,9 +239,19 @@ export function RecordDesk() {
           )}
         </nav>
 
-        <section className="min-w-0 flex-1 lg:max-w-2xl">
-          <div className="rounded-lg border border-border bg-card shadow-sm">
-            <header className="border-b border-border px-4 py-3">
+        <section className={cn("min-w-0 flex-1", !mobileQuick && "lg:max-w-2xl")}>
+          <div
+            className={cn(
+              "rounded-lg border border-border bg-card shadow-sm",
+              mobileQuick && "border-0 shadow-none",
+            )}
+          >
+            <header
+              className={cn(
+                "border-b border-border px-4 py-3",
+                mobileQuick && "hidden",
+              )}
+            >
               <div className="flex items-center gap-2.5">
                 {ActiveIcon && (
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -248,7 +269,7 @@ export function RecordDesk() {
               </div>
             </header>
 
-            <div className="p-4">
+            <div className={cn("p-4", mobileQuick && "px-0 pt-2")}>
               {mode === "expense" && (
                 <ManualExpenseForm
                   embedded
@@ -335,12 +356,14 @@ function DeskModeButton({
   action,
   label,
   active,
+  mobilePill = false,
   showDraftDot = false,
   onSelect,
 }: {
   action: RecordActionDef;
   label: string;
   active: boolean;
+  mobilePill?: boolean;
   showDraftDot?: boolean;
   onSelect: () => void;
 }) {
@@ -352,20 +375,37 @@ function DeskModeButton({
       aria-selected={active}
       aria-description={showDraftDot ? "Saved count draft" : undefined}
       className={cn(
-        "flex min-w-[8.5rem] shrink-0 items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors lg:min-w-0 lg:w-full",
-        active
-          ? "bg-primary/10 text-primary ring-1 ring-primary/20"
-          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+        "flex shrink-0 items-center gap-2 text-sm font-medium transition-colors",
+        mobilePill
+          ? cn(
+              "min-h-10 rounded-full border px-3.5 py-2",
+              active
+                ? "border-primary bg-primary text-primary-foreground shadow-[0_2px_10px_rgb(37_99_235/0.3)]"
+                : "border-border bg-card text-foreground",
+            )
+          : cn(
+              "min-w-[8.5rem] gap-2.5 rounded-md px-3 py-2.5 text-left lg:min-w-0 lg:w-full",
+              active
+                ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            ),
       )}
       onClick={onSelect}
     >
       <span
         className={cn(
-          "relative flex size-8 shrink-0 items-center justify-center rounded-md",
-          active ? "bg-primary/15 text-primary" : "bg-muted/60 text-muted-foreground",
+          "relative flex shrink-0 items-center justify-center",
+          mobilePill
+            ? "size-5"
+            : cn(
+                "size-8 rounded-md",
+                active
+                  ? "bg-primary/15 text-primary"
+                  : "bg-muted/60 text-muted-foreground",
+              ),
         )}
       >
-        <Icon className="size-4" aria-hidden />
+        <Icon className={cn(mobilePill ? "size-4" : "size-4")} aria-hidden />
         {showDraftDot && (
           <span
             className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warning"

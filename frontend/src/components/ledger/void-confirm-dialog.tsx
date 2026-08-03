@@ -25,7 +25,13 @@ export function VoidConfirmDialog({
   onConfirm,
 }: Props) {
   return (
-    <Dialog open={open} title={title} onClose={onClose}>
+    <Dialog
+      open={open}
+      title={title}
+      onClose={onClose}
+      size="compact"
+      mobilePresentation="sheet"
+    >
       <VoidWarningBanner />
       {detail && (
         <p className="mt-3 text-sm text-muted-foreground">{detail}</p>

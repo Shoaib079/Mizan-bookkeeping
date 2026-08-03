@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatMonthYear, priorCalendarMonth, weekdayLabels } from "@/lib/dates";
+import { formatMonthYear, isFutureDay, priorCalendarMonth, startOfDay, weekdayLabels } from "@/lib/dates";
 
 describe("calendar labels", () => {
   it("uses English month names in the DateInput popup", () => {
@@ -22,5 +22,12 @@ describe("calendar labels", () => {
       year: 2025,
       month: 12,
     });
+  });
+
+  it("treats dates after today as future", () => {
+    const today = startOfDay(new Date(2026, 7, 3));
+    expect(isFutureDay(new Date(2026, 7, 4), today)).toBe(true);
+    expect(isFutureDay(new Date(2026, 7, 3), today)).toBe(false);
+    expect(isFutureDay(new Date(2026, 7, 2), today)).toBe(false);
   });
 });

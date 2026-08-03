@@ -69,6 +69,8 @@ export function usePeriodUnlockSubmit() {
         open={open}
         title="Closed period — owner unlock"
         onClose={cancelUnlock}
+        size="compact"
+        mobilePresentation="sheet"
       >
         <form onSubmit={onUnlockSubmit} className="space-y-3">
           <p className="text-sm text-muted-foreground">{apiMessage}</p>

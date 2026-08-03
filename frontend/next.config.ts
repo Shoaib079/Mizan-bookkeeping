@@ -8,6 +8,8 @@ const appRoot = join(__dirname);
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: appRoot,
+  // Allow phone/tablet on LAN to load dev assets (e.g. http://192.168.1.x:3000).
+  allowedDevOrigins: ["192.168.1.125", "192.168.1.125:3000"],
   // Reduce parallel static generation — avoids ENFILE on macOS with low maxfiles.
   experimental: {
     cpus: 1,

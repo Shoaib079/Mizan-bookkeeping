@@ -131,21 +131,25 @@ export function TeamPanel() {
       {loading && <TableSkeleton columns={5} />}
 
       {!loading && items.length > 0 && (
-        <DataTable>
+        <DataTable tableClassName="min-w-[40rem]">
           <DataTableHead>
             <tr>
               <DataTableHeaderCell>Name</DataTableHeaderCell>
               <DataTableHeaderCell>Email</DataTableHeaderCell>
               <DataTableHeaderCell>Role</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell> </DataTableHeaderCell>
+              <DataTableHeaderCell align="right"> </DataTableHeaderCell>
             </tr>
           </DataTableHead>
           <DataTableBody>
             {items.map((row) => (
               <DataTableRow key={row.id}>
-                <DataTableCell>{row.user.display_name}</DataTableCell>
-                <DataTableCell>{row.user.email}</DataTableCell>
+                <DataTableCell className="max-w-[10rem] truncate">
+                  {row.user.display_name}
+                </DataTableCell>
+                <DataTableCell className="max-w-[14rem] truncate">
+                  <span title={row.user.email ?? undefined}>{row.user.email}</span>
+                </DataTableCell>
                 <DataTableCell>
                   <Select
                     value={row.role}
@@ -153,7 +157,7 @@ export function TeamPanel() {
                     onChange={(e) =>
                       void onRoleChange(row, e.target.value as EntityRole)
                     }
-                    className="max-w-[12rem]"
+                    className="w-full min-w-[10rem] max-w-[12rem]"
                   >
                     {ENTITY_ROLES.map((r) => (
                       <option key={r.value} value={r.value}>
@@ -162,10 +166,10 @@ export function TeamPanel() {
                     ))}
                   </Select>
                 </DataTableCell>
-                <DataTableCell>
+                <DataTableCell className="whitespace-nowrap">
                   {row.user.is_active ? "Active" : "Inactive"}
                 </DataTableCell>
-                <DataTableCell>
+                <DataTableCell align="right" className="whitespace-nowrap">
                   <Button
                     type="button"
                     variant="ghost"

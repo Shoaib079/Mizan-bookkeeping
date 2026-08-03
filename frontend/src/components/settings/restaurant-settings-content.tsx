@@ -42,12 +42,10 @@ export function RestaurantSettingsContent() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
-  const [chartCount, setChartCount] = useState<number | null>(null);
 
   const reloadSettings = useCallback(async () => {
     if (!entityId) {
       setSettings([]);
-      setChartCount(null);
       setProfile(null);
       return;
     }
@@ -56,17 +54,13 @@ export function RestaurantSettingsContent() {
     setProfileLoading(true);
     setProfileError(null);
     try {
-      const [settingsRes, chartRes, entityRes] = await Promise.all([
+      const [settingsRes, entityRes] = await Promise.all([
         apiFetch<{ items: EntitySettingRow[] }>(
           `/entities/${entityId}/settings?limit=200`,
-        ),
-        apiFetch<{ total: number }>(
-          `/entities/${entityId}/chart-of-accounts?limit=1`,
         ),
         apiFetch<EntityProfile>(`/entities/${entityId}`),
       ]);
       setSettings(settingsRes.items);
-      setChartCount(chartRes.total);
       setProfile(entityRes);
       setProfileName(entityRes.name);
       setProfileLegalName(entityRes.legal_name ?? "");
@@ -74,7 +68,6 @@ export function RestaurantSettingsContent() {
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : "Failed to load");
       setSettings([]);
-      setChartCount(null);
       setProfile(null);
       setProfileError(err instanceof Error ? err.message : "Failed to load profile");
     } finally {
@@ -156,7 +149,7 @@ export function RestaurantSettingsContent() {
   }
 
   return (
-    <div className="max-w-xl space-y-8">
+    <div className="max-w-3xl space-y-8">
       <section className="rounded-lg border border-border bg-card p-5">
         <h2 className="text-sm font-semibold">Company profile</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -244,18 +237,9 @@ export function RestaurantSettingsContent() {
         <p className="mt-1 text-sm text-muted-foreground">
           Members who can access this restaurant and their roles.
         </p>
-        <div className="mt-4">
+        <div className="mt-4 min-w-0">
           <TeamPanel />
         </div>
-      </section>
-
-      <section className="rounded-lg border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold">Chart of accounts</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {chartCount === null
-            ? "Loading…"
-            : `${chartCount} account${chartCount === 1 ? "" : "s"} on chart.`}
-        </p>
       </section>
 
       <section className="rounded-lg border border-border bg-card p-5">

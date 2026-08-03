@@ -22,6 +22,11 @@ describe("void confirmation UX", () => {
     expect(manualForm).toContain("VoidWarningBanner");
     expect(groupSale).toContain("VoidTriggerButton");
     expect(read("ledger/void-confirm-dialog.tsx")).toContain("VoidWarningBanner");
+    expect(read("ledger/void-confirm-dialog.tsx")).toContain(
+      'mobilePresentation="sheet"',
+    );
+    expect(voidForm).toContain('mobilePresentation="sheet"');
+    expect(manualForm).toContain('mobilePresentation="sheet"');
     expect(read("ledger/void-warning-banner.tsx")).toContain(
       "This cannot be undone",
     );

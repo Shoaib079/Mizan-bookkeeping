@@ -3,15 +3,22 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 
-import { currentMonthRange } from "@/lib/date-range";
+import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
 
 export function useCardsUrl() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const defaults = useMemo(() => currentMonthRange(), []);
 
-  const from = searchParams.get("from") ?? defaults.from;
-  const to = searchParams.get("to") ?? defaults.to;
+  const { from, to } = useMemo(
+    () =>
+      resolveReportRange(
+        searchParams.get("from"),
+        searchParams.get("to"),
+        defaults,
+      ),
+    [defaults, searchParams],
+  );
 
   const setRange = useCallback(
     (nextFrom: string, nextTo: string) => {

@@ -31,6 +31,8 @@ import {
   sourceLabel,
 } from "@/lib/transaction-registry";
 import { transactionPeekActions } from "@/lib/subledger-actions";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
+import { cn } from "@/lib/utils";
 
 export { LEDGER_CHANGED_EVENT };
 
@@ -80,6 +82,7 @@ export function TransactionPeekProvider({
   children: React.ReactNode;
 }) {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const [entry, setEntry] = useState<PeekEntry | null>(null);
   const [voidOpen, setVoidOpen] = useState(false);
 
@@ -128,8 +131,8 @@ export function TransactionPeekProvider({
     : [];
 
   return (
-    <PeekContext.Provider value={value}>
-      {children}
+    <>
+      <PeekContext.Provider value={value}>{children}</PeekContext.Provider>
 
       {entry && (
         <>
@@ -142,9 +145,20 @@ export function TransactionPeekProvider({
           <aside
             role="dialog"
             aria-label="Transaction details"
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l border-border bg-card shadow-[var(--shadow-pop)]"
+            className={cn(
+              "fixed z-50 flex flex-col border-border bg-card shadow-[var(--shadow-pop)]",
+              isMobile
+                ? "inset-x-0 bottom-0 max-h-[88dvh] rounded-t-2xl border-t pb-[env(safe-area-inset-bottom,0px)]"
+                : "inset-y-0 right-0 w-full max-w-sm border-l",
+            )}
           >
-            <div className="border-b border-border px-5 py-4">
+            {isMobile && (
+              <div
+                className="mx-auto mt-2.5 h-1 w-9 shrink-0 rounded-full bg-border"
+                aria-hidden
+              />
+            )}
+            <div className={cn("border-b border-border px-5 py-4", isMobile && "pt-3")}>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Transaction · {sourceLabel(entry.source)}</span>
                 <button
@@ -276,6 +290,6 @@ export function TransactionPeekProvider({
           />
         </>
       )}
-    </PeekContext.Provider>
+    </>
   );
 }

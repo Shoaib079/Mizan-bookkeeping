@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { Children } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { SectionTabs } from "@/components/layout/section-tabs";
@@ -14,8 +15,10 @@ export default function DeliveryLayout({
   const pathname = usePathname();
   return (
     <AppShell title={pageTitleForPathname(pathname)}>
-      <SectionTabs sectionId="delivery" ariaLabel="Delivery sections" />
-      {children}
+      <div>
+        <SectionTabs sectionId="delivery" ariaLabel="Delivery sections" />
+        <div>{Children.toArray(children)}</div>
+      </div>
     </AppShell>
   );
 }

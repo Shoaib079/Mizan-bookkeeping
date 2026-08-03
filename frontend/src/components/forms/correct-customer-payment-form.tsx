@@ -21,6 +21,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 
 export type CorrectableCustomerPaymentRow = {
   journal_entry_id: string;
@@ -76,6 +77,7 @@ export function CorrectCustomerPaymentForm({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<Record<string, string | boolean> | null>(null);
 
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.gl_account_id === paymentGlAccountId),
@@ -122,12 +124,11 @@ export function CorrectCustomerPaymentForm({
   );
 
   useEffect(() => {
-    if (!open || !payment) return;
+    if (!open || !payment) {
+      setBaseline(null);
+      return;
+    }
     setDateText(formatTrDate(payment.movement_date));
-    // Prefill the amount exactly as it was entered — a positive payment figure —
-    // not the signed ledger value (a customer payment is stored as a negative
-    // credit). Showing −13.200 both misrepresents the entry and blocks saving
-    // (the form requires a positive amount).
     setAmountText(formatKurus(Math.abs(payment.amount_kurus)));
     setForexAmountText("");
     setRateText("");
@@ -135,9 +136,37 @@ export function CorrectCustomerPaymentForm({
     setDescription(payment.description);
     setReason("");
     setError(null);
-    // Load accounts last — it restores the recorded account and FX amount.
+    setBaseline(null);
     void loadAccounts(payment).catch(() => undefined);
   }, [open, payment, loadAccounts]);
+
+  useEffect(() => {
+    if (!open || !payment || baseline !== null) return;
+    if (!paymentGlAccountId && accounts.length === 0) return;
+    setBaseline({
+      dateText,
+      amountText,
+      forexAmountText,
+      rateText,
+      tryValueTouched,
+      description,
+      reason,
+      paymentGlAccountId,
+    });
+  }, [
+    open,
+    payment,
+    baseline,
+    accounts.length,
+    paymentGlAccountId,
+    dateText,
+    amountText,
+    forexAmountText,
+    rateText,
+    tryValueTouched,
+    description,
+    reason,
+  ]);
 
   useEffect(() => {
     if (!isFxWallet) {
@@ -162,6 +191,21 @@ export function CorrectCustomerPaymentForm({
     amountKurus === null ||
     amountKurus <= 0 ||
     (isFxWallet && (forexMinor === null || forexMinor <= 0));
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-customer-payment",
+    open && payment !== null,
+    baseline,
+    {
+      dateText,
+      amountText,
+      forexAmountText,
+      rateText,
+      tryValueTouched,
+      description,
+      reason,
+      paymentGlAccountId,
+    },
+  );
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -223,8 +267,8 @@ export function CorrectCustomerPaymentForm({
 
   return (
     <>
-      <Dialog open={open} title="Edit customer payment" onClose={onClose}>
-        <form onSubmit={onSubmit} className="space-y-3">
+      <Dialog open={open} title="Edit customer payment" onClose={onClose} dirty={dirty}>
+        <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
           <div>
             <Label htmlFor="ccp-date">Payment date (DD.MM.YYYY)</Label>
             <DateInput

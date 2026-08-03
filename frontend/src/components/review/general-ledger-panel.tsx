@@ -38,7 +38,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatChartAccountLabel } from "@/lib/chart-accounts";
 import { apiFetch } from "@/lib/api";
-import { currentMonthRange } from "@/lib/date-range";
+import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { journalEntryRowClassName } from "@/lib/ledger-display";
@@ -202,8 +202,15 @@ function LedgerPanelContent() {
   const router = useRouter();
   const defaults = useMemo(() => currentMonthRange(), []);
 
-  const from = searchParams.get("from") ?? defaults.from;
-  const to = searchParams.get("to") ?? defaults.to;
+  const { from, to } = useMemo(
+    () =>
+      resolveReportRange(
+        searchParams.get("from"),
+        searchParams.get("to"),
+        defaults,
+      ),
+    [defaults, searchParams],
+  );
   const q = searchParams.get("q") ?? "";
   const source = searchParams.get("source") ?? "";
   const status = searchParams.get("status") ?? "";

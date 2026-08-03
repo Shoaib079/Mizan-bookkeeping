@@ -14,9 +14,11 @@ import {
   displayFromDate,
   formatMonthYear,
   getCalendarDays,
+  isFutureDay,
   isSameDay,
   lateNightDateHint,
   parseDisplayToDate,
+  startOfDay,
   weekdayLabels,
 } from "@/lib/dates";
 import { shouldOpenCalendarOnClick } from "@/lib/date-input-open";
@@ -33,7 +35,27 @@ export type DateInputProps = {
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   /** Off for report filters where today's date is normal (avoids clutter/overlap). */
   showLateNightHint?: boolean;
+  /** Block calendar days after today — default for all posting/entry dates. */
+  disableFuture?: boolean;
 };
+
+function viewFromValue(
+  value: string,
+  today: Date | null,
+  disableFuture: boolean,
+): { year: number; month: number } | null {
+  const parsed = parseDisplayToDate(value);
+  if (parsed) {
+    if (disableFuture && today && isFutureDay(parsed, today)) {
+      return { year: today.getFullYear(), month: today.getMonth() };
+    }
+    return { year: parsed.getFullYear(), month: parsed.getMonth() };
+  }
+  if (today) {
+    return { year: today.getFullYear(), month: today.getMonth() };
+  }
+  return null;
+}
 
 export function DateInput({
   id,
@@ -45,30 +67,40 @@ export function DateInput({
   placeholder = "DD.MM.YYYY",
   onKeyDown,
   showLateNightHint = true,
+  disableFuture = true,
 }: DateInputProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  // Computed on the client after mount: the server has no idea what time it is
-  // where the user is, and rendering the hint during SSR would mismatch.
+  const [today, setToday] = useState<Date | null>(null);
   const [lateNightHint, setLateNightHint] = useState<string | null>(null);
 
   const selected = parseDisplayToDate(value);
-  const today = new Date();
-  const [viewYear, setViewYear] = useState(
-    () => selected?.getFullYear() ?? today.getFullYear(),
-  );
-  const [viewMonth, setViewMonth] = useState(
-    () => selected?.getMonth() ?? today.getMonth(),
-  );
+  const [viewYear, setViewYear] = useState(0);
+  const [viewMonth, setViewMonth] = useState(0);
 
   useEffect(() => {
-    const parsed = parseDisplayToDate(value);
-    if (parsed) {
-      setViewYear(parsed.getFullYear());
-      setViewMonth(parsed.getMonth());
+    setToday(startOfDay(new Date()));
+  }, []);
+
+  const showCalendar = useCallback(() => {
+    if (!shouldOpenCalendarOnClick(disabled) || !today) return;
+    const next = viewFromValue(value, today, disableFuture);
+    if (next) {
+      setViewYear(next.year);
+      setViewMonth(next.month);
     }
-  }, [value]);
+    setOpen(true);
+  }, [disableFuture, disabled, today, value]);
+
+  useEffect(() => {
+    if (open || !today) return;
+    const next = viewFromValue(value, today, disableFuture);
+    if (next) {
+      setViewYear(next.year);
+      setViewMonth(next.month);
+    }
+  }, [open, today, value, disableFuture]);
 
   useEffect(() => {
     if (!showLateNightHint) {
@@ -89,28 +121,58 @@ export function DateInput({
     return () => document.removeEventListener("mousedown", onDocumentMouseDown);
   }, [open]);
 
+  const isDateDisabled = useCallback(
+    (date: Date) =>
+      Boolean(today) && disableFuture && isFutureDay(date, today!),
+    [disableFuture, today],
+  );
+
+  const canGoNextMonth =
+    !disableFuture ||
+    !today ||
+    viewYear < today.getFullYear() ||
+    (viewYear === today.getFullYear() && viewMonth < today.getMonth());
+
   const pickDate = useCallback(
     (date: Date) => {
+      if (isDateDisabled(date)) return;
       onChange(displayFromDate(date));
       setOpen(false);
       inputRef.current?.focus();
     },
-    [onChange],
+    [isDateDisabled, onChange],
   );
 
-  const openCalendar = useCallback(() => {
-    if (shouldOpenCalendarOnClick(disabled)) setOpen(true);
-  }, [disabled]);
+  const clampTypedValue = useCallback(() => {
+    if (!disableFuture || !today) return;
+    const parsed = parseDisplayToDate(value);
+    if (parsed && isFutureDay(parsed, today)) {
+      onChange(displayFromDate(today));
+    }
+  }, [disableFuture, onChange, today, value]);
+
+  const toggleCalendar = useCallback(() => {
+    if (disabled) return;
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    showCalendar();
+  }, [disabled, open, showCalendar]);
 
   const adjustDay = useCallback(
     (delta: number) => {
-      const base = selected ?? new Date();
-      onChange(displayFromDate(addDays(base, delta)));
+      if (!today) return;
+      const base = selected ?? today;
+      const next = addDays(base, delta);
+      if (isDateDisabled(next)) return;
+      onChange(displayFromDate(next));
     },
-    [onChange, selected],
+    [isDateDisabled, onChange, selected, today],
   );
 
   const shiftMonth = (delta: number) => {
+    if (delta > 0 && !canGoNextMonth) return;
     const next = new Date(viewYear, viewMonth + delta, 1);
     setViewYear(next.getFullYear());
     setViewMonth(next.getMonth());
@@ -165,7 +227,8 @@ export function DateInput({
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        onClick={openCalendar}
+        onBlur={clampTypedValue}
+        onClick={showCalendar}
         onKeyDown={handleInputKeyDown}
         className={cn(
           "h-9 w-full rounded-md border border-border bg-background py-2 pl-3 pr-9 text-sm",
@@ -179,7 +242,7 @@ export function DateInput({
         disabled={disabled}
         aria-label="Open calendar"
         aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={toggleCalendar}
         className={cn(
           "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground",
           "hover:bg-muted hover:text-foreground",
@@ -190,7 +253,7 @@ export function DateInput({
         <Calendar className="h-4 w-4" />
       </button>
 
-      {open && (
+      {open && today && (
         <div
           role="dialog"
           aria-label="Choose date"
@@ -211,8 +274,12 @@ export function DateInput({
             <button
               type="button"
               aria-label="Next month"
+              disabled={!canGoNextMonth}
               onClick={() => shiftMonth(1)}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
+                !canGoNextMonth && "cursor-not-allowed opacity-40 hover:bg-transparent",
+              )}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -230,29 +297,40 @@ export function DateInput({
           </div>
 
           <div className="grid grid-cols-7 gap-0.5">
-            {cells.map((cell, index) =>
-              cell ? (
+            {cells.map((cell, index) => {
+              if (!cell) {
+                return <span key={`pad-${index}`} aria-hidden />;
+              }
+              const future = isDateDisabled(cell);
+              const isSelected = selected != null && isSameDay(cell, selected);
+              const isToday = isSameDay(cell, today);
+              return (
                 <button
                   key={cell.toISOString()}
                   type="button"
+                  disabled={future}
+                  aria-disabled={future}
                   onClick={() => pickDate(cell)}
                   className={cn(
                     "h-8 rounded-md text-sm tabular-nums",
-                    "hover:bg-sidebar-accent hover:text-primary",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                    selected && isSameDay(cell, selected)
-                      ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
-                      : isSameDay(cell, today)
-                        ? "font-semibold text-primary"
-                        : "text-foreground",
+                    future &&
+                      "cursor-not-allowed text-muted-foreground/40 hover:bg-transparent",
+                    !future && "hover:bg-sidebar-accent hover:text-primary",
+                    !future &&
+                      isSelected &&
+                      "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                    !future &&
+                      !isSelected &&
+                      isToday &&
+                      "font-semibold text-primary",
+                    !future && !isSelected && !isToday && "text-foreground",
                   )}
                 >
                   {cell.getDate()}
                 </button>
-              ) : (
-                <span key={`pad-${index}`} aria-hidden />
-              ),
-            )}
+              );
+            })}
           </div>
 
           <button

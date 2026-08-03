@@ -7,6 +7,12 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
+import {
+  discardChangesConfirmLabel,
+  discardChangesMessage,
+  discardChangesTitle,
+} from "@/lib/account-menu-helpers";
 import { cn } from "@/lib/utils";
 
 const FOCUSABLE =
@@ -19,8 +25,10 @@ export function Dialog({
   children,
   className,
   size = "default",
+  mobilePresentation = "fullscreen",
   dirty = false,
   onDiscard,
+  onCloseRef,
 }: {
   open: boolean;
   title: string;
@@ -29,15 +37,20 @@ export function Dialog({
   className?: string;
   /** Compact fits short person-picker + payment forms. */
   size?: "default" | "compact";
+  /** Mobile layout — sheet keeps context visible behind quick confirms/forms. */
+  mobilePresentation?: "fullscreen" | "sheet";
   /** When true, Esc/backdrop/X paths ask before closing. */
   dirty?: boolean;
   /** Called when the user confirms discarding unsaved changes. */
   onDiscard?: () => void;
+  /** Receives the guarded close handler (respects dirty confirm). */
+  onCloseRef?: React.MutableRefObject<(() => void) | undefined>;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const focusedOnOpenRef = useRef(false);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const isMobile = useIsMobileShell();
 
   useEffect(() => {
     if (!open) {
@@ -59,6 +72,14 @@ export function Dialog({
     onDiscard?.();
     onClose();
   }, [onClose, onDiscard]);
+
+  useEffect(() => {
+    if (!onCloseRef) return;
+    onCloseRef.current = requestClose;
+    return () => {
+      onCloseRef.current = undefined;
+    };
+  }, [onCloseRef, requestClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -109,9 +130,16 @@ export function Dialog({
 
   if (!open) return null;
 
+  const isMobileSheet = isMobile && mobilePresentation === "sheet";
+
   const overlay = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+      className={cn(
+        "fixed inset-0 flex bg-black/30",
+        isMobileSheet ? "z-[60] items-end p-0" : "z-50",
+        isMobile && !isMobileSheet && "items-stretch p-0",
+        !isMobile && "items-center justify-center p-4",
+      )}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) requestClose();
       }}
@@ -119,16 +147,30 @@ export function Dialog({
       <div
         ref={panelRef}
         className={cn(
-          "relative w-full overflow-y-auto rounded-lg border border-border bg-card shadow-[var(--shadow-pop)]",
-          size === "compact"
-            ? "max-h-[85vh] max-w-sm p-4"
-            : "max-h-[90vh] max-w-lg p-5",
+          "relative w-full overflow-y-auto border-border bg-card shadow-[var(--shadow-pop)]",
+          isMobileSheet &&
+            "max-h-[85dvh] rounded-t-2xl border-x-0 border-b-0 border-t pb-[env(safe-area-inset-bottom,0px)]",
+          isMobile &&
+            !isMobileSheet &&
+            "flex min-h-0 flex-1 flex-col rounded-none border-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]",
+          !isMobile && "rounded-lg border",
+          !isMobile &&
+            (size === "compact"
+              ? "max-h-[85vh] max-w-sm p-4"
+              : "max-h-[90vh] max-w-lg p-5"),
+          isMobile && "p-4",
           className,
         )}
         role="dialog"
         aria-modal
         aria-labelledby={titleId}
       >
+        {isMobileSheet && (
+          <div
+            className="mx-auto mb-3 h-1 w-9 shrink-0 rounded-full bg-border"
+            aria-hidden
+          />
+        )}
         <div
           className={cn(
             "flex items-center justify-between",
@@ -166,10 +208,10 @@ export function Dialog({
                 id={`${titleId}-discard`}
                 className="text-sm font-semibold"
               >
-                Discard unsaved changes?
+                {discardChangesTitle()}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Your changes have not been saved yet.
+                {discardChangesMessage()}
               </p>
               <div className="mt-4 flex justify-end gap-2">
                 <Button
@@ -180,7 +222,7 @@ export function Dialog({
                   Keep editing
                 </Button>
                 <Button type="button" variant="primary" onClick={confirmDiscard}>
-                  Discard
+                  {discardChangesConfirmLabel()}
                 </Button>
               </div>
             </div>

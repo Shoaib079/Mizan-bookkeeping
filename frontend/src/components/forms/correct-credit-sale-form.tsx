@@ -14,6 +14,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 
 export type CorrectableCreditSaleRow = {
   journal_entry_id: string;
@@ -48,22 +49,43 @@ export function CorrectCreditSaleForm({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<{
+    dateText: string;
+    amountText: string;
+    description: string;
+    reason: string;
+  } | null>(null);
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
 
   useEffect(() => {
-    if (!open || !sale) return;
-    setDateText(formatTrDate(sale.movement_date));
-    // Show the amount as entered (positive magnitude), not the signed ledger value.
-    setAmountText(formatKurus(Math.abs(sale.amount_kurus)));
-    setDescription(sale.description);
-    setReason("");
+    if (!open || !sale) {
+      setBaseline(null);
+      return;
+    }
+    const snapshot = {
+      dateText: formatTrDate(sale.movement_date),
+      amountText: formatKurus(Math.abs(sale.amount_kurus)),
+      description: sale.description,
+      reason: "",
+    };
+    setDateText(snapshot.dateText);
+    setAmountText(snapshot.amountText);
+    setDescription(snapshot.description);
+    setReason(snapshot.reason);
+    setBaseline(snapshot);
     setError(null);
   }, [open, sale]);
 
   const amountKurus = parseTryToKurus(amountText);
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-credit-sale",
+    open && sale !== null,
+    baseline,
+    { dateText, amountText, description, reason },
+  );
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -116,8 +138,8 @@ export function CorrectCreditSaleForm({
 
   return (
     <>
-      <Dialog open={open} title="Edit credit sale" onClose={onClose}>
-        <form onSubmit={onSubmit} className="space-y-3">
+      <Dialog open={open} title="Edit credit sale" onClose={onClose} dirty={dirty}>
+        <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
           <div>
             <Label htmlFor="ccs-date">Sale date</Label>
             <DateInput id="ccs-date" value={dateText} onChange={setDateText} required />

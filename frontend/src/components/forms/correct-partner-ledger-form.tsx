@@ -25,6 +25,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 
 type ExpenseAccountOption = ChartAccount;
 
@@ -68,6 +69,7 @@ export function CorrectPartnerLedgerForm({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<Record<string, string> | null>(null);
 
   const isExpenseFronted = entry?.movement_type === "expense_fronted";
 
@@ -108,16 +110,60 @@ export function CorrectPartnerLedgerForm({
   }, [open, submitIdempotency]);
 
   useEffect(() => {
-    if (!open || !entry) return;
+    if (!open || !entry) {
+      setBaseline(null);
+      return;
+    }
     setDateText(formatTrDate(entry.movement_date));
     setAmountText(formatKurus(Math.abs(entry.amount_kurus)));
     setDescription(entry.description);
     setReason("");
     setError(null);
+    setBaseline(null);
     void loadOptions(entry).catch(() => undefined);
   }, [open, entry, loadOptions]);
 
+  useEffect(() => {
+    if (!open || !entry || baseline !== null) return;
+    if (!isExpenseFronted && cashAccounts.length === 0) return;
+    if (isExpenseFronted && expenseAccounts.length === 0) return;
+    setBaseline({
+      dateText,
+      amountText,
+      description,
+      reason,
+      expenseAccountId,
+      cashAccountId,
+    });
+  }, [
+    open,
+    entry,
+    baseline,
+    isExpenseFronted,
+    cashAccounts.length,
+    expenseAccounts.length,
+    dateText,
+    amountText,
+    description,
+    reason,
+    expenseAccountId,
+    cashAccountId,
+  ]);
+
   const amountKurus = parseTryToKurus(amountText);
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-partner-ledger",
+    open && entry !== null,
+    baseline,
+    {
+      dateText,
+      amountText,
+      description,
+      reason,
+      expenseAccountId,
+      cashAccountId,
+    },
+  );
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -179,8 +225,8 @@ export function CorrectPartnerLedgerForm({
 
   return (
     <>
-      <Dialog open={open} title="Edit partner entry" onClose={onClose}>
-        <form onSubmit={onSubmit} className="space-y-3">
+      <Dialog open={open} title="Edit partner entry" onClose={onClose} dirty={dirty}>
+        <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
           <div>
             <Label htmlFor="cpl-date">Date</Label>
             <DateInput id="cpl-date" value={dateText} onChange={setDateText} required />

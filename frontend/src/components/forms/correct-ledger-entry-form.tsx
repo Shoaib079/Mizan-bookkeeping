@@ -15,6 +15,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 
 type PostingLine = {
   account_id: string;
@@ -62,6 +63,13 @@ export function CorrectLedgerEntryForm({
   const [lineAmounts, setLineAmounts] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<{
+    dateText: string;
+    voidDateText: string;
+    description: string;
+    reason: string;
+    lineAmounts: string[];
+  } | null>(null);
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
@@ -72,15 +80,33 @@ export function CorrectLedgerEntryForm({
   }, [entityId]);
 
   useEffect(() => {
-    if (!open || !entry) return;
+    if (!open || !entry) {
+      setBaseline(null);
+      return;
+    }
     void loadAccounts().catch(() => undefined);
-    setDateText(formatTrDate(entry.entry_date));
-    setVoidDateText(formatTrDate(entry.entry_date));
-    setDescription(entry.description);
-    setReason("");
-    setLineAmounts(entry.lines.map((line) => formatKurus(line.amount_kurus)));
+    const snapshot = {
+      dateText: formatTrDate(entry.entry_date),
+      voidDateText: formatTrDate(entry.entry_date),
+      description: entry.description,
+      reason: "",
+      lineAmounts: entry.lines.map((line) => formatKurus(line.amount_kurus)),
+    };
+    setDateText(snapshot.dateText);
+    setVoidDateText(snapshot.voidDateText);
+    setDescription(snapshot.description);
+    setReason(snapshot.reason);
+    setLineAmounts(snapshot.lineAmounts);
+    setBaseline(snapshot);
     setError(null);
   }, [open, entry, loadAccounts]);
+
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-ledger-entry",
+    open && entry !== null,
+    baseline,
+    { dateText, voidDateText, description, reason, lineAmounts },
+  );
 
   const accountLabel = (accountId: string) => {
     const acct = accounts.find((a) => a.id === accountId);
@@ -171,8 +197,8 @@ export function CorrectLedgerEntryForm({
 
   return (
     <>
-      <Dialog open={open} title="Edit ledger entry" onClose={onClose}>
-        <form onSubmit={onSubmit} className="space-y-3">
+      <Dialog open={open} title="Edit ledger entry" onClose={onClose} dirty={dirty}>
+        <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
           <div>
             <Label htmlFor="cle-date">New entry date (DD.MM.YYYY)</Label>
             <DateInput

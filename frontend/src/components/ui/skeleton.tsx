@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
+import { MobileCardListSkeleton } from "@/components/ui/mobile-card-list";
 
 export function Skeleton({
   className,
@@ -66,4 +68,21 @@ export function PageSkeleton({ className }: { className?: string }) {
       <TableSkeleton />
     </div>
   );
+}
+
+/** Table on desktop, card stack on mobile (C4.3). */
+export function ListSkeleton({
+  rows = 5,
+  columns = 4,
+  className,
+}: {
+  rows?: number;
+  columns?: number;
+  className?: string;
+}) {
+  const isMobile = useIsMobileShell();
+  if (isMobile) {
+    return <MobileCardListSkeleton rows={rows} className={className} />;
+  }
+  return <TableSkeleton rows={rows} columns={columns} className={className} />;
 }

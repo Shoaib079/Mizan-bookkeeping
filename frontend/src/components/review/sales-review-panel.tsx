@@ -19,7 +19,8 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/ui/skeleton";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ShoppingBag } from "lucide-react";
 import {
@@ -39,6 +40,7 @@ import {
   type SalesReviewFilter,
 } from "@/lib/use-sales-review-url";
 import { cn } from "@/lib/utils";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 type PaginatedResponse<T> = { items: T[]; total: number };
 
@@ -53,6 +55,7 @@ export function SalesReviewPanel({
   defaultFilter = "all",
   showCreate = false,
 }: Props) {
+  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const { from, to, review, setRange, setReview, listQuery, exportQuery } =
     useSalesReviewUrl(defaultFilter);
@@ -206,7 +209,7 @@ export function SalesReviewPanel({
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={6} />}
+      {loading && <ListSkeleton columns={6} rows={4} />}
 
       {!loading && items.length === 0 ? (
         <EmptyState
@@ -216,7 +219,44 @@ export function SalesReviewPanel({
         />
       ) : null}
 
-      {!loading && items.length > 0 && (
+      {!loading && items.length > 0 && isMobile && (
+        <MobileCardList>
+          {items.map((row) => (
+            <MobileCardRow
+              key={row.id}
+              href={
+                isPendingReviewStatus(row.status)
+                  ? `/sales/${row.id}`
+                  : `/sales/${row.id}`
+              }
+              title={row.summary_date ? formatTrDate(row.summary_date) : "—"}
+              meta={<StatusBadge status={row.status} />}
+              amount={formatTry(row.total_kurus)}
+              trailing={
+                row.status === "posted" ? (
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-8 px-2 text-xs"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCorrectSummary(row);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                ) : isPendingReviewStatus(row.status) ? (
+                  <span className="text-xs text-primary">Review</span>
+                ) : null
+              }
+            />
+          ))}
+        </MobileCardList>
+      )}
+
+      {!loading && items.length > 0 && !isMobile && (
         <DataTable>
           <DataTableHead>
             <tr>

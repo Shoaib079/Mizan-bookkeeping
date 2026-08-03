@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { TableSkeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TablePager } from "@/components/ui/table-pager";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { UserCircle } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -30,6 +32,7 @@ import { useCustomerBalances } from "@/lib/use-balance-map";
 import { cn } from "@/lib/utils";
 
 export default function CustomersPage() {
+  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const [searchDraft, setSearchDraft] = useState("");
   const search = useDebouncedValue(searchDraft.trim(), 300);
@@ -51,7 +54,7 @@ export default function CustomersPage() {
             value={searchDraft}
             disabled={!entityId}
             placeholder="Search customers…"
-            className="w-56"
+            className={cn("w-56", isMobile && "w-full max-w-none")}
             onChange={(event) => setSearchDraft(event.target.value)}
           />
           <p className="text-sm text-muted-foreground">
@@ -67,7 +70,7 @@ export default function CustomersPage() {
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {entityId && forbidden && <ForbiddenMessage context="customer list" />}
-      {loading && <TableSkeleton columns={4} />}
+      {loading && <ListSkeleton columns={4} />}
 
       {!loading && entityId && !forbidden && items.length === 0 && (
         <EmptyState
@@ -81,7 +84,29 @@ export default function CustomersPage() {
         />
       )}
 
-      {items.length > 0 && (
+      {items.length > 0 &&
+        (isMobile ? (
+          <MobileCardList>
+            {items.map((row) => {
+              const balance = balancesState.balances.get(row.id) ?? 0;
+              return (
+                <MobileCardRow
+                  key={row.id}
+                  href={`/customers/${row.id}`}
+                  title={row.name}
+                  meta={
+                    <>
+                      <span>{row.identifier ?? "No ID"}</span>
+                      <StatusBadge status={row.is_active ? "active" : "inactive"} />
+                    </>
+                  }
+                  amount={balance === 0 ? "—" : formatTry(balance)}
+                  amountClassName={cn(balance > 0 && "text-success")}
+                />
+              );
+            })}
+          </MobileCardList>
+        ) : (
         <DataTable>
           <DataTableHead>
             <tr>
@@ -119,7 +144,7 @@ export default function CustomersPage() {
             })}
           </DataTableBody>
         </DataTable>
-      )}
+        ))}
 
       {!forbidden && (
         <TablePager

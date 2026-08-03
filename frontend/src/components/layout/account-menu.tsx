@@ -20,8 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import {
   devModeIdentityLabel,
+  discardChangesConfirmLabel,
+  discardChangesMessage,
+  discardChangesTitle,
   switchConfirmMessage,
-  unsavedWorkWarningMessage,
 } from "@/lib/account-menu-helpers";
 import { useApiAuth } from "@/lib/api-auth";
 import { clearMizanStorage, useEntity } from "@/lib/entity-context";
@@ -380,9 +382,9 @@ function AccountMenuPanel({
 
       {unsavedConfirm && (
         <ConfirmOverlay
-          title="Unsaved changes"
-          message={unsavedWorkWarningMessage()}
-          confirmLabel="Leave anyway"
+          title={discardChangesTitle()}
+          message={discardChangesMessage()}
+          confirmLabel={discardChangesConfirmLabel()}
           onCancel={() => setUnsavedConfirm(null)}
           onConfirm={() => {
             const action = unsavedConfirm;

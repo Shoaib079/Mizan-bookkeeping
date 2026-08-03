@@ -3,15 +3,22 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 
-import { currentMonthRange } from "@/lib/date-range";
+import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
 
 export function useReportRangeFromUrl() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const defaults = useMemo(() => currentMonthRange(), []);
 
-  const from = searchParams.get("from") ?? defaults.from;
-  const to = searchParams.get("to") ?? defaults.to;
+  const { from, to } = useMemo(
+    () =>
+      resolveReportRange(
+        searchParams.get("from"),
+        searchParams.get("to"),
+        defaults,
+      ),
+    [defaults, searchParams],
+  );
 
   const setRange = useCallback(
     (nextFrom: string, nextTo: string) => {
@@ -31,7 +38,12 @@ export function useReportAsOfFromUrl() {
   const router = useRouter();
   const defaults = useMemo(() => currentMonthRange(), []);
 
-  const asOf = searchParams.get("as_of") ?? defaults.to;
+  const asOf = useMemo(() => {
+    const today = defaults.to;
+    const param = searchParams.get("as_of");
+    if (!param) return today;
+    return param > today ? today : param;
+  }, [defaults.to, searchParams]);
 
   const setAsOf = useCallback(
     (next: string) => {

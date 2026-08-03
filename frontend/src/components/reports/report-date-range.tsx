@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/input";
-import { currentMonthRange } from "@/lib/date-range";
+import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
 import { formatTrDate, parseTrDate } from "@/lib/money";
 
 type Props = {
@@ -27,7 +27,16 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
   const apply = () => {
     const parsedFrom = parseTrDate(fromDisplay);
     const parsedTo = parseTrDate(toDisplay);
-    if (parsedFrom && parsedTo) onChange(parsedFrom, parsedTo);
+    if (!parsedFrom || !parsedTo) return;
+    const { from: nextFrom, to: nextTo } = resolveReportRange(
+      parsedFrom,
+      parsedTo,
+      { from: parsedFrom, to: parsedTo },
+    );
+    if (nextTo !== parsedTo) {
+      setToDisplay(formatTrDate(nextTo));
+    }
+    onChange(nextFrom, nextTo);
   };
 
   return (

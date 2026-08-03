@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { Children } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { SectionTabs } from "@/components/layout/section-tabs";
@@ -14,8 +15,10 @@ export default function BankingLayout({
   const pathname = usePathname();
   return (
     <AppShell title={pageTitleForPathname(pathname)}>
-      <SectionTabs sectionId="banking" ariaLabel="Banking sections" />
-      {children}
+      <div>
+        <SectionTabs sectionId="banking" ariaLabel="Banking sections" />
+        <div>{Children.toArray(children)}</div>
+      </div>
     </AppShell>
   );
 }

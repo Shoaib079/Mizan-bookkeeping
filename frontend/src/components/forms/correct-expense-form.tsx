@@ -15,6 +15,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 
 import {
   filterExpenseAccounts,
@@ -68,6 +69,14 @@ export function CorrectExpenseForm({
   const [dateText, setDateText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<{
+    dateText: string;
+    itemName: string;
+    amountText: string;
+    expenseAccountId: string;
+    moneyAccountId: string;
+    description: string;
+  } | null>(null);
 
   const loadOptions = useCallback(async () => {
     if (!entityId) return;
@@ -84,15 +93,26 @@ export function CorrectExpenseForm({
   }, [entityId]);
 
   useEffect(() => {
-    if (!open || !expense) return;
+    if (!open || !expense) {
+      setBaseline(null);
+      return;
+    }
     void loadOptions().catch(() => undefined);
-    setDateText(formatTrDate(expense.expense_date));
-    // Show the amount as entered (positive magnitude), not the signed ledger value.
-    setAmountText(formatKurus(Math.abs(expense.amount_kurus)));
-    setItemName(expense.written_item_description ?? "");
-    setDescription(expense.description);
-    setExpenseAccountId(expense.expense_account_id);
-    setMoneyAccountId(expense.money_account_id);
+    const snapshot = {
+      dateText: formatTrDate(expense.expense_date),
+      itemName: expense.written_item_description ?? "",
+      amountText: formatKurus(Math.abs(expense.amount_kurus)),
+      description: expense.description,
+      expenseAccountId: expense.expense_account_id,
+      moneyAccountId: expense.money_account_id,
+    };
+    setDateText(snapshot.dateText);
+    setAmountText(snapshot.amountText);
+    setItemName(snapshot.itemName);
+    setDescription(snapshot.description);
+    setExpenseAccountId(snapshot.expenseAccountId);
+    setMoneyAccountId(snapshot.moneyAccountId);
+    setBaseline(snapshot);
     setError(null);
   }, [open, expense, loadOptions]);
 
@@ -109,6 +129,20 @@ export function CorrectExpenseForm({
     !moneyAccountId ||
     amountKurus === null ||
     amountKurus <= 0;
+
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-expense",
+    open && expense !== null,
+    baseline,
+    {
+      dateText,
+      itemName,
+      amountText,
+      expenseAccountId,
+      moneyAccountId,
+      description,
+    },
+  );
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -176,8 +210,8 @@ export function CorrectExpenseForm({
 
   return (
     <>
-    <Dialog open={open} title="Edit expense" onClose={onClose}>
-      <form onSubmit={onSubmit} className="space-y-3">
+    <Dialog open={open} title="Edit expense" onClose={onClose} dirty={dirty}>
+      <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
         <div>
           <Label htmlFor="correct-exp-date">Date (DD.MM.YYYY)</Label>
           <DateInput

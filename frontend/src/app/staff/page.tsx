@@ -14,17 +14,106 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { UsersRound } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
 import { formatStaffBalanceMinor } from "@/lib/format-staff-balance";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
+
+function StaffCardList({
+  items,
+  balances,
+  balancesLoading,
+}: {
+  items: EmployeeRow[];
+  balances: Map<string, number>;
+  balancesLoading: boolean;
+}) {
+  return (
+    <MobileCardList>
+      {items.map((row) => (
+        <MobileCardRow
+          key={row.id}
+          href={`/staff/${row.id}`}
+          title={row.name}
+          meta={
+            <>
+              <span>{row.pay_currency}</span>
+              <StatusBadge status={row.is_active ? "active" : "inactive"} />
+            </>
+          }
+          amount={
+            balances.has(row.id)
+              ? formatStaffBalanceMinor(balances.get(row.id) ?? 0, row.pay_currency)
+              : balancesLoading
+                ? "…"
+                : "—"
+          }
+        />
+      ))}
+    </MobileCardList>
+  );
+}
+
+function StaffTable({
+  items,
+  balances,
+  balancesLoading,
+}: {
+  items: EmployeeRow[];
+  balances: Map<string, number>;
+  balancesLoading: boolean;
+}) {
+  return (
+    <DataTable>
+      <DataTableHead>
+        <tr>
+          <DataTableHeaderCell>Name</DataTableHeaderCell>
+          <DataTableHeaderCell>Pay currency</DataTableHeaderCell>
+          <DataTableHeaderCell>Status</DataTableHeaderCell>
+          <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
+        </tr>
+      </DataTableHead>
+      <DataTableBody>
+        {items.map((row) => (
+          <DataTableRow key={row.id} href={`/staff/${row.id}`}>
+            <DataTableCell>
+              <Link
+                href={`/staff/${row.id}`}
+                className="font-medium text-foreground hover:underline"
+              >
+                {row.name}
+              </Link>
+            </DataTableCell>
+            <DataTableCell>{row.pay_currency}</DataTableCell>
+            <DataTableCell>
+              <StatusBadge status={row.is_active ? "active" : "inactive"} />
+            </DataTableCell>
+            <DataTableCell align="right" className="tabular-nums">
+              {balances.has(row.id)
+                ? formatStaffBalanceMinor(
+                    balances.get(row.id) ?? 0,
+                    row.pay_currency,
+                  )
+                : balancesLoading
+                  ? "…"
+                  : "—"}
+            </DataTableCell>
+          </DataTableRow>
+        ))}
+      </DataTableBody>
+    </DataTable>
+  );
+}
 
 export default function StaffPage() {
+  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const { items, total, loading, error, forbidden, reload } =
     useEntityList<EmployeeRow>(
@@ -39,6 +128,8 @@ export default function StaffPage() {
     (res) => (res as { balance_minor: number }).balance_minor,
   );
   const [formOpen, setFormOpen] = useState(false);
+
+  const listProps = { items, balances, balancesLoading };
 
   return (
     <AppShell title="Staff">
@@ -55,7 +146,7 @@ export default function StaffPage() {
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {entityId && forbidden && <ForbiddenMessage context="staff list" />}
-      {loading && <TableSkeleton columns={4} />}
+      {loading && <ListSkeleton columns={4} />}
 
       {!loading && entityId && !forbidden && items.length === 0 && (
         <EmptyState
@@ -65,46 +156,12 @@ export default function StaffPage() {
         />
       )}
 
-      {items.length > 0 && (
-        <DataTable>
-          <DataTableHead>
-            <tr>
-              <DataTableHeaderCell>Name</DataTableHeaderCell>
-              <DataTableHeaderCell>Pay currency</DataTableHeaderCell>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
-            </tr>
-          </DataTableHead>
-          <DataTableBody>
-            {items.map((row) => (
-              <DataTableRow key={row.id} href={`/staff/${row.id}`}>
-                <DataTableCell>
-                  <Link
-                    href={`/staff/${row.id}`}
-                    className="font-medium text-foreground hover:underline"
-                  >
-                    {row.name}
-                  </Link>
-                </DataTableCell>
-                <DataTableCell>{row.pay_currency}</DataTableCell>
-                <DataTableCell>
-                  <StatusBadge status={row.is_active ? "active" : "inactive"} />
-                </DataTableCell>
-                <DataTableCell align="right" className="tabular-nums">
-                  {balances.has(row.id)
-                    ? formatStaffBalanceMinor(
-                        balances.get(row.id) ?? 0,
-                        row.pay_currency,
-                      )
-                    : balancesLoading
-                      ? "…"
-                      : "—"}
-                </DataTableCell>
-              </DataTableRow>
-            ))}
-          </DataTableBody>
-        </DataTable>
-      )}
+      {!loading && items.length > 0 &&
+        (isMobile ? (
+          <StaffCardList {...listProps} />
+        ) : (
+          <StaffTable {...listProps} />
+        ))}
 
       <EmployeeForm
         open={formOpen}

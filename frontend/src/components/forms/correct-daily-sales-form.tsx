@@ -17,6 +17,7 @@ import { formatKurus, formatTry, formatTrDate, parseTrDate, parseTryToKurus } fr
 import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
 
 type MoneyAccount = { id: string; name: string };
@@ -52,6 +53,7 @@ export function CorrectDailySalesForm({
   const [zReportText, setZReportText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<Record<string, string> | null>(null);
 
   const loadOptions = useCallback(async () => {
     if (!entityId) return;
@@ -66,7 +68,10 @@ export function CorrectDailySalesForm({
   }, [entityId]);
 
   useEffect(() => {
-    if (!open || !summary) return;
+    if (!open || !summary) {
+      setBaseline(null);
+      return;
+    }
     void loadOptions().catch(() => undefined);
     setDateText(
       summary.summary_date ? formatTrDate(summary.summary_date) : "",
@@ -78,7 +83,30 @@ export function CorrectDailySalesForm({
     );
     setMoneyAccountId(summary.money_account_id ?? "");
     setError(null);
+    setBaseline(null);
   }, [open, summary, loadOptions]);
+
+  useEffect(() => {
+    if (!open || !summary || baseline !== null) return;
+    if (!moneyAccountId && cashAccounts.length === 0) return;
+    setBaseline({
+      dateText,
+      cashText,
+      cardText,
+      zReportText,
+      moneyAccountId,
+    });
+  }, [
+    open,
+    summary,
+    baseline,
+    cashAccounts.length,
+    moneyAccountId,
+    dateText,
+    cashText,
+    cardText,
+    zReportText,
+  ]);
 
   useEffect(() => {
     if (open && summary && cashAccounts.length > 0 && !moneyAccountId) {
@@ -98,6 +126,12 @@ export function CorrectDailySalesForm({
     zReportKurus > 0 &&
     cardKurus !== zReportKurus;
   const submitBlocked = totalKurus <= 0 || !moneyAccountId || !summary;
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-daily-sales",
+    open && summary !== null,
+    baseline,
+    { dateText, cashText, cardText, zReportText, moneyAccountId },
+  );
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -163,8 +197,8 @@ export function CorrectDailySalesForm({
 
   return (
     <>
-    <Dialog open={open} title="Edit daily sales" onClose={onClose}>
-      <form onSubmit={onSubmit} className="space-y-3">
+    <Dialog open={open} title="Edit daily sales" onClose={onClose} dirty={dirty}>
+      <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
         <div>
           <Label htmlFor="correct-sales-date">Date (DD.MM.YYYY)</Label>
           <DateInput

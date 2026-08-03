@@ -19,6 +19,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 
 export type CorrectableSupplierPaymentRow = {
   journal_entry_id: string;
@@ -62,6 +63,7 @@ export function CorrectSupplierPaymentForm({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<Record<string, string> | null>(null);
 
   const loadAccounts = useCallback(
     async (recorded: CorrectableSupplierPaymentRow) => {
@@ -80,18 +82,58 @@ export function CorrectSupplierPaymentForm({
   );
 
   useEffect(() => {
-    if (!open || !payment) return;
+    if (!open || !payment) {
+      setBaseline(null);
+      return;
+    }
     setDateText(formatTrDate(payment.movement_date));
-    // Show the amount as entered (positive magnitude), not the signed ledger value.
     setAmountText(formatKurus(Math.abs(payment.amount_kurus)));
     setDescription(payment.description);
     setReference("");
     setReason("");
     setError(null);
+    setBaseline(null);
     void loadAccounts(payment).catch(() => undefined);
   }, [open, payment, loadAccounts]);
 
+  useEffect(() => {
+    if (!open || !payment || baseline !== null) return;
+    if (!paymentGlAccountId && accounts.length === 0) return;
+    setBaseline({
+      dateText,
+      amountText,
+      description,
+      reference,
+      reason,
+      paymentGlAccountId,
+    });
+  }, [
+    open,
+    payment,
+    baseline,
+    accounts.length,
+    paymentGlAccountId,
+    dateText,
+    amountText,
+    description,
+    reference,
+    reason,
+  ]);
+
   const amountKurus = parseTryToKurus(amountText);
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-supplier-payment",
+    open && payment !== null,
+    baseline,
+    {
+      dateText,
+      amountText,
+      description,
+      reference,
+      reason,
+      paymentGlAccountId,
+    },
+  );
   const submitBlocked =
     !payment ||
     !paymentGlAccountId ||
@@ -154,8 +196,8 @@ export function CorrectSupplierPaymentForm({
 
   return (
     <>
-      <Dialog open={open} title="Edit supplier payment" onClose={onClose}>
-        <form onSubmit={onSubmit} className="space-y-3">
+      <Dialog open={open} title="Edit supplier payment" onClose={onClose} dirty={dirty}>
+        <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
           <div>
             <Label htmlFor="csp-date">Payment date (DD.MM.YYYY)</Label>
             <DateInput

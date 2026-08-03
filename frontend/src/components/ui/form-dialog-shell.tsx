@@ -2,7 +2,8 @@
 
 /** Wraps form content in Dialog unless embedded in a parent modal. */
 
-import type { ReactNode } from "react";
+import type { MutableRefObject, ReactNode } from "react";
+import { useRef } from "react";
 
 import { Dialog } from "@/components/ui/dialog";
 
@@ -12,6 +13,9 @@ type Props = {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  dirty?: boolean;
+  onDiscard?: () => void;
+  closeRef?: MutableRefObject<(() => void) | undefined>;
 };
 
 export function FormDialogShell({
@@ -20,11 +24,35 @@ export function FormDialogShell({
   title,
   onClose,
   children,
+  dirty = false,
+  onDiscard,
+  closeRef: externalCloseRef,
 }: Props) {
+  const internalCloseRef = useRef<(() => void) | undefined>(undefined);
+  const closeRef = externalCloseRef ?? internalCloseRef;
+
   if (embedded) return children;
   return (
-    <Dialog open={open} title={title} onClose={onClose}>
+    <Dialog
+      open={open}
+      title={title}
+      onClose={onClose}
+      dirty={dirty}
+      onDiscard={onDiscard}
+      onCloseRef={closeRef}
+    >
       {children}
     </Dialog>
   );
+}
+
+/** Guarded close for Cancel buttons inside FormDialogShell. */
+export function useFormDialogClose(
+  closeRef: MutableRefObject<(() => void) | undefined> | undefined,
+  onClose: () => void,
+) {
+  return () => {
+    if (closeRef?.current) closeRef.current();
+    else onClose();
+  };
 }

@@ -15,14 +15,16 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { Handshake } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import { extractPartnerNetBalanceKurus } from "@/lib/partner-balance";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 type PartnerListResponse = {
   items: PartnerRow[];
@@ -40,6 +42,7 @@ function formatSharePct(value: string | null): string {
 }
 
 export default function PartnersPage() {
+  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const [items, setItems] = useState<PartnerRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -108,7 +111,7 @@ export default function PartnersPage() {
         </p>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={4} />}
+      {loading && <ListSkeleton columns={4} />}
 
       {!loading && entityId && items.length === 0 && (
         <EmptyState
@@ -118,7 +121,31 @@ export default function PartnersPage() {
         />
       )}
 
-      {items.length > 0 && (
+      {items.length > 0 &&
+        (isMobile ? (
+          <MobileCardList>
+            {items.map((row) => (
+              <MobileCardRow
+                key={row.id}
+                href={`/partners/${row.id}`}
+                title={row.name}
+                meta={
+                  <>
+                    <span>Share {formatSharePct(row.ownership_share_pct)}</span>
+                    <StatusBadge status={row.is_active ? "active" : "inactive"} />
+                  </>
+                }
+                amount={
+                  balances.has(row.id)
+                    ? formatTry(balances.get(row.id)!)
+                    : balancesLoading
+                      ? "…"
+                      : "—"
+                }
+              />
+            ))}
+          </MobileCardList>
+        ) : (
         <DataTable>
           <DataTableHead>
             <tr>
@@ -156,7 +183,7 @@ export default function PartnersPage() {
             ))}
           </DataTableBody>
         </DataTable>
-      )}
+        ))}
 
       <PartnerForm
         open={formOpen}

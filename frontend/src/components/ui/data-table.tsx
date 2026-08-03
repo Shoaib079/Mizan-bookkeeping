@@ -7,9 +7,11 @@ import { cn } from "@/lib/utils";
 export function DataTable({
   children,
   className,
+  tableClassName,
 }: {
   children: React.ReactNode;
   className?: string;
+  tableClassName?: string;
 }) {
   return (
     <div
@@ -18,7 +20,7 @@ export function DataTable({
         className,
       )}
     >
-      <table className="w-full text-sm">{children}</table>
+      <table className={cn("w-full text-sm", tableClassName)}>{children}</table>
     </div>
   );
 }

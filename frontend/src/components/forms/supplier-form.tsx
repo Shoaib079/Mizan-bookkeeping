@@ -13,6 +13,7 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { useToast } from "@/lib/toast";
 import { useRegisterUnsaved } from "@/lib/unsaved-work";
+import { useFormTouched } from "@/lib/use-form-dirty";
 
 export type SupplierRow = {
   id: string;
@@ -49,13 +50,21 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const { touched, markTouched } = useFormTouched(open);
+
   const dirty =
     open &&
-    !editing &&
-    (name.trim() !== "" ||
-      vkn.trim() !== "" ||
-      iban.trim() !== "" ||
-      notes.trim() !== "");
+    touched &&
+    (editing && supplier
+      ? name !== supplier.name ||
+        iban !== (supplier.iban ?? "") ||
+        notes !== (supplier.notes ?? "") ||
+        isActive !== supplier.is_active ||
+        autoPostPayments !== supplier.auto_post_payments
+      : name.trim() !== "" ||
+        vkn.trim() !== "" ||
+        iban.trim() !== "" ||
+        notes.trim() !== "");
 
   useRegisterUnsaved("supplier-form", dirty, open);
 
@@ -124,9 +133,10 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
       open={open}
       title={editing ? "Edit supplier" : "New supplier"}
       onClose={onClose}
+      dirty={dirty}
     >
       {!editing && <RecordingForBanner />}
-      <form onSubmit={onSubmit} className="space-y-3">
+      <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
         <div>
           <Label htmlFor="sup-name">Name</Label>
           <Input

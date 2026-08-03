@@ -18,17 +18,61 @@ import {
 import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { TableSkeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TablePager } from "@/components/ui/table-pager";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { Users } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
-import { formatSupplierPayableBalance } from "@/lib/supplier-balance";
+import { formatSupplierPayableBalance, isSupplierAdvanceBalance } from "@/lib/supplier-balance";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useSupplierBalances } from "@/lib/use-balance-map";
 import { cn } from "@/lib/utils";
+
+function SupplierCardList({
+  rows,
+  balances,
+}: {
+  rows: SupplierRow[];
+  balances: Map<string, number>;
+}) {
+  return (
+    <MobileCardList>
+      {rows.map((row) => {
+        const balance = balances.get(row.id) ?? 0;
+        const advance = isSupplierAdvanceBalance(balance);
+        return (
+          <MobileCardRow
+            key={row.id}
+            href={`/suppliers/${row.id}`}
+            title={row.name}
+            meta={
+              <>
+                <span>{row.vkn || "No VKN"}</span>
+                <StatusBadge status={row.is_active ? "active" : "inactive"} />
+              </>
+            }
+            amount={
+              balance === 0
+                ? "—"
+                : advance
+                  ? formatTry(Math.abs(balance))
+                  : formatTry(balance)
+            }
+            amountNote={advance ? "Advance · invoice pending" : undefined}
+            amountClassName={cn(
+              balance > 0 && "text-destructive",
+              advance && "text-success",
+            )}
+          />
+        );
+      })}
+    </MobileCardList>
+  );
+}
 
 function SupplierTable({
   rows,
@@ -83,6 +127,7 @@ function SupplierTable({
 }
 
 export default function SuppliersPage() {
+  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const [showInactive, setShowInactive] = useState(false);
   const [searchDraft, setSearchDraft] = useState("");
@@ -103,6 +148,19 @@ export default function SuppliersPage() {
   const inactiveItems = useMemo(() => items.filter((row) => !row.is_active), [items]);
   const activeCount = showInactive ? activeItems.length : total;
 
+  function SupplierListView({
+    rows,
+  }: {
+    rows: SupplierRow[];
+  }) {
+    const props = { rows, balances: balancesState.balances };
+    return isMobile ? (
+      <SupplierCardList {...props} />
+    ) : (
+      <SupplierTable {...props} />
+    );
+  }
+
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -111,7 +169,7 @@ export default function SuppliersPage() {
             value={searchDraft}
             disabled={!entityId}
             placeholder="Search suppliers…"
-            className="w-56"
+            className={cn("w-56", isMobile && "w-full max-w-none")}
             onChange={(event) => setSearchDraft(event.target.value)}
           />
           <p className="text-sm text-muted-foreground">
@@ -158,7 +216,7 @@ export default function SuppliersPage() {
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {entityId && forbidden && <ForbiddenMessage context="supplier list" />}
-      {loading && <TableSkeleton columns={4} />}
+      {loading && <ListSkeleton columns={4} />}
 
       {!loading && entityId && !forbidden && items.length === 0 && (
         <EmptyState
@@ -177,7 +235,7 @@ export default function SuppliersPage() {
           <h2 className="mb-2 text-sm font-semibold text-foreground">
             Active suppliers
           </h2>
-          <SupplierTable rows={activeItems} balances={balancesState.balances} />
+          <SupplierListView rows={activeItems} />
         </section>
       )}
 
@@ -190,12 +248,12 @@ export default function SuppliersPage() {
             Deactivated suppliers stay in history but are hidden from invoice
             linking and new payments.
           </p>
-          <SupplierTable rows={inactiveItems} balances={balancesState.balances} />
+          <SupplierListView rows={inactiveItems} />
         </section>
       )}
 
       {!loading && !forbidden && !showInactive && items.length > 0 && (
-        <SupplierTable rows={items} balances={balancesState.balances} />
+        <SupplierListView rows={items} />
       )}
 
       {!forbidden && (

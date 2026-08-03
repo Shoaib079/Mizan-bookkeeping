@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mizan — mobile UX preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1e293b; --muted: #64748b; --faint: #94a3b8;
+    --primary: #2563eb; --primary-soft: #eff6ff; --primary-border: #bfdbfe;
+    --success: #16a34a; --success-soft: #f0fdf4; --success-border: #bbf7d0;
+    --warning: #d97706; --warning-soft: #fffbeb; --warning-border: #fde68a;
+    --danger: #dc2626; --danger-soft: #fef2f2; --danger-border: #fecaca;
+    --violet: #7c3aed; --violet-soft: #f5f3ff;
+    --teal: #0d9488; --teal-soft: #f0fdfa;
+    --border: #e2e8f0; --hover: #f8fafc; --card: #ffffff;
+    --shell: #f2f2f7;
+    --shadow: 0 12px 40px rgb(15 23 42 / .16);
+    --shadow-card: 0 1px 3px rgb(15 23 42 / .06), 0 1px 2px rgb(15 23 42 / .04);
+    --phone-w: 390px; --phone-h: 844px; --tab-h: 68px; --top-h: 52px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    background: #f1f5f9; color: var(--fg); font-size: 14px; line-height: 1.45;
+    min-height: 100vh;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  .pos { color: var(--success); }
+  .neg { color: var(--danger); }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+  .intro { margin-bottom: 20px; }
+  .intro h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+  .intro p, .intro li { color: var(--muted); font-size: 13px; max-width: 760px; }
+  .intro ul { margin: 10px 0 0 18px; }
+  .intro a { color: var(--primary); }
+  .intro code { font-size: 12px; background: #e2e8f0; padding: 1px 6px; border-radius: 4px; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; align-items: center; }
+  .btn {
+    border: 1px solid var(--border); background: var(--card); color: var(--fg);
+    border-radius: 8px; padding: 8px 14px; font-size: 13px; font-family: inherit; cursor: pointer;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn.on { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary); font-weight: 500; }
+
+  .stage { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; justify-content: center; }
+  .phone-label { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .phone {
+    width: var(--phone-w); height: var(--phone-h); background: var(--bg);
+    border-radius: 40px; border: 10px solid #1e293b; box-shadow: var(--shadow);
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+  .phone-notch {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 28px; background: #1e293b; border-radius: 0 0 16px 16px; z-index: 60;
+  }
+
+  .app {
+    display: flex; flex-direction: column; height: 100%; min-height: 0;
+    padding-top: max(12px, env(safe-area-inset-top, 0px)); background: var(--bg);
+  }
+  .topbar {
+    height: var(--top-h); flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+    padding: 0 12px 0 8px; border-bottom: 1px solid rgb(226 232 240 / .8);
+    background: rgb(255 255 255 / .92); backdrop-filter: blur(12px);
+    box-shadow: 0 1px 0 rgb(255 255 255 / .8);
+  }
+  .back-btn {
+    width: 44px; height: 44px; border: none; background: transparent; font-size: 22px;
+    color: var(--primary); cursor: pointer; border-radius: 8px; display: none;
+    align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .back-btn.show { display: flex; }
+  .back-btn:active { background: var(--hover); }
+  .topbar-title { font-size: 17px; font-weight: 600; flex: 1; min-width: 0; line-height: 1.2; }
+  .topbar-title small { display: block; font-size: 11px; font-weight: 400; color: var(--faint); margin-top: 1px; }
+  .review-dot {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border: 1px solid var(--warning-border);
+    color: #92400e; border-radius: 999px; font-size: 11px; font-weight: 600;
+    padding: 5px 11px; white-space: nowrap; cursor: pointer; flex-shrink: 0;
+    box-shadow: 0 1px 2px rgb(217 119 6 / .12);
+  }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff;
+    font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgb(37 99 235 / .35);
+  }
+  .avatar-btn {
+    border: none; padding: 0; cursor: pointer; font-family: inherit;
+  }
+  .avatar-btn:active { transform: scale(0.96); }
+  .avatar-btn:focus-visible { outline: 2px solid var(--primary-border); outline-offset: 2px; }
+
+  .period-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; margin-bottom: 12px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-soft), #fff);
+    border: 1px solid var(--primary-border); font-size: 13px;
+  }
+  .period-banner b { color: var(--primary); font-weight: 600; }
+  .period-banner span { color: var(--muted); font-size: 12px; }
+
+  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .kpi {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 12px 12px 14px; min-height: 76px; box-shadow: var(--shadow-card);
+    position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px;
+    border-radius: 0 3px 3px 0; background: var(--primary);
+  }
+  .kpi.k-green::before { background: var(--success); }
+  .kpi.k-blue::before { background: var(--primary); }
+  .kpi.k-amber::before { background: var(--warning); }
+  .kpi.k-red::before { background: var(--danger); }
+  .kpi.k-violet::before { background: var(--violet); }
+  .kpi.k-teal::before { background: var(--teal); }
+  .kpi.k-green { background: linear-gradient(160deg, #f0fdf4 0%, #fff 55%); border-color: var(--success-border); }
+  .kpi.k-blue { background: linear-gradient(160deg, #eff6ff 0%, #fff 55%); border-color: var(--primary-border); }
+  .kpi.k-amber { background: linear-gradient(160deg, #fffbeb 0%, #fff 55%); border-color: var(--warning-border); }
+  .kpi.k-red { background: linear-gradient(160deg, #fef2f2 0%, #fff 55%); border-color: var(--danger-border); }
+  .kpi.k-violet { background: linear-gradient(160deg, #f5f3ff 0%, #fff 55%); border-color: #ddd6fe; }
+  .kpi.k-teal { background: linear-gradient(160deg, #f0fdfa 0%, #fff 55%); border-color: #99f6e4; }
+  .kpi .lbl { font-size: 11px; color: var(--muted); font-weight: 500; }
+  .kpi .val { font-size: 18px; font-weight: 600; margin-top: 5px; letter-spacing: -0.02em; }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; margin-bottom: 14px; box-shadow: var(--shadow-card);
+  }
+  .panel-head {
+    padding: 11px 14px; border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; color: var(--fg);
+    background: linear-gradient(180deg, #fafafa, #fff);
+  }
+
+  .scroll {
+    flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0;
+    padding: 14px 14px calc(var(--tab-h) + env(safe-area-inset-bottom, 0px) + 14px);
+    -webkit-overflow-scrolling: touch; background: var(--bg);
+  }
+  .scroll.subpage { padding-bottom: 24px; }
+  /* Native grouped screens (More, Settings) — not web cards on white */
+  .scroll.native {
+    background: var(--shell);
+    padding: 8px 16px calc(var(--tab-h) + 8px);
+  }
+  .scroll.native.subpage { padding: 8px 16px 24px; }
+
+  .page-head { margin-bottom: 14px; }
+  .page-head h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .page-head p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .card-row {
+    padding: 12px 14px; border-bottom: 1px solid var(--border); cursor: pointer; min-height: 48px;
+  }
+  .card-row:active { background: var(--hover); }
+  .card-row:last-child { border-bottom: 0; }
+  .card-row .row1 { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .card-row .desc { font-size: 13px; font-weight: 500; }
+  .card-row .amt { font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .card-row .row2 {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 6px; font-size: 11px; color: var(--muted);
+  }
+  .pill { display: inline-block; font-size: 10px; border-radius: 999px; padding: 2px 8px; font-weight: 500; }
+  .pill.posted { background: var(--success-soft); color: var(--success); }
+  .pill.review { background: var(--warning-soft); color: var(--warning); }
+
+  .record-chips {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+    margin-bottom: 14px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .record-chips::-webkit-scrollbar { display: none; }
+  .record-chip {
+    flex-shrink: 0; border: 1px solid var(--border); border-radius: 999px;
+    padding: 8px 14px; font-size: 13px; font-weight: 500; font-family: inherit;
+    background: var(--card); color: var(--fg); cursor: pointer; min-height: 40px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .record-chip.on {
+    background: var(--primary); border-color: var(--primary); color: #fff;
+    box-shadow: 0 2px 10px rgb(37 99 235 / .3);
+  }
+  .record-chip .ic { font-size: 15px; line-height: 1; }
+  .record-form {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; box-shadow: var(--shadow-card); margin-bottom: 12px;
+  }
+  .record-form h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .record-form .hint { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.4; }
+  .record-field { margin-bottom: 12px; }
+  .record-field label {
+    display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px;
+  }
+  .record-field input, .record-field select {
+    width: 100%; height: 48px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 0 12px; font-family: inherit; font-size: 16px; background: var(--bg);
+  }
+  .record-field input:focus { outline: 2px solid var(--primary-border); border-color: var(--primary); }
+  .record-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .record-camera {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; min-height: 140px; border: 2px dashed var(--primary-border);
+    border-radius: 14px; background: var(--primary-soft); cursor: pointer;
+    padding: 20px; text-align: center;
+  }
+  .record-camera:active { background: #dbeafe; }
+  .record-camera .cam-ic {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+    box-shadow: 0 4px 14px rgb(37 99 235 / .4);
+  }
+  .record-camera b { font-size: 15px; color: var(--primary); }
+  .record-camera span { font-size: 12px; color: var(--muted); }
+  .record-post {
+    width: 100%; min-height: 52px; border: none; border-radius: 12px;
+    background: var(--primary); color: #fff; font-size: 16px; font-weight: 600;
+    font-family: inherit; cursor: pointer; margin-top: 4px;
+    box-shadow: 0 4px 14px rgb(37 99 235 / .35);
+  }
+  .record-post:active { filter: brightness(0.95); }
+  .record-today {
+    border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+    background: var(--hover); margin-top: 4px;
+  }
+  .record-today .lbl { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .record-today .items { margin-top: 8px; font-size: 13px; color: var(--fg); }
+  .record-today .items span { color: var(--muted); }
+  .record-more-toggle {
+    width: 100%; border: 1px dashed var(--border); border-radius: 12px;
+    padding: 12px; background: transparent; font-family: inherit; font-size: 13px;
+    color: var(--muted); cursor: pointer; margin-top: 8px;
+  }
+  .record-more-panel { display: none; margin-top: 10px; }
+  .record-more-panel.open { display: grid; gap: 8px; }
+  .record-quick-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--card);
+    cursor: pointer; min-height: 48px; text-align: left; font-family: inherit; font-size: 14px;
+  }
+  .record-quick-row:active { background: var(--hover); }
+  .record-quick-row .ic { font-size: 18px; width: 28px; text-align: center; }
+  .record-pane { display: none; }
+  .record-pane.on { display: block; }
+
+  /* ── More page (iOS Settings style) ── */
+  .entity-card {
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+    background: var(--card); border-radius: 14px; margin-bottom: 22px;
+    cursor: pointer; min-height: 68px;
+    box-shadow: var(--shadow-card); border: 1px solid rgb(255 255 255 / .8);
+  }
+  .entity-card:active { background: var(--hover); }
+  .entity-card .dot {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgb(217 119 6 / .35);
+  }
+  .entity-card .name { font-size: 15px; font-weight: 600; }
+  .entity-card .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .entity-card .chev { margin-left: auto; color: var(--faint); font-size: 18px; }
+
+  .more-section { margin-bottom: 20px; }
+  .more-section > h3 {
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--faint); padding: 0 12px 8px;
+  }
+  .more-group {
+    background: var(--card); border-radius: 14px; overflow: hidden;
+    box-shadow: var(--shadow-card);
+  }
+  .more-row {
+    display: flex; align-items: center; gap: 12px; padding: 0 16px;
+    min-height: 52px; cursor: pointer; border-bottom: 1px solid var(--shell);
+    font-size: 16px;
+  }
+  .more-row:last-child { border-bottom: 0; }
+  .more-row:active { background: var(--hover); }
+  .more-row .chip {
+    width: 34px; height: 34px; border-radius: 10px; background: var(--primary-soft);
+    display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+  }
+  .chip.in { background: #dcfce7; }
+  .chip.out { background: #fee2e2; }
+  .chip.held { background: #dbeafe; }
+  .chip.report { background: var(--violet-soft); }
+  .chip.settings { background: #f1f5f9; }
+  .more-row .meta { margin-left: auto; font-size: 13px; color: var(--muted); margin-right: 4px; }
+  .more-row .chev { color: var(--faint); font-size: 16px; flex-shrink: 0; }
+  .more-row.danger { color: var(--danger); justify-content: center; font-size: 16px; font-weight: 500; }
+
+  /* Reports hub — download action lives here, not on More */
+  .reports-sticky-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 10px;
+  }
+  .reports-download {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 10px;
+    border: 1px solid var(--primary-border); background: var(--primary-soft);
+    color: var(--primary); font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; flex-shrink: 0; min-height: 44px;
+  }
+  .reports-download:active { background: #dbeafe; }
+  .reports-download .dl-ic { width: 18px; height: 18px; flex-shrink: 0; }
+
+  .screen-reports { padding: 0 !important; }
+  .reports-sticky {
+    position: sticky; top: 0; z-index: 5;
+    background: linear-gradient(180deg, #fff 0%, #fafbff 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 14px; margin: 0 0 12px;
+    box-shadow: 0 2px 8px rgb(37 99 235 / .06);
+  }
+  .reports-period {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 14px; font-weight: 600; margin-bottom: 0;
+    padding: 7px 14px; border-radius: 10px;
+    background: var(--primary-soft); color: var(--primary);
+    border: 1px solid var(--primary-border);
+    font-family: inherit; cursor: pointer;
+  }
+  .reports-summary {
+    display: flex; flex-wrap: wrap; gap: 12px 16px; font-size: 12px; color: var(--muted);
+  }
+  .reports-summary b { color: var(--fg); font-weight: 600; font-size: 13px; }
+  .reports-scroll { padding: 0 14px 16px; }
+
+  /* Settings toggles (native inline) */
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; min-height: 52px; border-bottom: 1px solid var(--shell);
+    font-size: 16px;
+  }
+  .setting-row:last-child { border-bottom: 0; }
+  .toggle {
+    width: 51px; height: 31px; border-radius: 999px; background: #e2e8f0;
+    position: relative; flex-shrink: 0;
+  }
+  .toggle.on { background: var(--success); }
+  .toggle::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 27px; height: 27px; border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 4px rgb(0 0 0 / .15);
+  }
+  .toggle.on::after { left: 22px; }
+  .setting-foot {
+    font-size: 13px; color: var(--muted); padding: 8px 12px 0; line-height: 1.4;
+  }
+
+  /* Report cards on phone */
+  .report-grid { display: grid; gap: 10px; }
+  .report-card {
+    border: 1px solid var(--border); border-radius: 14px; padding: 14px 14px 14px 16px;
+    cursor: pointer; min-height: 72px; box-shadow: var(--shadow-card);
+    display: flex; align-items: center; gap: 12px;
+    border-left: 4px solid var(--primary);
+  }
+  .report-card:active { background: var(--hover); }
+  .report-card:nth-child(2) { border-left-color: var(--success); }
+  .report-card:nth-child(3) { border-left-color: var(--violet); }
+  .report-card:nth-child(4) { border-left-color: var(--teal); }
+  .report-card .rc-ic {
+    width: 36px; height: 36px; border-radius: 10px; background: var(--primary-soft);
+    display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+  }
+  .report-card b { font-size: 14px; display: block; margin-bottom: 3px; }
+  .report-card span { font-size: 12px; color: var(--muted); }
+
+  .search-bar {
+    width: 100%; height: 44px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 0 12px; font-family: inherit; font-size: 14px; margin-bottom: 12px;
+    background: var(--bg);
+  }
+
+  /* Bottom tabs */
+  .bottom-tabs {
+    position: absolute; bottom: 0; left: 0; right: 0; height: var(--tab-h);
+    display: flex; align-items: flex-end;
+    background: rgb(255 255 255 / .94); backdrop-filter: blur(16px);
+    border-top: 1px solid rgb(226 232 240 / .9);
+    padding-bottom: env(safe-area-inset-bottom, 0); z-index: 30;
+    transition: transform .2s ease;
+  }
+  .bottom-tabs.hidden { transform: translateY(100%); }
+  .bottom-tabs button {
+    flex: 1; border: none; background: transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    gap: 3px; font-size: 10px; color: var(--muted); cursor: pointer;
+    min-height: 44px; font-family: inherit; padding: 8px 0 10px;
+  }
+  .bottom-tabs button .ic { font-size: 18px; line-height: 1; }
+  .bottom-tabs button.on { color: var(--primary); font-weight: 600; }
+  .bottom-tabs button.on .ic { transform: scale(1.05); }
+  .bottom-tabs button.on::after {
+    content: ""; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--primary); margin-top: 2px;
+  }
+  .tab-wrap.record-fab button.on::after { display: none; }
+  .tab-wrap { position: relative; flex: 1; display: flex; justify-content: center; }
+  .tab-wrap.record-fab { flex: 1.15; align-items: flex-end; padding-bottom: 2px; }
+  .tab-wrap.record-fab button { flex: none; padding: 0 0 4px; gap: 5px; color: var(--muted); min-height: auto; }
+  .tab-wrap.record-fab button.on { color: var(--primary); }
+  .fab-circle {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: linear-gradient(145deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 300; line-height: 1; margin-top: -24px;
+    box-shadow: 0 6px 20px rgb(37 99 235 / .5), 0 0 0 4px rgb(255 255 255 / .9);
+    border: none;
+  }
+  .fab-label { font-size: 10px; font-weight: 600; }
+  .badge-dot {
+    position: absolute; top: 4px; margin-left: 16px;
+    background: var(--warning); color: #fff; font-size: 9px; font-weight: 600;
+    border-radius: 999px; min-width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center; padding: 0 4px;
+  }
+
+  /* Transaction bottom sheet */
+  .txn-veil {
+    position: absolute; inset: 0; background: rgb(15 23 42 / .35); z-index: 90;
+    opacity: 0; pointer-events: none; transition: opacity .18s;
+  }
+  .txn-veil.open { opacity: 1; pointer-events: auto; }
+  .txn-drawer {
+    position: absolute; left: 0; right: 0; bottom: 0; max-height: 88%;
+    background: var(--bg); z-index: 100; border-radius: 16px 16px 0 0;
+    transform: translateY(100%); transition: transform .22s ease;
+    display: flex; flex-direction: column; box-shadow: 0 -4px 24px rgb(15 23 42 / .12);
+  }
+  .txn-drawer.open { transform: translateY(0); }
+  .txn-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 0; }
+  .txn-head { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .txn-head .amt { font-size: 22px; font-weight: 600; }
+  .txn-body { flex: 1; overflow-y: auto; padding: 14px 16px; font-size: 13px; }
+  .txn-foot {
+    padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px;
+  }
+  .txn-foot .btn { flex: 1; min-height: 44px; }
+  .btn-primary-block {
+    width: 100%; margin-top: 8px; padding: 14px;
+    background: var(--primary); color: #fff; border: none; border-radius: 12px;
+    font-size: 16px; font-family: inherit; font-weight: 600; cursor: pointer;
+  }
+
+  .period-banner { cursor: pointer; }
+  .period-banner:active { filter: brightness(0.98); }
+
+  /* Period / date picker — no future dates */
+  .period-veil {
+    position: absolute; inset: 0; background: rgb(15 23 42 / .35); z-index: 90;
+    opacity: 0; pointer-events: none; transition: opacity .18s;
+  }
+  .period-veil.open { opacity: 1; pointer-events: auto; }
+  .period-drawer {
+    position: absolute; left: 0; right: 0; bottom: 0; max-height: 78%;
+    background: var(--bg); z-index: 100; border-radius: 16px 16px 0 0;
+    transform: translateY(100%); transition: transform .22s ease;
+    display: flex; flex-direction: column; box-shadow: 0 -4px 24px rgb(15 23 42 / .12);
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .period-drawer.open { transform: translateY(0); }
+  .period-drawer-head { padding: 12px 0 8px; text-align: center; }
+  .period-drawer-head h3 { font-size: 16px; font-weight: 600; }
+  .period-drawer-head p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .period-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 8px 0 12px;
+  }
+  .period-nav button {
+    width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--card); font-size: 20px; color: var(--primary); cursor: pointer;
+    font-family: inherit;
+  }
+  .period-nav button:disabled { opacity: .35; cursor: not-allowed; color: var(--faint); }
+  .period-nav-label { font-size: 16px; font-weight: 600; }
+  .period-weekdays {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    font-size: 11px; color: var(--faint); text-align: center; margin-bottom: 6px;
+  }
+  .period-cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  }
+  .period-cal-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; font-size: 14px; font-variant-numeric: tabular-nums;
+    border: none; background: transparent; font-family: inherit; color: var(--fg);
+  }
+  .period-cal-day.empty { pointer-events: none; }
+  .period-cal-day.future {
+    color: var(--faint); opacity: .4; cursor: not-allowed; pointer-events: none;
+  }
+  .period-cal-day.past { cursor: pointer; }
+  .period-cal-day.past:active { background: var(--hover); }
+  .period-cal-day.today {
+    background: var(--primary); color: #fff; font-weight: 600;
+    box-shadow: 0 2px 8px rgb(37 99 235 / .35);
+  }
+  .period-cal-day.selected:not(.today) {
+    background: var(--primary-soft); color: var(--primary); font-weight: 600;
+    outline: 2px solid var(--primary-border);
+  }
+  .period-done {
+    margin-top: 14px; width: 100%; min-height: 48px; border: none; border-radius: 12px;
+    background: var(--primary); color: #fff; font-size: 16px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+  }
+
+  .screen { display: none; }
+  .screen.on { display: block; }
+
+  .doc-panel {
+    flex: 1; min-width: 280px; max-width: 480px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; font-size: 13px; max-height: 844px; overflow-y: auto;
+  }
+  .doc-panel h3 { font-size: 15px; margin-bottom: 10px; }
+  .doc-panel h4 { font-size: 12px; color: var(--faint); text-transform: uppercase; margin: 14px 0 6px; letter-spacing: .04em; }
+  .doc-panel p, .doc-panel li { color: var(--muted); margin: 6px 0; font-size: 12.5px; }
+  .doc-panel ul { margin-left: 16px; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; margin-right: 4px; border: 1px solid var(--border); }
+
+  @media (max-width: 900px) {
+    .doc-panel { max-width: 100%; max-height: none; }
+    .phone { width: 100%; max-width: var(--phone-w); height: min(var(--phone-h), 90dvh); }
+  }
+
+  /* On a real phone: drop the demo frame — UI fills the device viewport */
+  @media (max-width: 820px) {
+    body { background: var(--bg); }
+    .wrap { padding: 0; max-width: none; }
+    .intro, .controls, .doc-panel, .phone-label { display: none !important; }
+    .stage { display: block; gap: 0; }
+    .phone {
+      width: 100%; max-width: none;
+      height: 100dvh; min-height: -webkit-fill-available;
+      border-radius: 0; border: none; box-shadow: none;
+    }
+    .phone-notch { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Mizan mobile UX preview</h1>
+    <p>
+      Interactive mock for slice <strong>C4</strong> — not in the app yet. Full spec:
+      <a href="MOBILE_UX_PLAN.md">MOBILE_UX_PLAN.md</a>. Colors match
+      <code>DESIGN_SYSTEM.md</code> (#2563EB primary, white background, Inter 14px).
+    </p>
+    <ul>
+      <li><strong>More = full page</strong> — grouped lists on gray shell (native app feel)</li>
+      <li><strong>Your profile</strong> — tap avatar (top-right), not in Settings</li>
+      <li><strong>One Settings</strong> row in More → restaurant setup inside (team, modules, opening balances…)</li>
+      <li>Drill-in pages show <strong>‹</strong> back and hide the tab bar</li>
+      <li><strong>Color cues</strong> — green = in / positive, red = out / payables, blue = held, amber = needs attention</li>
+      <li><strong>Any phone size</strong> — 390×844 is only the desktop demo frame; on a real device the UI stretches to full width (see Responsive below)</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <span style="font-size:12px;color:var(--muted)">Screens:</span>
+    <button class="btn on" data-screen="home">Home</button>
+    <button class="btn" data-screen="record">Record</button>
+    <button class="btn" data-screen="review">Review</button>
+    <button class="btn" data-screen="more">More</button>
+    <button class="btn" data-screen="suppliers">Suppliers ↗</button>
+    <button class="btn" data-screen="reports">Reports ↗</button>
+    <button class="btn" data-screen="settings">Settings ↗</button>
+    <button class="btn" id="openTxn">Transaction sheet</button>
+  </div>
+
+  <div class="stage">
+    <div>
+      <div class="phone-label">390 × 844 · white UI · 820px breakpoint</div>
+      <div class="phone" id="phone">
+        <div class="phone-notch"></div>
+        <div class="app">
+          <header class="topbar">
+            <button type="button" class="back-btn" id="backBtn" aria-label="Back">‹</button>
+            <div class="topbar-title" id="topTitle">Dashboard<small>Kebapçı Halil</small></div>
+            <div class="review-dot" id="reviewPill" onclick="goTab('review')">4 review</div>
+            <button type="button" class="avatar avatar-btn" id="avatarBtn" aria-label="Your profile">SH</button>
+          </header>
+
+          <div class="scroll" id="scrollArea">
+            <!-- HOME -->
+            <section class="screen on" id="s-home">
+              <div class="period-banner" id="homePeriodBanner" role="button" tabindex="0">
+                <div><b id="homePeriodMonth">—</b> · <span id="homePeriodSub">Month to date</span></div>
+                <span style="color:var(--primary);font-weight:600;font-size:12px">Change ›</span>
+              </div>
+              <div class="kpi-grid">
+                <div class="kpi k-green"><div class="lbl">Net result</div><div class="val num pos">+38.412 ₺</div></div>
+                <div class="kpi k-blue"><div class="lbl">Cash + bank</div><div class="val num">214.860 ₺</div></div>
+                <div class="kpi k-teal"><div class="lbl">Sales</div><div class="val num">412.300 ₺</div></div>
+                <div class="kpi k-amber"><div class="lbl">Needs review</div><div class="val" style="color:var(--warning)">4</div></div>
+              </div>
+              <div class="page-head" style="margin-top:8px"><h2>Right now</h2><p>Tap a card to open the directory</p></div>
+              <div class="kpi-grid">
+                <div class="kpi k-red" onclick="pushScreen('suppliers','home')" style="cursor:pointer"><div class="lbl">Payables</div><div class="val num neg">−27.550 ₺</div></div>
+                <div class="kpi k-green"><div class="lbl">Receivables</div><div class="val num pos">+9.320 ₺</div></div>
+                <div class="kpi k-amber"><div class="lbl">Staff</div><div class="val num neg">−12.400 ₺</div></div>
+                <div class="kpi k-blue"><div class="lbl">FX held</div><div class="val">€1.240</div></div>
+              </div>
+              <div class="panel">
+                <div class="panel-head">Recent entries</div>
+                <div class="card-row" onclick="openTxn()">
+                  <div class="row1"><span class="desc">Yemeksepeti settlement</span><span class="amt num pos">+12.840 ₺</span></div>
+                  <div class="row2"><span><span data-date-offset="-1"></span> · Delivery</span><span class="pill posted">Posted</span></div>
+                </div>
+                <div class="card-row" onclick="openTxn()">
+                  <div class="row1"><span class="desc">Metro toptan — meat</span><span class="amt num neg">−4.500 ₺</span></div>
+                  <div class="row2"><span><span data-date-offset="0"></span> · Expense</span><span class="pill posted">Posted</span></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- RECORD — chips + inline form (no extra navigation) -->
+            <section class="screen" id="s-record">
+              <div class="page-head"><h2>Record</h2><p>Pick a type · fill · post — form stays on this tab</p></div>
+              <div class="record-chips" role="tablist" aria-label="Record type">
+                <button type="button" class="record-chip on" data-record="sales"><span class="ic">🛍</span>Sales</button>
+                <button type="button" class="record-chip" data-record="expense"><span class="ic">💸</span>Expense</button>
+                <button type="button" class="record-chip" data-record="receipt"><span class="ic">📷</span>Receipt</button>
+                <button type="button" class="record-chip" data-record="salary"><span class="ic">👥</span>Salary</button>
+                <button type="button" class="record-chip" data-record="fx"><span class="ic">🏦</span>FX</button>
+                <button type="button" class="record-chip" data-record="cash"><span class="ic">💵</span>Cash</button>
+              </div>
+
+              <div class="record-pane on" id="record-sales">
+                <div class="record-form">
+                  <h3>Daily sales</h3>
+                  <p class="hint">Today’s POS totals — defaults to today, no future dates.</p>
+                  <div class="record-field">
+                    <label>Date</label>
+                    <input type="text" id="recordDateSales" readonly>
+                  </div>
+                  <div class="record-row2">
+                    <div class="record-field" style="margin:0">
+                      <label>Cash</label>
+                      <input type="text" inputmode="decimal" placeholder="0" value="12.400">
+                    </div>
+                    <div class="record-field" style="margin:0">
+                      <label>Card</label>
+                      <input type="text" inputmode="decimal" placeholder="0" value="5.820">
+                    </div>
+                  </div>
+                  <button type="button" class="record-post">Post sales · 18.220 ₺</button>
+                </div>
+              </div>
+
+              <div class="record-pane" id="record-expense">
+                <div class="record-form">
+                  <h3>Quick expense</h3>
+                  <p class="hint">Cash or partner-fronted — bank/card expenses come from statements.</p>
+                  <div class="record-field">
+                    <label>Date</label>
+                    <input type="text" id="recordDateExpense" readonly>
+                  </div>
+                  <div class="record-field">
+                    <label>Amount</label>
+                    <input type="text" inputmode="decimal" placeholder="0,00 ₺">
+                  </div>
+                  <div class="record-field">
+                    <label>What for?</label>
+                    <input type="text" placeholder="e.g. Metro — meat">
+                  </div>
+                  <button type="button" class="record-post">Post expense</button>
+                </div>
+              </div>
+
+              <div class="record-pane" id="record-receipt">
+                <div class="record-form">
+                  <h3>Expense receipt</h3>
+                  <p class="hint">Camera opens immediately — one tap to capture, then confirm lines.</p>
+                  <button type="button" class="record-camera">
+                    <span class="cam-ic">📷</span>
+                    <b>Take photo</b>
+                    <span>or choose from gallery</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="record-pane" id="record-salary">
+                <div class="record-form">
+                  <h3>Salary payment</h3>
+                  <p class="hint">Staff picker remembers last choice for faster repeat posts.</p>
+                  <div class="record-field">
+                    <label>Staff</label>
+                    <select><option>Mehmet — chef</option><option>Ayşe — waiter</option></select>
+                  </div>
+                  <div class="record-field">
+                    <label>Amount</label>
+                    <input type="text" inputmode="decimal" placeholder="0,00 ₺">
+                  </div>
+                  <button type="button" class="record-post">Post salary</button>
+                </div>
+              </div>
+
+              <div class="record-pane" id="record-fx">
+                <div class="record-form">
+                  <h3>FX / transfer</h3>
+                  <p class="hint">Buy, sell, or move between accounts.</p>
+                  <div class="record-field">
+                    <label>Action</label>
+                    <select><option>Transfer between accounts</option><option>Buy foreign currency</option><option>Spend FX</option></select>
+                  </div>
+                  <div class="record-field">
+                    <label>Amount</label>
+                    <input type="text" inputmode="decimal" placeholder="0,00 ₺">
+                  </div>
+                  <button type="button" class="record-post">Continue</button>
+                </div>
+              </div>
+
+              <div class="record-pane" id="record-cash">
+                <div class="record-form">
+                  <h3>Count cash</h3>
+                  <p class="hint">Drawer count — does not post until you close the day.</p>
+                  <div class="record-field">
+                    <label>Counted in drawer</label>
+                    <input type="text" inputmode="decimal" placeholder="0,00 ₺" value="4.850">
+                  </div>
+                  <button type="button" class="record-post">Save count</button>
+                </div>
+              </div>
+
+              <div class="record-today">
+                <div class="lbl">Posted today</div>
+                <div class="items">Sales <b class="num">18.220 ₺</b> · Expense <span class="num">−450 ₺</span></div>
+              </div>
+
+              <button type="button" class="record-more-toggle" id="recordMoreToggle">More actions — supplier pay, partner, upload…</button>
+              <div class="record-more-panel" id="recordMorePanel">
+                <button type="button" class="record-quick-row"><span class="ic">📦</span>Supplier payment</button>
+                <button type="button" class="record-quick-row"><span class="ic">🤝</span>Partner reimbursement</button>
+                <button type="button" class="record-quick-row"><span class="ic">📄</span>Upload document</button>
+                <button type="button" class="record-quick-row"><span class="ic">🔒</span>Close day</button>
+              </div>
+            </section>
+
+            <!-- REVIEW -->
+            <section class="screen" id="s-review">
+              <div class="page-head"><h2>Review</h2><p>4 items need you</p></div>
+              <div class="kpi-grid">
+                <div class="kpi k-blue"><div class="lbl">Bank</div><div class="val">2</div></div>
+                <div class="kpi k-violet"><div class="lbl">Invoices</div><div class="val">1</div></div>
+                <div class="kpi k-teal"><div class="lbl">Sales</div><div class="val">1</div></div>
+                <div class="kpi k-green"><div class="lbl">Other</div><div class="val">0</div></div>
+              </div>
+              <div class="panel">
+                <div class="panel-head">Bank lines</div>
+                <div class="card-row">
+                  <div class="row1"><span class="desc">Garanti · unknown inflow</span><span class="amt num pos">+8.120 ₺</span></div>
+                  <div class="row2"><span data-date-offset="-2">—</span><span class="pill review">Classify</span></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- MORE — native grouped menu -->
+            <section class="screen native-screen" id="s-more">
+              <div class="entity-card">
+                <div class="dot">KH</div>
+                <div><div class="name">Kebapçı Halil</div><div class="sub">Switch restaurant</div></div>
+                <span class="chev">›</span>
+              </div>
+
+              <div class="more-section">
+                <h3>Money in</h3>
+                <div class="more-group">
+                  <div class="more-row" onclick="pushScreen('sales','more')"><span class="chip in">🛍</span>Sales<span class="chev">›</span></div>
+                  <div class="more-row"><span class="chip in">🛵</span>Delivery<span class="chev">›</span></div>
+                  <div class="more-row"><span class="chip in">👤</span>Customers<span class="chev">›</span></div>
+                </div>
+              </div>
+
+              <div class="more-section">
+                <h3>Money out</h3>
+                <div class="more-group">
+                  <div class="more-row" onclick="pushScreen('suppliers','more')"><span class="chip out">📦</span>Suppliers<span class="meta num neg">−27.550 ₺</span><span class="chev">›</span></div>
+                  <div class="more-row"><span class="chip out">👥</span>Staff<span class="chev">›</span></div>
+                  <div class="more-row"><span class="chip out">🤝</span>Partners<span class="chev">›</span></div>
+                </div>
+              </div>
+
+              <div class="more-section">
+                <h3>Money held</h3>
+                <div class="more-group">
+                  <div class="more-row"><span class="chip held">💳</span>Card clearing<span class="chev">›</span></div>
+                  <div class="more-row"><span class="chip held">💵</span>Cash &amp; FX<span class="chev">›</span></div>
+                </div>
+              </div>
+
+              <div class="more-section">
+                <h3>Understand</h3>
+                <div class="more-group">
+                  <div class="more-row" onclick="pushScreen('reports','more')">
+                    <span class="chip report">📊</span>Reports<span class="chev">›</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="more-section">
+                <div class="more-group">
+                  <div class="more-row" onclick="pushScreen('settings','more')"><span class="chip settings">⚙</span>Settings<span class="chev">›</span></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- SETTINGS — one place for all setup -->
+            <section class="screen native-screen" id="s-settings">
+              <div class="more-section">
+                <h3>Restaurant</h3>
+                <div class="more-group">
+                  <div class="more-row" onclick="pushScreen('company','settings')"><span class="chip">🏢</span>Company profile<span class="chev">›</span></div>
+                  <div class="more-row"><span class="chip">👥</span>Team<span class="meta">1 member</span><span class="chev">›</span></div>
+                </div>
+                <p class="setting-foot">Name, VKN, who can access this restaurant.</p>
+              </div>
+
+              <div class="more-section">
+                <h3>Books</h3>
+                <div class="more-group">
+                  <div class="more-row"><span class="chip">🏁</span>Opening balances<span class="chev">›</span></div>
+                </div>
+                <p class="setting-foot">Go-live date, starting cash, bank, payables.</p>
+              </div>
+
+              <div class="more-section">
+                <h3>Modules</h3>
+                <div class="more-group">
+                  <div class="setting-row"><span>Delivery platforms</span><span class="toggle on"></span></div>
+                  <div class="setting-row"><span>Card clearing</span><span class="toggle on"></span></div>
+                  <div class="setting-row"><span>Foreign currency</span><span class="toggle on"></span></div>
+                </div>
+              </div>
+
+              <div class="more-section">
+                <h3>Account</h3>
+                <div class="more-group">
+                  <div class="more-row"><span class="chip">☁</span>Backups<span class="chev">›</span></div>
+                </div>
+              </div>
+
+              <div class="more-section">
+                <div class="more-group">
+                  <div class="more-row danger">Sign out</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- SUB: Suppliers -->
+            <section class="screen" id="s-suppliers">
+              <input class="search-bar" placeholder="Search suppliers…" readonly>
+              <div class="kpi" style="margin-bottom:12px"><div class="lbl">Total payables</div><div class="val num neg">−27.550 ₺</div></div>
+              <div class="panel">
+                <div class="card-row">
+                  <div class="row1"><span class="desc">Metro Toptan</span><span class="amt num neg">−23.400 ₺</span></div>
+                  <div class="row2"><span>Active · <span data-date-offset="-1">—</span></span><span class="pill posted">Active</span></div>
+                </div>
+                <div class="card-row">
+                  <div class="row1"><span class="desc">Balparmak Bal</span><span class="amt num neg">−4.150 ₺</span></div>
+                  <div class="row2"><span>Active · 05.07</span><span class="pill posted">Active</span></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- SUB: Banking -->
+            <section class="screen" id="s-banking">
+              <div class="kpi-grid">
+                <div class="kpi"><div class="lbl">Garanti TL</div><div class="val num">148.320 ₺</div></div>
+                <div class="kpi"><div class="lbl">This month net</div><div class="val num pos">+35.170 ₺</div></div>
+              </div>
+              <div class="panel">
+                <div class="panel-head">Activity</div>
+                <div class="card-row" onclick="openTxn()">
+                  <div class="row1"><span class="desc">Metro ödeme</span><span class="amt num neg">−4.500 ₺</span></div>
+                  <div class="row2"><span data-date-offset="0">—</span><span class="pill posted">Posted</span></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- SUB: Sales -->
+            <section class="screen" id="s-sales">
+              <div class="page-head"><h2>Sales</h2></div>
+              <div class="panel">
+                <div class="card-row">
+                  <div class="row1"><span class="desc"><span data-date-offset="-1">—</span> daily sales</span><span class="amt num">18.220 ₺</span></div>
+                  <div class="row2"><span>Cash + card</span><span class="pill review">Review</span></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- SUB: Reports hub -->
+            <section class="screen screen-reports" id="s-reports">
+              <div class="reports-sticky">
+                <div class="reports-sticky-head">
+                  <button type="button" class="reports-period" id="reportsPeriodBtn">—</button>
+                  <button type="button" class="reports-download" aria-label="Download reports">
+                    <svg class="dl-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download
+                  </button>
+                </div>
+                <div class="reports-summary">
+                  <span>Sales <b class="num">412.300 ₺</b></span>
+                  <span>Expenses <b class="num">373.888 ₺</b></span>
+                  <span>Net <b class="num pos">+38.412 ₺</b></span>
+                </div>
+              </div>
+              <div class="reports-scroll">
+                <div class="report-grid">
+                  <div class="report-card"><span class="rc-ic">📈</span><div><b>Profit &amp; loss</b><span>Revenue and expenses</span></div></div>
+                  <div class="report-card"><span class="rc-ic">⚖</span><div><b>Balance sheet</b><span>Assets, liabilities, equity</span></div></div>
+                  <div class="report-card"><span class="rc-ic">📒</span><div><b>General ledger</b><span>Every journal entry</span></div></div>
+                  <div class="report-card"><span class="rc-ic">🔒</span><div><b>Month close</b><span>Seal the month</span></div></div>
+                  <div class="report-card"><span class="rc-ic">🏦</span><div><b>Cash &amp; bank book</b><span>Running balances</span></div></div>
+                  <div class="report-card"><span class="rc-ic">🧾</span><div><b>Expense register</b><span>All expenses in one list</span></div></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- SUB: Your profile (avatar top-right — not in Settings) -->
+            <section class="screen" id="s-profile">
+              <div class="panel" style="margin-bottom:14px">
+                <div style="display:flex;align-items:center;gap:14px;padding:16px">
+                  <span class="avatar" style="width:48px;height:48px;font-size:14px">SH</span>
+                  <div>
+                    <div style="font-size:16px;font-weight:600">Shoaib Halil</div>
+                    <div style="font-size:13px;color:var(--muted);margin-top:2px">shoaib@example.com</div>
+                  </div>
+                </div>
+                <div style="padding:0 16px 16px;border-top:1px solid var(--border);padding-top:14px">
+                  <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px">Display name</label>
+                  <input class="search-bar" style="margin:0" value="Shoaib Halil" readonly>
+                  <p style="font-size:12px;color:var(--muted);margin-top:8px">Shown on entries you post and in the audit trail.</p>
+                </div>
+              </div>
+              <button type="button" class="btn-primary-block">Save profile</button>
+            </section>
+
+            <!-- SUB: Settings drill-in example -->
+            <section class="screen native-screen" id="s-company">
+              <div class="more-section">
+                <div class="more-group">
+                  <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
+                    <label style="font-size:13px;color:var(--muted)">Display name</label>
+                    <input class="search-bar" style="margin:0" value="Kebapçı Halil" readonly>
+                  </div>
+                  <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px;border-bottom:0">
+                    <label style="font-size:13px;color:var(--muted)">VKN</label>
+                    <input class="search-bar" style="margin:0" value="1234567890" readonly>
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="btn-primary-block">Save</button>
+            </section>
+          </div>
+
+          <nav class="bottom-tabs" id="bottomTabs" aria-label="Primary">
+            <div class="tab-wrap"><button type="button" class="on" data-tab="home"><span class="ic">◫</span>Home</button></div>
+            <div class="tab-wrap">
+              <button type="button" data-tab="review"><span class="ic">✓</span>Review<span class="badge-dot">4</span></button>
+            </div>
+            <div class="tab-wrap record-fab">
+              <button type="button" data-tab="record"><span class="fab-circle">+</span><span class="fab-label">Record</span></button>
+            </div>
+            <div class="tab-wrap"><button type="button" data-tab="banking"><span class="ic">🏦</span>Banking</button></div>
+            <div class="tab-wrap"><button type="button" data-tab="more"><span class="ic">☰</span>More</button></div>
+          </nav>
+        </div>
+
+        <div class="txn-veil" id="txnVeil"></div>
+        <aside class="txn-drawer" id="txnDrawer">
+          <div class="txn-handle"></div>
+          <div class="txn-head">
+            <div class="amt num pos">+12.840,00 ₺</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">Yemeksepeti settlement · <span data-date-offset="-1">—</span></div>
+            <div style="margin-top:8px"><span class="pill posted">Posted</span></div>
+          </div>
+          <div class="txn-body">
+            <p style="font-size:11px;color:var(--faint);text-transform:uppercase;margin-bottom:8px">Journal lines</p>
+            <div style="border:1px solid var(--border);border-radius:8px;font-size:12px">
+              <div style="display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border)"><span>Garanti TL</span><span class="num">D 12.840</span></div>
+              <div style="display:flex;justify-content:space-between;padding:8px 10px"><span>Delivery receivable</span><span class="num">C 12.840</span></div>
+            </div>
+          </div>
+          <div class="txn-foot">
+            <button class="btn">Edit</button>
+            <button class="btn" style="color:var(--danger);border-color:var(--danger)">Void</button>
+          </div>
+        </aside>
+
+        <div class="period-veil" id="periodVeil"></div>
+        <aside class="period-drawer" id="periodDrawer" aria-label="Select period">
+          <div class="txn-handle"></div>
+          <div class="period-drawer-head">
+            <h3 id="periodDrawerTitle">Select period</h3>
+            <p>Today and past only — future dates are disabled</p>
+          </div>
+          <div class="period-nav">
+            <button type="button" id="periodPrev" aria-label="Previous month">‹</button>
+            <span class="period-nav-label" id="periodNavLabel">—</span>
+            <button type="button" id="periodNext" aria-label="Next month">›</button>
+          </div>
+          <div class="period-weekdays">
+            <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+          </div>
+          <div class="period-cal-grid" id="periodCalGrid"></div>
+          <button type="button" class="period-done" id="periodDone">Done</button>
+        </aside>
+      </div>
+    </div>
+
+    <aside class="doc-panel">
+      <h3>Design at a glance</h3>
+      <h4>Colors</h4>
+      <p><span class="swatch" style="background:#2563eb"></span>Primary #2563EB — FAB, links, active tab</p>
+      <p><span class="swatch" style="background:#16a34a"></span>Green — money in, receivables, positive</p>
+      <p><span class="swatch" style="background:#dc2626"></span>Red — payables, money out</p>
+      <p><span class="swatch" style="background:#dbeafe"></span>Blue — banking, cash held</p>
+      <p><span class="swatch" style="background:#d97706"></span>Amber — review queue, attention</p>
+      <p><span class="swatch" style="background:#7c3aed"></span>Violet — reports &amp; understand</p>
+
+      <h4>Dates</h4>
+      <ul>
+        <li>Preview uses <strong>real today</strong> from your device — reload tomorrow and labels move</li>
+        <li>Home + Reports default to <strong>current month</strong>, month-to-date through today</li>
+        <li>Period picker: tap Home banner or Reports period → calendar with <strong>future days disabled</strong></li>
+        <li>Cannot select 4 Aug if today is 3 Aug — same rule for posting in the real app</li>
+      </ul>
+
+      <h4>Responsive (any phone)</h4>
+      <ul>
+        <li><strong>Not fixed to 390px</strong> — that size is only the desktop mock bezel</li>
+        <li>Real build uses <strong>100% viewport width</strong>, fluid grids (<code>1fr 1fr</code> KPIs), no horizontal scroll</li>
+        <li>Breakpoint <strong>820px</strong> — below = mobile shell; above = desktop sidebar (same app, CSS switch)</li>
+        <li><strong>Safe areas</strong> — notch &amp; home indicator via <code>env(safe-area-inset-*)</code></li>
+        <li><strong>Height</strong> — <code>100dvh</code> so address bar show/hide doesn’t jump the layout</li>
+        <li>Works on iPhone SE → Pro Max, Android small/large — typography in <code>rem</code>, touch targets ≥ 44px</li>
+        <li><strong>Performance</strong> — layout is CSS flex/grid only; no lag from “wrong resolution”</li>
+      </ul>
+
+      <h4>Native app feel</h4>
+      <ul>
+        <li>Gray shell <code>#F2F2F7</code> on More &amp; Settings — not web white boxes</li>
+        <li>Grouped white rows, 52px tap height, iOS-style toggles</li>
+        <li><strong>One Settings</strong> in More — team, modules, opening balances inside</li>
+        <li><strong>Your profile</strong> — avatar top-right (SH), not in Settings</li>
+        <li>Drill-in hides tab bar; <strong>‹</strong> back on sub-pages</li>
+        <li>Reports: tap row on More → hub with period summary, <strong>Download</strong> (icon + label) in sticky bar, then report cards</li>
+      </ul>
+
+      <h4>Record (quick post)</h4>
+      <ul>
+        <li><strong>Chips + inline form</strong> — no menu → push → form; Sales opens by default</li>
+        <li>Switch type with one chip tap; <strong>Post</strong> on the same screen</li>
+        <li>Receipt chip → camera target immediately</li>
+        <li>Rare actions under <strong>More actions</strong> (collapsed)</li>
+      </ul>
+
+      <h4>Navigation</h4>
+      <ul>
+        <li><strong>More</strong> = full tab page (grouped rows + chevrons)</li>
+        <li>Tap a row → push page, <strong>‹</strong> back, tabs hidden</li>
+        <li>No hamburger sidebar</li>
+        <li>Record = center FAB (primary action)</li>
+      </ul>
+
+      <h4>Every page pattern</h4>
+      <ul>
+        <li><strong>Lists</strong> → card rows (48px min height)</li>
+        <li><strong>Detail</strong> → header balance + ledger cards</li>
+        <li><strong>Forms</strong> → full screen, Cancel / Save top bar</li>
+        <li><strong>Transaction</strong> → bottom sheet</li>
+      </ul>
+
+      <p style="margin-top:12px">Full page list: <code>MOBILE_UX_PLAN.md</code></p>
+    </aside>
+  </div>
+</div>
+
+<script>
+  /* ── Dates: always anchored to real today; no future selection ── */
+  function startOfDay(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+  function startOfMonth(d) {
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  }
+  function isSameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+  function isSameMonth(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+  }
+  function isFutureDay(d) {
+    return startOfDay(d) > TODAY;
+  }
+  function fmtShort(d) {
+    return String(d.getDate()).padStart(2, '0') + '.' +
+      String(d.getMonth() + 1).padStart(2, '0');
+  }
+  function fmtDayMonth(d) {
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+  function fmtMonthYear(d) {
+    return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  }
+  function fmtMonthShort(d) {
+    return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  }
+  function addDays(d, n) {
+    const x = new Date(d);
+    x.setDate(x.getDate() + n);
+    return x;
+  }
+  function daysInMonth(d) {
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  }
+
+  const TODAY = startOfDay(new Date());
+  let selectedMonth = startOfMonth(TODAY);
+  let selectedDay = new Date(TODAY);
+  let pickerViewMonth = startOfMonth(TODAY);
+
+  function updateRelativeDates() {
+    document.querySelectorAll('[data-date-offset]').forEach(el => {
+      const off = parseInt(el.dataset.dateOffset, 10);
+      el.textContent = fmtShort(addDays(TODAY, off));
+    });
+  }
+
+  function periodSubtitle() {
+    if (isSameMonth(selectedMonth, TODAY)) {
+      return 'Month to date · through ' + fmtDayMonth(selectedDay);
+    }
+    return 'Full month';
+  }
+
+  function syncPeriodLabels() {
+    const monthLabel = fmtMonthYear(selectedMonth);
+    document.getElementById('homePeriodMonth').textContent = monthLabel;
+    document.getElementById('homePeriodSub').textContent = periodSubtitle();
+    const rp = document.getElementById('reportsPeriodBtn');
+    if (rp) rp.textContent = fmtMonthShort(selectedMonth) + ' ▾';
+    TITLES.reports = ['Reports', fmtMonthShort(selectedMonth)];
+    if (currentScreen === 'reports') renderChrome('reports');
+  }
+
+  function renderPeriodCalendar() {
+    const grid = document.getElementById('periodCalGrid');
+    const nav = document.getElementById('periodNavLabel');
+    nav.textContent = fmtMonthYear(pickerViewMonth);
+    document.getElementById('periodPrev').disabled = false;
+    const atCurrentMonth = isSameMonth(pickerViewMonth, TODAY);
+    document.getElementById('periodNext').disabled = atCurrentMonth;
+
+    grid.innerHTML = '';
+    const y = pickerViewMonth.getFullYear();
+    const m = pickerViewMonth.getMonth();
+    const first = new Date(y, m, 1);
+    let pad = first.getDay() - 1;
+    if (pad < 0) pad = 6;
+    for (let i = 0; i < pad; i++) {
+      const empty = document.createElement('span');
+      empty.className = 'period-cal-day empty';
+      grid.appendChild(empty);
+    }
+    const total = daysInMonth(pickerViewMonth);
+    for (let day = 1; day <= total; day++) {
+      const date = new Date(y, m, day);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'period-cal-day';
+      btn.textContent = String(day);
+      if (isFutureDay(date)) {
+        btn.classList.add('future');
+        btn.disabled = true;
+        btn.title = 'Future dates cannot be selected';
+      } else {
+        btn.classList.add('past');
+        if (isSameDay(date, TODAY)) btn.classList.add('today');
+        if (isSameDay(date, selectedDay) && isSameMonth(date, selectedMonth)) {
+          btn.classList.add('selected');
+        }
+        btn.onclick = () => {
+          selectedDay = startOfDay(date);
+          selectedMonth = startOfMonth(date);
+          renderPeriodCalendar();
+        };
+      }
+      grid.appendChild(btn);
+    }
+  }
+
+  function openPeriodPicker() {
+    pickerViewMonth = startOfMonth(selectedMonth);
+    renderPeriodCalendar();
+    document.getElementById('periodVeil').classList.add('open');
+    document.getElementById('periodDrawer').classList.add('open');
+  }
+  function closePeriodPicker() {
+    document.getElementById('periodVeil').classList.remove('open');
+    document.getElementById('periodDrawer').classList.remove('open');
+  }
+
+  const TABS = new Set(['home', 'record', 'review', 'banking', 'more']);
+  function activeTabForScreen(name) {
+    if (TABS.has(name)) return name;
+    if (name === 'review-bank' || name.startsWith('review')) return 'review';
+    return 'more';
+  }
+  const TITLES = {
+    home: ['Dashboard', 'Kebapçı Halil'],
+    record: ['Record', 'Post in one tab'],
+    review: ['Review', '4 items need you'],
+    banking: ['Banking', 'Money held'],
+    more: ['More', 'All sections'],
+    settings: ['Settings', 'Restaurant & account'],
+    suppliers: ['Suppliers', 'Money out'],
+    sales: ['Sales', 'Money in'],
+    reports: ['Reports', fmtMonthShort(TODAY)],
+    company: ['Company profile', 'Restaurant'],
+    profile: ['Your profile', 'Account'],
+  };
+
+  let currentScreen = 'home';
+  let backTarget = null;
+
+  function isTabRoot(name) { return TABS.has(name); }
+
+  function renderChrome(name) {
+    const tab = isTabRoot(name);
+    document.getElementById('backBtn').classList.toggle('show', !tab);
+    const scroll = document.getElementById('scrollArea');
+    scroll.classList.toggle('subpage', !tab);
+    scroll.classList.toggle('native', name === 'more' || name === 'settings' || name === 'company');
+    document.getElementById('reviewPill').style.display = tab && name !== 'review' ? '' : 'none';
+    document.getElementById('avatarBtn').style.display = tab ? '' : 'none';
+
+    const t = TITLES[name] || TITLES.home;
+    document.getElementById('topTitle').innerHTML =
+      t[0] + (t[1] ? '<small>' + t[1] + '</small>' : '');
+
+    document.querySelectorAll('.bottom-tabs button[data-tab]').forEach(b => {
+      b.classList.toggle('on', b.dataset.tab === activeTabForScreen(name));
+    });
+    document.querySelectorAll('.controls .btn[data-screen]').forEach(b => {
+      const s = b.dataset.screen;
+      b.classList.toggle('on', s === name || (s && s.replace(' ↗', '') === name));
+    });
+  }
+
+  function showScreen(name, back = null) {
+    currentScreen = name;
+    backTarget = back;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+    const el = document.getElementById('s-' + name);
+    if (el) el.classList.add('on');
+    renderChrome(name);
+    closeTxn();
+    closePeriodPicker();
+    document.getElementById('scrollArea').scrollTop = 0;
+  }
+
+  function goTab(name) { showScreen(name, null); }
+
+  function pushScreen(name, from) { showScreen(name, from); }
+
+  function popScreen() {
+    if (backTarget) showScreen(backTarget, null);
+    else goTab('home');
+  }
+
+  function openTxn() {
+    document.getElementById('txnVeil').classList.add('open');
+    document.getElementById('txnDrawer').classList.add('open');
+  }
+  function closeTxn() {
+    document.getElementById('txnVeil').classList.remove('open');
+    document.getElementById('txnDrawer').classList.remove('open');
+  }
+
+  function openProfile() {
+    if (!isTabRoot(currentScreen)) return;
+    pushScreen('profile', currentScreen);
+  }
+
+  document.getElementById('backBtn').onclick = popScreen;
+  document.getElementById('txnVeil').onclick = closeTxn;
+  document.getElementById('openTxn').onclick = openTxn;
+  document.getElementById('avatarBtn').onclick = openProfile;
+
+  document.getElementById('homePeriodBanner').onclick = openPeriodPicker;
+  document.getElementById('homePeriodBanner').onkeydown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPeriodPicker(); }
+  };
+  document.getElementById('reportsPeriodBtn').onclick = openPeriodPicker;
+  document.getElementById('periodVeil').onclick = closePeriodPicker;
+  document.getElementById('periodPrev').onclick = () => {
+    pickerViewMonth = new Date(pickerViewMonth.getFullYear(), pickerViewMonth.getMonth() - 1, 1);
+    renderPeriodCalendar();
+  };
+  document.getElementById('periodNext').onclick = () => {
+    if (isSameMonth(pickerViewMonth, TODAY)) return;
+    const next = new Date(pickerViewMonth.getFullYear(), pickerViewMonth.getMonth() + 1, 1);
+    if (next > startOfMonth(TODAY)) return;
+    pickerViewMonth = next;
+    renderPeriodCalendar();
+  };
+  document.getElementById('periodDone').onclick = () => {
+    syncPeriodLabels();
+    closePeriodPicker();
+  };
+
+  document.querySelectorAll('.bottom-tabs button[data-tab]').forEach(b => {
+    b.onclick = () => goTab(b.dataset.tab);
+  });
+  document.querySelectorAll('.controls .btn[data-screen]').forEach(b => {
+    b.onclick = () => {
+      const s = b.dataset.screen.replace(' ↗', '');
+      if (TABS.has(s)) goTab(s);
+      else if (s === 'suppliers' || s === 'reports' || s === 'settings') {
+        pushScreen(s, isTabRoot(currentScreen) ? currentScreen : 'home');
+      }
+      else if (s === 'company') pushScreen(s, 'settings');
+    };
+  });
+
+  updateRelativeDates();
+  syncRecordDates();
+  syncPeriodLabels();
+  showScreen('home');
+
+  function setRecordMode(mode) {
+    document.querySelectorAll('.record-chip').forEach(c => {
+      c.classList.toggle('on', c.dataset.record === mode);
+    });
+    document.querySelectorAll('.record-pane').forEach(p => {
+      p.classList.toggle('on', p.id === 'record-' + mode);
+    });
+  }
+  document.querySelectorAll('.record-chip').forEach(c => {
+    c.onclick = () => setRecordMode(c.dataset.record);
+  });
+  document.getElementById('recordMoreToggle').onclick = () => {
+    document.getElementById('recordMorePanel').classList.toggle('open');
+  };
+
+  function syncRecordDates() {
+    const d = fmtShort(TODAY);
+    ['recordDateSales', 'recordDateExpense'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = d;
+    });
+  }
+</script>
+</body>
+</html>

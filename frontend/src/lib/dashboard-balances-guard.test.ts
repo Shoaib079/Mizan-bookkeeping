@@ -35,9 +35,12 @@ describe("balances on dashboard", () => {
     expect(overview).not.toContain('title="Bank"');
   });
 
-  it("redirects legacy /balances routes", () => {
+  it("redirects /balances to dashboard (same as desktop)", () => {
     const hub = read("app/balances/page.tsx");
     expect(hub).toContain('redirect("/")');
+  });
+
+  it("redirects legacy balance directory aliases", () => {
     expect(read("app/balances/suppliers/page.tsx")).toContain('redirect("/suppliers")');
     expect(read("app/(procurement)/payables/page.tsx")).toContain(
       'redirect("/suppliers")',

@@ -17,6 +17,7 @@ import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
+import { useEditFormDirty } from "@/lib/use-form-dirty";
 
 export type CorrectableFxPurchaseRow = {
   journal_entry_id: string;
@@ -63,6 +64,7 @@ export function CorrectFxPurchaseForm({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [baseline, setBaseline] = useState<Record<string, string> | null>(null);
 
   const loadAccounts = useCallback(
     async (recorded: CorrectableFxPurchaseRow) => {
@@ -83,15 +85,50 @@ export function CorrectFxPurchaseForm({
   );
 
   useEffect(() => {
-    if (!open || !purchase) return;
+    if (!open || !purchase) {
+      setBaseline(null);
+      return;
+    }
     setDateText(formatTrDate(purchase.movement_date));
     setNativeText(formatFxNativeInput(purchase.native_quantity));
     setTryCostText(formatKurus(purchase.try_cost_kurus));
     setDescription(purchase.description);
     setReason("");
     setError(null);
+    setBaseline(null);
     void loadAccounts(purchase).catch(() => undefined);
   }, [open, purchase, loadAccounts, currency]);
+
+  useEffect(() => {
+    if (!open || !purchase || baseline !== null) return;
+    if (!tryCashId && tryCashAccounts.length === 0) return;
+    setBaseline({
+      dateText,
+      nativeText,
+      tryCostText,
+      description,
+      reason,
+      tryCashId,
+    });
+  }, [
+    open,
+    purchase,
+    baseline,
+    tryCashAccounts.length,
+    tryCashId,
+    dateText,
+    nativeText,
+    tryCostText,
+    description,
+    reason,
+  ]);
+
+  const { dirty, markTouched } = useEditFormDirty(
+    "correct-fx-purchase",
+    open && purchase !== null,
+    baseline,
+    { dateText, nativeText, tryCostText, description, reason, tryCashId },
+  );
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -156,8 +193,8 @@ export function CorrectFxPurchaseForm({
 
   return (
     <>
-      <Dialog open={open} title={`Edit ${currency} purchase`} onClose={onClose}>
-        <form onSubmit={onSubmit} className="space-y-3">
+      <Dialog open={open} title={`Edit ${currency} purchase`} onClose={onClose} dirty={dirty}>
+        <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
           <div>
             <Label htmlFor="cfp-date">Date (DD.MM.YYYY)</Label>
             <DateInput

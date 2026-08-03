@@ -245,7 +245,7 @@ describe("account menu", () => {
       ),
     );
     expect(source).toContain("hasUnsavedWork");
-    expect(source).toContain("unsavedWorkWarningMessage");
+    expect(source).toContain("discardChangesMessage");
   });
 });
 

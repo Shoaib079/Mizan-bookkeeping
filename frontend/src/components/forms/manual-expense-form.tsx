@@ -35,6 +35,7 @@ import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 import { useToast } from "@/lib/toast";
 import { useRegisterUnsaved } from "@/lib/unsaved-work";
+import { useFormTouched } from "@/lib/use-form-dirty";
 import {
   clearConfirmItemOnTextEdit,
   type ExpenseItemSearchResult,
@@ -162,8 +163,11 @@ export function ManualExpenseForm({
     isEmpty: isExpenseDraftEmpty,
   });
 
+  const { touched, markTouched } = useFormTouched(open && recordKind === "expense");
+
   const dirty =
     recordKind === "expense" &&
+    touched &&
     baseline !== null &&
     statesDiffer(baseline, formDraft);
 
@@ -552,6 +556,7 @@ export function ManualExpenseForm({
       ) : (
       <form
         onSubmit={onSubmit}
+        onChange={markTouched}
         className={embedded ? "space-y-3" : "space-y-3"}
       >
         {embedded ? (

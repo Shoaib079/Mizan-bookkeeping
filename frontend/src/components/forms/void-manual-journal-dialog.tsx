@@ -105,7 +105,12 @@ export function VoidManualJournalDialog({
 
   return (
     <>
-      <Dialog open={open} title="Void manual journal" onClose={onClose}>
+      <Dialog
+        open={open}
+        title="Void manual journal"
+        onClose={onClose}
+        mobilePresentation="sheet"
+      >
         <form onSubmit={onSubmit} className="space-y-3">
           {journal && (
             <p className="text-sm text-muted-foreground">

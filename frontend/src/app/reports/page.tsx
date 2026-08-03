@@ -20,6 +20,7 @@ import Link from "next/link";
 
 import { MonthPackButton } from "@/components/reports/month-pack-button";
 import { ReportDateRange } from "@/components/reports/report-date-range";
+import { ReportPeriodTrigger } from "@/components/reports/report-period-trigger";
 import {
   ReportsPeriodSummary,
   ReportsPeriodSummarySkeleton,
@@ -37,6 +38,7 @@ import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
 import type { DashboardRead } from "@/lib/report-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type ReportCard = {
@@ -161,6 +163,7 @@ export default function ReportsPage() {
 }
 
 function ReportsBody() {
+  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const { role } = useEntityAccess();
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
@@ -217,45 +220,75 @@ function ReportsBody() {
 
   const qs = buildRangeQuery(range.from, range.to);
 
+  const periodSummaryBlock =
+    entityId &&
+    (summary ? (
+      <ReportsPeriodSummary
+        summary={summary}
+        role={role}
+        refreshing={loading}
+      />
+    ) : !summaryError ? (
+      <ReportsPeriodSummarySkeleton
+        showNet={shouldShowNetResultSummary(role)}
+      />
+    ) : null);
+
   return (
     <>
-      <div className="mb-6 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <ReportDateRange
-            from={range.from}
-            to={range.to}
-            disabled={!entityId || loading}
-            onChange={(from, to) => setRange({ from, to })}
-          />
-          {entityId && (
-            <MonthPackButton
-              entityId={entityId}
-              queryString={buildRangeQuery(range.from, range.to)}
-              disabled={loading}
+      {isMobile ? (
+        <div className="sticky top-0 z-10 -mx-3.5 mb-4 border-b border-border bg-background px-3.5 pb-3">
+          <div className="flex items-stretch gap-2">
+            <ReportPeriodTrigger
+              from={range.from}
+              to={range.to}
+              disabled={!entityId || loading}
+              onChange={(from, to) => setRange({ from, to })}
             />
+            {entityId && (
+              <MonthPackButton
+                compact
+                entityId={entityId}
+                queryString={buildRangeQuery(range.from, range.to)}
+                disabled={loading}
+              />
+            )}
+          </div>
+          {summaryError && (
+            <p className="mt-2 text-sm text-destructive">{summaryError}</p>
+          )}
+          {periodSummaryBlock && (
+            <div className="mt-3">{periodSummaryBlock}</div>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          Download all books for the period — Excel or PDF. Sales, expenses,
-          salaries, cash, banks, foreign currency, card clearing and the full
-          ledger. A closed month exports the figures it was sealed with.
-        </p>
-        {summaryError && (
-          <p className="text-sm text-destructive">{summaryError}</p>
-        )}
-        {entityId &&
-          (summary ? (
-            <ReportsPeriodSummary
-              summary={summary}
-              role={role}
-              refreshing={loading}
+      ) : (
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <ReportDateRange
+              from={range.from}
+              to={range.to}
+              disabled={!entityId || loading}
+              onChange={(from, to) => setRange({ from, to })}
             />
-          ) : !summaryError ? (
-            <ReportsPeriodSummarySkeleton
-              showNet={shouldShowNetResultSummary(role)}
-            />
-          ) : null)}
-      </div>
+            {entityId && (
+              <MonthPackButton
+                entityId={entityId}
+                queryString={buildRangeQuery(range.from, range.to)}
+                disabled={loading}
+              />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Download all books for the period — Excel or PDF. Sales, expenses,
+            salaries, cash, banks, foreign currency, card clearing and the full
+            ledger. A closed month exports the figures it was sealed with.
+          </p>
+          {summaryError && (
+            <p className="text-sm text-destructive">{summaryError}</p>
+          )}
+          {periodSummaryBlock}
+        </div>
+      )}
 
       {!entityId && (
         <p className="mb-4 text-sm text-muted-foreground">

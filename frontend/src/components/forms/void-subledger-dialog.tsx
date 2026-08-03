@@ -102,7 +102,7 @@ export function VoidSubledgerDialog({
 
   return (
     <>
-      <Dialog open={open} title={title} onClose={onClose}>
+      <Dialog open={open} title={title} onClose={onClose} mobilePresentation="sheet">
         <form onSubmit={onSubmit} className="space-y-3">
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
