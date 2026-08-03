@@ -179,7 +179,11 @@ def list_partners(
         search = text_search_filter(q, Partner.name)
         if search is not None:
             filters.append(search)
-        stmt = select(Partner).where(*filters).order_by(Partner.name)
+        stmt = (
+            select(Partner)
+            .where(*filters)
+            .order_by(Partner.is_active.desc(), Partner.name)
+        )
         return fetch_paginated(session, stmt, params)
 
 

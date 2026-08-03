@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form";
 import { AppShell } from "@/components/layout/app-shell";
@@ -25,37 +25,50 @@ import { useEntityList } from "@/lib/use-entity-list";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
 import { formatStaffBalanceMinor } from "@/lib/format-staff-balance";
 import { useIsMobileShell } from "@/lib/use-mobile-shell";
+import {
+  countInactiveDirectoryRows,
+  directoryInactiveSplitIndex,
+  sortDirectoryActiveFirst,
+} from "@/lib/directory-list";
 
 function StaffCardList({
   items,
   balances,
   balancesLoading,
+  inactiveSplitAt,
 }: {
   items: EmployeeRow[];
   balances: Map<string, number>;
   balancesLoading: boolean;
+  inactiveSplitAt?: number;
 }) {
   return (
     <MobileCardList>
-      {items.map((row) => (
-        <MobileCardRow
-          key={row.id}
-          href={`/staff/${row.id}`}
-          title={row.name}
-          meta={
-            <>
-              <span>{row.pay_currency}</span>
-              <StatusBadge status={row.is_active ? "active" : "inactive"} />
-            </>
-          }
-          amount={
-            balances.has(row.id)
-              ? formatStaffBalanceMinor(balances.get(row.id) ?? 0, row.pay_currency)
-              : balancesLoading
-                ? "…"
-                : "—"
-          }
-        />
+      {items.map((row, index) => (
+        <Fragment key={row.id}>
+          {inactiveSplitAt !== undefined && index === inactiveSplitAt && (
+            <p className="mb-2 mt-4 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Inactive employees
+            </p>
+          )}
+          <MobileCardRow
+            href={`/staff/${row.id}`}
+            title={row.name}
+            meta={
+              <>
+                <span>{row.pay_currency}</span>
+                <StatusBadge status={row.is_active ? "active" : "inactive"} />
+              </>
+            }
+            amount={
+              balances.has(row.id)
+                ? formatStaffBalanceMinor(balances.get(row.id) ?? 0, row.pay_currency)
+                : balancesLoading
+                  ? "…"
+                  : "—"
+            }
+          />
+        </Fragment>
       ))}
     </MobileCardList>
   );
@@ -65,10 +78,12 @@ function StaffTable({
   items,
   balances,
   balancesLoading,
+  inactiveSplitAt,
 }: {
   items: EmployeeRow[];
   balances: Map<string, number>;
   balancesLoading: boolean;
+  inactiveSplitAt?: number;
 }) {
   return (
     <DataTable>
@@ -81,31 +96,43 @@ function StaffTable({
         </tr>
       </DataTableHead>
       <DataTableBody>
-        {items.map((row) => (
-          <DataTableRow key={row.id} href={`/staff/${row.id}`}>
-            <DataTableCell>
-              <Link
-                href={`/staff/${row.id}`}
-                className="font-medium text-foreground hover:underline"
-              >
-                {row.name}
-              </Link>
-            </DataTableCell>
-            <DataTableCell>{row.pay_currency}</DataTableCell>
-            <DataTableCell>
-              <StatusBadge status={row.is_active ? "active" : "inactive"} />
-            </DataTableCell>
-            <DataTableCell align="right" className="tabular-nums">
-              {balances.has(row.id)
-                ? formatStaffBalanceMinor(
-                    balances.get(row.id) ?? 0,
-                    row.pay_currency,
-                  )
-                : balancesLoading
-                  ? "…"
-                  : "—"}
-            </DataTableCell>
-          </DataTableRow>
+        {items.map((row, index) => (
+          <Fragment key={row.id}>
+            {inactiveSplitAt !== undefined && index === inactiveSplitAt && (
+              <DataTableRow className="bg-muted/30 hover:bg-muted/30">
+                <DataTableCell
+                  colSpan={4}
+                  className="py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                >
+                  Inactive employees
+                </DataTableCell>
+              </DataTableRow>
+            )}
+            <DataTableRow href={`/staff/${row.id}`}>
+              <DataTableCell>
+                <Link
+                  href={`/staff/${row.id}`}
+                  className="font-medium text-foreground hover:underline"
+                >
+                  {row.name}
+                </Link>
+              </DataTableCell>
+              <DataTableCell>{row.pay_currency}</DataTableCell>
+              <DataTableCell>
+                <StatusBadge status={row.is_active ? "active" : "inactive"} />
+              </DataTableCell>
+              <DataTableCell align="right" className="tabular-nums">
+                {balances.has(row.id)
+                  ? formatStaffBalanceMinor(
+                      balances.get(row.id) ?? 0,
+                      row.pay_currency,
+                    )
+                  : balancesLoading
+                    ? "…"
+                    : "—"}
+              </DataTableCell>
+            </DataTableRow>
+          </Fragment>
         ))}
       </DataTableBody>
     </DataTable>
@@ -115,12 +142,19 @@ function StaffTable({
 export default function StaffPage() {
   const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
+  const [showInactive, setShowInactive] = useState(false);
+  const listPath = useMemo(
+    () => `/staff/employees?include_inactive=${showInactive ? "true" : "false"}`,
+    [showInactive],
+  );
   const { items, total, loading, error, forbidden, reload } =
-    useEntityList<EmployeeRow>(
-      "/staff/employees?include_inactive=true",
-      entityId,
-    );
-  const employeeIds = useMemo(() => items.map((row) => row.id), [items]);
+    useEntityList<EmployeeRow>(listPath, entityId);
+  const displayRows = useMemo(() => sortDirectoryActiveFirst(items), [items]);
+  const inactiveSplitAt = useMemo(
+    () => (showInactive ? directoryInactiveSplitIndex(displayRows) : undefined),
+    [displayRows, showInactive],
+  );
+  const employeeIds = useMemo(() => displayRows.map((row) => row.id), [displayRows]);
   const { balances, loading: balancesLoading } = useLedgerBalanceMap(
     entityId,
     employeeIds,
@@ -129,26 +163,52 @@ export default function StaffPage() {
   );
   const [formOpen, setFormOpen] = useState(false);
 
-  const listProps = { items, balances, balancesLoading };
+  const inactiveCount = useMemo(
+    () => countInactiveDirectoryRows(displayRows),
+    [displayRows],
+  );
+  const activeCount = showInactive ? displayRows.length - inactiveCount : total;
+
+  const listProps = {
+    items: displayRows,
+    balances,
+    balancesLoading,
+    inactiveSplitAt,
+  };
 
   return (
     <AppShell title="Staff">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {entityId
-            ? `${total} registered employee${total === 1 ? "" : "s"} (active and inactive — never deleted)`
+            ? showInactive
+              ? `${activeCount} active · ${inactiveCount} inactive`
+              : `${total} active employee${total === 1 ? "" : "s"}`
             : "Select a restaurant in the sidebar"}
         </p>
-        <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
-          New employee
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {entityId && (
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(event) => setShowInactive(event.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              Show inactive employees
+            </label>
+          )}
+          <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
+            New employee
+          </Button>
+        </div>
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {entityId && forbidden && <ForbiddenMessage context="staff list" />}
       {loading && <ListSkeleton columns={4} />}
 
-      {!loading && entityId && !forbidden && items.length === 0 && (
+      {!loading && entityId && !forbidden && displayRows.length === 0 && (
         <EmptyState
           icon={UsersRound}
           title="No employees yet"
@@ -156,7 +216,7 @@ export default function StaffPage() {
         />
       )}
 
-      {!loading && items.length > 0 &&
+      {!loading && !forbidden && displayRows.length > 0 &&
         (isMobile ? (
           <StaffCardList {...listProps} />
         ) : (

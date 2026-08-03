@@ -136,7 +136,11 @@ def list_employees(
         search = text_search_filter(q, Employee.name)
         if search is not None:
             filters.append(search)
-        stmt = select(Employee).where(*filters).order_by(Employee.name)
+        stmt = (
+            select(Employee)
+            .where(*filters)
+            .order_by(Employee.is_active.desc(), Employee.name)
+        )
         return fetch_paginated(session, stmt, params)
 
 
