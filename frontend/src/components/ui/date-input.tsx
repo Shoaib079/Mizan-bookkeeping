@@ -106,6 +106,7 @@ type CalendarPanelProps = {
   className?: string;
   style?: CSSProperties;
   panelRef?: React.RefObject<HTMLDivElement | null>;
+  isMobile?: boolean;
 };
 
 function CalendarPanel({
@@ -121,6 +122,7 @@ function CalendarPanel({
   className,
   style,
   panelRef,
+  isMobile = false,
 }: CalendarPanelProps) {
   return (
     <div
@@ -129,7 +131,8 @@ function CalendarPanel({
       aria-label="Choose date"
       style={style}
       className={cn(
-        "rounded-lg border border-border bg-card p-3 shadow-md",
+        "rounded-lg border border-border bg-card shadow-md",
+        isMobile ? "p-3" : "w-[17.5rem] p-4",
         className,
       )}
     >
@@ -138,11 +141,19 @@ function CalendarPanel({
           type="button"
           aria-label="Previous month"
           onClick={() => onShiftMonth(-1)}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          className={cn(
+            "flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
+            isMobile ? "h-7 w-7" : "h-8 w-8",
+          )}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className={isMobile ? "h-4 w-4" : "h-5 w-5"} />
         </button>
-        <span className="text-sm font-medium capitalize">
+        <span
+          className={cn(
+            "font-medium capitalize",
+            isMobile ? "text-sm" : "text-base",
+          )}
+        >
           {formatMonthYear(viewYear, viewMonth)}
         </span>
         <button
@@ -151,26 +162,30 @@ function CalendarPanel({
           disabled={!canGoNextMonth}
           onClick={() => onShiftMonth(1)}
           className={cn(
-            "flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
+            "flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
+            isMobile ? "h-7 w-7" : "h-8 w-8",
             !canGoNextMonth && "cursor-not-allowed opacity-40 hover:bg-transparent",
           )}
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className={isMobile ? "h-4 w-4" : "h-5 w-5"} />
         </button>
       </div>
 
-      <div className="mb-1 grid grid-cols-7 gap-0.5">
+      <div className={cn("mb-1 grid grid-cols-7", isMobile ? "gap-0.5" : "gap-1")}>
         {weekdayLabels().map((label) => (
           <div
             key={label}
-            className="py-1 text-center text-[0.65rem] font-medium text-muted-foreground"
+            className={cn(
+              "py-1 text-center font-medium text-muted-foreground",
+              isMobile ? "text-[0.65rem]" : "text-xs",
+            )}
           >
             {label}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-0.5">
+      <div className={cn("grid grid-cols-7", isMobile ? "gap-0.5" : "gap-1")}>
         {cells.map((cell, index) => {
           if (!cell) {
             return <span key={`pad-${index}`} aria-hidden />;
@@ -186,7 +201,8 @@ function CalendarPanel({
               aria-disabled={future}
               onClick={() => onPickDate(cell)}
               className={cn(
-                "h-8 rounded-md text-sm tabular-nums",
+                "rounded-md tabular-nums",
+                isMobile ? "h-8 text-sm" : "h-9 text-base",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 future &&
                   "cursor-not-allowed text-muted-foreground/40 hover:bg-transparent",
@@ -209,7 +225,10 @@ function CalendarPanel({
 
       <button
         type="button"
-        className="mt-2 w-full rounded-md py-1.5 text-xs text-primary hover:bg-sidebar-accent"
+        className={cn(
+          "mt-2 w-full rounded-md text-primary hover:bg-sidebar-accent",
+          isMobile ? "py-1.5 text-xs" : "py-2 text-sm",
+        )}
         onClick={() => onPickDate(today)}
       >
         Today
@@ -424,11 +443,12 @@ export function DateInput({
         isDateDisabled={isDateDisabled}
         onShiftMonth={shiftMonth}
         onPickDate={pickDate}
+        isMobile={isMobile}
         style={isMobile ? mobileCalendarStyle : undefined}
         className={
           isMobile
             ? undefined
-            : "absolute left-0 top-full z-50 mt-1 w-[min(17.5rem,100%)] max-w-[17.5rem]"
+            : "absolute left-0 top-full z-50 mt-1"
         }
       />
     ) : null;

@@ -15,10 +15,11 @@ describe("DateInput future dates", () => {
     expect(SOURCE).toContain("open && today");
   });
 
-  it("uses 16px input on mobile and viewport-aware calendar positioning", () => {
+  it("uses separate mobile portal sizing and fixed desktop calendar width", () => {
     expect(SOURCE).toContain("text-base touch-manipulation md:text-sm");
     expect(SOURCE).toContain("createPortal");
     expect(SOURCE).toContain("computeMobileCalendarStyle");
-    expect(SOURCE).toContain("w-[min(17.5rem,100%)]");
+    expect(SOURCE).toContain('isMobile ? "p-3" : "w-[17.5rem] p-4"');
+    expect(SOURCE).toContain("isMobile={isMobile}");
   });
 });
