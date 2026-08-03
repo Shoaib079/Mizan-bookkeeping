@@ -19,13 +19,19 @@ import {
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTry } from "@/lib/money";
+import {
+  chartAxisTick,
+  chartLegendStyle,
+  chartSeriesColors,
+  chartTooltipStyle,
+} from "@/lib/chart-theme";
 import type { TimeSeriesDailyPoint } from "@/lib/report-types";
 
 const CHART_HEIGHT = 280;
 
 const COLORS = {
-  sales: "#2563eb",
-  expenses: "#dc2626",
+  sales: chartSeriesColors.sales,
+  expenses: chartSeriesColors.expenses,
 } as const;
 
 export type WeeklyChartStatus = "loading" | "loaded" | "error";
@@ -114,15 +120,22 @@ export function WeeklyChart({ status, daily }: Props) {
       {status === "loaded" && (
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <BarChart data={data} barCategoryGap="15%">
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--border)"
+              vertical={false}
+            />
+            <XAxis dataKey="label" tick={chartAxisTick(11)} />
             <YAxis
-              tick={{ fontSize: 11 }}
+              tick={chartAxisTick(11)}
               tickFormatter={(v: number) => tryLabel(v)}
               width={90}
             />
-            <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
-            <Legend />
+            <Tooltip
+              formatter={(v) => tryLabel(Number(v ?? 0))}
+              contentStyle={chartTooltipStyle}
+            />
+            <Legend wrapperStyle={chartLegendStyle} />
             <Bar
               dataKey="sales"
               name="Sales"

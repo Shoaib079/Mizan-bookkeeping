@@ -82,7 +82,7 @@ function RecordFab({
     >
       <span
         className={cn(
-          "flex size-14 -mt-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_20px_rgb(37_99_235/0.45)] ring-4 ring-background",
+          "flex size-14 -mt-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_20px] shadow-primary/45 ring-4 ring-background",
           active && "ring-primary/20",
         )}
       >

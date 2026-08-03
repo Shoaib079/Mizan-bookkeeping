@@ -103,7 +103,7 @@ export function MobileSettingsModules() {
               className={cn(
                 "flex min-h-[52px] items-center justify-between gap-3 px-4 py-3",
                 index < KNOWN_ENTITY_SETTINGS.length - 1 &&
-                  "border-b border-[#f2f2f7]",
+                  "border-b border-border",
               )}
             >
               <div className="min-w-0 flex-1">

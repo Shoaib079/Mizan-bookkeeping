@@ -36,13 +36,13 @@ describe("SalesExpensesNetChart", () => {
     );
   });
 
-  it("uses correct colors: sales=blue, expenses=red, net=green", async () => {
+  it("uses theme tokens for sales, expenses, and net", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./dashboard-charts.tsx", import.meta.url), "utf8"),
     );
-    expect(source).toContain('sales: "#2563eb"');
-    expect(source).toContain('expenses: "#dc2626"');
-    expect(source).toContain('net: "#16a34a"');
+    expect(source).toContain("chartSeriesColors.sales");
+    expect(source).toContain("chartSeriesColors.expenses");
+    expect(source).toContain("chartSeriesColors.net");
   });
 });
 

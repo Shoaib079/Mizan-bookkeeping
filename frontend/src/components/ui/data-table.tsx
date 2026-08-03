@@ -103,16 +103,19 @@ export function DataTableCell({
   children,
   className,
   align = "left",
+  colSpan,
   onClick,
 }: {
   children: React.ReactNode;
   className?: string;
   align?: "left" | "right";
+  colSpan?: number;
   /** e.g. stopPropagation for action cells inside clickable rows. */
   onClick?: React.MouseEventHandler<HTMLTableCellElement>;
 }) {
   return (
     <td
+      colSpan={colSpan}
       className={cn(
         "px-4 py-2.5",
         align === "right" && "text-right tabular-nums",

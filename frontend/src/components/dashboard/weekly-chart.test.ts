@@ -55,12 +55,12 @@ describe("WeeklyChart", () => {
     expect(source).toContain('name="Expenses"');
   });
 
-  it("uses correct colors: sales=blue, expenses=red", async () => {
+  it("uses theme tokens for sales and expenses", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./weekly-chart.tsx", import.meta.url), "utf8"),
     );
-    expect(source).toContain('sales: "#2563eb"');
-    expect(source).toContain('expenses: "#dc2626"');
+    expect(source).toContain("chartSeriesColors.sales");
+    expect(source).toContain("chartSeriesColors.expenses");
   });
 
   it("formats tooltip in TRY via formatTry", async () => {
@@ -84,7 +84,7 @@ describe("WeeklyChart", () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./weekly-chart.tsx", import.meta.url), "utf8"),
     );
-    expect(source).toContain("<Legend />");
+    expect(source).toContain("<Legend wrapperStyle={chartLegendStyle} />");
   });
 });
 

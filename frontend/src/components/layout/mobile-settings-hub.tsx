@@ -30,7 +30,7 @@ function SettingsRow({
   return (
     <Link
       href={href}
-      className="flex min-h-[52px] items-center gap-3 border-b border-[#f2f2f7] px-4 last:border-b-0 active:bg-muted/60"
+      className="flex min-h-[52px] items-center gap-3 border-b border-border px-4 last:border-b-0 active:bg-muted/60"
     >
       <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
         <Icon className="size-4" />

@@ -202,7 +202,7 @@ export function recordActionGrant(actionId: string): Grant | null {
 
 export function validateGrantSelection(
   grants: readonly string[],
-  role?: EntityRole,
+  _role?: EntityRole,
 ): string | null {
   if (grants.length === 0) {
     return "Select at least one access item.";

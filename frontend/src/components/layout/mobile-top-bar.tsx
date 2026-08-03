@@ -35,7 +35,7 @@ function ProfileAvatarButton({
       className={cn(
         "flex size-[34px] shrink-0 items-center justify-center rounded-full",
         "bg-primary text-[11px] font-semibold text-primary-foreground",
-        "shadow-[0_2px_8px_rgb(37_99_235/0.35)] transition-transform active:scale-95",
+        "shadow-[0_2px_8px] shadow-primary/35 transition-transform active:scale-95",
       )}
     >
       {initials}

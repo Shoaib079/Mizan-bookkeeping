@@ -14,8 +14,8 @@ describe("entityAccentColor", () => {
     const b = entityAccentColor("entity-aaa");
     const c = entityAccentColor("entity-bbb");
     expect(a).toBe(b);
-    expect(a).toMatch(/^#[0-9a-f]{6}$/i);
-    expect(c).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(a).toMatch(/^var\(--entity-\d\)$/);
+    expect(c).toMatch(/^var\(--entity-\d\)$/);
   });
 });
 

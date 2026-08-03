@@ -51,6 +51,26 @@
   --sidebar-foreground: #334155;
   --sidebar-accent: #eff6ff;
   --ring: #2563eb;
+  /* Charts — series reuse semantic tokens; distinct hues get light/dark overrides in .dark */
+  --chart-axis: var(--muted-foreground);
+  --chart-grid: var(--border);
+  --chart-sales: var(--primary);
+  --chart-expenses: var(--destructive);
+  --chart-net: var(--success);
+  --chart-cash: var(--primary);
+  --chart-pos: #7c3aed;
+  --chart-delivery: var(--warning);
+  --chart-group: #0d9488;
+  --chart-other: var(--muted-foreground);
+  /* Entity avatar accents — deterministic per id; brighter in dark mode */
+  --entity-0: #2563eb;
+  --entity-1: #7c3aed;
+  --entity-2: #db2777;
+  --entity-3: #ea580c;
+  --entity-4: #059669;
+  --entity-5: #0891b2;
+  --entity-6: #4f46e5;
+  --entity-7: #be123c;
   /* Elevation (audit C3) */
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05);
   --shadow-pop: 0 8px 24px rgb(15 23 42 / 0.12), 0 2px 6px rgb(15 23 42 / 0.08);
@@ -73,6 +93,16 @@
   --sidebar-foreground: #e2e8f0;
   --sidebar-accent: #172554;
   --ring: #60a5fa;
+  --chart-pos: #a78bfa;
+  --chart-group: #2dd4bf;
+  --entity-0: #3b82f6;
+  --entity-1: #8b5cf6;
+  --entity-2: #ec4899;
+  --entity-3: #f97316;
+  --entity-4: #10b981;
+  --entity-5: #22d3ee;
+  --entity-6: #6366f1;
+  --entity-7: #f43f5e;
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
   color-scheme: dark;

@@ -1,14 +1,14 @@
 /** Deterministic restaurant colours + initials — Phase 12 Slice 12.0b. */
 
 const ENTITY_PALETTE = [
-  "#2563eb",
-  "#7c3aed",
-  "#db2777",
-  "#ea580c",
-  "#059669",
-  "#0891b2",
-  "#4f46e5",
-  "#be123c",
+  "var(--entity-0)",
+  "var(--entity-1)",
+  "var(--entity-2)",
+  "var(--entity-3)",
+  "var(--entity-4)",
+  "var(--entity-5)",
+  "var(--entity-6)",
+  "var(--entity-7)",
 ] as const;
 
 function hashEntityId(entityId: string): number {

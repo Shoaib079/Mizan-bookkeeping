@@ -19,20 +19,26 @@ import {
 } from "recharts";
 
 import { formatTry } from "@/lib/money";
+import {
+  chartAxisTick,
+  chartLegendStyle,
+  chartSeriesColors,
+  chartTooltipStyle,
+} from "@/lib/chart-theme";
 
 /* ── Shared ─────────────────────────────────────────────── */
 
 const CHART_HEIGHT = 240;
 
 const COLORS = {
-  cash: "#2563eb",
-  posCard: "#7c3aed",
-  delivery: "#f59e0b",
-  groupSales: "#0d9488",
-  other: "#64748b",
-  sales: "#2563eb",
-  expenses: "#dc2626",
-  net: "#16a34a",
+  cash: chartSeriesColors.cash,
+  posCard: chartSeriesColors.posCard,
+  delivery: chartSeriesColors.delivery,
+  groupSales: chartSeriesColors.groupSales,
+  other: chartSeriesColors.other,
+  sales: chartSeriesColors.sales,
+  expenses: chartSeriesColors.expenses,
+  net: chartSeriesColors.net,
 } as const;
 
 function kurusToLira(kurus: number): number {
@@ -109,8 +115,11 @@ export function SalesMixChart({
               <Cell key={entry.name} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
-          <Legend />
+          <Tooltip
+            formatter={(v) => tryLabel(Number(v ?? 0))}
+            contentStyle={chartTooltipStyle}
+          />
+          <Legend wrapperStyle={chartLegendStyle} />
         </PieChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -142,9 +151,16 @@ export function SalesExpensesNetChart({
     <ChartCard title="Sales vs expenses">
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <BarChart data={data} barCategoryGap="15%">
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => tryLabel(v)} width={90} />
-          <Tooltip formatter={(v) => tryLabel(Number(v ?? 0))} />
+          <XAxis dataKey="name" tick={chartAxisTick(12)} />
+          <YAxis
+            tick={chartAxisTick(12)}
+            tickFormatter={(v: number) => tryLabel(v)}
+            width={90}
+          />
+          <Tooltip
+            formatter={(v) => tryLabel(Number(v ?? 0))}
+            contentStyle={chartTooltipStyle}
+          />
           <Bar dataKey="amount" barSize={110} radius={[4, 4, 0, 0]}>
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.fill} />

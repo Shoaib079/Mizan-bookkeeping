@@ -109,6 +109,9 @@ function AppShellInner({
     </>
   );
 
+  const mobileGroupedShell =
+    pathname === "/more" || pathname === "/settings/restaurant";
+
   if (isMobile) {
     return (
       <div className="flex min-h-dvh flex-col bg-background">
@@ -123,7 +126,7 @@ function AppShellInner({
             "flex-1 overflow-y-auto overscroll-y-contain px-3.5 py-3",
             isMobile &&
               "pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]",
-            pathname === "/more" && "bg-[#f2f2f7] px-4",
+            mobileGroupedShell && "bg-muted px-4",
           )}
         >
           {mainChrome}

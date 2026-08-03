@@ -380,7 +380,7 @@ function DeskModeButton({
           ? cn(
               "min-h-10 rounded-full border px-3.5 py-2",
               active
-                ? "border-primary bg-primary text-primary-foreground shadow-[0_2px_10px_rgb(37_99_235/0.3)]"
+                ? "border-primary bg-primary text-primary-foreground shadow-[0_2px_10px] shadow-primary/30"
                 : "border-border bg-card text-foreground",
             )
           : cn(
