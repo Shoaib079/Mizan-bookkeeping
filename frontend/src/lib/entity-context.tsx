@@ -19,6 +19,7 @@ import {
   maySetEntityId,
   subscribeEntitySwitchPolicy,
 } from "@/lib/entity-switch-policy";
+import { notifySessionRevoked } from "@/lib/session-access";
 
 type Entity = { id: string; name: string };
 type UserProfile = { id: string; email: string; display_name: string };
@@ -133,6 +134,9 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
       );
       setEntities(res.items);
       setEntitiesError(false);
+      if (clerkEnabled && res.items.length === 0) {
+        notifySessionRevoked("removed");
+      }
       const stored = localStorage.getItem("mizan.entityId");
       const resolved = resolveEntityIdFromList(
         readStoredEntityId(),
@@ -156,7 +160,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setEntitiesLoading(false);
     }
-  }, []);
+  }, [clerkEnabled]);
 
   const refreshUserProfile = useCallback(async () => {
     if (!clerkEnabled || !isAuthReady) return;

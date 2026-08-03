@@ -34,13 +34,20 @@ describe("EntityAccessProvider (shared role context)", () => {
     expect(source).toContain("attempt < MAX_RETRIES");
   });
 
-  it("settles on view-only only after real 403", async () => {
+  it("forces sign-out on revoked membership (not generic 403 fallback)", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./use-entity-access.tsx", import.meta.url), "utf8"),
     );
-    expect(source).toContain('err.message.includes("403")');
-    expect(source).toContain('err.message.includes("Forbidden")');
-    expect(source).toContain("DEFAULT_DEV_ROLE");
+    expect(source).toContain("isSessionRevokedError");
+    expect(source).toContain("notifySessionRevoked");
+  });
+
+  it("supports silent background reload for live role sync", async () => {
+    const source = await import("fs/promises").then((fs) =>
+      fs.readFile(new URL("./use-entity-access.tsx", import.meta.url), "utf8"),
+    );
+    expect(source).toContain("silent");
+    expect(source).toContain("notifyRoleChanged");
   });
 
   it("waits for isAuthReady before fetching", async () => {
@@ -69,6 +76,7 @@ describe("providers.tsx wiring", () => {
       ),
     );
     expect(source).toContain("EntityAccessProvider");
+    expect(source).toContain("SessionAccessGuard");
     const eapIndex = source.indexOf("<EntityAccessProvider>");
     const qapIndex = source.indexOf("<QuickActionsProvider>");
     expect(eapIndex).toBeLessThan(qapIndex);
