@@ -250,6 +250,14 @@ def test_should_skip_idempotency_for_detect_document_type() -> None:
     assert should_skip_idempotency("GET", path) is True
 
 
+def test_should_skip_idempotency_for_profit_allocation_preview() -> None:
+    from app.core.idempotency.service import should_skip_idempotency
+
+    path = f"/entities/{uuid.uuid4()}/partners/profit-allocation/preview"
+    assert should_skip_idempotency("POST", path) is True
+    assert should_skip_idempotency("GET", path) is True
+
+
 def test_optional_key_dedup_when_enforcement_off(
     db_session,
     client: TestClient,
