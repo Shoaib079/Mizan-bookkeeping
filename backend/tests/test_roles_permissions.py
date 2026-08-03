@@ -659,6 +659,37 @@ def test_list_entities_returns_only_caller_memberships(
     assert str(restaurant_b.id) not in entity_ids
 
 
+def test_list_members_only_returns_current_entity_team(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    restaurant_a,
+    restaurant_b,
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    seed_default_chart(db_session, restaurant_b.id)
+    owner_a = _create_user(db_session, "owner-a-team@example.com", "Owner A")
+    owner_b = _create_user(db_session, "owner-b-team@example.com", "Owner B")
+    cashier_a = _create_user(db_session, "cashier-a-only@example.com", "Cashier A")
+    cashier_b = _create_user(db_session, "cashier-b-only@example.com", "Cashier B")
+    _add_member(db_session, restaurant_a.id, owner_a.id, EntityRole.OWNER)
+    _add_member(db_session, restaurant_a.id, cashier_a.id, EntityRole.CASHIER)
+    _add_member(db_session, restaurant_b.id, owner_b.id, EntityRole.OWNER)
+    _add_member(db_session, restaurant_b.id, cashier_b.id, EntityRole.CASHIER)
+
+    response = client.get(
+        f"/entities/{restaurant_a.id}/members",
+        headers=auth_headers(owner_a),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    emails = {row["user"]["email"] for row in body["items"]}
+    entity_ids = {row["entity_id"] for row in body["items"]}
+    assert body["total"] == 2
+    assert emails == {"owner-a-team@example.com", "cashier-a-only@example.com"}
+    assert entity_ids == {str(restaurant_a.id)}
+
+
 from tests.conftest import entity_create_json
 
 

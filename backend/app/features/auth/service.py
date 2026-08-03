@@ -220,7 +220,7 @@ def list_entity_members(
             select(EntityMembership)
             .join(User, EntityMembership.user_id == User.id)
             .options(joinedload(EntityMembership.user))
-            .where(*filters)
+            .where(EntityMembership.entity_id == entity_id, *filters)
             .order_by(EntityMembership.created_at)
         )
         return fetch_paginated(session, stmt, params)

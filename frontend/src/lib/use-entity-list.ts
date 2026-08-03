@@ -63,10 +63,15 @@ export function useEntityList<T>(path: string, entityId: string) {
   const errorMessage =
     query.error && !forbidden ? query.error.message || "Failed to load" : null;
 
+  // Entity-switch hygiene — never show a prior restaurant's rows while refetching.
+  const awaitingEntity =
+    Boolean(entityId) &&
+    (query.isPending || (query.isFetching && query.data === undefined));
+
   return {
-    items: query.data?.items ?? [],
-    total: query.data?.total ?? 0,
-    loading: Boolean(entityId) && query.isPending,
+    items: awaitingEntity ? [] : (query.data?.items ?? []),
+    total: awaitingEntity ? 0 : (query.data?.total ?? 0),
+    loading: awaitingEntity,
     error: errorMessage,
     forbidden,
     reload,

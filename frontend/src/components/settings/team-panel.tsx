@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { MemberForm } from "@/components/forms/member-form";
 import { ForbiddenMessage } from "@/components/reports/forbidden-message";
@@ -32,8 +32,13 @@ export function TeamPanel() {
   const { entityId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
-  const { items, total, loading, error, forbidden, reload } =
+  const { items, loading, error, forbidden, reload } =
     useEntityList<MembershipRow>("/members", entityId);
+  const teamMembers = useMemo(
+    () => items.filter((row) => row.entity_id === entityId),
+    [items, entityId],
+  );
+  const memberCount = teamMembers.length;
   const [formOpen, setFormOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -116,7 +121,7 @@ export function TeamPanel() {
     <>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {!loading ? `${total} member${total === 1 ? "" : "s"}` : "\u00a0"}
+          {!loading ? `${memberCount} member${memberCount === 1 ? "" : "s"}` : "\u00a0"}
         </p>
         <Button type="button" onClick={() => setFormOpen(true)}>
           Add member
@@ -130,8 +135,8 @@ export function TeamPanel() {
 
       {loading && <TableSkeleton columns={5} />}
 
-      {!loading && items.length > 0 && (
-        <DataTable tableClassName="min-w-[40rem]">
+      {!loading && teamMembers.length > 0 && (
+        <DataTable key={entityId} tableClassName="min-w-[40rem]">
           <DataTableHead>
             <tr>
               <DataTableHeaderCell>Name</DataTableHeaderCell>
@@ -142,7 +147,7 @@ export function TeamPanel() {
             </tr>
           </DataTableHead>
           <DataTableBody>
-            {items.map((row) => (
+            {teamMembers.map((row) => (
               <DataTableRow key={row.id}>
                 <DataTableCell className="max-w-[10rem] truncate">
                   {row.user.display_name}
@@ -185,7 +190,7 @@ export function TeamPanel() {
         </DataTable>
       )}
 
-      {!loading && items.length === 0 && !error && (
+      {!loading && teamMembers.length === 0 && !error && (
         <EmptyState
           icon={Users}
           title="No members yet"
