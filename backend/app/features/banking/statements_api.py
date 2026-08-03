@@ -358,6 +358,7 @@ def classify_statement_line(
             period_month=payload.period_month,
             period_salary_minor=payload.period_salary_minor,
             partner_id=payload.partner_id,
+            note=payload.note,
             match_token=payload.match_token,
         )
     except LookupError as exc:
@@ -407,6 +408,7 @@ def correct_statement_line(
             period_month=payload.period_month,
             period_salary_minor=payload.period_salary_minor,
             partner_id=payload.partner_id,
+            note=payload.note,
             reason=payload.reason,
             match_token=payload.match_token,
         )

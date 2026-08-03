@@ -24,7 +24,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   partnerId: string;
-  kind: "drawing" | "repayment";
+  kind: "drawing" | "repayment" | "capital";
   balanceKurus?: number;
   embedded?: boolean;
   onSaved?: () => void;
@@ -43,6 +43,8 @@ export function PartnerCashMovementForm({
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
   const isDrawing = kind === "drawing";
+  const isCapital = kind === "capital";
+  const isRepayment = kind === "repayment";
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -53,7 +55,7 @@ export function PartnerCashMovementForm({
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [description, setDescription] = useState(
-    isDrawing ? "Partner drawing" : "Partner drawing repayment",
+    isCapital ? "" : isDrawing ? "Partner drawing" : "Partner drawing repayment",
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -68,9 +70,14 @@ export function PartnerCashMovementForm({
   useEffect(() => {
     if (open) {
       setDateText(todayTrDate());
+      setDescription(
+        isCapital ? "" : isDrawing ? "Partner drawing" : "Partner drawing repayment",
+      );
+      setAmountText("");
+      setError(null);
       void loadAccounts().catch(() => undefined);
     }
-  }, [open, loadAccounts]);
+  }, [open, loadAccounts, isCapital, isDrawing]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -92,16 +99,21 @@ export function PartnerCashMovementForm({
       setError("Choose a cash or bank account.");
       return;
     }
-    if (
-      !isDrawing &&
-      balanceKurus !== undefined &&
-      balanceKurus >= 0
-    ) {
+    const note = description.trim();
+    if (!note) {
+      setError(
+        isCapital
+          ? "Add a note — why did this partner invest?"
+          : "Description is required.",
+      );
+      return;
+    }
+    if (isRepayment && balanceKurus !== undefined && balanceKurus >= 0) {
       setError("This partner has no outstanding drawing to repay.");
       return;
     }
     if (
-      !isDrawing &&
+      isRepayment &&
       balanceKurus !== undefined &&
       amountKurus > Math.abs(balanceKurus)
     ) {
@@ -115,22 +127,34 @@ export function PartnerCashMovementForm({
     setError(null);
     try {
       const idempotencyKey = submitIdempotency.beginSubmit();
-      const path = isDrawing ? "drawings" : "drawing-repayments";
-      const body = isDrawing
+      const path = isCapital
+        ? "capital-contributions"
+        : isDrawing
+          ? "drawings"
+          : "drawing-repayments";
+      const body = isCapital
         ? {
-            drawing_date: movementDate,
+            contribution_date: movementDate,
             amount_kurus: amountKurus,
-            description,
+            description: note,
             actor_id: actorId,
             payment_account_id: paymentGlAccountId,
           }
-        : {
-            payment_date: movementDate,
-            amount_kurus: amountKurus,
-            description,
-            actor_id: actorId,
-            payment_account_id: paymentGlAccountId,
-          };
+        : isDrawing
+          ? {
+              drawing_date: movementDate,
+              amount_kurus: amountKurus,
+              description: note,
+              actor_id: actorId,
+              payment_account_id: paymentGlAccountId,
+            }
+          : {
+              payment_date: movementDate,
+              amount_kurus: amountKurus,
+              description: note,
+              actor_id: actorId,
+              payment_account_id: paymentGlAccountId,
+            };
       await apiFetch(
         `/entities/${entityId}/partners/${partnerId}/${path}`,
         {
@@ -142,7 +166,13 @@ export function PartnerCashMovementForm({
       );
       submitIdempotency.completeSubmit();
       onSaved?.();
-      toast(isDrawing ? "Drawing recorded" : "Drawing repayment recorded");
+      toast(
+        isCapital
+          ? "Capital recorded"
+          : isDrawing
+            ? "Drawing recorded"
+            : "Drawing repayment recorded",
+      );
       onClose();
       setAmountText("");
     } catch (err) {
@@ -152,11 +182,17 @@ export function PartnerCashMovementForm({
     }
   }
 
+  const title = isCapital
+    ? "Record partner capital"
+    : isDrawing
+      ? "Record partner drawing"
+      : "Record drawing repayment";
+
   return (
     <FormDialogShell
       embedded={embedded}
       open={open}
-      title={isDrawing ? "Record partner drawing" : "Record drawing repayment"}
+      title={title}
       onClose={onClose}
     >
       <form onSubmit={onSubmit} className="space-y-3">
@@ -169,16 +205,18 @@ export function PartnerCashMovementForm({
             required
           />
         </div>
-        {balanceKurus !== undefined && (
+        {!isCapital && balanceKurus !== undefined && (
           <p className="text-sm text-muted-foreground">
             {partnerBalanceHeading(balanceKurus)}:{" "}
             {partnerBalanceAmount(balanceKurus)}
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          {isDrawing
-            ? "Partner withdraws cash from the business — balance may go negative (partner owes you)."
-            : "Partner repays cash against an outstanding drawing."}
+          {isCapital
+            ? "Partner puts cash or bank money into the business as equity — not a loan."
+            : isDrawing
+              ? "Partner withdraws cash from the business — balance may go negative (partner owes you)."
+              : "Partner repays cash against an outstanding drawing."}
         </p>
         <div>
           <Label htmlFor="pc-amount">Amount (TRY)</Label>
@@ -190,16 +228,28 @@ export function PartnerCashMovementForm({
           />
         </div>
         <div>
-          <Label htmlFor="pc-desc">Description</Label>
+          <Label htmlFor="pc-desc">{isCapital ? "Note" : "Description"}</Label>
           <Input
             id="pc-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
+            placeholder={
+              isCapital
+                ? "e.g. Opening cash, oven share, fridge…"
+                : undefined
+            }
           />
+          {isCapital && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Saved on the partner ledger so you remember why they invested.
+            </p>
+          )}
         </div>
         <div>
-          <Label htmlFor="pc-account">{isDrawing ? "Pay from" : "Receive into"}</Label>
+          <Label htmlFor="pc-account">
+            {isCapital || isRepayment ? "Receive into" : "Pay from"}
+          </Label>
           <Combobox
             id="pc-account"
             value={paymentGlAccountId}
@@ -213,7 +263,13 @@ export function PartnerCashMovementForm({
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Recording…" : isDrawing ? "Record drawing" : "Record repayment"}
+          {submitting
+            ? "Recording…"
+            : isCapital
+              ? "Record capital"
+              : isDrawing
+                ? "Record drawing"
+                : "Record repayment"}
         </Button>
       </form>
     </FormDialogShell>

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
+import pytest
 from sqlalchemy import func, select
 
 from app.core.chart_of_accounts.default_chart import (
@@ -119,6 +120,7 @@ def test_partner_capital_contribution_posts_to_3300(db_session, partner_setup) -
         classification=StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION,
         partner_id=partner_id,
         actor_id=ACTOR_ID,
+        note="Opening equity deposit",
     )
 
     assert result.line.status == StatementLineStatus.POSTED
@@ -133,6 +135,52 @@ def test_partner_capital_contribution_posts_to_3300(db_session, partner_setup) -
         == 1_000_000
     )
     assert partner_ledger.loan_balance_kurus(db_session, entity_id, partner_id) == 0
+
+
+def test_partner_capital_classify_requires_note(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    bank = _bank_with_balance(db_session, entity_id)
+    statement = _import_inflow_line(
+        db_session, entity_id, bank, 500_000, "ORTAK SERMAYE"
+    )
+    with pytest.raises(statement_service.InvalidClassificationError, match="note"):
+        statement_service.classify_statement_line(
+            db_session,
+            entity_id,
+            statement.id,
+            statement.lines[0].id,
+            classification=StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION,
+            partner_id=partner_id,
+            actor_id=ACTOR_ID,
+        )
+
+
+def test_manual_capital_contribution_cash_with_note(db_session, partner_setup) -> None:
+    from app.features.partners import service as partner_service
+    from app.features.partners.schema import CapitalContributionCreate
+
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    drawer = partner_setup["drawer"]
+
+    result = partner_service.record_capital_contribution(
+        db_session,
+        entity_id,
+        partner_id,
+        CapitalContributionCreate(
+            contribution_date=date(2026, 6, 1),
+            amount_kurus=250_000,
+            description="Cash for fridge",
+            actor_id=ACTOR_ID,
+            payment_account_id=drawer.gl_account_id,
+        ),
+    )
+    assert result.partner_ledger_entry.description == "Cash for fridge"
+    assert (
+        partner_ledger.capital_contribution_kurus(db_session, entity_id, partner_id)
+        == 250_000
+    )
 
 
 def test_capital_contribution_not_in_net_balance(db_session, partner_setup) -> None:
@@ -154,6 +202,7 @@ def test_capital_contribution_not_in_net_balance(db_session, partner_setup) -> N
         classification=StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION,
         partner_id=partner_id,
         actor_id=ACTOR_ID,
+        note="Opening equity deposit",
     )
 
     assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == 1_000_000

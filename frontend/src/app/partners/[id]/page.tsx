@@ -82,6 +82,7 @@ export default function PartnerDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [reimburseOpen, setReimburseOpen] = useState(false);
+  const [capitalOpen, setCapitalOpen] = useState(false);
   const [drawingOpen, setDrawingOpen] = useState(false);
   const [repaymentOpen, setRepaymentOpen] = useState(false);
   const [allocateOpen, setAllocateOpen] = useState(false);
@@ -99,6 +100,7 @@ export default function PartnerDetailPage() {
     setEditOpen(false);
     setExpenseOpen(false);
     setReimburseOpen(false);
+    setCapitalOpen(false);
     setDrawingOpen(false);
     setRepaymentOpen(false);
     setAllocateOpen(false);
@@ -236,6 +238,9 @@ export default function PartnerDetailPage() {
             <Button type="button" variant="secondary" onClick={() => setReimburseOpen(true)}>
               Pay reimbursement
             </Button>
+            <Button type="button" variant="secondary" onClick={() => setCapitalOpen(true)}>
+              Record capital
+            </Button>
             <Button type="button" variant="secondary" onClick={() => setDrawingOpen(true)}>
               Record drawing
             </Button>
@@ -354,6 +359,13 @@ export default function PartnerDetailPage() {
             partnerId={partnerId}
             balanceKurus={ledger?.balance_kurus}
             onClose={() => setReimburseOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <PartnerCashMovementForm
+            open={capitalOpen}
+            partnerId={partnerId}
+            kind="capital"
+            onClose={() => setCapitalOpen(false)}
             onSaved={() => void reload()}
           />
           <PartnerCashMovementForm

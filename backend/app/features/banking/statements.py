@@ -1191,6 +1191,7 @@ def classify_statement_line(
     period_month: int | None = None,
     period_salary_minor: int | None = None,
     partner_id: uuid.UUID | None = None,
+    note: str | None = None,
     match_token: str | None = None,
 ) -> ClassifyStatementLineResult:
     if entity_service.get_entity(session, entity_id) is None:
@@ -1754,6 +1755,10 @@ def classify_statement_line(
             if partner_id is None or actor_id is None:
                 raise InvalidClassificationError(
                     "partner_id and actor_id are required for partner_capital_contribution"
+                )
+            if not (note or "").strip():
+                raise InvalidClassificationError(
+                    "note is required for partner_capital_contribution — why did this partner invest?"
                 )
             if session.get(Partner, partner_id) is None:
                 raise LookupError("Partner not found")
@@ -2544,7 +2549,7 @@ def classify_statement_line(
                 partner_id,
                 contribution_date=line.transaction_date,
                 amount_kurus=contribution_amount,
-                description=line.description,
+                description=(note or "").strip(),
                 actor_id=actor_id,
                 payment_account_id=money_account.gl_account_id,
             )
@@ -2885,6 +2890,7 @@ def correct_statement_line(
     period_month: int | None = None,
     period_salary_minor: int | None = None,
     partner_id: uuid.UUID | None = None,
+    note: str | None = None,
     reason: str | None = None,
     match_token: str | None = None,
 ) -> ClassifyStatementLineResult:
@@ -2965,6 +2971,7 @@ def correct_statement_line(
         period_month=period_month,
         period_salary_minor=period_salary_minor,
         partner_id=partner_id,
+        note=note,
         match_token=match_token,
     )
 

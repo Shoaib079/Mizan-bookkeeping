@@ -60,6 +60,10 @@ export function buildClassifyLinePayload(
   if (classificationOption(classification)?.target === "partner") {
     body.partner_id = targets.partnerId;
   }
+  if (classification === "partner_capital_contribution") {
+    const note = targets.note.trim();
+    if (note) body.note = note;
+  }
 
   if (line.candidate_supplier_ledger_entry_id) {
     body.confirm_supplier_ledger_entry_id = line.candidate_supplier_ledger_entry_id;
@@ -88,6 +92,7 @@ export function targetsRequiredForClassification(
     case "partner_reimbursement":
     case "partner_drawing_repayment":
     case "partner_capital_contribution":
+      return !targets.partnerId || !targets.note.trim();
     case "partner_loan_receipt":
     case "partner_loan_payment":
       return !targets.partnerId;

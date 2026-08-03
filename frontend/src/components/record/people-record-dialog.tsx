@@ -339,6 +339,14 @@ function renderEmbeddedForm(
           balanceKurus={balanceKurus}
         />
       );
+    case "partnerCapital":
+      return (
+        <PartnerCashMovementForm
+          {...formProps}
+          partnerId={person.id}
+          kind="capital"
+        />
+      );
     case "partnerDrawing":
       return (
         <PartnerCashMovementForm

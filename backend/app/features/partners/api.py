@@ -31,6 +31,8 @@ from app.features.partners.schema import (
     DrawingRepaymentCreate,
     DrawingResponse,
     DrawingRepaymentResponse,
+    CapitalContributionCreate,
+    CapitalContributionResponse,
     PartnerJournalEntryCorrect,
     PartnerJournalEntryCorrectOut,
     ProfitAllocationPost,
@@ -286,6 +288,33 @@ def post_partner_drawing_repayment(
     except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverRepaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{partner_id}/capital-contributions",
+    response_model=CapitalContributionResponse,
+    status_code=201,
+)
+def post_partner_capital_contribution(
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: CapitalContributionCreate,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> CapitalContributionResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.record_capital_contribution(
+            session, entity_id, partner_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

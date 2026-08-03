@@ -19,6 +19,8 @@ export type StatementLineFormTargets = {
   customerId: string;
   employeeId: string;
   partnerId: string;
+  /** Note for partner capital — why they invested. */
+  note: string;
   counterpartId: string;
   creditCardId: string;
   expenseAccountId: string;
@@ -106,6 +108,7 @@ export function hydrateStatementLineFormState(
     customerId,
     employeeId,
     partnerId,
+    note: "",
     counterpartId,
     creditCardId,
     expenseAccountId,

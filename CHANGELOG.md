@@ -4,6 +4,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-03
 
+**Partner capital — cash/bank form + required note.**
+- Record capital from **People → Partners** (partner page) or Record (people picker) into cash or bank.
+- Note is required (why they invested) on that form and when classifying a bank inflow as Partner capital.
+
 **Deploy — migrations need httpx in the runtime image.**
 - Clerk invite email uses `httpx`; it is now a normal install dependency (Docker does not install `[dev]`). Alembic bootstrap no longer pulls the invite HTTP client just by loading models.
 

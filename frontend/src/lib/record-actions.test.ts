@@ -87,6 +87,7 @@ describe("record-actions", () => {
     expect(hiddenIds).toContain("cashMovement");
     expect(hiddenIds).toContain("customerPayment");
     expect(hiddenIds).toContain("partnerDrawing");
+    expect(hiddenIds).toContain("partnerCapital");
     expect(hiddenIds).toContain("customerCreditSale");
     expect(hiddenIds).toContain("supplier");
   });

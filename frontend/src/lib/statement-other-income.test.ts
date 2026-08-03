@@ -26,6 +26,7 @@ const targets: StatementLineFormTargets = {
   customerId: "",
   employeeId: "",
   partnerId: "",
+  note: "",
   counterpartId: "",
   creditCardId: "",
   expenseAccountId: "",

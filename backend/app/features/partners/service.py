@@ -56,6 +56,8 @@ from app.features.partners.schema import (
     DrawingRepaymentCreate,
     DrawingResponse,
     DrawingRepaymentResponse,
+    CapitalContributionCreate,
+    CapitalContributionResponse,
     PartnerJournalEntryCorrect,
     PartnerJournalEntryCorrectOut,
     ProfitAllocationPost,
@@ -363,6 +365,34 @@ def record_drawing_repayment(
         payment_account_id=payload.payment_account_id,
     )
     return DrawingRepaymentResponse(
+        journal_entry_id=result.journal_entry.id,
+        partner_ledger_entry=_partner_entry_read(
+            session, result.partner_ledger_entry, entity_id=entity_id
+        ),
+        balance_kurus=result.balance_kurus,
+    )
+
+
+def record_capital_contribution(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: CapitalContributionCreate,
+) -> CapitalContributionResponse:
+    note = payload.description.strip()
+    if not note:
+        raise ValueError("Note is required — why did this partner invest?")
+    result = partner_posting.post_capital_contribution(
+        session,
+        entity_id,
+        partner_id,
+        contribution_date=payload.contribution_date,
+        amount_kurus=payload.amount_kurus,
+        description=note,
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+    )
+    return CapitalContributionResponse(
         journal_entry_id=result.journal_entry.id,
         partner_ledger_entry=_partner_entry_read(
             session, result.partner_ledger_entry, entity_id=entity_id

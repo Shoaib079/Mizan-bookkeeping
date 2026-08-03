@@ -141,6 +141,20 @@ class DrawingRepaymentResponse(BaseModel):
     balance_kurus: int
 
 
+class CapitalContributionCreate(BaseModel):
+    contribution_date: date
+    amount_kurus: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: OptionalActorId = None
+    payment_account_id: uuid.UUID
+
+
+class CapitalContributionResponse(BaseModel):
+    journal_entry_id: uuid.UUID
+    partner_ledger_entry: PartnerLedgerEntryRead
+    balance_kurus: int
+
+
 class PartnerJournalEntryCorrect(BaseModel):
     entry_date: date
     description: str = Field(min_length=1, max_length=512)

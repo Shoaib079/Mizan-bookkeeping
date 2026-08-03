@@ -288,6 +288,11 @@ class ClassifyStatementLineRequest(BaseModel):
         default=None,
         description="Required for partner_drawing, partner_reimbursement, partner_drawing_repayment",
     )
+    note: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Required for partner_capital_contribution — why the partner invested",
+    )
     match_token: str | None = Field(
         default=None,
         max_length=512,
@@ -310,6 +315,11 @@ class CorrectStatementLineRequest(BaseModel):
     period_month: int | None = Field(default=None, ge=1, le=12)
     period_salary_minor: int | None = Field(default=None, gt=0)
     partner_id: uuid.UUID | None = None
+    note: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Required for partner_capital_contribution — why the partner invested",
+    )
     reason: str | None = Field(default=None, max_length=512)
     match_token: str | None = Field(
         default=None,

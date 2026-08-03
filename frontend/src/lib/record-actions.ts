@@ -50,6 +50,7 @@ export type RecordActionKey =
   | "staffPayment"
   | "partnerExpenseFronted"
   | "partnerReimbursement"
+  | "partnerCapital"
   | "partnerDrawing"
   | "partnerDrawingRepayment"
   | "partnerProfitAllocation"
@@ -318,6 +319,15 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     id: "partnerExpenseFronted",
     label: "Partner expense (fronted)",
     description: "Partner paid a business expense from personal funds.",
+    icon: Handshake,
+    section: "occasional",
+    personKind: "partner",
+    hidden: true,
+  },
+  {
+    id: "partnerCapital",
+    label: "Partner capital",
+    description: "Partner invests cash or bank money as equity.",
     icon: Handshake,
     section: "occasional",
     personKind: "partner",

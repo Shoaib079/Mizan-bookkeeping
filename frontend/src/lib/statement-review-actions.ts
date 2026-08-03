@@ -23,6 +23,8 @@ export type ClassifyLinePayload = {
   period_month?: number;
   period_salary_minor?: number;
   partner_id?: string;
+  /** Required for partner_capital_contribution — why they invested. */
+  note?: string;
   confirm_supplier_ledger_entry_id?: string;
   confirm_account_transfer_id?: string;
 };

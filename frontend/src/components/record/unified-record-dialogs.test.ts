@@ -38,6 +38,7 @@ describe("unified record dialogs", () => {
   it("loads balance when a person is selected in PeopleRecordDialog", () => {
     const people = read("record/people-record-dialog.tsx");
     expect(people).toContain("partnerReimbursement");
+    expect(people).toContain("partnerCapital");
     expect(people).toContain("renderEmbeddedForm");
     expect(people).not.toContain("onContinue");
   });

@@ -79,6 +79,7 @@ export function StatementClassifyBar({
   const [customerId, setCustomerId] = useState("");
   const [employeeId, setEmployeeId] = useState("");
   const [partnerId, setPartnerId] = useState("");
+  const [capitalNote, setCapitalNote] = useState("");
   const [counterpartId, setCounterpartId] = useState("");
   const [creditCardId, setCreditCardId] = useState("");
   const [expenseAccountId, setExpenseAccountId] = useState("");
@@ -111,6 +112,7 @@ export function StatementClassifyBar({
     setCustomerId(targets.customerId);
     setEmployeeId(targets.employeeId);
     setPartnerId(targets.partnerId);
+    setCapitalNote(targets.note);
     setCounterpartId(targets.counterpartId);
     setCreditCardId(targets.creditCardId);
     setExpenseAccountId(targets.expenseAccountId);
@@ -132,6 +134,12 @@ export function StatementClassifyBar({
     if (kind === "customer" && !customerId) return true;
     if (kind === "employee" && !employeeId) return true;
     if (kind === "partner" && !partnerId) return true;
+    if (
+      target === "partner_capital_contribution" &&
+      !capitalNote.trim()
+    ) {
+      return true;
+    }
     if (kind === "transfer" && !counterpartId) return true;
     if (kind === "credit_card" && !creditCardId) return true;
     if (kind === "expense" && !expenseAccountId) return true;
@@ -195,6 +203,9 @@ export function StatementClassifyBar({
   if (classificationOption(target)?.target === "partner") {
     body.partner_id = partnerId;
   }
+    if (target === "partner_capital_contribution") {
+      body.note = capitalNote.trim();
+    }
     if (line?.candidate_supplier_ledger_entry_id) {
       body.confirm_supplier_ledger_entry_id =
         line.candidate_supplier_ledger_entry_id;
@@ -361,14 +372,26 @@ export function StatementClassifyBar({
     }
     if (targetKind === "partner") {
       return (
-        <Combobox
-          id={`${idPrefix}-partner`}
-          value={partnerId}
-          onValueChange={setPartnerId}
-          options={pickers.partners.map((p) => ({ value: p.id, label: p.name }))}
-          placeholder="Partner…"
-          className="h-9 w-full min-w-0 text-xs"
-        />
+        <div className="flex w-full min-w-0 flex-col gap-1 sm:flex-row sm:items-center">
+          <Combobox
+            id={`${idPrefix}-partner`}
+            value={partnerId}
+            onValueChange={setPartnerId}
+            options={pickers.partners.map((p) => ({ value: p.id, label: p.name }))}
+            placeholder="Partner…"
+            className="h-9 w-full min-w-0 text-xs"
+          />
+          {classification === "partner_capital_contribution" && (
+            <Input
+              id={`${idPrefix}-capital-note`}
+              value={capitalNote}
+              onChange={(e) => setCapitalNote(e.target.value)}
+              placeholder="Note — why they invested…"
+              className="h-9 w-full min-w-0 text-xs"
+              required
+            />
+          )}
+        </div>
       );
     }
     if (targetKind === "transfer") {

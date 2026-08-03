@@ -52,6 +52,7 @@ const EMPTY_TARGETS: StatementLineFormTargets = {
   customerId: "",
   employeeId: "",
   partnerId: "",
+  note: "",
   counterpartId: "",
   creditCardId: "",
   expenseAccountId: "",
@@ -146,13 +147,23 @@ export function StatementBulkActionBar({
       case "partner_loan_receipt":
       case "partner_loan_payment":
         return (
-          <Combobox
-            value={targets.partnerId}
-            onValueChange={(partnerId) => patchTargets({ partnerId })}
-            options={pickers.partners.map((p) => ({ value: p.id, label: p.name }))}
-            placeholder="Partner…"
-            className="h-9 w-full min-w-0 text-xs"
-          />
+          <div className="flex w-full min-w-0 flex-col gap-1 sm:flex-row">
+            <Combobox
+              value={targets.partnerId}
+              onValueChange={(partnerId) => patchTargets({ partnerId })}
+              options={pickers.partners.map((p) => ({ value: p.id, label: p.name }))}
+              placeholder="Partner…"
+              className="h-9 w-full min-w-0 text-xs"
+            />
+            {classification === "partner_capital_contribution" && (
+              <Input
+                value={targets.note}
+                onChange={(e) => patchTargets({ note: e.target.value })}
+                placeholder="Note — why they invested…"
+                className="h-9 w-full min-w-0 text-xs"
+              />
+            )}
+          </div>
         );
       case "transfer":
         return (
