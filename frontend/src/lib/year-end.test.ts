@@ -37,13 +37,23 @@ describe("closableYears", () => {
 });
 
 describe("yearEndSummary", () => {
-  it("sends you to close December first", () => {
+  it("says there is nothing to close before nagging about December", () => {
+    const text = yearEndSummary(
+      preview({ december_closed: false, can_close: false, lines: [], net_result_kurus: 0 }),
+    );
+    expect(text).toMatch(/Nothing to close for 2026/);
+    expect(text).not.toMatch(/Close December/);
+  });
+
+  it("sends you to close December first when there are balances", () => {
     const text = yearEndSummary(preview({ december_closed: false, can_close: false }));
     expect(text).toMatch(/Close December 2026 first/);
   });
 
   it("says there's nothing to do for an empty year", () => {
-    const text = yearEndSummary(preview({ lines: [], net_result_kurus: 0 }));
+    const text = yearEndSummary(
+      preview({ lines: [], net_result_kurus: 0, december_closed: true }),
+    );
     expect(text).toMatch(/Nothing to close/);
   });
 

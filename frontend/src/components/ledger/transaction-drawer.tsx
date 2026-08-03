@@ -3,9 +3,9 @@
 /** Global transaction drawer (audit C1) — one peek surface for any journal
  * entry, opened from any row on any page via useTransactionPeek().
  *
- * Void policy (accounting-safe): only GENERIC_CORRECTABLE_SOURCES may void
- * through the generic ledger endpoint. Subledger-backed sources get an
- * "Open in <flow>" link to their dedicated correction flow instead. */
+ * Void policy (accounting-safe): generic ledger void only for sources in
+ * GENERIC_VOID_SAFE_SOURCES. Subledger-backed sources get an "Open in <flow>"
+ * link to their dedicated correction flow instead. */
 
 import Link from "next/link";
 import { X } from "lucide-react";
@@ -25,12 +25,12 @@ import { useEntity } from "@/lib/entity-context";
 import { LEDGER_CHANGED_EVENT, emitLedgerChanged } from "@/lib/ledger-events";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
-  GENERIC_CORRECTABLE_SOURCES,
   genericVoidPath,
   ledgerEntryHref,
   sourceFlow,
   sourceLabel,
 } from "@/lib/transaction-registry";
+import { transactionPeekActions } from "@/lib/subledger-actions";
 
 export { LEDGER_CHANGED_EVENT };
 
@@ -105,11 +105,13 @@ export function TransactionPeekProvider({
   const value = useMemo(() => ({ openTransaction }), [openTransaction]);
 
   const flow = entry ? sourceFlow(entry.source) : null;
+  const peekActions = entry
+    ? transactionPeekActions(entry.source, entry.status)
+    : { canEdit: false, canVoid: false };
   const canVoidHere =
-    entry !== null &&
-    entry.status === "posted" &&
-    GENERIC_CORRECTABLE_SOURCES.has(entry.source) &&
-    Boolean(entityId);
+    entry !== null && peekActions.canVoid && Boolean(entityId);
+  const canEditHere =
+    entry !== null && peekActions.canEdit && Boolean(entityId);
   const chainLinks = entry
     ? ([
         entry.reverses_entry_id && { label: "Reverses", id: entry.reverses_entry_id },
@@ -238,10 +240,16 @@ export function TransactionPeekProvider({
                 </div>
               </section>
 
-              {!canVoidHere && flow && entry.status === "posted" && (
+              {!canVoidHere && !canEditHere && flow && entry.status === "posted" && (
                 <p className="text-xs text-muted-foreground">
                   Edit or void this entry from {flow.label} — it updates its own
                   subledger, so corrections go through that flow.
+                </p>
+              )}
+              {canEditHere && (
+                <p className="text-xs text-muted-foreground">
+                  To edit amounts or accounts, open this entry in the general
+                  ledger.
                 </p>
               )}
             </div>

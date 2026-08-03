@@ -18,8 +18,7 @@ import {
   CorrectLedgerEntryForm,
   type CorrectableLedgerEntry,
 } from "@/components/forms/correct-ledger-entry-form";
-import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
-import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
+import { GlEntryActions } from "@/components/ledger/gl-entry-actions";
 import {
   ForbiddenMessage,
   isForbiddenError,
@@ -43,9 +42,8 @@ import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { journalEntryRowClassName } from "@/lib/ledger-display";
+import { generalLedgerEntryActions } from "@/lib/subledger-actions";
 import {
-  GENERIC_CORRECTABLE_SOURCES,
-  GENERIC_VOID_SAFE_SOURCES,
   JOURNAL_SOURCES,
   sourceFlow,
   sourceLabel,
@@ -182,7 +180,8 @@ function EntryDetailPanel({
 
       {(() => {
         const flow = sourceFlow(row.source);
-        if (!flow || GENERIC_VOID_SAFE_SOURCES.has(row.source)) return null;
+        const glActions = generalLedgerEntryActions(row.source);
+        if (!flow || glActions.useGenericEndpoints) return null;
         return (
           <p className="text-xs text-muted-foreground">
             This entry is managed by its own flow — edit or void it in{" "}
@@ -224,10 +223,6 @@ function LedgerPanelContent() {
   const [correctTarget, setCorrectTarget] = useState<CorrectableLedgerEntry | null>(
     null,
   );
-  const [voidTarget, setVoidTarget] = useState<{
-    entry_id: string;
-    description: string;
-  } | null>(null);
   const [accounts, setAccounts] = useState<Record<string, ChartAccount>>({});
 
   useEffect(() => {
@@ -323,7 +318,6 @@ function LedgerPanelContent() {
     setTotal(0);
     setExpandedId(null);
     setCorrectTarget(null);
-    setVoidTarget(null);
     void reload();
   }, [entityId, reload]);
 
@@ -576,33 +570,19 @@ function LedgerPanelContent() {
                           {formatTry(entryTotalKurus(row.lines))}
                         </DataTableCell>
                         <DataTableCell align="right">
-                          {row.status === "posted" &&
-                            GENERIC_VOID_SAFE_SOURCES.has(row.source) && (
-                              <SubledgerRowActions
-                                row={{
-                                  display_kind: "effective",
-                                  journal_entry_id: row.id,
-                                }}
-                                showEdit={GENERIC_CORRECTABLE_SOURCES.has(
-                                  row.source,
-                                )}
-                                onEdit={() =>
-                                  setCorrectTarget({
-                                    id: row.id,
-                                    entry_date: row.entry_date,
-                                    description: row.description,
-                                    source: row.source,
-                                    lines: row.lines,
-                                  })
-                                }
-                                onVoid={() =>
-                                  setVoidTarget({
-                                    entry_id: row.id,
-                                    description: row.description,
-                                  })
-                                }
-                              />
-                            )}
+                          <GlEntryActions
+                            row={row}
+                            onGenericEdit={() =>
+                              setCorrectTarget({
+                                id: row.id,
+                                entry_date: row.entry_date,
+                                description: row.description,
+                                source: row.source,
+                                lines: row.lines,
+                              })
+                            }
+                            onSaved={() => void reload()}
+                          />
                         </DataTableCell>
                       </tr>
                       {expanded && (
@@ -629,18 +609,6 @@ function LedgerPanelContent() {
         open={correctTarget !== null}
         entry={correctTarget}
         onClose={() => setCorrectTarget(null)}
-        onSaved={() => void reload()}
-      />
-      <VoidSubledgerDialog
-        open={voidTarget !== null}
-        title="Void ledger entry"
-        description={voidTarget?.description}
-        voidPath={
-          entityId && voidTarget
-            ? `/entities/${entityId}/ledger/entries/${voidTarget.entry_id}/void`
-            : null
-        }
-        onClose={() => setVoidTarget(null)}
         onSaved={() => void reload()}
       />
     </>

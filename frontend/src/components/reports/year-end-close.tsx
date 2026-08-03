@@ -123,6 +123,8 @@ export function YearEndClose({ entityId, isOwner }: Props) {
               "mb-3 rounded-md px-3 py-2 text-sm",
               preview.already_closed
                 ? "bg-success/10 text-success"
+                : preview.lines.length === 0
+                  ? "bg-muted/40 text-muted-foreground"
                 : preview.can_close
                   ? "bg-muted/40 text-muted-foreground"
                   : "bg-warning/10 text-warning",

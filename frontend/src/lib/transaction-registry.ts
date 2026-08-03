@@ -31,18 +31,26 @@ export const JOURNAL_SOURCES = [
   "cash_movement",
   "cash_drawer_close",
   "fx_purchase",
+  "fx_conversion",
+  "fx_expense_spend",
   "staff_accrual",
   "staff_advance",
   "staff_payment",
   "partner_expense_fronted",
   "partner_reimbursement_paid",
+  "partner_drawing",
+  "partner_drawing_repayment",
+  "partner_capital_contribution",
+  "partner_loan_received",
+  "partner_loan_repaid",
+  "partner_profit_allocation",
   "customer_credit_sale",
+  "group_sale",
   "customer_payment_received",
-  "fx_conversion",
-  "fx_expense_spend",
   "expense_entry",
   "year_end_close",
   "system",
+  "rule_auto",
 ] as const;
 
 export type JournalSource = (typeof JOURNAL_SOURCES)[number];
@@ -50,16 +58,18 @@ export type JournalSource = (typeof JOURNAL_SOURCES)[number];
 /** Sources where the generic ledger correct/void endpoints are safe (mirrors
  * the backend allowlist; previously duplicated as CORRECTABLE_SOURCES in the
  * general-ledger panel). */
-export const GENERIC_CORRECTABLE_SOURCES = new Set<string>(["manual", "bank_fee"]);
+export const GENERIC_CORRECTABLE_SOURCES = new Set<string>([
+  "manual",
+  "bank_fee",
+  "pos_commission_sweep",
+  "pos_commission_statement",
+]);
 
 /** Sources safe to VOID (but not edit/correct) through the generic ledger void
  * endpoint. These are plain journal entries with no subledger rows, so the
- * generic reversal is complete. The commission sweep (Dr 5300/5310 / Cr 1400)
- * belongs here: its own "Card clearing" flow has no void UI, so voiding it from
- * the GL is the only way to reverse a mistaken "Clear bank commission". */
+ * generic reversal is complete. */
 export const GENERIC_VOID_SAFE_SOURCES = new Set<string>([
   ...GENERIC_CORRECTABLE_SOURCES,
-  "pos_commission_sweep",
   // A year-end close is a plain journal entry with no subledger rows, so the
   // generic reversal is complete. It belongs here because voiding it IS the
   // undo — it restores the revenue and expense balances and reopens the year
@@ -165,9 +175,18 @@ const SOURCE_FLOWS: Record<string, SourceFlow> = {
   staff_payment: { href: "/staff", label: "Staff" },
   partner_expense_fronted: { href: "/partners", label: "Partners" },
   partner_reimbursement_paid: { href: "/partners", label: "Partners" },
+  partner_drawing: { href: "/partners", label: "Partners" },
+  partner_drawing_repayment: { href: "/partners", label: "Partners" },
+  partner_capital_contribution: { href: "/partners", label: "Partners" },
+  partner_loan_received: { href: "/partners", label: "Partners" },
+  partner_loan_repaid: { href: "/partners", label: "Partners" },
+  partner_profit_allocation: { href: "/partners", label: "Partners" },
   customer_credit_sale: { href: "/customers", label: "Customers" },
+  group_sale: { href: "/customers/group-sales", label: "Group sales" },
   customer_payment_received: { href: "/customers", label: "Customers" },
   expense_entry: { href: "/review/expenses", label: "Expenses" },
+  rule_auto: { href: "/banking/review", label: "Bank review" },
+  system: { href: "/banking/review", label: "Bank review" },
 };
 
 /** Where this transaction family is managed; null for system sources. */

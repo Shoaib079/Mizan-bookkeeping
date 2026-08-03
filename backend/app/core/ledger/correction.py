@@ -69,6 +69,9 @@ GENERIC_CORRECTABLE_SOURCES: frozenset[JournalEntrySource] = frozenset(
     {
         JournalEntrySource.MANUAL,
         JournalEntrySource.BANK_FEE,
+        # Plain Dr commission / Cr clearing or bank — no feature subledger row.
+        JournalEntrySource.POS_COMMISSION_SWEEP,
+        JournalEntrySource.POS_COMMISSION_STATEMENT,
     }
 )
 
@@ -101,8 +104,6 @@ VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
         JournalEntrySource.POS_SETTLEMENT,
         JournalEntrySource.CARD_SALES,
         JournalEntrySource.POS_CARD_TIP,
-        JournalEntrySource.POS_COMMISSION_SWEEP,
-        JournalEntrySource.POS_COMMISSION_STATEMENT,
         JournalEntrySource.DELIVERY_REPORT,
         JournalEntrySource.DELIVERY_SETTLEMENT,
         JournalEntrySource.DELIVERY_COMMISSION,

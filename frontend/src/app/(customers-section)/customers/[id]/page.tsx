@@ -12,6 +12,10 @@ import {
   CorrectCustomerPaymentForm,
   type CorrectableCustomerPaymentRow,
 } from "@/components/forms/correct-customer-payment-form";
+import {
+  CorrectCreditSaleForm,
+  type CorrectableCreditSaleRow,
+} from "@/components/forms/correct-credit-sale-form";
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
@@ -32,8 +36,8 @@ import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
+import { customerLedgerRowActions } from "@/lib/subledger-actions";
 import {
-  isEffectiveLedgerRow,
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
@@ -110,9 +114,12 @@ export default function CustomerDetailPage() {
   const [writeOffOpen, setWriteOffOpen] = useState(false);
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableCustomerPaymentRow | null>(null);
+  const [correctCreditSale, setCorrectCreditSale] =
+    useState<CorrectableCreditSaleRow | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
     journal_entry_id: string;
     description: string;
+    kind: "payment" | "credit_sale";
   } | null>(null);
 
   const resetDetailState = useCallback(() => {
@@ -124,6 +131,7 @@ export default function CustomerDetailPage() {
     setSaleOpen(false);
     setPaymentOpen(false);
     setCorrectPayment(null);
+    setCorrectCreditSale(null);
     setVoidTarget(null);
   }, []);
 
@@ -262,7 +270,16 @@ export default function CustomerDetailPage() {
                 </tr>
               </DataTableHead>
               <DataTableBody>
-                {visibleRows.map((entry) => (
+                {visibleRows.map((entry) => {
+                  const actions = customerLedgerRowActions({
+                    movementType: entry.movement_type,
+                    referenceType: entry.reference_type,
+                  });
+                  const isGroupSale =
+                    entry.movement_type === "credit_sale" &&
+                    entry.reference_type === "group_sale" &&
+                    entry.reference_id;
+                  return (
                   <DataTableRow
                     key={entry.id}
                     className={subledgerRowClassName(entry.display_kind)}
@@ -289,49 +306,58 @@ export default function CustomerDetailPage() {
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell align="right">
-                      {entry.movement_type === "payment_received" && (
+                      {isGroupSale ? (
+                        <div className="flex justify-end">
+                          <Link href={`/customers/group-sales/${entry.reference_id}`}>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-8 px-2"
+                            >
+                              Edit / Void
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : actions.canEdit || actions.canVoid ? (
                         <SubledgerRowActions
                           row={entry}
-                          onEdit={() =>
-                            setCorrectPayment({
+                          showEdit={actions.canEdit}
+                          onEdit={() => {
+                            if (entry.movement_type === "payment_received") {
+                              setCorrectPayment({
+                                journal_entry_id: entry.journal_entry_id!,
+                                movement_date: entry.movement_date,
+                                amount_kurus: entry.amount_kurus,
+                                description: entry.description,
+                                payment_account_id: entry.payment_account_id,
+                                payment_native_quantity: entry.payment_native_quantity,
+                                forex_currency: entry.forex_currency,
+                              });
+                              return;
+                            }
+                            setCorrectCreditSale({
                               journal_entry_id: entry.journal_entry_id!,
                               movement_date: entry.movement_date,
                               amount_kurus: entry.amount_kurus,
                               description: entry.description,
-                              payment_account_id: entry.payment_account_id,
-                              payment_native_quantity: entry.payment_native_quantity,
-                              forex_currency: entry.forex_currency,
-                            })
-                          }
+                            });
+                          }}
                           onVoid={() =>
                             setVoidTarget({
                               journal_entry_id: entry.journal_entry_id!,
                               description: entry.description,
+                              kind:
+                                entry.movement_type === "payment_received"
+                                  ? "payment"
+                                  : "credit_sale",
                             })
                           }
                         />
-                      )}
-                      {entry.movement_type === "credit_sale" &&
-                        entry.reference_type === "group_sale" &&
-                        entry.reference_id &&
-                        isEffectiveLedgerRow(entry) && (
-                          <div className="flex justify-end">
-                            <Link
-                              href={`/customers/group-sales/${entry.reference_id}`}
-                            >
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                className="h-8 px-2"
-                              >
-                                Edit / Void
-                              </Button>
-                            </Link>
-                          </div>
-                        )}
+                      ) : null}
                     </DataTableCell>
                   </DataTableRow>
-                ))}
+                  );
+                })}
               </DataTableBody>
             </DataTable>
           )}
@@ -375,13 +401,26 @@ export default function CustomerDetailPage() {
             onClose={() => setCorrectPayment(null)}
             onSaved={() => void reload()}
           />
+          <CorrectCreditSaleForm
+            open={correctCreditSale !== null}
+            customerId={customerId}
+            sale={correctCreditSale}
+            onClose={() => setCorrectCreditSale(null)}
+            onSaved={() => void reload()}
+          />
           <VoidSubledgerDialog
             open={voidTarget !== null}
-            title="Void customer payment"
+            title={
+              voidTarget?.kind === "credit_sale"
+                ? "Void credit sale"
+                : "Void customer payment"
+            }
             description={voidTarget?.description}
             voidPath={
               entityId && voidTarget
-                ? `/entities/${entityId}/customers/${customerId}/payments/${voidTarget.journal_entry_id}/void`
+                ? voidTarget.kind === "credit_sale"
+                  ? `/entities/${entityId}/customers/${customerId}/credit-sales/${voidTarget.journal_entry_id}/void`
+                  : `/entities/${entityId}/customers/${customerId}/payments/${voidTarget.journal_entry_id}/void`
                 : null
             }
             onClose={() => setVoidTarget(null)}

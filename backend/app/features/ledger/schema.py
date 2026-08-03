@@ -90,3 +90,15 @@ class CorrectJournalEntryOut(BaseModel):
 
 class JournalEntryListOut(PaginatedListOut[JournalEntryOut]):
     pass
+
+
+class LedgerEntryEditContextOut(BaseModel):
+    kind: str
+    context: dict
+
+
+class LedgerEntryActionsOut(BaseModel):
+    can_edit: bool
+    can_void: bool
+    void_path: str | None = None
+    edit: LedgerEntryEditContextOut | None = None

@@ -135,11 +135,11 @@ export function yearEndSummary(preview: YearEndPreviewRead): string {
   if (preview.already_closed) {
     return `${preview.year} is closed. Its profit sits in Retained Earnings and the year's accounts start from zero.`;
   }
+  if (preview.lines.length === 0) {
+    return `Nothing to close for ${preview.year} — no revenue or expense balances on 31 December. You can pick another year, or close December ${preview.year} only if you later post into that year.`;
+  }
   if (!preview.december_closed) {
     return `Close December ${preview.year} first — a year can't be sealed over a month that might still change.`;
-  }
-  if (preview.lines.length === 0) {
-    return `Nothing to close for ${preview.year} — no revenue or expense balances.`;
   }
   return preview.net_result_kurus >= 0
     ? `Ready. ${preview.year}'s profit will move into Retained Earnings, where partner distributions draw from.`

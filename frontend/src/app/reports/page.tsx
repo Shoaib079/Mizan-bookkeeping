@@ -20,6 +20,10 @@ import Link from "next/link";
 
 import { MonthPackButton } from "@/components/reports/month-pack-button";
 import { ReportDateRange } from "@/components/reports/report-date-range";
+import {
+  ReportsPeriodSummary,
+  ReportsPeriodSummarySkeleton,
+} from "@/components/reports/reports-period-summary";
 import { AppShell } from "@/components/layout/app-shell";
 import { apiFetch } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/api-error-message";
@@ -31,8 +35,6 @@ import {
 } from "@/lib/entity-access";
 import { isEntitySettingEnabled } from "@/lib/entity-settings";
 import { useEntity } from "@/lib/entity-context";
-import { formatFxNative } from "@/lib/fx-money";
-import { formatTry } from "@/lib/money";
 import type { DashboardRead } from "@/lib/report-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -241,52 +243,18 @@ function ReportsBody() {
         {summaryError && (
           <p className="text-sm text-destructive">{summaryError}</p>
         )}
-        {summary && (
-          <div className="space-y-3 rounded-lg border border-border bg-card px-4 py-3 text-sm">
-            <div className="flex flex-wrap gap-6">
-              <div>
-                <span className="text-muted-foreground">Sales · </span>
-                <span className="font-medium tabular-nums">
-                  {formatTry(summary.sales.total_sales_kurus)}
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Expenses · </span>
-                <span className="font-medium tabular-nums">
-                  {formatTry(summary.total_expenses_kurus)}
-                </span>
-              </div>
-              {shouldShowNetResultSummary(role) && (
-                <div>
-                  <span className="text-muted-foreground">Net · </span>
-                  <span className="font-medium tabular-nums">
-                    {formatTry(summary.net_result_kurus)}
-                  </span>
-                </div>
-              )}
-            </div>
-            {summary.fx_balances.length > 0 && (
-              <div className="border-t border-border pt-3">
-                <p className="mb-2 text-xs font-medium text-muted-foreground">
-                  Foreign currency held
-                </p>
-                <ul className="flex flex-wrap gap-x-6 gap-y-2">
-                  {summary.fx_balances.map((fx) => (
-                    <li key={fx.money_account_id} className="min-w-0">
-                      <span className="text-muted-foreground">{fx.name} · </span>
-                      <span className="font-medium tabular-nums">
-                        {formatFxNative(fx.native_quantity, fx.currency)}
-                      </span>
-                      <span className="ml-1 text-xs text-muted-foreground tabular-nums">
-                        (book {formatTry(fx.try_cost_kurus)})
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
+        {entityId &&
+          (summary ? (
+            <ReportsPeriodSummary
+              summary={summary}
+              role={role}
+              refreshing={loading}
+            />
+          ) : !summaryError ? (
+            <ReportsPeriodSummarySkeleton
+              showNet={shouldShowNetResultSummary(role)}
+            />
+          ) : null)}
       </div>
 
       {!entityId && (

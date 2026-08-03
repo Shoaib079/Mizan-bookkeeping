@@ -19,7 +19,13 @@ describe("transaction registry (audit C1)", () => {
   });
 
   it("keeps the generic void allowlist to accounting-safe sources only", () => {
-    expect([...GENERIC_CORRECTABLE_SOURCES].sort()).toEqual(["bank_fee", "manual"]);
+    expect([...GENERIC_CORRECTABLE_SOURCES].sort()).toEqual([
+      "bank_fee",
+      "manual",
+      "pos_commission_statement",
+      "pos_commission_sweep",
+    ]);
+    expect(GENERIC_VOID_SAFE_SOURCES.has("pos_commission_sweep")).toBe(true);
     expect(GENERIC_VOID_SAFE_SOURCES.has("transfer")).toBe(true);
     expect(GENERIC_VOID_SAFE_SOURCES.has("cash_drawer_close")).toBe(true);
     expect(GENERIC_VOID_SAFE_SOURCES.has("cash_movement")).toBe(false);

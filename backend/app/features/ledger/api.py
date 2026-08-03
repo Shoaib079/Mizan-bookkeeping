@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.ledger.models import JournalEntrySource, JournalEntryStatus
 from app.core.ledger.correction import SubledgerBackedCorrectionError
-from app.core.ledger.posting import PostingError
+from app.core.ledger.posting import EntryNotFoundError, PostingError
 from app.core.listing import ListParams, list_params_dependency, paginated_list
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
@@ -21,6 +21,8 @@ from app.features.ledger.schema import (
     CorrectJournalEntryRequest,
     JournalEntryListOut,
     JournalEntryOut,
+    LedgerEntryActionsOut,
+    LedgerEntryEditContextOut,
     VoidJournalEntryOut,
     VoidJournalEntryRequest,
 )
@@ -64,6 +66,33 @@ def list_journal_entries(
         total=total,
         limit=list_params.limit,
         offset=list_params.offset,
+    )
+
+
+@router.get("/entries/{entry_id}/actions", response_model=LedgerEntryActionsOut)
+def get_entry_actions(
+    entity_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> LedgerEntryActionsOut:
+    try:
+        actions = service.get_entry_actions(session, entity_id, entry_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except EntryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    edit = None
+    if actions.edit is not None:
+        edit = LedgerEntryEditContextOut(
+            kind=actions.edit.kind,
+            context=actions.edit.context,
+        )
+    return LedgerEntryActionsOut(
+        can_edit=actions.can_edit,
+        can_void=actions.can_void,
+        void_path=actions.void_path,
+        edit=edit,
     )
 
 

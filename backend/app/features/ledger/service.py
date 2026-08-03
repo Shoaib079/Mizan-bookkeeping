@@ -14,6 +14,7 @@ from app.core.ledger.correction import (
     is_generic_correctable,
     resolve_correction_route,
 )
+from app.core.ledger.entry_actions import resolve_ledger_entry_actions
 from app.core.ledger.posting import PostingLine, correct_journal_entry, void_journal_entry
 from app.db.session import entity_context
 from app.core.listing import (
@@ -171,3 +172,11 @@ def correct_entry(
         void_date=payload.void_date,
         period_unlock_reason=payload.period_unlock_reason,
     )
+
+
+def get_entry_actions(
+    session: Session,
+    entity_id: uuid.UUID,
+    entry_id: uuid.UUID,
+):
+    return resolve_ledger_entry_actions(session, entity_id, entry_id)

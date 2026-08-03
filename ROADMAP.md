@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | (none) |
 | **Next up**              | **GS-FX** — Forex-only group sales (design locked 2026-07-13, NOT built) · P5 — Delete company UI |
-| **Last completed slice** | **Partner capital cash/bank + required note (2026-08-03)** — manual Record capital into cash/bank; statement classify requires note; partner page action. |
-| **Last commit/tag**      | `v0.partner-capital-cash-note` |
+| **Last completed slice** | **GL inline Edit/Void + edit/void policy (2026-08-03)** — entry actions API; inline GL forms; card commission generic correct; partners/staff/customers actions; year-end empty year; reports summary skeleton. |
+| **Last commit/tag**      | `v0.gl-inline-edit-void` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
@@ -1879,6 +1879,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-03 | GL inline Edit/Void + edit/void policy       | `v0.gl-inline-edit-void`                               | `GET .../ledger/entries/{id}/actions`; inline Edit/Void in GL (expense/partner/staff/customer + generic); card commission generic correct; centralized `subledger-actions.ts`; year-end "Nothing to close" for empty year; reports period summary skeleton; fix GL `setVoidTarget` crash; 1376 pytest + 692 vitest |
 | 2026-08-03 | Clerk invite email on Add member               | *(pending commit)*                                     | Settings → Team add-by-email creates Clerk invitation; `PUBLIC_APP_URL` redirect to `/sign-up`; invite flags on MembershipRead; pytest |
 | 2026-08-02 | Cash count by notes + drawer split             | *(pending commit)*                                     | Note/coin calculator (UI + local draft only; books keep total); rename drawers; post-close split; **Record → Count cash**; Banking history; pytest + vitest |
 | 2026-08-02 | Partner pack Summary cash roll-forward         | `v0.partner-pack-summary-roll-forward`                 | Sales & result; opening (From−1) + cash lines + closing (To); hold/owe with cash split; partner labels (RULE_AUTO→Bank fee); color styling; Download all Excel/PDF; month-pack pytest |

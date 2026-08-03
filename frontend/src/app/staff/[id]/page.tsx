@@ -44,6 +44,7 @@ import {
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
+import { staffLedgerRowActions } from "@/lib/subledger-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 type LedgerEntry = {
@@ -83,22 +84,6 @@ type LedgerResponse = {
   outstanding_advance_minor: number;
   entries: LedgerEntry[];
 };
-
-/** TRY rows the correct form can rewrite. FX rows and paired advance payments
- * are void-only — Edit is never offered when the backend would refuse. */
-const correctableStaffTypes = new Set([
-  "salary_accrued",
-  "advance_paid",
-  "salary_payment",
-  "extra_days_accrued",
-  "extra_days_paid",
-]);
-
-/** Void-only: paired settlement halves, or cash-in with no edit path yet. */
-const staffVoidCompanionTypes = new Set([
-  "advance_applied",
-  "advance_returned",
-]);
 
 function extraDaysLabel(entry: LedgerEntry): string | null {
   if (
@@ -366,22 +351,13 @@ export default function StaffDetailPage() {
               <DataTableBody>
                 {displayRows.map((group) => {
                   const entry = group.primary;
-                  const isTryEmployee = employee.pay_currency === "TRY";
-                  // Edit only when the TRY correct form can succeed — never for
-                  // FX rows or a payment that also applied an advance.
-                  const canEdit =
-                    isTryEmployee &&
-                    !group.isAdvanceOffset &&
-                    group.advanceAppliedMinor <= 0 &&
-                    correctableStaffTypes.has(entry.movement_type);
-                  const canVoid =
-                    Boolean(entry.journal_entry_id) &&
-                    (canEdit ||
-                      group.isAdvanceOffset ||
-                      group.advanceAppliedMinor > 0 ||
-                      staffVoidCompanionTypes.has(entry.movement_type) ||
-                      correctableStaffTypes.has(entry.movement_type));
-                  const canAct = canEdit || canVoid;
+                  const actions = staffLedgerRowActions({
+                    movementType: entry.movement_type,
+                    payCurrency: employee.pay_currency,
+                    isAdvanceOffset: group.isAdvanceOffset,
+                    advanceAppliedMinor: group.advanceAppliedMinor,
+                  });
+                  const canAct = actions.canEdit || actions.canVoid;
                   return (
                     <DataTableRow
                       key={entry.id}
@@ -432,7 +408,7 @@ export default function StaffDetailPage() {
                           <SubledgerRowActions
                             inline
                             row={entry}
-                            showEdit={canEdit}
+                            showEdit={actions.canEdit}
                             onEdit={() =>
                               setCorrectEntry({
                                 journal_entry_id: entry.journal_entry_id!,

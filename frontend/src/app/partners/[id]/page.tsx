@@ -42,6 +42,7 @@ import {
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
+import { partnerLedgerRowActions } from "@/lib/subledger-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 type LedgerEntry = {
@@ -56,8 +57,6 @@ type LedgerEntry = {
   was_corrected?: boolean;
   running_balance_kurus?: number | null;
 };
-
-const correctablePartnerTypes = new Set(["expense_fronted", "reimbursement_paid"]);
 
 type LedgerResponse = {
   balance_kurus: number;
@@ -282,7 +281,10 @@ export default function PartnerDetailPage() {
                 </tr>
               </DataTableHead>
               <DataTableBody>
-                {visibleRows.map((entry) => (
+                {visibleRows.map((entry) => {
+                  const actions = partnerLedgerRowActions(entry.movement_type);
+                  const canAct = actions.canEdit || actions.canVoid;
+                  return (
                   <DataTableRow
                     key={entry.id}
                     className={subledgerRowClassName(entry.display_kind)}
@@ -301,10 +303,11 @@ export default function PartnerDetailPage() {
                           <EditedBadge />
                         </span>
                       )}
-                      {correctablePartnerTypes.has(entry.movement_type) && (
+                      {canAct && (
                         <SubledgerRowActions
                           inline
                           row={entry}
+                          showEdit={actions.canEdit}
                           onEdit={() =>
                             setCorrectEntry({
                               journal_entry_id: entry.journal_entry_id!,
@@ -333,7 +336,8 @@ export default function PartnerDetailPage() {
                         : "—"}
                     </DataTableCell>
                   </DataTableRow>
-                ))}
+                  );
+                })}
               </DataTableBody>
             </DataTable>
           )}

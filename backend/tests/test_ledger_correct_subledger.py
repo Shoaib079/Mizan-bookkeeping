@@ -620,6 +620,75 @@ def test_bank_fee_correctable_via_generic_endpoint(
     assert body["corrected"]["amends_entry_id"] == str(entry_id)
 
 
+def test_pos_commission_sweep_correctable_via_generic_endpoint(
+    client: TestClient, db_session, restaurant_a, seeded_accounts
+) -> None:
+    from app.core.chart_of_accounts.default_chart import (
+        CARD_COMMISSION_CODE,
+        CARD_SALES_CLEARING_CODE,
+    )
+    from app.core.ledger.models import JournalEntrySource
+    from app.features.banking import service as banking_service
+    from app.features.banking.models import MoneyAccountKind
+    from app.features.banking.schema import MoneyAccountCreate
+    from tests.test_pos_commission_clearance import (
+        ACTOR_ID,
+        _card_sales,
+        _net_deposit,
+    )
+
+    clearing_id = seeded_accounts[CARD_SALES_CLEARING_CODE]
+    commission_id = seeded_accounts[CARD_COMMISSION_CODE]
+    bank = banking_service.create_money_account(
+        db_session,
+        restaurant_a.id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.BANK,
+            name="Garanti TRY",
+            bank_name="Garanti BBVA",
+        ),
+    )
+    _card_sales(db_session, restaurant_a.id, 500_000)
+    _net_deposit(db_session, restaurant_a.id, bank, 480_000, date(2026, 6, 2))
+
+    clear = client.post(
+        f"/entities/{restaurant_a.id}/pos/clearing-reconciliation/clear-commission",
+        json={
+            "actor_id": str(ACTOR_ID),
+            "clearance_date": "2026-06-30",
+            "amount_kurus": 20_000,
+        },
+    )
+    assert clear.status_code == 200
+    entry_id = clear.json()["journal_entry_id"]
+
+    correct_response = client.post(
+        f"/entities/{restaurant_a.id}/ledger/entries/{entry_id}/correct",
+        json={
+            "entry_date": "2026-07-01",
+            "description": "Corrected card commission",
+            "actor_id": str(ACTOR_ID),
+            "reason": "Wrong commission amount",
+            "lines": [
+                {
+                    "account_id": str(commission_id),
+                    "amount_kurus": 25_000,
+                    "side": "debit",
+                },
+                {
+                    "account_id": str(clearing_id),
+                    "amount_kurus": 25_000,
+                    "side": "credit",
+                },
+            ],
+        },
+    )
+    assert correct_response.status_code == 200
+    body = correct_response.json()
+    assert body["corrected"]["source"] == JournalEntrySource.POS_COMMISSION_SWEEP.value
+    assert body["corrected"]["amends_entry_id"] == entry_id
+
+
 def test_security_invariant_subledger_correction_tie(
     db_session, restaurant_a, seeded_accounts
 ) -> None:
