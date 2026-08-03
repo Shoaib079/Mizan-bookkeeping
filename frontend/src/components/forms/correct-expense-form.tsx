@@ -6,7 +6,7 @@ import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
@@ -30,6 +30,7 @@ export type CorrectableExpenseRow = {
   expense_date: string;
   description: string;
   written_item_description: string | null;
+  notes: string | null;
   amount_kurus: number;
   expense_account_id: string;
   money_account_id: string;
@@ -65,6 +66,7 @@ export function CorrectExpenseForm({
   const [moneyAccountId, setMoneyAccountId] = useState("");
   const [itemName, setItemName] = useState("");
   const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
   const [amountText, setAmountText] = useState("");
   const [dateText, setDateText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +78,7 @@ export function CorrectExpenseForm({
     expenseAccountId: string;
     moneyAccountId: string;
     description: string;
+    notes: string;
   } | null>(null);
 
   const loadOptions = useCallback(async () => {
@@ -103,6 +106,7 @@ export function CorrectExpenseForm({
       itemName: expense.written_item_description ?? "",
       amountText: formatKurus(Math.abs(expense.amount_kurus)),
       description: expense.description,
+      notes: expense.notes ?? "",
       expenseAccountId: expense.expense_account_id,
       moneyAccountId: expense.money_account_id,
     };
@@ -110,6 +114,7 @@ export function CorrectExpenseForm({
     setAmountText(snapshot.amountText);
     setItemName(snapshot.itemName);
     setDescription(snapshot.description);
+    setNotes(snapshot.notes);
     setExpenseAccountId(snapshot.expenseAccountId);
     setMoneyAccountId(snapshot.moneyAccountId);
     setBaseline(snapshot);
@@ -141,6 +146,7 @@ export function CorrectExpenseForm({
       expenseAccountId,
       moneyAccountId,
       description,
+      notes,
     },
   );
 
@@ -181,6 +187,7 @@ export function CorrectExpenseForm({
                   has_source_document: false,
                   description:
                     description.trim() || itemName.trim() || "Manual expense",
+                  notes: notes.trim() || null,
                   actor_id: actorId,
                 },
                 periodUnlockReason,
@@ -266,6 +273,16 @@ export function CorrectExpenseForm({
             id="correct-exp-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="correct-exp-notes">Notes (optional)</Label>
+          <Textarea
+            id="correct-exp-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Receipt #, who paid, anything extra…"
+            maxLength={512}
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

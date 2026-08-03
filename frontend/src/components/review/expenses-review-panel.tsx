@@ -274,7 +274,7 @@ export function ExpensesReviewPanel() {
       ) : (
         <>
           {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-          {loading && <TableSkeleton columns={5} />}
+          {loading && <TableSkeleton columns={6} />}
 
           {!loading && items.length === 0 && (
             <EmptyState
@@ -290,6 +290,7 @@ export function ExpensesReviewPanel() {
                 <tr>
                   <DataTableHeaderCell>Date</DataTableHeaderCell>
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
+                  <DataTableHeaderCell>Notes</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
                   <DataTableHeaderCell>Status</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
@@ -311,6 +312,16 @@ export function ExpensesReviewPanel() {
                       }
                     >
                       {row.written_item_description || row.description}
+                    </DataTableCell>
+                    <DataTableCell
+                      className={cn(
+                        "max-w-[14rem] text-muted-foreground",
+                        isVoided && "line-through",
+                      )}
+                    >
+                      <span className="block truncate" title={row.notes ?? undefined}>
+                        {row.notes?.trim() ? row.notes : "—"}
+                      </span>
                     </DataTableCell>
                     <DataTableCell
                       align="right"

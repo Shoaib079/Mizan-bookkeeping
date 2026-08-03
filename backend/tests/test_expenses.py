@@ -142,6 +142,38 @@ def test_manual_expense_posts_dr_expense_cr_bank(
     assert _gl_balance(db_session, entity_id, bank_gl, AccountNormalBalance.DEBIT) == -50_000
 
 
+def test_manual_expense_stores_and_searches_notes(
+    client: TestClient, expense_setup
+) -> None:
+    entity_id = expense_setup["entity_id"]
+    rent_id = expense_setup["accounts"][RENT_EXPENSE_CODE]
+
+    create = client.post(
+        f"/entities/{entity_id}/expenses",
+        json={
+            "expense_date": "2026-06-03",
+            "amount_kurus": 12_000,
+            "expense_account_id": str(rent_id),
+            "money_account_id": str(expense_setup["drawer"].id),
+            "written_item_description": "süt",
+            "has_source_document": False,
+            "description": "Süt",
+            "notes": "Receipt #4821 — Ahmet paid",
+            "actor_id": str(ACTOR_ID),
+        },
+    )
+    assert create.status_code == 201, create.text
+    assert create.json()["notes"] == "Receipt #4821 — Ahmet paid"
+
+    listed = client.get(
+        f"/entities/{entity_id}/expenses",
+        params={"q": "Receipt #4821", "from": "2026-06-01", "to": "2026-06-30"},
+    )
+    assert listed.status_code == 200
+    assert listed.json()["total"] == 1
+    assert listed.json()["items"][0]["notes"] == "Receipt #4821 — Ahmet paid"
+
+
 def test_alias_remembers_spelling(db_session, client: TestClient, expense_setup) -> None:
     entity_id = expense_setup["entity_id"]
     rent_id = expense_setup["accounts"][RENT_EXPENSE_CODE]

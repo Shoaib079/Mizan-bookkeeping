@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import { Label, Select } from "@/components/ui/input";
+import { Label, Select, Textarea } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
@@ -62,6 +62,7 @@ type ExpenseFormDraft = {
   itemName: string;
   amountText: string;
   dateText: string;
+  notes: string;
 };
 
 function isExpenseDraftEmpty(draft: ExpenseFormDraft): boolean {
@@ -118,6 +119,7 @@ export function ManualExpenseForm({
   );
   const pickedItemCanonicalRef = useRef<string | null>(null);
   const [amountText, setAmountText] = useState("");
+  const [notes, setNotes] = useState("");
   const [dateText, setDateText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -138,6 +140,7 @@ export function ManualExpenseForm({
       itemName,
       amountText,
       dateText,
+      notes,
     }),
     [
       expenseAccountId,
@@ -147,6 +150,7 @@ export function ManualExpenseForm({
       itemName,
       amountText,
       dateText,
+      notes,
     ],
   );
 
@@ -223,6 +227,7 @@ export function ManualExpenseForm({
     pickedItemCanonicalRef.current = null;
     setExpenseAccountId("");
     setAmountText("");
+    setNotes("");
     setPaymentMode("cash");
     setPartnerId("");
     setRecordKind(defaultRecordKind);
@@ -321,6 +326,7 @@ export function ManualExpenseForm({
     setItemName(draft.itemName);
     setAmountText(draft.amountText);
     setDateText(draft.dateText);
+    setNotes(draft.notes);
   }
 
   function handleResume() {
@@ -341,6 +347,7 @@ export function ManualExpenseForm({
     setConfirmExpenseItemId(null);
     pickedItemCanonicalRef.current = null;
     setAmountText("");
+    setNotes("");
     setDateText(todayTrDate());
     setPaymentMode("cash");
     setPartnerId("");
@@ -417,6 +424,7 @@ export function ManualExpenseForm({
                   written_item_description: itemName || null,
                   has_source_document: false,
                   description,
+                  notes: notes.trim() || null,
                   actor_id: actorId,
                   confirm_expense_item_id: confirmExpenseItemId,
                 },
@@ -441,6 +449,7 @@ export function ManualExpenseForm({
       setConfirmExpenseItemId(null);
       pickedItemCanonicalRef.current = null;
       setAmountText("");
+      setNotes("");
       setExpenseAccountId("");
       setSuggestedAccountId(null);
       setSuggestedSource(null);
@@ -453,6 +462,7 @@ export function ManualExpenseForm({
         itemName: "",
         amountText: "",
         dateText,
+        notes: "",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -466,6 +476,20 @@ export function ManualExpenseForm({
     recordKind === "salary" ? "Record salary payment" : title;
   const showCashDrawerPicker =
     paymentMode === "cash" && shouldShowCashDrawerPicker(cashAccounts);
+
+  const notesField = (
+    <div>
+      <Label htmlFor="exp-notes">Notes (optional)</Label>
+      <Textarea
+        id="exp-notes"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Receipt #, supplier, who paid…"
+        maxLength={512}
+        disabled={submitting}
+      />
+    </div>
+  );
 
   if (!open) return null;
 
@@ -673,6 +697,7 @@ export function ManualExpenseForm({
                 <div className="hidden sm:block" aria-hidden />
               )}
             </div>
+            {notesField}
           </>
         ) : (
           <>
@@ -772,6 +797,7 @@ export function ManualExpenseForm({
             </p>
           </div>
         )}
+        {notesField}
           </>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}

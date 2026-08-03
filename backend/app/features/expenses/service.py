@@ -456,6 +456,7 @@ def list_expenses(
                 for c in (
                     text_search_filter(q, ExpenseEntry.description),
                     text_search_filter(q, ExpenseEntry.written_item_description),
+                    text_search_filter(q, ExpenseEntry.notes),
                     item_search,
                 )
                 if c is not None
@@ -469,14 +470,15 @@ def list_expenses(
                 )
                 .where(*filters, or_(*text_clauses))
             )
-            sum_stmt = select(
-                func.coalesce(func.sum(ExpenseEntry.amount_kurus), 0)
-            ).select_from(
-                ExpenseEntry.outerjoin(
+            sum_stmt = (
+                select(func.coalesce(func.sum(ExpenseEntry.amount_kurus), 0))
+                .select_from(ExpenseEntry)
+                .outerjoin(
                     ExpenseItem,
                     ExpenseEntry.expense_item_id == ExpenseItem.id,
                 )
-            ).where(*filters, or_(*text_clauses))
+                .where(*filters, or_(*text_clauses))
+            )
         else:
             stmt = select(ExpenseEntry).where(*filters)
             sum_stmt = select(
