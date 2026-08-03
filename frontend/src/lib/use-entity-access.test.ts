@@ -42,12 +42,12 @@ describe("EntityAccessProvider (shared role context)", () => {
     expect(source).toContain("notifySessionRevoked");
   });
 
-  it("supports silent background reload for live role sync", async () => {
+  it("tracks membershipSettled after successful /members/me", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(new URL("./use-entity-access.tsx", import.meta.url), "utf8"),
     );
-    expect(source).toContain("silent");
-    expect(source).toContain("notifyRoleChanged");
+    expect(source).toContain("membershipSettled");
+    expect(source).toContain("setMembershipSettled(true)");
   });
 
   it("waits for isAuthReady before fetching", async () => {

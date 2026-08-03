@@ -17,7 +17,7 @@
 | **Active slice**         | **GS-FX** forex-only group sales (next) |
 | **Next up**              | **GS-FX** · then owner sign-off items |
 | **Last completed slice** | **Live membership sync (2026-08-03)** — role changes apply within ~15s globally; removed/deactivated users forced sign-out; toast on promotion/demotion. |
-| **Last commit/tag**      | `v0.live-membership-sync` |
+| **Last commit/tag**      | `v0.owner-entity-switch-fix` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
@@ -1879,6 +1879,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-03 | Owner entity switch fix                      | `v0.owner-entity-switch-fix`                           | Do not lock switch before membershipSettled · owners use full entities list in menu/mobile/profile · fixes owner blocked from switching restaurants |
 | 2026-08-03 | Live membership sync (roles + revoke)        | `v0.live-membership-sync`                              | SessionAccessGuard polls `/members/me` every 15s + focus/visibility · role change toast · forced Clerk sign-out on remove/deactivate · entity list empty → sign-out · sign-in reason banner · session-access.ts + tests |
 | 2026-08-03 | Global app rules (entity lock at core)     | `v0.global-app-rules`                                  | entity-access.ts = single rule registry · entity-switch-policy gates setEntityId + visibleEntities globally · EntitySwitchGuard in providers · first-run/create gated to owners · tests |
 | 2026-08-03 | Non-owner entity lock (team roles)           | `v0.entity-switch-owner-only`                          | Only owners switch/create restaurants; partners/cashiers/view-only locked to assigned company · EntitySwitchGuard · profile/account/mobile UI; vitest |

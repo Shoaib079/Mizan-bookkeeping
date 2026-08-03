@@ -36,6 +36,15 @@ describe("entity switch guard wiring", () => {
     expect(source).toContain("maySetEntityId");
   });
 
+  it("does not lock entity switch before membership is settled", async () => {
+    const source = await fs.promises.readFile(
+      new URL("./entity-switch-guard.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(source).toContain("membershipSettled");
+    expect(source).not.toMatch(/\bloading\b/);
+  });
+
   it("account menu hides switch list without canSwitchEntity", async () => {
     const source = await fs.promises.readFile(
       new URL("./account-menu.tsx", import.meta.url),
@@ -43,5 +52,6 @@ describe("entity switch guard wiring", () => {
     );
     expect(source).toContain("canSwitch && otherEntities.length > 0");
     expect(source).toContain("canCreateEntity");
+    expect(source).toContain("canSwitch ? entities : visibleEntities");
   });
 });

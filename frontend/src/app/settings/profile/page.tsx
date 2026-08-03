@@ -34,10 +34,11 @@ function initialsFor(name: string, email: string | undefined): string {
 
 export default function ProfileSettingsPage() {
   const { clerkEnabled } = useApiAuth();
-  const { userProfile, refreshUserProfile, visibleEntities, entityId, setEntityId } =
+  const { userProfile, refreshUserProfile, entities, visibleEntities, entityId, setEntityId } =
     useEntity();
   const { role } = useEntityAccess();
   const canSwitch = canSwitchEntity(role);
+  const listEntities = canSwitch ? entities : visibleEntities;
   const { dark, mounted, setDarkMode } = useTheme();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -134,13 +135,13 @@ export default function ProfileSettingsPage() {
               ? "Click a restaurant to switch to it."
               : "You are assigned to this restaurant."}
           </p>
-          {visibleEntities.length === 0 ? (
+          {listEntities.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">
               You&apos;re not a member of any restaurant yet.
             </p>
           ) : (
             <ul className="mt-3 divide-y divide-border">
-              {visibleEntities.map((entity) => {
+              {listEntities.map((entity) => {
                 const active = entity.id === entityId;
                 return (
                   <li key={entity.id}>

@@ -113,8 +113,11 @@ function AccountMenuPanel({
   );
 
   const otherEntities = useMemo(
-    () => visibleEntities.filter((entity) => entity.id !== entityId),
-    [visibleEntities, entityId],
+    () =>
+      (canSwitch ? entities : visibleEntities).filter(
+        (entity) => entity.id !== entityId,
+      ),
+    [canSwitch, entities, visibleEntities, entityId],
   );
 
   const displayName = devMode

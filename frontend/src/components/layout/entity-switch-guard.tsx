@@ -14,11 +14,17 @@ import { useEntityAccess } from "@/lib/use-entity-access";
 
 export function EntitySwitchGuard() {
   const { entityId, setEntityId } = useEntity();
-  const { role, loading } = useEntityAccess();
+  const { role, membershipSettled } = useEntityAccess();
   const lockedEntityIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (loading) return;
+    // Do not lock until /members/me has settled — default role is least-privilege
+    // and would incorrectly block owners on first paint.
+    if (!membershipSettled) {
+      lockedEntityIdRef.current = null;
+      resetEntitySwitchPolicy();
+      return;
+    }
 
     if (canSwitchEntity(role)) {
       lockedEntityIdRef.current = null;
@@ -41,7 +47,7 @@ export function EntitySwitchGuard() {
     if (entityId !== lockedEntityId) {
       setEntityId(lockedEntityId);
     }
-  }, [entityId, loading, role, setEntityId]);
+  }, [entityId, membershipSettled, role, setEntityId]);
 
   useEffect(() => {
     return () => resetEntitySwitchPolicy();

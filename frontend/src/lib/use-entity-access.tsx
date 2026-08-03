@@ -49,6 +49,8 @@ export type ReloadAccessOptions = {
 type EntityAccessContextValue = {
   role: EntityRole;
   loading: boolean;
+  /** True after a successful /members/me response for the current entity. */
+  membershipSettled: boolean;
   canWriteOperations: boolean;
   canReadFinancialReports: boolean;
   reload: (options?: ReloadAccessOptions) => Promise<void>;
@@ -61,11 +63,13 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
   const { isAuthReady } = useApiAuth();
   const [role, setRole] = useState<EntityRole>(DEFAULT_DEV_ROLE);
   const [loading, setLoading] = useState(false);
+  const [membershipSettled, setMembershipSettled] = useState(false);
   const fetchIdRef = useRef(0);
   const settledRef = useRef(false);
 
   useEffect(() => {
     settledRef.current = false;
+    setMembershipSettled(false);
   }, [entityId]);
 
   const reload = useCallback(
@@ -73,6 +77,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
       if (!entityId || !isAuthReady) {
         setRole(DEFAULT_DEV_ROLE);
         settledRef.current = false;
+        setMembershipSettled(false);
         return;
       }
 
@@ -94,6 +99,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
             return res.role;
           });
           settledRef.current = true;
+          setMembershipSettled(true);
           if (!silent) setLoading(false);
           return;
         } catch (err) {
@@ -103,6 +109,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
           if (revokeReason) {
             notifySessionRevoked(revokeReason);
             settledRef.current = false;
+            setMembershipSettled(false);
             if (!silent) setLoading(false);
             return;
           }
@@ -113,6 +120,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
           if (is403) {
             setRole(DEFAULT_DEV_ROLE);
             settledRef.current = false;
+            setMembershipSettled(false);
             if (!silent) setLoading(false);
             return;
           }
@@ -127,6 +135,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
 
           setRole(DEFAULT_DEV_ROLE);
           settledRef.current = false;
+          setMembershipSettled(false);
           if (!silent) setLoading(false);
         }
       }
@@ -142,11 +151,12 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
     () => ({
       role,
       loading,
+      membershipSettled,
       canWriteOperations: canWriteOperations(role),
       canReadFinancialReports: canReadFinancialReports(role),
       reload,
     }),
-    [role, loading, reload],
+    [role, loading, membershipSettled, reload],
   );
 
   return (
