@@ -15,7 +15,7 @@ from app.core.cash.errors import DrawerDayClosedError, DrawerUnlockRequiredError
 from app.core.cash.posting import InvalidCashDrawerError, LargeCashVarianceError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard, require_owner_members, resolve_actor_id
+from app.core.auth.deps import daily_transactions_write_guard, member_read_guard, operations_write_guard, require_owner_members, resolve_actor_id
 from app.features.auth.models import User
 from app.features.cash import service as cash_service
 from app.features.cash.schema import (
@@ -105,7 +105,7 @@ def close_cash_drawer_day_route(
     entity_id: uuid.UUID,
     payload: CashDrawerCloseDayRequest,
     session: Session = Depends(get_session),
-    _guard: User | None = Depends(operations_write_guard),
+    _guard: User | None = Depends(daily_transactions_write_guard),
 ) -> CashDrawerCloseResponse:
     payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:

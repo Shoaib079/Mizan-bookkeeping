@@ -12,6 +12,7 @@ import { ToastProvider } from "@/lib/toast";
 import { UnsavedWorkProvider } from "@/lib/unsaved-work";
 import { EntityAccessProvider } from "@/lib/use-entity-access";
 import { EntitySwitchGuard } from "@/components/layout/entity-switch-guard";
+import { RouteAccessGuard } from "@/components/layout/route-access-guard";
 import { SessionAccessGuard } from "@/components/layout/session-access-guard";
 
 const clerkPubKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -23,6 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <EntityProvider>
           <EntityAccessProvider>
             <EntitySwitchGuard />
+            <RouteAccessGuard />
             <UnsavedWorkProvider>
               <ToastProvider>
                 <SessionAccessGuard />

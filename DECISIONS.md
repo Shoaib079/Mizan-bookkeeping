@@ -509,6 +509,18 @@ The `card_sales_batch.gross_amount_kurus` is stored as the full **Z** total (the
 
 **Not in slice:** JWT/Clerk/OAuth, month locking for cashier write restrictions (deferred), enforcing permissions on every endpoint, UI, RLS on `users`.
 
+## 2026-08-03 — Custom member access (Option B)
+
+**Choice:** Owners configure **per-member grants** per restaurant (Decisions §18). Canonical catalog in `backend/app/core/auth/grants.py` (mirrored in `frontend/src/lib/member-grants.ts`). Stored as JSONB `entity_memberships.grants`; migration `088` backfills from role preset. Role enum remains for display and preset shortcuts (`ROLE_PRESET_GRANTS`).
+
+**Grant groups:** API capabilities (`operations:write`, `daily_transactions:write`, `financial_reports:read`, `reports:read`, `admin:manage_members`); navigation (`nav:*`); Record hub actions (`record:sales`, …); scopes (`scope:live_month_edit_void`, `scope:switch_entity`, `scope:financial_dashboard_kpis`, `scope:export`).
+
+**Enforcement:** `effective_grants(membership)` resolves stored list or role fallback. Backend `require_permission` / guards read grants; frontend `useEntityAccess().grants` + `entity-access.ts` helpers. Live-month posting limit when `scope:live_month_edit_void` without `operations:write`.
+
+**UI:** Settings → Members & roles → **Edit access** (`MemberAccessEditor`); `PATCH /entities/{id}/members/{id}` accepts `{ grants: string[], role? }`.
+
+**Invariant:** Run `alembic upgrade head` (`088`) before deploying code that reads `grants` — otherwise members API 500s.
+
 ## 2026-06-22 — Daily expenses + spelling tolerance (Phase 6 Slice 6)
 
 **Choice:** Daily handwritten and manual typed expenses are first-class `expense_entries` — post Dr expense / Cr bank or cash via `post_expense_entry()` (`JournalEntrySource.EXPENSE_ENTRY`). `has_source_document=false` when no receipt attached. Item descriptions use canonical `expense_items` + `expense_item_aliases` with Turkish-aware normalization (`normalize_expense_item_text`) and fuzzy match (≥0.85 → `needs_review` until owner confirms; confirm remembers alias). Only `posted` expenses hit GL.

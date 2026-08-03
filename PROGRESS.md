@@ -9,11 +9,11 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | Separate Count cash / Close day — tests → commit with cash WIP |
-| **Last completed slice** | Count cash (draft only) vs Close day (post + optional send) split |
-| **Last tag** | `v0.partner-pack-summary-roll-forward` |
-| **Unpushed** | cash-count WIP + invite WIP + unlock + count/close split (prefer separate commits) |
-| **Next up** | Run frontend guards; fix books for 4.700 over if still needed; Railway invite env; commit. |
+| **Active slice** | **GS-FX** forex-only group sales (next) |
+| **Last completed slice** | **Custom member access (Option B)** — per-member grants, Edit access UI, migration `088` |
+| **Last tag** | *(pending)* `v0.custom-member-access` |
+| **Unpushed** | Custom member access WIP + prior unpushed slices — owner commit when ready |
+| **Next up** | Commit/tag custom access · deploy (Railway runs `088`) · GS-FX |
 
 ## FINANCIAL_AUDIT status (2026-07-27)
 

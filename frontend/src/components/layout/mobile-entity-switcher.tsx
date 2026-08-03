@@ -14,8 +14,8 @@ import { cn } from "@/lib/utils";
 export function MobileEntitySwitcher() {
   const { entityId, setEntityId, entities, visibleEntities, entitiesLoading } =
     useEntity();
-  const { role } = useEntityAccess();
-  const canSwitch = canSwitchEntity(role);
+  const { grants } = useEntityAccess();
+  const canSwitch = canSwitchEntity(grants);
   const listEntities = canSwitch ? entities : visibleEntities;
   const [open, setOpen] = useState(false);
   const active = listEntities.find((e) => e.id === entityId);

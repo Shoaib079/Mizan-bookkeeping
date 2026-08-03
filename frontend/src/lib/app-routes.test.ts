@@ -358,14 +358,14 @@ describe("command palette (UX-B data-first search)", () => {
     expect(source).toContain("prevEntityRef");
   });
 
-  it("gates actions behind canWriteOperations", async () => {
+  it("gates actions behind canWriteDailyTransactions", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/command-palette.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("canWriteOperations(role)");
+    expect(source).toContain("canWriteDailyTransactions(grants)");
     expect(source).toContain("filterRecordActions");
   });
 
@@ -465,7 +465,7 @@ describe("top-bar Record button", () => {
         "utf8",
       ),
     );
-    expect(source).toContain("shouldShowNewMenu(role)");
+    expect(source).toContain("shouldShowNewMenu(grants)");
     expect(source).toContain('href="/record"');
     expect(source).toContain("Plus");
     expect(source).toContain("bg-primary");

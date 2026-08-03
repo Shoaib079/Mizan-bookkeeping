@@ -27,6 +27,9 @@ import {
   type MembershipRow,
 } from "@/lib/settings-types";
 import { useEntityList } from "@/lib/use-entity-list";
+import { MemberAccessEditor } from "@/components/settings/member-access-editor";
+import type { Grant } from "@/lib/member-grants";
+import { isOwnerRole } from "@/lib/member-grants";
 
 export function TeamPanel() {
   const { entityId } = useEntity();
@@ -42,9 +45,41 @@ export function TeamPanel() {
   const [formOpen, setFormOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [accessMember, setAccessMember] = useState<MembershipRow | null>(null);
+  const [accessSaving, setAccessSaving] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+
+  async function onSaveAccess(payload: { role: EntityRole; grants: Grant[] }) {
+    if (!entityId || !accessMember) return;
+    setAccessSaving(true);
+    setAccessError(null);
+    try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
+      await apiFetch(`/entities/${entityId}/members/${accessMember.id}`, {
+        method: "PATCH",
+        idempotencyKey,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: payload.role, grants: payload.grants }),
+      });
+      submitIdempotency.completeSubmit();
+      toast("Access updated");
+      setAccessMember(null);
+      await reload();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setAccessError("You need owner access to manage members.");
+      } else if (err instanceof ApiError && err.status === 422) {
+        setAccessError(err.message);
+      } else {
+        setAccessError(err instanceof Error ? err.message : "Update failed");
+      }
+    } finally {
+      setAccessSaving(false);
+    }
+  }
 
   async function onRoleChange(membership: MembershipRow, role: EntityRole) {
-    if (!entityId || role === membership.role) return;
+    if (!entityId || role === membership.role || isOwnerRole(membership.role)) return;
     setUpdatingId(membership.id);
     setActionError(null);
     try {
@@ -133,7 +168,7 @@ export function TeamPanel() {
         <p className="mb-4 text-sm text-destructive">{actionError}</p>
       )}
 
-      {loading && <TableSkeleton columns={5} />}
+      {loading && <TableSkeleton columns={6} />}
 
       {!loading && teamMembers.length > 0 && (
         <DataTable key={entityId} tableClassName="min-w-[40rem]">
@@ -143,6 +178,7 @@ export function TeamPanel() {
               <DataTableHeaderCell>Email</DataTableHeaderCell>
               <DataTableHeaderCell>Role</DataTableHeaderCell>
               <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell>Access</DataTableHeaderCell>
               <DataTableHeaderCell align="right"> </DataTableHeaderCell>
             </tr>
           </DataTableHead>
@@ -156,23 +192,44 @@ export function TeamPanel() {
                   <span title={row.user.email ?? undefined}>{row.user.email}</span>
                 </DataTableCell>
                 <DataTableCell>
-                  <Select
-                    value={row.role}
-                    disabled={updatingId === row.id}
-                    onChange={(e) =>
-                      void onRoleChange(row, e.target.value as EntityRole)
-                    }
-                    className="w-full min-w-[10rem] max-w-[12rem]"
-                  >
-                    {ENTITY_ROLES.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </Select>
+                  {isOwnerRole(row.role) ? (
+                    <span className="text-sm font-medium">Owner</span>
+                  ) : (
+                    <Select
+                      value={row.role}
+                      disabled={updatingId === row.id}
+                      onChange={(e) =>
+                        void onRoleChange(row, e.target.value as EntityRole)
+                      }
+                      className="w-full min-w-[10rem] max-w-[12rem]"
+                    >
+                      {ENTITY_ROLES.filter((r) => r.value !== "owner").map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
                 </DataTableCell>
                 <DataTableCell className="whitespace-nowrap">
                   {row.user.is_active ? "Active" : "Inactive"}
+                </DataTableCell>
+                <DataTableCell className="whitespace-nowrap">
+                  {isOwnerRole(row.role) ? (
+                    <span className="text-sm text-muted-foreground">Full access</span>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={updatingId === row.id}
+                      onClick={() => {
+                        setAccessError(null);
+                        setAccessMember(row);
+                      }}
+                    >
+                      Edit access
+                    </Button>
+                  )}
                 </DataTableCell>
                 <DataTableCell align="right" className="whitespace-nowrap">
                   <Button
@@ -195,6 +252,23 @@ export function TeamPanel() {
           icon={Users}
           title="No members yet"
           hint="Add a user by email to grant access."
+        />
+      )}
+
+      {accessMember && (
+        <MemberAccessEditor
+          key={accessMember.id}
+          membership={accessMember}
+          open={accessMember !== null}
+          saving={accessSaving}
+          error={accessError}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAccessMember(null);
+              setAccessError(null);
+            }
+          }}
+          onSave={onSaveAccess}
         />
       )}
 

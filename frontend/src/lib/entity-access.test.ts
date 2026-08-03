@@ -1,163 +1,110 @@
 import { describe, expect, it } from "vitest";
 
-import { appRoutes } from "@/lib/app-routes";
 import {
-  ROLE_PERMISSIONS,
-  canWriteOperations,
+  canAccessAppPath,
+  canModifyEntryDate,
   canSwitchEntity,
-  canCreateEntity,
-  isOwner,
-  canManageExpenseItems,
-  visibleEntitiesForRole,
+  canWriteOperations,
+  filterAppRoutesForGrants,
   filterDashboardKpis,
-  filterDeliveryReportCards,
   filterFinancialReportCards,
-  filterNavItemsByEntitySettings,
-  filterRoutesByEntitySettings,
-  hasPermission,
-  shouldShowNewMenu,
-  shouldShowNetResultSummary,
   shouldShowWriteChrome,
+  visibleEntitiesForRole,
 } from "@/lib/entity-access";
+import { grantsForRole } from "@/lib/member-grants";
 
-describe("ROLE_PERMISSIONS matrix", () => {
-  it("matches backend financial_reports:read rules", () => {
-    expect(hasPermission("owner", "financial_reports:read")).toBe(true);
-    expect(hasPermission("partner", "financial_reports:read")).toBe(true);
-    expect(hasPermission("partner_view_only", "financial_reports:read")).toBe(true);
-    expect(hasPermission("cashier", "financial_reports:read")).toBe(false);
+describe("grant-based entity access", () => {
+  const ownerGrants = grantsForRole("owner");
+  const cashierGrants = grantsForRole("cashier");
+  const viewOnlyGrants = grantsForRole("partner_view_only");
+
+  it("owner has full operations write", () => {
+    expect(canWriteOperations(ownerGrants)).toBe(true);
+    expect(canWriteOperations(cashierGrants)).toBe(false);
+    expect(shouldShowWriteChrome(viewOnlyGrants)).toBe(false);
+    expect(shouldShowWriteChrome(ownerGrants)).toBe(true);
   });
 
-  it("matches backend operations:write rules", () => {
-    expect(hasPermission("owner", "operations:write")).toBe(true);
-    expect(hasPermission("cashier", "operations:write")).toBe(true);
-    expect(hasPermission("partner_view_only", "operations:write")).toBe(false);
-  });
-
-  it("covers all four roles", () => {
-    expect(Object.keys(ROLE_PERMISSIONS).sort()).toEqual([
-      "cashier",
-      "owner",
-      "partner",
-      "partner_view_only",
-    ]);
-  });
-});
-
-describe("entity switching", () => {
-  it("only owners may switch restaurants", () => {
-    expect(canSwitchEntity("owner")).toBe(true);
-    expect(canSwitchEntity("partner")).toBe(false);
-    expect(canSwitchEntity("cashier")).toBe(false);
-    expect(canSwitchEntity("partner_view_only")).toBe(false);
-  });
-
-  it("only owners may create restaurants", () => {
-    expect(canCreateEntity("owner")).toBe(true);
-    expect(canCreateEntity("partner")).toBe(false);
-    expect(canCreateEntity("cashier")).toBe(false);
-    expect(canCreateEntity("partner_view_only")).toBe(false);
-  });
-
-  it("owner-only actions use isOwner helper", () => {
-    expect(isOwner("owner")).toBe(true);
-    expect(isOwner("partner")).toBe(false);
-    expect(canManageExpenseItems("owner")).toBe(true);
-    expect(canManageExpenseItems("partner")).toBe(false);
+  it("switch entity follows scope grant", () => {
+    expect(canSwitchEntity(ownerGrants)).toBe(true);
+    expect(canSwitchEntity(grantsForRole("partner"))).toBe(false);
+    expect(canSwitchEntity(cashierGrants)).toBe(false);
   });
 });
 
 describe("visibleEntitiesForRole", () => {
   const entities = [
-    { id: "a", name: "India Gate" },
-    { id: "b", name: "Other Place" },
+    { id: "a", name: "A" },
+    { id: "b", name: "B" },
   ];
 
-  it("owners see every membership", () => {
-    expect(visibleEntitiesForRole(entities, "a", "owner")).toEqual(entities);
+  it("owner sees all restaurants", () => {
+    expect(
+      visibleEntitiesForRole(entities, "a", grantsForRole("owner")),
+    ).toEqual(entities);
   });
 
-  it("partners see only their assigned restaurant", () => {
-    expect(visibleEntitiesForRole(entities, "a", "partner")).toEqual([
-      { id: "a", name: "India Gate" },
-    ]);
-  });
-});
-
-describe("write chrome helpers", () => {
-  it("hides New menu and write actions for partner_view_only", () => {
-    expect(shouldShowNewMenu("partner_view_only")).toBe(false);
-    expect(shouldShowWriteChrome("partner_view_only")).toBe(false);
-    expect(canWriteOperations("partner_view_only")).toBe(false);
-  });
-
-  it("shows write chrome for cashier and owner", () => {
-    expect(shouldShowNewMenu("cashier")).toBe(true);
-    expect(shouldShowWriteChrome("owner")).toBe(true);
+  it("partner sees only assigned restaurant", () => {
+    expect(
+      visibleEntitiesForRole(entities, "a", grantsForRole("partner")),
+    ).toEqual([{ id: "a", name: "A" }]);
   });
 });
 
 describe("filterDashboardKpis", () => {
   const kpis = [
-    { key: "sales" as const, label: "Sales", value: "1 TL" },
-    { key: "expenses" as const, label: "Expenses", value: "2 TL" },
-    { key: "net_result" as const, label: "Net result", value: "3 TL" },
-    { key: "payables" as const, label: "Payables", value: "4 TL" },
-    { key: "receivables" as const, label: "Receivables", value: "5 TL" },
-    { key: "try_position" as const, label: "TRY position", value: "6 TL" },
-    { key: "needs_review" as const, label: "Needs review", value: "0" },
+    { key: "sales" as const, label: "Sales", value: "1" },
+    { key: "net_result" as const, label: "Net", value: "2" },
+    { key: "payables" as const, label: "Payables", value: "3" },
   ];
 
-  it("keeps all KPIs for owner", () => {
-    expect(filterDashboardKpis(kpis, "owner")).toHaveLength(7);
-  });
-
-  it("hides financial KPIs for cashier", () => {
-    const filtered = filterDashboardKpis(kpis, "cashier");
-    expect(filtered.map((k) => k.key)).toEqual([
-      "sales",
-      "expenses",
-      "needs_review",
-    ]);
-  });
-
-  it("hides net result summary for cashier", () => {
-    expect(shouldShowNetResultSummary("cashier")).toBe(false);
-    expect(shouldShowNetResultSummary("partner_view_only")).toBe(true);
+  it("hides financial KPIs for cashier grants", () => {
+    const filtered = filterDashboardKpis(kpis, grantsForRole("cashier"));
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]?.key).toBe("sales");
   });
 });
 
 describe("filterFinancialReportCards", () => {
   const cards = [
-    { href: "/reports/profit-and-loss", financial: true },
-    { href: "/reports/kdv-input", financial: false },
+    { title: "KDV", financial: false },
+    { title: "P&L", financial: true },
   ];
 
-  it("hides financial cards for cashier", () => {
-    expect(filterFinancialReportCards(cards, "cashier")).toEqual([
-      { href: "/reports/kdv-input", financial: false },
+  it("cashier sees non-financial cards only", () => {
+    expect(filterFinancialReportCards(cards, grantsForRole("cashier"))).toEqual([
+      { title: "KDV", financial: false },
     ]);
   });
 });
 
-describe("delivery setting filters", () => {
-  it("removes delivery routes when module is off", () => {
-    const settings = { deliveryEnabled: false };
-    const routes = filterRoutesByEntitySettings(appRoutes, settings);
-    expect(routes.some((r) => r.href.startsWith("/delivery"))).toBe(false);
-    expect(routes.some((r) => r.label === "New: Delivery report")).toBe(false);
+describe("canAccessAppPath", () => {
+  it("cashier preset paths", () => {
+    const grants = grantsForRole("cashier");
+    expect(canAccessAppPath(grants, "/record")).toBe(true);
+    expect(canAccessAppPath(grants, "/sales")).toBe(true);
+    expect(canAccessAppPath(grants, "/reports")).toBe(false);
+    expect(canAccessAppPath(grants, "/settings/profile")).toBe(true);
   });
+});
 
-  it("hides delivery nav item from Overview when module is off", () => {
-    const overview = appRoutes.filter((r) => r.group === "Overview" && !r.nestedUnder);
-    const filtered = filterNavItemsByEntitySettings(overview, { deliveryEnabled: false });
-    expect(filtered.some((r) => r.href === "/delivery")).toBe(false);
+describe("canModifyEntryDate", () => {
+  const ref = new Date("2026-08-15T12:00:00Z");
+
+  it("live month scope limits edit dates", () => {
+    const grants = grantsForRole("cashier");
+    expect(canModifyEntryDate(grants, "2026-08-10", ref)).toBe(true);
+    expect(canModifyEntryDate(grants, "2026-07-31", ref)).toBe(false);
+    expect(canModifyEntryDate(grantsForRole("owner"), "2026-07-31", ref)).toBe(
+      true,
+    );
   });
+});
 
-  it("hides delivery report card when module is off", () => {
-    const cards = [{ href: "/reports/delivery-sales" }, { href: "/reports/kdv-input" }];
-    expect(filterDeliveryReportCards(cards, false)).toEqual([
-      { href: "/reports/kdv-input" },
-    ]);
+describe("filterAppRoutesForGrants", () => {
+  it("filters routes by nav grants", () => {
+    const routes = [{ href: "/reports" }, { href: "/record" }];
+    const filtered = filterAppRoutesForGrants(routes, grantsForRole("cashier"));
+    expect(filtered).toEqual([{ href: "/record" }]);
   });
 });

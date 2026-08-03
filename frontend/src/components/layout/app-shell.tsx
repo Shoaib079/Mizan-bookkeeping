@@ -74,7 +74,7 @@ function AppShellInner({
   const isMobile = useIsMobileShell();
   const { deliveryEnabled } = useQuickActions();
   const { entityId } = useEntity();
-  const { role } = useEntityAccess();
+  const { grants } = useEntityAccess();
   const { counts: reviewCounts, loading: reviewLoading } = useReviewCounts(entityId);
 
   const navSettings = { deliveryEnabled };
@@ -82,7 +82,7 @@ function AppShellInner({
   const breadcrumb = breadcrumbForPathname(pathname, title);
   const onMobileTabRoot = isMobile && isMobileTabRoot(pathname);
   const showMobileTabs = isMobile;
-  const showRecordFab = shouldShowNewMenu(role);
+  const showRecordFab = shouldShowNewMenu(grants);
 
   const mobileTitle =
     pathname === "/"

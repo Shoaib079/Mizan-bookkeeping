@@ -1,13 +1,7 @@
-/** Global app rules — single source of truth for role/permission UI gates.
+/** Global app rules — single source of truth for grant-based UI gates.
  *
- * RULE: Every screen (desktop, mobile, dialog, menu) MUST use helpers here or
- * useEntityAccess() — never inline `role ===` checks in components.
- * Backend mirror: backend/app/core/auth/permissions.py
- *
- * Global enforcement layers:
- * - useEntityAccess() — one membership fetch per entity, shared context
- * - entity-switch-policy.ts + EntitySwitchGuard — blocks company switch globally
- * - entity-context setEntityId — respects switch policy on every code path
+ * RULE: Every screen MUST use helpers here or useEntityAccess() — never inline checks.
+ * Backend mirror: backend/app/core/auth/grants.py
  */
 
 import {
@@ -15,79 +9,145 @@ import {
   filterRoutesByEntitySettings,
   type EntityNavSettings,
 } from "@/lib/app-routes";
+import { isoToday } from "@/lib/date-range";
+import {
+  hasGrant,
+  recordActionGrant,
+  type Grant,
+} from "@/lib/member-grants";
 import type { EntityRole } from "@/lib/settings-types";
 
-export type Permission =
-  | "financial_reports:read"
-  | "operations:write"
-  | "admin:manage_members"
-  | "reports:read";
-
-const FULL_ACCESS: ReadonlySet<Permission> = new Set([
-  "financial_reports:read",
-  "operations:write",
-  "admin:manage_members",
-  "reports:read",
-]);
-
-const VIEW_AND_OPS_REPORTS: ReadonlySet<Permission> = new Set([
-  "operations:write",
-  "reports:read",
-]);
-
-const VIEW_ONLY: ReadonlySet<Permission> = new Set([
-  "financial_reports:read",
-  "reports:read",
-]);
-
-/** Keep in sync with backend ROLE_PERMISSIONS. */
-export const ROLE_PERMISSIONS: Record<EntityRole, ReadonlySet<Permission>> = {
-  owner: FULL_ACCESS,
-  partner: FULL_ACCESS,
-  cashier: VIEW_AND_OPS_REPORTS,
-  partner_view_only: VIEW_ONLY,
-};
-
-export function hasPermission(role: EntityRole, permission: Permission): boolean {
-  return ROLE_PERMISSIONS[role]?.has(permission) ?? false;
-}
+export type { Grant };
+export { hasGrant, grantsForRole, ROLE_PRESET_GRANTS, GRANT_GROUPS } from "@/lib/member-grants";
 
 export function isOwner(role: EntityRole): boolean {
   return role === "owner";
 }
 
-export function canManageMembers(role: EntityRole): boolean {
-  return hasPermission(role, "admin:manage_members");
+export function canManageMembers(grants: readonly string[]): boolean {
+  return hasGrant(grants, "admin:manage_members");
 }
 
 export function canManageExpenseItems(role: EntityRole): boolean {
   return isOwner(role);
 }
 
-export function canWriteOperations(role: EntityRole): boolean {
-  return hasPermission(role, "operations:write");
+export function canWriteOperations(grants: readonly string[]): boolean {
+  return hasGrant(grants, "operations:write");
 }
 
-export function canReadFinancialReports(role: EntityRole): boolean {
-  return hasPermission(role, "financial_reports:read");
+export function canWriteDailyTransactions(grants: readonly string[]): boolean {
+  return (
+    hasGrant(grants, "daily_transactions:write") ||
+    hasGrant(grants, "operations:write")
+  );
 }
 
-/** Only owners may switch or create restaurants — all other roles stay on assignment. */
-export function canSwitchEntity(role: EntityRole): boolean {
-  return isOwner(role);
+export function canReadReports(grants: readonly string[]): boolean {
+  return hasGrant(grants, "reports:read");
+}
+
+export function canAccessSettings(grants: readonly string[]): boolean {
+  return (
+    canWriteOperations(grants) ||
+    canManageMembers(grants) ||
+    hasGrant(grants, "nav:settings")
+  );
+}
+
+export function canUseRecordAction(
+  grants: readonly string[],
+  actionId: string,
+): boolean {
+  if (canWriteOperations(grants)) return true;
+  if (!canWriteDailyTransactions(grants)) return false;
+  const required = recordActionGrant(actionId);
+  if (required === null) return false;
+  return hasGrant(grants, required);
+}
+
+function normalizeRoutePath(pathname: string): string {
+  const base = pathname.split("?")[0]?.split("#")[0] ?? "/";
+  if (base.length > 1 && base.endsWith("/")) return base.slice(0, -1);
+  return base || "/";
+}
+
+function pathNavGrant(path: string): Grant | null {
+  if (path === "/") return "nav:dashboard";
+  if (path === "/record") return "nav:record";
+  if (path.startsWith("/review")) return "nav:review";
+  if (path.startsWith("/sales")) return "nav:sales";
+  if (path.startsWith("/delivery")) return "nav:delivery";
+  if (path.startsWith("/customers")) return "nav:customers";
+  if (path.startsWith("/suppliers")) return "nav:suppliers";
+  if (path.startsWith("/staff")) return "nav:staff";
+  if (path.startsWith("/partners")) return "nav:partners";
+  if (path.startsWith("/banking")) return "nav:banking";
+  if (path.startsWith("/cards")) return "nav:cards";
+  if (path.startsWith("/uploads")) return "nav:uploads";
+  if (path.startsWith("/reports")) return "nav:reports";
+  if (path.startsWith("/settings")) return "nav:settings";
+  if (path.startsWith("/onboarding")) return "nav:settings";
+  return null;
+}
+
+/** Profile is always reachable for signed-in members. */
+export function canAccessAppPath(
+  grants: readonly string[],
+  pathname: string,
+): boolean {
+  const path = normalizeRoutePath(pathname);
+  if (path === "/settings/profile") return true;
+  const navGrant = pathNavGrant(path);
+  if (navGrant === null) {
+    return canWriteOperations(grants);
+  }
+  return hasGrant(grants, navGrant);
+}
+
+export function requiresLiveMonthScope(grants: readonly string[]): boolean {
+  return (
+    hasGrant(grants, "scope:live_month_edit_void") &&
+    !hasGrant(grants, "operations:write")
+  );
+}
+
+export function canModifyEntryDate(
+  grants: readonly string[],
+  entryDateIso: string,
+  reference = new Date(),
+): boolean {
+  if (!requiresLiveMonthScope(grants)) return true;
+  const today = isoToday(reference);
+  const monthStart = `${reference.getFullYear()}-${String(reference.getMonth() + 1).padStart(2, "0")}-01`;
+  return entryDateIso >= monthStart && entryDateIso <= today;
+}
+
+export function filterAppRoutesForGrants<T extends { href: string }>(
+  routes: T[],
+  grants: readonly string[],
+): T[] {
+  return routes.filter((route) => canAccessAppPath(grants, route.href));
+}
+
+export function canReadFinancialReports(grants: readonly string[]): boolean {
+  return hasGrant(grants, "financial_reports:read");
+}
+
+export function canSwitchEntity(grants: readonly string[]): boolean {
+  return hasGrant(grants, "scope:switch_entity");
 }
 
 export function canCreateEntity(role: EntityRole): boolean {
   return isOwner(role);
 }
 
-/** Non-owners see only their assigned restaurant, not every membership on the account. */
 export function visibleEntitiesForRole<T extends { id: string }>(
   entities: T[],
   entityId: string,
-  role: EntityRole,
+  grants: readonly string[],
 ): T[] {
-  if (canSwitchEntity(role)) return entities;
+  if (canSwitchEntity(grants)) return entities;
   const current = entities.find((entity) => entity.id === entityId);
   if (current) return [current];
   return entities.length > 0 ? [entities[0]] : [];
@@ -120,32 +180,39 @@ const FINANCIAL_KPI_KEYS: ReadonlySet<DashboardKpiKey> = new Set([
   "bank_balance",
 ]);
 
-/** Hide P&L/balance-sheet KPIs for roles without financial_reports:read. */
 export function filterDashboardKpis(
   kpis: DashboardKpi[],
-  role: EntityRole,
+  grants: readonly string[],
 ): DashboardKpi[] {
-  if (canReadFinancialReports(role)) return kpis;
+  if (
+    canReadFinancialReports(grants) ||
+    hasGrant(grants, "scope:financial_dashboard_kpis")
+  ) {
+    return kpis;
+  }
   return kpis.filter((kpi) => !FINANCIAL_KPI_KEYS.has(kpi.key));
 }
 
-export function shouldShowNewMenu(role: EntityRole): boolean {
-  return canWriteOperations(role);
+export function shouldShowNewMenu(grants: readonly string[]): boolean {
+  return canWriteDailyTransactions(grants);
 }
 
-export function shouldShowWriteChrome(role: EntityRole): boolean {
-  return canWriteOperations(role);
+export function shouldShowWriteChrome(grants: readonly string[]): boolean {
+  return canWriteOperations(grants);
 }
 
-export function shouldShowNetResultSummary(role: EntityRole): boolean {
-  return canReadFinancialReports(role);
+export function shouldShowNetResultSummary(grants: readonly string[]): boolean {
+  return (
+    canReadFinancialReports(grants) ||
+    hasGrant(grants, "scope:financial_dashboard_kpis")
+  );
 }
 
 export function filterFinancialReportCards<T extends { financial: boolean }>(
   cards: T[],
-  role: EntityRole,
+  grants: readonly string[],
 ): T[] {
-  if (canReadFinancialReports(role)) return cards;
+  if (canReadFinancialReports(grants)) return cards;
   return cards.filter((card) => !card.financial);
 }
 
@@ -155,6 +222,23 @@ export function filterDeliveryReportCards<T extends { href: string }>(
 ): T[] {
   if (deliveryEnabled) return cards;
   return cards.filter((card) => !card.href.includes("/delivery"));
+}
+
+/** Journal sources editable under live-month scope (daily transaction posters). */
+export const LIVE_MONTH_JOURNAL_SOURCES = new Set<string>([
+  "pos_daily_summary",
+  "manual_daily_sales",
+  "expense",
+  "cash_drawer_close",
+]);
+
+export function canModifyJournalSource(
+  grants: readonly string[],
+  source: string,
+): boolean {
+  if (canWriteOperations(grants)) return true;
+  if (!requiresLiveMonthScope(grants)) return canWriteDailyTransactions(grants);
+  return LIVE_MONTH_JOURNAL_SOURCES.has(source);
 }
 
 export { filterNavItemsByEntitySettings, filterRoutesByEntitySettings };

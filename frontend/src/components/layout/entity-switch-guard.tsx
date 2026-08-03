@@ -14,7 +14,7 @@ import { useEntityAccess } from "@/lib/use-entity-access";
 
 export function EntitySwitchGuard() {
   const { entityId, setEntityId } = useEntity();
-  const { role, membershipSettled } = useEntityAccess();
+  const { grants, membershipSettled } = useEntityAccess();
   const lockedEntityIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function EntitySwitchGuard() {
       return;
     }
 
-    if (canSwitchEntity(role)) {
+    if (canSwitchEntity(grants)) {
       lockedEntityIdRef.current = null;
       resetEntitySwitchPolicy();
       return;
@@ -47,7 +47,7 @@ export function EntitySwitchGuard() {
     if (entityId !== lockedEntityId) {
       setEntityId(lockedEntityId);
     }
-  }, [entityId, membershipSettled, role, setEntityId]);
+  }, [entityId, membershipSettled, grants, setEntityId]);
 
   useEffect(() => {
     return () => resetEntitySwitchPolicy();

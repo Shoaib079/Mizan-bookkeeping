@@ -55,6 +55,8 @@ That last one is easy to forget and matters: an entry with no void route can be 
 
 **Period close lives in `core/period_locks`.** `service.py` (close/reopen), `guards.py` (the go-live floor and the soft lock, called from every posting path), `snapshot.py` (freeze the figures a closed month reported), `year_end.py` (move the year's result to Retained Earnings). The readiness rules that decide whether a month is *safe* to close are a product decision and live in `features/period_locks/readiness.py` — core stays the generic lock primitive that day-close and tests also use.
 
+**Auth & access live in `core/auth/`.** `permissions.py` — API-level guards (`financial_reports:read`, `operations:write`, etc.). `grants.py` — full per-member catalog (nav, Record actions, scopes); stored on `entity_memberships.grants` (migration `088`). Frontend mirror: `frontend/src/lib/member-grants.ts` + `entity-access.ts`; runtime fetch via `GET .../members/me`. Role names (`owner`, `cashier`, …) are presets/labels; enforcement uses the grant list.
+
 ---
 
 ## Frontend structure (Next.js)

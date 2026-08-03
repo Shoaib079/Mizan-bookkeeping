@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.auth.types import EntityRole
@@ -39,6 +40,7 @@ class EntityMembership(EntityScopedMixin, Base):
         index=True,
     )
     role: Mapped[str] = mapped_column(String(32), nullable=False)
+    grants: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     user: Mapped[User] = relationship(back_populates="memberships")

@@ -36,8 +36,8 @@ export default function ProfileSettingsPage() {
   const { clerkEnabled } = useApiAuth();
   const { userProfile, refreshUserProfile, entities, visibleEntities, entityId, setEntityId } =
     useEntity();
-  const { role } = useEntityAccess();
-  const canSwitch = canSwitchEntity(role);
+  const { role, grants } = useEntityAccess();
+  const canSwitch = canSwitchEntity(grants);
   const listEntities = canSwitch ? entities : visibleEntities;
   const { dark, mounted, setDarkMode } = useTheme();
   const { toast } = useToast();

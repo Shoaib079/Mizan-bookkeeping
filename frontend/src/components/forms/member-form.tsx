@@ -140,7 +140,7 @@ export function MemberForm({ open, onClose, onSaved }: Props) {
             value={role}
             onChange={(e) => setRole(e.target.value as EntityRole)}
           >
-            {ENTITY_ROLES.map((r) => (
+            {ENTITY_ROLES.filter((r) => r.value !== "owner").map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
               </option>

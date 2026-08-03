@@ -4,6 +4,12 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-03
 
+**Custom member access (Option B — owner-configured grants).**
+- Settings → **Members & roles → Edit access** per person: grouped checkboxes (pages, posting, Record actions, limits) with **Owner / Partner / Cashier / View-only** presets as shortcuts.
+- Stored on `entity_memberships.grants` (JSONB); backfilled from role on migration **`088_membership_grants`**. **`GET/PATCH .../members`** and **`GET .../members/me`** return resolved grants; backend guards + frontend `entity-access.ts` / `useEntityAccess()` enforce the same list (not role-name hacks).
+- Live-month edit/void scope applies when grant `scope:live_month_edit_void` is set without full `operations:write`.
+- **Deploy / local:** run `alembic upgrade head` before using the new code — without migration `088`, the members list returns 500 (missing column).
+
 **Partner capital — cash/bank form + required note.**
 - Record capital from **People → Partners** (partner page) or Record (people picker) into cash or bank.
 - Note is required (why they invested) on that form and when classifying a bank inflow as Partner capital.

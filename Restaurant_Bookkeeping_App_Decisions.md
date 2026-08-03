@@ -223,10 +223,11 @@ Upload/ingestion (+ fingerprint) · AI read · Match & identify · Needs Review 
 
 ## 18. Roles & permissions (per restaurant)
 
-- **Owner + active partners:** full access.
+- **Owner + active partners:** full access by default (preset grants).
 - **Cashier:** limited — add data and correct mistakes only, on **recent/unlocked** entries; all changes **audit-logged**. Sees only their assigned restaurant.
 - **Inactive partner:** view-only, no changes.
-- Roles are built as an **extensible permission layer**, so finer per-module permissions can be added later without rework. Access is always **per entity**.
+- **Custom access (Option B):** the owner configures **per-member grants** per restaurant via Settings → Members → **Edit access** (non-owners only). Role presets (Owner / Partner / Cashier / View-only) are shortcuts that fill the grant checklist; the saved truth is the member's **grant list**, not the preset name alone. **Owner memberships always have full access** — not editable via the grant UI; the restaurant creator is owner by default.
+- Roles remain as an **extensible permission layer** with a canonical grant catalog (`backend/app/core/auth/grants.py`, mirrored in `frontend/src/lib/member-grants.ts`). Access is always **per entity**.
 
 ---
 

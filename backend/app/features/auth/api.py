@@ -15,6 +15,7 @@ from app.core.auth.deps import (
     require_entity_membership,
     resolve_current_user,
 )
+from app.core.auth.grants import grants_for_role, grants_to_strings
 from app.core.auth.types import EntityRole
 from app.db.session import get_session
 from app.features.auth import service
@@ -108,6 +109,7 @@ def get_my_membership(
         return MyMembershipRead(
             role=EntityRole.OWNER,
             permissions=service.permissions_for_role(EntityRole.OWNER),
+            grants=grants_to_strings(grants_for_role(EntityRole.OWNER)),
         )
 
     user = resolve_current_user(session, authorization)
@@ -130,7 +132,7 @@ def list_members(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return paginated_list(
-        [MembershipRead.model_validate(m) for m in memberships],
+        [service.membership_to_read(m) for m in memberships],
         total=total,
         limit=list_params.limit,
         offset=list_params.offset,
@@ -147,7 +149,7 @@ def add_member(
     try:
         if payload.user_id is not None:
             membership = service.add_entity_member(session, entity_id, payload)
-            return MembershipRead.model_validate(membership)
+            return service.membership_to_read(membership)
         assert payload.email is not None
         return service.invite_member_by_email(
             session,
@@ -176,7 +178,13 @@ def update_member(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return MembershipRead.model_validate(membership)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except service.CannotEditOwnerAccessError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except service.LastOwnerError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return service.membership_to_read(membership)
 
 
 @members_router.delete("/{membership_id}", status_code=204)

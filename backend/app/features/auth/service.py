@@ -14,18 +14,27 @@ from app.core.auth.clerk_invitations import (
     ClerkInviteResult,
     create_clerk_invitation,
 )
+from app.core.auth.grants import (
+    Grant,
+    InvalidGrantsError,
+    effective_grants,
+    grants_for_role,
+    grants_to_strings,
+    validate_grants,
+)
 from app.core.auth.permissions import ROLE_PERMISSIONS
 from app.core.auth.types import EntityRole
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.db.session import entity_context
-from app.features.auth.schema import MyMembershipRead
 from app.features.auth.audit import AuthAuditAction, record_auth_event
 from app.features.auth.models import EntityMembership, User
 from app.features.auth.schema import (
     MembershipCreate,
     MembershipRead,
     MembershipUpdate,
+    MyMembershipRead,
     UserCreate,
+    UserRead,
     UserUpdate,
 )
 from app.features.entities import service as entity_service
@@ -39,6 +48,16 @@ class DuplicateMembershipError(Exception):
     """Raised when user is already a member of the entity."""
 
     def __init__(self, message: str = "Already a member of this restaurant.") -> None:
+        super().__init__(message)
+
+
+class CannotEditOwnerAccessError(Exception):
+    """Raised when a PATCH tries to customize grants for an owner membership."""
+
+    def __init__(
+        self,
+        message: str = "Owner access is fixed and cannot be edited.",
+    ) -> None:
         super().__init__(message)
 
 
@@ -174,6 +193,31 @@ def permissions_for_role(role: EntityRole, *, is_active: bool = True) -> list[st
     return sorted(p.value for p in perms)
 
 
+def permissions_for_membership(membership: EntityMembership) -> list[str]:
+    grants = effective_grants(
+        membership.entity_role,
+        membership.grants,
+        is_active=membership.user.is_active,
+    )
+    api_values = {
+        Grant.FINANCIAL_REPORTS_READ.value,
+        Grant.OPERATIONS_WRITE.value,
+        Grant.DAILY_TRANSACTIONS_WRITE.value,
+        Grant.ADMIN_MANAGE_MEMBERS.value,
+        Grant.REPORTS_READ.value,
+    }
+    return sorted(g.value for g in grants if g.value in api_values)
+
+
+def grants_for_membership(membership: EntityMembership) -> list[str]:
+    grants = effective_grants(
+        membership.entity_role,
+        membership.grants,
+        is_active=membership.user.is_active,
+    )
+    return grants_to_strings(grants)
+
+
 def get_user_membership(
     session: Session, entity_id: uuid.UUID, user_id: uuid.UUID
 ) -> EntityMembership | None:
@@ -190,11 +234,25 @@ def get_user_membership(
         )
 
 
+def membership_to_read(membership: EntityMembership) -> MembershipRead:
+    """Build API row — always resolve grants (NULL DB values fall back to role preset)."""
+    return MembershipRead(
+        id=membership.id,
+        entity_id=membership.entity_id,
+        user_id=membership.user_id,
+        role=membership.entity_role,
+        grants=grants_for_membership(membership),
+        created_at=membership.created_at,
+        user=UserRead.model_validate(membership.user),
+    )
+
+
 def build_my_membership_read(membership: EntityMembership) -> MyMembershipRead:
     role = membership.entity_role
     return MyMembershipRead(
         role=role,
-        permissions=permissions_for_role(role, is_active=membership.user.is_active),
+        permissions=permissions_for_membership(membership),
+        grants=grants_for_membership(membership),
     )
 
 
@@ -240,6 +298,7 @@ def add_entity_member(
             entity_id=entity_id,
             user_id=payload.user_id,
             role=payload.role.value,
+            grants=grants_to_strings(grants_for_role(payload.role)),
         )
         session.add(membership)
         try:
@@ -292,7 +351,7 @@ def invite_member_by_email(
             invite = ClerkInviteResult(outcome="failed", detail=str(exc))
 
     # Snapshot before audit commit (expires ORM instances / RLS context).
-    result = MembershipRead.model_validate(membership).model_copy(
+    result = membership_to_read(membership).model_copy(
         update={
             "invite_sent": invite.sent,
             "invite_status": invite.outcome,
@@ -336,8 +395,35 @@ def update_entity_member(
         if membership is None:
             raise LookupError("Membership not found")
 
+        if membership.entity_role == EntityRole.OWNER and payload.grants is not None:
+            raise CannotEditOwnerAccessError()
+
+        next_role = membership.entity_role if payload.role is None else payload.role
+
+        if payload.grants is not None:
+            try:
+                normalized = validate_grants(payload.grants, role=next_role)
+            except InvalidGrantsError as exc:
+                raise ValueError(str(exc)) from exc
+            membership.grants = normalized
+
         if payload.role is not None:
+            if (
+                membership.entity_role == EntityRole.OWNER
+                and payload.role != EntityRole.OWNER
+            ):
+                owners = session.scalars(
+                    select(EntityMembership).where(
+                        EntityMembership.entity_id == entity_id,
+                        EntityMembership.role == EntityRole.OWNER.value,
+                    )
+                ).all()
+                if len(owners) <= 1:
+                    raise LastOwnerError("Cannot demote the last owner of this restaurant.")
             membership.role = payload.role.value
+            if payload.grants is None:
+                membership.grants = grants_to_strings(grants_for_role(payload.role))
+
         if payload.is_active is not None:
             membership.user.is_active = payload.is_active
 

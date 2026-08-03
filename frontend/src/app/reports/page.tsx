@@ -165,7 +165,7 @@ export default function ReportsPage() {
 function ReportsBody() {
   const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
-  const { role } = useEntityAccess();
+  const { grants } = useEntityAccess();
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [range, setRange] = useState(currentMonthRange);
   const [summary, setSummary] = useState<DashboardRead | null>(null);
@@ -185,10 +185,10 @@ function ReportsBody() {
   const visibleCards = useMemo(
     () =>
       filterDeliveryReportCards(
-        filterFinancialReportCards(reportCards, role),
+        filterFinancialReportCards(reportCards, grants),
         deliveryEnabled,
       ),
-    [role, deliveryEnabled],
+    [grants, deliveryEnabled],
   );
 
   const reload = useCallback(async () => {
@@ -225,12 +225,12 @@ function ReportsBody() {
     (summary ? (
       <ReportsPeriodSummary
         summary={summary}
-        role={role}
+        grants={grants}
         refreshing={loading}
       />
     ) : !summaryError ? (
       <ReportsPeriodSummarySkeleton
-        showNet={shouldShowNetResultSummary(role)}
+        showNet={shouldShowNetResultSummary(grants)}
       />
     ) : null);
 

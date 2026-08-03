@@ -63,7 +63,7 @@ const DOCUMENT_ROUTE: Record<DetectedDocumentType, RecordActionKey> = {
 
 export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
   const { entityId } = useEntity();
-  const { role } = useEntityAccess();
+  const { grants } = useEntityAccess();
   const {
     deliveryEnabled,
     openRecordAction,
@@ -93,19 +93,19 @@ export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
   );
 
   const primaryActions = useMemo(
-    () => primaryRecordActions({ deliveryEnabled }),
-    [deliveryEnabled],
+    () => primaryRecordActions({ deliveryEnabled, grants }),
+    [deliveryEnabled, grants],
   );
 
   const moreSections = useMemo(() => {
     const sections: { section: RecordSectionId; actions: RecordActionDef[] }[] =
-      [...dailyVisibleSections({ deliveryEnabled })];
-    const occasional = occasionalRecordActions({ deliveryEnabled });
+      [...dailyVisibleSections({ deliveryEnabled, grants })];
+    const occasional = occasionalRecordActions({ deliveryEnabled, grants });
     if (occasional.length > 0) {
       sections.push({ section: "occasional", actions: occasional });
     }
     return sections;
-  }, [deliveryEnabled]);
+  }, [deliveryEnabled, grants]);
 
   const moreActions = useMemo(
     () => moreSections.flatMap((group) => group.actions),
@@ -119,7 +119,7 @@ export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
     : DESK_SHORT_LABELS.sales;
   const ActiveIcon = activeAction?.icon;
 
-  if (!shouldShowNewMenu(role)) {
+  if (!shouldShowNewMenu(grants)) {
     return (
       <p className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
         View only — you can review figures under Reports and the dashboard, but

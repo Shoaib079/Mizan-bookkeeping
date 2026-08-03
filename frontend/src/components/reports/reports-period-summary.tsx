@@ -5,18 +5,17 @@ import { shouldShowNetResultSummary } from "@/lib/entity-access";
 import { formatFxNative } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import type { DashboardRead } from "@/lib/report-types";
-import type { EntityRole } from "@/lib/settings-types";
 import { cn } from "@/lib/utils";
 
 type Props = {
   summary: DashboardRead;
-  role: EntityRole;
+  grants: readonly string[];
   refreshing?: boolean;
 };
 
 export function ReportsPeriodSummary({
   summary,
-  role,
+  grants,
   refreshing = false,
 }: Props) {
   return (
@@ -40,7 +39,7 @@ export function ReportsPeriodSummary({
             {formatTry(summary.total_expenses_kurus)}
           </span>
         </div>
-        {shouldShowNetResultSummary(role) && (
+        {shouldShowNetResultSummary(grants) && (
           <div>
             <span className="text-muted-foreground">Net · </span>
             <span className="font-medium tabular-nums">

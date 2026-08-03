@@ -10,7 +10,9 @@ import {
   type AppRoute,
   type EntityNavSettings,
 } from "@/lib/app-routes";
+import { filterAppRoutesForGrants } from "@/lib/entity-access";
 import { cn } from "@/lib/utils";
+import { useEntityAccess } from "@/lib/use-entity-access";
 
 type SidebarNavProps = {
   pathname: string;
@@ -51,11 +53,15 @@ export function SidebarNav({
   settings,
   reviewTotal = 0,
 }: SidebarNavProps) {
+  const { grants } = useEntityAccess();
   const overview = navGroups.find((group) => group.label === "Overview");
   const dashboard = overview?.items.find((item) => item.href === "/");
-  const hubItems = filterNavItemsByEntitySettings(
-    overview?.items.filter((item) => item.href !== "/") ?? [],
-    settings,
+  const hubItems = filterAppRoutesForGrants(
+    filterNavItemsByEntitySettings(
+      overview?.items.filter((item) => item.href !== "/") ?? [],
+      settings,
+    ),
+    grants,
   );
 
   return (
@@ -82,7 +88,10 @@ export function SidebarNav({
       {navGroups
         .filter((group) => group.label !== "Overview")
         .map((group) => {
-          const items = filterNavItemsByEntitySettings(group.items, settings);
+          const items = filterAppRoutesForGrants(
+            filterNavItemsByEntitySettings(group.items, settings),
+            grants,
+          );
           if (items.length === 0) return null;
 
           return (

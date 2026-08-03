@@ -47,7 +47,7 @@ export function RecordActionModals({
   routedFile = null,
   routedTo = null,
 }: Props) {
-  const { canWriteOperations } = useEntityAccess();
+  const { canWriteDailyTransactions } = useEntityAccess();
   const { deliveryEnabled, openRecordAction, openRecordActionWithFile } =
     useQuickActions();
 
@@ -92,7 +92,7 @@ export function RecordActionModals({
     effectiveModal === "fxConvert" ||
     effectiveModal === "fxSpend";
 
-  if (!canWriteOperations) return null;
+  if (!canWriteDailyTransactions) return null;
 
   return (
     <>

@@ -7,11 +7,14 @@ import {
   Menu,
   Plus,
   ScanSearch,
+  ShoppingBag,
 } from "lucide-react";
 
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { activeMobileTab } from "@/lib/mobile-shell";
+import { hasGrant } from "@/lib/entity-access";
 import { useUnsavedWork } from "@/lib/unsaved-work";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 type MobileBottomTabsProps = {
@@ -104,7 +107,11 @@ export function MobileBottomTabs({
   const pathname = usePathname();
   const router = useRouter();
   const { requestLeave } = useUnsavedWork();
+  const { grants } = useEntityAccess();
   const tab = activeMobileTab(pathname);
+  const showReview = hasGrant(grants, "nav:review");
+  const showBanking = hasGrant(grants, "nav:banking");
+  const showSalesTab = hasGrant(grants, "nav:sales") && !showBanking;
 
   function navigate(href: string) {
     if (href === pathname) return;
@@ -124,14 +131,16 @@ export function MobileBottomTabs({
           active={tab === "/"}
           onNavigate={navigate}
         />
-        <TabLink
-          href="/review"
-          label="Review"
-          icon={ScanSearch}
-          active={tab === "/review"}
-          badge={reviewTotal}
-          onNavigate={navigate}
-        />
+        {showReview && (
+          <TabLink
+            href="/review"
+            label="Review"
+            icon={ScanSearch}
+            active={tab === "/review"}
+            badge={reviewTotal}
+            onNavigate={navigate}
+          />
+        )}
         {showRecord ? (
           <RecordFab active={tab === "/record"} onNavigate={navigate} />
         ) : (
@@ -143,20 +152,33 @@ export function MobileBottomTabs({
             onNavigate={navigate}
           />
         )}
-        <TabLink
-          href="/banking"
-          label="Banking"
-          icon={Building2}
-          active={tab === "/banking"}
-          onNavigate={navigate}
-        />
-        <TabLink
-          href="/more"
-          label="More"
-          icon={Menu}
-          active={tab === "/more"}
-          onNavigate={navigate}
-        />
+        {showBanking && (
+          <>
+            <TabLink
+              href="/banking"
+              label="Banking"
+              icon={Building2}
+              active={tab === "/banking"}
+              onNavigate={navigate}
+            />
+            <TabLink
+              href="/more"
+              label="More"
+              icon={Menu}
+              active={tab === "/more"}
+              onNavigate={navigate}
+            />
+          </>
+        )}
+        {showSalesTab && (
+          <TabLink
+            href="/sales"
+            label="Sales"
+            icon={ShoppingBag}
+            active={pathname.startsWith("/sales")}
+            onNavigate={navigate}
+          />
+        )}
       </div>
     </nav>
   );

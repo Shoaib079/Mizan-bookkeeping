@@ -19,6 +19,8 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { canUseRecordAction } from "@/lib/entity-access";
+
 /** Modal shortcuts wired from New menu and command palette. */
 export type QuickActionKey =
   | "expense"
@@ -405,15 +407,16 @@ export function recordActionById(id: RecordActionKey): RecordActionDef {
 
 export function filterRecordActions(
   actions: RecordActionDef[],
-  opts: { deliveryEnabled: boolean },
+  opts: { deliveryEnabled: boolean; grants?: readonly string[] },
 ): RecordActionDef[] {
-  return actions.filter(
-    (action) => !action.requiresDelivery || opts.deliveryEnabled,
-  );
+  return actions.filter((action) => {
+    if (opts.grants && !canUseRecordAction(opts.grants, action.id)) return false;
+    return !action.requiresDelivery || opts.deliveryEnabled;
+  });
 }
 
 export function primaryRecordActions(
-  opts: { deliveryEnabled: boolean },
+  opts: { deliveryEnabled: boolean; grants?: readonly string[] },
 ): RecordActionDef[] {
   const available = filterRecordActions(RECORD_ACTIONS, opts);
   return PRIMARY_RECORD_ACTION_IDS.map((id) =>
@@ -423,7 +426,7 @@ export function primaryRecordActions(
 
 export function recordActionsBySection(
   section: RecordSectionId,
-  opts: { deliveryEnabled: boolean },
+  opts: { deliveryEnabled: boolean; grants?: readonly string[] },
 ): RecordActionDef[] {
   const primary = new Set<RecordActionKey>(PRIMARY_RECORD_ACTION_IDS);
   return filterRecordActions(
@@ -438,7 +441,7 @@ export function recordActionsBySection(
 }
 
 export function dailyVisibleSections(
-  opts: { deliveryEnabled: boolean },
+  opts: { deliveryEnabled: boolean; grants?: readonly string[] },
 ): { section: RecordSectionId; actions: RecordActionDef[] }[] {
   return DAILY_VISIBLE_SECTIONS.map((section) => ({
     section,
@@ -447,7 +450,7 @@ export function dailyVisibleSections(
 }
 
 export function occasionalRecordActions(
-  opts: { deliveryEnabled: boolean },
+  opts: { deliveryEnabled: boolean; grants?: readonly string[] },
 ): RecordActionDef[] {
   return recordActionsBySection("occasional", opts);
 }

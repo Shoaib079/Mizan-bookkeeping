@@ -10,8 +10,8 @@ describe("global app rules", () => {
       "utf8",
     );
     expect(source).toContain("Global app rules");
-    expect(source).toContain("entity-switch-policy");
-    expect(source).toContain("EntitySwitchGuard");
+    expect(source).toContain("useEntityAccess()");
+    expect(source).toContain("member-grants");
   });
 
   it("entity switch policy gates setEntityId globally", async () => {
@@ -27,6 +27,7 @@ describe("global app rules", () => {
       "utf8",
     );
     expect(providers).toContain("EntitySwitchGuard");
+    expect(providers).toContain("RouteAccessGuard");
   });
 
   it("expense item merge uses global canManageExpenseItems", async () => {

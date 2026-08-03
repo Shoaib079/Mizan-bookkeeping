@@ -50,8 +50,9 @@ def test_role_permission_map() -> None:
     assert Permission.ADMIN_MANAGE_MEMBERS in owner_perms
 
     cashier_perms = ROLE_PERMISSIONS[EntityRole.CASHIER]
-    assert Permission.REPORTS_READ in cashier_perms
-    assert Permission.OPERATIONS_WRITE in cashier_perms
+    assert Permission.DAILY_TRANSACTIONS_WRITE in cashier_perms
+    assert Permission.OPERATIONS_WRITE not in cashier_perms
+    assert Permission.REPORTS_READ not in cashier_perms
     assert Permission.FINANCIAL_REPORTS_READ not in cashier_perms
     assert Permission.ADMIN_MANAGE_MEMBERS not in cashier_perms
 
@@ -420,7 +421,8 @@ def test_get_my_membership_when_auth_enforced(
     assert response.status_code == 200
     body = response.json()
     assert body["role"] == "cashier"
-    assert "operations:write" in body["permissions"]
+    assert "daily_transactions:write" in body["permissions"]
+    assert "operations:write" not in body["permissions"]
     assert "financial_reports:read" not in body["permissions"]
 
 
@@ -437,6 +439,8 @@ def test_get_my_membership_dev_mode_defaults_owner(
     assert body["role"] == "owner"
     assert "operations:write" in body["permissions"]
     assert "financial_reports:read" in body["permissions"]
+    assert "scope:switch_entity" in body["grants"]
+    assert "scope:switch_entity" in body["grants"]
 
 
 def test_get_my_membership_dev_mode_x_user_id_lookup(
@@ -852,6 +856,135 @@ def test_patch_users_me_updates_display_name(
     )
     assert response.status_code == 200
     assert response.json()["display_name"] == "Updated Name"
+
+
+def test_get_my_membership_includes_grants(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    cashier = _create_user(db_session, "grants-cashier@example.com", "Cashier")
+    _add_member(db_session, setup["entity_id"], cashier.id, EntityRole.CASHIER)
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/members/me",
+        headers=auth_headers(cashier),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "financial_reports:read" not in body["permissions"]
+    assert "nav:record" in body["grants"]
+    assert "scope:live_month_edit_void" in body["grants"]
+
+
+def test_owner_can_customize_member_grants(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    owner = _create_user(db_session, "grant-owner@example.com", "Owner")
+    member = _create_user(db_session, "grant-member@example.com", "Member")
+    _add_member(db_session, setup["entity_id"], owner.id, EntityRole.OWNER)
+    membership = _add_member(
+        db_session, setup["entity_id"], member.id, EntityRole.CASHIER
+    )
+
+    custom_grants = sorted(
+        {
+            "nav:dashboard",
+            "nav:record",
+            "nav:sales",
+            "nav:reports",
+            "daily_transactions:write",
+            "record:sales",
+            "record:expense",
+            "record:count_cash",
+            "record:close_day",
+            "scope:live_month_edit_void",
+            "reports:read",
+        }
+    )
+
+    patch = client.patch(
+        f"/entities/{setup['entity_id']}/members/{membership.id}",
+        json={"grants": custom_grants},
+        headers=auth_headers(owner),
+    )
+    assert patch.status_code == 200
+    assert "nav:reports" in patch.json()["grants"]
+
+    me = client.get(
+        f"/entities/{setup['entity_id']}/members/me",
+        headers=auth_headers(member),
+    )
+    assert me.status_code == 200
+    assert "nav:reports" in me.json()["grants"]
+    assert "reports:read" in me.json()["permissions"]
+
+
+def test_patch_member_grants_validates_live_month_rule(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    owner = _create_user(db_session, "validate-owner@example.com", "Owner")
+    member = _create_user(db_session, "validate-member@example.com", "Member")
+    _add_member(db_session, setup["entity_id"], owner.id, EntityRole.OWNER)
+    membership = _add_member(
+        db_session, setup["entity_id"], member.id, EntityRole.CASHIER
+    )
+
+    response = client.patch(
+        f"/entities/{setup['entity_id']}/members/{membership.id}",
+        json={
+            "grants": [
+                "daily_transactions:write",
+                "nav:record",
+                "record:sales",
+            ]
+        },
+        headers=auth_headers(owner),
+    )
+    assert response.status_code == 422
+    assert "live_month" in response.json()["detail"].lower()
+
+
+def test_patch_owner_grants_rejected(
+    auth_enforced,
+    client: TestClient,
+    db_session: Session,
+    roles_entity_setup,
+) -> None:
+    setup = roles_entity_setup
+    owner = _create_user(db_session, "immutable-owner@example.com", "Owner")
+    actor = _create_user(db_session, "actor-owner@example.com", "Actor")
+    membership = _add_member(db_session, setup["entity_id"], owner.id, EntityRole.OWNER)
+    membership_id = membership.id
+    _add_member(db_session, setup["entity_id"], actor.id, EntityRole.OWNER)
+
+    response = client.patch(
+        f"/entities/{setup['entity_id']}/members/{membership_id}",
+        json={"grants": ["nav:record", "daily_transactions:write"]},
+        headers=auth_headers(actor),
+    )
+    assert response.status_code == 422
+    assert "fixed" in response.json()["detail"].lower()
+
+
+def test_owner_effective_grants_ignore_stored_restrictions() -> None:
+    from app.core.auth.grants import Grant, effective_grants
+    from app.features.auth.models import EntityRole
+
+    grants = effective_grants(EntityRole.OWNER, ["nav:record"])
+    assert Grant.ADMIN_MANAGE_MEMBERS in grants
+    assert Grant.OPERATIONS_WRITE in grants
+    assert Grant.SCOPE_SWITCH_ENTITY in grants
 
 
 def test_patch_users_me_requires_authenticated_user(

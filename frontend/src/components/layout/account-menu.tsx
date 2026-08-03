@@ -27,7 +27,7 @@ import {
 } from "@/lib/account-menu-helpers";
 import { useApiAuth } from "@/lib/api-auth";
 import { clearMizanStorage, useEntity } from "@/lib/entity-context";
-import { canCreateEntity, canSwitchEntity } from "@/lib/entity-access";
+import { canCreateEntity, canSwitchEntity, canAccessSettings } from "@/lib/entity-access";
 import { entityAccentColor, userInitials } from "@/lib/entity-visual";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { useToast } from "@/lib/toast";
@@ -85,9 +85,10 @@ function AccountMenuPanel({
     entitiesError,
     userProfile,
   } = useEntity();
-  const { role } = useEntityAccess();
-  const canSwitch = canSwitchEntity(role);
+  const { role, grants } = useEntityAccess();
+  const canSwitch = canSwitchEntity(grants);
   const canCreate = canCreateEntity(role);
+  const showSettings = canAccessSettings(grants);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -331,6 +332,8 @@ function AccountMenuPanel({
               <User className="size-4 text-muted-foreground" />
               Your profile
             </Link>
+            {showSettings && (
+            <>
             <Link
               href="/settings/restaurant"
               role="menuitem"
@@ -353,6 +356,8 @@ function AccountMenuPanel({
               <Plus className="size-4 text-muted-foreground" />
               Add restaurant
             </button>
+            )}
+            </>
             )}
           </div>
 

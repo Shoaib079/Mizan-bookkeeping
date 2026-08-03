@@ -1,6 +1,6 @@
 /** First-run onboarding checklist — Phase 12 Slice 12.0. */
 
-import { hasPermission } from "@/lib/entity-access";
+import { canManageMembers } from "@/lib/entity-access";
 import type { EntityRole } from "@/lib/settings-types";
 
 export type OnboardingState = {
@@ -29,6 +29,7 @@ export function shouldShowOnboardingChecklist(role: EntityRole): boolean {
 export function buildOnboardingSteps(
   state: OnboardingState,
   role: EntityRole,
+  grants: readonly string[],
 ): OnboardingStep[] {
   const steps: OnboardingStep[] = [
     {
@@ -39,7 +40,7 @@ export function buildOnboardingSteps(
     },
   ];
 
-  if (hasPermission(role, "admin:manage_members")) {
+  if (canManageMembers(grants)) {
     steps.push({
       id: "invite_staff",
       label: "Invite staff",

@@ -20,7 +20,7 @@ from app.core.pos.posting import (
 from app.core.ledger.posting import PostingError
 from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.core.auth.deps import daily_transactions_write_guard, member_read_guard, operations_write_guard, resolve_actor_id
 from app.features.auth.models import User
 from app.features.pos import daily_summary_service
 from app.features.pos import service as pos_service
@@ -400,7 +400,7 @@ def correct_pos_daily_summary(
     summary_id: uuid.UUID,
     payload: CorrectPosDailySummaryRequest,
     session: Session = Depends(get_session),
-    _guard: User | None = Depends(operations_write_guard),
+    _guard: User | None = Depends(daily_transactions_write_guard),
 ) -> PosDailySummaryRead:
     payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
@@ -422,7 +422,7 @@ def create_manual_daily_sales(
     entity_id: uuid.UUID,
     payload: ManualDailySalesRequest,
     session: Session = Depends(get_session),
-    _guard: User | None = Depends(operations_write_guard),
+    _guard: User | None = Depends(daily_transactions_write_guard),
 ) -> PosDailySummaryRead:
     payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
@@ -466,7 +466,7 @@ def void_pos_daily_summary(
     summary_id: uuid.UUID,
     payload: VoidJournalEntryRequest,
     session: Session = Depends(get_session),
-    _guard: User | None = Depends(operations_write_guard),
+    _guard: User | None = Depends(daily_transactions_write_guard),
 ) -> SubledgerVoidOut:
     from app.core.ledger.correction import PosDailySummaryCorrectionError
 

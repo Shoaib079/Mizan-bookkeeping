@@ -158,6 +158,15 @@ Alembic runs as the **schema owner** (`mizan` with Docker Compose), not as `miza
 cd backend && .venv/bin/alembic upgrade head
 ```
 
+**Head (2026-08-03):** `088_membership_grants` — adds `entity_memberships.grants` (JSONB) for custom member access; backfills from role preset. **Required** after pulling custom-access code; without it, Settings → Members returns **500 Internal Server Error** (column missing).
+
+### Troubleshooting — Members list 500 / empty team
+
+1. Run `alembic current` — must show `088_membership_grants` (or later).
+2. If behind: `cd backend && .venv/bin/alembic upgrade head`
+3. Restart the API process (uvicorn / Railway redeploy).
+4. Hard refresh Settings → Members & roles.
+
 With Docker Compose, set `DATABASE_ADMIN_URL` in `.env` (see Environment above) so migrations and role bootstrap use `mizan:mizan_dev`.
 
 ## Project layout

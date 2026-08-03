@@ -8,6 +8,7 @@ from datetime import date, datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.auth.grants import Grant, effective_grants, has_grant
 from app.core.auth.types import EntityRole
 from app.core.period_locks.errors import (
     BeforeGoLiveError,
@@ -134,6 +135,47 @@ def mark_periods_dirty_for_dates(
         lock.dirty = True
 
 
+def _requires_live_month_scope(
+    session: Session, entity_id: uuid.UUID, actor_id: uuid.UUID
+) -> bool:
+    """True when member has live-month scope without full operations write."""
+    with user_membership_lookup(session, actor_id):
+        membership = session.scalar(
+            select(EntityMembership).where(
+                EntityMembership.entity_id == entity_id,
+                EntityMembership.user_id == actor_id,
+            )
+        )
+    if membership is None:
+        return False
+    grants = effective_grants(
+        membership.entity_role,
+        membership.grants,
+        is_active=membership.user.is_active,
+    )
+    return has_grant(grants, Grant.SCOPE_LIVE_MONTH_EDIT_VOID) and not has_grant(
+        grants, Grant.OPERATIONS_WRITE
+    )
+
+
+def assert_live_month_scope_only(
+    session: Session,
+    entity_id: uuid.UUID,
+    actor_id: uuid.UUID,
+    dates: list[date],
+) -> None:
+    """Members with live-month scope may post, edit, or void only in the current month."""
+    if not dates or not _requires_live_month_scope(session, entity_id, actor_id):
+        return
+    today = utc_today()
+    month_start = today.replace(day=1)
+    for d in dates:
+        if d < month_start or d > today:
+            raise PeriodLockedError(
+                "You may only add or change entries in the current month"
+            )
+
+
 def assert_entry_dates_allowed(
     session: Session,
     entity_id: uuid.UUID,
@@ -145,6 +187,8 @@ def assert_entry_dates_allowed(
     """Reject go-live violations and soft-locked periods unless owner supplies unlock reason."""
     if not dates:
         return
+
+    assert_live_month_scope_only(session, entity_id, actor_id, dates)
 
     go_live = get_go_live_date(session, entity_id)
     if go_live is not None:

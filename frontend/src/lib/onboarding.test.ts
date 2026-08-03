@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { grantsForRole } from "@/lib/member-grants";
 import {
   buildOnboardingSteps,
   deriveOnboardingState,
@@ -55,14 +56,22 @@ describe("buildOnboardingSteps", () => {
   };
 
   it("includes invite staff only for admin:manage_members roles", () => {
-    const ownerSteps = buildOnboardingSteps(freshState, "owner");
+    const ownerSteps = buildOnboardingSteps(
+      freshState,
+      "owner",
+      grantsForRole("owner"),
+    );
     expect(ownerSteps.map((step) => step.id)).toEqual([
       "opening_balances",
       "invite_staff",
       "first_day",
     ]);
 
-    const cashierSteps = buildOnboardingSteps(freshState, "cashier");
+    const cashierSteps = buildOnboardingSteps(
+      freshState,
+      "cashier",
+      grantsForRole("cashier"),
+    );
     expect(cashierSteps.map((step) => step.id)).toEqual([
       "opening_balances",
       "first_day",
@@ -77,6 +86,7 @@ describe("buildOnboardingSteps", () => {
         firstDayRecorded: false,
       },
       "owner",
+      grantsForRole("owner"),
     );
     expect(steps.filter((step) => step.done).map((step) => step.id)).toEqual([
       "opening_balances",
@@ -84,7 +94,11 @@ describe("buildOnboardingSteps", () => {
   });
 
   it("links first day to sales", () => {
-    const step = buildOnboardingSteps(freshState, "owner").find(
+    const step = buildOnboardingSteps(
+      freshState,
+      "owner",
+      grantsForRole("owner"),
+    ).find(
       (item) => item.id === "first_day",
     );
     expect(step?.href).toBe("/sales");
@@ -100,6 +114,7 @@ describe("isOnboardingComplete", () => {
         firstDayRecorded: true,
       },
       "owner",
+      grantsForRole("owner"),
     );
     expect(isOnboardingComplete(steps)).toBe(true);
     expect(
@@ -111,6 +126,7 @@ describe("isOnboardingComplete", () => {
             firstDayRecorded: false,
           },
           "owner",
+          grantsForRole("owner"),
         ),
       ),
     ).toBe(false);
@@ -131,6 +147,7 @@ describe("shouldShowOnboardingChecklistPanel", () => {
       firstDayRecorded: false,
     },
     "owner",
+    grantsForRole("owner"),
   );
 
   it("hides when dismissed for the entity", () => {
@@ -153,6 +170,7 @@ describe("shouldShowOnboardingChecklistPanel", () => {
         firstDayRecorded: true,
       },
       "owner",
+      grantsForRole("owner"),
     );
     expect(
       shouldShowOnboardingChecklistPanel({

@@ -2,8 +2,7 @@
 
 /**
  * Shared entity-access context — ONE fetch per entity, every consumer reads the
- * same role. Replaces the old per-component useState + fetch that caused the
- * QuickActionsProvider vs hub role desync (SEC-4 least-privilege fallback).
+ * same grants. Replaces per-component role inference (SEC-4 least-privilege).
  */
 
 import {
@@ -18,9 +17,13 @@ import {
 
 import { apiFetch } from "@/lib/api";
 import {
+  canAccessSettings,
   canReadFinancialReports,
+  canReadReports,
+  canWriteDailyTransactions,
   canWriteOperations,
 } from "@/lib/entity-access";
+import { grantsForRole } from "@/lib/member-grants";
 import {
   isSessionRevokedError,
   notifyRoleChanged,
@@ -33,10 +36,13 @@ import { useApiAuth } from "@/lib/api-auth";
 type MyMembershipRead = {
   role: EntityRole;
   permissions: string[];
+  grants: string[];
 };
 
 /** Least-privilege fallback until the real membership is loaded. */
 export const DEFAULT_DEV_ROLE: EntityRole = "partner_view_only";
+
+const DEFAULT_DEV_GRANTS: string[] = grantsForRole(DEFAULT_DEV_ROLE);
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 800;
@@ -48,11 +54,14 @@ export type ReloadAccessOptions = {
 
 type EntityAccessContextValue = {
   role: EntityRole;
+  grants: readonly string[];
   loading: boolean;
-  /** True after a successful /members/me response for the current entity. */
   membershipSettled: boolean;
   canWriteOperations: boolean;
+  canWriteDailyTransactions: boolean;
   canReadFinancialReports: boolean;
+  canReadReports: boolean;
+  canAccessSettings: boolean;
   reload: (options?: ReloadAccessOptions) => Promise<void>;
 };
 
@@ -62,6 +71,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
   const { entityId } = useEntity();
   const { isAuthReady } = useApiAuth();
   const [role, setRole] = useState<EntityRole>(DEFAULT_DEV_ROLE);
+  const [grants, setGrants] = useState<readonly string[]>(DEFAULT_DEV_GRANTS);
   const [loading, setLoading] = useState(false);
   const [membershipSettled, setMembershipSettled] = useState(false);
   const fetchIdRef = useRef(0);
@@ -76,6 +86,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
     async (options?: ReloadAccessOptions) => {
       if (!entityId || !isAuthReady) {
         setRole(DEFAULT_DEV_ROLE);
+        setGrants(DEFAULT_DEV_GRANTS);
         settledRef.current = false;
         setMembershipSettled(false);
         return;
@@ -98,6 +109,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
             }
             return res.role;
           });
+          setGrants(res.grants.length > 0 ? res.grants : grantsForRole(res.role));
           settledRef.current = true;
           setMembershipSettled(true);
           if (!silent) setLoading(false);
@@ -119,6 +131,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
             (err.message.includes("403") || err.message.includes("Forbidden"));
           if (is403) {
             setRole(DEFAULT_DEV_ROLE);
+            setGrants(DEFAULT_DEV_GRANTS);
             settledRef.current = false;
             setMembershipSettled(false);
             if (!silent) setLoading(false);
@@ -134,6 +147,7 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
           }
 
           setRole(DEFAULT_DEV_ROLE);
+          setGrants(DEFAULT_DEV_GRANTS);
           settledRef.current = false;
           setMembershipSettled(false);
           if (!silent) setLoading(false);
@@ -150,13 +164,17 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
   const value = useMemo(
     () => ({
       role,
+      grants,
       loading,
       membershipSettled,
-      canWriteOperations: canWriteOperations(role),
-      canReadFinancialReports: canReadFinancialReports(role),
+      canWriteOperations: canWriteOperations(grants),
+      canWriteDailyTransactions: canWriteDailyTransactions(grants),
+      canReadFinancialReports: canReadFinancialReports(grants),
+      canReadReports: canReadReports(grants),
+      canAccessSettings: canAccessSettings(grants),
       reload,
     }),
-    [role, loading, membershipSettled, reload],
+    [role, grants, loading, membershipSettled, reload],
   );
 
   return (

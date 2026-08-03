@@ -64,6 +64,7 @@ class MembershipCreate(BaseModel):
 
 class MembershipUpdate(BaseModel):
     role: EntityRole | None = None
+    grants: list[str] | None = None
     is_active: bool | None = None
 
 
@@ -72,6 +73,7 @@ class MembershipRead(BaseModel):
     entity_id: uuid.UUID
     user_id: uuid.UUID
     role: EntityRole
+    grants: list[str] = Field(default_factory=list)
     created_at: datetime
     user: UserRead
     #: True when Clerk sent (or already had) an invitation email for this add.
@@ -84,7 +86,8 @@ class MembershipRead(BaseModel):
 
 
 class MyMembershipRead(BaseModel):
-    """Caller role + resolved permissions for UI gating (Slice 11.21)."""
+    """Caller role + resolved grants for UI gating."""
 
     role: EntityRole
     permissions: list[str]
+    grants: list[str]

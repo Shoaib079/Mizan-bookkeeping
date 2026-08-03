@@ -13,6 +13,7 @@ export type MembershipRow = {
   entity_id: string;
   user_id: string;
   role: EntityRole;
+  grants: string[];
   created_at: string;
   user: {
     id: string;

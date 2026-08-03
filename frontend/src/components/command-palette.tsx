@@ -34,7 +34,10 @@ import { reviewExpensesFilteredHref } from "@/lib/use-expenses-review-url";
 import { apiFetch } from "@/lib/api";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { useEntityAccess } from "@/lib/use-entity-access";
-import { canWriteOperations } from "@/lib/entity-access";
+import {
+  canWriteDailyTransactions,
+  filterAppRoutesForGrants,
+} from "@/lib/entity-access";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -51,7 +54,7 @@ type PaletteRow =
 export function CommandPalette({ deliveryEnabled }: Props) {
   const router = useRouter();
   const { entityId } = useEntity();
-  const { role } = useEntityAccess();
+  const { grants } = useEntityAccess();
   const { openRecordAction } = useQuickActions();
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -66,11 +69,9 @@ export function CommandPalette({ deliveryEnabled }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const prevEntityRef = useRef(entityId);
 
-  // SRCH-B: spend lookup maps (fetched once per palette open)
   const [supplierSpend, setSupplierSpend] = useState<Map<string, number>>(new Map());
   const [itemSpend, setItemSpend] = useState<Map<string, number>>(new Map());
 
-  // Stale guard: reset search results on entity switch
   useEffect(() => {
     if (prevEntityRef.current !== entityId) {
       prevEntityRef.current = entityId;
@@ -83,7 +84,6 @@ export function CommandPalette({ deliveryEnabled }: Props) {
     }
   }, [entityId]);
 
-  // SRCH-B: fetch spend totals when palette opens
   useEffect(() => {
     if (!open || !entityId) return;
     const range = currentMonthRange();
@@ -105,19 +105,23 @@ export function CommandPalette({ deliveryEnabled }: Props) {
   }, [open, entityId]);
 
   const routes = useMemo(
-    () => filterRoutesByEntitySettings(appRoutes, { deliveryEnabled }),
-    [deliveryEnabled],
+    () =>
+      filterAppRoutesForGrants(
+        filterRoutesByEntitySettings(appRoutes, { deliveryEnabled }),
+        grants,
+      ),
+    [deliveryEnabled, grants],
   );
 
   const actions = useMemo(
     () =>
-      canWriteOperations(role)
+      canWriteDailyTransactions(grants)
         ? filterRecordActions(
             RECORD_ACTIONS.filter((a) => !a.hidden),
-            { deliveryEnabled },
+            { deliveryEnabled, grants },
           )
         : [],
-    [role, deliveryEnabled],
+    [grants, deliveryEnabled],
   );
 
   // Debounced API search

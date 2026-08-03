@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 export function OnboardingChecklist() {
   const { entityId } = useEntity();
-  const { role } = useEntityAccess();
+  const { role, grants } = useEntityAccess();
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [state, setState] = useState<ReturnType<typeof deriveOnboardingState> | null>(
@@ -67,8 +67,8 @@ export function OnboardingChecklist() {
 
   const steps = useMemo(() => {
     if (!state) return [];
-    return buildOnboardingSteps(state, role);
-  }, [state, role]);
+    return buildOnboardingSteps(state, role, grants);
+  }, [state, role, grants]);
 
   const visible = shouldShowOnboardingChecklistPanel({
     entityId: entityId ?? "",

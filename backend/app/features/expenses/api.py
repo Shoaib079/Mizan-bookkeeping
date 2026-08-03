@@ -20,7 +20,7 @@ from app.core.ledger.errors import PostingError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
 from app.core.schema_types import coerce_optional_uuid
-from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.core.auth.deps import daily_transactions_write_guard, member_read_guard, operations_write_guard, resolve_actor_id
 from app.features.auth.models import User
 from app.features.expenses import service as expenses_service
 from app.features.expenses.models import ExpenseEntryStatus, ExpenseReceiptIntakeStatus
@@ -132,7 +132,7 @@ def create_expense(
     entity_id: uuid.UUID,
     payload: ExpenseCreate,
     session: Session = Depends(get_session),
-    _guard: User | None = Depends(operations_write_guard),
+    _guard: User | None = Depends(daily_transactions_write_guard),
 ) -> ExpenseRead:
     payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
@@ -393,7 +393,7 @@ def correct_expense(
     expense_id: uuid.UUID,
     payload: ExpenseCorrect,
     session: Session = Depends(get_session),
-    _guard: User | None = Depends(operations_write_guard),
+    _guard: User | None = Depends(daily_transactions_write_guard),
 ) -> ExpenseCorrectOut:
     payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
@@ -420,7 +420,7 @@ def void_expense(
     expense_id: uuid.UUID,
     payload: VoidJournalEntryRequest,
     session: Session = Depends(get_session),
-    _guard: User | None = Depends(operations_write_guard),
+    _guard: User | None = Depends(daily_transactions_write_guard),
 ) -> SubledgerVoidOut:
     payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:

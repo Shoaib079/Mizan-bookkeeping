@@ -26,6 +26,7 @@ import {
   type QuickActionKey,
   type RecordActionKey,
 } from "@/lib/record-actions";
+import { canUseRecordAction } from "@/lib/entity-access";
 import { useEntityAccess } from "@/lib/use-entity-access";
 
 export type { QuickActionKey, RecordActionKey } from "@/lib/record-actions";
@@ -60,7 +61,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   const router = useRouter();
   const { entityId } = useEntity();
   const { isAuthReady } = useApiAuth();
-  const { canWriteOperations } = useEntityAccess();
+  const { canWriteDailyTransactions, grants } = useEntityAccess();
   const [active, setActive] = useState<RecordActionKey | null>(null);
   const [documentRoute, setDocumentRoute] = useState<{
     key: RecordActionKey;
@@ -117,7 +118,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
 
   const openRecordAction = useCallback(
     (key: RecordActionKey) => {
-      if (!canWriteOperations) return;
+      if (!canWriteDailyTransactions || !canUseRecordAction(grants, key)) return;
       if (key === "deliveryReport" && !deliveryEnabled) return;
       if (entityId) recordActionUsage(entityId, key);
       const pageHref = RECORD_ACTION_PAGE_HREFS[key];
@@ -128,17 +129,17 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
       setDocumentRoute(null);
       setActive(key);
     },
-    [canWriteOperations, deliveryEnabled, entityId, router],
+    [canWriteDailyTransactions, deliveryEnabled, entityId, grants, router],
   );
 
   const openRecordActionWithFile = useCallback(
     (key: RecordActionKey, file: File) => {
-      if (!canWriteOperations) return;
+      if (!canWriteDailyTransactions || !canUseRecordAction(grants, key)) return;
       if (entityId) recordActionUsage(entityId, key);
       setDocumentRoute({ key, file });
       setActive(key);
     },
-    [canWriteOperations, entityId],
+    [canWriteDailyTransactions, entityId, grants],
   );
 
   const closeQuickAction = useCallback(() => {

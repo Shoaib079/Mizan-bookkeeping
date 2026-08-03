@@ -5,7 +5,9 @@ import { ChevronRight, Settings } from "lucide-react";
 
 import { MobileEntitySwitcher } from "@/components/layout/mobile-entity-switcher";
 import { appRoutes, filterNavItemsByEntitySettings, type AppRoute } from "@/lib/app-routes";
+import { hasGrant } from "@/lib/entity-access";
 import { useQuickActions } from "@/components/quick-actions";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 const MORE_SECTION_HREFS: { label: string; hrefs: string[] }[] = [
@@ -58,9 +60,30 @@ function MoreRow({ item }: { item: AppRoute }) {
   );
 }
 
+function hasLimitedMoreMenu(grants: readonly string[]): boolean {
+  return (
+    hasGrant(grants, "nav:record") &&
+    !hasGrant(grants, "nav:banking") &&
+    !hasGrant(grants, "nav:reports")
+  );
+}
+
 export function MobileMoreMenu() {
   const { deliveryEnabled } = useQuickActions();
+  const { grants } = useEntityAccess();
   const settings = { deliveryEnabled };
+
+  if (hasLimitedMoreMenu(grants)) {
+    return (
+      <div className="pb-2">
+        <MobileEntitySwitcher />
+        <p className="px-3 py-4 text-sm text-muted-foreground">
+          Your access is limited to daily recording. Use Record to post sales and
+          expenses, or Sales to review this month&apos;s entries.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-2">
@@ -84,22 +107,24 @@ export function MobileMoreMenu() {
         );
       })}
 
-      <MoreSection title="Setup">
-        <Link
-          href="/settings/restaurant"
-          className="flex min-h-[52px] items-center gap-3 px-4 active:bg-muted/60"
-        >
-          <span
-            className={cn(
-              "flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-muted",
-            )}
+      {hasGrant(grants, "nav:settings") && (
+        <MoreSection title="Setup">
+          <Link
+            href="/settings/restaurant"
+            className="flex min-h-[52px] items-center gap-3 px-4 active:bg-muted/60"
           >
-            <Settings className="size-4 text-muted-foreground" />
-          </span>
-          <span className="flex-1 text-base">Settings</span>
-          <ChevronRight className="size-4 text-muted-foreground/60" />
-        </Link>
-      </MoreSection>
+            <span
+              className={cn(
+                "flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-muted",
+              )}
+            >
+              <Settings className="size-4 text-muted-foreground" />
+            </span>
+            <span className="flex-1 text-base">Settings</span>
+            <ChevronRight className="size-4 text-muted-foreground/60" />
+          </Link>
+        </MoreSection>
+      )}
     </div>
   );
 }

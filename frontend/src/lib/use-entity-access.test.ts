@@ -112,14 +112,14 @@ describe("providers.tsx wiring", () => {
   });
 });
 
-describe("owner can openRecordAction", () => {
-  it("openRecordAction guard checks canWriteOperations from shared context", async () => {
+describe("record actions gated by grants", () => {
+  it("openRecordAction guard checks canWriteDailyTransactions from shared context", async () => {
     const source = await import("fs/promises").then((fs) =>
       fs.readFile(
         new URL("../components/quick-actions.tsx", import.meta.url),
         "utf8",
       ),
     );
-    expect(source).toContain("if (!canWriteOperations) return");
+    expect(source).toContain("if (!canWriteDailyTransactions || !canUseRecordAction(grants, key)) return");
   });
 });

@@ -7,6 +7,10 @@
  */
 
 import {
+  canModifyEntryDate,
+  canModifyJournalSource,
+} from "@/lib/entity-access";
+import {
   GENERIC_CORRECTABLE_SOURCES,
   GENERIC_VOID_SAFE_SOURCES,
   sourceFlow,
@@ -91,20 +95,41 @@ export const STAFF_VOID_ONLY_MOVEMENT_TYPES = new Set<string>([
   "advance_returned",
 ]);
 
-export function journalEntryRowActions(source: string): RowActions {
+export type JournalActionOptions = {
+  grants?: readonly string[];
+  entryDate?: string;
+};
+
+export function journalEntryRowActions(
+  source: string,
+  options?: JournalActionOptions,
+): RowActions {
+  let actions: RowActions;
   if (GENERIC_CORRECTABLE_SOURCES.has(source)) {
-    return { canEdit: true, canVoid: true };
+    actions = { canEdit: true, canVoid: true };
+  } else if (GENERIC_VOID_SAFE_SOURCES.has(source)) {
+    actions = { canEdit: false, canVoid: true };
+  } else if (DEDICATED_CORRECTION_JOURNAL_SOURCES.has(source)) {
+    actions = { canEdit: true, canVoid: true };
+  } else if (VOID_ONLY_JOURNAL_SOURCES.has(source)) {
+    actions = { canEdit: false, canVoid: true };
+  } else {
+    actions = { canEdit: false, canVoid: false };
   }
-  if (GENERIC_VOID_SAFE_SOURCES.has(source)) {
-    return { canEdit: false, canVoid: true };
+
+  if (options?.grants) {
+    if (!canModifyJournalSource(options.grants, source)) {
+      return { canEdit: false, canVoid: false };
+    }
+    if (
+      options.entryDate &&
+      !canModifyEntryDate(options.grants, options.entryDate)
+    ) {
+      return { canEdit: false, canVoid: false };
+    }
   }
-  if (DEDICATED_CORRECTION_JOURNAL_SOURCES.has(source)) {
-    return { canEdit: true, canVoid: true };
-  }
-  if (VOID_ONLY_JOURNAL_SOURCES.has(source)) {
-    return { canEdit: false, canVoid: true };
-  }
-  return { canEdit: false, canVoid: false };
+
+  return actions;
 }
 
 export function canUseGenericLedgerCorrect(source: string): boolean {
