@@ -29,3 +29,22 @@ export function clearConfirmItemOnTextEdit(
 export function shouldSearchExpenseItems(text: string): boolean {
   return text.trim().length >= EXPENSE_ITEM_SEARCH_MIN_CHARS;
 }
+
+/** Hide the list when the typed value already matches a confirmed pick. */
+export function shouldShowExpenseItemSuggestions(
+  results: ExpenseItemSearchResult[],
+  value: string,
+  confirmedItemId: string | null | undefined,
+): boolean {
+  if (results.length === 0) return false;
+  if (!confirmedItemId) return true;
+  const trimmed = value.trim();
+  const confirmed = results.find((item) => item.id === confirmedItemId);
+  if (
+    confirmed &&
+    confirmed.canonical_name.trim().toLowerCase() === trimmed.toLowerCase()
+  ) {
+    return false;
+  }
+  return true;
+}

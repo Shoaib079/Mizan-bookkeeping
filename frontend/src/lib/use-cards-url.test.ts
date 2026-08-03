@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
+import { currentMonthRange } from "@/lib/date-range";
 
 describe("useCardsUrl listQuery shape", () => {
   it("builds from/to query from current month defaults", () => {

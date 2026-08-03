@@ -107,6 +107,7 @@ def resolve_ledger_entry_actions(
                         "expense_date": expense.expense_date.isoformat(),
                         "description": expense.description,
                         "written_item_description": expense.written_item_description,
+                        "notes": expense.notes,
                         "amount_kurus": expense.amount_kurus,
                         "expense_account_id": str(expense.expense_account_id),
                         "money_account_id": str(expense.money_account_id),

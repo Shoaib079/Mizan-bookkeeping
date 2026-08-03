@@ -598,6 +598,7 @@ export function ManualExpenseForm({
             <ExpenseItemTypeahead
               entityId={entityId}
               value={itemName}
+              confirmedItemId={confirmExpenseItemId}
               onValueChange={handleItemNameChange}
               onPickItem={handlePickExpenseItem}
               disabled={submitting}
@@ -704,6 +705,7 @@ export function ManualExpenseForm({
         <ExpenseItemTypeahead
           entityId={entityId}
           value={itemName}
+          confirmedItemId={confirmExpenseItemId}
           onValueChange={handleItemNameChange}
           onPickItem={handlePickExpenseItem}
           disabled={submitting}

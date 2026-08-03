@@ -131,6 +131,10 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
               ctx.written_item_description == null
                 ? null
                 : String(ctx.written_item_description),
+            notes:
+              ctx.notes == null || ctx.notes === undefined
+                ? null
+                : String(ctx.notes),
             amount_kurus: Number(ctx.amount_kurus),
             expense_account_id: String(ctx.expense_account_id),
             money_account_id: String(ctx.money_account_id),

@@ -8,6 +8,7 @@ import {
   EXPENSE_ITEM_SEARCH_DEBOUNCE_MS,
   expenseItemSearchUrl,
   shouldSearchExpenseItems,
+  shouldShowExpenseItemSuggestions,
   type ExpenseItemSearchResult,
 } from "@/lib/expense-item-search";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
@@ -21,6 +22,8 @@ type Props = {
   onValueChange: (value: string) => void;
   onPickItem: (item: ExpenseItemSearchResult) => void;
   disabled?: boolean;
+  /** When set and the field matches that item, hide redundant suggestions. */
+  confirmedItemId?: string | null;
 };
 
 export function ExpenseItemTypeahead({
@@ -31,6 +34,7 @@ export function ExpenseItemTypeahead({
   onValueChange,
   onPickItem,
   disabled,
+  confirmedItemId = null,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
@@ -61,7 +65,13 @@ export function ExpenseItemTypeahead({
             expenseItemSearchUrl(entityId, value),
           );
           setResults(res.items);
-          setOpen(res.items.length > 0);
+          setOpen(
+            shouldShowExpenseItemSuggestions(
+              res.items,
+              value,
+              confirmedItemId,
+            ),
+          );
           setActiveIndex(0);
         } catch {
           setResults([]);
@@ -73,7 +83,7 @@ export function ExpenseItemTypeahead({
     }, EXPENSE_ITEM_SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
-  }, [entityId, value]);
+  }, [entityId, value, confirmedItemId]);
 
   function handlePick(item: ExpenseItemSearchResult) {
     onPickItem(item);
@@ -112,7 +122,11 @@ export function ExpenseItemTypeahead({
         disabled={disabled}
         onChange={(event) => onValueChange(event.target.value)}
         onFocus={() => {
-          if (results.length > 0) setOpen(true);
+          if (
+            shouldShowExpenseItemSuggestions(results, value, confirmedItemId)
+          ) {
+            setOpen(true);
+          }
         }}
         onKeyDown={handleKeyDown}
       />
