@@ -17,7 +17,7 @@
 | **Active slice**         | **GS-FX** forex-only group sales (next) |
 | **Next up**              | **GS-FX** · then owner sign-off items |
 | **Last completed slice** | **C4 mobile shell (2026-08-03)** — bottom tabs, More/Settings hub, card rows on list pages, transaction bottom sheet, Record quick-post, reports sticky download bar. See `MOBILE_UX_PLAN.md`. |
-| **Last commit/tag**      | `v0.entity-switch-owner-only` |
+| **Last commit/tag**      | `v0.global-app-rules` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 

@@ -6,6 +6,8 @@ import {
   canWriteOperations,
   canSwitchEntity,
   canCreateEntity,
+  isOwner,
+  canManageExpenseItems,
   visibleEntitiesForRole,
   filterDashboardKpis,
   filterDeliveryReportCards,
@@ -55,6 +57,13 @@ describe("entity switching", () => {
     expect(canCreateEntity("partner")).toBe(false);
     expect(canCreateEntity("cashier")).toBe(false);
     expect(canCreateEntity("partner_view_only")).toBe(false);
+  });
+
+  it("owner-only actions use isOwner helper", () => {
+    expect(isOwner("owner")).toBe(true);
+    expect(isOwner("partner")).toBe(false);
+    expect(canManageExpenseItems("owner")).toBe(true);
+    expect(canManageExpenseItems("partner")).toBe(false);
   });
 });
 

@@ -16,7 +16,7 @@ import { useEntity } from "@/lib/entity-context";
 import { entityAccentColor, entityInitial } from "@/lib/entity-visual";
 import { ENTITY_ROLES } from "@/lib/settings-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
-import { canSwitchEntity, visibleEntitiesForRole } from "@/lib/entity-access";
+import { canSwitchEntity } from "@/lib/entity-access";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -34,11 +34,10 @@ function initialsFor(name: string, email: string | undefined): string {
 
 export default function ProfileSettingsPage() {
   const { clerkEnabled } = useApiAuth();
-  const { userProfile, refreshUserProfile, entities, entityId, setEntityId } =
+  const { userProfile, refreshUserProfile, visibleEntities, entityId, setEntityId } =
     useEntity();
   const { role } = useEntityAccess();
   const canSwitch = canSwitchEntity(role);
-  const visibleEntities = visibleEntitiesForRole(entities, entityId, role);
   const { dark, mounted, setDarkMode } = useTheme();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();

@@ -19,6 +19,23 @@ describe("entity switch guard wiring", () => {
     expect(source).toContain("Your restaurant");
   });
 
+  it("entity context blocks setEntityId when policy is locked", async () => {
+    const source = await fs.promises.readFile(
+      new URL("../../lib/entity-context.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(source).toContain("maySetEntityId");
+    expect(source).toContain("visibleEntities");
+  });
+
+  it("policy module is the single global gate", async () => {
+    const source = await fs.promises.readFile(
+      new URL("../../lib/entity-switch-policy.ts", import.meta.url),
+      "utf8",
+    );
+    expect(source).toContain("maySetEntityId");
+  });
+
   it("account menu hides switch list without canSwitchEntity", async () => {
     const source = await fs.promises.readFile(
       new URL("./account-menu.tsx", import.meta.url),

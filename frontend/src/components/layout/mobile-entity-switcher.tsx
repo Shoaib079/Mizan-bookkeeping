@@ -12,11 +12,11 @@ import { cn } from "@/lib/utils";
 
 /** Restaurant switcher on More tab (C4.2). Non-owners see a read-only badge. */
 export function MobileEntitySwitcher() {
-  const { entityId, setEntityId, entities, entitiesLoading } = useEntity();
+  const { entityId, setEntityId, visibleEntities, entitiesLoading } = useEntity();
   const { role } = useEntityAccess();
   const canSwitch = canSwitchEntity(role);
   const [open, setOpen] = useState(false);
-  const active = entities.find((e) => e.id === entityId);
+  const active = visibleEntities.find((e) => e.id === entityId);
 
   if (entitiesLoading && !active) {
     return (
@@ -59,9 +59,9 @@ export function MobileEntitySwitcher() {
         />
       </button>
 
-      {open && entities.length > 1 && (
+      {open && visibleEntities.length > 1 && (
         <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-pop)]">
-          {entities.map((entity) => (
+          {visibleEntities.map((entity) => (
             <button
               key={entity.id}
               type="button"

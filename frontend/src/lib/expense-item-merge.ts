@@ -7,9 +7,7 @@ export type ExpenseItemRow = {
   is_active: boolean;
 };
 
-export function canManageExpenseItems(role: EntityRole): boolean {
-  return role === "owner";
-}
+export { canManageExpenseItems } from "@/lib/entity-access";
 
 export function expenseItemsListUrl(entityId: string, query?: string): string {
   const params = new URLSearchParams({ limit: "50" });

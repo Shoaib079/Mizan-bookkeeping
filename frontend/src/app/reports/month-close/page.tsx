@@ -21,6 +21,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
+import { isOwner } from "@/lib/entity-access";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityAccess } from "@/lib/use-entity-access";
@@ -95,7 +96,7 @@ function MonthCloseContent() {
   const { toast } = useToast();
   const closeIdempotency = useSubmitIdempotency();
   const reopenIdempotency = useSubmitIdempotency();
-  const isOwner = role === "owner";
+  const userIsOwner = isOwner(role);
 
   const months = useMemo(() => closableMonths(new Date()), []);
   const [monthKey, setMonthKey] = useState(months[0]?.value ?? "");
@@ -270,7 +271,7 @@ function MonthCloseContent() {
                 )}
               </div>
 
-              {isOwner && (
+              {userIsOwner && (
                 <div className="shrink-0">
                   {state.kind === "closed" ? (
                     <Button
@@ -294,7 +295,7 @@ function MonthCloseContent() {
               )}
             </div>
 
-            {isOwner && (
+            {userIsOwner && (
               <div className="mt-3">
                 <Label htmlFor="month-close-note">Note (optional)</Label>
                 <Input
@@ -306,7 +307,7 @@ function MonthCloseContent() {
                 />
               </div>
             )}
-            {!isOwner && (
+            {!userIsOwner && (
               <p className="mt-3 text-xs text-muted-foreground">
                 Only the owner can close or reopen a month.
               </p>
@@ -346,7 +347,7 @@ function MonthCloseContent() {
             <SealedMonthChanges entityId={entityId} lockId={state.lock.id} />
           )}
 
-          {entityId && <YearEndClose entityId={entityId} isOwner={isOwner} />}
+          {entityId && <YearEndClose entityId={entityId} isOwner={userIsOwner} />}
 
           {closedMonths.length > 0 && (
             <section>

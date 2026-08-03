@@ -1,11 +1,15 @@
 "use client";
 
-/** Keeps non-owner roles on their assigned restaurant — blocks entityId changes. */
+/** Applies global entity-switch policy from role — desktop, mobile, all routes. */
 
 import { useEffect, useRef } from "react";
 
 import { canSwitchEntity } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
+import {
+  setEntitySwitchPolicy,
+  resetEntitySwitchPolicy,
+} from "@/lib/entity-switch-policy";
 import { useEntityAccess } from "@/lib/use-entity-access";
 
 export function EntitySwitchGuard() {
@@ -18,20 +22,30 @@ export function EntitySwitchGuard() {
 
     if (canSwitchEntity(role)) {
       lockedEntityIdRef.current = null;
+      resetEntitySwitchPolicy();
       return;
     }
 
-    if (!entityId) return;
+    if (!entityId) {
+      setEntitySwitchPolicy({ canSwitch: false, lockedEntityId: null });
+      return;
+    }
 
     if (!lockedEntityIdRef.current) {
       lockedEntityIdRef.current = entityId;
-      return;
     }
 
-    if (entityId !== lockedEntityIdRef.current) {
-      setEntityId(lockedEntityIdRef.current);
+    const lockedEntityId = lockedEntityIdRef.current;
+    setEntitySwitchPolicy({ canSwitch: false, lockedEntityId });
+
+    if (entityId !== lockedEntityId) {
+      setEntityId(lockedEntityId);
     }
   }, [entityId, loading, role, setEntityId]);
+
+  useEffect(() => {
+    return () => resetEntitySwitchPolicy();
+  }, []);
 
   return null;
 }

@@ -14,6 +14,11 @@ import { useRouter } from "next/navigation";
 import { apiFetch, setAuthHeaderProvider } from "@/lib/api";
 import { useApiAuth } from "@/lib/api-auth";
 import { fetchEntitiesWithRetry, resolveEntityIdFromList } from "@/lib/entity-context-helpers";
+import {
+  getEntitySwitchPolicy,
+  maySetEntityId,
+  subscribeEntitySwitchPolicy,
+} from "@/lib/entity-switch-policy";
 
 type Entity = { id: string; name: string };
 type UserProfile = { id: string; email: string; display_name: string };
@@ -54,6 +59,8 @@ type EntityContextValue = {
   actorId: string;
   setActorId: (id: string) => void;
   entities: Entity[];
+  /** Scoped list — non-owners only see their assigned restaurant globally. */
+  visibleEntities: Entity[];
   entitiesLoading: boolean;
   entitiesLoaded: boolean;
   entitiesError: boolean;
@@ -77,6 +84,18 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
   const [entitiesLoaded, setEntitiesLoaded] = useState(false);
   const [entitiesError, setEntitiesError] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [policyVersion, setPolicyVersion] = useState(0);
+
+  useEffect(() => subscribeEntitySwitchPolicy(() => setPolicyVersion((v) => v + 1)), []);
+
+  const visibleEntities = useMemo(() => {
+    void policyVersion;
+    const { canSwitch, lockedEntityId } = getEntitySwitchPolicy();
+    if (canSwitch || !lockedEntityId) return entities;
+    const current = entities.find((entity) => entity.id === lockedEntityId);
+    if (current) return [current];
+    return entities.length > 0 ? [entities[0]] : [];
+  }, [entities, policyVersion]);
 
   useEffect(() => {
     setEntityIdState(readStoredEntityId());
@@ -92,6 +111,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
   }, [clerkEnabled, actorId]);
 
   const setEntityId = useCallback((id: string, options?: SetEntityOptions) => {
+    if (!maySetEntityId(id)) return;
     setEntityIdState((current) => (current === id ? current : id));
     localStorage.setItem("mizan.entityId", id);
     if (options?.redirectToDashboard) {
@@ -114,16 +134,20 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
       setEntities(res.items);
       setEntitiesError(false);
       const stored = localStorage.getItem("mizan.entityId");
-      setEntityIdState((current) =>
-        resolveEntityIdFromList(current, res.items, stored),
-      );
       const resolved = resolveEntityIdFromList(
         readStoredEntityId(),
         res.items,
         stored,
       );
-      if (resolved) {
-        localStorage.setItem("mizan.entityId", resolved);
+      const nextId =
+        resolved && maySetEntityId(resolved)
+          ? resolved
+          : getEntitySwitchPolicy().lockedEntityId ?? resolved ?? "";
+      setEntityIdState((current) =>
+        nextId && current !== nextId ? nextId : current || nextId,
+      );
+      if (nextId && maySetEntityId(nextId)) {
+        localStorage.setItem("mizan.entityId", nextId);
       }
       setEntitiesLoaded(true);
     } catch {
@@ -161,6 +185,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
       actorId,
       setActorId,
       entities,
+      visibleEntities,
       entitiesLoading,
       entitiesLoaded,
       entitiesError,
@@ -174,6 +199,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
       actorId,
       setActorId,
       entities,
+      visibleEntities,
       entitiesLoading,
       entitiesLoaded,
       entitiesError,

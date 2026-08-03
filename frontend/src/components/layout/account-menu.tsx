@@ -79,6 +79,7 @@ function AccountMenuPanel({
     actorId,
     setActorId,
     entities,
+    visibleEntities,
     entitiesLoading,
     entitiesLoaded,
     entitiesError,
@@ -112,8 +113,8 @@ function AccountMenuPanel({
   );
 
   const otherEntities = useMemo(
-    () => entities.filter((entity) => entity.id !== entityId),
-    [entities, entityId],
+    () => visibleEntities.filter((entity) => entity.id !== entityId),
+    [visibleEntities, entityId],
   );
 
   const displayName = devMode

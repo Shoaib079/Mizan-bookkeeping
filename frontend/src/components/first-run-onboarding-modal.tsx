@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useApiAuth } from "@/lib/api-auth";
+import { canCreateEntity } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import {
   shouldShowFirstRunOnboarding,
   submitFirstRunOnboarding,
@@ -29,6 +31,7 @@ export function FirstRunOnboardingModal() {
     userProfile,
     refreshUserProfile,
   } = useEntity();
+  const { role, loading: roleLoading } = useEntityAccess();
   const submitIdempotency = useSubmitIdempotency();
 
   const [fullName, setFullName] = useState("");
@@ -38,13 +41,16 @@ export function FirstRunOnboardingModal() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const open = shouldShowFirstRunOnboarding({
-    isAuthReady,
-    entitiesLoading,
-    entitiesLoaded,
-    entitiesError,
-    entityCount: entities.length,
-  });
+  const open =
+    canCreateEntity(role) &&
+    shouldShowFirstRunOnboarding({
+      isAuthReady,
+      entitiesLoading,
+      entitiesLoaded,
+      entitiesError,
+      entityCount: entities.length,
+    }) &&
+    !roleLoading;
 
   useEffect(() => {
     if (!open) return;

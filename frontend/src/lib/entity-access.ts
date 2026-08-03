@@ -1,4 +1,14 @@
-/** Role/permission helpers — mirror backend permissions.py (Slice 11.21). */
+/** Global app rules — single source of truth for role/permission UI gates.
+ *
+ * RULE: Every screen (desktop, mobile, dialog, menu) MUST use helpers here or
+ * useEntityAccess() — never inline `role ===` checks in components.
+ * Backend mirror: backend/app/core/auth/permissions.py
+ *
+ * Global enforcement layers:
+ * - useEntityAccess() — one membership fetch per entity, shared context
+ * - entity-switch-policy.ts + EntitySwitchGuard — blocks company switch globally
+ * - entity-context setEntityId — respects switch policy on every code path
+ */
 
 import {
   filterNavItemsByEntitySettings,
@@ -42,6 +52,18 @@ export function hasPermission(role: EntityRole, permission: Permission): boolean
   return ROLE_PERMISSIONS[role]?.has(permission) ?? false;
 }
 
+export function isOwner(role: EntityRole): boolean {
+  return role === "owner";
+}
+
+export function canManageMembers(role: EntityRole): boolean {
+  return hasPermission(role, "admin:manage_members");
+}
+
+export function canManageExpenseItems(role: EntityRole): boolean {
+  return isOwner(role);
+}
+
 export function canWriteOperations(role: EntityRole): boolean {
   return hasPermission(role, "operations:write");
 }
@@ -52,11 +74,11 @@ export function canReadFinancialReports(role: EntityRole): boolean {
 
 /** Only owners may switch or create restaurants — all other roles stay on assignment. */
 export function canSwitchEntity(role: EntityRole): boolean {
-  return role === "owner";
+  return isOwner(role);
 }
 
 export function canCreateEntity(role: EntityRole): boolean {
-  return role === "owner";
+  return isOwner(role);
 }
 
 /** Non-owners see only their assigned restaurant, not every membership on the account. */
