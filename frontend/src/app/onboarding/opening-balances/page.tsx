@@ -565,7 +565,6 @@ export default function OpeningBalancesPage() {
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    variant="secondary"
                     disabled={!defaultMainDrawerId(moneyAccounts)}
                     onClick={() => {
                       const drawerId = defaultMainDrawerId(moneyAccounts);
@@ -583,7 +582,6 @@ export default function OpeningBalancesPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant="secondary"
                     disabled={!defaultBankAccountId(moneyAccounts)}
                     onClick={() => {
                       const bankId = defaultBankAccountId(moneyAccounts);
@@ -601,7 +599,6 @@ export default function OpeningBalancesPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant="secondary"
                     onClick={() => {
                       const line = newLine();
                       setLines((prev) => [...prev, line]);

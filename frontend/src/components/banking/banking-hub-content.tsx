@@ -61,7 +61,6 @@ export function BankingHubContent() {
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
-            variant="secondary"
             type="button"
             disabled={!entityId}
             onClick={() => setTransferOpen(true)}

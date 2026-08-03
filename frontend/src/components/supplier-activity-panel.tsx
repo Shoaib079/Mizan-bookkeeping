@@ -171,7 +171,6 @@ export function SupplierActivityPanel({
         />
         <Button
           type="button"
-          variant="secondary"
           disabled={!entityId || exporting || loading}
           onClick={() => void onExport()}
         >
@@ -305,7 +304,6 @@ export function SupplierActivityPanel({
                       row.movement_kind === "unposted_invoice" && (
                         <Button
                           type="button"
-                          variant="secondary"
                           className="ml-2 inline-flex h-8 px-2 text-xs align-middle"
                           onClick={() =>
                             setReviewDraftId(
@@ -339,7 +337,6 @@ export function SupplierActivityPanel({
                     {row.has_document && row.invoice_draft_id ? (
                       <Button
                         type="button"
-                        variant="secondary"
                         className="h-8 px-2 text-xs"
                         onClick={() =>
                           setPreviewDraftId(

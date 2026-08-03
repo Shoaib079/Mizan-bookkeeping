@@ -37,7 +37,6 @@ export function SubledgerRowActions({
       {showEdit && (
         <Button
           type="button"
-          variant="secondary"
           className="h-8 px-2"
           onClick={onEdit}
         >

@@ -158,10 +158,10 @@ export function FxWalletPageContent() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => setPurchaseOpen(true)}>Buy {currency}</Button>
-              <Button variant="secondary" onClick={() => setConvertOpen(true)}>
+              <Button onClick={() => setConvertOpen(true)}>
                 Convert to TRY
               </Button>
-              <Button variant="secondary" onClick={() => setSpendOpen(true)}>
+              <Button onClick={() => setSpendOpen(true)}>
                 Spend on expense
               </Button>
             </div>

@@ -161,19 +161,16 @@ export function AccountDetailPageContent() {
               )}
               {account.account_kind === "cash" && (
                 <Link href="/banking/cash">
-                  <Button variant="secondary">Cash drawer</Button>
+                  <Button>Cash drawer</Button>
                 </Link>
               )}
               {account.account_kind === "foreign_currency" && (
                 <Link href={`/banking/fx/${account.id}`}>
-                  <Button variant="secondary">FX wallet</Button>
+                  <Button>FX wallet</Button>
                 </Link>
               )}
               {account.account_kind !== "credit_card" && (
-                <Button
-                  variant="secondary"
-                  onClick={() => setTransferOpen(true)}
-                >
+                <Button onClick={() => setTransferOpen(true)}>
                   Transfer
                 </Button>
               )}

@@ -219,7 +219,6 @@ export default function StaffDetailPage() {
                 <h1 className="text-xl font-semibold">{employee.name}</h1>
                 <Button
                   type="button"
-                  variant="secondary"
                   className="h-8"
                   onClick={() => setEditOpen(true)}
                 >
@@ -276,19 +275,11 @@ export default function StaffDetailPage() {
             <Button type="button" onClick={() => setPaymentOpen(true)}>
               Pay salary
             </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setAdvanceOpen(true)}
-            >
+            <Button type="button" onClick={() => setAdvanceOpen(true)}>
               Give advance
             </Button>
             {employee.pay_currency === "TRY" && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setExtraDaysOpen(true)}
-              >
+              <Button type="button" onClick={() => setExtraDaysOpen(true)}>
                 Extra days
               </Button>
             )}
@@ -296,7 +287,6 @@ export default function StaffDetailPage() {
               ledger.outstanding_advance_minor > 0 && (
                 <Button
                   type="button"
-                  variant="secondary"
                   title="Record cash returned by the employee for an advance/overpayment"
                   onClick={() => setReturnOpen(true)}
                 >
@@ -308,18 +298,13 @@ export default function StaffDetailPage() {
               ledger.remaining_accrual_minor > 0 && (
                 <Button
                   type="button"
-                  variant="secondary"
                   title="Net advance against unpaid salary without paying cash — normally automatic at Pay salary"
                   onClick={() => setApplyAdvanceOpen(true)}
                 >
                   Apply advance (no cash)
                 </Button>
               )}
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setAccrualOpen(true)}
-            >
+            <Button type="button" onClick={() => setAccrualOpen(true)}>
               Adjust accrual
             </Button>
           </div>

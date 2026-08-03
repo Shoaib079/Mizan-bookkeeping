@@ -23,6 +23,7 @@ export function useLedgerBalanceMap(
   ids: string[],
   buildPath: (id: string) => string,
   extract: (res: unknown) => number,
+  refreshKey = 0,
 ): Result {
   const [balances, setBalances] = useState<Map<string, number>>(EMPTY);
   const [loading, setLoading] = useState(false);
@@ -64,7 +65,7 @@ export function useLedgerBalanceMap(
     // buildPath/extract are stable by construction; re-run only when the set of
     // ids (key) or the entity changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityId, key]);
+  }, [entityId, key, refreshKey]);
 
   return { balances, loading };
 }

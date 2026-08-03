@@ -137,7 +137,7 @@ export default function GroupSalesPage() {
                 <DataTableCell align="right">
                   <div className="flex justify-end gap-2">
                     <Link href={`/customers/group-sales/${sale.id}`}>
-                      <Button type="button" variant="secondary">
+                      <Button type="button">
                         Open
                       </Button>
                     </Link>

@@ -101,7 +101,6 @@ export function CardsPageContent() {
         />
         <div className="flex flex-wrap gap-2">
           <Button
-            variant="secondary"
             type="button"
             disabled={!entityId}
             onClick={() => setSettleFormOpen(true)}
@@ -109,7 +108,6 @@ export function CardsPageContent() {
             Record settlement
           </Button>
           <Button
-            variant="secondary"
             type="button"
             disabled={!entityId}
             onClick={() => setClearFormOpen(true)}

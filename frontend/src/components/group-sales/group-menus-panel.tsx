@@ -78,7 +78,6 @@ export function GroupMenusPanel() {
                 <DataTableCell align="right">
                   <Button
                     type="button"
-                    variant="secondary"
                     onClick={() => {
                       setEditing(row);
                       setFormOpen(true);

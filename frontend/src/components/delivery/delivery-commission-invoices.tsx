@@ -100,7 +100,6 @@ export function DeliveryCommissionInvoices({
               <DataTableCell>
                 <Button
                   type="button"
-                  variant="secondary"
                   className="h-8 px-2 text-xs"
                   onClick={() =>
                     setExpandedDraftId((current) =>

@@ -220,7 +220,6 @@ export function TeamPanel() {
                   ) : (
                     <Button
                       type="button"
-                      variant="secondary"
                       disabled={updatingId === row.id}
                       onClick={() => {
                         setAccessError(null);

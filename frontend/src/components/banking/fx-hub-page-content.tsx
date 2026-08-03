@@ -276,7 +276,6 @@ export function FxHubPageContent() {
                   key={currency}
                   type="button"
                   className="h-8 px-3 text-xs"
-                  variant="secondary"
                   onClick={() => openAddWallet(currency)}
                 >
                   + {currency}
@@ -286,7 +285,6 @@ export function FxHubPageContent() {
             <Button
               type="button"
               className="h-8 px-3 text-xs"
-              variant="secondary"
               onClick={() => openAddWallet("USD")}
             >
               + Add wallet
@@ -307,14 +305,12 @@ export function FxHubPageContent() {
                 Buy
               </Button>
               <Button
-                variant="secondary"
                 disabled={!actionWallet}
                 onClick={() => setConvertOpen(true)}
               >
                 Convert
               </Button>
               <Button
-                variant="secondary"
                 disabled={!actionWallet}
                 onClick={() => setSpendOpen(true)}
               >

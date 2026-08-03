@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
+import { PartnerProfitAllocationForm } from "@/components/forms/partner-profit-allocation-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,12 +51,15 @@ export default function PartnersPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [allocateOpen, setAllocateOpen] = useState(false);
+  const [balanceRefresh, setBalanceRefresh] = useState(0);
   const partnerIds = useMemo(() => items.map((row) => row.id), [items]);
   const { balances, loading: balancesLoading } = useLedgerBalanceMap(
     entityId,
     partnerIds,
     (id) => `/partners/${id}/ledger`,
     (res) => extractPartnerNetBalanceKurus(res),
+    balanceRefresh,
   );
 
   const reload = useCallback(async () => {
@@ -100,9 +104,18 @@ export default function PartnersPage() {
             ? `${total} registered partner${total === 1 ? "" : "s"} (active and inactive — never deleted)`
             : "Select a restaurant in the sidebar"}
         </p>
-        <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
-          New partner
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            disabled={!entityId}
+            onClick={() => setAllocateOpen(true)}
+          >
+            Allocate profit
+          </Button>
+          <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
+            New partner
+          </Button>
+        </div>
       </div>
 
       {shareWarning && (
@@ -189,6 +202,14 @@ export default function PartnersPage() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSaved={() => void reload()}
+      />
+      <PartnerProfitAllocationForm
+        open={allocateOpen}
+        onClose={() => setAllocateOpen(false)}
+        onSaved={() => {
+          void reload();
+          setBalanceRefresh((value) => value + 1);
+        }}
       />
     </AppShell>
   );

@@ -166,7 +166,6 @@ export default function SupplierDetailPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-semibold">{supplier.name}</h1>
                 <Button
-                  variant="secondary"
                   className="h-8"
                   onClick={() => setEditOpen(true)}
                 >
@@ -192,11 +191,8 @@ export default function SupplierDetailPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link
-                href="/record"
-                className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted"
-              >
-                Upload via Record
+              <Link href="/record">
+                <Button type="button">Upload via Record</Button>
               </Link>
               <Button onClick={() => setPaymentOpen(true)}>
                 Record payment

@@ -221,7 +221,6 @@ export default function CashDrawerPage() {
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
-            variant="secondary"
             disabled={!entityId}
             onClick={() => setAddDrawerOpen(true)}
           >
@@ -229,7 +228,6 @@ export default function CashDrawerPage() {
           </Button>
           <Button
             type="button"
-            variant="secondary"
             disabled={!entityId}
             onClick={() => setCountCashOpen(true)}
           >
@@ -237,7 +235,6 @@ export default function CashDrawerPage() {
           </Button>
           <Button
             type="button"
-            variant="secondary"
             disabled={!entityId}
             onClick={() => setCloseDayOpen(true)}
           >
@@ -374,7 +371,6 @@ export default function CashDrawerPage() {
                   {detail.status === "closed" && (
                     <Button
                       type="button"
-                      variant="secondary"
                       onClick={() => {
                         setReopenReason("");
                         setReopenError(null);

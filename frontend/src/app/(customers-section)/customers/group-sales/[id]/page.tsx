@@ -188,7 +188,6 @@ export default function GroupSaleDetailPage() {
               <>
                 <Button
                   type="button"
-                  variant="secondary"
                   onClick={() => setEditOpen(true)}
                 >
                   Edit

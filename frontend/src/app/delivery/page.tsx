@@ -53,7 +53,6 @@ export default function DeliveryPage() {
     <>
       <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
         <Button
-          variant="secondary"
           type="button"
           disabled={!entityId}
           onClick={() => setSettleFormOpen(true)}

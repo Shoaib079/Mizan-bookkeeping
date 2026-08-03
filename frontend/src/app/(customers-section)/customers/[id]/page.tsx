@@ -224,19 +224,18 @@ export default function CustomerDetailPage() {
           </div>
 
           <div className="mb-6 flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
+            <Button type="button" onClick={() => setEditOpen(true)}>
               Edit
             </Button>
             <Button type="button" onClick={() => setSaleOpen(true)}>
               Group sale
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setPaymentOpen(true)}>
+            <Button type="button" onClick={() => setPaymentOpen(true)}>
               Record payment
             </Button>
             {ledger.balance_kurus > 0 && (
               <Button
                 type="button"
-                variant="secondary"
                 onClick={() => setWriteOffOpen(true)}
                 title="Write off part or all of the outstanding balance"
               >
@@ -309,11 +308,7 @@ export default function CustomerDetailPage() {
                       {isGroupSale ? (
                         <div className="flex justify-end">
                           <Link href={`/customers/group-sales/${entry.reference_id}`}>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-8 px-2"
-                            >
+                            <Button type="button" className="h-8 px-2">
                               Edit / Void
                             </Button>
                           </Link>

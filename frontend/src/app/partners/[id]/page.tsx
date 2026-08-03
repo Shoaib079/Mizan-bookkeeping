@@ -14,7 +14,6 @@ import {
   type CorrectablePartnerLedgerRow,
 } from "@/components/forms/correct-partner-ledger-form";
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
-import { PartnerProfitAllocationForm } from "@/components/forms/partner-profit-allocation-form";
 import { PartnerReimbursementForm } from "@/components/forms/partner-reimbursement-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -84,7 +83,6 @@ export default function PartnerDetailPage() {
   const [capitalOpen, setCapitalOpen] = useState(false);
   const [drawingOpen, setDrawingOpen] = useState(false);
   const [repaymentOpen, setRepaymentOpen] = useState(false);
-  const [allocateOpen, setAllocateOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
     journal_entry_id: string;
@@ -102,7 +100,6 @@ export default function PartnerDetailPage() {
     setCapitalOpen(false);
     setDrawingOpen(false);
     setRepaymentOpen(false);
-    setAllocateOpen(false);
     setCorrectEntry(null);
     setVoidTarget(null);
   }, []);
@@ -165,7 +162,6 @@ export default function PartnerDetailPage() {
                 <h1 className="text-xl font-semibold">{partner.name}</h1>
                 <Button
                   type="button"
-                  variant="secondary"
                   className="h-8"
                   onClick={() => setEditOpen(true)}
                 >
@@ -234,24 +230,17 @@ export default function PartnerDetailPage() {
             <Button type="button" onClick={() => setExpenseOpen(true)}>
               Expense fronted
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setReimburseOpen(true)}>
+            <Button type="button" onClick={() => setReimburseOpen(true)}>
               Pay reimbursement
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setCapitalOpen(true)}>
+            <Button type="button" onClick={() => setCapitalOpen(true)}>
               Record capital
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setDrawingOpen(true)}>
+            <Button type="button" onClick={() => setDrawingOpen(true)}>
               Record drawing
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setAllocateOpen(true)}>
-              Allocate profit
-            </Button>
             {partnerDrawingRepaymentAllowed(ledger.capital_balance_kurus) && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setRepaymentOpen(true)}
-              >
+              <Button type="button" onClick={() => setRepaymentOpen(true)}>
                 Repay drawing
               </Button>
             )}
@@ -386,11 +375,6 @@ export default function PartnerDetailPage() {
             kind="repayment"
             balanceKurus={ledger?.capital_balance_kurus}
             onClose={() => setRepaymentOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <PartnerProfitAllocationForm
-            open={allocateOpen}
-            onClose={() => setAllocateOpen(false)}
             onSaved={() => void reload()}
           />
           <CorrectPartnerLedgerForm
