@@ -127,14 +127,17 @@ def lock_setup(db_session: Session, restaurant_a):
     _set_go_live(db_session, restaurant_a.id, go_live)
     accounts = _account_ids(db_session, restaurant_a.id)
     owner = _create_user(db_session, "period-owner@example.com")
+    partner = _create_user(db_session, "period-partner@example.com")
     cashier = _create_user(db_session, "period-cashier@example.com")
     _add_member(db_session, restaurant_a.id, owner.id, EntityRole.OWNER)
+    _add_member(db_session, restaurant_a.id, partner.id, EntityRole.PARTNER)
     _add_member(db_session, restaurant_a.id, cashier.id, EntityRole.CASHIER)
     return {
         "entity_id": restaurant_a.id,
         "go_live": go_live,
         "accounts": accounts,
         "owner": owner,
+        "partner": partner,
         "cashier": cashier,
     }
 
@@ -172,8 +175,8 @@ def test_close_day_blocks_non_owner_post(
 
     blocked = client.post(
         f"/entities/{setup['entity_id']}/manual-journals",
-        json=_manual_payload(bank_id, ap_id, setup["cashier"].id, locked_day.isoformat()),
-        headers=auth_headers(setup["cashier"]),
+        json=_manual_payload(bank_id, ap_id, setup["partner"].id, locked_day.isoformat()),
+        headers=auth_headers(setup["partner"]),
     )
     assert blocked.status_code == 422
     assert "closed period" in blocked.json()["detail"].lower()
@@ -247,8 +250,8 @@ def test_close_month_blocks_backdated_entry_in_month(
 
     blocked = client.post(
         f"/entities/{setup['entity_id']}/manual-journals",
-        json=_manual_payload(bank_id, ap_id, setup["cashier"].id, "2026-02-20"),
-        headers=auth_headers(setup["cashier"]),
+        json=_manual_payload(bank_id, ap_id, setup["partner"].id, "2026-02-20"),
+        headers=auth_headers(setup["partner"]),
     )
     assert blocked.status_code == 422
 
@@ -286,9 +289,9 @@ def test_correct_blocked_when_only_void_date_in_locked_period(
             entry_id,
             entry_date=original_date.isoformat(),
             void_date=locked_void_date.isoformat(),
-            actor_id=setup["cashier"].id,
+            actor_id=setup["partner"].id,
         ),
-        headers=auth_headers(setup["cashier"]),
+        headers=auth_headers(setup["partner"]),
     )
     assert blocked.status_code == 422
     assert "closed period" in blocked.json()["detail"].lower()
@@ -341,9 +344,9 @@ def test_correct_blocked_when_original_entry_period_locked(
             entry_id,
             entry_date=unlocked_correct_date.isoformat(),
             void_date=unlocked_correct_date.isoformat(),
-            actor_id=setup["cashier"].id,
+            actor_id=setup["partner"].id,
         ),
-        headers=auth_headers(setup["cashier"]),
+        headers=auth_headers(setup["partner"]),
     )
     assert blocked.status_code == 422
     assert "closed period" in blocked.json()["detail"].lower()
@@ -389,9 +392,9 @@ def test_correct_blocked_when_corrected_date_before_go_live(
             entry_id,
             entry_date="2025-12-31",
             void_date=original_date.isoformat(),
-            actor_id=setup["cashier"].id,
+            actor_id=setup["partner"].id,
         ),
-        headers=auth_headers(setup["cashier"]),
+        headers=auth_headers(setup["partner"]),
     )
     assert blocked.status_code == 422
     assert "go-live" in blocked.json()["detail"].lower()

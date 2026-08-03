@@ -18,6 +18,7 @@ from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource
+from app.core.period_locks.guards import utc_today
 from app.core.pos.daily_summary_posting import confirm_pos_daily_summary
 from app.db.session import entity_context
 from app.features.auth import service as auth_service
@@ -77,16 +78,17 @@ def _ensure_owner(db_session, entity_id: uuid.UUID) -> uuid.UUID:
 def cash_setup(db_session, restaurant_a):
     seed_default_chart(db_session, restaurant_a.id)
     drawer = _cash_account(db_session, restaurant_a.id)
-    actor_id = _ensure_actor(db_session, restaurant_a.id)
     owner_id = _ensure_owner(db_session, restaurant_a.id)
+    cashier_id = _ensure_actor(db_session, restaurant_a.id)
     with entity_context(db_session, restaurant_a.id):
         accounts = {a.code: a.id for a in db_session.scalars(select(Account))}
     return {
         "entity_id": restaurant_a.id,
         "drawer": drawer,
         "accounts": accounts,
-        "actor_id": actor_id,
         "owner_id": owner_id,
+        "cashier_id": cashier_id,
+        "actor_id": owner_id,
     }
 
 
@@ -329,7 +331,8 @@ def test_movement_rejected_after_close_without_owner(db_session, cash_setup) -> 
     entity_id = cash_setup["entity_id"]
     drawer = cash_setup["drawer"]
     revenue_id = cash_setup["accounts"][SALES_REVENUE_CODE]
-    movement_date = date(2026, 4, 5)
+    cashier_id = cash_setup["cashier_id"]
+    movement_date = utc_today()
 
     cash_posting.post_cash_movement(
         db_session,
@@ -340,7 +343,7 @@ def test_movement_rejected_after_close_without_owner(db_session, cash_setup) -> 
         amount_kurus=10_000,
         offset_account_id=revenue_id,
         description="Sales",
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
 
     close = _close_drawer_day(
@@ -349,7 +352,7 @@ def test_movement_rejected_after_close_without_owner(db_session, cash_setup) -> 
         drawer_id=drawer.id,
         session_date=movement_date,
         counted_balance_kurus=10_000,
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
 
     with pytest.raises(DrawerDayClosedError, match="owner unlock required"):
@@ -362,7 +365,7 @@ def test_movement_rejected_after_close_without_owner(db_session, cash_setup) -> 
             amount_kurus=1_000,
             offset_account_id=revenue_id,
             description="Late entry",
-            actor_id=cash_setup["actor_id"],
+            actor_id=cashier_id,
         )
 
     assert close.session.status == CashDrawerSessionStatus.CLOSED
@@ -373,7 +376,8 @@ def test_owner_reopen_then_post_succeeds_with_audit(db_session, cash_setup) -> N
     drawer = cash_setup["drawer"]
     revenue_id = cash_setup["accounts"][SALES_REVENUE_CODE]
     owner_id = cash_setup["owner_id"]
-    movement_date = date(2026, 4, 8)
+    cashier_id = cash_setup["cashier_id"]
+    movement_date = utc_today()
 
     cash_posting.post_cash_movement(
         db_session,
@@ -384,7 +388,7 @@ def test_owner_reopen_then_post_succeeds_with_audit(db_session, cash_setup) -> N
         amount_kurus=20_000,
         offset_account_id=revenue_id,
         description="Sales",
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
     close = _close_drawer_day(
         db_session,
@@ -392,7 +396,7 @@ def test_owner_reopen_then_post_succeeds_with_audit(db_session, cash_setup) -> N
         drawer_id=drawer.id,
         session_date=movement_date,
         counted_balance_kurus=20_000,
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
 
     reopened = reopen_cash_drawer_session(
@@ -426,7 +430,7 @@ def test_owner_reopen_then_post_succeeds_with_audit(db_session, cash_setup) -> N
         amount_kurus=2_000,
         offset_account_id=revenue_id,
         description="Late sale after reopen",
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
     assert result.cash_movement.amount_kurus == 2_000
 
@@ -436,7 +440,8 @@ def test_owner_post_with_unlock_reason_reopens_and_audits(db_session, cash_setup
     drawer = cash_setup["drawer"]
     revenue_id = cash_setup["accounts"][SALES_REVENUE_CODE]
     owner_id = cash_setup["owner_id"]
-    movement_date = date(2026, 4, 9)
+    cashier_id = cash_setup["cashier_id"]
+    movement_date = utc_today()
 
     cash_posting.post_cash_movement(
         db_session,
@@ -447,7 +452,7 @@ def test_owner_post_with_unlock_reason_reopens_and_audits(db_session, cash_setup
         amount_kurus=15_000,
         offset_account_id=revenue_id,
         description="Sales",
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
     close = _close_drawer_day(
         db_session,
@@ -455,7 +460,7 @@ def test_owner_post_with_unlock_reason_reopens_and_audits(db_session, cash_setup
         drawer_id=drawer.id,
         session_date=movement_date,
         counted_balance_kurus=15_000,
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
 
     with pytest.raises(DrawerUnlockRequiredError, match="period_unlock_reason"):
@@ -506,7 +511,8 @@ def test_owner_recount_close_day_requires_unlock_reason(db_session, cash_setup) 
     drawer = cash_setup["drawer"]
     revenue_id = cash_setup["accounts"][SALES_REVENUE_CODE]
     owner_id = cash_setup["owner_id"]
-    movement_date = date(2026, 4, 12)
+    cashier_id = cash_setup["cashier_id"]
+    movement_date = utc_today()
 
     cash_posting.post_cash_movement(
         db_session,
@@ -517,7 +523,7 @@ def test_owner_recount_close_day_requires_unlock_reason(db_session, cash_setup) 
         amount_kurus=30_000,
         offset_account_id=revenue_id,
         description="Sales",
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
     first = _close_drawer_day(
         db_session,
@@ -525,7 +531,7 @@ def test_owner_recount_close_day_requires_unlock_reason(db_session, cash_setup) 
         drawer_id=drawer.id,
         session_date=movement_date,
         counted_balance_kurus=30_000,
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
     assert first.session.status == CashDrawerSessionStatus.CLOSED
 
@@ -546,7 +552,7 @@ def test_owner_recount_close_day_requires_unlock_reason(db_session, cash_setup) 
             drawer_id=drawer.id,
             session_date=movement_date,
             counted_balance_kurus=29_500,
-            actor_id=cash_setup["actor_id"],
+            actor_id=cashier_id,
             period_unlock_reason="Cashier cannot unlock",
         )
 
@@ -667,8 +673,8 @@ def test_cash_drawer_api_e2e(client: TestClient, db_session, cash_setup) -> None
     drawer = cash_setup["drawer"]
     revenue_id = cash_setup["accounts"][SALES_REVENUE_CODE]
     owner_id = cash_setup["owner_id"]
-    actor_id = cash_setup["actor_id"]
-    movement_date = "2026-04-10"
+    cashier_id = cash_setup["cashier_id"]
+    movement_date = utc_today().isoformat()
 
     movement_resp = client.post(
         f"/entities/{entity_id}/cash/movements",
@@ -679,7 +685,7 @@ def test_cash_drawer_api_e2e(client: TestClient, db_session, cash_setup) -> None
             "amount_kurus": 120_000,
             "offset_account_id": str(revenue_id),
             "description": "API cash in",
-            "actor_id": str(actor_id),
+            "actor_id": str(cashier_id),
         },
     )
     assert movement_resp.status_code == 201
@@ -692,7 +698,7 @@ def test_cash_drawer_api_e2e(client: TestClient, db_session, cash_setup) -> None
             "money_account_id": str(drawer.id),
             "session_date": movement_date,
             "counted_balance_kurus": 118_000,
-            "actor_id": str(actor_id),
+            "actor_id": str(cashier_id),
         },
     )
     assert close_resp.status_code == 200
@@ -718,7 +724,7 @@ def test_cash_drawer_api_e2e(client: TestClient, db_session, cash_setup) -> None
             "amount_kurus": 1_000,
             "offset_account_id": str(revenue_id),
             "description": "After close",
-            "actor_id": str(actor_id),
+            "actor_id": str(cashier_id),
         },
     )
     assert blocked_resp.status_code == 422
@@ -743,7 +749,7 @@ def test_cash_drawer_api_e2e(client: TestClient, db_session, cash_setup) -> None
             "amount_kurus": 1_000,
             "offset_account_id": str(revenue_id),
             "description": "After reopen",
-            "actor_id": str(actor_id),
+            "actor_id": str(cashier_id),
         },
     )
     assert after_reopen_resp.status_code == 201
@@ -754,7 +760,7 @@ def test_cash_drawer_api_e2e(client: TestClient, db_session, cash_setup) -> None
         drawer_id=drawer.id,
         session_date=date.fromisoformat(movement_date),
         counted_balance_kurus=121_000,
-        actor_id=cash_setup["actor_id"],
+        actor_id=cashier_id,
     )
     assert close_again.session.status == CashDrawerSessionStatus.CLOSED
 
