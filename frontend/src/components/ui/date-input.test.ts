@@ -22,4 +22,12 @@ describe("DateInput future dates", () => {
     expect(SOURCE).toContain('isMobile ? "p-3" : "w-[17.5rem] p-4"');
     expect(SOURCE).toContain("isMobile={isMobile}");
   });
+
+  it("keeps the calendar icon anchored to the input when the late-night hint shows", () => {
+    const hintIdx = SOURCE.indexOf("{lateNightHint &&");
+    const inputWrapIdx = SOURCE.indexOf('<div className="relative">');
+    expect(inputWrapIdx).toBeGreaterThan(-1);
+    expect(hintIdx).toBeGreaterThan(inputWrapIdx);
+    expect(SOURCE).toContain("!isMobile && calendarPanel");
+  });
 });

@@ -454,49 +454,53 @@ export function DateInput({
     ) : null;
 
   return (
-    <div ref={rootRef} className={cn("relative", className)}>
-      <input
-        ref={inputRef}
-        id={id}
-        type="text"
-        inputMode="numeric"
-        autoComplete="off"
-        disabled={disabled}
-        required={required}
-        placeholder={placeholder}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onBlur={clampTypedValue}
-        onClick={showCalendar}
-        onKeyDown={handleInputKeyDown}
-        className={cn(
-          "h-9 w-full rounded-md border border-border bg-background py-2 pl-3 pr-9 text-base touch-manipulation md:text-sm",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          disabled && "cursor-not-allowed opacity-50",
-        )}
-      />
-      <button
-        type="button"
-        tabIndex={-1}
-        disabled={disabled}
-        aria-label="Open calendar"
-        aria-expanded={open}
-        onClick={toggleCalendar}
-        className={cn(
-          "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground touch-manipulation",
-          "hover:bg-muted hover:text-foreground",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-          disabled && "pointer-events-none opacity-50",
-        )}
-      >
-        <Calendar className="h-4 w-4" />
-      </button>
+    <div ref={rootRef} className={className}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          disabled={disabled}
+          required={required}
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={clampTypedValue}
+          onClick={showCalendar}
+          onKeyDown={handleInputKeyDown}
+          className={cn(
+            "h-9 w-full rounded-md border border-border bg-background py-2 pl-3 pr-9 text-base touch-manipulation md:text-sm",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            disabled && "cursor-not-allowed opacity-50",
+          )}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          aria-label="Open calendar"
+          aria-expanded={open}
+          onClick={toggleCalendar}
+          className={cn(
+            "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground touch-manipulation",
+            "hover:bg-muted hover:text-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            disabled && "pointer-events-none opacity-50",
+          )}
+        >
+          <Calendar className="h-4 w-4" />
+        </button>
+
+        {!isMobile && calendarPanel}
+      </div>
 
       {isMobile && typeof document !== "undefined"
         ? calendarPanel
           ? createPortal(calendarPanel, document.body)
           : null
-        : calendarPanel}
+        : null}
 
       {lateNightHint && (
         <p className="mt-1 text-xs text-warning">{lateNightHint}</p>
