@@ -40,12 +40,12 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
   };
 
   return (
-    <div className="flex flex-wrap items-start gap-x-3 gap-y-4">
-      <div>
+    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-3 sm:gap-y-4">
+      <div className="min-w-0 flex-1 sm:flex-none">
         <Label htmlFor="report-from">From</Label>
         <DateInput
           id="report-from"
-          className="mt-1 w-36"
+          className="mt-1 w-full min-w-0 sm:w-36"
           value={fromDisplay}
           disabled={disabled}
           showLateNightHint={false}
@@ -55,11 +55,11 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
           }}
         />
       </div>
-      <div>
+      <div className="min-w-0 flex-1 sm:flex-none">
         <Label htmlFor="report-to">To</Label>
         <DateInput
           id="report-to"
-          className="mt-1 w-36"
+          className="mt-1 w-full min-w-0 sm:w-36"
           value={toDisplay}
           disabled={disabled}
           showLateNightHint={false}
@@ -69,7 +69,7 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
           }}
         />
       </div>
-      <div className="flex flex-wrap items-end gap-2 pt-6">
+      <div className="flex flex-wrap items-stretch gap-2 sm:items-end sm:pt-6">
         <Button type="button" variant="secondary" disabled={disabled} onClick={apply}>
           Apply
         </Button>

@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | **GS-FX** forex-only group sales (next) |
 | **Next up**              | **GS-FX** · then owner sign-off items |
-| **Last completed slice** | **Custom member access (2026-08-03)** — per-member grant catalog stored on `entity_memberships`; Settings → Edit access UI; backend + frontend enforce same grants; role presets as shortcuts; migration `088`. |
-| **Last commit/tag**      | `v0.custom-member-access` |
+| **Last completed slice** | **Mobile date input stability (2026-08-03)** — 16px inputs prevent iOS zoom; calendar portal + viewport-aware positioning; report period sheet on mobile. |
+| **Last commit/tag**      | `v0.mobile-date-input` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 

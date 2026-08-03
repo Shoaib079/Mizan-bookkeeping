@@ -44,6 +44,7 @@ export function ReportPeriodTrigger({
       <Dialog
         open={open}
         title="Report period"
+        mobilePresentation="sheet"
         onClose={() => setOpen(false)}
       >
         <ReportDateRange

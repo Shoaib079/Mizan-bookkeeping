@@ -14,4 +14,11 @@ describe("DateInput future dates", () => {
     expect(SOURCE).toContain("setToday(startOfDay(new Date()))");
     expect(SOURCE).toContain("open && today");
   });
+
+  it("uses 16px input on mobile and viewport-aware calendar positioning", () => {
+    expect(SOURCE).toContain("text-base touch-manipulation md:text-sm");
+    expect(SOURCE).toContain("createPortal");
+    expect(SOURCE).toContain("computeMobileCalendarStyle");
+    expect(SOURCE).toContain("w-[min(17.5rem,100%)]");
+  });
 });

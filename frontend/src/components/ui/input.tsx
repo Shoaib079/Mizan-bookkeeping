@@ -10,7 +10,7 @@ export const Input = forwardRef<
     <input
       ref={ref}
       className={cn(
-        "h-9 w-full rounded-md border border-border bg-background px-3 text-sm",
+        "h-9 w-full rounded-md border border-border bg-background px-3 text-base md:text-sm touch-manipulation",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
@@ -38,7 +38,7 @@ export function Select({
   return (
     <select
       className={cn(
-        "h-9 w-full rounded-md border border-border bg-background px-3 text-sm",
+        "h-9 w-full rounded-md border border-border bg-background px-3 text-base md:text-sm touch-manipulation",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}

@@ -4,10 +4,13 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 
 import {
   addDays,
@@ -22,6 +25,8 @@ import {
   weekdayLabels,
 } from "@/lib/dates";
 import { shouldOpenCalendarOnClick } from "@/lib/date-input-open";
+import { MOBILE_SHELL_MAX_WIDTH_PX } from "@/lib/mobile-shell";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { cn } from "@/lib/utils";
 
 export type DateInputProps = {
@@ -38,6 +43,10 @@ export type DateInputProps = {
   /** Block calendar days after today — default for all posting/entry dates. */
   disableFuture?: boolean;
 };
+
+const CALENDAR_WIDTH_PX = 280;
+const CALENDAR_HEIGHT_EST_PX = 340;
+const VIEWPORT_PAD_PX = 8;
 
 function viewFromValue(
   value: string,
@@ -57,6 +66,158 @@ function viewFromValue(
   return null;
 }
 
+function computeMobileCalendarStyle(anchor: DOMRect): CSSProperties {
+  const width = Math.min(
+    CALENDAR_WIDTH_PX,
+    window.innerWidth - VIEWPORT_PAD_PX * 2,
+  );
+  let left = anchor.left;
+  left = Math.max(
+    VIEWPORT_PAD_PX,
+    Math.min(left, window.innerWidth - width - VIEWPORT_PAD_PX),
+  );
+
+  let top = anchor.bottom + 4;
+  if (top + CALENDAR_HEIGHT_EST_PX > window.innerHeight - VIEWPORT_PAD_PX) {
+    const above = anchor.top - CALENDAR_HEIGHT_EST_PX - 4;
+    if (above >= VIEWPORT_PAD_PX) {
+      top = above;
+    } else {
+      top = Math.max(
+        VIEWPORT_PAD_PX,
+        window.innerHeight - CALENDAR_HEIGHT_EST_PX - VIEWPORT_PAD_PX,
+      );
+    }
+  }
+
+  return { position: "fixed", left, top, width, zIndex: 60 };
+}
+
+type CalendarPanelProps = {
+  viewYear: number;
+  viewMonth: number;
+  canGoNextMonth: boolean;
+  cells: (Date | null)[];
+  selected: Date | null;
+  today: Date;
+  isDateDisabled: (date: Date) => boolean;
+  onShiftMonth: (delta: number) => void;
+  onPickDate: (date: Date) => void;
+  className?: string;
+  style?: CSSProperties;
+  panelRef?: React.RefObject<HTMLDivElement | null>;
+};
+
+function CalendarPanel({
+  viewYear,
+  viewMonth,
+  canGoNextMonth,
+  cells,
+  selected,
+  today,
+  isDateDisabled,
+  onShiftMonth,
+  onPickDate,
+  className,
+  style,
+  panelRef,
+}: CalendarPanelProps) {
+  return (
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-label="Choose date"
+      style={style}
+      className={cn(
+        "rounded-lg border border-border bg-card p-3 shadow-md",
+        className,
+      )}
+    >
+      <div className="mb-2 flex items-center justify-between gap-1">
+        <button
+          type="button"
+          aria-label="Previous month"
+          onClick={() => onShiftMonth(-1)}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-medium capitalize">
+          {formatMonthYear(viewYear, viewMonth)}
+        </span>
+        <button
+          type="button"
+          aria-label="Next month"
+          disabled={!canGoNextMonth}
+          onClick={() => onShiftMonth(1)}
+          className={cn(
+            "flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
+            !canGoNextMonth && "cursor-not-allowed opacity-40 hover:bg-transparent",
+          )}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mb-1 grid grid-cols-7 gap-0.5">
+        {weekdayLabels().map((label) => (
+          <div
+            key={label}
+            className="py-1 text-center text-[0.65rem] font-medium text-muted-foreground"
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((cell, index) => {
+          if (!cell) {
+            return <span key={`pad-${index}`} aria-hidden />;
+          }
+          const future = isDateDisabled(cell);
+          const isSelected = selected != null && isSameDay(cell, selected);
+          const isToday = isSameDay(cell, today);
+          return (
+            <button
+              key={cell.toISOString()}
+              type="button"
+              disabled={future}
+              aria-disabled={future}
+              onClick={() => onPickDate(cell)}
+              className={cn(
+                "h-8 rounded-md text-sm tabular-nums",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                future &&
+                  "cursor-not-allowed text-muted-foreground/40 hover:bg-transparent",
+                !future && "hover:bg-sidebar-accent hover:text-primary",
+                !future &&
+                  isSelected &&
+                  "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                !future &&
+                  !isSelected &&
+                  isToday &&
+                  "font-semibold text-primary",
+                !future && !isSelected && !isToday && "text-foreground",
+              )}
+            >
+              {cell.getDate()}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        className="mt-2 w-full rounded-md py-1.5 text-xs text-primary hover:bg-sidebar-accent"
+        onClick={() => onPickDate(today)}
+      >
+        Today
+      </button>
+    </div>
+  );
+}
+
 export function DateInput({
   id,
   value,
@@ -71,9 +232,14 @@ export function DateInput({
 }: DateInputProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobileShell();
   const [open, setOpen] = useState(false);
   const [today, setToday] = useState<Date | null>(null);
   const [lateNightHint, setLateNightHint] = useState<string | null>(null);
+  const [mobileCalendarStyle, setMobileCalendarStyle] = useState<
+    CSSProperties | undefined
+  >(undefined);
 
   const selected = parseDisplayToDate(value);
   const [viewYear, setViewYear] = useState(0);
@@ -110,12 +276,39 @@ export function DateInput({
     setLateNightHint(lateNightDateHint(value));
   }, [value, showLateNightHint]);
 
+  const updateMobileCalendarPosition = useCallback(() => {
+    if (!isMobile || !inputRef.current) return;
+    setMobileCalendarStyle(
+      computeMobileCalendarStyle(inputRef.current.getBoundingClientRect()),
+    );
+  }, [isMobile]);
+
+  useLayoutEffect(() => {
+    if (!open || !isMobile) {
+      setMobileCalendarStyle(undefined);
+      return;
+    }
+    updateMobileCalendarPosition();
+  }, [open, isMobile, updateMobileCalendarPosition, viewYear, viewMonth]);
+
+  useEffect(() => {
+    if (!open || !isMobile) return;
+    const onViewportChange = () => updateMobileCalendarPosition();
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("scroll", onViewportChange, true);
+    return () => {
+      window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("scroll", onViewportChange, true);
+    };
+  }, [open, isMobile, updateMobileCalendarPosition]);
+
   useEffect(() => {
     if (!open) return;
     function onDocumentMouseDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (calendarRef.current?.contains(target)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onDocumentMouseDown);
     return () => document.removeEventListener("mousedown", onDocumentMouseDown);
@@ -138,9 +331,13 @@ export function DateInput({
       if (isDateDisabled(date)) return;
       onChange(displayFromDate(date));
       setOpen(false);
-      inputRef.current?.focus();
+      if (isMobile) {
+        inputRef.current?.blur();
+      } else {
+        inputRef.current?.focus();
+      }
     },
-    [isDateDisabled, onChange],
+    [isDateDisabled, isMobile, onChange],
   );
 
   const clampTypedValue = useCallback(() => {
@@ -214,6 +411,28 @@ export function DateInput({
 
   const cells = getCalendarDays(viewYear, viewMonth);
 
+  const calendarPanel =
+    open && today ? (
+      <CalendarPanel
+        panelRef={calendarRef}
+        viewYear={viewYear}
+        viewMonth={viewMonth}
+        canGoNextMonth={canGoNextMonth}
+        cells={cells}
+        selected={selected}
+        today={today}
+        isDateDisabled={isDateDisabled}
+        onShiftMonth={shiftMonth}
+        onPickDate={pickDate}
+        style={isMobile ? mobileCalendarStyle : undefined}
+        className={
+          isMobile
+            ? undefined
+            : "absolute left-0 top-full z-50 mt-1 w-[min(17.5rem,100%)] max-w-[17.5rem]"
+        }
+      />
+    ) : null;
+
   return (
     <div ref={rootRef} className={cn("relative", className)}>
       <input
@@ -231,7 +450,7 @@ export function DateInput({
         onClick={showCalendar}
         onKeyDown={handleInputKeyDown}
         className={cn(
-          "h-9 w-full rounded-md border border-border bg-background py-2 pl-3 pr-9 text-sm",
+          "h-9 w-full rounded-md border border-border bg-background py-2 pl-3 pr-9 text-base touch-manipulation md:text-sm",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           disabled && "cursor-not-allowed opacity-50",
         )}
@@ -244,7 +463,7 @@ export function DateInput({
         aria-expanded={open}
         onClick={toggleCalendar}
         className={cn(
-          "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground",
+          "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground touch-manipulation",
           "hover:bg-muted hover:text-foreground",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           disabled && "pointer-events-none opacity-50",
@@ -253,95 +472,11 @@ export function DateInput({
         <Calendar className="h-4 w-4" />
       </button>
 
-      {open && today && (
-        <div
-          role="dialog"
-          aria-label="Choose date"
-          className="absolute left-0 top-full z-50 mt-1 w-[17.5rem] rounded-lg border border-border bg-card p-3 shadow-md"
-        >
-          <div className="mb-2 flex items-center justify-between gap-1">
-            <button
-              type="button"
-              aria-label="Previous month"
-              onClick={() => shiftMonth(-1)}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-sm font-medium capitalize">
-              {formatMonthYear(viewYear, viewMonth)}
-            </span>
-            <button
-              type="button"
-              aria-label="Next month"
-              disabled={!canGoNextMonth}
-              onClick={() => shiftMonth(1)}
-              className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
-                !canGoNextMonth && "cursor-not-allowed opacity-40 hover:bg-transparent",
-              )}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="mb-1 grid grid-cols-7 gap-0.5">
-            {weekdayLabels().map((label) => (
-              <div
-                key={label}
-                className="py-1 text-center text-[0.65rem] font-medium text-muted-foreground"
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-0.5">
-            {cells.map((cell, index) => {
-              if (!cell) {
-                return <span key={`pad-${index}`} aria-hidden />;
-              }
-              const future = isDateDisabled(cell);
-              const isSelected = selected != null && isSameDay(cell, selected);
-              const isToday = isSameDay(cell, today);
-              return (
-                <button
-                  key={cell.toISOString()}
-                  type="button"
-                  disabled={future}
-                  aria-disabled={future}
-                  onClick={() => pickDate(cell)}
-                  className={cn(
-                    "h-8 rounded-md text-sm tabular-nums",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                    future &&
-                      "cursor-not-allowed text-muted-foreground/40 hover:bg-transparent",
-                    !future && "hover:bg-sidebar-accent hover:text-primary",
-                    !future &&
-                      isSelected &&
-                      "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-                    !future &&
-                      !isSelected &&
-                      isToday &&
-                      "font-semibold text-primary",
-                    !future && !isSelected && !isToday && "text-foreground",
-                  )}
-                >
-                  {cell.getDate()}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            className="mt-2 w-full rounded-md py-1.5 text-xs text-primary hover:bg-sidebar-accent"
-            onClick={() => pickDate(today)}
-          >
-            Today
-          </button>
-        </div>
-      )}
+      {isMobile && typeof document !== "undefined"
+        ? calendarPanel
+          ? createPortal(calendarPanel, document.body)
+          : null
+        : calendarPanel}
 
       {lateNightHint && (
         <p className="mt-1 text-xs text-warning">{lateNightHint}</p>
@@ -349,3 +484,6 @@ export function DateInput({
     </div>
   );
 }
+
+/** Exported for tests — mobile calendar width cap matches shell breakpoint. */
+export const dateInputMobileMaxWidthPx = MOBILE_SHELL_MAX_WIDTH_PX;

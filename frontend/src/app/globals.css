@@ -88,6 +88,14 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+  /* iOS Safari zooms focused inputs below 16px — keep the page scale stable on mobile. */
+  @media (max-width: 819px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
 }
 
 @layer utilities {
