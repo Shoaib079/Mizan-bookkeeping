@@ -50,6 +50,27 @@ export function canReadFinancialReports(role: EntityRole): boolean {
   return hasPermission(role, "financial_reports:read");
 }
 
+/** Only owners may switch or create restaurants — all other roles stay on assignment. */
+export function canSwitchEntity(role: EntityRole): boolean {
+  return role === "owner";
+}
+
+export function canCreateEntity(role: EntityRole): boolean {
+  return role === "owner";
+}
+
+/** Non-owners see only their assigned restaurant, not every membership on the account. */
+export function visibleEntitiesForRole<T extends { id: string }>(
+  entities: T[],
+  entityId: string,
+  role: EntityRole,
+): T[] {
+  if (canSwitchEntity(role)) return entities;
+  const current = entities.find((entity) => entity.id === entityId);
+  if (current) return [current];
+  return entities.length > 0 ? [entities[0]] : [];
+}
+
 export type DashboardKpiKey =
   | "sales"
   | "expenses"

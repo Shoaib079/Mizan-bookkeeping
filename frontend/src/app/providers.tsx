@@ -11,6 +11,7 @@ import { QueryProvider } from "@/lib/query-client";
 import { ToastProvider } from "@/lib/toast";
 import { UnsavedWorkProvider } from "@/lib/unsaved-work";
 import { EntityAccessProvider } from "@/lib/use-entity-access";
+import { EntitySwitchGuard } from "@/components/layout/entity-switch-guard";
 
 const clerkPubKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -20,6 +21,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ApiAuthProvider clerkEnabled={Boolean(clerkPubKey)}>
         <EntityProvider>
           <EntityAccessProvider>
+            <EntitySwitchGuard />
             <UnsavedWorkProvider>
               <ToastProvider>
                 <QuickActionsProvider>

@@ -17,7 +17,7 @@
 | **Active slice**         | **GS-FX** forex-only group sales (next) |
 | **Next up**              | **GS-FX** · then owner sign-off items |
 | **Last completed slice** | **C4 mobile shell (2026-08-03)** — bottom tabs, More/Settings hub, card rows on list pages, transaction bottom sheet, Record quick-post, reports sticky download bar. See `MOBILE_UX_PLAN.md`. |
-| **Last commit/tag**      | `v0.c4-mobile-shell` |
+| **Last commit/tag**      | `v0.entity-switch-owner-only` |
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
@@ -1879,6 +1879,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-03 | Non-owner entity lock (team roles)           | `v0.entity-switch-owner-only`                          | Only owners switch/create restaurants; partners/cashiers/view-only locked to assigned company · EntitySwitchGuard · profile/account/mobile UI; vitest |
 | 2026-08-03 | C4 mobile shell (phone UX)                   | `v0.c4-mobile-shell`                                 | Bottom tabs + FAB · `/more` + `/balances` · mobile top bar · More/Settings hub · card rows · transaction bottom sheet · Record quick chips · reports sticky period + Download · void/period-unlock as mobile sheet · unsaved-changes guard on edit forms · no future dates + date-picker fixes · month-to-date default ranges · `MOBILE_UX_PLAN.md`; 716 vitest green |
 | 2026-08-03 | GL inline Edit/Void + edit/void policy       | `v0.gl-inline-edit-void`                               | `GET .../ledger/entries/{id}/actions`; inline Edit/Void in GL (expense/partner/staff/customer + generic); card commission generic correct; centralized `subledger-actions.ts`; year-end "Nothing to close" for empty year; reports period summary skeleton; fix GL `setVoidTarget` crash; 1376 pytest + 692 vitest |
 | 2026-08-03 | Clerk invite email on Add member               | *(pending commit)*                                     | Settings → Team add-by-email creates Clerk invitation; `PUBLIC_APP_URL` redirect to `/sign-up`; invite flags on MembershipRead; pytest |

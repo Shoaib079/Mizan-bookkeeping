@@ -4,6 +4,9 @@ import { appRoutes } from "@/lib/app-routes";
 import {
   ROLE_PERMISSIONS,
   canWriteOperations,
+  canSwitchEntity,
+  canCreateEntity,
+  visibleEntitiesForRole,
   filterDashboardKpis,
   filterDeliveryReportCards,
   filterFinancialReportCards,
@@ -35,6 +38,39 @@ describe("ROLE_PERMISSIONS matrix", () => {
       "owner",
       "partner",
       "partner_view_only",
+    ]);
+  });
+});
+
+describe("entity switching", () => {
+  it("only owners may switch restaurants", () => {
+    expect(canSwitchEntity("owner")).toBe(true);
+    expect(canSwitchEntity("partner")).toBe(false);
+    expect(canSwitchEntity("cashier")).toBe(false);
+    expect(canSwitchEntity("partner_view_only")).toBe(false);
+  });
+
+  it("only owners may create restaurants", () => {
+    expect(canCreateEntity("owner")).toBe(true);
+    expect(canCreateEntity("partner")).toBe(false);
+    expect(canCreateEntity("cashier")).toBe(false);
+    expect(canCreateEntity("partner_view_only")).toBe(false);
+  });
+});
+
+describe("visibleEntitiesForRole", () => {
+  const entities = [
+    { id: "a", name: "India Gate" },
+    { id: "b", name: "Other Place" },
+  ];
+
+  it("owners see every membership", () => {
+    expect(visibleEntitiesForRole(entities, "a", "owner")).toEqual(entities);
+  });
+
+  it("partners see only their assigned restaurant", () => {
+    expect(visibleEntitiesForRole(entities, "a", "partner")).toEqual([
+      { id: "a", name: "India Gate" },
     ]);
   });
 });

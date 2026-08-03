@@ -4,13 +4,17 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 import { EntityBadge } from "@/components/layout/entity-badge";
+import { canSwitchEntity } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
 import { entityAccentColor, entityInitial } from "@/lib/entity-visual";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
-/** Restaurant switcher on More tab (C4.2). */
+/** Restaurant switcher on More tab (C4.2). Non-owners see a read-only badge. */
 export function MobileEntitySwitcher() {
   const { entityId, setEntityId, entities, entitiesLoading } = useEntity();
+  const { role } = useEntityAccess();
+  const canSwitch = canSwitchEntity(role);
   const [open, setOpen] = useState(false);
   const active = entities.find((e) => e.id === entityId);
 
@@ -21,6 +25,18 @@ export function MobileEntitySwitcher() {
   }
 
   if (!active || !entityId) return null;
+
+  if (!canSwitch) {
+    return (
+      <div className="mb-5 flex min-h-[68px] items-center gap-3 rounded-xl bg-card px-4 shadow-sm">
+        <EntityBadge entityId={entityId} name={active.name} />
+        <div className="min-w-0 flex-1 text-left">
+          <p className="truncate text-[15px] font-semibold">{active.name}</p>
+          <p className="text-xs text-muted-foreground">Your restaurant</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative mb-5">

@@ -27,10 +27,12 @@ import {
 } from "@/lib/account-menu-helpers";
 import { useApiAuth } from "@/lib/api-auth";
 import { clearMizanStorage, useEntity } from "@/lib/entity-context";
+import { canCreateEntity, canSwitchEntity } from "@/lib/entity-access";
 import { entityAccentColor, userInitials } from "@/lib/entity-visual";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { useToast } from "@/lib/toast";
 import { useUnsavedWork } from "@/lib/unsaved-work";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 type PendingAction =
@@ -82,6 +84,9 @@ function AccountMenuPanel({
     entitiesError,
     userProfile,
   } = useEntity();
+  const { role } = useEntityAccess();
+  const canSwitch = canSwitchEntity(role);
+  const canCreate = canCreateEntity(role);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -256,7 +261,7 @@ function AccountMenuPanel({
             </div>
           )}
 
-          {otherEntities.length > 0 && (
+          {canSwitch && otherEntities.length > 0 && (
             <div className="border-b border-border px-2 py-2">
               <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
                 Switch restaurant
@@ -331,6 +336,7 @@ function AccountMenuPanel({
               <Settings className="size-4 text-muted-foreground" />
               Restaurant settings
             </Link>
+            {canCreate && (
             <button
               type="button"
               role="menuitem"
@@ -343,6 +349,7 @@ function AccountMenuPanel({
               <Plus className="size-4 text-muted-foreground" />
               Add restaurant
             </button>
+            )}
           </div>
 
           {onSignOut && (

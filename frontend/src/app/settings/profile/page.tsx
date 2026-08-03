@@ -16,6 +16,7 @@ import { useEntity } from "@/lib/entity-context";
 import { entityAccentColor, entityInitial } from "@/lib/entity-visual";
 import { ENTITY_ROLES } from "@/lib/settings-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
+import { canSwitchEntity, visibleEntitiesForRole } from "@/lib/entity-access";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,8 @@ export default function ProfileSettingsPage() {
   const { userProfile, refreshUserProfile, entities, entityId, setEntityId } =
     useEntity();
   const { role } = useEntityAccess();
+  const canSwitch = canSwitchEntity(role);
+  const visibleEntities = visibleEntitiesForRole(entities, entityId, role);
   const { dark, mounted, setDarkMode } = useTheme();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -128,28 +131,32 @@ export default function ProfileSettingsPage() {
         <section className="rounded-lg border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Your restaurants</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Click a restaurant to switch to it.
+            {canSwitch
+              ? "Click a restaurant to switch to it."
+              : "You are assigned to this restaurant."}
           </p>
-          {entities.length === 0 ? (
+          {visibleEntities.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">
               You&apos;re not a member of any restaurant yet.
             </p>
           ) : (
             <ul className="mt-3 divide-y divide-border">
-              {entities.map((entity) => {
+              {visibleEntities.map((entity) => {
                 const active = entity.id === entityId;
                 return (
                   <li key={entity.id}>
                     <button
                       type="button"
+                      disabled={!canSwitch && !active}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm transition-colors hover:bg-muted/50",
+                        "flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left text-sm transition-colors",
+                        canSwitch && !active && "hover:bg-muted/50",
                         active && "font-medium",
+                        !canSwitch && "cursor-default",
                       )}
                       onClick={() => {
-                        if (!active) {
-                          setEntityId(entity.id, { redirectToDashboard: true });
-                        }
+                        if (!canSwitch || active) return;
+                        setEntityId(entity.id, { redirectToDashboard: true });
                       }}
                     >
                       <span
