@@ -56,7 +56,7 @@ export function PartnerLedgerDownloadMenu({
     <div className="relative" ref={menuRef}>
       <Button
         type="button"
-        variant="secondary"
+        variant="primary"
         disabled={disabled || !entityId || !partnerId || busy !== null}
         onClick={() => setOpen((value) => !value)}
         className="gap-1.5"

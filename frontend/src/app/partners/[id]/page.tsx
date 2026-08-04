@@ -219,27 +219,29 @@ export default function PartnerDetailPage() {
             </div>
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-2">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" onClick={() => setRecordOpen(true)}>
+                Record
+              </Button>
+              <Button
+                type="button"
+                disabled={(ledger.unpaid_profit_kurus ?? 0) <= 0}
+                onClick={() => setPayProfitOpen(true)}
+                title={
+                  (ledger.unpaid_profit_kurus ?? 0) <= 0
+                    ? "No unpaid allocated profit — allocate on the Partners list first"
+                    : undefined
+                }
+              >
+                Pay profit
+              </Button>
+            </div>
             <PartnerLedgerDownloadMenu
               entityId={entityId}
               partnerId={partnerId}
               disabled={loading}
             />
-            <Button type="button" onClick={() => setRecordOpen(true)}>
-              Record
-            </Button>
-            <Button
-              type="button"
-              disabled={(ledger.unpaid_profit_kurus ?? 0) <= 0}
-              onClick={() => setPayProfitOpen(true)}
-              title={
-                (ledger.unpaid_profit_kurus ?? 0) <= 0
-                  ? "No unpaid allocated profit — allocate on the Partners list first"
-                  : undefined
-              }
-            >
-              Pay profit
-            </Button>
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
