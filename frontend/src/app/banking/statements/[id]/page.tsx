@@ -2,6 +2,7 @@
 
 /** Bank statement — one-bar classify queue + full line ledger below. */
 
+import { PageHeader } from "@/components/page/page-header";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -158,16 +159,19 @@ export default function StatementDetailPage() {
 
   return (
     <>
-      {statement && (
-        <div className="mb-4">
-          <Link
-            href={`/banking/accounts/${statement.money_account_id}`}
-            className="text-sm text-primary hover:underline"
-          >
-            ← Account
-          </Link>
-        </div>
-      )}
+      <PageHeader
+        title="Bank statement"
+        actions={
+          statement && (
+            <Link
+              href={`/banking/accounts/${statement.money_account_id}`}
+              className="text-sm text-primary hover:underline"
+            >
+              Open account
+            </Link>
+          )
+        }
+      />
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && (

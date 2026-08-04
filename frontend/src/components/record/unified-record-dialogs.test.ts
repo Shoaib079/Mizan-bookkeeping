@@ -29,7 +29,9 @@ describe("unified record dialogs", () => {
   });
 
   it("embeds FX forms inline without a Continue step", () => {
-    const fx = read("record/fx-wallet-action-dialog.tsx");
+    // fx-wallet-action-dialog was superseded by fx-unified-dialog and deleted
+    // in the slice 8 sweep; the rule still applies to whatever renders FX.
+    const fx = read("record/fx-unified-dialog.tsx");
     expect(fx).toContain("embedded");
     expect(fx).not.toContain("formOpen");
     expect(fx).not.toContain("Continue");

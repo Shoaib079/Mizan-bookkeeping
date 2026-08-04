@@ -1,4 +1,5 @@
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
+import { PageHeader } from "@/components/page/page-header";
 
 export default async function InvoiceReviewPage({
   params,
@@ -6,5 +7,10 @@ export default async function InvoiceReviewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <InvoiceDraftReview draftId={id} />;
+  return (
+    <>
+      <PageHeader title="Invoice" />
+      <InvoiceDraftReview draftId={id} />
+    </>
+  );
 }

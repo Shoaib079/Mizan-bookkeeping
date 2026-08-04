@@ -11,7 +11,6 @@ import { AccountMenu } from "@/components/layout/account-menu";
 import { MobileBottomTabs } from "@/components/layout/mobile-bottom-tabs";
 import { MobileTopBar } from "@/components/layout/mobile-top-bar";
 import { PageBackLink } from "@/components/layout/page-back-link";
-import { PageTitleSlotProvider } from "@/components/page/page-title-slot";
 import { TransactionPeekProvider } from "@/components/ledger/transaction-drawer";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -94,38 +93,25 @@ function AppShellInner({
       ? "Dashboard"
       : title;
 
+  // Every page carries its own PageHeader now (slice 7), so the shell no
+  // longer draws a heading — it contributes the trail that leads to one. The
+  // handshake that used to negotiate this (page-title-slot.tsx) is gone with
+  // it: there is nothing left to negotiate.
+  const trail = [breadcrumb, title].filter(Boolean).join(" / ");
+
   const mainChrome = (
-    <PageTitleSlotProvider>
-      {(pageOwnsTitle) => (
-        <>
-          <Suspense fallback={null}>
-            <NavHistoryTracker />
-          </Suspense>
-          {!isMobile && <PageBackLink />}
-          {!isMobile && (
-            // A page with its own PageHeader carries the heading; the shell
-            // then contributes only the trail that leads to it.
-            <div className={pageOwnsTitle ? "mb-1" : "mb-5"}>
-              {(breadcrumb || pageOwnsTitle) && (
-                <p className="text-xs text-muted-foreground">
-                  {pageOwnsTitle
-                    ? [breadcrumb, title].filter(Boolean).join(" / ")
-                    : breadcrumb}
-                </p>
-              )}
-              {!pageOwnsTitle && (
-                <h1 className="mt-0.5 truncate text-xl font-semibold">
-                  {title}
-                </h1>
-              )}
-            </div>
-          )}
-          <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>
-            <TransactionPeekProvider>{children}</TransactionPeekProvider>
-          </ReviewCountsProvider>
-        </>
+    <>
+      <Suspense fallback={null}>
+        <NavHistoryTracker />
+      </Suspense>
+      {!isMobile && <PageBackLink />}
+      {!isMobile && trail && (
+        <p className="mb-1 text-xs text-muted-foreground">{trail}</p>
       )}
-    </PageTitleSlotProvider>
+      <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>
+        <TransactionPeekProvider>{children}</TransactionPeekProvider>
+      </ReviewCountsProvider>
+    </>
   );
 
   const mobileGroupedShell =

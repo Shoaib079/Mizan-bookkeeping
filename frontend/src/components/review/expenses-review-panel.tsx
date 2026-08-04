@@ -23,6 +23,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { FilterChips } from "@/components/page/filter-chips";
+import { PageHeader } from "@/components/page/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -156,6 +157,7 @@ export function ExpensesReviewPanel() {
 
   return (
     <>
+      <PageHeader title="Expenses to review" />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Cash and partner-fronted expenses posted here — correct mistakes below.

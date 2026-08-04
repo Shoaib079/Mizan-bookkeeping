@@ -10,12 +10,12 @@ import {
   DetailSection,
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
+import { LedgerTable } from "@/components/page/ledger-table";
 import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
-import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import {
   CorrectCustomerPaymentForm,
   type CorrectableCustomerPaymentRow,
@@ -30,11 +30,7 @@ import { GroupSaleForm } from "@/components/forms/group-sale-form";
 import { CustomerWriteOffDialog } from "@/components/forms/customer-write-off-dialog";
 import { Button } from "@/components/ui/button";
 import {
-  DataTable,
-  DataTableBody,
   DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -247,35 +243,24 @@ export default function CustomerDetailPage() {
       }
       activity={
         ledger && (
-          <DetailSection
-            title="Ledger"
-            controls={
-              <LedgerHistoryToggle
-                hiddenCount={hiddenCount}
-                showHistory={showHistory}
-                onToggle={setShowHistory}
-              />
-            }
-          >
-            {ledger.entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No movements yet.</p>
-          ) : visibleRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No current entries — show correction history to see voided rows.
-            </p>
-          ) : (
-            <DataTable>
-              <DataTableHead>
-                <tr>
-                  <DataTableHeaderCell>Date</DataTableHeaderCell>
-                  <DataTableHeaderCell>Type</DataTableHeaderCell>
-                  <DataTableHeaderCell>Description</DataTableHeaderCell>
-                  <DataTableHeaderCell>Pax / forex</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                  <DataTableHeaderCell>Actions</DataTableHeaderCell>
-                </tr>
-              </DataTableHead>
-              <DataTableBody>
+          <DetailSection title="Ledger">
+            <LedgerTable
+              columns={[
+                { key: "date", label: "Date" },
+                { key: "type", label: "Type" },
+                { key: "description", label: "Description" },
+                { key: "pax", label: "Pax / forex" },
+                { key: "amount", label: "Amount", align: "right" },
+              ]}
+              hasActions
+              isEmpty={ledger.entries.length === 0}
+              isFiltered={visibleRows.length === 0}
+              history={{
+                hiddenCount,
+                showHistory,
+                onToggle: setShowHistory,
+              }}
+            >
                 {visibleRows.map((entry) => {
                   const actions = customerLedgerRowActions({
                     movementType: entry.movement_type,
@@ -360,9 +345,7 @@ export default function CustomerDetailPage() {
                   </DataTableRow>
                   );
                 })}
-              </DataTableBody>
-            </DataTable>
-            )}
+            </LedgerTable>
           </DetailSection>
         )
       }

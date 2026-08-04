@@ -20,21 +20,17 @@ import {
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
-import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import { AppShell } from "@/components/layout/app-shell";
 import {
   DetailSection,
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
+import { LedgerTable } from "@/components/page/ledger-table";
 import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
 import { Button } from "@/components/ui/button";
 import {
-  DataTable,
-  DataTableBody,
   DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -308,36 +304,21 @@ export default function StaffDetailPage() {
         activity={
           ledger &&
           employee && (
-            <DetailSection
-              title="Ledger"
-              controls={
-                <LedgerHistoryToggle
-                  hiddenCount={hiddenCount}
-                  showHistory={showHistory}
-                  onToggle={setShowHistory}
-                />
-              }
-            >
-              {ledger.entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No movements yet.</p>
-          ) : visibleRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No current entries in this period — show correction history to see
-              voided rows.
-            </p>
-          ) : (
-            <DataTable>
-              <DataTableHead>
-                <tr>
-                  <DataTableHeaderCell>Date</DataTableHeaderCell>
-                  <DataTableHeaderCell>Type</DataTableHeaderCell>
-                  <DataTableHeaderCell>Description</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-                </tr>
-              </DataTableHead>
-              <DataTableBody>
+            <DetailSection title="Ledger">
+              <LedgerTable
+                columns={[
+                  { key: "date", label: "Date" },
+                  { key: "type", label: "Type" },
+                  { key: "description", label: "Description" },
+                  { key: "amount", label: "Amount", align: "right" },
+                  { key: "balance", label: "Balance", align: "right" },
+                ]}
+                hasActions
+                isEmpty={ledger.entries.length === 0}
+                isFiltered={visibleRows.length === 0}
+                history={{ hiddenCount, showHistory, onToggle: setShowHistory }}
+                filteredMessage="No current entries in this period — show correction history to see voided rows."
+              >
                 {displayRows.map((group) => {
                   const entry = group.primary;
                   const actions = staffLedgerRowActions({
@@ -430,9 +411,7 @@ export default function StaffDetailPage() {
                     </DataTableRow>
                   );
                 })}
-              </DataTableBody>
-            </DataTable>
-              )}
+              </LedgerTable>
             </DetailSection>
           )
         }

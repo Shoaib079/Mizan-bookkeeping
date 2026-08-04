@@ -333,19 +333,25 @@ describe("page archetypes", () => {
     expect(source).toContain('variant="ghost"');
     expect(source).not.toMatch(/variant="primary"/);
 
+    // The trailing Actions column is LedgerTable's job now for the ledgers
+    // that adopted it; the supplier panel still renders its own table.
+    const ledgerTable = await read("./ledger-table.tsx");
+    expect(ledgerTable).toMatch(/<DataTableHeaderCell align="right">\s*Actions/);
+
     for (const page of [
       "../../app/staff/[id]/page.tsx",
       "../../app/partners/[id]/page.tsx",
       "../supplier-activity-panel.tsx",
     ]) {
       const pageSource = await read(page);
-      expect(pageSource, page).toMatch(
-        /<DataTableHeaderCell align="right">\s*Actions/,
-      );
       expect(pageSource.includes("inline"), `${page} still inlines actions`).toBe(
         false,
       );
     }
+
+    expect(await read("../supplier-activity-panel.tsx")).toMatch(
+      /<DataTableHeaderCell align="right">\s*Actions/,
+    );
   });
 
   it("FilterChips exposes counts for review queues", async () => {

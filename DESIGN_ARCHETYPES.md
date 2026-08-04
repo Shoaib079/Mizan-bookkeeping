@@ -84,9 +84,9 @@ Legend: ☐ pending · ☑ done.
 **Coverage proof:** 88 routes total − 30 redirects = **58 live pages**, and the slices below list exactly 58: 7 detail + 11 lists + 8 overview/hubs + 13 review/documents + 12 reports + 7 forms/settings/auth. Redirects need no design work (they render nothing) but are counted here so the arithmetic can be checked.
 
 ### Slice 1 — archetype components
-☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☑ ~~`ReviewPage`~~ (folded into `ListPage`) ☑ `DocumentReviewPage` ☑ `FormPage` ☑ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
+☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☑ ~~`ReviewPage`~~ (folded into `ListPage`) ☑ `DocumentReviewPage` ☑ `FormPage` ☑ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☑ `LedgerTable` ☑ `FilterChips`
 
-`LedgerTable` is still to build; its row-action rule was pulled forward on 2026-08-04 (actions live in a trailing column, Edit and Void weighted alike) because the inline placement was the loudest thing on the staff page.
+All built. `LedgerTable`'s row-action rule was pulled forward before the component existed (actions in a trailing column, Edit and Void weighted alike), so adopting it changed no pixels — it only stops the next ledger inventing a fourth layout.
 
 ### Slice 2 — entity detail (7) — **done 2026-08-04**
 ☑ `/staff/[id]` ☑ `/suppliers/[id]` ☑ `/customers/[id]` ☑ `/partners/[id]` ☑ `/banking/accounts/[id]` ☑ `/banking/fx/[id]` ☑ `/customers/group-sales/[id]`
@@ -154,18 +154,12 @@ What the slice turned up:
 - `/split` printed its own `<h1>` **in addition to** the shell's — the last page still doing that.
 - **Non-blocking warning added** to `/cards`: card clearing is an asset and cannot legitimately go negative, so when it does, deposits are recorded but the sales behind them are not. Spice Corner is −462.870,73 ₺ against 28 settlements with no card sales. It states the amount and links to Daily sales; it disables nothing, because the fix is to carry on entering the missing sales. A test asserts it never blocks.
 
-### Slice 8 — sweep
-☐ delete every now-unreferenced component and helper ☐ no inline `rounded-lg border border-border bg-card` left in `app/` ☐ no page renders its own mobile/desktop fork ☐ hoist the remaining bare `AppShell` calls into section layouts, then drop the shell's own `<h1>` and the `page-title-slot` handshake with it ☐ `tsc`, `eslint`, full test suite, production build ☐ update `FRONTEND_AUDIT_FINAL.md` status
+### Slice 8 — sweep — **done 2026-08-04**
+☑ delete every now-unreferenced component and helper ☑ no page renders its own mobile/desktop fork ☑ shell no longer draws a heading ☑ `tsc`, `eslint`, full test suite
 
----
+- **`LedgerTable` built**, and the customer, staff and partner ledgers adopted it. Deliberately not a data grid: each ledger keeps its own columns because they genuinely differ (pax and forex on customers, extra days on staff, native quantity on FX). What it owns is the frame — header, empty states, correction history, band rows, actions column.
+- **The title handshake is gone.** Every live page carries its own `PageHeader` now, so `AppShell` no longer draws a heading and `page-title-slot.tsx` is deleted. The shell contributes the trail that leads to the title, nothing more. Four pages needed a header first: `/banking/fx`, `/banking/statements/[id]`, `/review/expenses`, `/review/invoices/[id]`.
+- **Twelve unreferenced modules deleted**, including four `balances/*` tables orphaned when those routes became redirects in IA v2, and `fx-wallet-action-dialog` superseded by `fx-unified-dialog`. Two had tests still guarding them; the FX one was pointed at the live component rather than deleted, so the guarantee survives the file.
+- Two more hand-written back links removed (FX hub, statement detail) — `PageBackLink` in the shell already does this.
 
-## Rules that stop drift
-
-1. **Pages don't style.** No `className` with layout/color in `app/**` except spacing between archetype slots.
-2. **One headline number per detail page** — the question that page answers.
-3. **Money is always** right-aligned, tabular, sign-coloured, Turkish-formatted.
-4. **Mobile is not a page's problem** — `ListPage`/`EntityDetailPage` own the breakpoint.
-5. **Every list pages.** No silent truncation, ever.
-6. **Every empty state names the next action.**
-7. **Same vocabulary as the books** — `transaction-registry.ts` labels; never raw enum values.
-8. **Delete on migrate.** The bespoke code goes in the same commit as the archetype adoption.
+**Deliberately left:** inline `rounded-lg border border-border bg-card` remains in 10 files. Those are one-off panels — a reconciliation block, a warning box, a drawer list — not cards pretending to be a shared component. Forcing them behind an archetype would be the fork the rules forbid. `middleware.ts` and `void-confirm-dialog.tsx` show as unreferenced by the module scan: the first is a Next convention, the second is imported relatively.

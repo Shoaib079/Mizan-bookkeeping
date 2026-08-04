@@ -9,6 +9,7 @@ import { FxExpenseSpendForm } from "@/components/forms/fx-expense-spend-form";
 import { FxPurchaseForm } from "@/components/forms/fx-purchase-form";
 import { MoneyAccountForm } from "@/components/forms/money-account-form";
 import { ReportDateRange } from "@/components/reports/report-date-range";
+import { PageHeader } from "@/components/page/page-header";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -206,11 +207,7 @@ export function FxHubPageContent() {
 
   return (
     <>
-      <div className="mb-4">
-        <Link href="/banking" className="text-sm text-primary hover:underline">
-          ← Banking
-        </Link>
-      </div>
+      <PageHeader title="Foreign currency" />
 
       {!entityId && (
         <p className="text-sm text-muted-foreground">

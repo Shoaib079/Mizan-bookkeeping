@@ -10,6 +10,7 @@ import {
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
 import { FilterChips } from "@/components/page/filter-chips";
+import { LedgerTable } from "@/components/page/ledger-table";
 import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { PartnerRecordForm } from "@/components/forms/partner-record-form";
@@ -17,7 +18,6 @@ import { PartnerLedgerDownloadMenu } from "@/components/partners/partner-ledger-
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
-import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import {
   CorrectPartnerLedgerForm,
   type CorrectablePartnerLedgerRow,
@@ -26,11 +26,7 @@ import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
-  DataTable,
-  DataTableBody,
   DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -266,49 +262,28 @@ export default function PartnerDetailPage() {
         }
         activity={
           ledger && (
-            <DetailSection
-              title="Ledger"
-              controls={
-                <div className="flex flex-wrap items-center gap-3">
+            <DetailSection title="Ledger">
+              <LedgerTable
+                columns={[
+                  { key: "date", label: "Date" },
+                  { key: "type", label: "Type" },
+                  { key: "description", label: "Description" },
+                  { key: "amount", label: "Amount", align: "right" },
+                  { key: "balance", label: "Balance", align: "right" },
+                ]}
+                hasActions
+                isEmpty={ledger.entries.length === 0}
+                isFiltered={visibleRows.length === 0}
+                history={{ hiddenCount, showHistory, onToggle: setShowHistory }}
+                controls={
                   <FilterChips
                     chips={PARTNER_LEDGER_FILTERS}
                     value={ledgerFilter}
                     onChange={setLedgerFilter}
                     ariaLabel="Filter ledger by movement"
                   />
-                  <LedgerHistoryToggle
-                    hiddenCount={hiddenCount}
-                    showHistory={showHistory}
-                    onToggle={setShowHistory}
-                  />
-                </div>
-              }
-            >
-              {ledger.entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No movements yet.</p>
-          ) : visibleRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No current entries — show correction history to see voided rows.
-            </p>
-          ) : (
-            <DataTable>
-              <DataTableHead>
-                <tr>
-                  <DataTableHeaderCell>Date</DataTableHeaderCell>
-                  <DataTableHeaderCell>Type</DataTableHeaderCell>
-                  <DataTableHeaderCell>Description</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">
-                    Amount
-                  </DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">
-                    Balance
-                  </DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">
-                    Actions
-                  </DataTableHeaderCell>
-                </tr>
-              </DataTableHead>
-              <DataTableBody>
+                }
+              >
                 {bands.map((band) => (
                   <Fragment key={band.key}>
                     {band.title && (
@@ -402,9 +377,7 @@ export default function PartnerDetailPage() {
                     })}
                   </Fragment>
                 ))}
-              </DataTableBody>
-            </DataTable>
-              )}
+              </LedgerTable>
             </DetailSection>
           )
         }
