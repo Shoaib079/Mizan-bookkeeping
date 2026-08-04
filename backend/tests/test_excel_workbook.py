@@ -6,6 +6,7 @@ from openpyxl import Workbook
 
 from app.core.excel.workbook import (
     MONEY_FORMAT,
+    MONEY_FORMAT_ACCOUNTING,
     add_sheet,
     create_workbook,
     finish_data_table,
@@ -57,4 +58,29 @@ def test_finish_data_table_freezes_and_filters():
     )
     assert ws.freeze_panes == "A5"
     assert ws.auto_filter.ref is not None
-    assert ws.cell(row=data_start, column=2).number_format == MONEY_FORMAT
+    # finish_data_table upgrades money cells to the accounting format
+    # (negatives red in parentheses) — still a number, so SUM() is unaffected.
+    assert (
+        ws.cell(row=data_start, column=2).number_format == MONEY_FORMAT_ACCOUNTING
+    )
+    assert ws.cell(row=data_start, column=2).value == 123.45
+
+
+def test_finish_data_table_sets_print_layout():
+    """Ctrl-P from Excel should fit one page wide and repeat the header row."""
+    wb, ws = create_workbook("Demo")
+    header_row = 1
+    data_start = write_header_row(ws, header_row, ["Label", money_header()])
+    ws.cell(row=data_start, column=1, value="Sample")
+    write_money(ws, data_start, 2, 5_000)
+    finish_data_table(
+        ws,
+        header_row=header_row,
+        last_data_row=data_start,
+        end_col=2,
+        print_footer="Kebapci Halil · Demo",
+    )
+    assert ws.page_setup.fitToWidth == 1
+    assert ws.print_title_rows == "1:1"
+    assert ws.oddFooter.left.text == "Kebapci Halil · Demo"
+    assert "&P" in (ws.oddFooter.right.text or "")

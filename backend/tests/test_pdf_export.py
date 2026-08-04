@@ -209,3 +209,34 @@ def test_cashier_blocked_from_profit_and_loss_pdf(
         headers=auth_headers(cashier),
     )
     assert response.status_code == 403
+
+
+def test_pdf_presentation_rules(
+    db_session, client: TestClient, pdf_export_setup
+) -> None:
+    """Presentation contract (2026-07-13): English labels, Turkish dates,
+    accounting negatives, KPI band, and a per-page footer."""
+    setup = pdf_export_setup
+    _post_period_sales(db_session, setup)
+    _post_rent_expense(
+        db_session, setup, amount_kurus=20_000, expense_date=date(2026, 1, 16)
+    )
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/reports/profit-and-loss/export/pdf",
+        params={"from": "2026-01-01", "to": "2026-01-31"},
+    )
+    text = _pdf_text(response.content)
+
+    # Masthead + KPI band + section grouping, all English.
+    assert "Profit and Loss" in text
+    assert "REVENUE" in text and "EXPENSES" in text
+    assert "NET RESULT" in text
+    # Dates presented Turkish-style, not ISO.
+    assert "01.01.2026" in text and "31.01.2026" in text
+    assert "2026-01-01" not in text
+    # Expenses shown as accounting negatives.
+    assert "(" in text and ")" in text
+    # Footer identifies the report on every page.
+    assert "Page 1" in text
+    assert setup["entity_name"] in text

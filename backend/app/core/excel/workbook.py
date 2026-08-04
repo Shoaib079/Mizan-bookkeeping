@@ -97,6 +97,11 @@ def add_sheet(wb: WorkbookType, title: str) -> Worksheet:
 #: 1.234,50 and an English one 1,234.50, both from the same file.
 MONEY_FORMAT = "#,##0.00"
 
+#: Accounting presentation of the same number: negatives red in parentheses so
+#: a refund or loss is unmistakable on a printed page. Still a real number —
+#: SUM() and filters are unaffected.
+MONEY_FORMAT_ACCOUNTING = '#,##0.00;[Red](#,##0.00)' 
+
 
 def money_header(column_name: str = "Amount") -> str:
     return f"{column_name} (₺)"
@@ -226,6 +231,10 @@ def style_money_columns(
             if isinstance(cell, MergedCell):
                 continue
             cell.alignment = Alignment(horizontal="right", vertical="center")
+            # Only restyle cells already carrying the plain money format, so
+            # sheets that set their own (dates, quantities) are left alone.
+            if cell.number_format == MONEY_FORMAT:
+                cell.number_format = MONEY_FORMAT_ACCOUNTING
 
 
 def write_sheet_title(
@@ -263,6 +272,33 @@ def write_header_row(
     return row + 1
 
 
+def apply_print_setup(
+    ws: Worksheet,
+    *,
+    header_row: int = 1,
+    landscape: bool = False,
+    footer_left: str = "",
+) -> None:
+    """Make Ctrl-P from Excel produce something presentable.
+
+    Fit to one page wide (never a stray column on page 2), repeat the header
+    row on every page, and stamp entity/report + page numbers in the footer.
+    """
+    ws.page_setup.orientation = "landscape" if landscape else "portrait"
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    if ws.sheet_properties.pageSetUpPr is not None:
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.print_options.horizontalCentered = True
+    if header_row >= 1:
+        ws.print_title_rows = f"{header_row}:{header_row}"
+    if footer_left:
+        ws.oddFooter.left.text = footer_left
+        ws.oddFooter.left.size = 8
+    ws.oddFooter.right.text = "Page &P of &N"
+    ws.oddFooter.right.size = 8
+
+
 def finish_data_table(
     ws: Worksheet,
     *,
@@ -274,8 +310,11 @@ def finish_data_table(
     money_cols: tuple[int, ...] | None = None,
     zebra: bool = True,
     column_widths: dict[int, float] | None = None,
+    print_setup: bool = True,
+    print_footer: str = "",
+    print_landscape: bool = False,
 ) -> None:
-    """Freeze header, optional AutoFilter, light borders, autosize."""
+    """Freeze header, optional AutoFilter, light borders, autosize, print setup."""
     if last_data_row >= header_row:
         for r in range(header_row + 1, last_data_row + 1):
             for c in range(1, end_col + 1):
@@ -317,6 +356,13 @@ def finish_data_table(
             first_row=header_row,
             last_row=last_data_row,
             last_col=end_col,
+        )
+    if print_setup:
+        apply_print_setup(
+            ws,
+            header_row=header_row,
+            landscape=print_landscape,
+            footer_left=print_footer,
         )
 
 

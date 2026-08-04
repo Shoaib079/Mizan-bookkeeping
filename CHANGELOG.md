@@ -2,6 +2,15 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-07-14
+
+**Report exports — presentation pass (`v0.report-export-presentation`):** PDF and Excel downloads now look like documents you'd hand an accountant. English-only labels (owner decision); lira figures and dates stay Turkish-formatted (1.234,56 ₺ · 31.07.2026) because those are locale, not language.
+
+- **PDF (`features/reports/pdf_export.py`) — redesigned shared helpers, so every statement inherits it:** branded masthead (report title, entity · period, "Generated" stamp in **local time**, blue rule) replacing the old stacked "Entity:/Generated: UTC" lines; new `summary_band()` KPI strip so the answer (revenue/expenses/net, or assets/liabilities/equity, or opening/change/closing) reads before any table; accounting table style — hairline rules instead of a full grid, small-caps headers, **right-aligned money** (was left), section bands replacing the redundant per-row "Type" column, subtotals bold, grand totals with a rule above; negatives as red `(1.234,56 ₺)`; per-page footer with entity · report · period and "Page N". Statements now render **portrait** (was landscape) — they're narrow by nature.
+- **Excel (`core/excel/workbook.py`):** new `MONEY_FORMAT_ACCOUNTING` (`#,##0.00;[Red](#,##0.00)`) applied by `style_money_columns` — negatives red in parentheses, still real numbers so SUM/filters work; new `apply_print_setup()` wired into `finish_data_table` (fit-to-one-page-wide, repeat header row on every page, footer with entity/report + "Page &P of &N"). Autofilter, freeze panes, zebra striping and autofit were already in place.
+- **Unchanged on purpose:** `month_pack_pdf.py` keeps its own table style (self-contained); all report data, endpoints, filenames and permissions are untouched — presentation only.
+- Tests: new `test_pdf_presentation_rules` (English labels, TR dates, accounting negatives, footer) and `test_finish_data_table_sets_print_layout`; existing money-format assertion updated to the accounting format.
+
 ## 2026-07-13
 
 **Fix — profit-settled drawings no longer show as outstanding (`v0.partner-drawings-settlement`):** When a profit allocation nets against drawings, the engine writes a `PROFIT_SETTLEMENT` row ("Settled from profit") and the partner's **net** balance zeroes — but `drawings_net_kurus` summed only `DRAWING + DRAWING_REPAYMENT`, so the partner page kept showing the withdrawal as open forever (and kept offering "Repay drawing"). `PROFIT_SETTLEMENT` now counts as repayment in the drawings figure, matching `NET_BALANCE_MOVEMENT_TYPES` which always included it. Books model is now exactly: partner takes (−) / returns (+), and profit allocation settles what's open before crediting capital. One-line backend change in `core/partners/ledger.py`; frontend reads the API figure everywhere, so no UI changes. Regression test: drawing → allocate with netting → drawings 0, net 0, settlement row 100k (`test_profit_settlement_clears_drawings_net`).
