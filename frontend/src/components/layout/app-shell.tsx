@@ -156,7 +156,11 @@ function AppShellInner({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
+      {/* Pinned: nav stays put while the page scrolls, so you can switch
+       * section from the bottom of a long ledger without scrolling back up.
+       * `h-screen` + its own overflow means a tall nav scrolls inside the
+       * sidebar rather than pushing the page. */}
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-border bg-sidebar">
         <div className="border-b border-border px-4 py-4">
           <p className="text-lg font-semibold text-primary">Mizan</p>
           <p className="text-xs text-muted-foreground">Restaurant bookkeeping</p>

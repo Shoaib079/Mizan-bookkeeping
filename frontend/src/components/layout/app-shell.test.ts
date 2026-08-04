@@ -30,6 +30,17 @@ describe("AppShell mobile shell (C4)", () => {
     expect(source).not.toContain("onMobileTabRoot");
   });
 
+  it("pins the desktop sidebar so it does not scroll with the page", async () => {
+    // The nav used to scroll away with the content, so switching section from
+    // the bottom of a long ledger meant scrolling back to the top first.
+    const source = await readAppShell();
+    const aside = source.slice(source.indexOf("<aside"), source.indexOf("</aside>"));
+    expect(aside).toContain("sticky top-0");
+    expect(aside).toContain("h-screen");
+    // A tall nav has to scroll inside the sidebar, not stretch the page.
+    expect(aside).toContain("overflow-y-auto");
+  });
+
   it("hides desktop sidebar on mobile branch", async () => {
     const source = await readAppShell();
     const start = source.indexOf("if (isMobile) {");
