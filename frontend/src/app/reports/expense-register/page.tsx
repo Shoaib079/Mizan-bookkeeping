@@ -7,12 +7,11 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-  ForbiddenMessage,
-  isForbiddenError,
-} from "@/components/reports/forbidden-message";
+import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
+import { ReportPage } from "@/components/page/report-page";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import {
   DataTable,
   DataTableBody,
@@ -23,7 +22,6 @@ import {
 } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { PageSkeleton } from "@/components/ui/skeleton";
 import { Receipt } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
@@ -84,11 +82,22 @@ function ExpenseRegisterContent() {
 
   return (
     <AppShell title="Expense register">
-      <p className="mb-4 text-sm text-muted-foreground">
-        Every expense that reached the books in this period — from expenses,
+      <ReportPage
+        title="Expense register"
+        entityId={entityId}
+        loading={loading}
+        error={error}
+        forbidden={forbidden}
+        forbiddenContext="expense register"
+        hasReport={Boolean(report)}
+        meta={
+          <>
+            Every expense that reached the books in this period — from expenses,
         salaries, supplier invoices, bank charges, commission and FX spend — in
         one list. The total matches the P&amp;L for the same range.
-      </p>
+          </>
+        }
+      >
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <ReportDateRange
@@ -115,16 +124,7 @@ function ExpenseRegisterContent() {
         )}
       </div>
 
-      {!entityId && (
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
-      )}
-      {forbidden && <ForbiddenMessage />}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
-
-      {report && !loading && (
+      {report && (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-lg border border-border bg-card p-4">
@@ -229,6 +229,7 @@ function ExpenseRegisterContent() {
           </section>
         </div>
       )}
+      </ReportPage>
     </AppShell>
   );
 }

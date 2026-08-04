@@ -4,10 +4,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 
-import {
-  ForbiddenMessage,
-  isForbiddenError,
-} from "@/components/reports/forbidden-message";
+import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { ReportDownloadMenu } from "@/components/reports/report-download-menu";
 import { AppShell } from "@/components/layout/app-shell";
@@ -19,7 +16,8 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
-import { PageSkeleton } from "@/components/ui/skeleton";
+import { ReportPage } from "@/components/page/report-page";
+import { StatCard } from "@/components/page/stat-card";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -71,60 +69,61 @@ function ProfitAndLossContent() {
 
   return (
     <AppShell title="Profit & loss">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <ReportDateRange
-          from={from}
-          to={to}
-          disabled={!entityId || loading}
-          onChange={setRange}
-        />
-        <ReportDownloadMenu
-          entityId={entityId}
-          reportSlug="profit-and-loss"
-          queryString={queryString}
-          pdf
-          disabled={forbidden || !report}
-        />
-      </div>
-
-      {!entityId && (
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
-      )}
-      {forbidden && <ForbiddenMessage />}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
-
-      {report && !loading && (
-        <SealedPeriodBanner
-          source={report.source}
-          sealed={report.sealed}
-          view={view}
-          onViewChange={setView}
-        />
-      )}
-
-      {report && (
-        <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { label: "Revenue", value: report.total_revenue_kurus },
-              { label: "Expenses", value: report.total_expenses_kurus },
-              { label: "Net income", value: report.net_income_kurus },
-            ].map((row) => (
-              <div
-                key={row.label}
-                className="rounded-lg border border-border bg-card p-4"
-              >
-                <p className="text-sm text-muted-foreground">{row.label}</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">
-                  {formatTry(row.value)}
-                </p>
-              </div>
-            ))}
-          </div>
-
+      <ReportPage
+        title="Profit & loss"
+        entityId={entityId}
+        loading={loading}
+        error={error}
+        forbidden={forbidden}
+        forbiddenContext="profit and loss"
+        hasReport={Boolean(report)}
+        periodControl={
+          <ReportDateRange
+            from={from}
+            to={to}
+            disabled={!entityId || loading}
+            onChange={setRange}
+          />
+        }
+        downloads={
+          <ReportDownloadMenu
+            entityId={entityId}
+            reportSlug="profit-and-loss"
+            queryString={queryString}
+            pdf
+            disabled={forbidden || !report}
+          />
+        }
+        banner={
+          report && (
+            <SealedPeriodBanner
+              source={report.source}
+              sealed={report.sealed}
+              view={view}
+              onViewChange={setView}
+            />
+          )
+        }
+        kpis={
+          report && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <StatCard label="Revenue" amountKurus={report.total_revenue_kurus} />
+              <StatCard
+                label="Expenses"
+                amountKurus={report.total_expenses_kurus}
+                tone="bad"
+              />
+              <StatCard
+                label="Net income"
+                amountKurus={report.net_income_kurus}
+                tone={report.net_income_kurus >= 0 ? "good" : "bad"}
+              />
+            </div>
+          )
+        }
+      >
+        {report && (
+          <div className="space-y-6">
           {revenue.length > 0 && (
             <section>
               <h2 className="mb-2 text-sm font-semibold">Revenue</h2>
@@ -138,8 +137,9 @@ function ProfitAndLossContent() {
               <AccountTable rows={expenses} />
             </section>
           )}
-        </div>
-      )}
+          </div>
+        )}
+      </ReportPage>
     </AppShell>
   );
 }

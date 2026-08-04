@@ -10,10 +10,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
-import {
-  ForbiddenMessage,
-  isForbiddenError,
-} from "@/components/reports/forbidden-message";
+import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +24,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
+import { ReportPage } from "@/components/page/report-page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Landmark } from "lucide-react";
 import { apiFetch } from "@/lib/api";
@@ -278,24 +276,26 @@ function BankReconciliationContent() {
 
   return (
     <AppShell title="Bank reconciliation">
-      <p className="mb-4 text-sm text-muted-foreground">
-        Whether each bank account agrees with the bank. Unclassified lines are
+      <ReportPage
+        title="Bank reconciliation"
+        entityId={entityId}
+        loading={loading}
+        error={error}
+        forbidden={forbidden}
+        forbiddenContext="bank reconciliation"
+        hasReport={Boolean(report)}
+        meta={
+          <>
+            Whether each bank account agrees with the bank. Unclassified lines are
         still outstanding. If you already recorded an expense from that bank
         (e.g. SGK), classify the matching statement line as{" "}
         <strong>Expense from bank</strong> with the same expense account — Mizan
         links it instead of posting twice.
-      </p>
+          </>
+        }
+      >
 
-      {!entityId && (
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
-      )}
-      {forbidden && <ForbiddenMessage />}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
-
-      {report && !loading && (
+      {report && (
         <>
           {allDone && (
             <p className="mb-4 rounded-md bg-success/10 px-3 py-2 text-sm text-success">
@@ -322,6 +322,7 @@ function BankReconciliationContent() {
           )}
         </>
       )}
+      </ReportPage>
     </AppShell>
   );
 }

@@ -9,12 +9,11 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-  ForbiddenMessage,
-  isForbiddenError,
-} from "@/components/reports/forbidden-message";
+import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
+import { ReportPage } from "@/components/page/report-page";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
 import {
   DataTable,
@@ -25,7 +24,6 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageSkeleton } from "@/components/ui/skeleton";
 import { Wallet } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
@@ -125,11 +123,22 @@ function CashBookContent() {
 
   return (
     <AppShell title="Cash & bank book">
-      <p className="mb-4 text-sm text-muted-foreground">
-        Everything that moved through this account — sales, expenses, staff
+      <ReportPage
+        title="Cash & bank book"
+        entityId={entityId}
+        loading={loading}
+        error={error}
+        forbidden={forbidden}
+        forbiddenContext="cash book"
+        hasReport={Boolean(report)}
+        meta={
+          <>
+            Everything that moved through this account — sales, expenses, staff
         payments, transfers — and what should be left in it. For a bank, this
         is the list to hold against your statement when the two disagree.
-      </p>
+          </>
+        }
+      >
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <ReportDateRange
@@ -150,16 +159,7 @@ function CashBookContent() {
         )}
       </div>
 
-      {!entityId && (
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
-      )}
-      {forbidden && <ForbiddenMessage />}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
-
-      {report && !loading && (
+      {report && (
         <div className="space-y-6">
           <section className="rounded-lg border border-border bg-card p-4">
             <dl className="space-y-1 text-sm">
@@ -349,6 +349,7 @@ function CashBookContent() {
           </section>
         </div>
       )}
+      </ReportPage>
     </AppShell>
   );
 }

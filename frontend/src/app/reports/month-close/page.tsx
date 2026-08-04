@@ -11,11 +11,9 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Check, Lock, LockOpen, X } from "lucide-react";
 
-import {
-  ForbiddenMessage,
-  isForbiddenError,
-} from "@/components/reports/forbidden-message";
+import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { AppShell } from "@/components/layout/app-shell";
+import { ReportPage } from "@/components/page/report-page";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label } from "@/components/ui/input";
@@ -209,11 +207,21 @@ function MonthCloseContent() {
 
   return (
     <AppShell title="Month close">
-      <p className="mb-4 text-sm text-muted-foreground">
-        Seal a month once you&apos;re happy with it. Your staff can no longer
+      <ReportPage
+        title="Month close"
+        entityId={entityId}
+        loading={loading}
+        error={error}
+        forbidden={forbidden}
+        forbiddenContext="month close"
+        meta={
+          <>
+            Seal a month once you&apos;re happy with it. Your staff can no longer
         post into it; you still can, but you&apos;ll be asked why — and the
         month gets flagged so you know it changed.
-      </p>
+          </>
+        }
+      >
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Combobox
@@ -225,15 +233,6 @@ function MonthCloseContent() {
           placeholder="Month…"
         />
       </div>
-
-      {!entityId && (
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
-      )}
-      {forbidden && <ForbiddenMessage />}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
 
       {readiness && state && !loading && (
         <div className="space-y-6">
@@ -381,6 +380,7 @@ function MonthCloseContent() {
           )}
         </div>
       )}
+      </ReportPage>
     </AppShell>
   );
 }

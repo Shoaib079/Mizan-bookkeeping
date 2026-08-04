@@ -26,6 +26,7 @@ import {
   ReportsPeriodSummarySkeleton,
 } from "@/components/reports/reports-period-summary";
 import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/page/page-header";
 import { apiFetch } from "@/lib/api";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import { buildRangeQuery, currentMonthRange } from "@/lib/date-range";
@@ -236,6 +237,11 @@ function ReportsBody() {
 
   return (
     <>
+      {/* Keeps its own body: a period summary, a mobile-only sticky control
+       * bar and a tile grid. Same call as /banking/cash and /cards — the
+       * header gives it the shared identity without pretending it is a plain
+       * hub. */}
+      <PageHeader title="Reports" />
       {isMobile ? (
         <div className="sticky top-0 z-10 -mx-3.5 mb-4 border-b border-border bg-background px-3.5 pb-3">
           <div className="flex items-stretch gap-2">

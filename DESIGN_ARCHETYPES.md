@@ -84,7 +84,7 @@ Legend: ☐ pending · ☑ done.
 **Coverage proof:** 88 routes total − 30 redirects = **58 live pages**, and the slices below list exactly 58: 7 detail + 11 lists + 8 overview/hubs + 13 review/documents + 12 reports + 7 forms/settings/auth. Redirects need no design work (they render nothing) but are counted here so the arithmetic can be checked.
 
 ### Slice 1 — archetype components
-☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☑ ~~`ReviewPage`~~ (folded into `ListPage`) ☑ `DocumentReviewPage` ☐ `FormPage` ☐ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
+☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☑ ~~`ReviewPage`~~ (folded into `ListPage`) ☑ `DocumentReviewPage` ☐ `FormPage` ☑ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
 
 `LedgerTable` is still to build; its row-action rule was pulled forward on 2026-08-04 (actions live in a trailing column, Edit and Void weighted alike) because the inline placement was the loudest thing on the staff page.
 
@@ -132,8 +132,16 @@ What the slice turned up:
 - **`/sales/[id]` had a status branch that wasn't exhaustive.** `canConfirm` covers draft/needs_review and `isTerminal` covers posted/rejected — a `duplicate` is neither. Collapsing it to a binary would have told the reader a duplicate "cannot be changed" when it can. Kept three-way, with a comment saying why.
 - `/banking/statements/[id]` keeps its own body: it is an import workspace (preview, mapping, line classification), not a document review.
 
-### Slice 6 — reports (12, incl. the `/reports` hub)
-☐ `/reports` ☐ `/reports/profit-and-loss` ☐ `/reports/balance-sheet` ☐ `/reports/cash-flow` ☐ `/reports/ledger` ☐ `/reports/kdv-input` ☐ `/reports/delivery-sales` ☐ `/reports/period-comparison` ☐ `/reports/cash-book` ☐ `/reports/expense-register` ☐ `/reports/bank-reconciliation` ☐ `/reports/month-close`
+### Slice 6 — reports (12, incl. the `/reports` hub) — **done 2026-08-04**
+☑ `/reports` ☑ `/reports/profit-and-loss` ☑ `/reports/balance-sheet` ☑ `/reports/cash-flow` ☑ `/reports/ledger` ☑ `/reports/kdv-input` ☑ `/reports/delivery-sales` ☑ `/reports/period-comparison` ☑ `/reports/cash-book` ☑ `/reports/expense-register` ☑ `/reports/bank-reconciliation` ☑ `/reports/month-close`
+
+Eleven compose `ReportPage`. The **hub** keeps its own body — a period summary, a mobile-only sticky control bar and a tile grid — and takes `PageHeader` for identity, the same call already made for `/banking/cash` and `/cards`.
+
+What the slice turned up:
+
+- **All twelve hand-wrote the same four states**: no restaurant selected, forbidden, error, loading. Each with its own spacing, so the period control and download menu sat at slightly different heights from one report to the next. `ReportPage` owns them now.
+- **P&L and balance sheet drew their own KPI boxes** in a `.map()` over a literal array, at `text-xl` where `StatCard` uses `text-2xl`. Both now use `StatCard`, so the dashboard and the reports agree.
+- The balance sheet's KPI band is the one that was reporting a broken accounting equation until the contra-account fix earlier the same day — worth re-reading on production.
 
 ### Slice 7 — forms + settings + auth (7)
 ☐ `/settings/restaurant` ☐ `/settings/profile` ☐ `/onboarding/opening-balances` ☐ `/banking/accounts/[id]/import` ☐ `/split` ☐ `/sign-in` ☐ `/sign-up`

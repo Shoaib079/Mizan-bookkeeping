@@ -219,6 +219,53 @@ describe("page archetypes", () => {
     );
   });
 
+  it("every report composes ReportPage and shares its states", async () => {
+    // Slice 6. All twelve repeated the same six lines by hand — period control
+    // left, downloads right, then no-entity / forbidden / error / loading —
+    // each with its own spacing, so the controls sat at different heights from
+    // one report to the next.
+    const reports = [
+      "profit-and-loss",
+      "balance-sheet",
+      "cash-flow",
+      "ledger",
+      "kdv-input",
+      "delivery-sales",
+      "period-comparison",
+      "cash-book",
+      "expense-register",
+      "bank-reconciliation",
+      "month-close",
+    ];
+
+    for (const slug of reports) {
+      const source = await read(`../../app/reports/${slug}/page.tsx`);
+      expect(source, slug).toContain("<ReportPage");
+      expect(source.includes("<h1"), `${slug} draws its own title`).toBe(false);
+      // The archetype renders the forbidden and loading states.
+      expect(
+        source.includes("<ForbiddenMessage"),
+        `${slug} still renders its own forbidden state`,
+      ).toBe(false);
+    }
+
+    // The hub keeps its own body (period summary, mobile sticky bar, tiles)
+    // but must still own its title — same call as /banking/cash and /cards.
+    const hub = await read("../../app/reports/page.tsx");
+    expect(hub).toContain("<PageHeader");
+  });
+
+  it("report KPI bands use StatCard, not hand-drawn boxes", async () => {
+    for (const slug of ["profit-and-loss", "balance-sheet"]) {
+      const source = await read(`../../app/reports/${slug}/page.tsx`);
+      expect(source, slug).toContain("<StatCard");
+      expect(
+        source.includes("text-xl font-semibold tabular-nums"),
+        `${slug} draws its own KPI box`,
+      ).toBe(false);
+    }
+  });
+
   it("row actions sit in a trailing column, weighted like siblings", async () => {
     // Edit and Void used to render inside the description cell on staff,
     // partners and supplier activity — so their left edge moved with the length

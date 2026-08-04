@@ -7,10 +7,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
-import {
-  ForbiddenMessage,
-  isForbiddenError,
-} from "@/components/reports/forbidden-message";
+import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { ReportAsOfDate } from "@/components/reports/report-as-of-date";
 import { ReportDownloadMenu } from "@/components/reports/report-download-menu";
 import { AppShell } from "@/components/layout/app-shell";
@@ -22,7 +19,8 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
-import { PageSkeleton } from "@/components/ui/skeleton";
+import { ReportPage } from "@/components/page/report-page";
+import { StatCard } from "@/components/page/stat-card";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -71,70 +69,67 @@ function BalanceSheetContent() {
 
   return (
     <AppShell title="Balance sheet">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <ReportAsOfDate
-          asOf={asOf}
-          disabled={!entityId || loading}
-          onChange={setAsOf}
-        />
-        <ReportDownloadMenu
-          entityId={entityId}
-          reportSlug="balance-sheet"
-          queryString={queryString}
-          pdf
-          disabled={forbidden || !report}
-        />
-      </div>
-
-      <p className="mb-4 text-xs text-muted-foreground">
-        Starting figures come from{" "}
-        <Link
-          href="/onboarding/opening-balances"
-          className="text-primary hover:underline"
-        >
-          Opening balances
-        </Link>{" "}
-        (Settings).
-      </p>
-
-      {!entityId && (
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
-      )}
-      {forbidden && <ForbiddenMessage />}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
-
-      {report && !loading && (
-        <SealedPeriodBanner
-          source={report.source}
-          sealed={report.sealed}
-          view={view}
-          onViewChange={setView}
-        />
-      )}
-
-      {report && (
-        <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { label: "Assets", value: report.total_assets_kurus },
-              { label: "Liabilities", value: report.total_liabilities_kurus },
-              { label: "Equity", value: report.total_equity_kurus },
-            ].map((row) => (
-              <div
-                key={row.label}
-                className="rounded-lg border border-border bg-card p-4"
-              >
-                <p className="text-sm text-muted-foreground">{row.label}</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">
-                  {formatTry(row.value)}
-                </p>
-              </div>
-            ))}
-          </div>
-
+      <ReportPage
+        title="Balance sheet"
+        entityId={entityId}
+        loading={loading}
+        error={error}
+        forbidden={forbidden}
+        forbiddenContext="balance sheet"
+        hasReport={Boolean(report)}
+        meta={
+          <>
+            Starting figures come from{" "}
+            <Link
+              href="/onboarding/opening-balances"
+              className="text-primary hover:underline"
+            >
+              Opening balances
+            </Link>{" "}
+            (Settings).
+          </>
+        }
+        periodControl={
+          <ReportAsOfDate
+            asOf={asOf}
+            disabled={!entityId || loading}
+            onChange={setAsOf}
+          />
+        }
+        downloads={
+          <ReportDownloadMenu
+            entityId={entityId}
+            reportSlug="balance-sheet"
+            queryString={queryString}
+            pdf
+            disabled={forbidden || !report}
+          />
+        }
+        banner={
+          report && (
+            <SealedPeriodBanner
+              source={report.source}
+              sealed={report.sealed}
+              view={view}
+              onViewChange={setView}
+            />
+          )
+        }
+        kpis={
+          report && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <StatCard label="Assets" amountKurus={report.total_assets_kurus} />
+              <StatCard
+                label="Liabilities"
+                amountKurus={report.total_liabilities_kurus}
+              />
+              <StatCard label="Equity" amountKurus={report.total_equity_kurus} />
+            </div>
+          )
+        }
+      >
+        {report && (
+          <div className="space-y-6">
           {!report.accounting_equation_balanced && (
             <p className="text-sm text-destructive">
               Accounting equation check failed — contact support.
@@ -166,8 +161,9 @@ function BalanceSheetContent() {
               {formatTry(report.total_liabilities_and_equity_kurus)}
             </span>
           </p>
-        </div>
-      )}
+          </div>
+        )}
+      </ReportPage>
     </AppShell>
   );
 }

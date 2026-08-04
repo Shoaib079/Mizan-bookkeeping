@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { ReportPage } from "@/components/page/report-page";
 import { TableSkeleton } from "@/components/ui/skeleton";
 
 const GeneralLedgerPanel = dynamic(
@@ -17,7 +18,9 @@ const GeneralLedgerPanel = dynamic(
 function GeneralLedgerContent() {
   return (
     <AppShell title="General ledger">
-      <GeneralLedgerPanel />
+      <ReportPage title="General ledger">
+        <GeneralLedgerPanel />
+      </ReportPage>
     </AppShell>
   );
 }

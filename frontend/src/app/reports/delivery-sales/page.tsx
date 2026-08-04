@@ -4,10 +4,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 
-import {
-  ForbiddenMessage,
-  isForbiddenError,
-} from "@/components/reports/forbidden-message";
+import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { ReportDownloadMenu } from "@/components/reports/report-download-menu";
 import { AppShell } from "@/components/layout/app-shell";
@@ -19,7 +16,7 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
-import { PageSkeleton } from "@/components/ui/skeleton";
+import { ReportPage } from "@/components/page/report-page";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -66,29 +63,31 @@ function DeliverySalesContent() {
 
   return (
     <AppShell title="Delivery sales">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <ReportDateRange
-          from={from}
-          to={to}
-          disabled={!entityId || loading}
-          onChange={setRange}
-        />
-        <ReportDownloadMenu
-          entityId={entityId}
-          reportSlug="delivery-sales"
-          queryString={queryString}
-          disabled={forbidden || !report}
-        />
-      </div>
-
-      {!entityId && (
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
-      )}
-      {forbidden && <ForbiddenMessage />}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
+      <ReportPage
+        title="Delivery sales"
+        entityId={entityId}
+        loading={loading}
+        error={error}
+        forbidden={forbidden}
+        forbiddenContext="delivery sales report"
+        hasReport={Boolean(report)}
+        periodControl={
+          <ReportDateRange
+            from={from}
+            to={to}
+            disabled={!entityId || loading}
+            onChange={setRange}
+          />
+        }
+        downloads={
+          <ReportDownloadMenu
+            entityId={entityId}
+            reportSlug="delivery-sales"
+            queryString={queryString}
+            disabled={forbidden || !report}
+          />
+        }
+      >
 
       {report && (
         <div className="space-y-6">
@@ -133,6 +132,7 @@ function DeliverySalesContent() {
           )}
         </div>
       )}
+      </ReportPage>
     </AppShell>
   );
 }
