@@ -117,6 +117,45 @@ describe("page archetypes", () => {
     }
   });
 
+  it("the dashboard uses OverviewPage, not the tile grid", async () => {
+    // Slice 4. §4b exists because the dashboard is KPI cards + charts + recent
+    // entries; forcing it into HubPage would be the drift the archetypes stop.
+    const dashboard = await read("../../app/page.tsx");
+    expect(dashboard).toContain("<OverviewPage");
+    expect(dashboard).not.toContain("<HubPage");
+    expect(dashboard.includes("<h1"), "dashboard draws its own title").toBe(
+      false,
+    );
+  });
+
+  it("every hub renders the shared header and one tile component", async () => {
+    for (const hub of [
+      "../banking/banking-hub-content.tsx",
+      "../banking/banking-branch-list-content.tsx",
+      "../../app/delivery/page.tsx",
+      "../../app/record/page.tsx",
+      "../../app/more/page.tsx",
+    ]) {
+      const source = await read(hub);
+      expect(source, hub).toMatch(/<HubPage|<PageHeader/);
+      expect(source.includes("<h1"), `${hub} draws its own title`).toBe(false);
+      // BankingHubTile was a second tile component with its own radius and
+      // padding; HubTileCard is the only one.
+      expect(source).not.toContain("BankingHubTile");
+    }
+  });
+
+  it("cards on the same row share one shell", async () => {
+    // CashBankSnapshotCard sits beside a StatCard and used rounded-xl/p-5
+    // against rounded-lg/p-4, so the pair visibly failed to line up.
+    const stat = await read("./stat-card.tsx");
+    const snapshot = await read("../dashboard/cash-bank-snapshot-card.tsx");
+    const shell = "rounded-lg border border-border bg-card p-4";
+    expect(stat).toContain(shell);
+    expect(snapshot).toContain(shell);
+    expect(snapshot).not.toContain("rounded-xl");
+  });
+
   it("row actions sit in a trailing column, weighted like siblings", async () => {
     // Edit and Void used to render inside the description cell on staff,
     // partners and supplier activity — so their left edge moved with the length

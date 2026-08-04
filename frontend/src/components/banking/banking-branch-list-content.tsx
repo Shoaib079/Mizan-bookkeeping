@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { BankAccountBalanceRow } from "@/components/banking/bank-account-balance-rows";
 import { MoneyAccountForm } from "@/components/forms/money-account-form";
+import { PageHeader } from "@/components/page/page-header";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
@@ -70,18 +70,19 @@ export function BankingBranchListContent({
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <Link href="/banking" className="text-sm text-primary hover:underline">
-          ← Banking
-        </Link>
-        <Button
-          type="button"
-          disabled={!entityId}
-          onClick={() => setAccountFormOpen(true)}
-        >
-          {addLabel}
-        </Button>
-      </div>
+      <PageHeader
+        title={title}
+        meta={branch?.bucket_name_tr}
+        primaryAction={
+          <Button
+            type="button"
+            disabled={!entityId}
+            onClick={() => setAccountFormOpen(true)}
+          >
+            {addLabel}
+          </Button>
+        }
+      />
 
       {!entityId && (
         <p className="text-sm text-muted-foreground">
@@ -94,12 +95,9 @@ export function BankingBranchListContent({
       {branch && (
         <section className="rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <div>
-              <h2 className="text-sm font-semibold">{title}</h2>
-              <p className="text-xs text-muted-foreground">
-                {branch.bucket_name_tr}
-              </p>
-            </div>
+            <span className="text-sm font-medium text-muted-foreground">
+              Total
+            </span>
             <span className="tabular-nums text-sm font-medium">
               {formatTry(branch.balance_kurus)}
             </span>

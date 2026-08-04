@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DeliveryCommissionInvoices } from "@/components/delivery/delivery-commission-invoices";
 import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { DeliverySettlementForm } from "@/components/forms/delivery-settlement-form";
+import { PageHeader } from "@/components/page/page-header";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
@@ -51,22 +52,29 @@ export default function DeliveryPage() {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-        <Button
-          type="button"
-          disabled={!entityId}
-          onClick={() => setSettleFormOpen(true)}
-        >
-          Record settlement
-        </Button>
-        <Button
-          type="button"
-          disabled={!entityId}
-          onClick={() => setReportFormOpen(true)}
-        >
-          Record sales
-        </Button>
-      </div>
+      <PageHeader
+        title="Delivery"
+        meta="Platform sales, commission, and settlement reconciliation."
+        primaryAction={
+          <Button
+            type="button"
+            disabled={!entityId}
+            onClick={() => setReportFormOpen(true)}
+          >
+            Record sales
+          </Button>
+        }
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!entityId}
+            onClick={() => setSettleFormOpen(true)}
+          >
+            Record settlement
+          </Button>
+        }
+      />
 
       {!entityId && (
         <p className="text-sm text-muted-foreground">

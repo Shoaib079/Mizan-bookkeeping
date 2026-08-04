@@ -79,7 +79,7 @@ Legend: ☐ pending · ☑ done.
 **Coverage proof:** 88 routes total − 30 redirects = **58 live pages**, and the slices below list exactly 58: 7 detail + 11 lists + 8 overview/hubs + 13 review/documents + 12 reports + 7 forms/settings/auth. Redirects need no design work (they render nothing) but are counted here so the arithmetic can be checked.
 
 ### Slice 1 — archetype components
-☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☐ `ReviewPage` ☐ `DocumentReviewPage` ☐ `FormPage` ☐ `ReportPage` ☑ `SummaryPanel` ☐ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
+☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☐ `ReviewPage` ☐ `DocumentReviewPage` ☐ `FormPage` ☐ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
 
 `LedgerTable` is still to build; its row-action rule was pulled forward on 2026-08-04 (actions live in a trailing column, Edit and Void weighted alike) because the inline placement was the loudest thing on the staff page.
 
@@ -103,10 +103,17 @@ What the slice turned up:
 - **Daily sales had its own filter chips** in a different style to `FilterChips` (solid vs tinted). Now shared.
 - Removed two hand-written `← Banking` back links that duplicated `PageBackLink` in the shell.
 
-### Slice 4 — overview + hubs (8)
-☐ `/` **(dashboard — `OverviewPage`, §4b)** ☐ `/banking` ☐ `/banking/banks` ☐ `/banking/cards` ☐ `/banking/fx` ☐ `/delivery` ☐ `/record` ☐ `/more`
+### Slice 4 — overview + hubs (8) — **done 2026-08-04**
+☑ `/` **(dashboard — `OverviewPage`, §4b)** ☑ `/banking` ☑ `/banking/banks` ☑ `/banking/cards` ☑ `/banking/fx` ☑ `/delivery` ☑ `/record` ☑ `/more`
 
 *(`/reports` is the reports hub — migrated with its own family in slice 6.)*
+
+`OverviewPage` and `StatCard` built here, completing all but `LedgerTable`. What the slice turned up:
+
+- **The dashboard had three card shapes for one job** — a linked "This period" card, a plain sales/expenses pair, and the "Right now" tiles, each with its own radius, padding and heading. All now `StatCard`.
+- **`CashBankSnapshotCard` sat beside one of them at a wider radius and more padding**, so two cards on the same row visibly failed to line up. Same shell now, asserted in the test.
+- **A second tile component existed.** `BankingHubTile` duplicated `HubTileCard` with different emphasis. Deleted; the banking hub composes `HubPage`.
+- `/banking/banks`, `/banking/cards` and `/banking/fx` share one implementation that repeated its title twice — once as the page heading, once as the section header above the same list. The section keeps only the total now.
 
 ### Slice 5 — review + documents (13)
 ☐ `/review/bank` ☐ `/review/sales` ☐ `/review/receipts` ☐ `/review/invoices` ☐ `/review/expenses` ☐ `/review/delivery` ☐ `/review/manual-journals` ☐ `/review/receipts/[id]` ☐ `/review/invoices/[id]` ☐ `/sales/[id]` ☐ `/banking/statements/[id]` ☐ `/delivery/reports` ☐ `/delivery/settlements`

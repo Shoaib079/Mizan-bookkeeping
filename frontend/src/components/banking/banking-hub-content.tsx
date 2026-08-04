@@ -4,8 +4,8 @@ import { Building2, Coins, CreditCard, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { BankingHubTile } from "@/components/banking/banking-hub-tile";
 import { TransferForm } from "@/components/forms/transfer-form";
+import { HubPage } from "@/components/page/hub-page";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
@@ -54,62 +54,66 @@ export function BankingHubContent() {
   const fxAccounts = tree ? allFxAccounts(tree) : [];
 
   return (
-    <>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Choose an area to view accounts, balances, and history.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setTransferOpen(true)}
-          >
-            New transfer
-          </Button>
-        </div>
-      </div>
-
+    <HubPage
+      title="Banking"
+      meta="Choose an area to view accounts, balances, and history."
+      error={error}
+      primaryAction={
+        <Button
+          type="button"
+          disabled={!entityId}
+          onClick={() => setTransferOpen(true)}
+        >
+          New transfer
+        </Button>
+      }
+      tiles={
+        tree
+          ? [
+              {
+                key: "banks",
+                href: "/banking/banks",
+                icon: Building2,
+                title: "Banks",
+                amount: formatTryTileBalance(tree.banks.balance_kurus),
+                subtitle: `${accountCountLabel(tree.banks.accounts.length, "account")} · ${accountSubtitle(tree.banks.accounts)}`,
+              },
+              {
+                key: "cards",
+                href: "/banking/cards",
+                icon: CreditCard,
+                title: "Credit cards",
+                amount: formatTryTileBalance(
+                  tree.credit_cards.balance_kurus,
+                ),
+                subtitle: `${accountCountLabel(tree.credit_cards.accounts.length, "card", "cards")} · ${accountSubtitle(tree.credit_cards.accounts)}`,
+              },
+              {
+                key: "cash",
+                href: "/banking/cash",
+                icon: Wallet,
+                title: "Cash drawer",
+                amount: formatTryTileBalance(tree.cash.balance_kurus),
+                subtitle: cashDrawerHubSubtitle(tree.cash.accounts),
+              },
+              {
+                key: "fx",
+                href: "/banking/fx",
+                icon: Coins,
+                title: "Foreign currency",
+                amount: formatFxTileSummary(fxAccounts),
+                subtitle: `${accountCountLabel(fxAccounts.length, "wallet", "wallets")} · ${accountSubtitle(fxAccounts)}`,
+              },
+            ]
+          : undefined
+      }
+    >
       {!entityId && (
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar.
         </p>
       )}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <PageSkeleton />}
-
-      {tree && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <BankingHubTile
-            href="/banking/banks"
-            icon={Building2}
-            title="Banks"
-            balance={formatTryTileBalance(tree.banks.balance_kurus)}
-            subtitle={`${accountCountLabel(tree.banks.accounts.length, "account")} · ${accountSubtitle(tree.banks.accounts)}`}
-          />
-          <BankingHubTile
-            href="/banking/cards"
-            icon={CreditCard}
-            title="Credit cards"
-            balance={formatTryTileBalance(tree.credit_cards.balance_kurus)}
-            subtitle={`${accountCountLabel(tree.credit_cards.accounts.length, "card", "cards")} · ${accountSubtitle(tree.credit_cards.accounts)}`}
-          />
-          <BankingHubTile
-            href="/banking/cash"
-            icon={Wallet}
-            title="Cash drawer"
-            balance={formatTryTileBalance(tree.cash.balance_kurus)}
-            subtitle={cashDrawerHubSubtitle(tree.cash.accounts)}
-          />
-          <BankingHubTile
-            href="/banking/fx"
-            icon={Coins}
-            title="Foreign currency"
-            balance={formatFxTileSummary(fxAccounts)}
-            subtitle={`${accountCountLabel(fxAccounts.length, "wallet", "wallets")} · ${accountSubtitle(fxAccounts)}`}
-          />
-        </div>
-      )}
 
       {tree && tree.cash.accounts.length === 0 && (
         <p className="mt-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
@@ -127,6 +131,6 @@ export function BankingHubContent() {
         onClose={() => setTransferOpen(false)}
         onTransferred={() => void reload()}
       />
-    </>
+    </HubPage>
   );
 }
