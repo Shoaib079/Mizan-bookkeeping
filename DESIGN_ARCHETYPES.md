@@ -48,6 +48,13 @@ Fills for each entity:
 ### 4. `HubPage`
 `PageHeader` + tile grid. One tile component, one grid. Banking, Delivery, Review, Record, Reports, More, Settings.
 
+### 4b. `OverviewPage` — the dashboard
+The dashboard is **not** a tile grid and must not be forced into one: it is KPI
+cards + trend charts + recent entries + drill-down cards. It gets its own
+archetype so it shares the header, card, money and empty-state rules while
+keeping its own body: `PageHeader` + period control + `StatCard` row +
+chart row + activity card. Only `/` uses it.
+
 ### 5. `ReviewPage`
 `PageHeader` + queue tabs with counts + rows with inline confirm/reject + document preview pane where one exists.
 
@@ -67,7 +74,9 @@ Two-pane: original document left, extracted fields + confidence + actions right.
 
 ## Migration checklist — every page, nothing skipped
 
-Legend: ☐ pending · ☑ done. **58 live pages** (30 redirects need no work but are listed so the count is provable).
+Legend: ☐ pending · ☑ done.
+
+**Coverage proof:** 88 routes total − 30 redirects = **58 live pages**, and the slices below list exactly 58: 7 detail + 11 lists + 8 overview/hubs + 13 review/documents + 12 reports + 7 forms/settings/auth. Redirects need no design work (they render nothing) but are counted here so the arithmetic can be checked.
 
 ### Slice 1 — archetype components
 ☐ `PageHeader` ☐ `EntityDetailPage` ☐ `ListPage` ☐ `HubPage` ☐ `ReviewPage` ☐ `DocumentReviewPage` ☐ `FormPage` ☐ `ReportPage` ☐ `SummaryPanel` ☐ `StatCard` ☐ `LedgerTable` ☐ `FilterChips`
@@ -78,13 +87,15 @@ Legend: ☐ pending · ☑ done. **58 live pages** (30 redirects need no work bu
 ### Slice 3 — lists (11)
 ☐ `/staff` ☐ `/suppliers` ☐ `/customers` ☐ `/partners` ☐ `/sales` ☐ `/cards` ☐ `/banking/transfers` ☐ `/banking/cash` ☐ `/customers/group-sales` ☐ `/customers/group-menus` ☐ `/delivery/platforms`
 
-### Slice 4 — hubs (7)
-☐ `/` (dashboard) ☐ `/banking` ☐ `/banking/banks` ☐ `/banking/cards` ☐ `/banking/fx` ☐ `/delivery` ☐ `/record` ☐ `/more` ☐ `/reports`
+### Slice 4 — overview + hubs (8)
+☐ `/` **(dashboard — `OverviewPage`, §4b)** ☐ `/banking` ☐ `/banking/banks` ☐ `/banking/cards` ☐ `/banking/fx` ☐ `/delivery` ☐ `/record` ☐ `/more`
 
-### Slice 5 — review + documents (11)
+*(`/reports` is the reports hub — migrated with its own family in slice 6.)*
+
+### Slice 5 — review + documents (13)
 ☐ `/review/bank` ☐ `/review/sales` ☐ `/review/receipts` ☐ `/review/invoices` ☐ `/review/expenses` ☐ `/review/delivery` ☐ `/review/manual-journals` ☐ `/review/receipts/[id]` ☐ `/review/invoices/[id]` ☐ `/sales/[id]` ☐ `/banking/statements/[id]` ☐ `/delivery/reports` ☐ `/delivery/settlements`
 
-### Slice 6 — reports (11)
+### Slice 6 — reports (12, incl. the `/reports` hub)
 ☐ `/reports` ☐ `/reports/profit-and-loss` ☐ `/reports/balance-sheet` ☐ `/reports/cash-flow` ☐ `/reports/ledger` ☐ `/reports/kdv-input` ☐ `/reports/delivery-sales` ☐ `/reports/period-comparison` ☐ `/reports/cash-book` ☐ `/reports/expense-register` ☐ `/reports/bank-reconciliation` ☐ `/reports/month-close`
 
 ### Slice 7 — forms + settings + auth (7)
