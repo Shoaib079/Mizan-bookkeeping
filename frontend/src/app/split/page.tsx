@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/page/page-header";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { FormDialogShell } from "@/components/ui/form-dialog-shell";
@@ -273,21 +274,21 @@ export default function SplitHubPage() {
 
   return (
     <AppShell title="Split">
-      <div className="mb-6 max-w-2xl space-y-2">
-        <h1 className="text-xl font-semibold">Split</h1>
-        <p className="text-sm text-muted-foreground">
-          Peel a personal share onto a partner from a posted bank expense (SGK,
-          rent…) or a supplier payment. Restaurant share stays on the books;
-          bank is unchanged.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Partner paid Metro from pocket (no bank payment yet):{" "}
-          <Link href="/partners" className="underline underline-offset-2">
-            Partners → Split buy
-          </Link>
-          .
-        </p>
-      </div>
+      <PageHeader
+        title="Split"
+        meta={
+          <>
+            Peel a personal share onto a partner from a posted bank expense
+            (SGK, rent…) or a supplier payment. Restaurant share stays on the
+            books; bank is unchanged. Partner paid from pocket with no bank
+            payment yet?{" "}
+            <Link href="/partners" className="underline underline-offset-2">
+              Partners → Split buy
+            </Link>
+            .
+          </>
+        }
+      />
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 

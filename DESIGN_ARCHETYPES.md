@@ -84,7 +84,7 @@ Legend: ☐ pending · ☑ done.
 **Coverage proof:** 88 routes total − 30 redirects = **58 live pages**, and the slices below list exactly 58: 7 detail + 11 lists + 8 overview/hubs + 13 review/documents + 12 reports + 7 forms/settings/auth. Redirects need no design work (they render nothing) but are counted here so the arithmetic can be checked.
 
 ### Slice 1 — archetype components
-☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☑ ~~`ReviewPage`~~ (folded into `ListPage`) ☑ `DocumentReviewPage` ☐ `FormPage` ☑ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
+☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☑ ~~`ReviewPage`~~ (folded into `ListPage`) ☑ `DocumentReviewPage` ☑ `FormPage` ☑ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
 
 `LedgerTable` is still to build; its row-action rule was pulled forward on 2026-08-04 (actions live in a trailing column, Edit and Void weighted alike) because the inline placement was the loudest thing on the staff page.
 
@@ -143,8 +143,16 @@ What the slice turned up:
 - **P&L and balance sheet drew their own KPI boxes** in a `.map()` over a literal array, at `text-xl` where `StatCard` uses `text-2xl`. Both now use `StatCard`, so the dashboard and the reports agree.
 - The balance sheet's KPI band is the one that was reporting a broken accounting equation until the contra-account fix earlier the same day — worth re-reading on production.
 
-### Slice 7 — forms + settings + auth (7)
-☐ `/settings/restaurant` ☐ `/settings/profile` ☐ `/onboarding/opening-balances` ☐ `/banking/accounts/[id]/import` ☐ `/split` ☐ `/sign-in` ☐ `/sign-up`
+### Slice 7 — forms + settings + auth (7) — **done 2026-08-04**
+☑ `/settings/restaurant` ☑ `/settings/profile` ☑ `/onboarding/opening-balances` ☑ `/banking/accounts/[id]/import` ☑ `/split` ☑ `/sign-in` ☑ `/sign-up`
+
+Four compose `FormPage`. **`/split`** is a workflow rather than a settings form, so it takes `PageHeader` only. **`/sign-in` and `/sign-up`** live outside `AppShell` entirely — they are Clerk's own components on a centred background, with no app chrome, and giving them an archetype would be pretending they are app pages.
+
+What the slice turned up:
+
+- **Settings cards used `p-5`** where every other card in the app uses `p-4`, and each page capped its own width differently (`max-w-xl`, `max-w-3xl`, `max-w-4xl`). `FormPage` caps it once, with `wide`/`full` for the two-column setup screens.
+- `/split` printed its own `<h1>` **in addition to** the shell's — the last page still doing that.
+- **Non-blocking warning added** to `/cards`: card clearing is an asset and cannot legitimately go negative, so when it does, deposits are recorded but the sales behind them are not. Spice Corner is −462.870,73 ₺ against 28 settlements with no card sales. It states the amount and links to Daily sales; it disables nothing, because the fix is to carry on entering the missing sales. A test asserts it never blocks.
 
 ### Slice 8 — sweep
 ☐ delete every now-unreferenced component and helper ☐ no inline `rounded-lg border border-border bg-card` left in `app/` ☐ no page renders its own mobile/desktop fork ☐ hoist the remaining bare `AppShell` calls into section layouts, then drop the shell's own `<h1>` and the `page-title-slot` handshake with it ☐ `tsc`, `eslint`, full test suite, production build ☐ update `FRONTEND_AUDIT_FINAL.md` status

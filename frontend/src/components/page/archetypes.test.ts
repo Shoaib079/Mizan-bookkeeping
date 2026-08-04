@@ -286,6 +286,43 @@ describe("page archetypes", () => {
     );
   });
 
+  it("forms and settings compose FormPage", async () => {
+    // Slice 7. These had each picked their own card padding (p-5 against the
+    // p-4 every other card uses) and their own max width.
+    for (const page of [
+      "../../app/settings/profile/page.tsx",
+      "../settings/restaurant-settings-content.tsx",
+      "../../app/onboarding/opening-balances/page.tsx",
+      "../../app/banking/accounts/[id]/import/page.tsx",
+    ]) {
+      const source = await read(page);
+      expect(source, page).toContain("<FormPage");
+      expect(
+        source.includes("bg-card p-5"),
+        `${page} still uses the odd p-5 card`,
+      ).toBe(false);
+    }
+
+    // /split is a workflow, not a settings form — it takes the header only.
+    expect(await read("../../app/split/page.tsx")).toContain("<PageHeader");
+    // Auth pages live outside the shell entirely; they are Clerk's own.
+    const signIn = await read("../../app/sign-in/[[...sign-in]]/page.tsx");
+    expect(signIn).not.toContain("FormPage");
+  });
+
+  it("the negative-clearing warning never blocks recording", async () => {
+    // Card clearing cannot legitimately go negative; when it does, sales are
+    // missing. The fix is to carry on entering them, so the warning must not
+    // disable anything — it only tells you what is missing and links to it.
+    const source = await read("../sales/cards-page-content.tsx");
+    const warning = source.slice(
+      source.indexOf("clearing_balance_kurus < 0"),
+      source.indexOf("Clearing reconciliation"),
+    );
+    expect(warning).toContain("Open Daily sales");
+    expect(warning).not.toContain("disabled");
+  });
+
   it("row actions sit in a trailing column, weighted like siblings", async () => {
     // Edit and Void used to render inside the description cell on staff,
     // partners and supplier activity — so their left edge moved with the length

@@ -1,5 +1,6 @@
 "use client";
 
+import { FormPage } from "@/components/page/form-page";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -109,15 +110,17 @@ export default function StatementImportPage() {
 
   if (phase === "wait-account" || phase === "ready") {
     return (
-      <div className="space-y-4">
-        {phase === "wait-account" && (
-          <p className="text-sm text-muted-foreground">Loading account…</p>
-        )}
+      <FormPage
+        title="Import statement"
+        meta={account?.name}
+        width="full"
+        loading={phase === "wait-account"}
+      >
         <StatementImportPanel
           moneyAccountId={accountId}
           accountName={account?.name}
         />
-      </div>
+      </FormPage>
     );
   }
 

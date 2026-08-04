@@ -1,5 +1,6 @@
 "use client";
 
+import { FormPage, FormSection } from "@/components/page/form-page";
 import Link from "next/link";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
@@ -149,8 +150,8 @@ export function RestaurantSettingsContent() {
   }
 
   return (
-    <div className="max-w-3xl space-y-8">
-      <section className="rounded-lg border border-border bg-card p-5">
+    <FormPage title="Restaurant settings" width="wide">
+      <FormSection>
         <h2 className="text-sm font-semibold">Company profile</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Your registered business details — used to identify your company on
@@ -208,9 +209,9 @@ export function RestaurantSettingsContent() {
             </Button>
           </form>
         )}
-      </section>
+      </FormSection>
 
-      <section className="rounded-lg border border-border bg-card p-5">
+      <FormSection>
         <h2 className="text-sm font-semibold">Modules</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Per-restaurant feature toggles. Turn modules on or off when your needs
@@ -230,9 +231,9 @@ export function RestaurantSettingsContent() {
           savingKey={savingKey}
           refreshDeliveryNavAfterSave
         />
-      </section>
+      </FormSection>
 
-      <section className="rounded-lg border border-border bg-card p-5">
+      <FormSection>
         <h2 className="text-sm font-semibold">Team</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Members who can access this restaurant and their roles.
@@ -240,9 +241,9 @@ export function RestaurantSettingsContent() {
         <div className="mt-4 min-w-0">
           <TeamPanel />
         </div>
-      </section>
+      </FormSection>
 
-      <section className="rounded-lg border border-border bg-card p-5">
+      <FormSection>
         <h2 className="text-sm font-semibold">Opening balances</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Go-live date, cash and bank balances, payables, and equity — the
@@ -254,9 +255,9 @@ export function RestaurantSettingsContent() {
         >
           Review opening balances →
         </Link>
-      </section>
+      </FormSection>
 
       <BackupsInfoPanel />
-    </div>
+    </FormPage>
   );
 }

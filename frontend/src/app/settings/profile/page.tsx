@@ -7,6 +7,7 @@ import { Check, Moon, Sun } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { FormPage, FormSection } from "@/components/page/form-page";
 import { useTheme } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -76,9 +77,9 @@ export default function ProfileSettingsPage() {
 
   return (
     <AppShell title="Your profile">
-      <div className="max-w-xl space-y-6">
+      <FormPage title="Your profile">
         {/* Identity */}
-        <section className="rounded-lg border border-border bg-card p-5">
+        <FormSection>
           <div className="flex items-center gap-4">
             <span
               className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-base font-semibold text-primary"
@@ -125,10 +126,10 @@ export default function ProfileSettingsPage() {
               {saving ? "Saving…" : "Save profile"}
             </Button>
           </form>
-        </section>
+        </FormSection>
 
         {/* Restaurants & role */}
-        <section className="rounded-lg border border-border bg-card p-5">
+        <FormSection>
           <h2 className="text-sm font-semibold">Your restaurants</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {canSwitch
@@ -189,10 +190,10 @@ export default function ProfileSettingsPage() {
             </Link>
             .
           </p>
-        </section>
+        </FormSection>
 
         {/* Appearance */}
-        <section className="rounded-lg border border-border bg-card p-5">
+        <FormSection>
           <h2 className="text-sm font-semibold">Appearance</h2>
           <div className="mt-3 flex gap-2">
             <Button
@@ -212,8 +213,8 @@ export default function ProfileSettingsPage() {
               <Moon className="size-4" /> Dark
             </Button>
           </div>
-        </section>
-      </div>
+        </FormSection>
+      </FormPage>
     </AppShell>
   );
 }

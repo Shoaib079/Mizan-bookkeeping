@@ -5,6 +5,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { FormPage } from "@/components/page/form-page";
 import { Button } from "@/components/ui/button";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 import { DateInput } from "@/components/ui/date-input";
@@ -522,7 +523,7 @@ export default function OpeningBalancesPage() {
       )}
 
       {entityId && (
-        <div className="max-w-4xl space-y-6">
+        <FormPage title="Opening balances" width="wide">
           {wizardSteps.length > 0 && (
             <p className="text-xs text-muted-foreground">
               Onboarding steps: {wizardSteps.join(" → ")}
@@ -755,7 +756,7 @@ export default function OpeningBalancesPage() {
               )}
             </section>
           )}
-        </div>
+        </FormPage>
       )}
     </AppShell>
   );

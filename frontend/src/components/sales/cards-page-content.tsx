@@ -2,6 +2,7 @@
 
 /** Card sales, settlements, clearing reconciliation — Phase 9 Slice 5. */
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { CardSalesForm } from "@/components/forms/card-sales-form";
@@ -134,6 +135,30 @@ export function CardsPageContent() {
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <PageSkeleton />}
+
+      {/* Card clearing is an asset — it cannot legitimately go negative. When
+       * it does, deposits have been recorded but the card sales behind them
+       * have not, and card revenue is understated by that amount. Purely
+       * informational: it never disables an action or blocks a recording,
+       * because the way to fix it is to carry on entering the missing sales. */}
+      {recon && recon.clearing_balance_kurus < 0 && (
+        <section className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-4">
+          <h2 className="text-sm font-semibold">
+            Card sales missing for {formatTry(Math.abs(recon.clearing_balance_kurus))}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Bank deposits from the card processor are recorded, but the daily
+            sales behind them are not — so card revenue is understated by about
+            this much. Enter the missing daily sales and this clears itself.
+          </p>
+          <Link
+            href="/sales"
+            className="mt-2 inline-block text-sm text-primary hover:underline"
+          >
+            Open Daily sales
+          </Link>
+        </section>
+      )}
 
       {recon && (
         <section className="mb-6 rounded-lg border border-border bg-card p-4">
