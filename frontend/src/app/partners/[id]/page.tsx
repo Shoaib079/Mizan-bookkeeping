@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { PartnerRecordForm } from "@/components/forms/partner-record-form";
+import { PartnerLedgerDownloadMenu } from "@/components/partners/partner-ledger-download-menu";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
@@ -219,6 +220,11 @@ export default function PartnerDetailPage() {
           </div>
 
           <div className="mb-6 flex flex-wrap gap-2">
+            <PartnerLedgerDownloadMenu
+              entityId={entityId}
+              partnerId={partnerId}
+              disabled={loading}
+            />
             <Button type="button" onClick={() => setRecordOpen(true)}>
               Record
             </Button>

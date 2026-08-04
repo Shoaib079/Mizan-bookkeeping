@@ -233,6 +233,79 @@ def get_partner_ledger(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.get("/{partner_id}/ledger/export")
+def export_partner_ledger(
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+):
+    from datetime import date as date_cls
+
+    from app.features.entities import service as entity_service
+    from app.features.partners import ledger_export
+    from app.features.reports.excel_export import export_filename, xlsx_response
+
+    try:
+        partner = service.get_partner(session, entity_id, partner_id)
+        ledger = service.get_partner_ledger(session, entity_id, partner_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    entity = entity_service.get_entity(session, entity_id)
+    entity_name = entity.name if entity is not None else "Mizan"
+    data = ledger_export.build_partner_ledger_xlsx(
+        entity_name=entity_name,
+        partner_name=partner.name,
+        ledger=ledger,
+    )
+    safe_name = partner.name.replace(" ", "_")[:40]
+    filename = export_filename(
+        f"partner-ledger-{safe_name}",
+        as_of=date_cls.today(),
+    )
+    return xlsx_response(data, filename)
+
+
+@router.get("/{partner_id}/ledger/export/pdf")
+def export_partner_ledger_pdf(
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+):
+    from datetime import date as date_cls
+
+    from app.features.entities import service as entity_service
+    from app.features.partners import ledger_export
+    from app.features.reports.excel_export import export_filename
+    from app.features.reports.pdf_export import PdfExportDependencyError, pdf_response
+
+    try:
+        partner = service.get_partner(session, entity_id, partner_id)
+        ledger = service.get_partner_ledger(session, entity_id, partner_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    entity = entity_service.get_entity(session, entity_id)
+    entity_name = entity.name if entity is not None else "Mizan"
+    try:
+        data = ledger_export.build_partner_ledger_pdf(
+            entity_name=entity_name,
+            partner_name=partner.name,
+            ledger=ledger,
+        )
+    except PdfExportDependencyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    safe_name = partner.name.replace(" ", "_")[:40]
+    filename = export_filename(
+        f"partner-ledger-{safe_name}",
+        as_of=date_cls.today(),
+        extension=".pdf",
+    )
+    return pdf_response(data, filename)
+
+
 @router.post(
     "/{partner_id}/expenses-fronted",
     response_model=ExpenseFrontedResponse,

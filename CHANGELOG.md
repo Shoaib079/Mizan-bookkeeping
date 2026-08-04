@@ -7,6 +7,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 **Partner Record rename.**
 - Partner Record type **Cash paid / taken** → **Cash taken / withdrawn** (same money-out behavior).
 
+**Partner page Download (Excel + PDF).**
+- Partner detail → **Download**: Excel or PDF of that partner’s ledger (movements + balances).
+
 **Partner summary — no Drawings (net) line.**
 - Partner page card no longer lists “Drawings (net)”. **Partner owes you** already has the cash position; the drawings line stayed after profit settled and confused the picture.
 

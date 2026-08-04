@@ -68,6 +68,20 @@ _STAFF_MOVEMENT_LABELS: dict[str, str] = {
     "incentive_payment": "Incentive payment",
 }
 
+_PARTNER_MOVEMENT_LABELS: dict[str, str] = {
+    "opening_balance": "Opening balance",
+    "expense_fronted": "Expense fronted",
+    "reimbursement_paid": "Reimbursement paid",
+    "drawing": "Drawing",
+    "drawing_repayment": "Drawing repayment",
+    "capital_contribution": "Capital contribution",
+    "partner_loan_received": "Partner loan received",
+    "partner_loan_repaid": "Partner loan repaid",
+    "profit_allocation": "Profit allocation",
+    "profit_settlement": "Settled from profit",
+    "profit_paid": "Profit paid",
+}
+
 # Words that mean "how the app works" — partner books must never show these.
 _PARTNER_FORBIDDEN_LABEL_WORDS = frozenset(
     {
@@ -100,6 +114,14 @@ def format_staff_movement(movement_type: object) -> str:
     if not raw:
         return ""
     return _STAFF_MOVEMENT_LABELS.get(raw, raw.replace("_", " ").title())
+
+
+def format_partner_movement(movement_type: object) -> str:
+    raw = movement_type.value if hasattr(movement_type, "value") else str(movement_type or "")
+    raw = raw.strip()
+    if not raw:
+        return ""
+    return _PARTNER_MOVEMENT_LABELS.get(raw, raw.replace("_", " ").title())
 
 
 def assert_partner_journal_labels_complete() -> None:
