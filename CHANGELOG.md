@@ -4,6 +4,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-04
 
+**Partner Download placement.**
+- Partner page: **Download** sits on the right of the action row; primary (filled) brand color.
+
 **Partner Record rename.**
 - Partner Record type **Cash paid / taken** → **Cash taken / withdrawn** (same money-out behavior).
 
