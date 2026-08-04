@@ -250,6 +250,11 @@ def _money_accounts(session: Session, kind: MoneyAccountKind) -> list[MoneyAccou
     )
 
 
+def _print_footer(ctx: MonthPackContext, sheet_label: str) -> str:
+    """Footer stamped on printed pages: who, what, which period."""
+    return f"{ctx.entity_name} · {sheet_label} · {ctx.from_date} – {ctx.to_date}"
+
+
 def _figures_label(ctx: MonthPackContext) -> str:
     if ctx.sealed:
         return f"As closed on {ctx.closed_at}"
@@ -503,6 +508,7 @@ def _write_sales(ws, series, dashboard, ctx: MonthPackContext) -> None:
         last_data_row=max(last_daily, data_start),
         end_col=4,
         money_cols=(2, 3, 4),
+        print_footer=_print_footer(ctx, "Month Pack — Sales"),
     )
     fit_columns_from_content(
         ws,
@@ -557,6 +563,7 @@ def _write_expenses(ws, register, ctx: MonthPackContext) -> None:
         last_data_row=last_detail,
         end_col=5,
         money_cols=(5,),
+        print_footer=_print_footer(ctx, "Month Pack — Expenses"),
     )
     fit_columns_from_content(
         ws,
@@ -635,6 +642,7 @@ def _write_salaries(
         last_data_row=max(row - 1, data_start),
         end_col=7,
         money_cols=(6, 7),
+        print_footer=_print_footer(ctx, "Month Pack — Salaries"),
     )
     fit_columns_from_content(
         ws,
@@ -688,6 +696,7 @@ def _write_account_book(ws, book, *, heading: str, ctx: MonthPackContext) -> Non
         last_data_row=max(row - 1, data_start),
         end_col=6,
         money_cols=(4, 5, 6),
+        print_footer=_print_footer(ctx, heading),
     )
     fit_columns_from_content(
         ws,
@@ -722,7 +731,12 @@ def _write_fx_holdings(ws, fx_balances, ctx: MonthPackContext) -> None:
     if not fx_balances:
         ws.cell(row=4, column=1, value="No foreign currency wallets.")
         finish_data_table(
-            ws, header_row=4, last_data_row=4, end_col=4, autofilter=False
+            ws,
+            header_row=4,
+            last_data_row=4,
+            end_col=4,
+            autofilter=False,
+            print_footer=_print_footer(ctx, "Month Pack — Foreign currency"),
         )
         return
 
@@ -770,6 +784,7 @@ def _write_fx_holdings(ws, fx_balances, ctx: MonthPackContext) -> None:
         last_data_row=data_start + len(fx_balances) - 1,
         end_col=4,
         money_cols=(3, 4),
+        print_footer=_print_footer(ctx, "Month Pack — Foreign currency"),
     )
     fit_columns_from_content(
         ws,

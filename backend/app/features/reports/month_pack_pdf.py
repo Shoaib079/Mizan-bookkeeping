@@ -18,6 +18,19 @@ from app.core.pdf.fonts import (
 )
 from app.features.reports import cash_book as cash_book_report
 from app.features.reports.month_pack import MonthPackBundle, cash_movement_rows
+from app.features.reports.pdf_export import (
+    _BAND,
+    _BRAND_BLUE,
+    _HAIRLINE,
+    _INK,
+    _MUTED,
+    _NEGATIVE,
+    _SLATE,
+    _fmt_date,
+    _period_text,
+    header_elements,
+    summary_band,
+)
 from app.features.reports.partner_sources import economic_source_value
 from app.features.staff import service as staff_service
 
@@ -55,6 +68,20 @@ def _date_cell(value: date | None) -> str:
     return _cell(value.strftime("%d.%m.%Y"))
 
 
+#: Order must match the section() calls below — drives the cover contents list.
+_SECTION_NAMES = (
+    "Summary",
+    "Sales — day by day",
+    "Expenses — by category",
+    "Salaries",
+    "Cash & bank books",
+    "Foreign currency held",
+    "Card clearing",
+    "Profit and loss",
+    "General ledger",
+)
+
+
 def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     register_bundled_fonts()
     (
@@ -86,10 +113,10 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         "PackSection",
         parent=styles["Heading2"],
         fontName=PDF_FONT_BOLD_NAME,
-        fontSize=12,
-        spaceBefore=8,
+        fontSize=11.5,
+        spaceBefore=2,
         spaceAfter=6,
-        textColor=colors.HexColor("#1D4ED8"),
+        textColor=colors.HexColor(_INK),
     )
     body_style = ParagraphStyle(
         "PackBody",
@@ -186,18 +213,83 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     )
     generated = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
 
-    elements: list = [
-        Paragraph(f"<b>{_cell(ctx.entity_name)}</b>", title_style),
-        Paragraph(f"Books for {_cell(ctx.from_date)} to {_cell(ctx.to_date)}", body_style),
-        Paragraph(f"Figures: {_cell(figures)}", body_style),
-        Paragraph(f"Generated: {_cell(generated)}", note_style),
-        Spacer(1, 0.35 * cm),
-    ]
-
     dashboard = bundle.dashboard
     bridge = bundle.cash_bridge
 
-    elements.extend(section("Summary"))
+    # ---- Cover page: same masthead as the standalone statements, then the
+    # headline figures, the books-balance proof, and what's inside.
+    elements: list = header_elements(
+        title="Month Pack",
+        entity_name=ctx.entity_name,
+        period_label="Period",
+        period_value=_period_text(ctx.from_date, ctx.to_date),
+    )
+    elements.extend(
+        summary_band(
+            [
+                ("Sales", dashboard.sales.total_sales_kurus),
+                ("Expenses", -abs(dashboard.total_expenses_kurus)),
+                ("Net result", dashboard.net_result_kurus),
+            ]
+        )
+    )
+
+    movement_total = sum(amount for _label, amount in cash_movement_rows(bundle.cash_flow))
+    balanced = bridge.balances_with_movements(movement_total)
+    proof_rows = [
+        [
+            _cell(
+                "Books balance"
+                if balanced
+                else "Books do not balance — review before filing"
+            ),
+            _cell(
+                f"Opening {_try_cell(bridge.opening_cash_bank_kurus)} "
+                f"+ movements = closing {_try_cell(bridge.closing_cash_bank_kurus)}"
+            ),
+        ]
+    ]
+    proof = Table(proof_rows, colWidths=["25%", "75%"])
+    proof.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (0, 0), PDF_FONT_BOLD_NAME),
+                ("FONTNAME", (1, 0), (1, 0), PDF_FONT_NAME),
+                ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, -1),
+                    colors.HexColor("#EAF3DE" if balanced else "#FCEBEB"),
+                ),
+                (
+                    "TEXTCOLOR",
+                    (0, 0),
+                    (-1, -1),
+                    colors.HexColor("#3B6D11" if balanced else _NEGATIVE),
+                ),
+                ("LEFTPADDING", (0, 0), (-1, -1), 9),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
+    elements.append(proof)
+    elements.append(Spacer(1, 0.4 * cm))
+
+    contents_rows: list[list] = [[_cell("Contents"), _cell("")]]
+    for index, name in enumerate(_SECTION_NAMES, start=1):
+        contents_rows.append([_cell(f"{index} · {name}"), ""])
+    contents = Table(contents_rows, colWidths=["60%", "40%"])
+    contents.setStyle(_table_style(money_cols=()))
+    elements.append(contents)
+    elements.append(Spacer(1, 0.3 * cm))
+    elements.append(para(f"Figures: {figures}", note_style))
+    elements.append(para(f"Generated {generated}", note_style))
+
+    elements.append(PageBreak())
+    elements.extend(section("1 · Summary"))
 
     elements.append(para("Sales & result", subsection_style))
     elements.append(Spacer(1, 0.1 * cm))
@@ -317,7 +409,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     )
 
     elements.append(PageBreak())
-    elements.extend(section("Sales — day by day"))
+    elements.extend(section("2 · Sales — day by day"))
     sales_rows: list[list] = [
         [
             _cell("Date"),
@@ -343,7 +435,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     )
 
     elements.append(PageBreak())
-    elements.extend(section("Expenses — by category"))
+    elements.extend(section("3 · Expenses — by category"))
     cat_rows: list[list] = [
         [_cell("Account"), _cell("Entries"), _cell("Amount")]
     ]
@@ -367,7 +459,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     expense_lines = bundle.register.rows[:_EXPENSE_LINES_CAP]
     if expense_lines:
         elements.append(Spacer(1, 0.3 * cm))
-        elements.extend(section("Expenses — every line"))
+        elements.extend(section("3 · Expenses — every line"))
         if len(bundle.register.rows) > len(expense_lines):
             elements.append(
                 para(
@@ -405,7 +497,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     salary_rows = _collect_salary_rows(session, bundle)
     if salary_rows:
         elements.append(PageBreak())
-        elements.extend(section("Salaries — accruals, payments and advances"))
+        elements.extend(section("4 · Salaries — accruals, payments and advances"))
         elements.append(
             table(
                 salary_rows,
@@ -424,7 +516,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         elements.extend(
             _account_book_section(
                 book,
-                heading=f"Cash book — {name}",
+                heading=f"5 · Cash book — {name}",
                 section=section,
                 table=table,
                 note_style=note_style,
@@ -446,7 +538,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         elements.extend(
             _account_book_section(
                 book,
-                heading=f"Bank book — {name}",
+                heading=f"5 · Bank book — {name}",
                 section=section,
                 table=table,
                 note_style=note_style,
@@ -459,7 +551,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
 
     if bundle.dashboard.fx_balances:
         elements.append(PageBreak())
-        elements.extend(section("Foreign currency held"))
+        elements.extend(section("6 · Foreign currency held"))
         fx_rows: list[list] = [
             [_cell("Wallet"), _cell("Currency"), _cell("Amount held"), _cell("TRY cost")]
         ]
@@ -480,7 +572,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         )
 
     elements.append(PageBreak())
-    elements.extend(section("Card clearing"))
+    elements.extend(section("7 · Card clearing"))
     clearing = bundle.clearing
     card_rows: list[list] = [[_cell("Description"), _cell("Amount")]]
     for label, value in [
@@ -495,7 +587,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     elements.append(table(card_rows, col_widths=[10 * cm, 4.5 * cm]))
 
     elements.append(PageBreak())
-    elements.extend(section("Profit and loss"))
+    elements.extend(section("8 · Profit and loss"))
     pl = bundle.profit_and_loss
     pl_rows: list[list] = [[_cell("Code"), _cell("Account"), _cell("Type"), _cell("Amount")]]
     for account in pl.accounts:
@@ -519,7 +611,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     )
 
     elements.append(PageBreak())
-    elements.extend(section("General ledger"))
+    elements.extend(section("9 · General ledger"))
     ledger_line_count = sum(len(entry.lines) for entry in bundle.entries)
     shown = 0
     ledger_rows: list[list] = [
@@ -572,17 +664,39 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     )
 
     buffer = __import__("io").BytesIO()
+    pagesize = landscape(A4)
+    margin = 1.2 * cm
+    footer_left = (
+        f"{ctx.entity_name} · Month Pack · "
+        f"{_period_text(ctx.from_date, ctx.to_date)}"
+    )
+
+    def _draw_footer(canvas, _doc) -> None:
+        canvas.saveState()
+        width, _height = pagesize
+        y = margin * 0.55
+        canvas.setStrokeColor(colors.HexColor(_HAIRLINE))
+        canvas.setLineWidth(0.5)
+        canvas.line(margin, y + 9, width - margin, y + 9)
+        canvas.setFont(PDF_FONT_NAME, 7)
+        canvas.setFillColor(colors.HexColor(_MUTED))
+        canvas.drawString(margin, y, footer_left)
+        canvas.drawRightString(
+            width - margin, y, f"Mizan · Page {canvas.getPageNumber()}"
+        )
+        canvas.restoreState()
+
     doc = SimpleDocTemplate(
         buffer,
-        pagesize=landscape(A4),
-        leftMargin=1.2 * cm,
-        rightMargin=1.2 * cm,
-        topMargin=1.2 * cm,
-        bottomMargin=1.2 * cm,
-        title=f"Books {ctx.from_date} to {ctx.to_date}",
+        pagesize=pagesize,
+        leftMargin=margin,
+        rightMargin=margin,
+        topMargin=margin,
+        bottomMargin=margin * 1.25,
+        title=f"Month Pack {ctx.from_date} to {ctx.to_date}",
         author="Mizan",
     )
-    doc.build(elements)
+    doc.build(elements, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
     return buffer.getvalue()
 
 
@@ -741,33 +855,82 @@ def _table_style(
     bold_rows: list[int] | None = None,
     highlight_rows: list[tuple[int, str, str]] | None = None,
     amount_colors: list[tuple[int, int, str]] | None = None,
+    section_rows: list[int] | None = None,
+    total_rows: list[int] | None = None,
+    money_cols: tuple[int, ...] = (-1,),
 ):
+    """Same accounting look as the standalone statements (pdf_export.py).
+
+    Hairline rules instead of a grid, small-caps headers, right-aligned money,
+    banded section rows, ruled grand totals. ``highlight_rows`` is kept for the
+    pack's semantic tints (net result green/red) but now renders as a soft band
+    rather than a saturated fill.
+    """
     colors, *_rest, TableStyle = _require_reportlab()
     commands: list = [
         ("FONTNAME", (0, 0), (-1, -1), PDF_FONT_NAME),
         ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#334155")),
-        ("BACKGROUND", (0, 0), (-1, header_rows - 1), colors.HexColor("#2563EB")),
-        ("TEXTCOLOR", (0, 0), (-1, header_rows - 1), colors.white),
-        ("FONTSIZE", (0, 0), (-1, header_rows - 1), 9),
-        ("FONTNAME", (0, 0), (-1, header_rows - 1), PDF_FONT_BOLD_NAME),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#BFDBFE")),
-        ("ROWBACKGROUNDS", (0, header_rows), (-1, -1), [
-            colors.white,
-            colors.HexColor("#F0F9FF"),
-        ]),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor(_SLATE)),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 3.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+        ("LINEBELOW", (0, header_rows - 1), (-1, -2), 0.4, colors.HexColor(_HAIRLINE)),
     ]
+    for row in range(header_rows):
+        commands.extend(
+            [
+                ("FONTNAME", (0, row), (-1, row), PDF_FONT_BOLD_NAME),
+                ("FONTSIZE", (0, row), (-1, row), 7),
+                ("TEXTCOLOR", (0, row), (-1, row), colors.HexColor(_MUTED)),
+            ]
+        )
+    commands.append(
+        (
+            "LINEBELOW",
+            (0, header_rows - 1),
+            (-1, header_rows - 1),
+            1,
+            colors.HexColor(_SLATE),
+        )
+    )
+    for col in money_cols:
+        commands.append(("ALIGN", (col, 0), (col, -1), "RIGHT"))
+    for row in section_rows or []:
+        commands.extend(
+            [
+                ("BACKGROUND", (0, row), (-1, row), colors.HexColor(_BAND)),
+                ("FONTNAME", (0, row), (-1, row), PDF_FONT_BOLD_NAME),
+                ("TEXTCOLOR", (0, row), (-1, row), colors.HexColor(_BRAND_BLUE)),
+            ]
+        )
     for row in bold_rows or []:
-        commands.append(("FONTNAME", (0, row), (-1, row), PDF_FONT_BOLD_NAME))
-    for row, bg, fg in highlight_rows or []:
-        commands.append(("BACKGROUND", (0, row), (-1, row), colors.HexColor(bg)))
-        commands.append(("TEXTCOLOR", (0, row), (-1, row), colors.HexColor(fg)))
-        commands.append(("FONTNAME", (0, row), (-1, row), PDF_FONT_BOLD_NAME))
+        commands.extend(
+            [
+                ("FONTNAME", (0, row), (-1, row), PDF_FONT_BOLD_NAME),
+                ("TEXTCOLOR", (0, row), (-1, row), colors.HexColor(_INK)),
+            ]
+        )
+    for row, _bg, fg in highlight_rows or []:
+        commands.extend(
+            [
+                ("BACKGROUND", (0, row), (-1, row), colors.HexColor(_BAND)),
+                ("FONTNAME", (0, row), (-1, row), PDF_FONT_BOLD_NAME),
+                ("TEXTCOLOR", (0, row), (-1, row), colors.HexColor(fg)),
+                ("LINEABOVE", (0, row), (-1, row), 1, colors.HexColor(_SLATE)),
+            ]
+        )
+    for row in total_rows or []:
+        commands.extend(
+            [
+                ("FONTNAME", (0, row), (-1, row), PDF_FONT_BOLD_NAME),
+                ("FONTSIZE", (0, row), (-1, row), 9),
+                ("TEXTCOLOR", (0, row), (-1, row), colors.HexColor(_INK)),
+                ("LINEABOVE", (0, row), (-1, row), 1.1, colors.HexColor(_SLATE)),
+                ("TOPPADDING", (0, row), (-1, row), 6),
+            ]
+        )
     for row, col, fg in amount_colors or []:
         commands.append(("TEXTCOLOR", (col, row), (col, row), colors.HexColor(fg)))
     return TableStyle(commands)

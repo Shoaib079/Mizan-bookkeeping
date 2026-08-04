@@ -4,6 +4,12 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-14
 
+**Month pack joins the shared export design (`v0.report-export-presentation-2`):** the "download all reports" pack (Excel + PDF) now uses the same document language as the individual statements — one look across every download in the app.
+
+- **PDF (`month_pack_pdf.py`):** its private table style is gone; it now imports the shared palette and `header_elements` / `summary_band` / `_table_style` from `pdf_export.py`, so hairline rules, small-caps headers, right-aligned money, section bands and ruled totals match the statements exactly (was: blue-filled headers, full grid, striped rows). New **cover page** — masthead, KPI band (sales/expenses/net), the `CashBridge` books-balance proof promoted from a buried sentence into a green (or red) confirmation panel, a numbered **contents** list, and the figures/generated notes. Sections are numbered 1–9 to match the contents; every page carries the standard footer (entity · Month Pack · period · Page N).
+- **Excel (`month_pack.py`):** every sheet writer now passes `print_footer` into `finish_data_table`, so each sheet prints with entity/section/period plus page numbers; the accounting money format and fit-to-page setup come free from the shared helper.
+- Net effect: statements, month pack, and any future export share one header, one table style, one footer — new reports inherit the look by using the helpers.
+
 **Report exports — presentation pass (`v0.report-export-presentation`):** PDF and Excel downloads now look like documents you'd hand an accountant. English-only labels (owner decision); lira figures and dates stay Turkish-formatted (1.234,56 ₺ · 31.07.2026) because those are locale, not language.
 
 - **PDF (`features/reports/pdf_export.py`) — redesigned shared helpers, so every statement inherits it:** branded masthead (report title, entity · period, "Generated" stamp in **local time**, blue rule) replacing the old stacked "Entity:/Generated: UTC" lines; new `summary_band()` KPI strip so the answer (revenue/expenses/net, or assets/liabilities/equity, or opening/change/closing) reads before any table; accounting table style — hairline rules instead of a full grid, small-caps headers, **right-aligned money** (was left), section bands replacing the redundant per-row "Type" column, subtotals bold, grand totals with a rule above; negatives as red `(1.234,56 ₺)`; per-page footer with entity · report · period and "Page N". Statements now render **portrait** (was landscape) — they're narrow by nature.

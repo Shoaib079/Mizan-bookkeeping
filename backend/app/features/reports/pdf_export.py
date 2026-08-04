@@ -148,7 +148,7 @@ def _build_pdf(
     return buffer.getvalue()
 
 
-def _header_elements(
+def header_elements(
     *,
     title: str,
     entity_name: str,
@@ -370,7 +370,7 @@ def build_profit_and_loss_pdf(report: ProfitAndLossRead, entity_name: str) -> by
     _, _, _, _, _, cm, _, _, _, Table, _ = _require_reportlab()
 
     period = _period_text(report.from_date, report.to_date)
-    elements = _header_elements(
+    elements = header_elements(
         title="Profit and Loss",
         entity_name=entity_name,
         period_label="Period",
@@ -443,7 +443,7 @@ def build_balance_sheet_pdf(report: BalanceSheetRead, entity_name: str) -> bytes
     _, _, _, _, _, cm, _, _, _, Table, _ = _require_reportlab()
 
     as_of = _fmt_date(report.as_of)
-    elements = _header_elements(
+    elements = header_elements(
         title="Balance Sheet",
         entity_name=entity_name,
         period_label="As of",
@@ -548,7 +548,7 @@ def build_cash_flow_pdf(report: CashFlowRead, entity_name: str) -> bytes:
     ) = _require_reportlab()
 
     period = _period_text(report.from_date, report.to_date)
-    elements = _header_elements(
+    elements = header_elements(
         title="Cash Flow Statement",
         entity_name=entity_name,
         period_label="Period",
