@@ -17,7 +17,7 @@
 | **Active slice**         | *(none)* |
 | **Next up**              | **GS-FX** forex-only group sales (design locked) |
 | **Last completed slice** | Ledger repair framework + `profit_allocation_v3` (void+repost; auto after migrate) |
-| **Last commit/tag**      | `v0.ledger-repairs` |
+| **Last commit/tag**      | `v0.profit-allocation-edit` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
