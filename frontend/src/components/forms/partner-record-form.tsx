@@ -51,7 +51,7 @@ const KIND_LABELS: Record<PartnerRecordKind, string> = {
   cash: "Cash taken / withdrawn",
   profit_paid: "Pay profit",
   capital: "Capital in",
-  returned: "Cash returned",
+  returned: "Partner returned cash",
 };
 
 export function PartnerRecordForm({
@@ -77,15 +77,13 @@ export function PartnerRecordForm({
       return [{ value: lockedKind, label: KIND_LABELS[lockedKind] }];
     }
     // Pay profit has its own button on the partner page — not in Record picker.
-    const opts: { value: PartnerRecordKind; label: string }[] = [
-      { value: "cash", label: KIND_LABELS.cash },
-      { value: "capital", label: KIND_LABELS.capital },
+    // Partner returned cash is always listed; submit is blocked when nothing to repay.
+    return [
+      { value: "cash" as const, label: KIND_LABELS.cash },
+      { value: "capital" as const, label: KIND_LABELS.capital },
+      { value: "returned" as const, label: KIND_LABELS.returned },
     ];
-    if (canReturn) {
-      opts.push({ value: "returned", label: KIND_LABELS.returned });
-    }
-    return opts;
-  }, [canReturn, lockedKind]);
+  }, [lockedKind]);
 
   const [kind, setKind] = useState<PartnerRecordKind>(lockedKind ?? "cash");
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
@@ -343,9 +341,25 @@ export function PartnerRecordForm({
           </p>
         )}
         {kind === "returned" && (
-          <p className="text-sm text-muted-foreground">
-            Outstanding drawing:{" "}
-            {partnerBalanceAmount(Math.abs(capitalBalanceKurus))}
+          <p
+            className={
+              canReturn
+                ? "text-sm text-muted-foreground"
+                : "text-sm text-destructive"
+            }
+          >
+            {canReturn ? (
+              <>
+                Outstanding drawing:{" "}
+                {partnerBalanceAmount(Math.abs(capitalBalanceKurus))}
+              </>
+            ) : (
+              <>
+                Nothing to repay right now. This only closes a prior withdrawal
+                when drawings still exceed allocated capital. If they are putting
+                in new money, use Capital in instead.
+              </>
+            )}
           </p>
         )}
         <div>
@@ -389,7 +403,10 @@ export function PartnerRecordForm({
           }
         />
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={submitting}>
+        <Button
+          type="submit"
+          disabled={submitting || (kind === "returned" && !canReturn)}
+        >
           {submitting ? "Recording…" : submitLabel}
         </Button>
       </form>
