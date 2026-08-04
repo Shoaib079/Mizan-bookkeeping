@@ -66,6 +66,9 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
     if (open) {
       submitIdempotency.resetSubmit();
       setAllocationDateText(todayTrDate());
+      setAmountText("");
+      setPeriodFromText("");
+      setPeriodToText("");
       setNetAgainstDrawings(true);
       setPreview(null);
       setError(null);
@@ -76,20 +79,50 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
     const profitKurus = parseTryToKurus(amountText);
     const periodFrom = parseTrDate(periodFromText);
     const periodTo = parseTrDate(periodToText);
+    const payload: {
+      profit_kurus?: number;
+      period_from?: string;
+      period_to?: string;
+    } = {};
     if (profitKurus !== null && profitKurus > 0) {
-      return { profit_kurus: profitKurus };
+      payload.profit_kurus = profitKurus;
     }
     if (periodFrom && periodTo) {
-      return { period_from: periodFrom, period_to: periodTo };
+      payload.period_from = periodFrom;
+      payload.period_to = periodTo;
+    } else if (periodFrom || periodTo) {
+      return "incomplete_period" as const;
     }
-    return null;
+    if (!payload.profit_kurus && !(payload.period_from && payload.period_to)) {
+      return null;
+    }
+    return payload;
   }, [amountText, periodFromText, periodToText]);
+
+  function profitSourceBanner(
+    payload: { profit_kurus?: number; period_from?: string; period_to?: string },
+    previewTotal: number,
+  ): string {
+    if (payload.profit_kurus != null) {
+      const periodNote =
+        payload.period_from && payload.period_to
+          ? ` Period ${formatTrDate(payload.period_from)}–${formatTrDate(payload.period_to)} only sets which drawings to net — it does not change this amount.`
+          : "";
+      return `Distributing your amount of ${formatTry(payload.profit_kurus)}.${periodNote}`;
+    }
+    return `Distributing the period’s net profit of ${formatTry(previewTotal)} (no amount typed).`;
+  }
 
   async function loadPreview() {
     if (!entityId) return;
     const profitPayload = buildProfitPayload();
+    if (profitPayload === "incomplete_period") {
+      setError("Set both period from and to, or leave both blank.");
+      setPreview(null);
+      return;
+    }
     if (!profitPayload) {
-      setError("Enter a profit amount or a valid period (from and to dates).");
+      setError("Enter a profit amount, or a period from and to (for full period P&L).");
       setPreview(null);
       return;
     }
@@ -136,6 +169,10 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
       return;
     }
     const profitPayload = buildProfitPayload();
+    if (profitPayload === "incomplete_period") {
+      setError("Set both period from and to, or leave both blank.");
+      return;
+    }
     if (!profitPayload) {
       setError("Enter a profit amount or a valid period.");
       return;
@@ -171,6 +208,14 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
     }
   }
 
+  const currentPayload = buildProfitPayload();
+  const sourceBanner =
+    preview &&
+    currentPayload &&
+    currentPayload !== "incomplete_period"
+      ? profitSourceBanner(currentPayload, preview.total_profit_kurus)
+      : null;
+
   return (
     <Dialog open={open} title="Allocate profit to partners" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
@@ -179,14 +224,17 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
           <DateInput
             id="alloc-date"
             value={allocationDateText}
-            onChange={setAllocationDateText}
+            onChange={(v) => {
+              setAllocationDateText(v);
+              setPreview(null);
+            }}
           />
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Dr Retained earnings (3100), Cr Owner drawings (3200) for amounts already
-          taken, Cr Partner capital (3300) for the remainder. Review the split before
-          confirming.
+          Type how much to distribute. Optional period only decides which
+          drawings to net against — it never replaces your amount. Leave the
+          amount blank to distribute the period’s full net profit instead.
         </p>
 
         <div>
@@ -194,26 +242,35 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
           <MoneyInput
             id="alloc-amount"
             value={amountText}
-            onChange={setAmountText}
-            placeholder="Or use period below"
+            onChange={(v) => {
+              setAmountText(v);
+              setPreview(null);
+            }}
+            placeholder="How much to allocate"
           />
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label htmlFor="period-from">Period from (optional)</Label>
+            <Label htmlFor="period-from">Period from (drawings cutoff)</Label>
             <DateInput
               id="period-from"
               value={periodFromText}
-              onChange={setPeriodFromText}
+              onChange={(v) => {
+                setPeriodFromText(v);
+                setPreview(null);
+              }}
             />
           </div>
           <div>
-            <Label htmlFor="period-to">Period to (optional)</Label>
+            <Label htmlFor="period-to">Period to</Label>
             <DateInput
               id="period-to"
               value={periodToText}
-              onChange={setPeriodToText}
+              onChange={(v) => {
+                setPeriodToText(v);
+                setPreview(null);
+              }}
             />
           </div>
         </div>
@@ -257,6 +314,11 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
 
         {preview && (
           <div className="space-y-2">
+            {sourceBanner && (
+              <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                {sourceBanner}
+              </p>
+            )}
             {preview.netting_as_of && preview.net_against_drawings && (
               <p className="text-xs text-muted-foreground">
                 Netting uses partner balances on or before{" "}

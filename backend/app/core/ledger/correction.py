@@ -93,6 +93,7 @@ DEDICATED_CORRECTION_ROUTES: dict[JournalEntrySource, str] = {
     JournalEntrySource.PARTNER_DRAWING: "partner drawing correction",
     JournalEntrySource.PARTNER_DRAWING_REPAYMENT: "partner drawing repayment correction",
     JournalEntrySource.EXPENSE_ENTRY: "expense entry correction",
+    JournalEntrySource.PARTNER_PROFIT_ALLOCATION: "partner profit allocation correction",
 }
 
 # Paired feature records with no dedicated correction API yet — never generic-correct.
@@ -112,7 +113,6 @@ VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
         JournalEntrySource.CASH_DRAWER_CLOSE,
         JournalEntrySource.RULE_AUTO,
         JournalEntrySource.SYSTEM,
-        JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
         JournalEntrySource.PARTNER_PROFIT_PAID,
         JournalEntrySource.PARTNER_SUPPLIER_PAID,
         JournalEntrySource.EXPENSE_PERSONAL_SPLIT,

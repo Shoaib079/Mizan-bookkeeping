@@ -216,10 +216,34 @@ def resolve_ledger_entry_actions(
             )
 
         if source == JournalEntrySource.PARTNER_PROFIT_ALLOCATION:
+            from app.core.chart_of_accounts.default_chart import RETAINED_EARNINGS_CODE
+            from app.core.chart_of_accounts.models import Account
+            from app.core.chart_of_accounts.types import AccountNormalBalance
+
+            retained = session.scalar(
+                select(Account).where(Account.code == RETAINED_EARNINGS_CODE)
+            )
+            profit_kurus = 0
+            if retained is not None:
+                profit_kurus = sum(
+                    line.amount_kurus
+                    for line in entry.lines
+                    if line.account_id == retained.id
+                    and line.side == AccountNormalBalance.DEBIT
+                )
             return LedgerEntryActions(
-                can_edit=False,
+                can_edit=True,
                 can_void=True,
                 void_path=f"partners/profit-allocation/{entry_id}/void",
+                edit=LedgerEntryEditContext(
+                    kind="partner_profit_allocation",
+                    context={
+                        "journal_entry_id": str(entry_id),
+                        "allocation_date": entry.entry_date.isoformat(),
+                        "description": entry.description,
+                        "profit_kurus": profit_kurus,
+                    },
+                ),
             )
 
         if source in {

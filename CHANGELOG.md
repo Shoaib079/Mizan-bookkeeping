@@ -4,6 +4,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-04
 
+**Edit partner profit allocation + amount beats period.**
+- General ledger → **Edit** on a Partner profit share row: change the total (e.g. 410.134 → 400.000). Saves by void+repost so each partner’s capital / unpaid profit update automatically.
+- Allocate form: typed **amount always wins**. Optional period only sets the drawings cutoff. Leave amount blank to distribute the period’s full net P&L. Preview states which source you are using.
+
 **Ledger repairs (auto on deploy).**
 - Named void→repost recipes bring old journals up to today’s rules once per restaurant (`ledger_repairs` table). Never silent UPDATE of posted amounts.
 - First recipe `profit_allocation_v3`: past partner profit allocations get full Dr 3100 + Cr 3200 settlement + Cr 3300 capital (and matching subledger). Runs after migrate; API startup is a backup. Re-deploy is a no-op.

@@ -74,6 +74,7 @@ from app.features.partners.schema import (
     ProfitAllocationPreviewRequest,
     ProfitAllocationVoid,
     ProfitAllocationVoidOut,
+    ProfitAllocationCorrect,
 )
 from app.core.partners import profit_allocation as partner_profit_allocation
 from app.core.partners.profit_allocation import OwnershipShareError
@@ -777,6 +778,12 @@ def _resolve_profit_kurus(
     period_from: date | None,
     period_to: date | None,
 ) -> int:
+    """Typed amount always wins. Period dates alone mean “allocate that P&L”.
+
+    When both are sent, ``profit_kurus`` is distributed and period is only used
+    for drawings netting (``period_to`` → netting as-of), never to override
+    the amount.
+    """
     if profit_kurus is not None:
         return profit_kurus
     if period_from is None or period_to is None:
@@ -891,4 +898,45 @@ def void_profit_allocation(
     return ProfitAllocationVoidOut(
         original_journal_entry_id=original.id,
         reversal_journal_entry_id=reversal.id,
+    )
+
+
+def correct_profit_allocation(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: ProfitAllocationCorrect,
+) -> ProfitAllocationPostOut:
+    result = partner_profit_allocation.correct_profit_allocation(
+        session,
+        entity_id,
+        journal_entry_id,
+        allocation_date=payload.allocation_date,
+        profit_kurus=payload.profit_kurus,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        net_against_drawings=payload.net_against_drawings,
+        netting_as_of=_netting_as_of(
+            period_to=payload.period_to,
+            allocation_date=payload.allocation_date,
+        ),
+        reason=payload.reason,
+        period_unlock_reason=payload.period_unlock_reason,
+    )
+    with entity_context(session, entity_id):
+        require_entity_context()
+        partner_reads = _partner_entry_reads(
+            session, list(result.partner_ledger_entries)
+        )
+    capital_allocated = sum(
+        entry.amount_kurus
+        for entry in result.partner_ledger_entries
+        if entry.movement_type == PartnerMovementType.PROFIT_ALLOCATION
+    )
+    return ProfitAllocationPostOut(
+        journal_entry_id=result.journal_entry.id,
+        total_profit_kurus=payload.profit_kurus,
+        total_allocated_kurus=capital_allocated,
+        net_against_drawings=payload.net_against_drawings,
+        partner_ledger_entries=partner_reads,
     )

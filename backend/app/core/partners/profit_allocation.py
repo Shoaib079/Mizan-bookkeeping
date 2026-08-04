@@ -387,3 +387,52 @@ def void_profit_allocation(
         session.refresh(original)
         session.refresh(reversal)
         return original, reversal
+
+
+def correct_profit_allocation(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    allocation_date: date,
+    profit_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    net_against_drawings: bool = True,
+    netting_as_of: date,
+    reason: str | None = None,
+    period_unlock_reason: str | None = None,
+) -> ProfitAllocationPostResult:
+    """Edit profit allocation — void the original and repost under current rules.
+
+    Partner capital / settlement / unpaid balances update to the new amounts
+    because the void reverses every linked subledger row before the repost.
+    """
+    original = None
+    with entity_context(session, entity_id):
+        require_entity_context()
+        original = _get_voidable_entry(session, journal_entry_id)
+        if original.source != JournalEntrySource.PARTNER_PROFIT_ALLOCATION:
+            raise CorrectionNotFoundError("journal entry is not a partner profit allocation")
+        original_date = original.entry_date
+
+    void_profit_allocation(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason or "Corrected partner profit allocation",
+        void_date=original_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return post_profit_allocation(
+        session,
+        entity_id,
+        allocation_date=allocation_date,
+        profit_kurus=profit_kurus,
+        description=description,
+        actor_id=actor_id,
+        net_against_drawings=net_against_drawings,
+        netting_as_of=netting_as_of,
+        period_unlock_reason=period_unlock_reason,
+    )

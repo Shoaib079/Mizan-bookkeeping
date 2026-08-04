@@ -163,6 +163,47 @@ def test_void_reverses_cleanly(db_session, three_partner_setup) -> None:
     assert partner_ledger.entity_capital_total_kurus(db_session, entity_id) == 0
 
 
+def test_correct_profit_allocation_updates_partner_totals(
+    db_session, three_partner_setup
+) -> None:
+    """Edit total voids+reposts — unpaid / allocated follow the new amount."""
+    entity_id = three_partner_setup["entity_id"]
+    partner_id = three_partner_setup["partner_ids"][0]
+    accounts = three_partner_setup["accounts"]
+
+    posted = pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=41_013_400,  # 410.134,00 ₺ period P&L by mistake
+        description="Period P&L by mistake",
+        actor_id=ACTOR_ID,
+        net_against_drawings=False,
+        netting_as_of=date(2026, 6, 30),
+    )
+    old_id = posted.journal_entry.id
+    corrected = pa.correct_profit_allocation(
+        db_session,
+        entity_id,
+        old_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=40_000_000,  # 400.000,00 ₺
+        description="Owner intended amount",
+        actor_id=ACTOR_ID,
+        net_against_drawings=False,
+        netting_as_of=date(2026, 6, 30),
+        reason="Amount should be 400k not period P&L",
+    )
+
+    assert corrected.journal_entry.id != old_id
+    assert _gl_balance(
+        db_session, entity_id, accounts[RETAINED_EARNINGS_CODE], AccountNormalBalance.CREDIT
+    ) == -40_000_000
+    # Ali 50% of 400.000,00 ₺
+    assert partner_ledger.profit_allocated_kurus(db_session, entity_id, partner_id) == 20_000_000
+    assert partner_ledger.unpaid_profit_kurus(db_session, entity_id, partner_id) == 20_000_000
+
+
 def test_entity_a_allocation_invisible_to_entity_b(
     db_session, restaurant_a, restaurant_b, three_partner_setup
 ) -> None:

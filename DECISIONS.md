@@ -2,6 +2,10 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-08-04 — Profit allocation: typed amount wins; Edit on GL
+
+**Choice:** When allocating profit, a typed TRY amount is what gets distributed. Optional period from/to only sets the drawings netting cutoff (`netting_as_of`). Leave amount blank to distribute that period’s full net P&L. Owners can **Edit** a posted partner profit share on the general ledger (void+repost) so capital / unpaid figures update without a separate void campaign.
+
 ## 2026-08-04 — Ledger repairs: void+repost recipes, run-once per restaurant
 
 **Choice:** When money rules change, posted books do **not** recompute on deploy. Each change that needs history fixed ships a **named repair recipe** that voids the old journal and reposts under current rules (full audit). Applied automatically once per entity via `ledger_repairs` (`repair_key` unique). Re-deploy is a no-op.

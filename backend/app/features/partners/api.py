@@ -52,6 +52,7 @@ from app.features.partners.schema import (
     ProfitAllocationPreviewRequest,
     ProfitAllocationVoid,
     ProfitAllocationVoidOut,
+    ProfitAllocationCorrect,
 )
 from app.core.partners.profit_allocation import OwnershipShareError
 
@@ -113,6 +114,36 @@ def void_profit_allocation(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except CorrectionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/profit-allocation/{journal_entry_id}/correct",
+    response_model=ProfitAllocationPostOut,
+)
+def correct_profit_allocation(
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: ProfitAllocationCorrect,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> ProfitAllocationPostOut:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.correct_profit_allocation(
+            session, entity_id, journal_entry_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except OwnershipShareError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

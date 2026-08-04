@@ -11,6 +11,10 @@ import {
   type CorrectablePartnerLedgerRow,
 } from "@/components/forms/correct-partner-ledger-form";
 import {
+  CorrectPartnerProfitAllocationForm,
+  type CorrectableProfitAllocationRow,
+} from "@/components/forms/correct-partner-profit-allocation-form";
+import {
   CorrectStaffLedgerForm,
   type CorrectableStaffLedgerRow,
 } from "@/components/forms/correct-staff-ledger-form";
@@ -76,6 +80,8 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
   const [expenseEdit, setExpenseEdit] = useState<CorrectableExpenseRow | null>(
     null,
   );
+  const [profitAllocationEdit, setProfitAllocationEdit] =
+    useState<CorrectableProfitAllocationRow | null>(null);
   const [busy, setBusy] = useState(false);
 
   const preview = generalLedgerEntryActions(row.source);
@@ -140,6 +146,14 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
             money_account_id: String(ctx.money_account_id),
             status: String(ctx.status),
             journal_entry_id: String(ctx.journal_entry_id),
+          });
+          return;
+        case "partner_profit_allocation":
+          setProfitAllocationEdit({
+            journal_entry_id: row.id,
+            allocation_date: String(ctx.allocation_date),
+            description: String(ctx.description),
+            profit_kurus: Number(ctx.profit_kurus),
           });
           return;
         case "partner_ledger":
@@ -290,6 +304,17 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
           onClose={() => setExpenseEdit(null)}
           onSaved={() => {
             setExpenseEdit(null);
+            onSaved();
+          }}
+        />
+      )}
+      {profitAllocationEdit && (
+        <CorrectPartnerProfitAllocationForm
+          open
+          entry={profitAllocationEdit}
+          onClose={() => setProfitAllocationEdit(null)}
+          onSaved={() => {
+            setProfitAllocationEdit(null);
             onSaved();
           }}
         />

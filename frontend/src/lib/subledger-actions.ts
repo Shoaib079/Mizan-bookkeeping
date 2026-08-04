@@ -39,6 +39,7 @@ export const DEDICATED_CORRECTION_JOURNAL_SOURCES = new Set<string>([
   "partner_drawing",
   "partner_drawing_repayment",
   "expense_entry",
+  "partner_profit_allocation",
 ]);
 
 /** Void and re-enter — no edit/correct API (bank classify, POS batch, etc.). */
@@ -56,7 +57,9 @@ export const VOID_ONLY_JOURNAL_SOURCES = new Set<string>([
   "cash_drawer_close",
   "rule_auto",
   "system",
-  "partner_profit_allocation",
+  "partner_profit_paid",
+  "partner_supplier_paid",
+  "expense_personal_split",
   "partner_capital_contribution",
   "partner_loan_received",
   "partner_loan_repaid",

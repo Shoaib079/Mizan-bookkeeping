@@ -285,6 +285,20 @@ class ProfitAllocationVoid(BaseModel):
     period_unlock_reason: str | None = Field(default=None, max_length=512)
 
 
+class ProfitAllocationCorrect(BaseModel):
+    """Edit allocation total/date — voids the original JE and reposts."""
+
+    allocation_date: date
+    profit_kurus: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: OptionalActorId = None
+    net_against_drawings: bool = True
+    period_from: date | None = None
+    period_to: date | None = None
+    reason: str | None = Field(default=None, max_length=512)
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
 class ProfitAllocationVoidOut(BaseModel):
     original_journal_entry_id: uuid.UUID
     reversal_journal_entry_id: uuid.UUID
