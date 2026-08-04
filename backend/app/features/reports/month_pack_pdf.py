@@ -6,6 +6,7 @@ from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.core.dates import format_period
 from app.core.excel.labels import format_journal_source, format_staff_movement
 from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.listing import ListParams
@@ -693,7 +694,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         rightMargin=margin,
         topMargin=margin,
         bottomMargin=margin * 1.25,
-        title=f"Month Pack {ctx.from_date} to {ctx.to_date}",
+        title=f"Month Pack {format_period(ctx.from_date, ctx.to_date)}",
         author="Mizan",
     )
     doc.build(elements, onFirstPage=_draw_footer, onLaterPages=_draw_footer)

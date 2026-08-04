@@ -122,7 +122,7 @@ def test_the_summary_names_the_period_and_the_business(db_session, books):
     wb, _ = _pack(db_session, books)
 
     summary = wb["Summary"]
-    assert "2026-06-01 to 2026-06-30" in str(summary.cell(row=2, column=2).value)
+    assert "01.06.2026 – 30.06.2026" in str(summary.cell(row=2, column=2).value)
     assert "books for the period" in str(summary.cell(row=1, column=1).value)
 
 
@@ -459,7 +459,9 @@ def test_month_pack_pdf_is_a_valid_readable_export(db_session, books):
     assert data[:4] == b"%PDF"
     assert month_pack.month_pack_pdf_filename(ctx).endswith("-live.pdf")
     text = _pdf_text(data)
-    assert "2026-06-01 to 2026-06-30" in text
+    # Dates read the way they do everywhere else in the app (01.06.2026).
+    assert "01.06.2026" in text
+    assert "30.06.2026" in text
     assert "Summary" in text
     assert "Cash & bank" in text
     assert "Opening cash" in text
@@ -468,6 +470,27 @@ def test_month_pack_pdf_is_a_valid_readable_export(db_session, books):
     assert "Expenses" in text
     assert "Profit and loss" in text
     assert "₺" in text
+
+
+def test_the_pdf_and_the_workbook_state_the_same_period(db_session, books):
+    """One download, two files — they must not describe the period differently.
+
+    They drifted once: the PDF moved onto the shared date presentation and the
+    workbook kept interpolating raw dates, so the same month pack read
+    "01.06.2026 – 30.06.2026" on paper and "2026-06-01 to 2026-06-30" in Excel.
+    """
+    _sale(db_session, books, date(2026, 6, 10), 100_000)
+
+    wb, _ = _pack(db_session, books)
+    workbook_period = str(wb["Summary"].cell(row=2, column=2).value)
+
+    data, _ctx = month_pack.build_month_pack_pdf(
+        db_session, books["entity_id"], JUNE_START, JUNE_END
+    )
+    pdf_text = _pdf_text(data)
+
+    for part in workbook_period.replace("–", " ").split():
+        assert part in pdf_text, f"{part!r} is in the workbook but not the PDF"
 
 
 def test_month_pack_pdf_api(db_session, client, books):

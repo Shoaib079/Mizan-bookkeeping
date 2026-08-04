@@ -23,6 +23,7 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.core.dates import format_as_of, format_period
 from app.core.excel.labels import format_journal_source, format_staff_movement
 from app.features.reports.partner_sources import (
     economic_source_value,
@@ -252,7 +253,7 @@ def _money_accounts(session: Session, kind: MoneyAccountKind) -> list[MoneyAccou
 
 def _print_footer(ctx: MonthPackContext, sheet_label: str) -> str:
     """Footer stamped on printed pages: who, what, which period."""
-    return f"{ctx.entity_name} · {sheet_label} · {ctx.from_date} – {ctx.to_date}"
+    return f"{ctx.entity_name} · {sheet_label} · {format_period(ctx.from_date, ctx.to_date)}"
 
 
 def _figures_label(ctx: MonthPackContext) -> str:
@@ -321,7 +322,7 @@ def _write_summary(
         subtitles=[],
         end_col=2,
     )
-    write_meta_pair(ws, 2, "Period", f"{ctx.from_date} to {ctx.to_date}")
+    write_meta_pair(ws, 2, "Period", format_period(ctx.from_date, ctx.to_date))
     write_meta_pair(ws, 3, "Figures", _figures_label(ctx))
 
     row = 5
@@ -472,7 +473,7 @@ def _write_sales(ws, series, dashboard, ctx: MonthPackContext) -> None:
     write_sheet_title(
         ws,
         "Sales, day by day",
-        subtitles=[f"{ctx.entity_name} · {ctx.from_date} to {ctx.to_date}"],
+        subtitles=[f"{ctx.entity_name} · {format_period(ctx.from_date, ctx.to_date)}"],
         end_col=4,
     )
     header_row = 4
@@ -524,7 +525,7 @@ def _write_expenses(ws, register, ctx: MonthPackContext) -> None:
     write_sheet_title(
         ws,
         "Every expense in the period",
-        subtitles=[f"{ctx.entity_name} · {ctx.from_date} to {ctx.to_date}"],
+        subtitles=[f"{ctx.entity_name} · {format_period(ctx.from_date, ctx.to_date)}"],
         end_col=5,
     )
     header_row = 4
@@ -589,7 +590,7 @@ def _write_salaries(
         ws,
         "Staff — accruals, payments and advances",
         subtitles=[
-            f"{ctx.entity_name} · {from_date} to {to_date}",
+            f"{ctx.entity_name} · {format_period(from_date, to_date)}",
             "FX staff amounts are in their pay currency; TRY cost is the lira booked.",
         ],
         end_col=7,
@@ -659,7 +660,7 @@ def _write_account_book(ws, book, *, heading: str, ctx: MonthPackContext) -> Non
     write_sheet_title(
         ws,
         f"{heading} — {book.money_account_name}",
-        subtitles=[f"{ctx.entity_name} · {ctx.from_date} to {ctx.to_date}"],
+        subtitles=[f"{ctx.entity_name} · {format_period(ctx.from_date, ctx.to_date)}"],
         end_col=6,
     )
     write_meta_pair(ws, 3, "Opening", None)
@@ -722,7 +723,7 @@ def _write_fx_holdings(ws, fx_balances, ctx: MonthPackContext) -> None:
         ws,
         "Foreign currency held",
         subtitles=[
-            f"{ctx.entity_name} · as of {ctx.to_date}",
+            f"{ctx.entity_name} · {format_as_of(ctx.to_date)}",
             "Amount held is the currency itself; TRY cost is what was paid for it.",
         ],
         end_col=4,
@@ -824,7 +825,7 @@ def _write_fx_book(
         ws,
         f"FX book — {wallet.name}",
         subtitles=[
-            f"{ctx.entity_name} · {from_date} to {to_date} · {currency}",
+            f"{ctx.entity_name} · {format_period(from_date, to_date)} · {currency}",
             "Native quantity and TRY book cost per movement.",
         ],
         end_col=5,
@@ -911,7 +912,7 @@ def _write_card_clearing(ws, reconciliation, ctx: MonthPackContext) -> None:
     write_sheet_title(
         ws,
         "Card clearing — where card money sat",
-        subtitles=[f"{ctx.entity_name} · {ctx.from_date} to {ctx.to_date}"],
+        subtitles=[f"{ctx.entity_name} · {format_period(ctx.from_date, ctx.to_date)}"],
         end_col=2,
     )
     row = write_section_header(ws, 4, "Summary", end_col=2)
@@ -974,7 +975,7 @@ def _write_ledger(
     write_sheet_title(
         ws,
         "General ledger — every entry in the period",
-        subtitles=[f"{ctx.entity_name} · {ctx.from_date} to {ctx.to_date}"],
+        subtitles=[f"{ctx.entity_name} · {format_period(ctx.from_date, ctx.to_date)}"],
         end_col=7,
     )
     header_row = 4

@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 
 from app.core.chart_of_accounts.types import AccountType
 from app.core.excel.labels import format_journal_source
+from app.core.dates import format_date, format_period
 from app.core.money import format_try
 from app.core.pdf.fonts import (
     PDF_FONT_BOLD_NAME,
@@ -38,19 +39,9 @@ _NEGATIVE = "#A32D2D"
 # formatted (1.234,56 ₺) because they are lira amounts, not language.
 
 
-def _fmt_date(value: object) -> str:
-    """Turkish date presentation (01.07.2026) — figures and dates stay local."""
-    if isinstance(value, (date, datetime)):
-        return value.strftime("%d.%m.%Y")
-    text = str(value)
-    try:
-        return datetime.strptime(text, "%Y-%m-%d").strftime("%d.%m.%Y")
-    except ValueError:
-        return text
-
-
-def _period_text(from_date: object, to_date: object) -> str:
-    return f"{_fmt_date(from_date)} – {_fmt_date(to_date)}"
+# Shared with the Excel exports so both halves of a download agree.
+_fmt_date = format_date
+_period_text = format_period
 
 
 def _money(amount_kurus: int) -> str:

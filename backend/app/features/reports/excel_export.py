@@ -8,6 +8,7 @@ from datetime import date
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 
+from app.core.dates import format_date, format_period
 from app.core.excel.labels import format_journal_source
 from app.core.excel.workbook import (
     bold_row,
@@ -79,7 +80,7 @@ def write_profit_and_loss_sheet(
         title="Profit and Loss",
         entity_id=report.entity_id,
         date_label="Period",
-        date_value=f"{report.from_date} to {report.to_date}",
+        date_value=format_period(report.from_date, report.to_date),
         end_col=4,
         entity_label=label,
     )
@@ -175,7 +176,7 @@ def build_balance_sheet_xlsx(report: BalanceSheetRead) -> bytes:
         title="Balance Sheet",
         entity_id=report.entity_id,
         date_label="As of",
-        date_value=str(report.as_of),
+        date_value=format_date(report.as_of),
         end_col=4,
     )
 
@@ -231,7 +232,7 @@ def build_cash_flow_xlsx(report: CashFlowRead) -> bytes:
         title="Cash Flow Statement",
         entity_id=report.entity_id,
         date_label="Period",
-        date_value=f"{report.from_date} to {report.to_date}",
+        date_value=format_period(report.from_date, report.to_date),
         end_col=3,
     )
 
@@ -285,7 +286,7 @@ def build_kdv_input_xlsx(report: KdvInputReportRead) -> bytes:
         title="KDV Input Report",
         entity_id=report.entity_id,
         date_label="Period",
-        date_value=f"{report.from_date} to {report.to_date}",
+        date_value=format_period(report.from_date, report.to_date),
         end_col=4,
     )
 
@@ -328,7 +329,7 @@ def build_delivery_sales_xlsx(report: DeliverySalesReportRead) -> bytes:
         title="Delivery Sales Report",
         entity_id=report.entity_id,
         date_label="Period",
-        date_value=f"{report.from_date} to {report.to_date}",
+        date_value=format_period(report.from_date, report.to_date),
         end_col=4,
     )
 
@@ -369,14 +370,14 @@ def build_period_comparison_xlsx(report: PeriodComparisonRead) -> bytes:
         title="Period Comparison",
         entity_id=report.entity_id,
         date_label="Current period",
-        date_value=f"{report.current_from} to {report.current_to}",
+        date_value=format_period(report.current_from, report.current_to),
         end_col=5,
     )
     ws.cell(row=2, column=3, value="Prior period")
     ws.cell(
         row=2,
         column=4,
-        value=f"{report.prior_from} to {report.prior_to}",
+        value=format_period(report.prior_from, report.prior_to),
     )
 
     data_start = write_header_row(
