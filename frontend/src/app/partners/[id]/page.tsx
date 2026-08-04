@@ -77,6 +77,7 @@ export default function PartnerDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
+  const [payProfitOpen, setPayProfitOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
     journal_entry_id: string;
@@ -90,6 +91,7 @@ export default function PartnerDetailPage() {
     setError(null);
     setEditOpen(false);
     setRecordOpen(false);
+    setPayProfitOpen(false);
     setCorrectEntry(null);
     setVoidTarget(null);
   }, []);
@@ -227,6 +229,18 @@ export default function PartnerDetailPage() {
             <Button type="button" onClick={() => setRecordOpen(true)}>
               Record
             </Button>
+            <Button
+              type="button"
+              disabled={(ledger.unpaid_profit_kurus ?? 0) <= 0}
+              onClick={() => setPayProfitOpen(true)}
+              title={
+                (ledger.unpaid_profit_kurus ?? 0) <= 0
+                  ? "No unpaid allocated profit — allocate on the Partners list first"
+                  : undefined
+              }
+            >
+              Pay profit
+            </Button>
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
@@ -325,9 +339,17 @@ export default function PartnerDetailPage() {
             partnerId={partnerId}
             netBalanceKurus={ledger.net_balance_kurus}
             frontedBalanceKurus={ledger.balance_kurus}
-            unpaidProfitKurus={ledger.unpaid_profit_kurus ?? 0}
             capitalBalanceKurus={ledger.capital_balance_kurus}
             onClose={() => setRecordOpen(false)}
+            onSaved={() => void reload()}
+          />
+          <PartnerRecordForm
+            key="pay-profit"
+            open={payProfitOpen}
+            partnerId={partnerId}
+            lockedKind="profit_paid"
+            unpaidProfitKurus={ledger.unpaid_profit_kurus ?? 0}
+            onClose={() => setPayProfitOpen(false)}
             onSaved={() => void reload()}
           />
           <CorrectPartnerLedgerForm

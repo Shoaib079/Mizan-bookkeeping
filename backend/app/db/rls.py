@@ -50,6 +50,7 @@ RLS_TABLES = (
     "period_locks",
     "period_lock_audit_events",
     "period_close_snapshots",
+    "ledger_repairs",
 )
 
 

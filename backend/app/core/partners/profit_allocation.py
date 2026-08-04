@@ -235,6 +235,7 @@ def post_profit_allocation(
     actor_id: uuid.UUID,
     net_against_drawings: bool = True,
     netting_as_of: date,
+    period_unlock_reason: str | None = None,
 ) -> ProfitAllocationPostResult:
     """Allocate net profit to partners — one JE, settlement + capital subledger rows."""
     if profit_kurus <= 0:
@@ -276,6 +277,7 @@ def post_profit_allocation(
             lines,
             actor_id=actor_id,
             source=JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
+            period_unlock_reason=period_unlock_reason,
         )
 
         partner_entries: list[PartnerLedgerEntry] = []

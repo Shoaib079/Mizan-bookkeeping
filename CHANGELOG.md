@@ -4,10 +4,15 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-04
 
+**Ledger repairs (auto on deploy).**
+- Named void→repost recipes bring old journals up to today’s rules once per restaurant (`ledger_repairs` table). Never silent UPDATE of posted amounts.
+- First recipe `profit_allocation_v3`: past partner profit allocations get full Dr 3100 + Cr 3200 settlement + Cr 3300 capital (and matching subledger). Runs after migrate; API startup is a backup. Re-deploy is a no-op.
+
 **Partner Record (one button).**
-- Partners → **Record**: choose Cash paid/taken, Pay profit, Capital in, or Cash returned.
-- Cash paid/taken settles fronted expenses first; extra is a withdrawal. Pay profit is inside Record when there is unpaid allocated profit.
-- Removed from the Record / Add sidebar (not hidden — deleted). Partner money is recorded on the partner page only. Split stays on Record for bank/supplier peel.
+- Partners → **Record**: Cash paid/taken, Capital in, or Cash returned (when applicable).
+- **Pay profit** is a separate button on the partner page (always visible; disabled until unpaid allocated profit > 0).
+- Cash paid/taken settles fronted expenses first; extra is a withdrawal.
+- Removed from the Record / Add sidebar (not hidden — deleted). Split stays on Record for bank/supplier peel.
 
 **One Pay partner button.**
 - _(Superseded same day by Partner Record.)_ Cash payout settle-then-withdraw API remains `POST .../cash-payments`.

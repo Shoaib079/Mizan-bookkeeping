@@ -52,10 +52,10 @@ Ordered, tick-off checklist for taking Mizan to production. Derived from `DEPLOY
 cd backend
 export DATABASE_URL='postgresql+psycopg://mizan_app:…@host:5432/mizan?sslmode=require'
 export DATABASE_ADMIN_URL='postgresql+psycopg://mizan:…@host:5432/postgres?sslmode=require'
-bash scripts/migrate_production.sh      # alembic upgrade head, no drop + grants
+bash scripts/migrate_production.sh      # alembic upgrade head + ledger repairs, no drop + grants
 bash scripts/verify_production_db.sh    # confirms head, RLS on every entity table, immutability triggers
 ```
-- [ ] `migrate_production.sh` prints `migrate ok`
+- [ ] `migrate_production.sh` prints `migrate ok` and `ledger repairs ok`
 - [ ] ✅ `verify_production_db.sh` passes (head + RLS + triggers)
 
 ---

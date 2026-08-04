@@ -11,6 +11,7 @@ from app.db.base import Base
 from app.db.provisioning import apply_database_integrity, APP_DB_ROLE
 from app.core.chart_of_accounts.models import Account  # noqa: F401
 from app.core.ledger.models import JournalEntry, JournalEntryLine, LedgerAuditEvent  # noqa: F401
+from app.core.ledger.repairs.models import LedgerRepair  # noqa: F401
 from app.features.invoices.models import InvoiceDraft  # noqa: F401
 from app.features.suppliers.models import Supplier  # noqa: F401
 from app.core.payables.models import SupplierLedgerEntry  # noqa: F401

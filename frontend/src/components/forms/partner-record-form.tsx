@@ -41,6 +41,8 @@ type Props = {
   frontedBalanceKurus?: number;
   unpaidProfitKurus?: number;
   capitalBalanceKurus?: number;
+  /** When set, skip type picker (e.g. dedicated Pay profit button). */
+  lockedKind?: PartnerRecordKind;
   embedded?: boolean;
   onSaved?: () => void;
 };
@@ -60,6 +62,7 @@ export function PartnerRecordForm({
   frontedBalanceKurus,
   unpaidProfitKurus = 0,
   capitalBalanceKurus = 0,
+  lockedKind,
   embedded,
   onSaved,
 }: Props) {
@@ -68,26 +71,23 @@ export function PartnerRecordForm({
   const submitIdempotency = useSubmitIdempotency();
 
   const canReturn = partnerDrawingRepaymentAllowed(capitalBalanceKurus);
-  const canPayProfit = unpaidProfitKurus > 0;
 
   const kindOptions = useMemo(() => {
+    if (lockedKind) {
+      return [{ value: lockedKind, label: KIND_LABELS[lockedKind] }];
+    }
+    // Pay profit has its own button on the partner page — not in Record picker.
     const opts: { value: PartnerRecordKind; label: string }[] = [
       { value: "cash", label: KIND_LABELS.cash },
       { value: "capital", label: KIND_LABELS.capital },
     ];
-    if (canPayProfit) {
-      opts.splice(1, 0, {
-        value: "profit_paid",
-        label: KIND_LABELS.profit_paid,
-      });
-    }
     if (canReturn) {
       opts.push({ value: "returned", label: KIND_LABELS.returned });
     }
     return opts;
-  }, [canPayProfit, canReturn]);
+  }, [canReturn, lockedKind]);
 
-  const [kind, setKind] = useState<PartnerRecordKind>("cash");
+  const [kind, setKind] = useState<PartnerRecordKind>(lockedKind ?? "cash");
   const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
   const [cashAccountId, setCashAccountId] = useState("");
   const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
@@ -131,22 +131,23 @@ export function PartnerRecordForm({
 
   useEffect(() => {
     if (!open) return;
-    setKind("cash");
+    setKind(lockedKind ?? "cash");
     setDateText(todayTrDate());
     setAmountText("");
     setError(null);
     void loadAccounts().catch(() => undefined);
-  }, [open, loadAccounts]);
+  }, [open, loadAccounts, lockedKind]);
 
   useEffect(() => {
     if (open) setDescription(defaultDescription);
   }, [open, defaultDescription]);
 
   useEffect(() => {
+    if (lockedKind) return;
     if (!kindOptions.some((o) => o.value === kind)) {
       setKind("cash");
     }
-  }, [kind, kindOptions]);
+  }, [kind, kindOptions, lockedKind]);
 
   function onDrawerChange(id: string) {
     setCashAccountId(id);
@@ -185,11 +186,17 @@ export function PartnerRecordForm({
       );
       return;
     }
-    if (kind === "profit_paid" && amountKurus > unpaidProfitKurus) {
-      setError(
-        `Payment cannot exceed unpaid profit of ${formatTry(unpaidProfitKurus)}.`,
-      );
-      return;
+    if (kind === "profit_paid") {
+      if (unpaidProfitKurus <= 0) {
+        setError("No unpaid allocated profit to pay. Allocate profit first.");
+        return;
+      }
+      if (amountKurus > unpaidProfitKurus) {
+        setError(
+          `Payment cannot exceed unpaid profit of ${formatTry(unpaidProfitKurus)}.`,
+        );
+        return;
+      }
     }
     if (kind === "returned") {
       if (!canReturn) {
@@ -285,22 +292,33 @@ export function PartnerRecordForm({
   }
 
   const fronted = Math.max(0, frontedBalanceKurus ?? 0);
+  const dialogTitle =
+    lockedKind === "profit_paid" ? "Pay profit" : "Record";
+  const submitLabel =
+    lockedKind === "profit_paid" ? "Pay profit" : "Record";
 
   return (
-    <FormDialogShell embedded={embedded} open={open} title="Record" onClose={onClose}>
+    <FormDialogShell
+      embedded={embedded}
+      open={open}
+      title={dialogTitle}
+      onClose={onClose}
+    >
       <form onSubmit={onSubmit} className="space-y-3">
         <p className="text-xs text-muted-foreground">
           Cash drawer only. Bank: classify on the statement.
         </p>
-        <div>
-          <Label>What to record</Label>
-          <Combobox
-            value={kind}
-            onValueChange={(v) => setKind(v as PartnerRecordKind)}
-            options={kindOptions}
-            placeholder="Choose…"
-          />
-        </div>
+        {!lockedKind && (
+          <div>
+            <Label>What to record</Label>
+            <Combobox
+              value={kind}
+              onValueChange={(v) => setKind(v as PartnerRecordKind)}
+              options={kindOptions}
+              placeholder="Choose…"
+            />
+          </div>
+        )}
         {kind === "cash" && netBalanceKurus !== undefined && (
           <p className="text-sm text-muted-foreground">
             {partnerBalanceHeading(netBalanceKurus)}:{" "}
@@ -319,6 +337,9 @@ export function PartnerRecordForm({
         {kind === "profit_paid" && (
           <p className="text-sm text-muted-foreground">
             Unpaid allocated profit: {formatTry(unpaidProfitKurus)}
+            {unpaidProfitKurus <= 0
+              ? " — allocate profit on the Partners list first."
+              : null}
           </p>
         )}
         {kind === "returned" && (
@@ -361,11 +382,15 @@ export function PartnerRecordForm({
           accounts={accounts}
           value={cashAccountId}
           onValueChange={onDrawerChange}
-          label={kind === "capital" || kind === "returned" ? "Cash drawer" : "Pay from cash"}
+          label={
+            kind === "capital" || kind === "returned"
+              ? "Cash drawer"
+              : "Pay from cash"
+          }
         />
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Recording…" : "Record"}
+          {submitting ? "Recording…" : submitLabel}
         </Button>
       </form>
     </FormDialogShell>

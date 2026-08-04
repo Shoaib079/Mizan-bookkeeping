@@ -16,8 +16,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | **GS-FX** forex-only group sales (design locked) |
-| **Last completed slice** | Partner **Record** (settle-then-withdraw + profit/capital/return; Record hub entry removed) |
-| **Last commit/tag**      | `v0.partner-record` |
+| **Last completed slice** | Ledger repair framework + `profit_allocation_v3` (void+repost; auto after migrate) |
+| **Last commit/tag**      | `v0.partner-record` *(tag after commit)* |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -281,6 +281,7 @@ Every statement-line classification that represents a **real GL event** must pos
 | Partner one cash Pay partner                  | done   | Single **Record** on partner page (cash/profit/capital/return); `POST .../cash-payments` settle 2150 then drawing 3200; Record hub partner entry removed; tag `v0.partner-record` |
 | Partner split buy (amount split)              | done   | UI: total + personal → restaurant auto; note + optional invoice #; pocket fronted and/or clear supplier AP; tag `v0.partner-splits` |
 | Split hub (bank expense → partner)            | done   | `/split` + Record → Split; bank expense **and supplier payment** → Dr 3200 / Cr expense + partner drawing; tag `v0.partner-splits` |
+| Ledger repair framework + profit_allocation_v3 | done   | `ledger_repairs` + auto-run after migrate/startup; void+repost era A/B allocations to settle-then-net; migration `089` |
 
 | Receivables                                 | done   | `customers` + `customer_ledger_entries`; credit sale Dr `1200`/Cr `4000`; payment Dr bank/Cr `1200` (no revenue); per-customer OB via `customer_id`; statement classify `customer_payment`; Alembic `027`; 8 tests; 260 pytest                                                                        |
 | FX spend / conversion                       | done   | `post_fx_conversion()` Dr bank/cash / Cr FX GL at average cost + realized gain `4200` or loss `5600`; `post_fx_expense_spend()` Dr expense / Cr FX at average cost; `SPEND` subledger row; owner-entered TRY received; no holding revaluation; 6 tests; 266 pytest                                    |

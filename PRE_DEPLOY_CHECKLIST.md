@@ -98,8 +98,9 @@ Cross-check: no env var referenced in code is missing from the dashboard
 
 ## 5. Database migrations
 
-- [x] Railway `mizan-api` runs `alembic upgrade head` (via
-      `scripts/migrate_production.sh`) as its **pre-deploy command** — confirmed;
+- [x] Railway `mizan-api` runs `scripts/migrate_production.sh` as its **pre-deploy
+      command** (`alembic upgrade head` then pending ledger repairs) — confirmed;
+      see Railway service Settings → Deploy. API startup re-runs repairs as fallback.
       migrations apply to Neon automatically on each deploy.
 - [x] `alembic current` against Neon shows `072_statement_rule_delivery_platform (head)` — prod is fully migrated.
 - [ ] Before any future in-place data migration (like 071), take a fresh R2 backup first.

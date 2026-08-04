@@ -1,5 +1,8 @@
 """FastAPI entry — wires routes and middleware only. No business logic (ARCHITECTURE.md)."""
 
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -72,10 +75,32 @@ ensure_storage_roots()
 # before conftest provisions mizan_app / mizan_test (CI fresh Postgres).
 # Local AUTH_ENFORCEMENT=false seeds that row lazily in resolve_actor_id.
 
+_logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Fallback: run pending ledger repairs if migrate/release step did not."""
+    if settings.app_env.lower() != "test":
+        from app.core.ledger.repairs import run_pending_repairs
+        from app.db.session import SessionLocal
+
+        session = SessionLocal()
+        try:
+            run_pending_repairs(session)
+        except Exception:
+            _logger.exception("ledger repairs failed on API startup")
+            raise
+        finally:
+            session.close()
+    yield
+
+
 app = FastAPI(
     title="Mizan API",
     description="Restaurant bookkeeping API",
     version="0.1.0",
+    lifespan=_lifespan,
 )
 
 

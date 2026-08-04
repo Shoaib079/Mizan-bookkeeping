@@ -2,6 +2,16 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-08-04 — Ledger repairs: void+repost recipes, run-once per restaurant
+
+**Choice:** When money rules change, posted books do **not** recompute on deploy. Each change that needs history fixed ships a **named repair recipe** that voids the old journal and reposts under current rules (full audit). Applied automatically once per entity via `ledger_repairs` (`repair_key` unique). Re-deploy is a no-op.
+
+**Not built:** Silent UPDATE of JE line amounts; a generic “rewrite all history for any code change”; auto-void of partner cash profit payments already made (those are reported for operator review only).
+
+**First key:** `profit_allocation_v3` — bring legacy partner profit allocations to settle-then-net (full Dr `3100`, Cr `3200` + Cr `3300`, `PROFIT_SETTLEMENT` + `PROFIT_ALLOCATION`). Soft-locked months use unlock reason `ledger repair profit_allocation_v3`.
+
+**When it runs:** `migrate_production.sh` after `alembic upgrade head`; API startup is a fail-closed fallback if the release command is not wired.
+
 ## 2026-08-04 — Partner page: one Record dialog
 
 **Choice:** Partner detail has a single **Record** action (also Add → Record). Dialog kinds: **Cash paid/taken** (settle 2150 then drawing 3200), **Pay profit**, **Capital in**, **Cash returned**. Removed separate partner-page buttons and deleted Add entry points for drawing / capital / expense-fronted / split-buy forms (not hidden — removed). Split hub (`/split`) remains for bank/supplier personal peel. Daily expenses covers partner-fronted expenses.

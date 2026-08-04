@@ -6,7 +6,9 @@
 > the authoritative entry in `DECISIONS.md` (2026-07) and `PRE_DEPLOY_CHECKLIST.md`.
 > Wherever this doc says "Render (API)" read **Railway**; `render.yaml` is stale.
 > Railway runs `alembic upgrade head` as its pre-deploy command; migrations reach
-> Neon automatically on deploy.
+> Neon automatically on deploy. **`migrate_production.sh` then runs pending ledger
+> repairs** (void+repost recipes such as `profit_allocation_v3`, idempotent). API
+> startup re-runs them as a fallback if the release step was skipped.
 
 Plain-English steps to provision and go live with Mizan. **Staging first** — run the full migrate + verify + smoke path on staging before production.
 
@@ -60,7 +62,8 @@ bash scripts/verify_production_db.sh
 
 What this does:
 
-- `migrate_production.sh` → `alembic upgrade head` (no schema drop) + grant `mizan_app` DML on all objects.
+- `migrate_production.sh` → `alembic upgrade head` (no schema drop) + grant `mizan_app` DML on all objects + **pending ledger repairs** (idempotent void+repost).
+- `verify_production_db.sh` → asserts Alembic head, RLS policies on every entity table, immutability triggers.
 - `verify_production_db.sh` → confirms Alembic head, RLS policy on every entity-scoped table, and ledger/audit/period-lock immutability triggers.
 
 **Staging:** run the same two scripts against your staging database before pointing production traffic.
@@ -460,7 +463,7 @@ Steps verified: `POST /entities` (chart + cash drawer) → opening balances vali
 | `backend/Dockerfile` | Production uvicorn image; non-root `app` user; `postgresql-client` |
 | `render.yaml` | Web + Celery worker + beat; pre-deploy migrate + verify |
 | `.env.production.example` | Full env catalog |
-| `backend/scripts/migrate_production.sh` | `alembic upgrade head` (no drop) |
+| `backend/scripts/migrate_production.sh` | `alembic upgrade head` (no drop) + pending ledger repairs |
 | `backend/scripts/verify_production_db.sh` | RLS + trigger integrity check |
 | `backend/scripts/verify_backup_restore.sh` | Latest backup → scratch DB → integrity verify |
 | `backend/scripts/run_backup_drill.sh` | Backup + restore-verify one-liner (staging drill) |
