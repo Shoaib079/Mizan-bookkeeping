@@ -100,6 +100,47 @@ describe("partnerCashSummary", () => {
     expect(summary.drawingsOutstandingKurus).toBe(5_000_000);
   });
 
+  it("separates cash the partner took from personal costs the business paid", () => {
+    // Canan's case: she never withdrew cash, but the business covered personal
+    // costs through the split flow. Reporting that as "drawings taken" reads as
+    // if she emptied the till.
+    const rows = [
+      row("drawing", -9_500_000, { reference_type: "expense_entry" }),
+      row("drawing", -300_000, { reference_type: "supplier_ledger_entry" }),
+    ];
+    const summary = partnerCashSummary(rows);
+
+    expect(summary.cashTakenKurus).toBe(0);
+    expect(summary.personalCostsKurus).toBe(9_800_000);
+    // The total is unchanged — this is presentation, not new accounting.
+    expect(summary.drawingsTakenKurus).toBe(9_800_000);
+  });
+
+  it("counts a drawing with no source as cash the partner withdrew", () => {
+    const rows = [
+      row("drawing", -2_000_000),
+      row("drawing", -500_000, { reference_type: "expense_entry" }),
+    ];
+    const summary = partnerCashSummary(rows);
+
+    expect(summary.cashTakenKurus).toBe(2_000_000);
+    expect(summary.personalCostsKurus).toBe(500_000);
+    expect(summary.drawingsTakenKurus).toBe(2_500_000);
+  });
+
+  it("never reports a voided split as money taken", () => {
+    const rows = [
+      row("drawing", -1_000_000, {
+        reference_type: "expense_entry",
+        display_kind: "void_reversal",
+      }),
+    ];
+    const summary = partnerCashSummary(rows);
+
+    expect(summary.personalCostsKurus).toBe(0);
+    expect(summary.drawingsTakenKurus).toBe(0);
+  });
+
   it("prefers API totals over row sums for capital and fronted expenses", () => {
     const summary = partnerCashSummary([row("capital_contribution", 1)], {
       capitalContributionKurus: 5_000_000,

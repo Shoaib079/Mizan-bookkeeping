@@ -152,9 +152,30 @@ export function PartnerProfitCard({
 }
 
 export function PartnerCashCard({ cash }: { cash: PartnerCashSummary }) {
+  // Both are drawings in the books, but only one means the partner took money.
+  // Shown apart so nobody reads a personal expense split as a withdrawal.
+  const mixed = cash.cashTakenKurus !== 0 && cash.personalCostsKurus !== 0;
+
   return (
-    <Panel title="Cash & expenses">
-      <Line label="Drawings taken" value={formatTry(cash.drawingsTakenKurus)} />
+    <Panel
+      title="Cash & expenses"
+      footnote={
+        cash.personalCostsKurus !== 0
+          ? "Personal costs are business payments covering something personal — no cash left the till, but they reduce capital the same way."
+          : undefined
+      }
+    >
+      <Line label="Cash taken" value={formatTry(cash.cashTakenKurus)} />
+      <Line
+        label="Personal costs paid by business"
+        value={formatTry(cash.personalCostsKurus)}
+      />
+      {mixed && (
+        <Line
+          label="Total taken out"
+          value={formatTry(cash.drawingsTakenKurus)}
+        />
+      )}
       <Line
         label="Drawings outstanding"
         value={formatTry(cash.drawingsOutstandingKurus)}

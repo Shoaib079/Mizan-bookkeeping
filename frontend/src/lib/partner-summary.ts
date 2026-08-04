@@ -24,7 +24,24 @@ export type PartnerSummaryRow = SubledgerDisplayRow & {
   amount_kurus: number;
   journal_entry_id?: string | null;
   movement_date?: string;
+  /** What wrote the row — see `SPLIT_REFERENCE_TYPES`. */
+  reference_type?: string | null;
 };
+
+/** A `drawing` row can mean two different things. Either the partner withdrew
+ * cash, or the business paid a personal cost of theirs and the personal share
+ * was peeled off (the /split flow). Both reduce capital identically, so the
+ * books don't care — but a partner who has never touched the till should not
+ * read "drawings taken" and think they did. Rows created by a split carry the
+ * originating record's type; a real withdrawal carries none. */
+const SPLIT_REFERENCE_TYPES = new Set(["expense_entry", "supplier_ledger_entry"]);
+
+export function isPersonalSplitDrawing(row: PartnerSummaryRow): boolean {
+  return (
+    row.movement_type === "drawing" &&
+    SPLIT_REFERENCE_TYPES.has(row.reference_type ?? "")
+  );
+}
 
 export type PartnerProfitSummary = {
   /** Every lira of profit ever assigned to this partner (settled + kept). */
@@ -40,7 +57,12 @@ export type PartnerProfitSummary = {
 };
 
 export type PartnerCashSummary = {
+  /** Everything taken out — cash plus personal costs the business covered. */
   drawingsTakenKurus: number;
+  /** Money the partner actually withdrew. */
+  cashTakenKurus: number;
+  /** Personal share of business expenses, peeled off via /split. */
+  personalCostsKurus: number;
   /** Positive when the partner still owes money taken out. */
   drawingsOutstandingKurus: number;
   expensesFrontedKurus: number;
@@ -107,7 +129,14 @@ export function partnerCashSummary(
 ): PartnerCashSummary {
   const live = effectiveRows(rows);
   // drawing rows are negative; report what was taken as a positive figure.
-  const drawingsTaken = magnitude(sumByType(live, "drawing"));
+  const drawingRows = live.filter((row) => row.movement_type === "drawing");
+  const sumRows = (subset: PartnerSummaryRow[]) =>
+    magnitude(subset.reduce((total, row) => total + row.amount_kurus, 0));
+  const personalCosts = sumRows(drawingRows.filter(isPersonalSplitDrawing));
+  const cashTaken = sumRows(
+    drawingRows.filter((row) => !isPersonalSplitDrawing(row)),
+  );
+  const drawingsTaken = cashTaken + personalCosts;
   const contributions =
     totals.capitalContributionKurus ?? sumByType(live, "capital_contribution");
   const fronted =
@@ -117,6 +146,8 @@ export function partnerCashSummary(
 
   return {
     drawingsTakenKurus: drawingsTaken,
+    cashTakenKurus: cashTaken,
+    personalCostsKurus: personalCosts,
     drawingsOutstandingKurus: net < 0 ? magnitude(net) : 0,
     expensesFrontedKurus: fronted,
     capitalContributedKurus: contributions,

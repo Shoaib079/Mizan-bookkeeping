@@ -50,10 +50,20 @@ export function isAllocationRow(movementType: string): boolean {
   );
 }
 
+/** Inside an allocation band the generic labels don't explain the split.
+ * "Settled from profit" is true but leaves the reader to work out that it means
+ * the share went to clearing what they'd already taken. */
+export function allocationRowLabel(movementType: string): string | null {
+  if (movementType === "profit_settlement") return "Cleared earlier drawings";
+  if (movementType === "profit_allocation") return "Added to capital";
+  return null;
+}
+
 type BandableRow = {
   movement_type: string;
   movement_date: string;
   journal_entry_id?: string | null;
+  amount_kurus?: number;
 };
 
 export type LedgerBand<T> = {
@@ -63,6 +73,14 @@ export type LedgerBand<T> = {
   groupKey: string;
   /** Band heading; null renders an unlabelled group. */
   title: string | null;
+  /** The partner's whole share for the period, before any netting.
+   *
+   * The posting engine never writes this as a row: it splits the gross share
+   * into a settlement (the part that cleared open drawings) and a smaller
+   * capital allocation. A reader seeing only those two has to add them back up
+   * to learn what the partner actually earned, so the band carries the total
+   * and the rows beneath it read as the breakdown. Null on non-profit bands. */
+  grossKurus: number | null;
   rows: T[];
 };
 
@@ -106,6 +124,9 @@ export function groupPartnerLedgerRows<T extends BandableRow>(
 
     if (last && last.groupKey === wantedKey) {
       last.rows.push(row);
+      if (allocationKey) {
+        last.grossKurus = (last.grossKurus ?? 0) + (row.amount_kurus ?? 0);
+      }
       continue;
     }
 
@@ -115,6 +136,7 @@ export function groupPartnerLedgerRows<T extends BandableRow>(
       title: allocationKey
         ? `${monthLabel(row.movement_date)} profit allocation`
         : null,
+      grossKurus: allocationKey ? (row.amount_kurus ?? 0) : null,
       rows: [row],
     });
   }

@@ -67,6 +67,11 @@ class PartnerLedgerEntryRead(BaseModel):
     journal_entry_id: uuid.UUID | None
     # GL account a reimbursement was paid from — restores the picker.
     payment_account_id: uuid.UUID | None = None
+    # What produced the row. A DRAWING written by a personal expense split
+    # carries "expense_entry"/"supplier_ledger_entry"; a partner who actually
+    # withdrew cash carries none. Without this the UI cannot tell them apart
+    # and reports both as money taken out.
+    reference_type: str | None = None
     running_balance_kurus: int | None = None
     created_at: datetime
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE

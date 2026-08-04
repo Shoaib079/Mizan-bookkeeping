@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  allocationRowLabel,
   groupPartnerLedgerRows,
   partnerLedgerFilterMatches,
 } from "@/lib/partner-ledger-view";
@@ -9,8 +10,9 @@ function row(
   movement_type: string,
   movement_date: string,
   journal_entry_id?: string,
+  amount_kurus = 0,
 ) {
-  return { movement_type, movement_date, journal_entry_id };
+  return { movement_type, movement_date, journal_entry_id, amount_kurus };
 }
 
 describe("partnerLedgerFilterMatches", () => {
@@ -70,7 +72,45 @@ describe("groupPartnerLedgerRows", () => {
     expect(total).toBe(rows.length);
   });
 
+  it("recovers the gross share the engine never wrote as a row", () => {
+    // A 100.000 share where 95.000 cleared open drawings: the ledger holds a
+    // 95.000 settlement and a 5.000 allocation, and the 100.000 the partner
+    // actually earned appears nowhere. The band carries it.
+    const bands = groupPartnerLedgerRows([
+      row("profit_settlement", "2026-07-31", "je-july", 9_500_000),
+      row("profit_allocation", "2026-07-31", "je-july", 500_000),
+    ]);
+
+    expect(bands).toHaveLength(1);
+    expect(bands[0].grossKurus).toBe(10_000_000);
+    // And it reconciles with the rows beneath it.
+    expect(bands[0].rows.reduce((n, r) => n + r.amount_kurus, 0)).toBe(
+      bands[0].grossKurus,
+    );
+  });
+
+  it("carries no gross on bands that are not allocations", () => {
+    const bands = groupPartnerLedgerRows([
+      row("drawing", "2026-07-10", undefined, -2_000_000),
+    ]);
+    expect(bands[0].grossKurus).toBeNull();
+  });
+
   it("returns nothing for an empty ledger", () => {
     expect(groupPartnerLedgerRows([])).toEqual([]);
+  });
+});
+
+describe("allocationRowLabel", () => {
+  it("names what each half of a netted allocation did", () => {
+    expect(allocationRowLabel("profit_settlement")).toBe(
+      "Cleared earlier drawings",
+    );
+    expect(allocationRowLabel("profit_allocation")).toBe("Added to capital");
+  });
+
+  it("defers to the standard label for anything else", () => {
+    expect(allocationRowLabel("drawing")).toBeNull();
+    expect(allocationRowLabel("profit_paid")).toBeNull();
   });
 });

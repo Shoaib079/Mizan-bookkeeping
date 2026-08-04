@@ -150,6 +150,45 @@ def test_bank_expense_personal_split_reclass(db_session, split_hub_setup) -> Non
     )
 
 
+def test_ledger_marks_split_drawings_apart_from_cash_drawings(
+    db_session, split_hub_setup
+) -> None:
+    """A partner who never withdrew cash must not be reported as having done so.
+
+    Both a personal expense split and a real withdrawal write a DRAWING row, so
+    the only thing telling them apart is `reference_type`. The partner page
+    reports them on separate lines, so the ledger API has to carry it.
+    """
+    from app.features.partners import service as partner_service
+
+    setup = split_hub_setup
+    expense_id = _post_bank_expense(
+        db_session, setup, amount_kurus=100_000, description="SGK odemesi"
+    )
+    partner_posting.post_expense_personal_split(
+        db_session,
+        setup["entity_id"],
+        setup["partner_id"],
+        expense_id=expense_id,
+        personal_amount_kurus=30_000,
+        note="Personal SGK",
+        actor_id=ACTOR_ID,
+    )
+
+    ledger = partner_service.get_partner_ledger(
+        db_session, setup["entity_id"], setup["partner_id"]
+    )
+    drawings = [
+        row
+        for row in ledger.entries
+        if row.movement_type == PartnerMovementType.DRAWING
+    ]
+    assert len(drawings) == 1
+    # Sourced from an expense — value taken out, but no cash withdrawn.
+    assert drawings[0].reference_type == "expense_entry"
+    assert drawings[0].amount_kurus == -30_000
+
+
 def test_split_rejects_over_remaining(db_session, split_hub_setup) -> None:
     setup = split_hub_setup
     expense_id = _post_bank_expense(

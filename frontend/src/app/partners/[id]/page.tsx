@@ -57,6 +57,7 @@ import {
 } from "@/lib/partner-summary";
 import {
   PARTNER_LEDGER_FILTERS,
+  allocationRowLabel,
   groupPartnerLedgerRows,
   partnerLedgerFilterMatches,
   type PartnerLedgerFilter,
@@ -72,6 +73,9 @@ type LedgerEntry = {
   description: string;
   journal_entry_id: string | null;
   payment_account_id: string | null;
+  /** Tells a drawing the partner took in cash from one created by a personal
+   * expense split — the two read very differently to an owner. */
+  reference_type?: string | null;
   display_kind: SubledgerDisplayKind;
   was_corrected?: boolean;
   running_balance_kurus?: number | null;
@@ -305,13 +309,25 @@ export default function PartnerDetailPage() {
                 {bands.map((band) => (
                   <Fragment key={band.key}>
                     {band.title && (
-                      <tr>
+                      // The gross share the partner earned. The rows beneath
+                      // are how it was applied, so they read as its breakdown
+                      // rather than as two unrelated amounts.
+                      <tr className="bg-muted/40">
                         <td
-                          colSpan={5}
-                          className="bg-muted/40 px-4 py-1.5 text-xs font-medium uppercase tracking-wider text-primary"
+                          colSpan={3}
+                          className="px-4 py-1.5 text-xs font-medium uppercase tracking-wider text-primary"
                         >
                           {band.title}
+                          {band.rows.length > 1 && (
+                            <span className="ml-2 normal-case tracking-normal text-muted-foreground">
+                              — share applied as follows
+                            </span>
+                          )}
                         </td>
+                        <td className="px-4 py-1.5 text-right text-sm font-semibold tabular-nums text-primary">
+                          {band.grossKurus != null && formatTry(band.grossKurus)}
+                        </td>
+                        <td />
                       </tr>
                     )}
                     {band.rows.map((entry) => {
@@ -327,8 +343,12 @@ export default function PartnerDetailPage() {
                           <DataTableCell>
                             {formatTrDate(entry.movement_date)}
                           </DataTableCell>
-                          <DataTableCell>
-                            {partnerMovementLabels[entry.movement_type] ??
+                          <DataTableCell
+                            className={band.title ? "pl-8" : undefined}
+                          >
+                            {(band.title &&
+                              allocationRowLabel(entry.movement_type)) ??
+                              partnerMovementLabels[entry.movement_type] ??
                               entry.movement_type}
                           </DataTableCell>
                           <DataTableCell>
