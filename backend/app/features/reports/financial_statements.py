@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.models import Account
-from app.core.chart_of_accounts.types import AccountType
+from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 from app.core.ledger.balances import (
     P_AND_L_EXCLUDED_SOURCES,
     balance_as_of_kurus,
@@ -37,6 +37,36 @@ __all__ = ["get_balance_sheet", "get_profit_and_loss"]
 #: way you exported it.
 VIEW_AS_CLOSED = "as_closed"
 VIEW_LIVE = "live"
+
+
+#: What a type's balance means when it is positive. An account whose
+#: normal_balance opposes this is a *contra* account: Owner Drawings (3200) is
+#: equity with a DEBIT normal balance, so its natural positive balance is money
+#: taken *out* of equity.
+_TYPE_NORMAL_BALANCE = {
+    AccountType.ASSET: AccountNormalBalance.DEBIT,
+    AccountType.EXPENSE: AccountNormalBalance.DEBIT,
+    AccountType.LIABILITY: AccountNormalBalance.CREDIT,
+    AccountType.EQUITY: AccountNormalBalance.CREDIT,
+    AccountType.REVENUE: AccountNormalBalance.CREDIT,
+}
+
+
+def _statement_signed_kurus(account: Account, natural_kurus: int) -> int:
+    """A natural balance re-signed for the section it is reported in.
+
+    `balance_as_of_kurus` returns the balance in the account's *own* normal
+    direction, so Owner Drawings comes back positive when money has been drawn.
+    Summing that straight into equity *added* drawings to equity instead of
+    deducting them, which is what broke the accounting equation — the ledger
+    was balanced all along, the report was signing one account the wrong way.
+
+    Reported at the row level, not just in the subtotal, so a reader sees
+    "Owner Drawings −1.234,00" under Equity and the section visibly adds up.
+    """
+    if account.normal_balance == _TYPE_NORMAL_BALANCE[account.account_type]:
+        return natural_kurus
+    return -natural_kurus
 
 
 def _require_entity(session: Session, entity_id: uuid.UUID) -> None:
@@ -187,7 +217,9 @@ def _unclosed_net_income_kurus(session: Session, as_of_date: date) -> int:
     for account in _accounts_with_balances(
         session, (AccountType.REVENUE, AccountType.EXPENSE), as_of_date
     ):
-        balance = balance_as_of_kurus(session, account, as_of_date)
+        balance = _statement_signed_kurus(
+            account, balance_as_of_kurus(session, account, as_of_date)
+        )
         if account.account_type == AccountType.REVENUE:
             revenue_total += balance
         else:
@@ -365,7 +397,7 @@ def get_balance_sheet(
                 code=account.code,
                 name_en=account.name_en,
                 account_type=account.account_type,
-                balance_kurus=balance,
+                balance_kurus=_statement_signed_kurus(account, balance),
             )
             if account.account_type == AccountType.ASSET:
                 asset_rows.append(row)
@@ -379,10 +411,13 @@ def get_balance_sheet(
             # balance: sealed assets against a live net income.
             sealed_net_income = 0
             for account in _accounts_by_id(session, list(figures)):
+                signed = _statement_signed_kurus(
+                    account, figures[account.id].closing_balance_kurus
+                )
                 if account.account_type == AccountType.REVENUE:
-                    sealed_net_income += figures[account.id].closing_balance_kurus
+                    sealed_net_income += signed
                 elif account.account_type == AccountType.EXPENSE:
-                    sealed_net_income -= figures[account.id].closing_balance_kurus
+                    sealed_net_income -= signed
             unclosed_net_income = sealed_net_income
         else:
             unclosed_net_income = _unclosed_net_income_kurus(session, as_of_date)

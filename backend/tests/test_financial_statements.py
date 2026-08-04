@@ -435,3 +435,67 @@ def test_a_deactivated_account_keeps_the_balance_sheet_balanced(
         "a deactivated account still holding a balance dropped out of the sheet"
     )
     assert after.equity.unclosed_net_income_kurus == before.equity.unclosed_net_income_kurus
+
+
+def test_owner_drawings_reduce_equity_and_keep_the_sheet_balanced(
+    db_session, fs_setup
+) -> None:
+    """A contra account must deduct from its section, not add to it.
+
+    Owner Drawings (3200) is equity with a DEBIT normal balance, so
+    `balance_as_of_kurus` returns it positive once money has been drawn.
+    Summing that straight into equity added the drawing instead of deducting
+    it, and the balance sheet reported "Accounting equation check failed" on a
+    perfectly balanced ledger.
+    """
+    from app.core.chart_of_accounts.default_chart import OWNER_DRAWINGS_CODE
+
+    entity_id = fs_setup["entity_id"]
+    as_of = date(2026, 6, 30)
+
+    with entity_context(db_session, entity_id):
+        accounts = {a.code: a for a in db_session.scalars(select(Account))}
+        drawings = accounts[OWNER_DRAWINGS_CODE]
+        assert drawings.normal_balance == AccountNormalBalance.DEBIT, (
+            "this test only means anything while 3200 is contra-equity"
+        )
+
+    before = financial_statements.get_balance_sheet(
+        db_session, entity_id, as_of, view=financial_statements.VIEW_LIVE
+    )
+
+    # Owner takes 1.000,00 out of the bank.
+    post_journal_entry(
+        db_session,
+        entity_id,
+        date(2026, 6, 15),
+        "Owner drawing",
+        [
+            PostingLine(
+                account_id=drawings.id,
+                amount_kurus=100_000,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=fs_setup["bank_gl_id"],
+                amount_kurus=100_000,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ],
+        actor_id=ACTOR_ID,
+        source=JournalEntrySource.MANUAL,
+    )
+
+    after = financial_statements.get_balance_sheet(
+        db_session, entity_id, as_of, view=financial_statements.VIEW_LIVE
+    )
+
+    assert after.accounting_equation_balanced
+    # Assets fell by the drawing, and so did equity — not rose.
+    assert after.total_assets_kurus == before.total_assets_kurus - 100_000
+    assert after.total_equity_kurus == before.total_equity_kurus - 100_000
+
+    row = next(
+        r for r in after.equity.accounts if r.code == OWNER_DRAWINGS_CODE
+    )
+    assert row.balance_kurus == -100_000, "drawings should read as a deduction"
