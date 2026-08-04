@@ -10,6 +10,7 @@ import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { ReportDateRange } from "@/components/reports/report-date-range";
+import { PageHeader } from "@/components/page/page-header";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import {
@@ -92,14 +93,10 @@ export function CardsPageContent() {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <ReportDateRange
-          from={from}
-          to={to}
-          disabled={loading}
-          onChange={setRange}
-        />
-        <div className="flex flex-wrap gap-2">
+      <PageHeader
+        title="Cards"
+        meta="Card clearing, bank settlements, and commission clearance. Batches and settlements are filtered by date; clearing balance is current."
+        primaryAction={
           <Button
             type="button"
             disabled={!entityId}
@@ -107,27 +104,33 @@ export function CardsPageContent() {
           >
             Record settlement
           </Button>
+        }
+        actions={
           <Button
             type="button"
-            disabled={!entityId}
-            onClick={() => setClearFormOpen(true)}
-          >
-            Record commission
-          </Button>
-          <Button
-            type="button"
+            variant="secondary"
             disabled={!entityId}
             onClick={() => setCardFormOpen(true)}
           >
             New card batch
           </Button>
-        </div>
-      </div>
+        }
+        overflowActions={[
+          {
+            label: "Record commission",
+            onSelect: () => setClearFormOpen(true),
+          },
+        ]}
+      />
 
-      <p className="mb-4 text-sm text-muted-foreground">
-        Card clearing, bank settlements, and commission clearance. Batches and
-        settlements below are filtered by date; clearing balance is current.
-      </p>
+      <div className="mb-4">
+        <ReportDateRange
+          from={from}
+          to={to}
+          disabled={loading}
+          onChange={setRange}
+        />
+      </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <PageSkeleton />}

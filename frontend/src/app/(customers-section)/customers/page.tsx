@@ -16,13 +16,12 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ListPage } from "@/components/page/list-page";
+import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { ListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { TablePager } from "@/components/ui/table-pager";
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
-import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { UserCircle } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -32,7 +31,6 @@ import { useCustomerBalances } from "@/lib/use-balance-map";
 import { cn } from "@/lib/utils";
 
 export default function CustomersPage() {
-  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const [searchDraft, setSearchDraft] = useState("");
   const search = useDebouncedValue(searchDraft.trim(), 300);
@@ -46,33 +44,115 @@ export default function CustomersPage() {
   const balancesState = useCustomerBalances(entityId);
   const [formOpen, setFormOpen] = useState(false);
 
+  const CustomerTable = () => (
+          <DataTable>
+            <DataTableHead>
+              <tr>
+                <DataTableHeaderCell>Name</DataTableHeaderCell>
+                <DataTableHeaderCell>Identifier</DataTableHeaderCell>
+                <DataTableHeaderCell>Status</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Owed to you</DataTableHeaderCell>
+              </tr>
+            </DataTableHead>
+            <DataTableBody>
+              {items.map((row) => {
+                const balance = balancesState.balances.get(row.id) ?? 0;
+                return (
+                  <DataTableRow key={row.id} href={`/customers/${row.id}`}>
+                    <DataTableCell>
+                      <Link
+                        href={`/customers/${row.id}`}
+                        className="font-medium text-foreground hover:underline"
+                      >
+                        {row.name}
+                      </Link>
+                    </DataTableCell>
+                    <DataTableCell>{row.identifier ?? "—"}</DataTableCell>
+                    <DataTableCell>
+                      <StatusBadge status={row.is_active ? "active" : "inactive"} />
+                    </DataTableCell>
+                    <DataTableCell
+                      align="right"
+                      className={cn("tabular-nums", balance > 0 && "text-success")}
+                    >
+                      {balance === 0 ? "—" : formatTry(balance)}
+                    </DataTableCell>
+                  </DataTableRow>
+                );
+              })}
+            </DataTableBody>
+          </DataTable>
+  );
+
+  const CustomerCards = () => (
+            <MobileCardList>
+              {items.map((row) => {
+                const balance = balancesState.balances.get(row.id) ?? 0;
+                return (
+                  <MobileCardRow
+                    key={row.id}
+                    href={`/customers/${row.id}`}
+                    title={row.name}
+                    meta={
+                      <>
+                        <span>{row.identifier ?? "No ID"}</span>
+                        <StatusBadge status={row.is_active ? "active" : "inactive"} />
+                      </>
+                    }
+                    amount={balance === 0 ? "—" : formatTry(balance)}
+                    amountClassName={cn(balance > 0 && "text-success")}
+                  />
+                );
+              })}
+            </MobileCardList>
+  );
+
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            value={searchDraft}
-            disabled={!entityId}
-            placeholder="Search customers…"
-            className={cn("w-56", isMobile && "w-full max-w-none")}
-            onChange={(event) => setSearchDraft(event.target.value)}
-          />
-          <p className="text-sm text-muted-foreground">
-            {entityId
-              ? `${total} registered customer${total === 1 ? "" : "s"} (active and inactive — never deleted)`
-              : "Select a restaurant in the sidebar"}
-          </p>
-        </div>
-        <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
+    <ListPage
+      title="Customers"
+      loading={loading}
+      error={error}
+      forbidden={
+        entityId && forbidden ? (
+          <ForbiddenMessage context="customer list" />
+        ) : undefined
+      }
+      primaryAction={
+        <Button
+          type="button"
+          disabled={!entityId}
+          onClick={() => setFormOpen(true)}
+        >
           New customer
         </Button>
-      </div>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {entityId && forbidden && <ForbiddenMessage context="customer list" />}
-      {loading && <ListSkeleton columns={4} />}
-
-      {!loading && entityId && !forbidden && items.length === 0 && (
+      }
+      toolbar={
+        <Input
+          value={searchDraft}
+          disabled={!entityId}
+          placeholder="Search customers…"
+          className="w-56"
+          onChange={(event) => setSearchDraft(event.target.value)}
+        />
+      }
+      countLabel={
+        entityId
+          ? `${total} registered customer${total === 1 ? "" : "s"} (active and inactive — never deleted)`
+          : "Select a restaurant in the sidebar"
+      }
+      summary={
+        entityId && (
+          <HeadlineFigure
+            label="Total receivable"
+            amountKurus={balancesState.totalKurus}
+            caption="Across all customers."
+            format={balancesState.loading ? () => "…" : undefined}
+          />
+        )
+      }
+      skeletonColumns={4}
+      isEmpty={Boolean(entityId) && items.length === 0}
+      empty={
         <EmptyState
           icon={UserCircle}
           title={search ? "No customers match your search" : "No customers yet"}
@@ -82,95 +162,17 @@ export default function CustomersPage() {
               : "Add customers for credit sales and payments."
           }
         />
-      )}
-
-      {items.length > 0 &&
-        (isMobile ? (
-          <MobileCardList>
-            {items.map((row) => {
-              const balance = balancesState.balances.get(row.id) ?? 0;
-              return (
-                <MobileCardRow
-                  key={row.id}
-                  href={`/customers/${row.id}`}
-                  title={row.name}
-                  meta={
-                    <>
-                      <span>{row.identifier ?? "No ID"}</span>
-                      <StatusBadge status={row.is_active ? "active" : "inactive"} />
-                    </>
-                  }
-                  amount={balance === 0 ? "—" : formatTry(balance)}
-                  amountClassName={cn(balance > 0 && "text-success")}
-                />
-              );
-            })}
-          </MobileCardList>
-        ) : (
-        <DataTable>
-          <DataTableHead>
-            <tr>
-              <DataTableHeaderCell>Name</DataTableHeaderCell>
-              <DataTableHeaderCell>Identifier</DataTableHeaderCell>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Owed to you</DataTableHeaderCell>
-            </tr>
-          </DataTableHead>
-          <DataTableBody>
-            {items.map((row) => {
-              const balance = balancesState.balances.get(row.id) ?? 0;
-              return (
-                <DataTableRow key={row.id} href={`/customers/${row.id}`}>
-                  <DataTableCell>
-                    <Link
-                      href={`/customers/${row.id}`}
-                      className="font-medium text-foreground hover:underline"
-                    >
-                      {row.name}
-                    </Link>
-                  </DataTableCell>
-                  <DataTableCell>{row.identifier ?? "—"}</DataTableCell>
-                  <DataTableCell>
-                    <StatusBadge status={row.is_active ? "active" : "inactive"} />
-                  </DataTableCell>
-                  <DataTableCell
-                    align="right"
-                    className={cn("tabular-nums", balance > 0 && "text-success")}
-                  >
-                    {balance === 0 ? "—" : formatTry(balance)}
-                  </DataTableCell>
-                </DataTableRow>
-              );
-            })}
-          </DataTableBody>
-        </DataTable>
-        ))}
-
-      {!forbidden && (
-        <TablePager
-          offset={offset}
-          pageSize={pageSize}
-          total={total}
-          disabled={loading}
-          onOffsetChange={setOffset}
-        />
-      )}
-
-      {entityId && !forbidden && (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Total receivable across all customers:{" "}
-          <span className="font-medium tabular-nums text-foreground">
-            {balancesState.loading ? "…" : formatTry(balancesState.totalKurus)}
-          </span>
-          .
-        </p>
-      )}
-
+      }
+      table={<CustomerTable />}
+      mobile={<CustomerCards />}
+      pager={{ offset, pageSize, total, onOffsetChange: setOffset }}
+    >
       <CustomerForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSaved={() => void reload()}
       />
-    </>
+    </ListPage>
   );
+
 }

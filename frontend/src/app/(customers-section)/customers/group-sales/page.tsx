@@ -12,8 +12,8 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Users } from "lucide-react";
 import Link from "next/link";
@@ -41,7 +41,7 @@ function formatSaleTotal(sale: GroupSaleRead): string {
 
 export default function GroupSalesPage() {
   const { entityId } = useEntity();
-  const { items, total, loading, error, reload } = useEntityList<GroupSaleRead>(
+  const { items, total, loading, error, reload, offset, setOffset, pageSize } = useEntityList<GroupSaleRead>(
     "/group-sales",
     entityId,
   );
@@ -82,28 +82,26 @@ export default function GroupSalesPage() {
   }
 
   return (
-    <>
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {`${total} group sale${total === 1 ? "" : "s"}`}
-        </p>
+    <ListPage
+      title="Group sales"
+      loading={loading}
+      error={error}
+      primaryAction={
         <Button type="button" onClick={() => setFormOpen(true)}>
           New group sale
         </Button>
-      </div>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={6} />}
-
-      {!loading && items.length === 0 && (
+      }
+      countLabel={`${total} group sale${total === 1 ? "" : "s"}`}
+      skeletonColumns={6}
+      isEmpty={items.length === 0}
+      empty={
         <EmptyState
           icon={Users}
           title="No group sales yet"
           hint="Record a tour or agency booking with menu lines and pax."
         />
-      )}
-
-      {items.length > 0 && (
+      }
+      table={
         <DataTable>
           <DataTableHead>
             <tr>
@@ -137,7 +135,7 @@ export default function GroupSalesPage() {
                 <DataTableCell align="right">
                   <div className="flex justify-end gap-2">
                     <Link href={`/customers/group-sales/${sale.id}`}>
-                      <Button type="button">
+                      <Button type="button" variant="ghost">
                         Open
                       </Button>
                     </Link>
@@ -177,8 +175,9 @@ export default function GroupSalesPage() {
             ))}
           </DataTableBody>
         </DataTable>
-      )}
-
+      }
+      pager={{ offset, pageSize, total, onOffsetChange: setOffset }}
+    >
       <GroupSaleForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -191,6 +190,7 @@ export default function GroupSalesPage() {
         onClose={() => setEditSale(null)}
         onSaved={() => void reload()}
       />
-    </>
+    </ListPage>
   );
+
 }

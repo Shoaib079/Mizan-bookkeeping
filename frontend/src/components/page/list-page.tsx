@@ -24,6 +24,9 @@ type Props = {
   toolbar?: React.ReactNode;
   /** "83 suppliers" — the honest count, always shown. */
   countLabel?: React.ReactNode;
+  /** A figure the whole list rolls up to, above the rows — total payables,
+   * total receivable. Use `HeadlineFigure`/`SummaryPanel`, not a bespoke card. */
+  summary?: React.ReactNode;
 
   /** Desktop table. */
   table: React.ReactNode;
@@ -61,6 +64,7 @@ export function ListPage({
   overflowActions,
   toolbar,
   countLabel,
+  summary,
   table,
   mobile,
   empty,
@@ -100,6 +104,10 @@ export function ListPage({
             <p className="text-sm text-muted-foreground">{countLabel}</p>
           )}
         </div>
+      )}
+
+      {summary && !forbidden && (
+        <div className="mb-5 flex flex-wrap gap-3">{summary}</div>
       )}
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}

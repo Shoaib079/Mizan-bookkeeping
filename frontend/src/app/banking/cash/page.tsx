@@ -13,6 +13,7 @@ import { CashMovementForm } from "@/components/forms/cash-movement-form";
 import { MoneyAccountForm } from "@/components/forms/money-account-form";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/page/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Label } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -214,32 +215,9 @@ export default function CashDrawerPage() {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <Link href="/banking" className="text-sm text-primary hover:underline">
-          ← Banking
-        </Link>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setAddDrawerOpen(true)}
-          >
-            Add cash drawer
-          </Button>
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setCountCashOpen(true)}
-          >
-            Count cash
-          </Button>
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setCloseDayOpen(true)}
-          >
-            Close day
-          </Button>
+      <PageHeader
+        title="Cash"
+        primaryAction={
           <Button
             type="button"
             disabled={!entityId}
@@ -247,8 +225,28 @@ export default function CashDrawerPage() {
           >
             Record movement
           </Button>
-        </div>
-      </div>
+        }
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!entityId}
+            onClick={() => setCountCashOpen(true)}
+          >
+            Count cash
+          </Button>
+        }
+        overflowActions={[
+          {
+            label: "Close day",
+            onSelect: () => setCloseDayOpen(true),
+          },
+          {
+            label: "Add cash drawer",
+            onSelect: () => setAddDrawerOpen(true),
+          },
+        ]}
+      />
 
       {!entityId && (
         <p className="text-sm text-muted-foreground">

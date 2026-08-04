@@ -17,7 +17,7 @@ export default function ReviewSalesPage() {
   return (
     <Suspense fallback={<TableSkeleton columns={6} />}>
       {/* M1: same merged panel as /sales, pre-filtered to the review queue. */}
-      <SalesReviewPanel defaultFilter="pending" />
+      <SalesReviewPanel defaultFilter="pending" title="Sales to review" />
     </Suspense>
   );
 }

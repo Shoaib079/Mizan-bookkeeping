@@ -83,6 +83,40 @@ describe("page archetypes", () => {
     }
   });
 
+  it("every list page composes ListPage and pages its rows", async () => {
+    // Slice 3. Rule 5: every list pages — no silent truncation. Staff and
+    // partners had no pager at all, and daily sales fetched 200 rows then told
+    // the reader "showing 200 — download Excel for the full list".
+    const lists = [
+      "../../app/staff/page.tsx",
+      "../../app/(procurement)/suppliers/page.tsx",
+      "../../app/(customers-section)/customers/page.tsx",
+      "../../app/(customers-section)/customers/group-sales/page.tsx",
+      "../../app/banking/transfers/page.tsx",
+      "../../app/partners/page.tsx",
+      "../group-sales/group-menus-panel.tsx",
+      "../delivery/delivery-platforms-panel.tsx",
+      "../review/sales-review-panel.tsx",
+    ];
+
+    for (const list of lists) {
+      const source = await read(list);
+      expect(source, list).toContain("<ListPage");
+      // ListPage owns the breakpoint; a page forking it is how they drifted.
+      expect(source.includes("useIsMobileShell"), `${list} forks mobile`).toBe(
+        false,
+      );
+      expect(source.includes("<h1"), `${list} draws its own title`).toBe(false);
+    }
+
+    // Partners is the one list still capped rather than paged — see the note in
+    // DESIGN_ARCHETYPES. Everything else offers a pager.
+    for (const list of lists.filter((l) => !l.includes("partners"))) {
+      const source = await read(list);
+      expect(source, `${list} has no pager`).toContain("pager={{");
+    }
+  });
+
   it("row actions sit in a trailing column, weighted like siblings", async () => {
     // Edit and Void used to render inside the description cell on staff,
     // partners and supplier activity — so their left edge moved with the length

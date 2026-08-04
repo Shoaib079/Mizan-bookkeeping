@@ -6,6 +6,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
 import { PartnerProfitAllocationForm } from "@/components/forms/partner-profit-allocation-form";
 import { AppShell } from "@/components/layout/app-shell";
+import { ListPage } from "@/components/page/list-page";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -16,7 +17,6 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { Handshake } from "lucide-react";
@@ -30,7 +30,6 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import { extractPartnerNetBalanceKurus } from "@/lib/partner-balance";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
-import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 type PartnerListResponse = {
   items: PartnerRow[];
@@ -155,7 +154,6 @@ function PartnerTable({
 }
 
 export default function PartnersPage() {
-  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const [showInactive, setShowInactive] = useState(false);
   const [items, setItems] = useState<PartnerRow[]>([]);
@@ -230,16 +228,31 @@ export default function PartnersPage() {
 
   return (
     <AppShell title="Partners">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {entityId
-            ? showInactive
-              ? `${activeCount} active · ${inactiveCount} inactive`
-              : `${total} active partner${total === 1 ? "" : "s"}`
-            : "Select a restaurant in the sidebar"}
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          {entityId && (
+      <ListPage
+        title="Partners"
+        loading={loading}
+        error={error}
+        primaryAction={
+          <Button
+            type="button"
+            disabled={!entityId}
+            onClick={() => setFormOpen(true)}
+          >
+            New partner
+          </Button>
+        }
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!entityId}
+            onClick={() => setAllocateOpen(true)}
+          >
+            Allocate profit
+          </Button>
+        }
+        toolbar={
+          entityId && (
             <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
               <input
                 type="checkbox"
@@ -249,56 +262,49 @@ export default function PartnersPage() {
               />
               Show inactive partners
             </label>
-          )}
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setAllocateOpen(true)}
-          >
-            Allocate profit
-          </Button>
-          <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
-            New partner
-          </Button>
-        </div>
-      </div>
-
-      {shareWarning && (
-        <p className="mb-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-          {shareWarning}
-        </p>
-      )}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <ListSkeleton columns={4} />}
-
-      {!loading && entityId && displayRows.length === 0 && (
-        <EmptyState
-          icon={Handshake}
-          title="No partners yet"
-          hint="Track expenses fronted by owners and reimbursements."
+          )
+        }
+        countLabel={
+          entityId
+            ? showInactive
+              ? `${activeCount} active · ${inactiveCount} inactive`
+              : `${total} active partner${total === 1 ? "" : "s"}`
+            : "Select a restaurant in the sidebar"
+        }
+        summary={
+          shareWarning && (
+            <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              {shareWarning}
+            </p>
+          )
+        }
+        skeletonColumns={4}
+        isEmpty={Boolean(entityId) && displayRows.length === 0}
+        empty={
+          <EmptyState
+            icon={Handshake}
+            title="No partners yet"
+            hint="Track expenses fronted by owners and reimbursements."
+          />
+        }
+        table={<PartnerTable {...listProps} />}
+        mobile={<PartnerCardList {...listProps} />}
+      >
+        <PartnerForm
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          onSaved={() => void reload()}
         />
-      )}
-
-      {!loading && displayRows.length > 0 &&
-        (isMobile ? (
-          <PartnerCardList {...listProps} />
-        ) : (
-          <PartnerTable {...listProps} />
-        ))}
-
-      <PartnerForm
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={() => void reload()}
-      />
-      <PartnerProfitAllocationForm
-        open={allocateOpen}
-        onClose={() => setAllocateOpen(false)}
-        onSaved={() => {
-          void reload();
-          setBalanceRefresh((value) => value + 1);
-        }}
-      />
+        <PartnerProfitAllocationForm
+          open={allocateOpen}
+          onClose={() => setAllocateOpen(false)}
+          onSaved={() => {
+            void reload();
+            setBalanceRefresh((value) => value + 1);
+          }}
+        />
+      </ListPage>
     </AppShell>
   );
+
 }

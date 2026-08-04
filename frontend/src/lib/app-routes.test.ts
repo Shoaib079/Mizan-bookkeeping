@@ -320,14 +320,19 @@ describe("delivery gating", () => {
   });
 
   it("sales list links uploads to Record instead of inline modal", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../app/(sales)/sales/page.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
-    expect(source).toContain('href="/record"');
-    expect(source).not.toContain("PosSummaryUploadForm");
+    // The link lives in the shared panel now that it carries the page header;
+    // /sales and /review/sales render the same one.
+    const read = (path: string) =>
+      import("fs/promises").then((fs) =>
+        fs.readFile(new URL(path, import.meta.url), "utf8"),
+      );
+
+    const panel = await read("../components/review/sales-review-panel.tsx");
+    expect(panel).toContain('href="/record"');
+    expect(panel).not.toContain("PosSummaryUploadForm");
+
+    const page = await read("../app/(sales)/sales/page.tsx");
+    expect(page).not.toContain("PosSummaryUploadForm");
   });
 });
 

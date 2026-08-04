@@ -12,8 +12,8 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { UtensilsCrossed } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
@@ -22,10 +22,11 @@ import { useEntityList } from "@/lib/use-entity-list";
 
 export function GroupMenusPanel() {
   const { entityId } = useEntity();
-  const { items, total, loading, error, reload } = useEntityList<GroupMenuRow>(
-    "/group-menus?include_inactive=true",
-    entityId,
-  );
+  const { items, total, loading, error, reload, offset, setOffset, pageSize } =
+    useEntityList<GroupMenuRow>(
+      "/group-menus?include_inactive=true",
+      entityId,
+    );
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<GroupMenuRow | null>(null);
 
@@ -38,28 +39,33 @@ export function GroupMenusPanel() {
   }
 
   return (
-    <>
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {`${total} menu${total === 1 ? "" : "s"}`}
-        </p>
-        <Button type="button" onClick={() => { setEditing(null); setFormOpen(true); }}>
+    <ListPage
+      title="Group menus"
+      meta="Catalog of menus tour agencies can book. Used when recording group sales."
+      loading={loading}
+      error={error}
+      primaryAction={
+        <Button
+          type="button"
+          onClick={() => {
+            setEditing(null);
+            setFormOpen(true);
+          }}
+        >
           New menu
         </Button>
-      </div>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={3} />}
-
-      {!loading && items.length === 0 && (
+      }
+      countLabel={`${total} menu${total === 1 ? "" : "s"}`}
+      skeletonColumns={3}
+      isEmpty={items.length === 0}
+      empty={
         <EmptyState
           icon={UtensilsCrossed}
           title="No group menus yet"
           hint="Add menus your tour agencies can book (e.g. Veg lunch, Non-veg dinner)."
         />
-      )}
-
-      {items.length > 0 && (
+      }
+      table={
         <DataTable>
           <DataTableHead>
             <tr>
@@ -78,6 +84,7 @@ export function GroupMenusPanel() {
                 <DataTableCell align="right">
                   <Button
                     type="button"
+                    variant="ghost"
                     onClick={() => {
                       setEditing(row);
                       setFormOpen(true);
@@ -90,14 +97,16 @@ export function GroupMenusPanel() {
             ))}
           </DataTableBody>
         </DataTable>
-      )}
-
+      }
+      pager={{ offset, pageSize, total, onOffsetChange: setOffset }}
+    >
       <GroupMenuForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
         menu={editing}
         onSaved={() => void reload()}
       />
-    </>
+    </ListPage>
   );
+
 }

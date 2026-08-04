@@ -1,9 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
+
+/** Matches ENTITY_LIST_PAGE_SIZE so every list in the app pages alike. */
+export const SALES_PAGE_SIZE = 50;
 
 export type SalesReviewFilter = "all" | "pending" | "posted";
 
@@ -56,16 +59,40 @@ export function useSalesReviewUrl(defaultFilter: SalesReviewFilter = "all") {
     [router, searchParams],
   );
 
+  /** One page at a time. This used to fetch limit=200 and tell the reader
+   * "showing 200 — download Excel for the full list", which is the silent
+   * truncation DESIGN_ARCHETYPES rule 5 exists to stop. */
+  const [offset, setOffset] = useState(0);
+  // A new period or filter starts at page one — otherwise you land on an
+  // offset that no longer exists and see an empty table.
+  useEffect(() => setOffset(0), [from, to, review]);
+
   const listQuery = useMemo(() => {
-    const params = new URLSearchParams({ from, to, limit: "200" });
+    const params = new URLSearchParams({
+      from,
+      to,
+      limit: String(SALES_PAGE_SIZE),
+      offset: String(offset),
+    });
     if (review !== "all") params.set("review", review);
     return params.toString();
-  }, [from, review, to]);
+  }, [from, offset, review, to]);
 
   const exportQuery = useMemo(() => {
     const params = new URLSearchParams({ from, to, review });
     return params.toString();
   }, [from, review, to]);
 
-  return { from, to, review, setRange, setReview, listQuery, exportQuery };
+  return {
+    from,
+    to,
+    review,
+    setRange,
+    setReview,
+    listQuery,
+    exportQuery,
+    offset,
+    setOffset,
+    pageSize: SALES_PAGE_SIZE,
+  };
 }

@@ -1,10 +1,13 @@
 "use client";
 
+/** Staff list — DESIGN_ARCHETYPES §3 (`ListPage`). */
+
 import Link from "next/link";
 import { Fragment, useMemo, useState } from "react";
 
 import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form";
 import { AppShell } from "@/components/layout/app-shell";
+import { ListPage } from "@/components/page/list-page";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -17,14 +20,12 @@ import {
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { UsersRound } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
 import { formatStaffBalanceMinor } from "@/lib/format-staff-balance";
-import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import {
   countInactiveDirectoryRows,
   directoryInactiveSplitIndex,
@@ -140,15 +141,23 @@ function StaffTable({
 }
 
 export default function StaffPage() {
-  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const [showInactive, setShowInactive] = useState(false);
   const listPath = useMemo(
     () => `/staff/employees?include_inactive=${showInactive ? "true" : "false"}`,
     [showInactive],
   );
-  const { items, total, loading, error, forbidden, reload } =
-    useEntityList<EmployeeRow>(listPath, entityId);
+  const {
+    items,
+    total,
+    loading,
+    error,
+    forbidden,
+    reload,
+    offset,
+    setOffset,
+    pageSize,
+  } = useEntityList<EmployeeRow>(listPath, entityId);
   const displayRows = useMemo(() => sortDirectoryActiveFirst(items), [items]);
   const inactiveSplitAt = useMemo(
     () => (showInactive ? directoryInactiveSplitIndex(displayRows) : undefined),
@@ -178,16 +187,26 @@ export default function StaffPage() {
 
   return (
     <AppShell title="Staff">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {entityId
-            ? showInactive
-              ? `${activeCount} active · ${inactiveCount} inactive`
-              : `${total} active employee${total === 1 ? "" : "s"}`
-            : "Select a restaurant in the sidebar"}
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          {entityId && (
+      <ListPage
+        title="Staff"
+        loading={loading}
+        error={error}
+        forbidden={
+          entityId && forbidden ? (
+            <ForbiddenMessage context="staff list" />
+          ) : undefined
+        }
+        primaryAction={
+          <Button
+            type="button"
+            disabled={!entityId}
+            onClick={() => setFormOpen(true)}
+          >
+            New employee
+          </Button>
+        }
+        toolbar={
+          entityId && (
             <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
               <input
                 type="checkbox"
@@ -197,37 +216,34 @@ export default function StaffPage() {
               />
               Show inactive employees
             </label>
-          )}
-          <Button type="button" disabled={!entityId} onClick={() => setFormOpen(true)}>
-            New employee
-          </Button>
-        </div>
-      </div>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {entityId && forbidden && <ForbiddenMessage context="staff list" />}
-      {loading && <ListSkeleton columns={4} />}
-
-      {!loading && entityId && !forbidden && displayRows.length === 0 && (
-        <EmptyState
-          icon={UsersRound}
-          title="No employees yet"
-          hint="Add staff to track salary accruals, advances, and payments."
+          )
+        }
+        countLabel={
+          entityId
+            ? showInactive
+              ? `${activeCount} active · ${inactiveCount} inactive`
+              : `${total} active employee${total === 1 ? "" : "s"}`
+            : "Select a restaurant in the sidebar"
+        }
+        skeletonColumns={4}
+        isEmpty={Boolean(entityId) && displayRows.length === 0}
+        empty={
+          <EmptyState
+            icon={UsersRound}
+            title="No employees yet"
+            hint="Add staff to track salary accruals, advances, and payments."
+          />
+        }
+        table={<StaffTable {...listProps} />}
+        mobile={<StaffCardList {...listProps} />}
+        pager={{ offset, pageSize, total, onOffsetChange: setOffset }}
+      >
+        <EmployeeForm
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          onSaved={() => void reload()}
         />
-      )}
-
-      {!loading && !forbidden && displayRows.length > 0 &&
-        (isMobile ? (
-          <StaffCardList {...listProps} />
-        ) : (
-          <StaffTable {...listProps} />
-        ))}
-
-      <EmployeeForm
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={() => void reload()}
-      />
+      </ListPage>
     </AppShell>
   );
 }

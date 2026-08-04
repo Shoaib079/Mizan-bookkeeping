@@ -16,13 +16,12 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { ForbiddenMessage } from "@/components/reports/forbidden-message";
+import { ListPage } from "@/components/page/list-page";
+import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { ListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { TablePager } from "@/components/ui/table-pager";
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
-import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { Users } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -127,7 +126,6 @@ function SupplierTable({
 }
 
 export default function SuppliersPage() {
-  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
   const [showInactive, setShowInactive] = useState(false);
   const [searchDraft, setSearchDraft] = useState("");
@@ -148,39 +146,64 @@ export default function SuppliersPage() {
   const inactiveItems = useMemo(() => items.filter((row) => !row.is_active), [items]);
   const activeCount = showInactive ? activeItems.length : total;
 
-  function SupplierListView({
-    rows,
-  }: {
-    rows: SupplierRow[];
-  }) {
-    const props = { rows, balances: balancesState.balances };
-    return isMobile ? (
-      <SupplierCardList {...props} />
-    ) : (
-      <SupplierTable {...props} />
+  const sections = (
+    render: (props: { rows: SupplierRow[] }) => React.ReactNode,
+  ) => {
+    if (!showInactive) return render({ rows: items });
+    return (
+      <>
+        {activeItems.length > 0 && (
+          <section className="mb-8">
+            <h2 className="mb-2 text-sm font-semibold text-foreground">
+              Active suppliers
+            </h2>
+            {render({ rows: activeItems })}
+          </section>
+        )}
+        {inactiveItems.length > 0 && (
+          <section className="mb-8">
+            <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
+              Inactive suppliers
+            </h2>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Deactivated suppliers stay in history but are hidden from invoice
+              linking and new payments.
+            </p>
+            {render({ rows: inactiveItems })}
+          </section>
+        )}
+      </>
     );
-  }
+  };
 
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+    <ListPage
+      title="Suppliers"
+      loading={loading}
+      error={error}
+      forbidden={
+        entityId && forbidden ? (
+          <ForbiddenMessage context="supplier list" />
+        ) : undefined
+      }
+      primaryAction={
+        <Button
+          type="button"
+          disabled={!entityId}
+          onClick={() => setFormOpen(true)}
+        >
+          New supplier
+        </Button>
+      }
+      toolbar={
+        <>
           <Input
             value={searchDraft}
             disabled={!entityId}
             placeholder="Search suppliers…"
-            className={cn("w-56", isMobile && "w-full max-w-none")}
+            className="w-56"
             onChange={(event) => setSearchDraft(event.target.value)}
           />
-          <p className="text-sm text-muted-foreground">
-            {entityId
-              ? showInactive
-                ? `${activeCount} active · ${inactiveItems.length} inactive`
-                : `${total} active supplier${total === 1 ? "" : "s"}`
-              : "Select a restaurant in the sidebar"}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
           {entityId && (
             <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
               <input
@@ -192,33 +215,28 @@ export default function SuppliersPage() {
               Show inactive suppliers
             </label>
           )}
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setFormOpen(true)}
-          >
-            New supplier
-          </Button>
-        </div>
-      </div>
-
-      {entityId && !forbidden && (
-        <div className="mb-6 rounded-lg border border-border bg-card p-4 sm:max-w-xs">
-          <p className="text-sm text-muted-foreground">Total payables</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">
-            {balancesState.loading ? "…" : formatTry(balancesState.totalKurus)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Across all suppliers — any month until paid.
-          </p>
-        </div>
-      )}
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {entityId && forbidden && <ForbiddenMessage context="supplier list" />}
-      {loading && <ListSkeleton columns={4} />}
-
-      {!loading && entityId && !forbidden && items.length === 0 && (
+        </>
+      }
+      countLabel={
+        entityId
+          ? showInactive
+            ? `${activeCount} active · ${inactiveItems.length} inactive`
+            : `${total} active supplier${total === 1 ? "" : "s"}`
+          : "Select a restaurant in the sidebar"
+      }
+      summary={
+        entityId && (
+          <HeadlineFigure
+            label="Total payables"
+            amountKurus={balancesState.totalKurus}
+            caption="Across all suppliers — any month until paid."
+            format={balancesState.loading ? () => "…" : undefined}
+          />
+        )
+      }
+      skeletonColumns={4}
+      isEmpty={Boolean(entityId) && items.length === 0}
+      empty={
         <EmptyState
           icon={Users}
           title={search ? "No suppliers match your search" : "No suppliers yet"}
@@ -228,49 +246,20 @@ export default function SuppliersPage() {
               : "Create a supplier to track payables and e-Fatura invoices."
           }
         />
-      )}
-
-      {!loading && !forbidden && showInactive && activeItems.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-2 text-sm font-semibold text-foreground">
-            Active suppliers
-          </h2>
-          <SupplierListView rows={activeItems} />
-        </section>
-      )}
-
-      {!loading && !forbidden && showInactive && inactiveItems.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
-            Inactive suppliers
-          </h2>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Deactivated suppliers stay in history but are hidden from invoice
-            linking and new payments.
-          </p>
-          <SupplierListView rows={inactiveItems} />
-        </section>
-      )}
-
-      {!loading && !forbidden && !showInactive && items.length > 0 && (
-        <SupplierListView rows={items} />
-      )}
-
-      {!forbidden && (
-        <TablePager
-          offset={offset}
-          pageSize={pageSize}
-          total={total}
-          disabled={loading}
-          onOffsetChange={setOffset}
-        />
-      )}
-
+      }
+      table={sections((props) => (
+        <SupplierTable {...props} balances={balancesState.balances} />
+      ))}
+      mobile={sections((props) => (
+        <SupplierCardList {...props} balances={balancesState.balances} />
+      ))}
+      pager={{ offset, pageSize, total, onOffsetChange: setOffset }}
+    >
       <SupplierForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSaved={() => void reload()}
       />
-    </>
+    </ListPage>
   );
 }

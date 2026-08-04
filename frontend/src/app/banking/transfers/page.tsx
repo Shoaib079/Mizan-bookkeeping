@@ -2,7 +2,6 @@
 
 /** Account transfers — Phase 9 Slice 4. */
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { TransferForm } from "@/components/forms/transfer-form";
@@ -15,9 +14,8 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
-import { TablePager } from "@/components/ui/table-pager";
 import { ArrowLeftRight } from "lucide-react";
 import type { AccountTransferRead } from "@/lib/banking-types";
 import { apiFetch } from "@/lib/api";
@@ -68,11 +66,11 @@ export default function TransfersPage() {
   }
 
   return (
-    <>
-      <div className="mb-4 flex items-center justify-between">
-        <Link href="/banking" className="text-sm text-primary hover:underline">
-          ← Banking
-        </Link>
+    <ListPage
+      title="Transfers"
+      loading={loading}
+      error={error}
+      primaryAction={
         <Button
           type="button"
           disabled={!entityId}
@@ -80,24 +78,18 @@ export default function TransfersPage() {
         >
           New transfer
         </Button>
-      </div>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={5} />}
-
-      {!loading && entityId && items.length === 0 && (
+      }
+      countLabel={`${total} transfer${total === 1 ? "" : "s"}`}
+      skeletonColumns={5}
+      isEmpty={Boolean(entityId) && items.length === 0}
+      empty={
         <EmptyState
           icon={ArrowLeftRight}
           title="No transfers recorded yet"
           hint="Move money between bank and cash accounts."
         />
-      )}
-
-      {items.length > 0 && (
-        <>
-          <p className="mb-3 text-sm text-muted-foreground">
-            {total} transfer{total === 1 ? "" : "s"}
-          </p>
+      }
+      table={
           <DataTable>
             <DataTableHead>
               <tr>
@@ -128,21 +120,15 @@ export default function TransfersPage() {
               ))}
             </DataTableBody>
           </DataTable>
-          <TablePager
-            offset={offset}
-            pageSize={pageSize}
-            total={total}
-            disabled={loading}
-            onOffsetChange={setOffset}
-          />
-        </>
-      )}
-
+      }
+      pager={{ offset, pageSize, total, onOffsetChange: setOffset }}
+    >
       <TransferForm
         open={transferOpen}
         onClose={() => setTransferOpen(false)}
         onTransferred={() => void reload()}
       />
-    </>
+    </ListPage>
   );
+
 }

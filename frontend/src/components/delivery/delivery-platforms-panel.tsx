@@ -12,8 +12,8 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Truck } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
@@ -22,7 +22,7 @@ import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
 
 export function DeliveryPlatformsPanel() {
   const { entityId } = useEntity();
-  const { items, total, loading, error, reload } =
+  const { items, total, loading, error, reload, offset, setOffset, pageSize } =
     useEntityList<DeliveryPlatform>(
       "/delivery/platforms?include_inactive=true",
       entityId,
@@ -49,28 +49,26 @@ export function DeliveryPlatformsPanel() {
   }
 
   return (
-    <>
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {`${total} platform${total === 1 ? "" : "s"}`}
-        </p>
+    <ListPage
+      title="Delivery platforms"
+      loading={loading}
+      error={error}
+      primaryAction={
         <Button type="button" onClick={openCreate}>
           New platform
         </Button>
-      </div>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={4} />}
-
-      {!loading && items.length === 0 && (
+      }
+      countLabel={`${total} platform${total === 1 ? "" : "s"}`}
+      skeletonColumns={4}
+      isEmpty={items.length === 0}
+      empty={
         <EmptyState
           icon={Truck}
           title="No delivery platforms yet"
           hint="Add Getir, Yemeksepeti, or other delivery partners."
         />
-      )}
-
-      {items.length > 0 && (
+      }
+      table={
         <DataTable>
           <DataTableHead>
             <tr>
@@ -103,14 +101,16 @@ export function DeliveryPlatformsPanel() {
             ))}
           </DataTableBody>
         </DataTable>
-      )}
-
+      }
+      pager={{ offset, pageSize, total, onOffsetChange: setOffset }}
+    >
       <DeliveryPlatformForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
         platform={editing}
         onSaved={() => void reload()}
       />
-    </>
+    </ListPage>
   );
+
 }

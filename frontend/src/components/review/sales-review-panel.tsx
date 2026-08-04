@@ -18,8 +18,9 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { FilterChips } from "@/components/page/filter-chips";
+import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ListSkeleton } from "@/components/ui/skeleton";
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ShoppingBag } from "lucide-react";
@@ -39,8 +40,6 @@ import {
   useSalesReviewUrl,
   type SalesReviewFilter,
 } from "@/lib/use-sales-review-url";
-import { cn } from "@/lib/utils";
-import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 type PaginatedResponse<T> = { items: T[]; total: number };
 
@@ -49,15 +48,28 @@ type Props = {
   defaultFilter?: SalesReviewFilter;
   /** M3: /sales owns creation — "New daily sales" button + ?new=1 deep link. */
   showCreate?: boolean;
+  /** The page's own name — /sales and /review/sales share this panel. */
+  title?: string;
 };
 
 export function SalesReviewPanel({
   defaultFilter = "all",
   showCreate = false,
+  title = "Daily sales",
 }: Props) {
-  const isMobile = useIsMobileShell();
   const { entityId } = useEntity();
-  const { from, to, review, setRange, setReview, listQuery, exportQuery } =
+  const {
+    from,
+    to,
+    review,
+    setRange,
+    setReview,
+    listQuery,
+    exportQuery,
+    offset,
+    setOffset,
+    pageSize,
+  } =
     useSalesReviewUrl(defaultFilter);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -152,111 +164,69 @@ export function SalesReviewPanel({
   }
 
   return (
-    <>
-      <div className="mb-4 space-y-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+    <ListPage
+      title={title}
+      loading={loading}
+      error={error}
+      primaryAction={
+        showCreate ? (
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            New daily sales
+          </Button>
+        ) : undefined
+      }
+      actions={
+        <>
+          {showCreate && (
+            <Link href="/record">
+              <Button type="button" variant="secondary">
+                Upload via Record
+              </Button>
+            </Link>
+          )}
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={loading || exporting || total === 0}
+          className="gap-1.5"
+          onClick={() => void onExport()}
+        >
+          <Download className="size-4" />
+          {exporting ? "Downloading…" : "Download Excel"}
+        </Button>
+        </>
+      }
+      toolbar={
+        <>
           <ReportDateRange
             from={from}
             to={to}
             disabled={loading || exporting}
             onChange={setRange}
           />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={loading || exporting || total === 0}
-              className="gap-1.5"
-              onClick={() => void onExport()}
-            >
-              <Download className="size-4" />
-              {exporting ? "Downloading…" : "Download Excel"}
-            </Button>
-            {showCreate && (
-              <Button type="button" onClick={() => setCreateOpen(true)}>
-                New daily sales
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1">
-          {SALES_REVIEW_FILTERS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm",
-                review === tab.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80",
-              )}
-              onClick={() => setReview(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <p className="text-sm text-muted-foreground">
-          {loading
-            ? "Loading…"
-            : `${total} daily sale${total === 1 ? "" : "s"} in this period`}
-          {total > items.length && !loading
-            ? ` (showing ${items.length} — download Excel for the full list)`
-            : null}
-        </p>
-      </div>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <ListSkeleton columns={6} rows={4} />}
-
-      {!loading && items.length === 0 ? (
+          <FilterChips
+            chips={SALES_REVIEW_FILTERS}
+            value={review}
+            onChange={setReview}
+            ariaLabel="Filter daily sales"
+          />
+        </>
+      }
+      countLabel={
+        loading
+          ? "Loading…"
+          : `${total} daily sale${total === 1 ? "" : "s"} in this period`
+      }
+      skeletonColumns={6}
+      isEmpty={items.length === 0}
+      empty={
         <EmptyState
           icon={ShoppingBag}
           title="No sales in this period"
           hint="Change the dates or filter, or upload sales via Record."
         />
-      ) : null}
-
-      {!loading && items.length > 0 && isMobile && (
-        <MobileCardList>
-          {items.map((row) => (
-            <MobileCardRow
-              key={row.id}
-              href={
-                isPendingReviewStatus(row.status)
-                  ? `/sales/${row.id}`
-                  : `/sales/${row.id}`
-              }
-              title={row.summary_date ? formatTrDate(row.summary_date) : "—"}
-              meta={<StatusBadge status={row.status} />}
-              amount={formatTry(row.total_kurus)}
-              trailing={
-                row.status === "posted" ? (
-                  <div className="flex gap-1">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-8 px-2 text-xs"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCorrectSummary(row);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                  </div>
-                ) : isPendingReviewStatus(row.status) ? (
-                  <span className="text-xs text-primary">Review</span>
-                ) : null
-              }
-            />
-          ))}
-        </MobileCardList>
-      )}
-
-      {!loading && items.length > 0 && !isMobile && (
+      }
+      table={
         <DataTable>
           <DataTableHead>
             <tr>
@@ -326,8 +296,45 @@ export function SalesReviewPanel({
             ))}
           </DataTableBody>
         </DataTable>
-      )}
-
+      }
+      mobile={
+        <MobileCardList>
+          {items.map((row) => (
+            <MobileCardRow
+              key={row.id}
+              href={
+                isPendingReviewStatus(row.status)
+                  ? `/sales/${row.id}`
+                  : `/sales/${row.id}`
+              }
+              title={row.summary_date ? formatTrDate(row.summary_date) : "—"}
+              meta={<StatusBadge status={row.status} />}
+              amount={formatTry(row.total_kurus)}
+              trailing={
+                row.status === "posted" ? (
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-8 px-2 text-xs"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCorrectSummary(row);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                ) : isPendingReviewStatus(row.status) ? (
+                  <span className="text-xs text-primary">Review</span>
+                ) : null
+              }
+            />
+          ))}
+        </MobileCardList>
+      }
+      pager={{ offset, pageSize, total, onOffsetChange: setOffset }}
+    >
       {showCreate && (
         <ManualDailySalesForm
           open={createOpen}
@@ -362,6 +369,6 @@ export function SalesReviewPanel({
           void reload();
         }}
       />
-    </>
+    </ListPage>
   );
 }
