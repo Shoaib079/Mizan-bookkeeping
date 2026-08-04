@@ -248,7 +248,12 @@ def test_exported_amounts_are_lira(
     assert 100_000 not in values
 
     # A number, not a formatted string — otherwise every SUM() in the file breaks.
-    assert all(cell.number_format == "#,##0.00" for cell in numbers)
+    # Money columns carry the accounting variant (negatives red in parentheses);
+    # both are numeric formats, neither turns the value into text.
+    assert all(
+        cell.number_format in ("#,##0.00", "#,##0.00;[Red](#,##0.00)")
+        for cell in numbers
+    )
 
 
 def test_money_columns_are_marked_as_lira(client: TestClient, export_setup) -> None:

@@ -139,7 +139,8 @@ def test_balance_sheet_pdf_export(
     )
     text = _pdf_text(data)
     assert setup["entity_name"] in text
-    assert "Assets" in text
+    # Section bands and KPI labels render uppercase (accounting presentation).
+    assert "assets" in text.lower()
     _assert_amount_with_try_symbol(bs_report.total_assets_kurus, text)
 
 
@@ -159,7 +160,8 @@ def test_cash_flow_pdf_export(
 
     text = _pdf_text(data)
     assert setup["entity_name"] in text
-    assert "Opening cash" in text
+    # "OPENING CASH" now leads the KPI band rather than a summary table row.
+    assert "opening cash" in text.lower()
     _assert_amount_with_try_symbol(100_000, text)
 
 
