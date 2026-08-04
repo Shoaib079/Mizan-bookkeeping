@@ -83,6 +83,31 @@ describe("page archetypes", () => {
     }
   });
 
+  it("row actions sit in a trailing column, weighted like siblings", async () => {
+    // Edit and Void used to render inside the description cell on staff,
+    // partners and supplier activity — so their left edge moved with the length
+    // of the text beside them and you couldn't scan the column. Edit was also
+    // filled-primary, making a long ledger a wall of blue.
+    const source = await read("../ledger/subledger-row-actions.tsx");
+    expect(source).not.toContain("inline");
+    expect(source).toContain('variant="ghost"');
+    expect(source).not.toMatch(/variant="primary"/);
+
+    for (const page of [
+      "../../app/staff/[id]/page.tsx",
+      "../../app/partners/[id]/page.tsx",
+      "../supplier-activity-panel.tsx",
+    ]) {
+      const pageSource = await read(page);
+      expect(pageSource, page).toMatch(
+        /<DataTableHeaderCell align="right">\s*Actions/,
+      );
+      expect(pageSource.includes("inline"), `${page} still inlines actions`).toBe(
+        false,
+      );
+    }
+  });
+
   it("FilterChips exposes counts for review queues", async () => {
     const source = await read("./filter-chips.tsx");
     expect(source).toContain("chip.count");

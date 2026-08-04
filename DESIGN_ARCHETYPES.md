@@ -81,6 +81,8 @@ Legend: ☐ pending · ☑ done.
 ### Slice 1 — archetype components
 ☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☐ `ReviewPage` ☐ `DocumentReviewPage` ☐ `FormPage` ☐ `ReportPage` ☑ `SummaryPanel` ☐ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
 
+`LedgerTable` is still to build; its row-action rule was pulled forward on 2026-08-04 (actions live in a trailing column, Edit and Void weighted alike) because the inline placement was the loudest thing on the staff page.
+
 ### Slice 2 — entity detail (7) — **done 2026-08-04**
 ☑ `/staff/[id]` ☑ `/suppliers/[id]` ☑ `/customers/[id]` ☑ `/partners/[id]` ☑ `/banking/accounts/[id]` ☑ `/banking/fx/[id]` ☑ `/customers/group-sales/[id]`
 

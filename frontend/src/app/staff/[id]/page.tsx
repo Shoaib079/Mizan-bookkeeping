@@ -334,6 +334,7 @@ export default function StaffDetailPage() {
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
                 </tr>
               </DataTableHead>
               <DataTableBody>
@@ -392,9 +393,18 @@ export default function StaffDetailPage() {
                             <EditedBadge />
                           </span>
                         )}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        {formatMinorAmount(group.netMinor)}
+                      </DataTableCell>
+                      <DataTableCell align="right" className="tabular-nums text-muted-foreground">
+                        {group.balanceMinor === null
+                          ? "—"
+                          : formatMinorAmount(group.balanceMinor)}
+                      </DataTableCell>
+                      <DataTableCell>
                         {canAct && (
                           <SubledgerRowActions
-                            inline
                             row={entry}
                             showEdit={actions.canEdit}
                             onEdit={() =>
@@ -416,14 +426,6 @@ export default function StaffDetailPage() {
                             }
                           />
                         )}
-                      </DataTableCell>
-                      <DataTableCell align="right">
-                        {formatMinorAmount(group.netMinor)}
-                      </DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums text-muted-foreground">
-                        {group.balanceMinor === null
-                          ? "—"
-                          : formatMinorAmount(group.balanceMinor)}
                       </DataTableCell>
                     </DataTableRow>
                   );

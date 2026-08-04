@@ -303,6 +303,9 @@ export default function PartnerDetailPage() {
                   <DataTableHeaderCell align="right">
                     Balance
                   </DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">
+                    Actions
+                  </DataTableHeaderCell>
                 </tr>
               </DataTableHead>
               <DataTableBody>
@@ -327,7 +330,7 @@ export default function PartnerDetailPage() {
                         <td className="px-4 py-1.5 text-right text-sm font-semibold tabular-nums text-primary">
                           {band.grossKurus != null && formatTry(band.grossKurus)}
                         </td>
-                        <td />
+                        <td colSpan={2} />
                       </tr>
                     )}
                     {band.rows.map((entry) => {
@@ -358,9 +361,20 @@ export default function PartnerDetailPage() {
                                 <EditedBadge />
                               </span>
                             )}
+                          </DataTableCell>
+                          <DataTableCell align="right">
+                            {formatTry(entry.amount_kurus)}
+                          </DataTableCell>
+                          <DataTableCell align="right">
+                            {entry.running_balance_kurus != null
+                              ? formatPartnerNetBalance(
+                                  entry.running_balance_kurus,
+                                )
+                              : "—"}
+                          </DataTableCell>
+                          <DataTableCell>
                             {canAct && (
                               <SubledgerRowActions
-                                inline
                                 row={entry}
                                 showEdit={actions.canEdit}
                                 onEdit={() =>
@@ -382,16 +396,6 @@ export default function PartnerDetailPage() {
                                 }
                               />
                             )}
-                          </DataTableCell>
-                          <DataTableCell align="right">
-                            {formatTry(entry.amount_kurus)}
-                          </DataTableCell>
-                          <DataTableCell align="right">
-                            {entry.running_balance_kurus != null
-                              ? formatPartnerNetBalance(
-                                  entry.running_balance_kurus,
-                                )
-                              : "—"}
                           </DataTableCell>
                         </DataTableRow>
                       );

@@ -230,6 +230,7 @@ export function SupplierActivityPanel({
                 <DataTableHeaderCell>Dekont</DataTableHeaderCell>
                 <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
                 <DataTableHeaderCell>Doc</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
               </tr>
             </DataTableHead>
             <DataTableBody>
@@ -254,9 +255,46 @@ export function SupplierActivityPanel({
                         <EditedBadge />
                       </span>
                     )}
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    {row.net_kurus != null ? formatTry(row.net_kurus) : "—"}
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    {row.vat_kurus != null ? formatTry(row.vat_kurus) : "—"}
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    {row.amount_kurus != null ? formatTry(row.amount_kurus) : "—"}
+                  </DataTableCell>
+                  <DataTableCell>{row.bank_name ?? "—"}</DataTableCell>
+                  <DataTableCell>{row.dekont_ref ?? "—"}</DataTableCell>
+                  <DataTableCell align="right">
+                    {formatSupplierPayableBalance(row.balance_kurus)}
+                  </DataTableCell>
+                  <DataTableCell>
+                    {row.has_document && row.invoice_draft_id ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-8 px-2 text-xs"
+                        onClick={() =>
+                          setPreviewDraftId(
+                            previewDraftId === row.invoice_draft_id
+                              ? null
+                              : row.invoice_draft_id,
+                          )
+                        }
+                      >
+                        {previewDraftId === row.invoice_draft_id
+                          ? "Hide"
+                          : "View"}
+                      </Button>
+                    ) : (
+                      "—"
+                    )}
+                  </DataTableCell>
+                  <DataTableCell>
                     {row.movement_kind === "payment" && onCorrectPayment && (
                       <SubledgerRowActions
-                        inline
                         row={row}
                         onEdit={() =>
                           onCorrectPayment({
@@ -280,7 +318,6 @@ export function SupplierActivityPanel({
                       row.can_edit &&
                       onEditInvoice && (
                         <SubledgerRowActions
-                          inline
                           row={row}
                           onEdit={() =>
                             onEditInvoice({
@@ -304,7 +341,8 @@ export function SupplierActivityPanel({
                       row.movement_kind === "unposted_invoice" && (
                         <Button
                           type="button"
-                          className="ml-2 inline-flex h-8 px-2 text-xs align-middle"
+                          variant="ghost"
+                          className="h-8 px-2 text-xs"
                           onClick={() =>
                             setReviewDraftId(
                               reviewDraftId === row.invoice_draft_id
@@ -318,41 +356,6 @@ export function SupplierActivityPanel({
                             : "Review"}
                         </Button>
                       )}
-                  </DataTableCell>
-                  <DataTableCell align="right">
-                    {row.net_kurus != null ? formatTry(row.net_kurus) : "—"}
-                  </DataTableCell>
-                  <DataTableCell align="right">
-                    {row.vat_kurus != null ? formatTry(row.vat_kurus) : "—"}
-                  </DataTableCell>
-                  <DataTableCell align="right">
-                    {row.amount_kurus != null ? formatTry(row.amount_kurus) : "—"}
-                  </DataTableCell>
-                  <DataTableCell>{row.bank_name ?? "—"}</DataTableCell>
-                  <DataTableCell>{row.dekont_ref ?? "—"}</DataTableCell>
-                  <DataTableCell align="right">
-                    {formatSupplierPayableBalance(row.balance_kurus)}
-                  </DataTableCell>
-                  <DataTableCell>
-                    {row.has_document && row.invoice_draft_id ? (
-                      <Button
-                        type="button"
-                        className="h-8 px-2 text-xs"
-                        onClick={() =>
-                          setPreviewDraftId(
-                            previewDraftId === row.invoice_draft_id
-                              ? null
-                              : row.invoice_draft_id,
-                          )
-                        }
-                      >
-                        {previewDraftId === row.invoice_draft_id
-                          ? "Hide"
-                          : "View"}
-                      </Button>
-                    ) : (
-                      "—"
-                    )}
                   </DataTableCell>
                 </DataTableRow>
               ))}
