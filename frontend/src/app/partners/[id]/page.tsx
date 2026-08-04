@@ -182,7 +182,6 @@ export default function PartnerDetailPage() {
               {(ledger.balance_kurus !== 0 ||
                 ledger.capital_contribution_kurus !== 0 ||
                 ledger.profit_allocated_kurus !== 0 ||
-                ledger.drawings_net_kurus !== 0 ||
                 (ledger.loan_balance_kurus ?? 0) !== 0) && (
                 <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                   {ledger.balance_kurus !== 0 && (
@@ -207,12 +206,6 @@ export default function PartnerDetailPage() {
                     <p>
                       Unpaid profit:{" "}
                       {formatTry(ledger.unpaid_profit_kurus ?? 0)}
-                    </p>
-                  )}
-                  {ledger.drawings_net_kurus !== 0 && (
-                    <p>
-                      Drawings (net):{" "}
-                      {formatPartnerNetBalance(ledger.drawings_net_kurus)}
                     </p>
                   )}
                   {(ledger.loan_balance_kurus ?? 0) !== 0 && (

@@ -4,6 +4,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-04
 
+**Partner summary — no Drawings (net) line.**
+- Partner page card no longer lists “Drawings (net)”. **Partner owes you** already has the cash position; the drawings line stayed after profit settled and confused the picture.
+
 **Edit partner profit allocation + amount beats period.**
 - General ledger → **Edit** on a Partner profit share row: change the total (e.g. 410.134 → 400.000). Saves by void+repost so each partner’s capital / unpaid profit update automatically.
 - Allocate form: typed **amount always wins**. Optional period only sets the drawings cutoff. Leave amount blank to distribute the period’s full net P&L. Preview states which source you are using.
