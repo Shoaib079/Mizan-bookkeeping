@@ -49,11 +49,11 @@ async function checklistRoutes(): Promise<string[]> {
     new URL("../../../DESIGN_ARCHETYPES.md", import.meta.url),
     "utf8",
   );
+  // Boxes may be ticked (☑) or not (☐) — coverage is about what is listed.
   const section = doc.split("## Migration checklist")[1] ?? "";
-  const blocks =
-    section.match(/### Slice [2-7][^\n]*\n(?:[^\n]*☐[^\n]*\n?)+/g) ?? [];
-  return blocks.flatMap((block) =>
-    [...block.matchAll(/☐ `([^`]+)`/g)].map((match) => match[1]),
+  const slices = section.split(/^### Slice /m).filter((block) => /^[2-7]\b/.test(block));
+  return slices.flatMap((block) =>
+    [...block.matchAll(/[☐☑] `(\/[^`]*)`/g)].map((match) => match[1]),
   );
 }
 

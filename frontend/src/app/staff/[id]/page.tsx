@@ -1,5 +1,7 @@
 "use client";
 
+/** Staff detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
+
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -20,6 +22,12 @@ import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import { AppShell } from "@/components/layout/app-shell";
+import {
+  DetailSection,
+  EntityDetailPage,
+} from "@/components/page/entity-detail-page";
+import { MetaFacts } from "@/components/page/page-header";
+import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -204,118 +212,113 @@ export default function StaffDetailPage() {
     );
   }
 
+  const isTry = employee?.pay_currency === "TRY";
+  const hasAdvance = (ledger?.outstanding_advance_minor ?? 0) > 0;
+
   return (
     <AppShell title={employee?.name ?? "Employee"}>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading employee…</p>
-      )}
-
-      {!loading && employee && ledger && (
-        <>
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-semibold">{employee.name}</h1>
-                <Button
-                  type="button"
-                  className="h-8"
-                  onClick={() => setEditOpen(true)}
-                >
-                  Edit
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Pay currency: {employee.pay_currency}
-              </p>
-              <StatusBadge
-                status={employee.is_active ? "active" : "inactive"}
-              />
-              {employee.notes && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {employee.notes}
-                </p>
-              )}
-            </div>
-            <div className="min-w-[16rem] rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">Net to pay</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatMinorAmount(position.netToPayMinor)}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {netPositionCaption(position)}
-              </p>
-              <div className="mt-3 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
-                <div className="flex justify-between gap-4">
-                  <span>Salary owed</span>
-                  <span className="tabular-nums">
-                    {formatMinorAmount(position.salaryOwedMinor)}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span>Advance held</span>
-                  <span className="tabular-nums">
-                    {position.advanceHeldMinor > 0 ? "−" : ""}
-                    {formatMinorAmount(position.advanceHeldMinor)}
-                  </span>
-                </div>
-                {!netPositionReconciles(position) && (
-                  <div className="flex justify-between gap-4">
-                    <span>Other movements</span>
-                    <span className="tabular-nums">
-                      {formatMinorAmount(position.otherMinor)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-6 flex flex-wrap gap-2">
-            <Button type="button" onClick={() => setPaymentOpen(true)}>
-              Pay salary
-            </Button>
-            <Button type="button" onClick={() => setAdvanceOpen(true)}>
-              Give advance
-            </Button>
-            {employee.pay_currency === "TRY" && (
-              <Button type="button" onClick={() => setExtraDaysOpen(true)}>
-                Extra days
-              </Button>
-            )}
-            {employee.pay_currency === "TRY" &&
-              ledger.outstanding_advance_minor > 0 && (
-                <Button
-                  type="button"
-                  title="Record cash returned by the employee for an advance/overpayment"
-                  onClick={() => setReturnOpen(true)}
-                >
-                  Return advance
-                </Button>
-              )}
-            {employee.pay_currency === "TRY" &&
-              ledger.outstanding_advance_minor > 0 &&
-              ledger.remaining_accrual_minor > 0 && (
-                <Button
-                  type="button"
-                  title="Net advance against unpaid salary without paying cash — normally automatic at Pay salary"
-                  onClick={() => setApplyAdvanceOpen(true)}
-                >
-                  Apply advance (no cash)
-                </Button>
-              )}
-            <Button type="button" onClick={() => setAccrualOpen(true)}>
-              Adjust accrual
-            </Button>
-          </div>
-
-          <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
-          <LedgerHistoryToggle
-            hiddenCount={hiddenCount}
-            showHistory={showHistory}
-            onToggle={setShowHistory}
-          />
-          {ledger.entries.length === 0 ? (
+      <EntityDetailPage
+        title={employee?.name ?? "Employee"}
+        loading={loading}
+        error={error}
+        meta={
+          employee && (
+            <MetaFacts
+              items={[
+                <StatusBadge
+                  key="status"
+                  status={employee.is_active ? "active" : "inactive"}
+                />,
+                `Paid in ${employee.pay_currency}`,
+                employee.notes,
+              ].filter(Boolean)}
+            />
+          )
+        }
+        primaryAction={
+          <Button type="button" onClick={() => setPaymentOpen(true)}>
+            Pay salary
+          </Button>
+        }
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setAdvanceOpen(true)}
+          >
+            Give advance
+          </Button>
+        }
+        overflowActions={[
+          {
+            label: "Extra days",
+            show: isTry,
+            onSelect: () => setExtraDaysOpen(true),
+          },
+          {
+            label: "Return advance",
+            title:
+              "Record cash returned by the employee for an advance/overpayment",
+            show: isTry && hasAdvance,
+            onSelect: () => setReturnOpen(true),
+          },
+          {
+            label: "Apply advance (no cash)",
+            title:
+              "Net advance against unpaid salary without paying cash — normally automatic at Pay salary",
+            show:
+              isTry && hasAdvance && (ledger?.remaining_accrual_minor ?? 0) > 0,
+            onSelect: () => setApplyAdvanceOpen(true),
+          },
+          { label: "Adjust accrual", onSelect: () => setAccrualOpen(true) },
+          { label: "Edit employee", onSelect: () => setEditOpen(true) },
+        ]}
+        headline={
+          ledger && (
+            <HeadlineFigure
+              label="Net to pay"
+              amountKurus={position.netToPayMinor}
+              caption={netPositionCaption(position)}
+              format={formatMinorAmount}
+            />
+          )
+        }
+        panels={
+          ledger && (
+            <SummaryPanel
+              title="How that nets out"
+              format={formatMinorAmount}
+              lines={[
+                { label: "Salary owed", amountKurus: position.salaryOwedMinor },
+                {
+                  label: "Advance held",
+                  amountKurus: position.advanceHeldMinor,
+                  negative: position.advanceHeldMinor > 0,
+                },
+                {
+                  label: "Other movements",
+                  amountKurus: position.otherMinor,
+                  hideWhenZero: netPositionReconciles(position),
+                },
+              ]}
+              total={{ label: "Net to pay", amountKurus: position.netToPayMinor }}
+            />
+          )
+        }
+        activity={
+          ledger &&
+          employee && (
+            <DetailSection
+              title="Ledger"
+              controls={
+                <LedgerHistoryToggle
+                  hiddenCount={hiddenCount}
+                  showHistory={showHistory}
+                  onToggle={setShowHistory}
+                />
+              }
+            >
+              {ledger.entries.length === 0 ? (
             <p className="text-sm text-muted-foreground">No movements yet.</p>
           ) : visibleRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">
@@ -427,13 +430,14 @@ export default function StaffDetailPage() {
                 })}
               </DataTableBody>
             </DataTable>
-          )}
-        </>
-      )}
-
-      {employee && entityId && (
-        <>
-          <EmployeeForm
+              )}
+            </DetailSection>
+          )
+        }
+      >
+        {employee && entityId && (
+          <>
+            <EmployeeForm
             open={editOpen}
             employee={employee}
             onClose={() => setEditOpen(false)}
@@ -502,8 +506,9 @@ export default function StaffDetailPage() {
             onClose={() => setVoidTarget(null)}
             onSaved={() => void reload()}
           />
-        </>
-      )}
+          </>
+        )}
+      </EntityDetailPage>
     </AppShell>
   );
 }

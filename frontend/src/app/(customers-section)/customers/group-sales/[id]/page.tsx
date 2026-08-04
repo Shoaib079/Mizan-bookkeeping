@@ -1,9 +1,17 @@
 "use client";
 
+/** Group sale detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
+
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  DetailSection,
+  EntityDetailPage,
+} from "@/components/page/entity-detail-page";
+import { MetaFacts } from "@/components/page/page-header";
+import { HeadlineFigure } from "@/components/page/summary-panel";
 import type { CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
@@ -33,6 +41,7 @@ function hasLinkedPayment(sale: GroupSaleRead): boolean {
 
 export default function GroupSaleDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const saleId = params.id;
   const { entityId } = useEntity();
   const { toast } = useToast();
@@ -124,26 +133,13 @@ export default function GroupSaleDetailPage() {
   const isForex = Boolean(sale.forex_currency && sale.total_forex_minor != null);
 
   return (
-    <>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">{sale.description}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {formatTrDate(sale.sale_date)}
-            {customer && (
-              <>
-                {" · "}
-                <Link
-                  href={`/customers/${customer.id}`}
-                  className="text-primary hover:underline"
-                >
-                  {customer.name}
-                </Link>
-              </>
-            )}
-          </p>
-          <div className="mt-2">
+    <EntityDetailPage
+      title={sale.description}
+      meta={
+        <MetaFacts
+          items={[
             <StatusBadge
+              key="status"
               status={
                 sale.status === "posted"
                   ? "active"
@@ -151,100 +147,86 @@ export default function GroupSaleDetailPage() {
                     ? "inactive"
                     : "pending"
               }
-            />
-          </div>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Booked (TRY)</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">
-            {formatTry(sale.total_kurus)}
-          </p>
-          {isForex && sale.total_forex_minor != null && (
-            <>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Booked ({sale.forex_currency})
-              </p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">
-                {formatFxNative(sale.total_forex_minor, sale.forex_currency!)}
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-
-      {sale.fx_rate_used != null && sale.forex_currency && (
-        <p className="mb-4 text-sm text-muted-foreground">
-          Sale-date rate: {formatTry(sale.fx_rate_used)} per 1 {sale.forex_currency}
-        </p>
-      )}
-
-      <div className="mb-6 flex flex-wrap gap-2">
-        {sale.status === "posted" && (
-          <>
-            <Button type="button" onClick={() => setPaymentOpen(true)}>
-              Record payment
-            </Button>
-            {canMutate ? (
-              <>
-                <Button
-                  type="button"
-                  onClick={() => setEditOpen(true)}
-                >
-                  Edit
-                </Button>
-                <VoidTriggerButton
-                  className="h-9 border border-destructive/40 px-4 hover:bg-destructive/10"
-                  confirmTitle="Void this group sale?"
-                  confirmDetail={
-                    customer
-                      ? `${customer.name} · ${formatTry(sale.total_kurus)}`
-                      : formatTry(sale.total_kurus)
-                  }
-                  confirmLabel="Void group sale"
-                  confirming={voiding}
-                  onContinue={() => void onVoid()}
-                />
-              </>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled
-                  title="Void or settle the linked payment first"
-                >
-                  Edit
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled
-                  className="border-destructive/40 text-destructive"
-                  title="Void or settle the linked payment first"
-                >
-                  Void
-                </Button>
-              </>
-            )}
-          </>
-        )}
-        {sale.amends_group_sale_id && (
-          <Link href={`/customers/group-sales/${sale.amends_group_sale_id}`}>
-            <Button type="button" variant="ghost">
-              View original
-            </Button>
-          </Link>
-        )}
-        {sale.amended_by_group_sale_id && (
-          <Link href={`/customers/group-sales/${sale.amended_by_group_sale_id}`}>
-            <Button type="button" variant="ghost">
-              View correction
-            </Button>
-          </Link>
-        )}
-      </div>
-
-      <h2 className="mb-2 text-sm font-semibold">Menu lines</h2>
+            />,
+            formatTrDate(sale.sale_date),
+            customer && (
+              <Link
+                key="customer"
+                href={`/customers/${customer.id}`}
+                className="text-primary hover:underline"
+              >
+                {customer.name}
+              </Link>
+            ),
+            sale.fx_rate_used != null &&
+              sale.forex_currency &&
+              `Sale-date rate ${formatTry(sale.fx_rate_used)} per 1 ${sale.forex_currency}`,
+          ].filter(Boolean)}
+        />
+      }
+      primaryAction={
+        sale.status === "posted" && (
+          <Button type="button" onClick={() => setPaymentOpen(true)}>
+            Record payment
+          </Button>
+        )
+      }
+      actions={
+        sale.status === "posted" &&
+        canMutate && (
+          <VoidTriggerButton
+            className="h-9 border border-destructive/40 px-4 hover:bg-destructive/10"
+            confirmTitle="Void this group sale?"
+            confirmDetail={
+              customer
+                ? `${customer.name} · ${formatTry(sale.total_kurus)}`
+                : formatTry(sale.total_kurus)
+            }
+            confirmLabel="Void group sale"
+            confirming={voiding}
+            onContinue={() => void onVoid()}
+          />
+        )
+      }
+      overflowActions={[
+        {
+          label: "Edit group sale",
+          show: sale.status === "posted",
+          title: canMutate
+            ? undefined
+            : "Void or settle the linked payment first",
+          onSelect: () => {
+            if (canMutate) setEditOpen(true);
+          },
+        },
+        {
+          label: "View original",
+          show: Boolean(sale.amends_group_sale_id),
+          onSelect: () =>
+            router.push(`/customers/group-sales/${sale.amends_group_sale_id}`),
+        },
+        {
+          label: "View correction",
+          show: Boolean(sale.amended_by_group_sale_id),
+          onSelect: () =>
+            router.push(
+              `/customers/group-sales/${sale.amended_by_group_sale_id}`,
+            ),
+        },
+      ]}
+      headline={
+        <HeadlineFigure
+          label="Booked (TRY)"
+          amountKurus={sale.total_kurus}
+          caption={
+            isForex && sale.total_forex_minor != null
+              ? `${formatFxNative(sale.total_forex_minor, sale.forex_currency!)} in ${sale.forex_currency}`
+              : undefined
+          }
+        />
+      }
+      activity={
+        <DetailSection title="Menu lines">
       <DataTable>
         <DataTableHead>
           <tr>
@@ -280,7 +262,9 @@ export default function GroupSaleDetailPage() {
           ))}
         </DataTableBody>
       </DataTable>
-
+        </DetailSection>
+      }
+    >
       <GroupSaleForm
         open={editOpen}
         customerId={sale.customer_id}
@@ -298,6 +282,6 @@ export default function GroupSaleDetailPage() {
         onClose={() => setPaymentOpen(false)}
         onSaved={() => void reload()}
       />
-    </>
+    </EntityDetailPage>
   );
 }

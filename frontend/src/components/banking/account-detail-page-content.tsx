@@ -1,11 +1,17 @@
 "use client";
 
-/** Money account detail — statements, card payments, transfers — Phase 9 Slice 4. */
+/** Money account detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  DetailSection,
+  EntityDetailPage,
+} from "@/components/page/entity-detail-page";
+import { MetaFacts } from "@/components/page/page-header";
+import { HeadlineFigure } from "@/components/page/summary-panel";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { BankActivityPanel } from "@/components/banking/bank-activity-panel";
 import { TransferForm } from "@/components/forms/transfer-form";
@@ -124,62 +130,76 @@ export function AccountDetailPageContent() {
         ? formatTry(account.balance_kurus)
         : "";
 
+  const kindLabel =
+    account?.account_kind === "credit_card"
+      ? "Credit card payable"
+      : (account?.account_kind.replace(/_/g, " ") ?? "");
+
   return (
-    <>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading account…</p>
-      )}
-
-      {!loading && account && (
-        <>
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {account.account_kind === "credit_card"
-                  ? "Credit card payable"
-                  : account.account_kind.replace(/_/g, " ")}
-                {account.bank_name && ` · ${account.bank_name}`}
-                {account.iban && ` · ${account.iban}`}
-                {account.last_four && ` ···${account.last_four}`}
-              </p>
-              <p className="mt-2 text-2xl font-semibold tabular-nums">
-                {balanceDisplay}
-              </p>
-              {account.account_kind === "credit_card" && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Card purchases are recorded as expenses. Payments from bank
-                  reduce this balance.
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {account.account_kind === "bank" && (
-                <Link href={`/banking/accounts/${accountId}/import`}>
-                  <Button>Upload statement</Button>
-                </Link>
-              )}
-              {account.account_kind === "cash" && (
-                <Link href="/banking/cash">
-                  <Button>Cash drawer</Button>
-                </Link>
-              )}
-              {account.account_kind === "foreign_currency" && (
-                <Link href={`/banking/fx/${account.id}`}>
-                  <Button>FX wallet</Button>
-                </Link>
-              )}
-              {account.account_kind !== "credit_card" && (
-                <Button onClick={() => setTransferOpen(true)}>
-                  Transfer
-                </Button>
-              )}
-            </div>
-          </div>
-
+    <EntityDetailPage
+      title={account?.name ?? "Account"}
+      loading={loading}
+      error={error}
+      meta={
+        account && (
+          <MetaFacts
+            items={[
+              kindLabel,
+              account.bank_name,
+              account.iban,
+              account.last_four && `···${account.last_four}`,
+            ].filter(Boolean)}
+          />
+        )
+      }
+      primaryAction={
+        account?.account_kind !== "credit_card" &&
+        account && <Button onClick={() => setTransferOpen(true)}>Transfer</Button>
+      }
+      actions={
+        account && (
+          <>
+            {account.account_kind === "bank" && (
+              <Link href={`/banking/accounts/${accountId}/import`}>
+                <Button variant="secondary">Upload statement</Button>
+              </Link>
+            )}
+            {account.account_kind === "cash" && (
+              <Link href="/banking/cash">
+                <Button variant="secondary">Cash drawer</Button>
+              </Link>
+            )}
+            {account.account_kind === "foreign_currency" && (
+              <Link href={`/banking/fx/${account.id}`}>
+                <Button variant="secondary">FX wallet</Button>
+              </Link>
+            )}
+          </>
+        )
+      }
+      headline={
+        account && (
+          <HeadlineFigure
+            label={
+              account.account_kind === "credit_card"
+                ? "Card payable"
+                : "Current balance"
+            }
+            amountKurus={account.balance_kurus}
+            format={() => balanceDisplay}
+            caption={
+              account.account_kind === "credit_card"
+                ? "Card purchases post as expenses; bank payments reduce this."
+                : undefined
+            }
+          />
+        )
+      }
+      activity={
+        account && (
+          <div className="space-y-8">
           {account.account_kind === "bank" && (
-            <section>
-              <h2 className="mb-3 text-sm font-semibold">Statements</h2>
+            <DetailSection title="Statements">
               {statements.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No statements imported yet.
@@ -224,7 +244,7 @@ export function AccountDetailPageContent() {
                   </DataTableBody>
                 </DataTable>
               )}
-            </section>
+            </DetailSection>
           )}
 
           {account.account_kind === "bank" && (
@@ -232,16 +252,17 @@ export function AccountDetailPageContent() {
           )}
 
           {account.account_kind === "credit_card" && (
-            <section>
-              <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-                <h2 className="text-sm font-semibold">Card payments</h2>
+            <DetailSection
+              title="Card payments"
+              controls={
                 <ReportDateRange
                   from={from}
                   to={to}
                   disabled={loading}
                   onChange={setRange}
                 />
-              </div>
+              }
+            >
               {cardPayments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No bank payments to this card in this date range. Classify an
@@ -277,17 +298,18 @@ export function AccountDetailPageContent() {
                   </DataTableBody>
                 </DataTable>
               )}
-            </section>
+            </DetailSection>
           )}
-        </>
-      )}
-
+          </div>
+        )
+      }
+    >
       <TransferForm
         open={transferOpen}
         onClose={() => setTransferOpen(false)}
         defaultFromId={accountId}
         onTransferred={() => void reload()}
       />
-    </>
+    </EntityDetailPage>
   );
 }

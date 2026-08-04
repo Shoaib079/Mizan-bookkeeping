@@ -11,6 +11,7 @@ import { AccountMenu } from "@/components/layout/account-menu";
 import { MobileBottomTabs } from "@/components/layout/mobile-bottom-tabs";
 import { MobileTopBar } from "@/components/layout/mobile-top-bar";
 import { PageBackLink } from "@/components/layout/page-back-link";
+import { PageTitleSlotProvider } from "@/components/page/page-title-slot";
 import { TransactionPeekProvider } from "@/components/ledger/transaction-drawer";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -19,7 +20,6 @@ import { useQuickActions } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { navGroups, isNavItemActive } from "@/lib/app-routes";
-import { isMobileTabRoot } from "@/lib/mobile-shell";
 import { shouldShowNewMenu } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
 import { pushNavHistory } from "@/lib/nav-history";
@@ -80,8 +80,6 @@ function AppShellInner({
   const navSettings = { deliveryEnabled };
   const onReviewPage = pathname.startsWith("/review");
   const breadcrumb = breadcrumbForPathname(pathname, title);
-  const onMobileTabRoot = isMobile && isMobileTabRoot(pathname);
-  const showMobileTabs = isMobile;
   const showRecordFab = shouldShowNewMenu(grants);
 
   const mobileTitle =
@@ -90,23 +88,37 @@ function AppShellInner({
       : title;
 
   const mainChrome = (
-    <>
-      <Suspense fallback={null}>
-        <NavHistoryTracker />
-      </Suspense>
-      {!isMobile && <PageBackLink />}
-      {!isMobile && (
-        <div className="mb-5">
-          {breadcrumb && (
-            <p className="text-xs text-muted-foreground">{breadcrumb}</p>
+    <PageTitleSlotProvider>
+      {(pageOwnsTitle) => (
+        <>
+          <Suspense fallback={null}>
+            <NavHistoryTracker />
+          </Suspense>
+          {!isMobile && <PageBackLink />}
+          {!isMobile && (
+            // A page with its own PageHeader carries the heading; the shell
+            // then contributes only the trail that leads to it.
+            <div className={pageOwnsTitle ? "mb-1" : "mb-5"}>
+              {(breadcrumb || pageOwnsTitle) && (
+                <p className="text-xs text-muted-foreground">
+                  {pageOwnsTitle
+                    ? [breadcrumb, title].filter(Boolean).join(" / ")
+                    : breadcrumb}
+                </p>
+              )}
+              {!pageOwnsTitle && (
+                <h1 className="mt-0.5 truncate text-xl font-semibold">
+                  {title}
+                </h1>
+              )}
+            </div>
           )}
-          <h1 className="mt-0.5 truncate text-xl font-semibold">{title}</h1>
-        </div>
+          <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>
+            <TransactionPeekProvider>{children}</TransactionPeekProvider>
+          </ReviewCountsProvider>
+        </>
       )}
-      <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>
-        <TransactionPeekProvider>{children}</TransactionPeekProvider>
-      </ReviewCountsProvider>
-    </>
+    </PageTitleSlotProvider>
   );
 
   const mobileGroupedShell =
@@ -131,7 +143,7 @@ function AppShellInner({
         >
           {mainChrome}
         </main>
-        {showMobileTabs && (
+        {isMobile && (
           <MobileBottomTabs
             reviewTotal={reviewCounts.total}
             showRecord={showRecordFab}

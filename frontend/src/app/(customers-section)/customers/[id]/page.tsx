@@ -1,9 +1,17 @@
 "use client";
 
+/** Customer detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  DetailSection,
+  EntityDetailPage,
+} from "@/components/page/entity-detail-page";
+import { MetaFacts } from "@/components/page/page-header";
+import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
@@ -173,84 +181,83 @@ export default function CustomerDetailPage() {
 
   if (!entityId) {
     return (
-      <>
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
-      </>
+      <p className="text-sm text-muted-foreground">
+        Select a restaurant in the sidebar.
+      </p>
     );
   }
 
   return (
-    <>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading customer…</p>
-      )}
-
-      {!loading && customer && ledger && (
-        <>
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-semibold">{customer.name}</h1>
-              {customer.tax_id && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  VKN/TCKN: {customer.tax_id}
-                </p>
-              )}
-              {(customer.contact_name || customer.phone) && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {[customer.contact_name, customer.phone].filter(Boolean).join(" · ")}
-                </p>
-              )}
-              {customer.identifier && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  ID: {customer.identifier}
-                </p>
-              )}
-              <StatusBadge status={customer.is_active ? "active" : "inactive"} />
-              {customer.notes && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {customer.notes}
-                </p>
-              )}
-            </div>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">Receivable balance</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatTry(ledger.balance_kurus)}
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-6 flex flex-wrap gap-2">
-            <Button type="button" onClick={() => setEditOpen(true)}>
-              Edit
-            </Button>
-            <Button type="button" onClick={() => setSaleOpen(true)}>
-              Group sale
-            </Button>
-            <Button type="button" onClick={() => setPaymentOpen(true)}>
-              Record payment
-            </Button>
-            {ledger.balance_kurus > 0 && (
-              <Button
-                type="button"
-                onClick={() => setWriteOffOpen(true)}
-                title="Write off part or all of the outstanding balance"
-              >
-                Write off
-              </Button>
-            )}
-          </div>
-
-          <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
-          <LedgerHistoryToggle
-            hiddenCount={hiddenCount}
-            showHistory={showHistory}
-            onToggle={setShowHistory}
+    <EntityDetailPage
+      title={customer?.name ?? "Customer"}
+      loading={loading}
+      error={error}
+      meta={
+        customer && (
+          <MetaFacts
+            items={[
+              <StatusBadge
+                key="status"
+                status={customer.is_active ? "active" : "inactive"}
+              />,
+              customer.tax_id && `VKN/TCKN ${customer.tax_id}`,
+              customer.contact_name,
+              customer.phone,
+              customer.identifier && `ID ${customer.identifier}`,
+              customer.notes,
+            ].filter(Boolean)}
           />
-          {ledger.entries.length === 0 ? (
+        )
+      }
+      primaryAction={
+        <Button type="button" onClick={() => setPaymentOpen(true)}>
+          Record payment
+        </Button>
+      }
+      actions={
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setSaleOpen(true)}
+        >
+          Group sale
+        </Button>
+      }
+      overflowActions={[
+        {
+          label: "Write off balance",
+          title: "Write off part or all of the outstanding balance",
+          show: (ledger?.balance_kurus ?? 0) > 0,
+          onSelect: () => setWriteOffOpen(true),
+        },
+        { label: "Edit customer", onSelect: () => setEditOpen(true) },
+      ]}
+      headline={
+        ledger && (
+          <HeadlineFigure
+            label="Receivable balance"
+            amountKurus={ledger.balance_kurus}
+            caption={
+              ledger.balance_kurus > 0
+                ? "Owed by this customer"
+                : "Nothing outstanding"
+            }
+          />
+        )
+      }
+      activity={
+        ledger && (
+          <DetailSection
+            title="Ledger"
+            controls={
+              <LedgerHistoryToggle
+                hiddenCount={hiddenCount}
+                showHistory={showHistory}
+                onToggle={setShowHistory}
+              />
+            }
+          >
+            {ledger.entries.length === 0 ? (
             <p className="text-sm text-muted-foreground">No movements yet.</p>
           ) : visibleRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">
@@ -355,10 +362,11 @@ export default function CustomerDetailPage() {
                 })}
               </DataTableBody>
             </DataTable>
-          )}
-        </>
-      )}
-
+            )}
+          </DetailSection>
+        )
+      }
+    >
       {customer && (
         <>
           <CustomerForm
@@ -423,6 +431,6 @@ export default function CustomerDetailPage() {
           />
         </>
       )}
-    </>
+    </EntityDetailPage>
   );
 }

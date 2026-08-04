@@ -19,14 +19,15 @@ describe("AppShell mobile shell (C4)", () => {
     expect(source).toContain("MobileTopBar");
     expect(source).toContain("MobileBottomTabs");
     expect(source).toContain("useIsMobileShell");
-    expect(source).toContain("isMobileTabRoot");
     expect(source).toContain("min-h-dvh");
   });
 
   it("always renders bottom tabs on mobile (including drill-in pages)", async () => {
+    // Tabs must depend on `isMobile` alone. Gating them on "is this a tab
+    // root" once stranded users on drill-in pages with no way back.
     const source = await readAppShell();
-    expect(source).toContain("const showMobileTabs = isMobile");
-    expect(source).not.toContain("showMobileTabs = isMobile && onMobileTabRoot");
+    expect(source).toMatch(/\{isMobile && \(\s*<MobileBottomTabs/);
+    expect(source).not.toContain("onMobileTabRoot");
   });
 
   it("hides desktop sidebar on mobile branch", async () => {

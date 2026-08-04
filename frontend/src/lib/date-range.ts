@@ -25,12 +25,15 @@ export function resolveReportRange(
   fromParam: string | null,
   toParam: string | null,
   defaults: { from: string; to: string } = currentMonthRange(),
+  /** Injectable so the clamp is testable — it used to read the real clock even
+   * when `defaults` came from a fixed date, which made results drift by day. */
+  now: Date = new Date(),
 ): { from: string; to: string } {
   const from = fromParam ?? defaults.from;
   let to = toParam ?? defaults.to;
-  const today = isoToday();
+  const today = isoToday(now);
   if (to > today) to = today;
-  if (from > to) return currentMonthRange();
+  if (from > to) return currentMonthRange(now);
   return { from, to };
 }
 

@@ -22,7 +22,12 @@ describe("date-range", () => {
 
   it("resolveReportRange clamps future to dates", () => {
     expect(
-      resolveReportRange("2026-08-01", "2026-08-31", currentMonthRange(aug3)),
+      resolveReportRange(
+        "2026-08-01",
+        "2026-08-31",
+        currentMonthRange(aug3),
+        aug3,
+      ),
     ).toEqual({
       from: "2026-08-01",
       to: "2026-08-03",
@@ -31,7 +36,12 @@ describe("date-range", () => {
 
   it("resolveReportRange resets when from is after to", () => {
     expect(
-      resolveReportRange("2026-08-10", "2026-08-03", currentMonthRange(aug3)),
+      resolveReportRange(
+        "2026-08-10",
+        "2026-08-03",
+        currentMonthRange(aug3),
+        aug3,
+      ),
     ).toEqual(currentMonthRange(aug3));
   });
 });

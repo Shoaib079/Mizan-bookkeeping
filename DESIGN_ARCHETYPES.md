@@ -79,10 +79,15 @@ Legend: ☐ pending · ☑ done.
 **Coverage proof:** 88 routes total − 30 redirects = **58 live pages**, and the slices below list exactly 58: 7 detail + 11 lists + 8 overview/hubs + 13 review/documents + 12 reports + 7 forms/settings/auth. Redirects need no design work (they render nothing) but are counted here so the arithmetic can be checked.
 
 ### Slice 1 — archetype components
-☐ `PageHeader` ☐ `EntityDetailPage` ☐ `ListPage` ☐ `HubPage` ☐ `ReviewPage` ☐ `DocumentReviewPage` ☐ `FormPage` ☐ `ReportPage` ☐ `SummaryPanel` ☐ `StatCard` ☐ `LedgerTable` ☐ `FilterChips`
+☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☐ `ReviewPage` ☐ `DocumentReviewPage` ☐ `FormPage` ☐ `ReportPage` ☑ `SummaryPanel` ☐ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
 
-### Slice 2 — entity detail (7)
-☐ `/staff/[id]` ☐ `/suppliers/[id]` ☐ `/customers/[id]` ☐ `/partners/[id]` ☐ `/banking/accounts/[id]` ☐ `/banking/fx/[id]` ☐ `/customers/group-sales/[id]`
+### Slice 2 — entity detail (7) — **done 2026-08-04**
+☑ `/staff/[id]` ☑ `/suppliers/[id]` ☑ `/customers/[id]` ☑ `/partners/[id]` ☑ `/banking/accounts/[id]` ☑ `/banking/fx/[id]` ☑ `/customers/group-sales/[id]`
+
+All seven now compose `EntityDetailPage`; none draws its own title or balance card, and `archetypes.test.ts` fails if one starts again. Two things the slice forced out into the open:
+
+- **One `h1` per page.** `AppShell` also drew a heading, so a migrated page had two. `PageHeader` now claims the title slot (`page-title-slot.tsx`) and the shell falls back to a breadcrumb — no hardcoded list of migrated routes to go stale.
+- **Money isn't always lira.** Staff are paid in USD/EUR and FX wallets hold foreign currency, so `SummaryPanel` and `HeadlineFigure` take an optional `format`. Extended, not forked (see the rule at the top).
 
 ### Slice 3 — lists (11)
 ☐ `/staff` ☐ `/suppliers` ☐ `/customers` ☐ `/partners` ☐ `/sales` ☐ `/cards` ☐ `/banking/transfers` ☐ `/banking/cash` ☐ `/customers/group-sales` ☐ `/customers/group-menus` ☐ `/delivery/platforms`
@@ -102,7 +107,7 @@ Legend: ☐ pending · ☑ done.
 ☐ `/settings/restaurant` ☐ `/settings/profile` ☐ `/onboarding/opening-balances` ☐ `/banking/accounts/[id]/import` ☐ `/split` ☐ `/sign-in` ☐ `/sign-up`
 
 ### Slice 8 — sweep
-☐ delete every now-unreferenced component and helper ☐ no inline `rounded-lg border border-border bg-card` left in `app/` ☐ no page renders its own mobile/desktop fork ☐ `tsc`, `eslint`, full test suite, production build ☐ update `FRONTEND_AUDIT_FINAL.md` status
+☐ delete every now-unreferenced component and helper ☐ no inline `rounded-lg border border-border bg-card` left in `app/` ☐ no page renders its own mobile/desktop fork ☐ hoist the remaining bare `AppShell` calls into section layouts, then drop the shell's own `<h1>` and the `page-title-slot` handshake with it ☐ `tsc`, `eslint`, full test suite, production build ☐ update `FRONTEND_AUDIT_FINAL.md` status
 
 ---
 

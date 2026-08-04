@@ -57,6 +57,32 @@ describe("page archetypes", () => {
     }
   });
 
+  it("every entity detail page composes the archetype, never its own layout", async () => {
+    // Slice 2. The audit found four different arrangements of the same four
+    // ingredients across these pages; the archetype is only worth having if
+    // none of them goes back to hand-assembling a header or a balance card.
+    const pages = [
+      "../../app/staff/[id]/page.tsx",
+      "../../app/(procurement)/suppliers/[id]/page.tsx",
+      "../../app/(customers-section)/customers/[id]/page.tsx",
+      "../../app/(customers-section)/customers/group-sales/[id]/page.tsx",
+      "../../app/partners/[id]/page.tsx",
+      "../banking/account-detail-page-content.tsx",
+      "../banking/fx-wallet-page-content.tsx",
+    ];
+
+    for (const page of pages) {
+      const source = await read(page);
+      expect(source, page).toContain("<EntityDetailPage");
+      // The archetype owns the title and the headline figure.
+      expect(source.includes("<h1"), `${page} draws its own title`).toBe(false);
+      expect(
+        source.includes("text-2xl font-semibold tabular-nums"),
+        `${page} draws its own headline figure`,
+      ).toBe(false);
+    }
+  });
+
   it("FilterChips exposes counts for review queues", async () => {
     const source = await read("./filter-chips.tsx");
     expect(source).toContain("chip.count");

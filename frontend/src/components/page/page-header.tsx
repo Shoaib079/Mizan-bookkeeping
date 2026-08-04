@@ -5,6 +5,7 @@
  * Title, the facts that identify the thing, and the actions you can take on
  * it — always in the same place, so the eye never has to re-learn a page. */
 
+import { useClaimPageTitle } from "@/components/page/page-title-slot";
 import {
   OverflowMenu,
   type OverflowMenuItem,
@@ -32,6 +33,9 @@ export function PageHeader({
   overflowActions,
   className,
 }: Props) {
+  // The shell drops its own heading while this page has one.
+  useClaimPageTitle();
+
   const hasActions =
     Boolean(primaryAction) ||
     Boolean(actions) ||

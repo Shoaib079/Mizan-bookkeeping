@@ -1,8 +1,17 @@
 "use client";
 
+/** Partner detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
+
 import { useParams } from "next/navigation";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  DetailSection,
+  EntityDetailPage,
+} from "@/components/page/entity-detail-page";
+import { FilterChips } from "@/components/page/filter-chips";
+import { MetaFacts } from "@/components/page/page-header";
+import { HeadlineFigure } from "@/components/page/summary-panel";
 import { PartnerRecordForm } from "@/components/forms/partner-record-form";
 import { PartnerLedgerDownloadMenu } from "@/components/partners/partner-ledger-download-menu";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
@@ -30,7 +39,6 @@ import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
-  partnerBalanceAmount,
   partnerBalanceHeading,
   formatPartnerNetBalance,
 } from "@/lib/partner-balance";
@@ -54,7 +62,6 @@ import {
   type PartnerLedgerFilter,
 } from "@/lib/partner-ledger-view";
 import { partnerLedgerRowActions } from "@/lib/subledger-actions";
-import { cn } from "@/lib/utils";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 type LedgerEntry = {
@@ -182,110 +189,98 @@ export default function PartnerDetailPage() {
 
   return (
     <AppShell title={partner?.name ?? "Partner"}>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading partner…</p>
-      )}
-
-      {!loading && partner && ledger && (
-        <>
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-semibold">{partner.name}</h1>
-                <Button
-                  type="button"
-                  className="h-8"
-                  onClick={() => setEditOpen(true)}
-                >
-                  Edit
-                </Button>
-              </div>
-              <StatusBadge status={partner.is_active ? "active" : "inactive"} />
-              {partner.ownership_share_pct != null && (
-                <span className="text-sm text-muted-foreground">
-                  Share: {partner.ownership_share_pct}%
-                </span>
-              )}
-              {partner.notes && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {partner.notes}
-                </p>
-              )}
-            </div>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">
-                {partnerBalanceHeading(ledger.net_balance_kurus)}
-              </p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {partnerBalanceAmount(ledger.net_balance_kurus)}
-              </p>
-              {(ledger.loan_balance_kurus ?? 0) !== 0 && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Partner loan: {formatTry(ledger.loan_balance_kurus!)}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Profit and cash reported separately — one sticker each. */}
-          <div className="mb-6 flex flex-wrap gap-3">
-            <PartnerProfitCard profit={profitSummary} />
-            <PartnerCashCard cash={cashSummary} />
-          </div>
-
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => setRecordOpen(true)}>
-                Record
-              </Button>
-              <Button
-                type="button"
-                disabled={(ledger.unpaid_profit_kurus ?? 0) <= 0}
-                onClick={() => setPayProfitOpen(true)}
-                title={
-                  (ledger.unpaid_profit_kurus ?? 0) <= 0
-                    ? "No unpaid allocated profit — allocate on the Partners list first"
-                    : undefined
-                }
-              >
-                Pay profit
-              </Button>
-            </div>
+      <EntityDetailPage
+        title={partner?.name ?? "Partner"}
+        loading={loading}
+        error={error}
+        meta={
+          partner && (
+            <MetaFacts
+              items={[
+                <StatusBadge
+                  key="status"
+                  status={partner.is_active ? "active" : "inactive"}
+                />,
+                partner.ownership_share_pct != null &&
+                  `${partner.ownership_share_pct}% share`,
+                partner.notes,
+              ].filter(Boolean)}
+            />
+          )
+        }
+        primaryAction={
+          <Button type="button" onClick={() => setRecordOpen(true)}>
+            Record
+          </Button>
+        }
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={(ledger?.unpaid_profit_kurus ?? 0) <= 0}
+              onClick={() => setPayProfitOpen(true)}
+              title={
+                (ledger?.unpaid_profit_kurus ?? 0) <= 0
+                  ? "No unpaid allocated profit — allocate on the Partners list first"
+                  : undefined
+              }
+            >
+              Pay profit
+            </Button>
             <PartnerLedgerDownloadMenu
               entityId={entityId}
               partnerId={partnerId}
               disabled={loading}
             />
-          </div>
-
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Ledger</h2>
-            <div className="flex flex-wrap gap-1">
-              {PARTNER_LEDGER_FILTERS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  aria-pressed={ledgerFilter === tab.id}
-                  className={cn(
-                    "rounded-md px-2.5 py-1 text-xs transition-colors",
-                    ledgerFilter === tab.id
-                      ? "bg-primary/10 font-medium text-primary"
-                      : "border border-border text-muted-foreground hover:bg-muted/60",
-                  )}
-                  onClick={() => setLedgerFilter(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <LedgerHistoryToggle
-            hiddenCount={hiddenCount}
-            showHistory={showHistory}
-            onToggle={setShowHistory}
-          />
-          {ledger.entries.length === 0 ? (
+          </>
+        }
+        overflowActions={[
+          { label: "Edit partner", onSelect: () => setEditOpen(true) },
+        ]}
+        headline={
+          ledger && (
+            <HeadlineFigure
+              label={partnerBalanceHeading(ledger.net_balance_kurus)}
+              amountKurus={Math.abs(ledger.net_balance_kurus)}
+              caption={
+                (ledger.loan_balance_kurus ?? 0) !== 0
+                  ? `Partner loan: ${formatTry(ledger.loan_balance_kurus!)}`
+                  : undefined
+              }
+            />
+          )
+        }
+        /* Profit and cash reported separately — one sticker each. */
+        panels={
+          ledger && (
+            <>
+              <PartnerProfitCard profit={profitSummary} />
+              <PartnerCashCard cash={cashSummary} />
+            </>
+          )
+        }
+        activity={
+          ledger && (
+            <DetailSection
+              title="Ledger"
+              controls={
+                <div className="flex flex-wrap items-center gap-3">
+                  <FilterChips
+                    chips={PARTNER_LEDGER_FILTERS}
+                    value={ledgerFilter}
+                    onChange={setLedgerFilter}
+                    ariaLabel="Filter ledger by movement"
+                  />
+                  <LedgerHistoryToggle
+                    hiddenCount={hiddenCount}
+                    showHistory={showHistory}
+                    onToggle={setShowHistory}
+                  />
+                </div>
+              }
+            >
+              {ledger.entries.length === 0 ? (
             <p className="text-sm text-muted-foreground">No movements yet.</p>
           ) : visibleRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">
@@ -385,53 +380,59 @@ export default function PartnerDetailPage() {
                 ))}
               </DataTableBody>
             </DataTable>
-          )}
-
-          <PartnerForm
-            open={editOpen}
-            partner={partner}
-            onClose={() => setEditOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <PartnerRecordForm
-            open={recordOpen}
-            partnerId={partnerId}
-            netBalanceKurus={ledger.net_balance_kurus}
-            frontedBalanceKurus={ledger.balance_kurus}
-            drawingsNetKurus={ledger.drawings_net_kurus}
-            onClose={() => setRecordOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <PartnerRecordForm
-            key="pay-profit"
-            open={payProfitOpen}
-            partnerId={partnerId}
-            lockedKind="profit_paid"
-            unpaidProfitKurus={ledger.unpaid_profit_kurus ?? 0}
-            onClose={() => setPayProfitOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <CorrectPartnerLedgerForm
-            open={correctEntry !== null}
-            partnerId={partnerId}
-            entry={correctEntry}
-            onClose={() => setCorrectEntry(null)}
-            onSaved={() => void reload()}
-          />
-          <VoidSubledgerDialog
-            open={voidTarget !== null}
-            title="Void partner movement"
-            description={voidTarget?.description}
-            voidPath={
-              entityId && voidTarget
-                ? `/entities/${entityId}/partners/${partnerId}/ledger/${voidTarget.journal_entry_id}/void`
-                : null
-            }
-            onClose={() => setVoidTarget(null)}
-            onSaved={() => void reload()}
-          />
-        </>
-      )}
+              )}
+            </DetailSection>
+          )
+        }
+      >
+        {partner && ledger && (
+          <>
+            <PartnerForm
+              open={editOpen}
+              partner={partner}
+              onClose={() => setEditOpen(false)}
+              onSaved={() => void reload()}
+            />
+            <PartnerRecordForm
+              open={recordOpen}
+              partnerId={partnerId}
+              netBalanceKurus={ledger.net_balance_kurus}
+              frontedBalanceKurus={ledger.balance_kurus}
+              drawingsNetKurus={ledger.drawings_net_kurus}
+              onClose={() => setRecordOpen(false)}
+              onSaved={() => void reload()}
+            />
+            <PartnerRecordForm
+              key="pay-profit"
+              open={payProfitOpen}
+              partnerId={partnerId}
+              lockedKind="profit_paid"
+              unpaidProfitKurus={ledger.unpaid_profit_kurus ?? 0}
+              onClose={() => setPayProfitOpen(false)}
+              onSaved={() => void reload()}
+            />
+            <CorrectPartnerLedgerForm
+              open={correctEntry !== null}
+              partnerId={partnerId}
+              entry={correctEntry}
+              onClose={() => setCorrectEntry(null)}
+              onSaved={() => void reload()}
+            />
+            <VoidSubledgerDialog
+              open={voidTarget !== null}
+              title="Void partner movement"
+              description={voidTarget?.description}
+              voidPath={
+                entityId && voidTarget
+                  ? `/entities/${entityId}/partners/${partnerId}/ledger/${voidTarget.journal_entry_id}/void`
+                  : null
+              }
+              onClose={() => setVoidTarget(null)}
+              onSaved={() => void reload()}
+            />
+          </>
+        )}
+      </EntityDetailPage>
     </AppShell>
   );
 }

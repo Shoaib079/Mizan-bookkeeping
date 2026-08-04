@@ -1,6 +1,6 @@
 "use client";
 
-/** Supplier detail — ledger, drafts, payment — Phase 9 Slice 3. */
+/** Supplier detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -17,6 +17,12 @@ import {
 import { SupplierForm, type SupplierRow } from "@/components/forms/supplier-form";
 import { SupplierPaymentForm } from "@/components/forms/supplier-payment-form";
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
+import {
+  DetailSection,
+  EntityDetailPage,
+} from "@/components/page/entity-detail-page";
+import { MetaFacts } from "@/components/page/page-header";
+import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
 import { SupplierActivityPanel } from "@/components/supplier-activity-panel";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -24,11 +30,12 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { isSupplierAdvanceBalance } from "@/lib/supplier-balance";
 import {
-  formatSupplierPayableBalance,
-  isSupplierAdvanceBalance,
-} from "@/lib/supplier-balance";
-import { isInvoiceWorkbenchStatus, isReadyToPostInvoiceStatus } from "@/lib/review-status";
+  isInvoiceWorkbenchStatus,
+  isPendingReviewStatus,
+  isReadyToPostInvoiceStatus,
+} from "@/lib/review-status";
 
 type LedgerEntry = {
   id: string;
@@ -144,116 +151,121 @@ export default function SupplierDetailPage() {
 
   if (!entityId) {
     return (
-      <>
-        <p className="text-sm text-muted-foreground">
-          Select a restaurant in the sidebar.
-        </p>
-      </>
+      <p className="text-sm text-muted-foreground">
+        Select a restaurant in the sidebar.
+      </p>
     );
   }
 
+  const isAdvance = isSupplierAdvanceBalance(ledger?.balance_kurus ?? 0);
+  const awaiting = drafts.filter((d) => isPendingReviewStatus(d.status));
+  const readyToPost = drafts.filter((d) => isReadyToPostInvoiceStatus(d.status));
+  const sumGross = (rows: DraftRow[]) =>
+    rows.reduce((total, row) => total + row.gross_kurus, 0);
+
   return (
-    <>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading supplier…</p>
-      )}
-
-      {!loading && supplier && ledger && (
-        <>
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-semibold">{supplier.name}</h1>
-                <Button
-                  className="h-8"
-                  onClick={() => setEditOpen(true)}
-                >
-                  Edit
-                </Button>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                VKN {supplier.vkn}
-                {supplier.iban && ` · ${supplier.iban}`}
-              </p>
-              {supplier.notes && (
-                <p className="mt-1 text-sm">{supplier.notes}</p>
-              )}
-              <div className="mt-2 flex flex-wrap gap-2">
-                <StatusBadge
-                  status={supplier.is_active ? "active" : "inactive"}
-                />
-                {supplier.auto_post_payments && (
-                  <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                    Auto-post payments
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/record">
-                <Button type="button">Upload via Record</Button>
-              </Link>
-              <Button onClick={() => setPaymentOpen(true)}>
-                Record payment
-              </Button>
-            </div>
-          </div>
-
-          <div className="mb-6 rounded-lg border border-border bg-card p-4">
-            <p className="text-sm text-muted-foreground">
-              {isSupplierAdvanceBalance(ledger.balance_kurus)
-                ? "Supplier advance"
-                : "Payable balance"}
-            </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">
-              {formatSupplierPayableBalance(ledger.balance_kurus)}
-            </p>
-            {ledger.balance_kurus === 0 &&
-              drafts.some((d) => isReadyToPostInvoiceStatus(d.status)) && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Confirmed invoices are not in payables until you post them to
-                  the ledger — see Invoice drafts below or{" "}
-                  <Link
-                    href="/review/invoices"
-                    className="text-primary hover:underline"
-                  >
-                    Review → Invoices
-                  </Link>
-                  .
-                </p>
-              )}
-          </div>
-
+    <EntityDetailPage
+      title={supplier?.name ?? "Supplier"}
+      loading={loading}
+      error={error}
+      meta={
+        supplier && (
+          <MetaFacts
+            items={[
+              <StatusBadge
+                key="status"
+                status={supplier.is_active ? "active" : "inactive"}
+              />,
+              `VKN ${supplier.vkn}`,
+              supplier.iban,
+              supplier.auto_post_payments && "Auto-posts payments",
+              supplier.notes,
+            ].filter(Boolean)}
+          />
+        )
+      }
+      primaryAction={
+        <Button onClick={() => setPaymentOpen(true)}>Record payment</Button>
+      }
+      actions={
+        <Link href="/record">
+          <Button type="button" variant="secondary">
+            Upload invoice
+          </Button>
+        </Link>
+      }
+      overflowActions={[
+        { label: "Edit supplier", onSelect: () => setEditOpen(true) },
+      ]}
+      headline={
+        ledger && (
+          <HeadlineFigure
+            label={isAdvance ? "Supplier advance" : "Payable balance"}
+            amountKurus={Math.abs(ledger.balance_kurus)}
+            caption={
+              isAdvance
+                ? "Paid ahead — invoice still pending"
+                : "Owed to this supplier"
+            }
+          />
+        )
+      }
+      panels={
+        drafts.length > 0 && (
+          <SummaryPanel
+            title="Uploaded invoices"
+            lines={[
+              {
+                label: "Awaiting review",
+                hint: `${awaiting.length}`,
+                amountKurus: sumGross(awaiting),
+                hideWhenZero: true,
+              },
+              {
+                label: "Confirmed, not yet posted",
+                hint: `${readyToPost.length}`,
+                amountKurus: sumGross(readyToPost),
+                hideWhenZero: true,
+              },
+            ]}
+            footnote={
+              readyToPost.length > 0
+                ? "Confirmed invoices only join the payable balance once posted to the ledger."
+                : undefined
+            }
+          />
+        )
+      }
+      activity={
+        <div className="space-y-8">
           {highlightDraftId && (
-            <div className="mb-6 rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-3 text-sm font-semibold">Review uploaded invoice</h2>
-              <InvoiceDraftReview
-                draftId={highlightDraftId}
-                embedded
-                onUpdated={handleDraftUpdated}
-              />
-            </div>
+            <DetailSection title="Review uploaded invoice">
+              <div className="rounded-lg border border-border bg-card p-4">
+                <InvoiceDraftReview
+                  draftId={highlightDraftId}
+                  embedded
+                  onUpdated={handleDraftUpdated}
+                />
+              </div>
+            </DetailSection>
           )}
 
-          <section className="mb-8">
-            <h2 className="mb-3 text-sm font-semibold">Activity</h2>
+          <DetailSection title="Activity">
             <SupplierActivityPanel
               supplierId={supplierId}
               onCorrectPayment={(row) => setCorrectPayment(row)}
               onEditInvoice={(row) => setCorrectInvoice(row)}
             />
-          </section>
+          </DetailSection>
 
-          <section>
-            <h2 className="mb-1 text-sm font-semibold">Invoice drafts</h2>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Uploaded e-Faturas for this supplier — confirm, then post to
-              ledger to add to the balance above.
-            </p>
+          <DetailSection title="Invoice drafts">
             {drafts.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No invoice drafts for this supplier.
+                No uploaded invoices for this supplier.{" "}
+                <Link href="/record" className="text-primary hover:underline">
+                  Upload an e-Fatura
+                </Link>
+                .
               </p>
             ) : (
               <div className="space-y-3">
@@ -295,10 +307,10 @@ export default function SupplierDetailPage() {
                 ))}
               </div>
             )}
-          </section>
-        </>
-      )}
-
+          </DetailSection>
+        </div>
+      }
+    >
       <SupplierForm
         open={editOpen}
         supplier={supplier}
@@ -326,6 +338,6 @@ export default function SupplierDetailPage() {
         onClose={() => setCorrectInvoice(null)}
         onSaved={() => void reload()}
       />
-    </>
+    </EntityDetailPage>
   );
 }

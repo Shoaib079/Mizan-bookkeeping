@@ -1,10 +1,16 @@
 "use client";
 
-/** FX wallet ledger + actions — Phase 9 Slice 4. */
+/** FX wallet — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  DetailSection,
+  EntityDetailPage,
+} from "@/components/page/entity-detail-page";
+import { MetaFacts } from "@/components/page/page-header";
+import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
@@ -137,51 +143,65 @@ export function FxWalletPageContent() {
   }
 
   return (
-    <>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading wallet…</p>
-      )}
-
-      {!loading && balance && account && (
+    <EntityDetailPage
+      title={account?.name ?? `${currency} wallet`}
+      loading={loading}
+      error={error}
+      meta={account && <MetaFacts items={[`${currency} wallet`]} />}
+      primaryAction={
+        <Button onClick={() => setPurchaseOpen(true)}>Buy {currency}</Button>
+      }
+      actions={
         <>
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">{currency} wallet</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatFxNative(balance.native_quantity, currency)}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                TRY cost basis: {formatTry(balance.try_cost_kurus)} · GL:{" "}
-                {formatTry(balance.gl_balance_kurus)}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => setPurchaseOpen(true)}>Buy {currency}</Button>
-              <Button onClick={() => setConvertOpen(true)}>
-                Convert to TRY
-              </Button>
-              <Button onClick={() => setSpendOpen(true)}>
-                Spend on expense
-              </Button>
-            </div>
-          </div>
-
-          <section>
-            <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-              <h2 className="text-sm font-semibold">Ledger</h2>
-              <ReportDateRange
-                from={from}
-                to={to}
-                disabled={loading}
-                onChange={setRange}
-              />
-            </div>
-            <LedgerHistoryToggle
-              hiddenCount={hiddenCount}
-              showHistory={showHistory}
-              onToggle={setShowHistory}
-            />
+          <Button variant="secondary" onClick={() => setConvertOpen(true)}>
+            Convert to TRY
+          </Button>
+          <Button variant="secondary" onClick={() => setSpendOpen(true)}>
+            Spend on expense
+          </Button>
+        </>
+      }
+      headline={
+        balance && (
+          <HeadlineFigure
+            label="Wallet balance"
+            amountKurus={balance.native_quantity}
+            format={() => formatFxNative(balance.native_quantity, currency)}
+          />
+        )
+      }
+      panels={
+        balance && (
+          <SummaryPanel
+            title="What it cost in lira"
+            lines={[
+              { label: "TRY cost basis", amountKurus: balance.try_cost_kurus },
+              { label: "General ledger", amountKurus: balance.gl_balance_kurus },
+            ]}
+          />
+        )
+      }
+      activity={
+        balance &&
+        account && (
+          <DetailSection
+            title="Ledger"
+            controls={
+              <div className="flex flex-wrap items-center gap-3">
+                <ReportDateRange
+                  from={from}
+                  to={to}
+                  disabled={loading}
+                  onChange={setRange}
+                />
+                <LedgerHistoryToggle
+                  hiddenCount={hiddenCount}
+                  showHistory={showHistory}
+                  onToggle={setShowHistory}
+                />
+              </div>
+            }
+          >
             {ledger.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No FX movements in this date range.
@@ -287,10 +307,10 @@ export function FxWalletPageContent() {
                 </DataTableBody>
               </DataTable>
             )}
-          </section>
-        </>
-      )}
-
+          </DetailSection>
+        )
+      }
+    >
       <FxPurchaseForm
         open={purchaseOpen}
         onClose={() => setPurchaseOpen(false)}
@@ -345,6 +365,6 @@ export function FxWalletPageContent() {
         onClose={() => setVoidTarget(null)}
         onSaved={() => void reload()}
       />
-    </>
+    </EntityDetailPage>
   );
 }

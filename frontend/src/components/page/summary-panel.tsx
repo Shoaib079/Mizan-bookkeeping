@@ -28,11 +28,23 @@ function toneClass(tone: SummaryLine["tone"]): string | undefined {
   return undefined;
 }
 
-function Row({ line, total = false }: { line: SummaryLine; total?: boolean }) {
+/** Most panels show lira. Staff are paid in USD/EUR too, so the formatter is
+ * injectable rather than each such page drawing its own panel. */
+export type AmountFormatter = (minor: number) => string;
+
+function Row({
+  line,
+  total = false,
+  format = formatTry,
+}: {
+  line: SummaryLine;
+  total?: boolean;
+  format?: AmountFormatter;
+}) {
   const magnitude = Math.abs(line.amountKurus);
   const text = line.negative
-    ? `−${formatTry(magnitude)}`
-    : formatTry(line.amountKurus);
+    ? `−${format(magnitude)}`
+    : format(line.amountKurus);
 
   return (
     <div
@@ -77,6 +89,8 @@ type Props = {
   /** Shown instead of the lines when there is no history yet. */
   emptyMessage?: string;
   footnote?: string;
+  /** Defaults to lira — pass through for foreign-currency pages. */
+  format?: AmountFormatter;
   className?: string;
 };
 
@@ -87,6 +101,7 @@ export function SummaryPanel({
   total,
   emptyMessage,
   footnote,
+  format,
   className,
 }: Props) {
   const visible = lines.filter(
@@ -118,9 +133,9 @@ export function SummaryPanel({
         ) : (
           <>
             {visible.map((line) => (
-              <Row key={line.label} line={line} />
+              <Row key={line.label} line={line} format={format} />
             ))}
-            {total && <Row line={total} total />}
+            {total && <Row line={total} total format={format} />}
           </>
         )}
         {footnote && (
@@ -137,12 +152,15 @@ export function HeadlineFigure({
   amountKurus,
   caption,
   tone = "default",
+  format = formatTry,
   className,
 }: {
   label: string;
   amountKurus: number;
   caption?: string;
   tone?: "default" | "good" | "bad";
+  /** Defaults to lira — pass through for foreign-currency pages. */
+  format?: AmountFormatter;
   className?: string;
 }) {
   return (
@@ -159,7 +177,7 @@ export function HeadlineFigure({
           toneClass(tone),
         )}
       >
-        {formatTry(amountKurus)}
+        {format(amountKurus)}
       </p>
       {caption && (
         <p className="mt-0.5 text-xs text-muted-foreground">{caption}</p>
