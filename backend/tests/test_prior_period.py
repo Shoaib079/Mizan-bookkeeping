@@ -57,12 +57,27 @@ def test_a_whole_year_compares_against_the_previous_year():
     )
 
 
-def test_a_partial_month_still_uses_an_equal_length_window():
-    """No calendar answer exists for 1–15 July, so equal length is the only
-    defensible rule — 15 days ending the day before."""
+def test_month_to_date_compares_against_the_same_dates_last_month():
+    """Changed 2026-08-04. This used to take the equal-length window, so 1–4
+    August compared against 28–31 July — four ordinary days against a month
+    end, where rent, salaries and card settlements cluster. The comparison
+    always looked alarming and never meant anything. "How is this month going"
+    means against the same days of last month."""
+    assert _prior_period(date(2026, 8, 1), date(2026, 8, 4)) == (
+        date(2026, 7, 1),
+        date(2026, 7, 4),
+    )
     assert _prior_period(date(2026, 7, 1), date(2026, 7, 15)) == (
-        date(2026, 6, 16),
-        date(2026, 6, 30),
+        date(2026, 6, 1),
+        date(2026, 6, 15),
+    )
+
+
+def test_month_to_date_clamps_to_a_short_previous_month():
+    """1–30 March has no 1–30 February to compare against."""
+    assert _prior_period(date(2026, 3, 1), date(2026, 3, 30)) == (
+        date(2026, 2, 1),
+        date(2026, 2, 28),
     )
 
 

@@ -60,6 +60,28 @@ def is_whole_year(from_date: date, to_date: date) -> bool:
     )
 
 
+def is_month_to_date(from_date: date, to_date: date) -> bool:
+    """Starts on the 1st, ends inside the same month but before its last day."""
+    return (
+        from_date.day == 1
+        and (from_date.year, from_date.month) == (to_date.year, to_date.month)
+        and to_date < _last_day_of_month(from_date)
+    )
+
+
+def _same_dates_previous_month(
+    from_date: date, to_date: date
+) -> tuple[date, date]:
+    """1–N of the previous month, clamped to its length.
+
+    31 March compares against 28 (or 29) February, not 3 March.
+    """
+    prior_month_end = from_date - timedelta(days=1)
+    prior_start = prior_month_end.replace(day=1)
+    day = min(to_date.day, prior_month_end.day)
+    return prior_start, prior_month_end.replace(day=day)
+
+
 def _prior_period(from_date: date, to_date: date) -> tuple[date, date]:
     """The period a reader would naturally compare this one against.
 
@@ -69,6 +91,9 @@ def _prior_period(from_date: date, to_date: date) -> tuple[date, date]:
     so a month compares against the *previous month*, not the previous 31 days
     (BUGLOG 2026-07-29). Same for a whole year, where leap days would shift it.
 
+    Month-to-date compares against the same dates of the previous month, for
+    the reason given inline below.
+
     Anything else keeps the equal-length window, which is the only defensible
     answer for a range that isn't a calendar period.
     """
@@ -77,6 +102,13 @@ def _prior_period(from_date: date, to_date: date) -> tuple[date, date]:
         return prior_to.replace(day=1), prior_to
     if is_whole_year(from_date, to_date):
         return date(from_date.year - 1, 1, 1), date(from_date.year - 1, 12, 31)
+    if is_month_to_date(from_date, to_date):
+        # "How is this month going" means against the same days of last month,
+        # not the days immediately before. 1–4 August against 28–31 July put
+        # four ordinary days against a month end, where rent, salaries and card
+        # settlements cluster — the comparison always looked alarming and never
+        # meant anything.
+        return _same_dates_previous_month(from_date, to_date)
 
     period_days = (to_date - from_date).days + 1
     prior_to = from_date - timedelta(days=1)

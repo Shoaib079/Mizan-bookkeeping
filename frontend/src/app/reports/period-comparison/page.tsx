@@ -2,7 +2,7 @@
 
 /** Period comparison report (Phase 9 Slice 8). */
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { ReportDateRange } from "@/components/reports/report-date-range";
@@ -18,6 +18,12 @@ import {
 } from "@/components/ui/data-table";
 import { ReportPage } from "@/components/page/report-page";
 import { apiFetch } from "@/lib/api";
+import {
+  PRIOR_PERIOD_MODES,
+  priorPeriodFor,
+  priorPeriodIsUsable,
+  type PriorPeriodMode,
+} from "@/lib/prior-period";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import type { PeriodComparisonRead } from "@/lib/report-types";
@@ -32,6 +38,18 @@ function formatChangePercent(value: number | null): string {
 function PeriodComparisonContent() {
   const { entityId } = useEntity();
   const { from, to, setRange, queryString } = useReportRangeFromUrl();
+  const [priorMode, setPriorMode] = useState<PriorPeriodMode>("auto");
+
+  // `auto` sends nothing and lets the backend choose; every other mode sends an
+  // explicit range through params the API has always accepted.
+  const fullQuery = useMemo(() => {
+    const prior = priorPeriodFor(priorMode, from, to);
+    if (!prior) return queryString;
+    const params = new URLSearchParams(queryString);
+    params.set("prior_from", prior.from);
+    params.set("prior_to", prior.to);
+    return params.toString();
+  }, [from, priorMode, queryString, to]);
   const [report, setReport] = useState<PeriodComparisonRead | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +65,7 @@ function PeriodComparisonContent() {
     setForbidden(false);
     try {
       const res = await apiFetch<PeriodComparisonRead>(
-        `/entities/${entityId}/reports/period-comparison?${queryString}`,
+        `/entities/${entityId}/reports/period-comparison?${fullQuery}`,
       );
       setReport(res);
     } catch (err) {
@@ -61,7 +79,7 @@ function PeriodComparisonContent() {
     } finally {
       setLoading(false);
     }
-  }, [entityId, queryString]);
+  }, [entityId, fullQuery]);
 
   useEffect(() => {
     void reload();
@@ -78,18 +96,42 @@ function PeriodComparisonContent() {
         forbiddenContext="period comparison"
         hasReport={Boolean(report)}
         periodControl={
-          <ReportDateRange
-            from={from}
-            to={to}
-            disabled={!entityId || loading}
-            onChange={setRange}
-          />
+          <div className="flex flex-wrap items-end gap-4">
+            <ReportDateRange
+              from={from}
+              to={to}
+              disabled={!entityId || loading}
+              onChange={setRange}
+            />
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted-foreground">Compare against</span>
+              <select
+                value={priorMode}
+                disabled={!entityId || loading}
+                onChange={(event) =>
+                  setPriorMode(event.target.value as PriorPeriodMode)
+                }
+                className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+              >
+                {PRIOR_PERIOD_MODES.map((mode) => (
+                  <option
+                    key={mode.id}
+                    value={mode.id}
+                    title={mode.hint}
+                    disabled={!priorPeriodIsUsable(mode.id, from, to)}
+                  >
+                    {mode.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         }
         downloads={
           <ReportDownloadMenu
             entityId={entityId}
             reportSlug="period-comparison"
-            queryString={queryString}
+            queryString={fullQuery}
             disabled={forbidden || !report}
           />
         }
