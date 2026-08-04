@@ -11,6 +11,7 @@ import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
 import { ReportPage } from "@/components/page/report-page";
+import { StatCard } from "@/components/page/stat-card";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import {
   DataTable,
@@ -127,24 +128,12 @@ function ExpenseRegisterContent() {
       {report && (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">Total expenses</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatTry(report.total_kurus)}
-              </p>
-            </div>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">Entries</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {report.entry_count}
-              </p>
-            </div>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm text-muted-foreground">Accounts used</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                {report.account_totals.length}
-              </p>
-            </div>
+            <StatCard label="Total expenses" amountKurus={report.total_kurus} />
+            <StatCard label="Entries" value={String(report.entry_count)} />
+            <StatCard
+              label="Accounts used"
+              value={String(report.account_totals.length)}
+            />
           </div>
 
           {report.account_totals.length > 0 && (

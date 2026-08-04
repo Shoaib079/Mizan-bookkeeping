@@ -17,6 +17,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { ReportPage } from "@/components/page/report-page";
+import { StatCard } from "@/components/page/stat-card";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -91,12 +92,11 @@ function DeliverySalesContent() {
 
       {report && (
         <div className="space-y-6">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <p className="text-sm text-muted-foreground">Total gross</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">
-              {formatTry(report.total_gross_kurus)}
-            </p>
-          </div>
+          <StatCard
+            label="Total gross"
+            amountKurus={report.total_gross_kurus}
+            className="sm:max-w-xs"
+          />
 
           {report.platforms.length > 0 ? (
             <DataTable>

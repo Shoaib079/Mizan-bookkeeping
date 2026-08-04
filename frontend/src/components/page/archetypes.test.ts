@@ -256,7 +256,14 @@ describe("page archetypes", () => {
   });
 
   it("report KPI bands use StatCard, not hand-drawn boxes", async () => {
-    for (const slug of ["profit-and-loss", "balance-sheet"]) {
+    for (const slug of [
+      "profit-and-loss",
+      "balance-sheet",
+      "cash-flow",
+      "kdv-input",
+      "delivery-sales",
+      "expense-register",
+    ]) {
       const source = await read(`../../app/reports/${slug}/page.tsx`);
       expect(source, slug).toContain("<StatCard");
       expect(

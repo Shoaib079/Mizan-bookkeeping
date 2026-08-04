@@ -17,6 +17,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { ReportPage } from "@/components/page/report-page";
+import { StatCard } from "@/components/page/stat-card";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -92,23 +93,9 @@ function KdvInputContent() {
       {report && (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { label: "Total base", value: report.total_base_kurus },
-              { label: "Total VAT", value: report.total_vat_kurus },
-              { label: "Invoices", value: report.invoice_count, money: false },
-            ].map((row) => (
-              <div
-                key={row.label}
-                className="rounded-lg border border-border bg-card p-4"
-              >
-                <p className="text-sm text-muted-foreground">{row.label}</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">
-                  {"money" in row && row.money === false
-                    ? row.value
-                    : formatTry(row.value as number)}
-                </p>
-              </div>
-            ))}
+            <StatCard label="Total base" amountKurus={report.total_base_kurus} />
+            <StatCard label="Total VAT" amountKurus={report.total_vat_kurus} />
+            <StatCard label="Invoices" value={String(report.invoice_count)} />
           </div>
 
           {report.rates.length > 0 ? (

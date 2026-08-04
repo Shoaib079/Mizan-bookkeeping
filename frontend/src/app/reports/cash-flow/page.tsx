@@ -17,6 +17,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { ReportPage } from "@/components/page/report-page";
+import { StatCard } from "@/components/page/stat-card";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -93,21 +94,9 @@ function CashFlowContent() {
       {report && (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { label: "Opening cash", value: report.opening_cash_kurus },
-              { label: "Net change", value: report.net_change_kurus },
-              { label: "Closing cash", value: report.closing_cash_kurus },
-            ].map((row) => (
-              <div
-                key={row.label}
-                className="rounded-lg border border-border bg-card p-4"
-              >
-                <p className="text-sm text-muted-foreground">{row.label}</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">
-                  {formatTry(row.value)}
-                </p>
-              </div>
-            ))}
+            <StatCard label="Opening cash" amountKurus={report.opening_cash_kurus} />
+            <StatCard label="Net change" amountKurus={report.net_change_kurus} />
+            <StatCard label="Closing cash" amountKurus={report.closing_cash_kurus} />
           </div>
 
           <section>
