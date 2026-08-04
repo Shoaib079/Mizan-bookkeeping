@@ -152,7 +152,54 @@ def resolve_ledger_entry_actions(
             JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
             JournalEntrySource.PARTNER_LOAN_RECEIVED,
             JournalEntrySource.PARTNER_LOAN_REPAID,
+            JournalEntrySource.PARTNER_PROFIT_PAID,
         }:
+            row = session.scalar(
+                select(PartnerLedgerEntry).where(
+                    PartnerLedgerEntry.journal_entry_id == entry_id
+                )
+            )
+            if row is None:
+                return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+            return LedgerEntryActions(
+                can_edit=False,
+                can_void=True,
+                void_path=(
+                    f"partners/{row.partner_id}/ledger/{entry_id}/void"
+                ),
+            )
+
+        if source == JournalEntrySource.PARTNER_SUPPLIER_PAID:
+            partner_row = session.scalar(
+                select(PartnerLedgerEntry).where(
+                    PartnerLedgerEntry.journal_entry_id == entry_id
+                )
+            )
+            if partner_row is not None:
+                return LedgerEntryActions(
+                    can_edit=False,
+                    can_void=True,
+                    void_path=(
+                        f"partners/{partner_row.partner_id}/ledger/{entry_id}/void"
+                    ),
+                )
+            # Personal-only AP clear: no partner subledger row — void via supplier.
+            supplier_row = session.scalar(
+                select(SupplierLedgerEntry).where(
+                    SupplierLedgerEntry.journal_entry_id == entry_id
+                )
+            )
+            if supplier_row is None:
+                return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+            return LedgerEntryActions(
+                can_edit=False,
+                can_void=True,
+                void_path=(
+                    f"payables/suppliers/{supplier_row.supplier_id}/payments/{entry_id}/void"
+                ),
+            )
+
+        if source == JournalEntrySource.EXPENSE_PERSONAL_SPLIT:
             row = session.scalar(
                 select(PartnerLedgerEntry).where(
                     PartnerLedgerEntry.journal_entry_id == entry_id

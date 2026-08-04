@@ -1,4 +1,4 @@
-"""Partner profit allocation — Dr 3100 / Cr 3300 per ownership share (Decisions §17)."""
+"""Partner profit allocation — Dr 3100 / Cr 3200 (settlement) / Cr 3300 (Decisions §17)."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.default_chart import (
+    OWNER_DRAWINGS_CODE,
     PARTNER_CAPITAL_CODE,
     RETAINED_EARNINGS_CODE,
 )
@@ -54,6 +55,7 @@ class ProfitAllocationSplit:
 class ProfitAllocationPreview:
     total_profit_kurus: int
     splits: tuple[ProfitAllocationSplit, ...]
+    netting_as_of: date | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,8 +107,9 @@ def split_profit_by_ownership(
 ) -> list[ProfitAllocationSplit]:
     """Floor each share; last partner (by stable sort) absorbs rounding remainder.
 
-    When ``net_against_drawings`` is set, partners with a negative unified net
-    balance (money already taken) receive a reduced allocation — never below zero.
+    When ``net_against_drawings`` is set, partners with a negative scoped net
+    balance (money already taken on or before ``netting_as_of``) receive a
+    profit settlement for the offset and a reduced capital allocation.
     """
     if total_kurus <= 0:
         raise ValueError("profit amount must be positive kuruş")
@@ -145,7 +148,7 @@ def split_profit_by_ownership(
             )
         )
 
-    assert sum(s.amount_kurus for s in splits) <= total_kurus
+    assert sum(s.gross_amount_kurus for s in splits) == total_kurus
     return splits
 
 
@@ -155,6 +158,7 @@ def preview_profit_allocation(
     *,
     profit_kurus: int,
     net_against_drawings: bool = True,
+    netting_as_of: date,
 ) -> ProfitAllocationPreview:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -163,7 +167,9 @@ def preview_profit_allocation(
         require_entity_context()
         partners = _active_partners_with_shares(session)
         net_balances = {
-            p.id: partner_ledger.net_balance_kurus(session, entity_id, p.id)
+            p.id: partner_ledger.net_balance_kurus_as_of(
+                session, entity_id, p.id, as_of=netting_as_of
+            )
             for p in partners
         }
         splits = split_profit_by_ownership(
@@ -175,23 +181,37 @@ def preview_profit_allocation(
         return ProfitAllocationPreview(
             total_profit_kurus=profit_kurus,
             splits=tuple(splits),
+            netting_as_of=netting_as_of,
         )
 
 
 def build_profit_allocation_lines(
     *,
     retained_earnings_id: uuid.UUID,
+    owner_drawings_id: uuid.UUID,
     partner_capital_id: uuid.UUID,
     splits: list[ProfitAllocationSplit],
 ) -> list[PostingLine]:
-    total = sum(s.amount_kurus for s in splits)
+    gross_total = sum(s.gross_amount_kurus for s in splits)
+    offset_total = sum(s.offset_kurus for s in splits)
+    capital_total = sum(s.amount_kurus for s in splits)
+    assert gross_total == offset_total + capital_total
+
     lines: list[PostingLine] = [
         PostingLine(
             account_id=retained_earnings_id,
-            amount_kurus=total,
+            amount_kurus=gross_total,
             side=AccountNormalBalance.DEBIT,
         ),
     ]
+    if offset_total > 0:
+        lines.append(
+            PostingLine(
+                account_id=owner_drawings_id,
+                amount_kurus=offset_total,
+                side=AccountNormalBalance.CREDIT,
+            )
+        )
     for split in splits:
         if split.amount_kurus <= 0:
             continue
@@ -214,8 +234,9 @@ def post_profit_allocation(
     description: str,
     actor_id: uuid.UUID,
     net_against_drawings: bool = True,
+    netting_as_of: date,
 ) -> ProfitAllocationPostResult:
-    """Allocate net profit to partners — one JE, one subledger row per partner."""
+    """Allocate net profit to partners — one JE, settlement + capital subledger rows."""
     if profit_kurus <= 0:
         raise ValueError("profit_kurus must be positive")
 
@@ -226,7 +247,9 @@ def post_profit_allocation(
         require_entity_context()
         partners = _active_partners_with_shares(session)
         net_balances = {
-            p.id: partner_ledger.net_balance_kurus(session, entity_id, p.id)
+            p.id: partner_ledger.net_balance_kurus_as_of(
+                session, entity_id, p.id, as_of=netting_as_of
+            )
             for p in partners
         }
         splits = split_profit_by_ownership(
@@ -237,9 +260,11 @@ def post_profit_allocation(
         )
 
         retained = _chart_account(session, RETAINED_EARNINGS_CODE)
+        drawings = _chart_account(session, OWNER_DRAWINGS_CODE)
         capital = _chart_account(session, PARTNER_CAPITAL_CODE)
         lines = build_profit_allocation_lines(
             retained_earnings_id=retained.id,
+            owner_drawings_id=drawings.id,
             partner_capital_id=capital.id,
             splits=splits,
         )
@@ -254,20 +279,32 @@ def post_profit_allocation(
         )
 
         partner_entries: list[PartnerLedgerEntry] = []
+        settlement_desc = f"Settled from profit — {description}"
         for split in splits:
-            if split.amount_kurus == 0:
-                continue
-            entry = partner_ledger.persist_partner_ledger_entry(
-                session,
-                split.partner_id,
-                movement_date=allocation_date,
-                movement_type=PartnerMovementType.PROFIT_ALLOCATION,
-                amount_kurus=split.amount_kurus,
-                description=description,
-                actor_id=actor_id,
-                journal_entry_id=journal_entry.id,
-            )
-            partner_entries.append(entry)
+            if split.offset_kurus > 0:
+                entry = partner_ledger.persist_partner_ledger_entry(
+                    session,
+                    split.partner_id,
+                    movement_date=allocation_date,
+                    movement_type=PartnerMovementType.PROFIT_SETTLEMENT,
+                    amount_kurus=split.offset_kurus,
+                    description=settlement_desc,
+                    actor_id=actor_id,
+                    journal_entry_id=journal_entry.id,
+                )
+                partner_entries.append(entry)
+            if split.amount_kurus > 0:
+                entry = partner_ledger.persist_partner_ledger_entry(
+                    session,
+                    split.partner_id,
+                    movement_date=allocation_date,
+                    movement_type=PartnerMovementType.PROFIT_ALLOCATION,
+                    amount_kurus=split.amount_kurus,
+                    description=description,
+                    actor_id=actor_id,
+                    journal_entry_id=journal_entry.id,
+                )
+                partner_entries.append(entry)
 
         session.commit()
         session.refresh(journal_entry)

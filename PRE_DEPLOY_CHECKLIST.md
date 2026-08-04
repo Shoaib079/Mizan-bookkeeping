@@ -5,7 +5,7 @@ items marked **BLOCKER** will break the live site if skipped.
 
 **CURRENT STACK (2026-07 — authoritative; ignore any "Render" references below/in other docs):**
 - **Database:** Neon (managed Postgres).
-- **Backend API + worker:** Railway (`mizan-api` service). Auto-deploys from GitHub `main`; runs Alembic migrations as its **pre-deploy command** (so a deploy migrates Neon automatically).
+- **Backend API + worker:** Railway (`mizan-api` + `mizan-celery-worker` + `mizan-celery-beat` + Redis). Auto-deploys from GitHub `main`; runs Alembic migrations as its **pre-deploy command** (so a deploy migrates Neon automatically).
 - **Frontend:** Vercel (Next.js). Auto-deploys from `main` once the build compiles. (Was Render, was Netlify — both retired.)
 - **Auth:** Clerk. **Backups:** Cloudflare R2 (nightly `pg_dump`).
 

@@ -32,6 +32,7 @@ class StatementLineClassification(str, enum.Enum):
     PARTNER_REIMBURSEMENT = "partner_reimbursement"
     PARTNER_DRAWING_REPAYMENT = "partner_drawing_repayment"
     PARTNER_CAPITAL_CONTRIBUTION = "partner_capital_contribution"
+    PARTNER_PROFIT_PAID = "partner_profit_paid"
     PARTNER_LOAN_RECEIPT = "partner_loan_receipt"
     PARTNER_LOAN_PAYMENT = "partner_loan_payment"
     LOAN_PAYMENT = "loan_payment"

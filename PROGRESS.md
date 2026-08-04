@@ -9,11 +9,12 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | **GS-FX** forex-only group sales (next) |
-| **Last completed slice** | **Custom member access (Option B)** — per-member grants, Edit access UI, migration `088` |
-| **Last tag** | *(pending)* `v0.custom-member-access` |
-| **Unpushed** | Custom member access WIP + prior unpushed slices — owner commit when ready |
-| **Next up** | Commit/tag custom access · deploy (Railway runs `088`) · GS-FX |
+| **Active slice** | *(none)* |
+| **Last completed slice** | Partner pay-profit + split buy + Split hub |
+| **Last tag** | `v0.partner-splits` |
+| **Unpushed** | *(none after push)* |
+| **Next up** | GS-FX forex-only group sales |
+
 
 ## FINANCIAL_AUDIT status (2026-07-27)
 

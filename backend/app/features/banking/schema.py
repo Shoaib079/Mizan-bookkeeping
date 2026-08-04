@@ -286,7 +286,7 @@ class ClassifyStatementLineRequest(BaseModel):
     )
     partner_id: uuid.UUID | None = Field(
         default=None,
-        description="Required for partner_drawing, partner_reimbursement, partner_drawing_repayment",
+        description="Required for partner_drawing, partner_reimbursement, partner_drawing_repayment, partner_profit_paid",
     )
     note: str | None = Field(
         default=None,

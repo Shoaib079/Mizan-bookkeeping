@@ -140,6 +140,16 @@ export function defaultBankAccountId(
   return accounts.find((a) => a.account_kind === "bank")?.id ?? null;
 }
 
+/** Cash drawer accounts only — manual partner/staff bank moves use statement classify. */
+export async function loadCashAccounts(
+  entityId: string,
+): Promise<MoneyAccountOption[]> {
+  const cashRes = await apiFetch<{ items: MoneyAccountApiRow[] }>(
+    `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
+  );
+  return cashRes.items.filter((row) => row.is_active !== false).map(toOption);
+}
+
 /** Bank + cash accounts for payment pickers. */
 export async function loadBankAndCashAccounts(
   entityId: string,

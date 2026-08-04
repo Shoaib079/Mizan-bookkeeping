@@ -10,7 +10,12 @@ from sqlalchemy.orm import Session
 from app.core.listing import ListParams, list_params_dependency
 from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError, PostingError
-from app.core.partners.ledger import OverpaymentError, OverRepaymentError, ZeroMovementError
+from app.core.partners.ledger import (
+    OverpaymentError,
+    OverProfitPaymentError,
+    OverRepaymentError,
+    ZeroMovementError,
+)
 from app.core.partners.posting import InvalidPartnerPostingError
 from app.db.session import get_session
 from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
@@ -25,6 +30,8 @@ from app.features.partners.schema import (
     PartnerListOut,
     PartnerRead,
     PartnerUpdate,
+    PartnerSplitBuyCreate,
+    PartnerSplitBuyResponse,
     ReimbursementPaidCreate,
     ReimbursementPaidResponse,
     DrawingCreate,
@@ -33,6 +40,8 @@ from app.features.partners.schema import (
     DrawingRepaymentResponse,
     CapitalContributionCreate,
     CapitalContributionResponse,
+    ProfitPaidCreate,
+    ProfitPaidResponse,
     PartnerJournalEntryCorrect,
     PartnerJournalEntryCorrectOut,
     ProfitAllocationPost,
@@ -217,6 +226,31 @@ def post_expense_fronted(
 
 
 @router.post(
+    "/{partner_id}/split-buys",
+    response_model=PartnerSplitBuyResponse,
+    status_code=201,
+)
+def post_split_buy(
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: PartnerSplitBuyCreate,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> PartnerSplitBuyResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.record_split_buy(session, entity_id, partner_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
     "/{partner_id}/reimbursements",
     response_model=ReimbursementPaidResponse,
     status_code=201,
@@ -315,6 +349,33 @@ def post_partner_capital_contribution(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{partner_id}/profit-payments",
+    response_model=ProfitPaidResponse,
+    status_code=201,
+)
+def post_partner_profit_payment(
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: ProfitPaidCreate,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> ProfitPaidResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.record_profit_paid(session, entity_id, partner_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OverProfitPaymentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

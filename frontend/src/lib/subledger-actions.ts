@@ -80,6 +80,7 @@ export const PARTNER_VOID_ONLY_MOVEMENT_TYPES = new Set<string>([
   "capital_contribution",
   "partner_loan_received",
   "partner_loan_repaid",
+  "profit_paid",
 ]);
 
 export const STAFF_EDITABLE_MOVEMENT_TYPES = new Set<string>([
@@ -163,7 +164,7 @@ export function partnerLedgerRowActions(movementType: string): RowActions {
   if (PARTNER_VOID_ONLY_MOVEMENT_TYPES.has(movementType)) {
     return { canEdit: false, canVoid: true };
   }
-  if (movementType === "profit_allocation") {
+  if (movementType === "profit_allocation" || movementType === "profit_settlement") {
     return { canEdit: false, canVoid: false };
   }
   return { canEdit: false, canVoid: false };

@@ -69,15 +69,24 @@ Render: `render.yaml` runs both scripts as `preDeployCommand` on the API service
 
 ---
 
-## 3. Redis
+## 3. Redis + Celery (Backup now + nightly)
 
-1. Create a Redis instance (Upstash free tier works for staging).
-2. Set:
-   - `REDIS_URL`
-   - `CELERY_BROKER_URL` (same URL, db `0`)
-   - `CELERY_RESULT_BACKEND` (same host, db `1`)
+**Production (Railway project `reasonable-strength`, 2026-08):** Redis + Celery are live.
 
-Use `rediss://` if your provider requires TLS.
+| Service | Role |
+|---------|------|
+| **Redis** | Railway plugin — private `redis://…@redis.railway.internal:6379` |
+| **mizan-api** | `REDIS_URL` / `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` = `${{Redis.REDIS_URL}}` |
+| **mizan-celery-worker** | `celery -A app.workers.celery_app worker --loglevel=info` + `BACKUP_S3_*` + DB |
+| **mizan-celery-beat** | `celery -A app.workers.celery_app beat --loglevel=info` (single instance; 03:00 UTC) |
+
+Legacy cron service **Mizan-backups** is **slept** (Celery beat owns nightly). Do not re-enable both or you get double nightly jobs.
+
+**If provisioning elsewhere:**
+
+1. Create Redis (Railway plugin preferred on Railway; Upstash free tier works for staging).
+2. Set `REDIS_URL`, `CELERY_BROKER_URL`, and `CELERY_RESULT_BACKEND` to the **same** URL (db `0`).
+3. Use `rediss://` only when the provider requires TLS (Celery adds `ssl_cert_reqs` automatically).
 
 ---
 

@@ -75,6 +75,7 @@ function normalizeRoutePath(pathname: string): string {
 function pathNavGrant(path: string): Grant | null {
   if (path === "/") return "nav:dashboard";
   if (path === "/record") return "nav:record";
+  if (path.startsWith("/split")) return "nav:record";
   if (path.startsWith("/review")) return "nav:review";
   if (path.startsWith("/sales")) return "nav:sales";
   if (path.startsWith("/delivery")) return "nav:delivery";

@@ -32,6 +32,7 @@ from app.core.expenses.posting import InvalidExpensePostingError, post_expense_e
 from app.core.partners import posting as partner_posting
 from app.core.partners.ledger import OverLoanRepaymentError as PartnerOverLoanRepaymentError
 from app.core.partners.ledger import OverpaymentError as PartnerOverpaymentError
+from app.core.partners.ledger import OverProfitPaymentError as PartnerOverProfitPaymentError
 from app.core.partners.ledger import OverRepaymentError as PartnerOverRepaymentError
 from app.core.staff import posting as staff_posting
 from app.core.staff.ledger import OverpaymentError as StaffOverpaymentError
@@ -101,6 +102,7 @@ _PARTNER_LINE_CLASSIFICATIONS = frozenset(
         StatementLineClassification.PARTNER_REIMBURSEMENT,
         StatementLineClassification.PARTNER_DRAWING_REPAYMENT,
         StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION,
+        StatementLineClassification.PARTNER_PROFIT_PAID,
         StatementLineClassification.PARTNER_LOAN_RECEIPT,
         StatementLineClassification.PARTNER_LOAN_PAYMENT,
     }
@@ -156,6 +158,7 @@ def _resolve_partner_id_for_line(
                     PartnerMovementType.REIMBURSEMENT_PAID,
                     PartnerMovementType.DRAWING_REPAYMENT,
                     PartnerMovementType.CAPITAL_CONTRIBUTION,
+                    PartnerMovementType.PROFIT_PAID,
                     PartnerMovementType.PARTNER_LOAN_RECEIVED,
                     PartnerMovementType.PARTNER_LOAN_REPAID,
                 )
@@ -1763,6 +1766,18 @@ def classify_statement_line(
             if session.get(Partner, partner_id) is None:
                 raise LookupError("Partner not found")
 
+        elif classification == StatementLineClassification.PARTNER_PROFIT_PAID:
+            if line.amount_kurus >= 0:
+                raise InvalidClassificationError(
+                    "partner_profit_paid requires an outflow (negative amount_kurus)"
+                )
+            if partner_id is None or actor_id is None:
+                raise InvalidClassificationError(
+                    "partner_id and actor_id are required for partner_profit_paid"
+                )
+            if session.get(Partner, partner_id) is None:
+                raise LookupError("Partner not found")
+
         elif classification == StatementLineClassification.PARTNER_LOAN_RECEIPT:
             if line.amount_kurus <= 0:
                 raise InvalidClassificationError(
@@ -2575,6 +2590,54 @@ def classify_statement_line(
             entity_id,
             line,
             StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION,
+            match_token=match_token,
+        )
+        return ClassifyStatementLineResult(
+            line=_line_read_by_id(session, entity_id, line_id),
+            linked_existing_payment=False,
+            linked_existing_transfer=False,
+            routed_to_needs_review=False,
+            journal_entry_id=journal_id,
+        )
+
+    if classification == StatementLineClassification.PARTNER_PROFIT_PAID:
+        payment_amount = abs(line.amount_kurus)
+        assert actor_id is not None
+        assert partner_id is not None
+        try:
+            result = partner_posting.post_profit_paid(
+                session,
+                entity_id,
+                partner_id,
+                payment_date=line.transaction_date,
+                amount_kurus=payment_amount,
+                description=line.description,
+                actor_id=actor_id,
+                payment_account_id=money_account.gl_account_id,
+            )
+        except (
+            partner_posting.InvalidPartnerPostingError,
+            PartnerOverProfitPaymentError,
+            ValueError,
+        ) as exc:
+            raise InvalidClassificationError(str(exc)) from exc
+        journal_id = result.journal_entry.id
+
+        with entity_context(session, entity_id):
+            line = session.get(BankStatementLine, line_id)
+            assert line is not None
+            line.classification = StatementLineClassification.PARTNER_PROFIT_PAID
+            line.status = StatementLineStatus.POSTED
+            line.journal_entry_id = journal_id
+            line.partner_id = partner_id
+            session.commit()
+            session.refresh(line)
+
+        _record_classification_learning(
+            session,
+            entity_id,
+            line,
+            StatementLineClassification.PARTNER_PROFIT_PAID,
             match_token=match_token,
         )
         return ClassifyStatementLineResult(

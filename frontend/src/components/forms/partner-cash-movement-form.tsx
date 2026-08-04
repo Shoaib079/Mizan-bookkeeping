@@ -12,19 +12,20 @@ import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
-import { loadBankAndCashAccounts, type MoneyAccountOption } from "@/lib/load-money-accounts";
+import { loadCashAccounts, type MoneyAccountOption } from "@/lib/load-money-accounts";
 import {
   partnerBalanceAmount,
   partnerBalanceHeading,
 } from "@/lib/partner-balance";
-import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   partnerId: string;
-  kind: "drawing" | "repayment" | "capital";
+  kind: "drawing" | "repayment" | "capital" | "profit_paid";
+  /** Drawing/repayment: net/capital balance. Profit paid: unpaid allocated profit. */
   balanceKurus?: number;
   embedded?: boolean;
   onSaved?: () => void;
@@ -45,6 +46,7 @@ export function PartnerCashMovementForm({
   const isDrawing = kind === "drawing";
   const isCapital = kind === "capital";
   const isRepayment = kind === "repayment";
+  const isProfitPaid = kind === "profit_paid";
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -54,30 +56,36 @@ export function PartnerCashMovementForm({
   const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
-  const [description, setDescription] = useState(
-    isCapital ? "" : isDrawing ? "Partner drawing" : "Partner drawing repayment",
-  );
+  const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const defaultDescription = isCapital
+    ? ""
+    : isProfitPaid
+      ? "Partner profit paid"
+      : isDrawing
+        ? "Partner drawing"
+        : "Partner drawing repayment";
+
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
-    const merged = await loadBankAndCashAccounts(entityId);
-    setAccounts(merged);
-    if (merged[0]) setPaymentGlAccountId(merged[0].gl_account_id);
+    // Manual partner money is cash-only — bank in/out is statement classify.
+    const options = await loadCashAccounts(entityId);
+    setAccounts(options);
+    if (options[0]) setPaymentGlAccountId(options[0].gl_account_id);
+    else setPaymentGlAccountId("");
   }, [entityId]);
 
   useEffect(() => {
     if (open) {
       setDateText(todayTrDate());
-      setDescription(
-        isCapital ? "" : isDrawing ? "Partner drawing" : "Partner drawing repayment",
-      );
+      setDescription(defaultDescription);
       setAmountText("");
       setError(null);
       void loadAccounts().catch(() => undefined);
     }
-  }, [open, loadAccounts, isCapital, isDrawing]);
+  }, [open, loadAccounts, defaultDescription]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -96,7 +104,9 @@ export function PartnerCashMovementForm({
       return;
     }
     if (!paymentGlAccountId) {
-      setError("Choose a cash or bank account.");
+      setError(
+        "Choose a cash drawer. Bank movements: classify on the bank statement.",
+      );
       return;
     }
     const note = description.trim();
@@ -122,6 +132,20 @@ export function PartnerCashMovementForm({
       );
       return;
     }
+    if (isProfitPaid && (balanceKurus === undefined || balanceKurus <= 0)) {
+      setError("This partner has no unpaid allocated profit to pay.");
+      return;
+    }
+    if (
+      isProfitPaid &&
+      balanceKurus !== undefined &&
+      amountKurus > balanceKurus
+    ) {
+      setError(
+        `Payment cannot exceed unpaid profit of ${formatTry(balanceKurus)}.`,
+      );
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -129,9 +153,11 @@ export function PartnerCashMovementForm({
       const idempotencyKey = submitIdempotency.beginSubmit();
       const path = isCapital
         ? "capital-contributions"
-        : isDrawing
-          ? "drawings"
-          : "drawing-repayments";
+        : isProfitPaid
+          ? "profit-payments"
+          : isDrawing
+            ? "drawings"
+            : "drawing-repayments";
       const body = isCapital
         ? {
             contribution_date: movementDate,
@@ -140,16 +166,16 @@ export function PartnerCashMovementForm({
             actor_id: actorId,
             payment_account_id: paymentGlAccountId,
           }
-        : isDrawing
+        : isProfitPaid || isRepayment
           ? {
-              drawing_date: movementDate,
+              payment_date: movementDate,
               amount_kurus: amountKurus,
               description: note,
               actor_id: actorId,
               payment_account_id: paymentGlAccountId,
             }
           : {
-              payment_date: movementDate,
+              drawing_date: movementDate,
               amount_kurus: amountKurus,
               description: note,
               actor_id: actorId,
@@ -169,9 +195,11 @@ export function PartnerCashMovementForm({
       toast(
         isCapital
           ? "Capital recorded"
-          : isDrawing
-            ? "Drawing recorded"
-            : "Drawing repayment recorded",
+          : isProfitPaid
+            ? "Profit payment recorded"
+            : isDrawing
+              ? "Drawing recorded"
+              : "Drawing repayment recorded",
       );
       onClose();
       setAmountText("");
@@ -184,9 +212,13 @@ export function PartnerCashMovementForm({
 
   const title = isCapital
     ? "Record partner capital"
-    : isDrawing
-      ? "Record partner drawing"
-      : "Record drawing repayment";
+    : isProfitPaid
+      ? "Pay partner profit"
+      : isDrawing
+        ? "Record partner drawing"
+        : "Record drawing repayment";
+
+  const accountLabel = isCapital || isRepayment ? "Cash drawer" : "Pay from cash";
 
   return (
     <FormDialogShell
@@ -207,16 +239,19 @@ export function PartnerCashMovementForm({
         </div>
         {!isCapital && balanceKurus !== undefined && (
           <p className="text-sm text-muted-foreground">
-            {partnerBalanceHeading(balanceKurus)}:{" "}
-            {partnerBalanceAmount(balanceKurus)}
+            {isProfitPaid
+              ? `Unpaid allocated profit: ${formatTry(Math.max(0, balanceKurus))}`
+              : `${partnerBalanceHeading(balanceKurus)}: ${partnerBalanceAmount(balanceKurus)}`}
           </p>
         )}
         <p className="text-xs text-muted-foreground">
           {isCapital
-            ? "Partner puts cash or bank money into the business as equity — not a loan."
-            : isDrawing
-              ? "Partner withdraws cash from the business — balance may go negative (partner owes you)."
-              : "Partner repays cash against an outstanding drawing."}
+            ? "Partner puts cash into the business as equity — not a loan. Bank capital: classify the statement inflow as Partner capital."
+            : isProfitPaid
+              ? "Pays allocated profit from cash. Bank payouts: classify the statement as Partner profit paid — do not record both."
+              : isDrawing
+                ? "Partner takes cash from a drawer. Bank withdrawals: classify the statement as Partner withdrawal."
+                : "Partner returns cash against an outstanding drawing. Bank repayments: classify on the statement."}
         </p>
         <div>
           <Label htmlFor="pc-amount">Amount (TRY)</Label>
@@ -247,19 +282,20 @@ export function PartnerCashMovementForm({
           )}
         </div>
         <div>
-          <Label htmlFor="pc-account">
-            {isCapital || isRepayment ? "Receive into" : "Pay from"}
-          </Label>
+          <Label htmlFor="pc-account">{accountLabel}</Label>
           <Combobox
             id="pc-account"
             value={paymentGlAccountId}
             onValueChange={setPaymentGlAccountId}
             options={accounts.map((a) => ({
               value: a.gl_account_id,
-              label: `${a.name} (${a.account_kind})`,
+              label: a.name,
             }))}
-            placeholder="Choose account…"
+            placeholder="Choose cash drawer…"
           />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Bank? Wait for the statement and classify it there — never both.
+          </p>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting}>
@@ -267,9 +303,11 @@ export function PartnerCashMovementForm({
             ? "Recording…"
             : isCapital
               ? "Record capital"
-              : isDrawing
-                ? "Record drawing"
-                : "Record repayment"}
+              : isProfitPaid
+                ? "Pay profit"
+                : isDrawing
+                  ? "Record drawing"
+                  : "Record repayment"}
         </Button>
       </form>
     </FormDialogShell>

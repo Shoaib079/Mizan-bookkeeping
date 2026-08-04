@@ -31,8 +31,11 @@ Ordered, tick-off checklist for taking Mizan to production. Derived from `DEPLOY
   - `DATABASE_URL = postgresql+psycopg://mizan_app:…@host:5432/mizan?sslmode=require`
   - `DATABASE_ADMIN_URL = postgresql+psycopg://mizan:…@host:5432/postgres?sslmode=require`
 
-### 1b. Redis
-- [ ] Create instance; set `REDIS_URL`, `CELERY_BROKER_URL` (db 0), `CELERY_RESULT_BACKEND` (db 1) — `rediss://` if TLS required
+### 1b. Redis + Celery (production: done on Railway 2026-08)
+- [x] Railway Redis plugin; `REDIS_URL` / `CELERY_*` = `${{Redis.REDIS_URL}}` on `mizan-api`, worker, beat
+- [x] `mizan-celery-worker` + `mizan-celery-beat` (Dockerfile `./backend`); worker has `BACKUP_S3_*`
+- [x] Legacy `Mizan-backups` cron slept — Celery beat owns 03:00 UTC nightly
+- [ ] Elsewhere: create Redis; set broker + result to the **same** URL (db 0); `rediss://` only if TLS required
 
 ### 1c. Clerk (staging)
 - [ ] JWT template includes `email` **and** `email_verified` claims (without both, API auth fails)

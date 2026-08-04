@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 from app.core.ledger.subledger_display import SubledgerDisplayKind
@@ -79,6 +79,7 @@ class PartnerLedgerRead(BaseModel):
     capital_balance_kurus: int = 0
     capital_contribution_kurus: int = 0
     profit_allocated_kurus: int = 0
+    unpaid_profit_kurus: int = 0
     drawings_net_kurus: int = 0
     net_balance_kurus: int = 0
     loan_balance_kurus: int = 0
@@ -91,6 +92,30 @@ class ExpenseFrontedCreate(AcknowledgeDuplicateMixin):
     description: str = Field(min_length=1, max_length=512)
     actor_id: OptionalActorId = None
     expense_account_id: uuid.UUID
+
+
+class PartnerSplitBuyCreate(BaseModel):
+    expense_date: date
+    restaurant_amount_kurus: int = Field(ge=0)
+    personal_amount_kurus: int = Field(ge=0)
+    note: str = Field(min_length=1, max_length=512)
+    invoice_number: str | None = Field(default=None, max_length=128)
+    expense_account_id: uuid.UUID | None = None
+    supplier_id: uuid.UUID | None = None
+    actor_id: OptionalActorId = None
+
+    @model_validator(mode="after")
+    def _at_least_one_amount(self) -> PartnerSplitBuyCreate:
+        if self.restaurant_amount_kurus == 0 and self.personal_amount_kurus == 0:
+            raise ValueError("restaurant or personal amount must be positive")
+        return self
+
+
+class PartnerSplitBuyResponse(BaseModel):
+    journal_entry_ids: list[uuid.UUID]
+    partner_ledger_entry: PartnerLedgerEntryRead | None
+    balance_kurus: int
+    description: str
 
 
 class ReimbursementPaidCreate(BaseModel):
@@ -155,6 +180,21 @@ class CapitalContributionResponse(BaseModel):
     balance_kurus: int
 
 
+class ProfitPaidCreate(BaseModel):
+    payment_date: date
+    amount_kurus: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: OptionalActorId = None
+    payment_account_id: uuid.UUID
+
+
+class ProfitPaidResponse(BaseModel):
+    journal_entry_id: uuid.UUID
+    partner_ledger_entry: PartnerLedgerEntryRead
+    unpaid_profit_kurus: int
+    balance_kurus: int
+
+
 class PartnerJournalEntryCorrect(BaseModel):
     entry_date: date
     description: str = Field(min_length=1, max_length=512)
@@ -189,6 +229,7 @@ class ProfitAllocationPreviewRead(BaseModel):
     total_profit_kurus: int
     total_allocated_kurus: int = 0
     net_against_drawings: bool = True
+    netting_as_of: date | None = None
     lines: list[ProfitAllocationPreviewLine]
 
 
@@ -196,6 +237,7 @@ class ProfitAllocationPreviewRequest(BaseModel):
     profit_kurus: int | None = Field(default=None, gt=0)
     period_from: date | None = None
     period_to: date | None = None
+    allocation_date: date | None = None
     net_against_drawings: bool = True
 
 

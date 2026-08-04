@@ -40,6 +40,7 @@ _CLASSIFICATION_TO_SOURCE: dict[StatementLineClassification, JournalEntrySource]
     StatementLineClassification.PARTNER_REIMBURSEMENT: JournalEntrySource.PARTNER_REIMBURSEMENT_PAID,
     StatementLineClassification.PARTNER_DRAWING_REPAYMENT: JournalEntrySource.PARTNER_DRAWING_REPAYMENT,
     StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION: JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
+    StatementLineClassification.PARTNER_PROFIT_PAID: JournalEntrySource.PARTNER_PROFIT_PAID,
     StatementLineClassification.PARTNER_LOAN_RECEIPT: JournalEntrySource.PARTNER_LOAN_RECEIVED,
     StatementLineClassification.PARTNER_LOAN_PAYMENT: JournalEntrySource.PARTNER_LOAN_REPAID,
     StatementLineClassification.LOAN_PAYMENT: JournalEntrySource.PARTNER_LOAN_REPAID,

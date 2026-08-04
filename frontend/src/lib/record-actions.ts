@@ -12,6 +12,7 @@ import {
   Handshake,
   Landmark,
   Receipt,
+  Scissors,
   ShoppingBag,
   Upload,
   UserCircle,
@@ -56,6 +57,7 @@ export type RecordActionKey =
   | "partnerDrawing"
   | "partnerDrawingRepayment"
   | "partnerProfitAllocation"
+  | "splitExpense"
   | "customerCreditSale"
   | "customerPayment"
   | "supplierPayment";
@@ -224,6 +226,14 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     icon: Handshake,
     section: "payments",
     personKind: "partner",
+  },
+  {
+    id: "splitExpense",
+    label: "Split",
+    description:
+      "Peel personal share off a posted bank expense (SGK, rent…) onto a partner.",
+    icon: Scissors,
+    section: "payments",
   },
   {
     id: "supplierPayment",

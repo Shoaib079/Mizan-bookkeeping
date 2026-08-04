@@ -72,6 +72,7 @@ export type StatementLineClassification =
   | "partner_reimbursement"
   | "partner_drawing_repayment"
   | "partner_capital_contribution"
+  | "partner_profit_paid"
   | "partner_loan_receipt"
   | "partner_loan_payment"
   | "loan_payment"

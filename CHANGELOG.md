@@ -4,6 +4,26 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-04
 
+**Split hub (bank expense → partner).**
+- **Record → Split** (or `/split`): pick a posted bank expense (SGK, rent, etc.) **or supplier payment**, enter personal share, pick partner — restaurant share stays; personal becomes a partner drawing (P&L reduced). Bank line unchanged.
+- Supplier payment splits ask which expense account to reverse. Staff share still later; pocket Metro uses Partners → Split buy.
+
+**Partner split buy (amount split).**
+- On a partner’s page: **Split buy** — enter the **ticket total** and **personal** share; restaurant share is calculated (total − personal). Required note, optional invoice number (saved in the description so you can find it later).
+- Partner paid from pocket (no supplier): restaurant share becomes expense fronted; personal share is noted only.
+- Supplier already on the books: pick the supplier — clears payable and owes the partner for the restaurant share (no second expense); personal share comes off the P&L.
+- Line-by-line invoice splits and auto-retag of bank supplier payments are still future work.
+
+**Partner manual money — cash only.**
+- Partner forms (Pay profit, drawing, capital, repayment, reimbursement) only list cash drawers.
+- Bank partner movements: classify on the statement — never also record manually.
+
+**Pay partner profit from cash or bank.**
+- Allocating profit still only updates the books (capital / settlement) — it does **not** take money from the drawer or bank.
+- **Cash:** Partners → **Pay profit** (drawer only).
+- **Bank:** when the statement lands, classify the outflow as **Partner profit paid** — do not also Pay profit manually (that would double).
+- Cannot pay more than unpaid allocated profit. Drawings after the allocation period are ignored when netting.
+
 **Manual backup to Cloudflare.**
 - Settings → **Backup now** (owner/admin) uploads a full backup to R2 right away (same place as the nightly job).
 - If you already backed up that UTC day, the automatic nightly run skips creating another dump and only cleans old archives.

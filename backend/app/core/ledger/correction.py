@@ -113,6 +113,9 @@ VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
         JournalEntrySource.RULE_AUTO,
         JournalEntrySource.SYSTEM,
         JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
+        JournalEntrySource.PARTNER_PROFIT_PAID,
+        JournalEntrySource.PARTNER_SUPPLIER_PAID,
+        JournalEntrySource.EXPENSE_PERSONAL_SPLIT,
         JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
         JournalEntrySource.PARTNER_LOAN_RECEIVED,
         JournalEntrySource.PARTNER_LOAN_REPAID,
@@ -1527,6 +1530,12 @@ def void_partner_journal_entry(
         )
         if partner_row is None:
             raise CorrectionNotFoundError("partner ledger entry not found for journal entry")
+        # Partner paid supplier (split buy) also clears AP — reverse both ledgers.
+        supplier_row = session.scalar(
+            select(SupplierLedgerEntry).where(
+                SupplierLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
 
     return void_gl_with_subledger_rows(
         session,
@@ -1537,6 +1546,7 @@ def void_partner_journal_entry(
         void_date=void_date,
         period_unlock_reason=period_unlock_reason,
         partner_row=partner_row,
+        supplier_row=supplier_row,
     )
 
 

@@ -128,6 +128,13 @@ export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
     target: "partner",
   },
   {
+    value: "partner_profit_paid",
+    label: "Partner profit paid",
+    hint: "Pay allocated profit from bank — Dr 3300 / Cr bank (do not also Pay profit manually)",
+    direction: "outflow",
+    target: "partner",
+  },
+  {
     value: "partner_reimbursement",
     label: "Repay partner (fronted expenses)",
     hint: "Pay back what you owe the partner — not an expense",
@@ -217,6 +224,7 @@ const CLASSIFICATION_SEARCH_KEYWORDS: Partial<
   staff_incentive: "staff incentive bonus yemek yol prim",
   staff_advance: "salary advance avans personel",
   partner_drawing: "partner withdrawal drawing ortak çekim",
+  partner_profit_paid: "partner profit paid kar dağıtım ortak ödeme",
   partner_reimbursement: "partner reimbursement masraf ortak geri ödeme",
   partner_loan_payment: "partner loan repay ortak borç ödeme",
   loan_payment: "loan repay kredi taksit faiz bank loan",

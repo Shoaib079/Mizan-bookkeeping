@@ -21,6 +21,7 @@ from app.core.partners.ledger import (
     net_balance_kurus,
     profit_allocated_kurus,
     reimbursement_balance_kurus,
+    unpaid_profit_kurus,
 )
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import NET_BALANCE_MOVEMENT_TYPES, PartnerMovementType
@@ -50,6 +51,8 @@ from app.features.partners.schema import (
     PartnerLedgerEntryRead,
     PartnerLedgerRead,
     PartnerUpdate,
+    PartnerSplitBuyCreate,
+    PartnerSplitBuyResponse,
     ReimbursementPaidCreate,
     ReimbursementPaidResponse,
     DrawingCreate,
@@ -58,6 +61,8 @@ from app.features.partners.schema import (
     DrawingRepaymentResponse,
     CapitalContributionCreate,
     CapitalContributionResponse,
+    ProfitPaidCreate,
+    ProfitPaidResponse,
     PartnerJournalEntryCorrect,
     PartnerJournalEntryCorrectOut,
     ProfitAllocationPost,
@@ -237,6 +242,7 @@ def get_partner_ledger(
         capital = capital_balance_kurus(session, entity_id, partner_id)
         contribution = capital_contribution_kurus(session, entity_id, partner_id)
         profit_allocated = profit_allocated_kurus(session, entity_id, partner_id)
+        unpaid_profit = unpaid_profit_kurus(session, entity_id, partner_id)
         drawings = drawings_net_kurus(session, entity_id, partner_id)
         loan = loan_balance_kurus(session, entity_id, partner_id)
         net = net_balance_kurus(session, entity_id, partner_id)
@@ -258,6 +264,7 @@ def get_partner_ledger(
         capital_balance_kurus=capital,
         capital_contribution_kurus=contribution,
         profit_allocated_kurus=profit_allocated,
+        unpaid_profit_kurus=unpaid_profit,
         drawings_net_kurus=drawings,
         net_balance_kurus=net,
         loan_balance_kurus=loan,
@@ -302,12 +309,73 @@ def record_expense_fronted(
     )
 
 
+def record_split_buy(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: PartnerSplitBuyCreate,
+) -> PartnerSplitBuyResponse:
+    result = partner_posting.post_partner_split_buy(
+        session,
+        entity_id,
+        partner_id,
+        expense_date=payload.expense_date,
+        restaurant_amount_kurus=payload.restaurant_amount_kurus,
+        personal_amount_kurus=payload.personal_amount_kurus,
+        note=payload.note,
+        actor_id=payload.actor_id,
+        expense_account_id=payload.expense_account_id,
+        supplier_id=payload.supplier_id,
+        invoice_number=payload.invoice_number,
+    )
+    partner_read = None
+    if result.partner_ledger_entry is not None:
+        partner_read = _partner_entry_read(
+            session, result.partner_ledger_entry, entity_id=entity_id
+        )
+    return PartnerSplitBuyResponse(
+        journal_entry_ids=result.journal_entry_ids,
+        partner_ledger_entry=partner_read,
+        balance_kurus=result.balance_kurus,
+        description=result.description,
+    )
+
+
+def _require_manual_cash_payment_account(
+    session: Session,
+    entity_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+) -> None:
+    """Manual partner money APIs are cash-only; bank uses statement classify."""
+    from app.core.ledger.posting import InvalidAccountError
+    from app.features.banking.models import MoneyAccount, MoneyAccountKind
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        money = session.scalar(
+            select(MoneyAccount).where(
+                MoneyAccount.entity_id == entity_id,
+                MoneyAccount.gl_account_id == payment_account_id,
+            )
+        )
+        if money is None:
+            raise InvalidAccountError("payment account not found for this entity")
+        if money.account_kind != MoneyAccountKind.CASH:
+            raise InvalidAccountError(
+                "Manual partner money is cash-only — classify bank lines on the "
+                "bank statement"
+            )
+
+
 def record_reimbursement_paid(
     session: Session,
     entity_id: uuid.UUID,
     partner_id: uuid.UUID,
     payload: ReimbursementPaidCreate,
 ) -> ReimbursementPaidResponse:
+    _require_manual_cash_payment_account(
+        session, entity_id, payload.payment_account_id
+    )
     result = partner_posting.post_reimbursement_paid(
         session,
         entity_id,
@@ -333,6 +401,9 @@ def record_drawing(
     partner_id: uuid.UUID,
     payload: DrawingCreate,
 ) -> DrawingResponse:
+    _require_manual_cash_payment_account(
+        session, entity_id, payload.payment_account_id
+    )
     result = partner_posting.post_drawing(
         session,
         entity_id,
@@ -358,6 +429,9 @@ def record_drawing_repayment(
     partner_id: uuid.UUID,
     payload: DrawingRepaymentCreate,
 ) -> DrawingRepaymentResponse:
+    _require_manual_cash_payment_account(
+        session, entity_id, payload.payment_account_id
+    )
     result = partner_posting.post_drawing_repayment(
         session,
         entity_id,
@@ -386,6 +460,9 @@ def record_capital_contribution(
     note = payload.description.strip()
     if not note:
         raise ValueError("Note is required — why did this partner invest?")
+    _require_manual_cash_payment_account(
+        session, entity_id, payload.payment_account_id
+    )
     result = partner_posting.post_capital_contribution(
         session,
         entity_id,
@@ -401,6 +478,36 @@ def record_capital_contribution(
         partner_ledger_entry=_partner_entry_read(
             session, result.partner_ledger_entry, entity_id=entity_id
         ),
+        balance_kurus=result.balance_kurus,
+    )
+
+
+def record_profit_paid(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: ProfitPaidCreate,
+) -> ProfitPaidResponse:
+    """Manual Pay profit — cash drawer only. Bank payouts classify on the statement."""
+    _require_manual_cash_payment_account(
+        session, entity_id, payload.payment_account_id
+    )
+    result = partner_posting.post_profit_paid(
+        session,
+        entity_id,
+        partner_id,
+        payment_date=payload.payment_date,
+        amount_kurus=payload.amount_kurus,
+        description=payload.description.strip(),
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+    )
+    return ProfitPaidResponse(
+        journal_entry_id=result.journal_entry.id,
+        partner_ledger_entry=_partner_entry_read(
+            session, result.partner_ledger_entry, entity_id=entity_id
+        ),
+        unpaid_profit_kurus=result.unpaid_profit_kurus,
         balance_kurus=result.balance_kurus,
     )
 
@@ -485,6 +592,16 @@ def _build_partner_correction_lines(
     if movement_type == PartnerMovementType.PROFIT_ALLOCATION:
         raise CorrectionNotFoundError(
             "profit allocation must be voided at entity level, not per-partner correct"
+        )
+
+    if movement_type == PartnerMovementType.PROFIT_SETTLEMENT:
+        raise CorrectionNotFoundError(
+            "profit allocation must be voided at entity level, not per-partner correct"
+        )
+
+    if movement_type == PartnerMovementType.PROFIT_PAID:
+        raise CorrectionNotFoundError(
+            "profit payment must be voided, not corrected in place"
         )
 
     raise CorrectionNotFoundError("partner movement type is not correctable")
@@ -572,7 +689,10 @@ def void_partner_journal_entry_http(
         )
         if partner_row is None:
             raise CorrectionNotFoundError("partner ledger entry not found for journal entry")
-        if partner_row.movement_type.value == "profit_allocation":
+        if partner_row.movement_type.value in (
+            "profit_allocation",
+            "profit_settlement",
+        ):
             raise CorrectionNotFoundError(
                 "profit allocation must be voided at entity level, not per-partner void"
             )
@@ -590,6 +710,19 @@ def void_partner_journal_entry_http(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
     )
+
+
+def _netting_as_of(
+    *,
+    period_to: date | None,
+    allocation_date: date | None,
+) -> date:
+    """Movements after this date are ignored when netting profit against amount taken."""
+    if period_to is not None:
+        return period_to
+    if allocation_date is not None:
+        return allocation_date
+    raise ValueError("allocation_date is required when period_to is not set")
 
 
 def _resolve_profit_kurus(
@@ -627,11 +760,16 @@ def preview_profit_allocation(
         entity_id,
         profit_kurus=profit_kurus,
         net_against_drawings=payload.net_against_drawings,
+        netting_as_of=_netting_as_of(
+            period_to=payload.period_to,
+            allocation_date=payload.allocation_date,
+        ),
     )
     return ProfitAllocationPreviewRead(
         total_profit_kurus=preview.total_profit_kurus,
         total_allocated_kurus=sum(line.amount_kurus for line in preview.splits),
         net_against_drawings=payload.net_against_drawings,
+        netting_as_of=preview.netting_as_of,
         lines=[
             ProfitAllocationPreviewLine(
                 partner_id=line.partner_id,
@@ -667,18 +805,25 @@ def post_profit_allocation(
         description=payload.description,
         actor_id=payload.actor_id,
         net_against_drawings=payload.net_against_drawings,
+        netting_as_of=_netting_as_of(
+            period_to=payload.period_to,
+            allocation_date=payload.allocation_date,
+        ),
     )
     with entity_context(session, entity_id):
         require_entity_context()
         partner_reads = _partner_entry_reads(
             session, list(result.partner_ledger_entries)
         )
+    capital_allocated = sum(
+        entry.amount_kurus
+        for entry in result.partner_ledger_entries
+        if entry.movement_type == PartnerMovementType.PROFIT_ALLOCATION
+    )
     return ProfitAllocationPostOut(
         journal_entry_id=result.journal_entry.id,
         total_profit_kurus=profit_kurus,
-        total_allocated_kurus=sum(
-            entry.amount_kurus for entry in result.partner_ledger_entries
-        ),
+        total_allocated_kurus=capital_allocated,
         net_against_drawings=payload.net_against_drawings,
         partner_ledger_entries=partner_reads,
     )

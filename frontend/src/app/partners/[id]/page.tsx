@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { PartnerExpenseFrontedForm } from "@/components/forms/partner-expense-fronted-form";
+import { PartnerSplitBuyForm } from "@/components/forms/partner-split-buy-form";
 import { PartnerCashMovementForm } from "@/components/forms/partner-cash-movement-form";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
@@ -62,6 +63,7 @@ type LedgerResponse = {
   capital_balance_kurus: number;
   capital_contribution_kurus: number;
   profit_allocated_kurus: number;
+  unpaid_profit_kurus?: number;
   drawings_net_kurus: number;
   net_balance_kurus: number;
   loan_balance_kurus?: number;
@@ -79,10 +81,11 @@ export default function PartnerDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
+  const [splitBuyOpen, setSplitBuyOpen] = useState(false);
   const [reimburseOpen, setReimburseOpen] = useState(false);
-  const [capitalOpen, setCapitalOpen] = useState(false);
-  const [drawingOpen, setDrawingOpen] = useState(false);
-  const [repaymentOpen, setRepaymentOpen] = useState(false);
+  const [cashMoveKind, setCashMoveKind] = useState<
+    "capital" | "drawing" | "repayment" | "profit_paid" | null
+  >(null);
   const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
     journal_entry_id: string;
@@ -96,10 +99,9 @@ export default function PartnerDetailPage() {
     setError(null);
     setEditOpen(false);
     setExpenseOpen(false);
+    setSplitBuyOpen(false);
     setReimburseOpen(false);
-    setCapitalOpen(false);
-    setDrawingOpen(false);
-    setRepaymentOpen(false);
+    setCashMoveKind(null);
     setCorrectEntry(null);
     setVoidTarget(null);
   }, []);
@@ -210,6 +212,13 @@ export default function PartnerDetailPage() {
                       {formatTry(ledger.profit_allocated_kurus)}
                     </p>
                   )}
+                  {(ledger.profit_allocated_kurus !== 0 ||
+                    (ledger.unpaid_profit_kurus ?? 0) !== 0) && (
+                    <p>
+                      Unpaid profit:{" "}
+                      {formatTry(ledger.unpaid_profit_kurus ?? 0)}
+                    </p>
+                  )}
                   {ledger.drawings_net_kurus !== 0 && (
                     <p>
                       Drawings (net):{" "}
@@ -230,17 +239,35 @@ export default function PartnerDetailPage() {
             <Button type="button" onClick={() => setExpenseOpen(true)}>
               Expense fronted
             </Button>
+            <Button type="button" onClick={() => setSplitBuyOpen(true)}>
+              Split buy
+            </Button>
             <Button type="button" onClick={() => setReimburseOpen(true)}>
               Pay reimbursement
             </Button>
-            <Button type="button" onClick={() => setCapitalOpen(true)}>
+            <Button type="button" onClick={() => setCashMoveKind("capital")}>
               Record capital
             </Button>
-            <Button type="button" onClick={() => setDrawingOpen(true)}>
+            <Button type="button" onClick={() => setCashMoveKind("drawing")}>
               Record drawing
             </Button>
+            <Button
+              type="button"
+              disabled={(ledger.unpaid_profit_kurus ?? 0) <= 0}
+              onClick={() => setCashMoveKind("profit_paid")}
+              title={
+                (ledger.unpaid_profit_kurus ?? 0) <= 0
+                  ? "No unpaid allocated profit to pay"
+                  : undefined
+              }
+            >
+              Pay profit
+            </Button>
             {partnerDrawingRepaymentAllowed(ledger.capital_balance_kurus) && (
-              <Button type="button" onClick={() => setRepaymentOpen(true)}>
+              <Button
+                type="button"
+                onClick={() => setCashMoveKind("repayment")}
+              >
                 Repay drawing
               </Button>
             )}
@@ -347,6 +374,12 @@ export default function PartnerDetailPage() {
             onClose={() => setExpenseOpen(false)}
             onSaved={() => void reload()}
           />
+          <PartnerSplitBuyForm
+            open={splitBuyOpen}
+            partnerId={partnerId}
+            onClose={() => setSplitBuyOpen(false)}
+            onSaved={() => void reload()}
+          />
           <PartnerReimbursementForm
             open={reimburseOpen}
             partnerId={partnerId}
@@ -355,26 +388,20 @@ export default function PartnerDetailPage() {
             onSaved={() => void reload()}
           />
           <PartnerCashMovementForm
-            open={capitalOpen}
+            key={cashMoveKind ?? "closed"}
+            open={cashMoveKind !== null}
             partnerId={partnerId}
-            kind="capital"
-            onClose={() => setCapitalOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <PartnerCashMovementForm
-            open={drawingOpen}
-            partnerId={partnerId}
-            kind="drawing"
-            balanceKurus={ledger?.net_balance_kurus}
-            onClose={() => setDrawingOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <PartnerCashMovementForm
-            open={repaymentOpen}
-            partnerId={partnerId}
-            kind="repayment"
-            balanceKurus={ledger?.capital_balance_kurus}
-            onClose={() => setRepaymentOpen(false)}
+            kind={cashMoveKind ?? "drawing"}
+            balanceKurus={
+              cashMoveKind === "profit_paid"
+                ? (ledger?.unpaid_profit_kurus ?? 0)
+                : cashMoveKind === "repayment"
+                  ? ledger?.capital_balance_kurus
+                  : cashMoveKind === "drawing"
+                    ? ledger?.net_balance_kurus
+                    : undefined
+            }
+            onClose={() => setCashMoveKind(null)}
             onSaved={() => void reload()}
           />
           <CorrectPartnerLedgerForm

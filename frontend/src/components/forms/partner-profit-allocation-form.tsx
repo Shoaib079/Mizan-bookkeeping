@@ -18,7 +18,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
 import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
-import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { formatTry, parseTrDate, parseTryToKurus, formatTrDate } from "@/lib/money";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
@@ -36,6 +36,7 @@ type PreviewResponse = {
   total_profit_kurus: number;
   total_allocated_kurus: number;
   net_against_drawings: boolean;
+  netting_as_of?: string | null;
   lines: PreviewLine[];
 };
 
@@ -92,6 +93,13 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
       setPreview(null);
       return;
     }
+    const allocationDate = parseTrDate(allocationDateText);
+    const periodTo = parseTrDate(periodToText);
+    if (!periodTo && !allocationDate) {
+      setError("Set allocation date or period to before previewing.");
+      setPreview(null);
+      return;
+    }
     setPreviewLoading(true);
     setError(null);
     try {
@@ -102,6 +110,7 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...profitPayload,
+            allocation_date: allocationDate ?? undefined,
             net_against_drawings: netAgainstDrawings,
           }),
         },
@@ -175,8 +184,9 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Dr Retained earnings (3100), Cr Partner capital (3300) per ownership
-          share. Review the split before confirming.
+          Dr Retained earnings (3100), Cr Owner drawings (3200) for amounts already
+          taken, Cr Partner capital (3300) for the remainder. Review the split before
+          confirming.
         </p>
 
         <div>
@@ -228,8 +238,11 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
             }}
           />
           <span>
-            Net against amount already taken — reduce each partner&apos;s share when
-            their net balance is negative (drawings exceed fronted expenses).
+            Net against amount already taken — settle each partner&apos;s share of
+            profit against their net balance (drawings, fronted expenses, loans) on
+            or before the profit period end, or the allocation date when using a
+            fixed amount. Movements after that date are ignored so later drawings
+            stay separate.
           </span>
         </label>
 
@@ -243,7 +256,14 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
         </Button>
 
         {preview && (
-          <div className="rounded-lg border border-border">
+          <div className="space-y-2">
+            {preview.netting_as_of && preview.net_against_drawings && (
+              <p className="text-xs text-muted-foreground">
+                Netting uses partner balances on or before{" "}
+                {formatTrDate(preview.netting_as_of)}.
+              </p>
+            )}
+            <div className="rounded-lg border border-border">
             <DataTable>
               <DataTableHead>
                 <DataTableRow>
@@ -297,6 +317,7 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
                 </DataTableRow>
               </DataTableBody>
             </DataTable>
+            </div>
           </div>
         )}
 

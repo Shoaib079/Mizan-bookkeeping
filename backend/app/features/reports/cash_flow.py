@@ -61,6 +61,7 @@ _FINANCING_SOURCES = frozenset(
     {
         JournalEntrySource.CREDIT_CARD_PAYMENT,
         JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
+        JournalEntrySource.PARTNER_PROFIT_PAID,
         JournalEntrySource.PARTNER_LOAN_RECEIVED,
         JournalEntrySource.PARTNER_LOAN_REPAID,
     }
@@ -78,6 +79,8 @@ _NON_CASH_SOURCES = frozenset(
         JournalEntrySource.STAFF_ACCRUAL,
         JournalEntrySource.PARTNER_EXPENSE_FRONTED,
         JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
+        JournalEntrySource.PARTNER_SUPPLIER_PAID,
+        JournalEntrySource.EXPENSE_PERSONAL_SPLIT,
         JournalEntrySource.CUSTOMER_CREDIT_SALE,
         JournalEntrySource.GROUP_SALE,
         # Pure bookkeeping — moves P&L balances into equity, touches no money.

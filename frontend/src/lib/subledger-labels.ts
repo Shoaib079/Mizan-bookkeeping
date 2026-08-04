@@ -20,6 +20,8 @@ export const partnerMovementLabels: Record<string, string> = {
   partner_loan_received: "Partner loan received",
   partner_loan_repaid: "Partner loan repaid",
   profit_allocation: "Profit allocation",
+  profit_settlement: "Settled from profit",
+  profit_paid: "Profit paid",
 };
 
 export const customerMovementLabels: Record<string, string> = {

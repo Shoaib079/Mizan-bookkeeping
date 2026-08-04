@@ -57,6 +57,7 @@ _CLASSIFICATION_LABELS: dict[StatementLineClassification, str] = {
     StatementLineClassification.PARTNER_REIMBURSEMENT: "Partner reimbursement",
     StatementLineClassification.PARTNER_DRAWING_REPAYMENT: "Drawing repayment",
     StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION: "Capital contribution",
+    StatementLineClassification.PARTNER_PROFIT_PAID: "Partner profit paid",
     StatementLineClassification.PARTNER_LOAN_RECEIPT: "Partner loan in",
     StatementLineClassification.PARTNER_LOAN_PAYMENT: "Partner loan payment",
     StatementLineClassification.LOAN_PAYMENT: "Loan payment",

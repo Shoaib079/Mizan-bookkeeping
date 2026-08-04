@@ -65,7 +65,9 @@
 ## Restaurant operations & deeper
 - **External sales verification** — reconcile sales reported by delivery platforms / the POS provider (Yemeksepeti, Getir, Trendyol, etc.) against recorded sales.
 - **Recipe costing / menu pricing / food cost** — Ingredient → Recipe → Recipe lines → Menu item + price history; gives food-cost % (the COGS world we deferred). The previous app had a real structure to borrow later.
-- **Partner profit allocation** — distribute profit among partners (beyond our current reimbursement-only scope).
+- ~~**Partner profit allocation**~~ → **built** (allocate + cash pay + bank statement classify).
+- ~~**Partner split buy (amount split)**~~ → **built 2026-08-04** (`POST .../split-buys`; note + optional invoice #; pocket fronted and/or clear supplier AP). **Still future:** line-item invoice splits; auto-retag of posted bank supplier payments.
+- ~~**Split hub (bank expense → partner)**~~ → **built 2026-08-04** (`/split`; peel personal off posted bank expense **or supplier payment** onto partner drawing). **Still future on hub:** staff share; classify-time shortcut.
 
 ---
 

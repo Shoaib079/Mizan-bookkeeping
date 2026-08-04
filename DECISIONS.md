@@ -2,6 +2,47 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-08-04 — Split hub (bank expense → partner personal)
+
+**Choice:** One **Split** page (`/split`, also Record → Split) peels personal share off an already-posted **bank expense** (e.g. SGK) or a **supplier payment** onto a **partner drawing**. Enter personal; restaurant = total − personal. Bank is not touched again.
+
+**Books:** Dr `3200` Owner drawings / Cr expense account (personal only). Partner ledger `drawing` linked to the source. JE source `expense_personal_split`. Cap: cumulative personal splits ≤ source amount. Supplier payment path requires picking which expense account to reverse.
+
+**Out of scope (same hub later):** staff share; classify-time shortcut. Pocket/AP partner-paid Metro still uses Partners → Split buy.
+
+**API:** `POST /entities/{id}/splits/bank-expenses`; `POST .../splits/supplier-payments`; list endpoints for both.
+
+## 2026-08-04 — Partner split buy (amount split + optional invoice #)
+
+**Choice:** Partners → **Split buy** records a Metro-style purchase split by **money amounts** (not invoice lines).
+- **UI:** enter **total** + **personal**; restaurant share = total − personal (never type both shares — avoids add mistakes).
+- **Note** required; **invoice number** optional (text in description for later search — no invoice FK; payables stay balance-based).
+- **No supplier:** partner paid from pocket → restaurant share = expense fronted (Dr expense / Cr 2150); personal share is description-only (partner’s own money).
+- **Supplier selected:** partner paid the supplier against existing AP → restaurant share Dr AP / Cr 2150 (owe partner, no second expense); personal share Dr AP / Cr expense (clear AP + reverse personal from P&L). Total ≤ supplier payable; overpay uses normal supplier payment/advance.
+- **Out of scope:** line-item splits; auto-retag of an already-posted bank supplier payment (void then use this flow).
+
+**API:** `POST .../partners/{id}/split-buys`. Journal source `partner_supplier_paid` for AP-clear legs.
+
+## 2026-08-04 — Partner manual money is cash-only; bank via statement
+
+**Choice:** Partner page / Record forms (capital, drawing, repayment, profit paid, reimbursement) accept **cash drawers only**. Bank inflows/outflows for partners are recorded by **classifying the bank statement** (Partner capital, Partner withdrawal, Partner profit paid, etc.). Manual APIs reject non-cash payment accounts.
+
+**Why:** Owner rule — never manually double-post a bank line. Statement is the source of truth for bank.
+
+## 2026-08-04 — Partner profit: allocate on books, pay from cash/bank separately
+
+**Choice:** Partner profit is two steps.
+1. **Allocate** — books only: credit Partner Capital (`3300`) by ownership share; optional **net against amount already taken** clears cash-settleable net (drawings etc.) via settlement as of `period_to` (or allocation date for a fixed amount). Does **not** move cash or bank.
+2. **Pay profit** —
+   - **Cash:** Partners → Pay profit (drawer only). Manual HTTP API rejects bank accounts so you cannot double-post.
+   - **Bank:** classify the statement outflow as **Partner profit paid** (`partner_profit_paid`) — Dr `3300` / Cr bank. Do **not** also use Pay profit for the same transfer.
+
+Amount capped at **unpaid allocated profit**. Void-only (same pattern as capital contribution).
+
+**Why:** Owners hand partners cash or bank transfers after the books say how much each is owed. Mixing bank payout into a manual form double-counts when the statement lands. Netting ignores drawings after the profit period.
+
+**API:** `POST .../partners/{id}/profit-payments` (cash); statement classify `partner_profit_paid`; ledger `unpaid_profit_kurus`. Journal source `partner_profit_paid` (financing on cash-flow).
+
 ## 2026-08-03 — Clerk invitation email on Add member
 
 **Status:** Built (pending commit/tag).

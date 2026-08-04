@@ -14,10 +14,11 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | — (pick next: **GS-FX**) |
-| **Next up**              | **GS-FX** · then owner sign-off items |
-| **Last completed slice** | **Manual R2 backup (`v0.manual-r2-backup`)** — Settings Backup now; nightly skips same UTC day. Prior: mobile date input. |
-| **Last commit/tag**      | `v0.manual-r2-backup` |
+| **Active slice**         | *(none)* |
+| **Next up**              | **GS-FX** forex-only group sales (design locked) |
+| **Last completed slice** | Partner pay-profit + split buy + Split hub (bank expense & supplier payment) |
+| **Last commit/tag**      | `v0.partner-splits` |
+
 
 **FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
@@ -29,7 +30,7 @@
 
 > **✅ Deploy reality (2026-07-27):** Stack of record is **Neon + Railway + Vercel + Cloudflare R2** — all "Render" references elsewhere in this file are historical, see DECISIONS 2026-07 for the authoritative stack. Railway auto-deploys from `main` and runs `alembic upgrade head` pre-deploy. **Latest migration head includes `088_membership_grants` (2026-08-03)** — additive JSONB `grants` on `entity_memberships` with role-preset backfill. Prior heads `083` (period close snapshots) and `084` (journal cash-flow category). **Sandbox cannot reach GitHub**, so the owner pushes; `origin/main` in the working copy updates when they do.
 >
-> **Railway Hobby $5 upgrade still outstanding** — the trial credit funds the API and the nightly `mizan-backup` cron. If it lapses, **R2 backups stop silently.**
+> **Railway Hobby billing** — API + Redis + Celery worker/beat must stay funded. If the project sleeps or Redis stops, **Backup now and nightly R2 backups fail** (API returns “Backup worker unavailable”).
 
 ### Next plan (pre-launch, owner-driven)
 
@@ -275,7 +276,11 @@ Every statement-line classification that represents a **real GL event** must pos
 | Staff (salary vs advance — no double-count) | done   | `employees` + `staff_ledger_entries`; `2250` Salaries Payable; TRY accrual Dr `5100`/Cr `2250`; advance Dr `1300`/Cr cash; payment Dr `2250`/Cr `1300`+cash (atomic advance offset); FX accrual subledger-only; FX payment Dr `5100`/Cr FX GL + `fx_ledger` spend; Alembic `025`; 9 tests; 243 pytest |
 | Partner reimbursements                      | done   | `partners` + `partner_ledger_entries`; expense fronted Dr expense/Cr `2150`; reimbursement Dr `2150`/Cr cash (no expense); per-partner OB via `partner_id` lines; Alembic `026`; 10 tests; 252 pytest                                                                                                 |
 | Partner profit allocation (ownership share) | done   | `3300` Partner Capital; allocate Dr `3100`/Cr `3300` by `ownership_share_pct` (100% gate, last-partner rounding); drawings Dr `3200`/Cr cash; split reimbursement vs capital subledger ties; preview/post/void API + UI; migration `070`; 5 pytest in `test_partner_profit_allocation.py`; tag `v0.partner-profit-allocation` |
-| Partner unified net ledger + profit netting   | done   | One **net balance** per partner (cash-settleable only — excludes capital contribution & profit allocation); contribution/drawings/profit breakdown; running balance on ledger; profit allocation **net against amount already taken**; tag `v0.partner-unified-ledger` |
+| Partner unified net ledger + profit netting   | done   | One **net balance** per partner (cash-settleable only — excludes capital contribution & profit allocation); contribution/drawings/profit breakdown; running balance on ledger; profit allocation **net against amount already taken** (settlement as of period end); tag `v0.partner-unified-ledger` |
+| Partner pay profit (cash / bank)              | done   | Allocate stays books-only; **cash** Pay profit (drawer); **bank** statement classify `partner_profit_paid` (no manual bank pay — avoids double); unpaid cap; financing cash-flow; tag `v0.partner-splits` |
+| Partner split buy (amount split)              | done   | UI: total + personal → restaurant auto; note + optional invoice #; pocket fronted and/or clear supplier AP (`partner_supplier_paid`); `POST .../split-buys`; line-item split deferred; tag `v0.partner-splits` |
+| Split hub (bank expense → partner)            | done   | `/split` + Record → Split; bank expense **and supplier payment** → Dr 3200 / Cr expense + partner drawing; `expense_personal_split`; tag `v0.partner-splits` |
+
 | Receivables                                 | done   | `customers` + `customer_ledger_entries`; credit sale Dr `1200`/Cr `4000`; payment Dr bank/Cr `1200` (no revenue); per-customer OB via `customer_id`; statement classify `customer_payment`; Alembic `027`; 8 tests; 260 pytest                                                                        |
 | FX spend / conversion                       | done   | `post_fx_conversion()` Dr bank/cash / Cr FX GL at average cost + realized gain `4200` or loss `5600`; `post_fx_expense_spend()` Dr expense / Cr FX at average cost; `SPEND` subledger row; owner-entered TRY received; no holding revaluation; 6 tests; 266 pytest                                    |
 
@@ -1900,6 +1905,9 @@ Take the tested app to a real, secure production environment and put real data i
 | 2026-08-01 | e-Fatura PDF soft-hyphen dates + 1% KDV | `v0.efatura-soft-hyphen-date`                          | Parse invoice dates with Unicode dash variants (soft hyphen U+00AD); BBD mango supply fixture; single-rate VAT base uses net matrah; pytest |
 | 2026-08-01 | Bank activity — opening balance rows           | `v0.bank-activity-opening-balance`                     | Account activity timeline includes **Opening balance** GL lines on the bank sub-account (go-live date in range); posted in/out + running book align with closing; panel copy updated; pytest |
 | 2026-08-01 | Statement Bakiye column not in description     | `v0.statement-bakiye-column-fix`                       | Exclude Bakiye/Güncel Bakiye from description merge; Bakiye maps to closing balance only; remove Extra description on import UI; sanitize saved mappings; 15 pytest + vitest |
+| 2026-08-04 | Split hub (bank expense → partner)             | *(uncommitted — await owner)*                          | `/split` + Record → Split; personal peel → Dr 3200 / Cr expense + partner drawing; `expense_personal_split`; 3 pytest |
+| 2026-08-04 | Partner split buy (amount split)               | *(uncommitted — await owner)*                          | Total + personal → auto restaurant; note + optional invoice #; pocket fronted / AP-clear `partner_supplier_paid`; `POST .../split-buys`; 8 pytest |
+| 2026-08-04 | Partner pay profit (cash / bank)               | *(uncommitted — await owner)*                          | Allocate books-only; cash Pay profit; bank via statement **Partner profit paid**; period-scoped netting; unpaid cap |
 | 2026-08-01 | Partner unified net ledger + profit netting    | `v0.partner-unified-ledger`                            | `net_balance_kurus` for cash-settleable movements only; contribution/profit/drawings breakdown; running balance; profit `net_against_drawings`; UI on detail/directory/balances; 1337 pytest + build green |
 | 2026-08-01 | Searchable statement classification picker     | `v0.statement-classify-search`                         | `ClassificationPicker` + combobox keywords (supplier, POS, tax/SGK, etc.) on classify bar, bulk bar, review rows; 16 vitest |
 | 2026-08-01 | Suppliers total payables summary               | `v0.suppliers-payables-summary`                        | Total payables card at top of supplier directory (matches Balances payables styling); removed easy-to-miss footnote at bottom |

@@ -46,6 +46,10 @@ class OverLoanRepaymentError(PartnerLedgerError):
     """Loan repayment would exceed amount owed to partner."""
 
 
+class OverProfitPaymentError(PartnerLedgerError):
+    """Profit payment would exceed unpaid allocated profit."""
+
+
 def persist_partner_opening_entry(
     session: Session,
     partner_id: uuid.UUID,
@@ -171,6 +175,8 @@ def _sum_balance(
     session: Session,
     partner_id: uuid.UUID | None,
     movement_types: frozenset[PartnerMovementType] | None = None,
+    *,
+    as_of: date | None = None,
 ) -> int:
     from app.core.ledger.subledger_effective import effective_total_for_scalars
 
@@ -180,6 +186,8 @@ def _sum_balance(
         stmt = stmt.where(PartnerLedgerEntry.partner_id == partner_id)
     if movement_types is not None:
         stmt = stmt.where(PartnerLedgerEntry.movement_type.in_(movement_types))
+    if as_of is not None:
+        stmt = stmt.where(PartnerLedgerEntry.movement_date <= as_of)
     rows = session.scalars(stmt)
     return effective_total_for_scalars(
         session,
@@ -271,12 +279,29 @@ def capital_contribution_kurus(
 def profit_allocated_kurus(
     session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
 ) -> int:
-    """Total profit allocated to partner on 3300."""
+    """Total profit allocated to partner on 3300 (gross capital credits)."""
     return _partner_balance_by_types(
         session,
         entity_id,
         partner_id,
         frozenset({PartnerMovementType.PROFIT_ALLOCATION}),
+    )
+
+
+def unpaid_profit_kurus(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    """Allocated profit not yet paid out in cash/bank (allocations − payments)."""
+    return _partner_balance_by_types(
+        session,
+        entity_id,
+        partner_id,
+        frozenset(
+            {
+                PartnerMovementType.PROFIT_ALLOCATION,
+                PartnerMovementType.PROFIT_PAID,
+            }
+        ),
     )
 
 
@@ -327,6 +352,21 @@ def net_balance_kurus(
 
     Positive = business owes the partner; negative = partner owes the business.
     """
+    return net_balance_kurus_as_of(session, entity_id, partner_id, as_of=None)
+
+
+def net_balance_kurus_as_of(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    *,
+    as_of: date | None,
+) -> int:
+    """Net balance including only movements on or before ``as_of`` (inclusive).
+
+    When ``as_of`` is None, all effective movements count (same as net_balance_kurus).
+    Used when allocating profit for a period — drawings after period end are ignored.
+    """
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
@@ -334,7 +374,9 @@ def net_balance_kurus(
         partner = session.get(Partner, partner_id)
         if partner is None:
             raise LookupError("Partner not found")
-        return _sum_balance(session, partner_id, NET_BALANCE_MOVEMENT_TYPES)
+        return _sum_balance(
+            session, partner_id, NET_BALANCE_MOVEMENT_TYPES, as_of=as_of
+        )
 
     if get_current_entity_id() == entity_id:
         return _read()

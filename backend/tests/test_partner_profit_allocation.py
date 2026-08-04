@@ -95,6 +95,7 @@ def test_three_partner_split_posts_exact_credits(db_session, three_partner_setup
         profit_kurus=total,
         description="H1 profit share",
         actor_id=ACTOR_ID,
+        netting_as_of=date(2026, 6, 30),
     )
 
     assert result.journal_entry.source == JournalEntrySource.PARTNER_PROFIT_ALLOCATION
@@ -131,6 +132,7 @@ def test_shares_not_100_rejected(db_session, three_partner_setup) -> None:
             profit_kurus=100_000,
             description="Bad shares",
             actor_id=ACTOR_ID,
+            netting_as_of=date(2026, 6, 30),
         )
 
 
@@ -145,6 +147,7 @@ def test_void_reverses_cleanly(db_session, three_partner_setup) -> None:
         profit_kurus=300_000,
         description="To void",
         actor_id=ACTOR_ID,
+        netting_as_of=date(2026, 6, 30),
     )
     pa.void_profit_allocation(
         db_session,
@@ -173,6 +176,7 @@ def test_entity_a_allocation_invisible_to_entity_b(
         profit_kurus=100_000,
         description="Entity A only",
         actor_id=ACTOR_ID,
+        netting_as_of=date(2026, 6, 30),
     )
 
     with entity_context(db_session, restaurant_b.id):
@@ -196,6 +200,7 @@ def test_capital_balance_allocation_minus_drawings(db_session, three_partner_set
         profit_kurus=1_000_000,
         description="Profit",
         actor_id=ACTOR_ID,
+        netting_as_of=date(2026, 6, 30),
     )
 
     partner_posting.post_drawing(
@@ -259,13 +264,265 @@ def test_profit_allocation_nets_prior_drawing(db_session, three_partner_setup) -
         description="Profit with netting",
         actor_id=ACTOR_ID,
         net_against_drawings=True,
+        netting_as_of=date(2026, 6, 30),
     )
 
-    by_partner = {e.partner_id: e.amount_kurus for e in result.partner_ledger_entries}
+    by_partner = {
+        e.partner_id: e.amount_kurus
+        for e in result.partner_ledger_entries
+        if e.movement_type == PartnerMovementType.PROFIT_ALLOCATION
+    }
     assert by_partner[partner_id] == 300_000  # 500k gross − 200k already taken
     assert sum(by_partner.values()) == 800_000
 
     assert _gl_balance(
         db_session, entity_id, accounts[PARTNER_CAPITAL_CODE], AccountNormalBalance.CREDIT
     ) == 800_000
+    assert _gl_balance(
+        db_session, entity_id, accounts[OWNER_DRAWINGS_CODE], AccountNormalBalance.DEBIT
+    ) == 0
+    assert partner_ledger.net_balance_kurus(db_session, entity_id, partner_id) == 0
+
+    with entity_context(db_session, entity_id):
+        types = db_session.scalars(
+            select(PartnerLedgerEntry.movement_type).where(
+                PartnerLedgerEntry.partner_id == partner_id
+            )
+        ).all()
+    assert PartnerMovementType.PROFIT_SETTLEMENT in types
+    assert PartnerMovementType.PROFIT_ALLOCATION in types
+
+
+def test_profit_paid_from_cash_reduces_drawer_and_unpaid(
+    db_session, three_partner_setup
+) -> None:
+    entity_id = three_partner_setup["entity_id"]
+    partner_id = three_partner_setup["partner_ids"][0]
+    drawer = three_partner_setup["drawer"]
+    accounts = three_partner_setup["accounts"]
+
+    pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=1_000_000,
+        description="Profit",
+        actor_id=ACTOR_ID,
+        net_against_drawings=False,
+        netting_as_of=date(2026, 6, 30),
+    )
+    assert partner_ledger.unpaid_profit_kurus(db_session, entity_id, partner_id) == 500_000
+
+    cash_before = _gl_balance(
+        db_session, entity_id, drawer.gl_account_id, AccountNormalBalance.DEBIT
+    )
+
+    result = partner_posting.post_profit_paid(
+        db_session,
+        entity_id,
+        partner_id,
+        payment_date=date(2026, 7, 1),
+        amount_kurus=200_000,
+        description="Cash profit payout",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    assert result.unpaid_profit_kurus == 300_000
+    assert partner_ledger.unpaid_profit_kurus(db_session, entity_id, partner_id) == 300_000
+    assert partner_ledger.profit_allocated_kurus(db_session, entity_id, partner_id) == 500_000
+
+    assert (
+        _gl_balance(
+            db_session, entity_id, drawer.gl_account_id, AccountNormalBalance.DEBIT
+        )
+        == cash_before - 200_000
+    )
+
+    assert _gl_balance(
+        db_session, entity_id, accounts[PARTNER_CAPITAL_CODE], AccountNormalBalance.CREDIT
+    ) == 1_000_000 - 200_000
+
+    with pytest.raises(partner_ledger.OverProfitPaymentError):
+        partner_posting.post_profit_paid(
+            db_session,
+            entity_id,
+            partner_id,
+            payment_date=date(2026, 7, 2),
+            amount_kurus=400_000,
+            description="Too much",
+            actor_id=ACTOR_ID,
+            payment_account_id=drawer.gl_account_id,
+        )
+
+
+def test_profit_paid_from_bank(db_session, three_partner_setup) -> None:
+    entity_id = three_partner_setup["entity_id"]
+    partner_id = three_partner_setup["partner_ids"][1]
+    accounts = three_partner_setup["accounts"]
+
+    bank = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(account_kind=MoneyAccountKind.BANK, name="Ops Bank"),
+    )
+
+    pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=1_000_000,
+        description="Profit",
+        actor_id=ACTOR_ID,
+        net_against_drawings=False,
+        netting_as_of=date(2026, 6, 30),
+    )
+
+    partner_posting.post_profit_paid(
+        db_session,
+        entity_id,
+        partner_id,
+        payment_date=date(2026, 7, 1),
+        amount_kurus=300_000,
+        description="Bank profit payout",
+        actor_id=ACTOR_ID,
+        payment_account_id=bank.gl_account_id,
+    )
+    assert partner_ledger.unpaid_profit_kurus(db_session, entity_id, partner_id) == 0
+    assert _gl_balance(
+        db_session, entity_id, accounts[PARTNER_CAPITAL_CODE], AccountNormalBalance.CREDIT
+    ) == 700_000
+
+
+def test_profit_netting_ignores_drawings_after_period_to(
+    db_session, three_partner_setup
+) -> None:
+    entity_id = three_partner_setup["entity_id"]
+    partner_id = three_partner_setup["partner_ids"][0]
+    drawer = three_partner_setup["drawer"]
+    period_end = date(2026, 6, 30)
+
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 6, 15),
+        amount_kurus=50_000,
+        description="In-period drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 7, 27),
+        amount_kurus=200_000,
+        description="After-period drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert (
+        partner_ledger.net_balance_kurus_as_of(
+            db_session, entity_id, partner_id, as_of=period_end
+        )
+        == -50_000
+    )
+
+    preview = pa.preview_profit_allocation(
+        db_session,
+        entity_id,
+        profit_kurus=1_000_000,
+        net_against_drawings=True,
+        netting_as_of=period_end,
+    )
+    ali = next(s for s in preview.splits if s.partner_id == partner_id)
+    assert ali.gross_amount_kurus == 500_000
+    assert ali.offset_kurus == 50_000
+    assert ali.amount_kurus == 450_000
+
+    pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 7, 31),
+        profit_kurus=1_000_000,
+        description="Q2 profit",
+        actor_id=ACTOR_ID,
+        net_against_drawings=True,
+        netting_as_of=period_end,
+    )
+
+    # In-period drawing settled; after-period drawing still owed.
     assert partner_ledger.net_balance_kurus(db_session, entity_id, partner_id) == -200_000
+
+
+def test_statement_partner_profit_paid_from_bank(db_session, three_partner_setup) -> None:
+    """Bank profit payouts post via statement classify — not a second manual pay."""
+    from app.core.onboarding.posting import post_opening_balances
+    from app.features.banking import statements as statement_service
+    from app.features.banking.statement_models import (
+        StatementLineClassification,
+        StatementLineStatus,
+    )
+    from app.features.onboarding.opening_balances import OpeningBalanceLineInput
+
+    entity_id = three_partner_setup["entity_id"]
+    partner_id = three_partner_setup["partner_ids"][0]
+    accounts = three_partner_setup["accounts"]
+
+    bank = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(account_kind=MoneyAccountKind.BANK, name="Garanti TRY"),
+    )
+    post_opening_balances(
+        db_session,
+        entity_id,
+        go_live_date=date(2026, 1, 1),
+        lines=[OpeningBalanceLineInput(money_account_id=bank.id, amount_kurus=5_000_000)],
+        actor_id=ACTOR_ID,
+    )
+
+    pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=1_000_000,
+        description="Profit",
+        actor_id=ACTOR_ID,
+        net_against_drawings=False,
+        netting_as_of=date(2026, 6, 30),
+    )
+    assert partner_ledger.unpaid_profit_kurus(db_session, entity_id, partner_id) == 500_000
+
+    csv = (
+        "transaction_date,amount,description,reference\n"
+        '2026-07-01,"-2.000,00",KAR ODEME ORTAK,REF-PP\n'
+    ).encode()
+    statement = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank.id,
+        csv,
+        original_filename="profit-out.csv",
+    )
+    line_id = statement.lines[0].id
+
+    result = statement_service.classify_statement_line(
+        db_session,
+        entity_id,
+        statement.id,
+        line_id,
+        classification=StatementLineClassification.PARTNER_PROFIT_PAID,
+        partner_id=partner_id,
+        actor_id=ACTOR_ID,
+    )
+    assert result.line.status == StatementLineStatus.POSTED
+    assert result.journal_entry_id is not None
+    assert partner_ledger.unpaid_profit_kurus(db_session, entity_id, partner_id) == 300_000
+    assert _gl_balance(
+        db_session, entity_id, accounts[PARTNER_CAPITAL_CODE], AccountNormalBalance.CREDIT
+    ) == 800_000
+    assert _gl_balance(
+        db_session, entity_id, bank.gl_account_id, AccountNormalBalance.DEBIT
+    ) == 5_000_000 - 200_000

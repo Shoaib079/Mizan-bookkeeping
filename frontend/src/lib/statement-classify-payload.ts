@@ -91,11 +91,12 @@ export function targetsRequiredForClassification(
     case "partner_drawing":
     case "partner_reimbursement":
     case "partner_drawing_repayment":
-    case "partner_capital_contribution":
-      return !targets.partnerId || !targets.note.trim();
+    case "partner_profit_paid":
     case "partner_loan_receipt":
     case "partner_loan_payment":
       return !targets.partnerId;
+    case "partner_capital_contribution":
+      return !targets.partnerId || !targets.note.trim();
     case "transfer":
       return !targets.counterpartId;
     case "credit_card_payment":

@@ -6,11 +6,12 @@ from celery import Celery
 from celery.schedules import crontab
 
 from app.config import settings
+from app.workers.celery_redis_url import normalize_celery_redis_url
 
 celery_app = Celery("mizan")
 celery_app.conf.update(
-    broker_url=settings.celery_broker_url,
-    result_backend=settings.celery_result_backend,
+    broker_url=normalize_celery_redis_url(settings.celery_broker_url),
+    result_backend=normalize_celery_redis_url(settings.celery_result_backend),
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",

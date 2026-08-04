@@ -33,6 +33,7 @@ from app.features.cash.api import sessions_router as cash_sessions_router
 from app.features.fx.api import router as fx_router
 from app.features.staff.api import router as staff_router
 from app.features.partners.api import router as partners_router
+from app.features.splits.api import router as splits_router
 from app.features.customers.api import router as customers_router
 from app.features.group_sales.api import router as group_sales_router
 from app.features.receivables.api import router as receivables_router
@@ -117,6 +118,7 @@ app.include_router(cash_sessions_router)
 app.include_router(fx_router)
 app.include_router(staff_router)
 app.include_router(partners_router)
+app.include_router(splits_router)
 app.include_router(customers_router)
 app.include_router(group_sales_router)
 app.include_router(receivables_router)
