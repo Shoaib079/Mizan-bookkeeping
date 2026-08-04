@@ -25,7 +25,8 @@ import { invalidateReviewCounts } from "@/lib/review-counts-types";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { useStatementReviewUrl } from "@/lib/use-statement-review-url";
 import { useStatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
-import { cn } from "@/lib/utils";
+import { FilterChips } from "@/components/page/filter-chips";
+import { PageHeader } from "@/components/page/page-header";
 
 export function StatementReviewPanel() {
   const { entityId } = useEntity();
@@ -108,10 +109,10 @@ export function StatementReviewPanel() {
 
   return (
     <>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Tick the box next to the date on each line to post or correct a batch with the
-        same classification. Expand a row for one-at-a-time actions.
-      </p>
+      <PageHeader
+        title="Bank lines to review"
+        meta="Tick the box next to the date on each line to post or correct a batch with the same classification. Expand a row for one-at-a-time actions."
+      />
 
       <div className="mb-4">
         <ReportDateRange
@@ -137,34 +138,19 @@ export function StatementReviewPanel() {
         />
       )}
 
-      <div
-        className="mb-6 flex flex-wrap gap-2 border-b border-border pb-2"
-        role="tablist"
-        aria-label="Statement line status filters"
-      >
-        {STATEMENT_REVIEW_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              activeTab === tab.id
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-            onClick={() => {
-              setActiveTab(tab.id);
-              setSelectedLineIds(new Set());
-            }}
-          >
-            {tab.label}
-            <span className="ml-1.5 tabular-nums opacity-80">
-              ({tabCounts[tab.id]})
-            </span>
-          </button>
-        ))}
+      <div className="mb-6 border-b border-border pb-3">
+        <FilterChips
+          chips={STATEMENT_REVIEW_TABS.map((tab) => ({
+            ...tab,
+            count: tabCounts[tab.id],
+          }))}
+          value={activeTab}
+          ariaLabel="Statement line status filters"
+          onChange={(next) => {
+            setActiveTab(next);
+            setSelectedLineIds(new Set());
+          }}
+        />
       </div>
 
       {!loading && visibleLines.length > 0 && (

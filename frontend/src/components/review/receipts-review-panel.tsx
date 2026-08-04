@@ -10,8 +10,8 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Receipt } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
@@ -44,20 +44,26 @@ export function ReceiptsReviewPanel() {
   }
 
   return (
-    <>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Confirm extracted line items from receipt photos before posting.
-      </p>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={4} />}
-      {!loading && pending.length === 0 && (
+    <ListPage
+      title="Receipts to review"
+      meta="Confirm extracted line items from receipt photos before posting."
+      loading={loading}
+      error={error}
+      countLabel={
+        pending.length > 0
+          ? `${pending.length} awaiting review`
+          : undefined
+      }
+      skeletonColumns={4}
+      isEmpty={pending.length === 0}
+      empty={
         <EmptyState
           icon={Receipt}
           title="Nothing to review"
           hint="Uploaded expense receipts awaiting review will appear here."
         />
-      )}
-      {!loading && pending.length > 0 && (
+      }
+      table={
         <DataTable>
           <DataTableHead>
             <tr>
@@ -94,7 +100,7 @@ export function ReceiptsReviewPanel() {
             ))}
           </DataTableBody>
         </DataTable>
-      )}
-    </>
+      }
+    />
   );
 }

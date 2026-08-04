@@ -46,6 +46,9 @@ type Props = {
   };
   /** Total line under the table ("Total payable: …"). */
   footer?: React.ReactNode;
+  /** Detail for the selected row, shown under the rows. Review queues open a
+   * document or draft in place rather than navigating away. */
+  preview?: React.ReactNode;
 
   loading?: boolean;
   error?: string | null;
@@ -71,6 +74,7 @@ export function ListPage({
   isEmpty = false,
   pager,
   footer,
+  preview,
   loading = false,
   error,
   forbidden,
@@ -132,6 +136,7 @@ export function ListPage({
           {footer && (
             <p className="mt-4 text-xs text-muted-foreground">{footer}</p>
           )}
+          {preview && <div className="mt-4">{preview}</div>}
         </>
       )}
 

@@ -10,8 +10,8 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Truck } from "lucide-react";
 import { useQuickActions } from "@/components/quick-actions";
@@ -49,20 +49,24 @@ export function DeliveryReviewPanel() {
   }
 
   return (
-    <>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Confirm platform sales before posting.
-      </p>
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={5} />}
-      {!loading && pending.length === 0 && (
+    <ListPage
+      title="Delivery to review"
+      meta="Confirm platform sales before posting."
+      loading={loading}
+      error={error}
+      countLabel={
+        pending.length > 0 ? `${pending.length} awaiting review` : undefined
+      }
+      skeletonColumns={5}
+      isEmpty={pending.length === 0}
+      empty={
         <EmptyState
           icon={Truck}
           title="Nothing to review"
           hint="Platform sales awaiting review will appear here."
         />
-      )}
-      {!loading && pending.length > 0 && (
+      }
+      table={
         <DataTable>
           <DataTableHead>
             <tr>
@@ -94,7 +98,7 @@ export function DeliveryReviewPanel() {
             ))}
           </DataTableBody>
         </DataTable>
-      )}
-    </>
+      }
+    />
   );
 }

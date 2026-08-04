@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
+import { DocumentReviewPage } from "@/components/page/document-review-page";
+import { MetaFacts } from "@/components/page/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   filterExpenseAccounts,
@@ -255,27 +257,31 @@ export function ReceiptReview({
   const isTerminal = isReviewTerminalStatus(intake.status);
 
   return (
-    <form onSubmit={onConfirm} className="grid gap-6 lg:grid-cols-2">
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h2 className="text-sm font-semibold">Original receipt</h2>
-          <StatusBadge status={intake.status} />
-        </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={documentUrl(entityId, intakeId)}
-          alt="Expense receipt"
-          className="max-h-[480px] w-full rounded-md border border-border object-contain"
-        />
-        <p className="mt-2 text-xs text-muted-foreground">
-          {formatTrDate(intake.expense_date)}
-        </p>
-        {intake.review_reason && (
-          <p className="mt-2 text-sm text-warning">{intake.review_reason}</p>
-        )}
-      </div>
-
-      <div className="rounded-lg border border-border bg-card p-4">
+    <form onSubmit={onConfirm}>
+      <DocumentReviewPage
+        title="Receipt"
+        meta={
+          <MetaFacts
+            items={[
+              <StatusBadge key="status" status={intake.status} />,
+              formatTrDate(intake.expense_date),
+              intake.review_reason,
+            ].filter(Boolean)}
+          />
+        }
+        document={
+          <>
+            <h2 className="mb-3 text-sm font-semibold">Original receipt</h2>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={documentUrl(entityId, intakeId)}
+              alt="Expense receipt"
+              className="max-h-[480px] w-full rounded-md border border-border object-contain"
+            />
+          </>
+        }
+        fields={
+          <>
         <h2 className="mb-3 text-sm font-semibold">Lines</h2>
         {resumeDraft && !isTerminal && (
           <ResumeDraftBanner
@@ -372,7 +378,9 @@ export function ReceiptReview({
             This receipt is {intake.status} and cannot be changed.
           </p>
         )}
-      </div>
+          </>
+        }
+      />
     </form>
   );
 }

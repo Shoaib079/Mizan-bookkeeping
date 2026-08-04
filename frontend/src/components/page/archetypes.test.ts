@@ -156,6 +156,60 @@ describe("page archetypes", () => {
     expect(snapshot).not.toContain("rounded-xl");
   });
 
+  it("review queues are ListPages, and document review is its own shape", async () => {
+    // Slice 5. A review queue turned out to be a list with different row
+    // actions, so ReviewPage would have been a near-duplicate of ListPage —
+    // the fork the rules forbid. ListPage gained a `preview` slot instead.
+    // DocumentReviewPage stays: two panes, one document, genuinely not a list.
+    for (const queue of [
+      "../review/receipts-review-panel.tsx",
+      "../review/delivery-review-panel.tsx",
+      "../review/invoices-review-panel.tsx",
+      "../review/sales-review-panel.tsx",
+    ]) {
+      const source = await read(queue);
+      expect(source, queue).toContain("<ListPage");
+    }
+
+    const doc = await read("./document-review-page.tsx");
+    expect(doc).toContain("lg:grid-cols-2");
+    expect(await read("../receipt-review.tsx")).toContain(
+      "<DocumentReviewPage",
+    );
+  });
+
+  it("no surface rolls its own filter chips", async () => {
+    // Six places drew their own pill row — solid where the shared chip is
+    // tinted, some as role="tablist", each with different padding.
+    const { readdir } = await import("fs/promises");
+    const roots = ["../review/", "../../app/", "../"];
+    const offenders: string[] = [];
+
+    async function scan(dir: string, depth = 0): Promise<void> {
+      if (depth > 3) return;
+      const url = new URL(dir, import.meta.url);
+      for (const entry of await readdir(url, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          await scan(`${dir}${entry.name}/`, depth + 1);
+        } else if (entry.name.endsWith(".tsx")) {
+          const source = await read(`${dir}${entry.name}`);
+          // The active-chip treatment, outside the shared component.
+          if (
+            source.includes('role="tablist"') &&
+            !source.includes("FilterChips")
+          ) {
+            offenders.push(`${dir}${entry.name}`);
+          }
+        }
+      }
+    }
+    await scan("../review/");
+
+    expect(offenders, `hand-rolled chips in: ${offenders.join(", ")}`).toEqual(
+      [],
+    );
+  });
+
   it("row actions sit in a trailing column, weighted like siblings", async () => {
     // Edit and Void used to render inside the description cell on staff,
     // partners and supplier activity — so their left edge moved with the length

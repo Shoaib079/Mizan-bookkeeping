@@ -13,8 +13,9 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { FilterChips } from "@/components/page/filter-chips";
+import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
@@ -33,7 +34,6 @@ import {
 import { useEntityList } from "@/lib/use-entity-list";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { useInvoicesReviewUrl } from "@/lib/use-invoices-review-url";
-import { cn } from "@/lib/utils";
 
 function InvoiceDraftTable({
   rows,
@@ -199,56 +199,41 @@ export function InvoicesReviewPanel() {
   const isPostedTab = activeTab === "posted";
 
   return (
-    <>
-      <p className="mb-4 text-sm text-muted-foreground">
-        {isPostedTab
+    <ListPage
+      title="Invoices to review"
+      meta={
+        isPostedTab
           ? "Browse posted supplier and commission e-Faturas. These are read-only — open a row to preview the document and jump to the ledger entry."
-          : "Uploaded supplier invoices stay here until posted to the ledger. Confirmed invoices must still be posted before they appear in payables. Click Review on a row to expand actions — post, send back to review, discard, or reclassify."}
-      </p>
-
-      <div className="mb-6 space-y-3">
-        <ReportDateRange
-          from={from}
-          to={to}
-          disabled={loading}
-          onChange={onRangeChange}
-        />
-
-        <div
-          className="flex flex-wrap gap-2 border-b border-border pb-2"
-          role="tablist"
-          aria-label="Invoice status filters"
-        >
-          {INVOICE_REVIEW_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                activeTab === tab.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-              onClick={() => onTabChange(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <TableSkeleton columns={isPostedTab ? 7 : 8} />}
-      {!loading && visibleRows.length === 0 && (
+          : "Uploaded supplier invoices stay here until posted to the ledger. Confirmed invoices must still be posted before they appear in payables. Click Review on a row to expand actions — post, send back to review, discard, or reclassify."
+      }
+      loading={loading}
+      error={error}
+      toolbar={
+        <>
+          <ReportDateRange
+            from={from}
+            to={to}
+            disabled={loading}
+            onChange={onRangeChange}
+          />
+          <FilterChips
+            chips={INVOICE_REVIEW_TABS}
+            value={activeTab}
+            onChange={onTabChange}
+            ariaLabel="Invoice status filters"
+          />
+        </>
+      }
+      skeletonColumns={isPostedTab ? 7 : 8}
+      isEmpty={visibleRows.length === 0}
+      empty={
         <EmptyState
           icon={FileText}
           title={emptyCopy.title}
           hint={emptyCopy.hint}
         />
-      )}
-      {!loading && visibleRows.length > 0 && (
+      }
+      table={
         <InvoiceDraftTable
           rows={visibleRows}
           expandedDraftId={expandedDraftId}
@@ -256,7 +241,7 @@ export function InvoicesReviewPanel() {
           onUpdated={onDraftUpdated}
           readOnly={isPostedTab}
         />
-      )}
-    </>
+      }
+    />
   );
 }

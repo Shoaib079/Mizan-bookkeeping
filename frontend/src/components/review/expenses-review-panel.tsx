@@ -22,6 +22,7 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { FilterChips } from "@/components/page/filter-chips";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -192,23 +193,12 @@ export function ExpensesReviewPanel() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1">
-          {EXPENSE_REVIEW_VIEWS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium",
-                view === tab.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80",
-              )}
-              onClick={() => setView(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <FilterChips
+          chips={EXPENSE_REVIEW_VIEWS}
+          value={view}
+          onChange={setView}
+          ariaLabel="Expense review view"
+        />
 
         {view === "expenses" && (
           <>
@@ -223,23 +213,12 @@ export function ExpensesReviewPanel() {
               />
             </div>
 
-            <div className="flex flex-wrap gap-1">
-              {EXPENSE_REVIEW_FILTERS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-sm",
-                    filter === tab.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80",
-                  )}
-                  onClick={() => setFilter(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            <FilterChips
+              chips={EXPENSE_REVIEW_FILTERS}
+              value={filter}
+              onChange={setFilter}
+              ariaLabel="Filter expenses"
+            />
 
             <p className="text-sm text-muted-foreground">
               {loading ? (

@@ -55,8 +55,13 @@ archetype so it shares the header, card, money and empty-state rules while
 keeping its own body: `PageHeader` + period control + `StatCard` row +
 chart row + activity card. Only `/` uses it.
 
-### 5. `ReviewPage`
-`PageHeader` + queue tabs with counts + rows with inline confirm/reject + document preview pane where one exists.
+### 5. ~~`ReviewPage`~~ — folded into `ListPage` (2026-08-04)
+A review queue turned out to be a list with different row actions: header,
+toolbar, table, empty state. The only thing it needed that `ListPage` lacked was
+a place to open the selected document in place, so `ListPage` gained a
+`preview` slot. Building a separate `ReviewPage` would have been a near-copy —
+the fork the rule at the top forbids. Queue tabs come from `SectionShell`, which
+already renders them for the whole `/review` section.
 
 ### 6. `DocumentReviewPage`
 Two-pane: original document left, extracted fields + confidence + actions right. Receipts, invoices, POS summaries, delivery reports.
@@ -79,7 +84,7 @@ Legend: ☐ pending · ☑ done.
 **Coverage proof:** 88 routes total − 30 redirects = **58 live pages**, and the slices below list exactly 58: 7 detail + 11 lists + 8 overview/hubs + 13 review/documents + 12 reports + 7 forms/settings/auth. Redirects need no design work (they render nothing) but are counted here so the arithmetic can be checked.
 
 ### Slice 1 — archetype components
-☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☐ `ReviewPage` ☐ `DocumentReviewPage` ☐ `FormPage` ☐ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
+☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☑ ~~`ReviewPage`~~ (folded into `ListPage`) ☑ `DocumentReviewPage` ☐ `FormPage` ☐ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☐ `LedgerTable` ☑ `FilterChips`
 
 `LedgerTable` is still to build; its row-action rule was pulled forward on 2026-08-04 (actions live in a trailing column, Edit and Void weighted alike) because the inline placement was the loudest thing on the staff page.
 
@@ -115,7 +120,7 @@ What the slice turned up:
 - **A second tile component existed.** `BankingHubTile` duplicated `HubTileCard` with different emphasis. Deleted; the banking hub composes `HubPage`.
 - `/banking/banks`, `/banking/cards` and `/banking/fx` share one implementation that repeated its title twice — once as the page heading, once as the section header above the same list. The section keeps only the total now.
 
-### Slice 5 — review + documents (13)
+### Slice 5 — review + documents (13) — **in progress 2026-08-04**
 ☐ `/review/bank` ☐ `/review/sales` ☐ `/review/receipts` ☐ `/review/invoices` ☐ `/review/expenses` ☐ `/review/delivery` ☐ `/review/manual-journals` ☐ `/review/receipts/[id]` ☐ `/review/invoices/[id]` ☐ `/sales/[id]` ☐ `/banking/statements/[id]` ☐ `/delivery/reports` ☐ `/delivery/settlements`
 
 ### Slice 6 — reports (12, incl. the `/reports` hub)

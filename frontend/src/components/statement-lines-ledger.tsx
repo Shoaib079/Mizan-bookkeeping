@@ -25,6 +25,7 @@ import {
   type StatementLineFilter,
   summarizeStatementLines,
 } from "@/lib/statement-line-filters";
+import { FilterChips } from "@/components/page/filter-chips";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -112,28 +113,15 @@ export function StatementLinesLedger({
         />
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {STATEMENT_LINE_FILTERS.map((tab) => {
-          const count = filterCounts[tab.id] ?? 0;
-          const active = filter === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setFilter(tab.id)}
-              className={cn(
-                "rounded-full px-2.5 py-1 text-xs transition-colors",
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80",
-              )}
-            >
-              {tab.label}
-              {count > 0 && ` (${count})`}
-            </button>
-          );
-        })}
-      </div>
+      <FilterChips
+        chips={STATEMENT_LINE_FILTERS.map((tab) => ({
+          ...tab,
+          count: filterCounts[tab.id] ?? 0,
+        }))}
+        value={filter}
+        onChange={setFilter}
+        ariaLabel="Filter statement lines"
+      />
 
       {filter === "skipped" && summary.skipped > 0 && (
         <p className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
