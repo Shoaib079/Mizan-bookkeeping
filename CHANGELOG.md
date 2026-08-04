@@ -4,6 +4,14 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-04
 
+**Partner Record (one button).**
+- Partners → **Record**: choose Cash paid/taken, Pay profit, Capital in, or Cash returned.
+- Cash paid/taken settles fronted expenses first; extra is a withdrawal. Pay profit is inside Record when there is unpaid allocated profit.
+- Removed from the Record / Add sidebar (not hidden — deleted). Partner money is recorded on the partner page only. Split stays on Record for bank/supplier peel.
+
+**One Pay partner button.**
+- _(Superseded same day by Partner Record.)_ Cash payout settle-then-withdraw API remains `POST .../cash-payments`.
+
 **Split hub (bank expense → partner).**
 - **Record → Split** (or `/split`): pick a posted bank expense (SGK, rent, etc.) **or supplier payment**, enter personal share, pick partner — restaurant share stays; personal becomes a partner drawing (P&L reduced). Bank line unchanged.
 - Supplier payment splits ask which expense account to reverse. Staff share still later; pocket Metro uses Partners → Split buy.

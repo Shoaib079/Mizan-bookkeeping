@@ -3,9 +3,7 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { PartnerExpenseFrontedForm } from "@/components/forms/partner-expense-fronted-form";
-import { PartnerSplitBuyForm } from "@/components/forms/partner-split-buy-form";
-import { PartnerCashMovementForm } from "@/components/forms/partner-cash-movement-form";
+import { PartnerRecordForm } from "@/components/forms/partner-record-form";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
@@ -15,7 +13,6 @@ import {
   type CorrectablePartnerLedgerRow,
 } from "@/components/forms/correct-partner-ledger-form";
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
-import { PartnerReimbursementForm } from "@/components/forms/partner-reimbursement-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +31,6 @@ import { formatTrDate, formatTry } from "@/lib/money";
 import {
   partnerBalanceAmount,
   partnerBalanceHeading,
-  partnerDrawingRepaymentAllowed,
   formatPartnerNetBalance,
 } from "@/lib/partner-balance";
 import { partnerMovementLabels } from "@/lib/subledger-labels";
@@ -80,12 +76,7 @@ export default function PartnerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [expenseOpen, setExpenseOpen] = useState(false);
-  const [splitBuyOpen, setSplitBuyOpen] = useState(false);
-  const [reimburseOpen, setReimburseOpen] = useState(false);
-  const [cashMoveKind, setCashMoveKind] = useState<
-    "capital" | "drawing" | "repayment" | "profit_paid" | null
-  >(null);
+  const [recordOpen, setRecordOpen] = useState(false);
   const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
     journal_entry_id: string;
@@ -98,10 +89,7 @@ export default function PartnerDetailPage() {
     setLoading(true);
     setError(null);
     setEditOpen(false);
-    setExpenseOpen(false);
-    setSplitBuyOpen(false);
-    setReimburseOpen(false);
-    setCashMoveKind(null);
+    setRecordOpen(false);
     setCorrectEntry(null);
     setVoidTarget(null);
   }, []);
@@ -236,41 +224,9 @@ export default function PartnerDetailPage() {
           </div>
 
           <div className="mb-6 flex flex-wrap gap-2">
-            <Button type="button" onClick={() => setExpenseOpen(true)}>
-              Expense fronted
+            <Button type="button" onClick={() => setRecordOpen(true)}>
+              Record
             </Button>
-            <Button type="button" onClick={() => setSplitBuyOpen(true)}>
-              Split buy
-            </Button>
-            <Button type="button" onClick={() => setReimburseOpen(true)}>
-              Pay reimbursement
-            </Button>
-            <Button type="button" onClick={() => setCashMoveKind("capital")}>
-              Record capital
-            </Button>
-            <Button type="button" onClick={() => setCashMoveKind("drawing")}>
-              Record drawing
-            </Button>
-            <Button
-              type="button"
-              disabled={(ledger.unpaid_profit_kurus ?? 0) <= 0}
-              onClick={() => setCashMoveKind("profit_paid")}
-              title={
-                (ledger.unpaid_profit_kurus ?? 0) <= 0
-                  ? "No unpaid allocated profit to pay"
-                  : undefined
-              }
-            >
-              Pay profit
-            </Button>
-            {partnerDrawingRepaymentAllowed(ledger.capital_balance_kurus) && (
-              <Button
-                type="button"
-                onClick={() => setCashMoveKind("repayment")}
-              >
-                Repay drawing
-              </Button>
-            )}
           </div>
 
           <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
@@ -301,107 +257,77 @@ export default function PartnerDetailPage() {
                   const actions = partnerLedgerRowActions(entry.movement_type);
                   const canAct = actions.canEdit || actions.canVoid;
                   return (
-                  <DataTableRow
-                    key={entry.id}
-                    className={subledgerRowClassName(entry.display_kind)}
-                  >
-                    <DataTableCell>
-                      {formatTrDate(entry.movement_date)}
-                    </DataTableCell>
-                    <DataTableCell>
-                      {partnerMovementLabels[entry.movement_type] ??
-                        entry.movement_type}
-                    </DataTableCell>
-                    <DataTableCell>
-                      <span>{entry.description}</span>
-                      {entry.was_corrected && (
-                        <span className="ml-2">
-                          <EditedBadge />
-                        </span>
-                      )}
-                      {canAct && (
-                        <SubledgerRowActions
-                          inline
-                          row={entry}
-                          showEdit={actions.canEdit}
-                          onEdit={() =>
-                            setCorrectEntry({
-                              journal_entry_id: entry.journal_entry_id!,
-                              movement_date: entry.movement_date,
-                              movement_type: entry.movement_type,
-                              amount_kurus: entry.amount_kurus,
-                              description: entry.description,
-                              payment_account_id: entry.payment_account_id,
-                            })
-                          }
-                          onVoid={() =>
-                            setVoidTarget({
-                              journal_entry_id: entry.journal_entry_id!,
-                              description: entry.description,
-                            })
-                          }
-                        />
-                      )}
-                    </DataTableCell>
-                    <DataTableCell align="right">
-                      {formatTry(entry.amount_kurus)}
-                    </DataTableCell>
-                    <DataTableCell align="right" className="tabular-nums">
-                      {entry.running_balance_kurus != null
-                        ? formatPartnerNetBalance(entry.running_balance_kurus)
-                        : "—"}
-                    </DataTableCell>
-                  </DataTableRow>
+                    <DataTableRow
+                      key={entry.id}
+                      className={subledgerRowClassName(entry.display_kind)}
+                    >
+                      <DataTableCell>
+                        {formatTrDate(entry.movement_date)}
+                      </DataTableCell>
+                      <DataTableCell>
+                        {partnerMovementLabels[entry.movement_type] ??
+                          entry.movement_type}
+                      </DataTableCell>
+                      <DataTableCell>
+                        <span>{entry.description}</span>
+                        {entry.was_corrected && (
+                          <span className="ml-2">
+                            <EditedBadge />
+                          </span>
+                        )}
+                        {canAct && (
+                          <SubledgerRowActions
+                            inline
+                            row={entry}
+                            showEdit={actions.canEdit}
+                            onEdit={() =>
+                              setCorrectEntry({
+                                journal_entry_id: entry.journal_entry_id!,
+                                movement_date: entry.movement_date,
+                                movement_type: entry.movement_type,
+                                amount_kurus: entry.amount_kurus,
+                                description: entry.description,
+                                payment_account_id: entry.payment_account_id,
+                              })
+                            }
+                            onVoid={() =>
+                              setVoidTarget({
+                                journal_entry_id: entry.journal_entry_id!,
+                                description: entry.description,
+                              })
+                            }
+                          />
+                        )}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        {formatTry(entry.amount_kurus)}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        {entry.running_balance_kurus != null
+                          ? formatPartnerNetBalance(entry.running_balance_kurus)
+                          : "—"}
+                      </DataTableCell>
+                    </DataTableRow>
                   );
                 })}
               </DataTableBody>
             </DataTable>
           )}
-        </>
-      )}
 
-      {partner && (
-        <>
           <PartnerForm
             open={editOpen}
             partner={partner}
             onClose={() => setEditOpen(false)}
             onSaved={() => void reload()}
           />
-          <PartnerExpenseFrontedForm
-            open={expenseOpen}
+          <PartnerRecordForm
+            open={recordOpen}
             partnerId={partnerId}
-            onClose={() => setExpenseOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <PartnerSplitBuyForm
-            open={splitBuyOpen}
-            partnerId={partnerId}
-            onClose={() => setSplitBuyOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <PartnerReimbursementForm
-            open={reimburseOpen}
-            partnerId={partnerId}
-            balanceKurus={ledger?.balance_kurus}
-            onClose={() => setReimburseOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <PartnerCashMovementForm
-            key={cashMoveKind ?? "closed"}
-            open={cashMoveKind !== null}
-            partnerId={partnerId}
-            kind={cashMoveKind ?? "drawing"}
-            balanceKurus={
-              cashMoveKind === "profit_paid"
-                ? (ledger?.unpaid_profit_kurus ?? 0)
-                : cashMoveKind === "repayment"
-                  ? ledger?.capital_balance_kurus
-                  : cashMoveKind === "drawing"
-                    ? ledger?.net_balance_kurus
-                    : undefined
-            }
-            onClose={() => setCashMoveKind(null)}
+            netBalanceKurus={ledger.net_balance_kurus}
+            frontedBalanceKurus={ledger.balance_kurus}
+            unpaidProfitKurus={ledger.unpaid_profit_kurus ?? 0}
+            capitalBalanceKurus={ledger.capital_balance_kurus}
+            onClose={() => setRecordOpen(false)}
             onSaved={() => void reload()}
           />
           <CorrectPartnerLedgerForm

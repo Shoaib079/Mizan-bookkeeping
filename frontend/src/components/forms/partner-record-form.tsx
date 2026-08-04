@@ -1,0 +1,376 @@
+"use client";
+
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+
+import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
+import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
+import { FormDialogShell } from "@/components/ui/form-dialog-shell";
+import { Combobox } from "@/components/ui/combobox";
+import { Input, Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
+import { apiFetch } from "@/lib/api";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
+import { useToast } from "@/lib/toast";
+import { useEntity } from "@/lib/entity-context";
+import {
+  defaultMainDrawerId,
+  loadCashAccounts,
+  type MoneyAccountOption,
+} from "@/lib/load-money-accounts";
+import {
+  formatPartnerNetBalance,
+  partnerBalanceAmount,
+  partnerBalanceHeading,
+  partnerDrawingRepaymentAllowed,
+} from "@/lib/partner-balance";
+import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { todayTrDate } from "@/lib/dates";
+
+export type PartnerRecordKind =
+  | "cash"
+  | "profit_paid"
+  | "capital"
+  | "returned";
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  partnerId: string;
+  netBalanceKurus?: number;
+  frontedBalanceKurus?: number;
+  unpaidProfitKurus?: number;
+  capitalBalanceKurus?: number;
+  embedded?: boolean;
+  onSaved?: () => void;
+};
+
+const KIND_LABELS: Record<PartnerRecordKind, string> = {
+  cash: "Cash paid / taken",
+  profit_paid: "Pay profit",
+  capital: "Capital in",
+  returned: "Cash returned",
+};
+
+export function PartnerRecordForm({
+  open,
+  onClose,
+  partnerId,
+  netBalanceKurus,
+  frontedBalanceKurus,
+  unpaidProfitKurus = 0,
+  capitalBalanceKurus = 0,
+  embedded,
+  onSaved,
+}: Props) {
+  const { entityId, actorId } = useEntity();
+  const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
+
+  const canReturn = partnerDrawingRepaymentAllowed(capitalBalanceKurus);
+  const canPayProfit = unpaidProfitKurus > 0;
+
+  const kindOptions = useMemo(() => {
+    const opts: { value: PartnerRecordKind; label: string }[] = [
+      { value: "cash", label: KIND_LABELS.cash },
+      { value: "capital", label: KIND_LABELS.capital },
+    ];
+    if (canPayProfit) {
+      opts.splice(1, 0, {
+        value: "profit_paid",
+        label: KIND_LABELS.profit_paid,
+      });
+    }
+    if (canReturn) {
+      opts.push({ value: "returned", label: KIND_LABELS.returned });
+    }
+    return opts;
+  }, [canPayProfit, canReturn]);
+
+  const [kind, setKind] = useState<PartnerRecordKind>("cash");
+  const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
+  const [cashAccountId, setCashAccountId] = useState("");
+  const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
+  const [dateText, setDateText] = useState("");
+  const [amountText, setAmountText] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) submitIdempotency.resetSubmit();
+  }, [open, submitIdempotency]);
+
+  const defaultDescription = useMemo(() => {
+    switch (kind) {
+      case "cash":
+        return "Partner cash payment";
+      case "profit_paid":
+        return "Partner profit paid";
+      case "capital":
+        return "";
+      case "returned":
+        return "Partner returned cash";
+    }
+  }, [kind]);
+
+  const loadAccounts = useCallback(async () => {
+    if (!entityId) return;
+    const options = await loadCashAccounts(entityId);
+    setAccounts(options);
+    const drawerId = defaultMainDrawerId(options);
+    const pick = options.find((a) => a.id === drawerId) ?? options[0];
+    if (pick) {
+      setCashAccountId(pick.id);
+      setPaymentGlAccountId(pick.gl_account_id);
+    } else {
+      setCashAccountId("");
+      setPaymentGlAccountId("");
+    }
+  }, [entityId]);
+
+  useEffect(() => {
+    if (!open) return;
+    setKind("cash");
+    setDateText(todayTrDate());
+    setAmountText("");
+    setError(null);
+    void loadAccounts().catch(() => undefined);
+  }, [open, loadAccounts]);
+
+  useEffect(() => {
+    if (open) setDescription(defaultDescription);
+  }, [open, defaultDescription]);
+
+  useEffect(() => {
+    if (!kindOptions.some((o) => o.value === kind)) {
+      setKind("cash");
+    }
+  }, [kind, kindOptions]);
+
+  function onDrawerChange(id: string) {
+    setCashAccountId(id);
+    const pick = accounts.find((a) => a.id === id);
+    setPaymentGlAccountId(pick?.gl_account_id ?? "");
+  }
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!entityId) {
+      setError("Select a restaurant in the sidebar first.");
+      return;
+    }
+    const amountKurus = parseTryToKurus(amountText);
+    const movementDate = parseTrDate(dateText);
+    if (amountKurus === null || amountKurus <= 0) {
+      setError("Enter a valid amount.");
+      return;
+    }
+    if (!movementDate) {
+      setError("Date must be DD.MM.YYYY.");
+      return;
+    }
+    if (!paymentGlAccountId) {
+      setError(
+        "Choose a cash drawer. Bank movements: classify on the bank statement.",
+      );
+      return;
+    }
+    const note = description.trim();
+    if (!note) {
+      setError(
+        kind === "capital"
+          ? "Add a note — why did this partner invest?"
+          : "Description is required.",
+      );
+      return;
+    }
+    if (kind === "profit_paid" && amountKurus > unpaidProfitKurus) {
+      setError(
+        `Payment cannot exceed unpaid profit of ${formatTry(unpaidProfitKurus)}.`,
+      );
+      return;
+    }
+    if (kind === "returned") {
+      if (!canReturn) {
+        setError("This partner has no outstanding drawing to repay.");
+        return;
+      }
+      if (amountKurus > Math.abs(capitalBalanceKurus)) {
+        setError(
+          `Cannot exceed ${partnerBalanceAmount(Math.abs(capitalBalanceKurus))}.`,
+        );
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
+      if (kind === "cash") {
+        const result = await apiFetch<{
+          reimbursement_kurus: number;
+          drawing_kurus: number;
+        }>(`/entities/${entityId}/partners/${partnerId}/cash-payments`, {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            payment_date: movementDate,
+            amount_kurus: amountKurus,
+            description: note,
+            actor_id: actorId,
+            payment_account_id: paymentGlAccountId,
+          }),
+        });
+        const parts: string[] = [];
+        if (result.reimbursement_kurus > 0) {
+          parts.push(`settled ${formatTry(result.reimbursement_kurus)}`);
+        }
+        if (result.drawing_kurus > 0) {
+          parts.push(`withdrawal ${formatTry(result.drawing_kurus)}`);
+        }
+        toast(
+          parts.length > 0
+            ? `Recorded (${parts.join(", ")})`
+            : "Recorded",
+        );
+      } else {
+        const path =
+          kind === "capital"
+            ? "capital-contributions"
+            : kind === "profit_paid"
+              ? "profit-payments"
+              : "drawing-repayments";
+        const body =
+          kind === "capital"
+            ? {
+                contribution_date: movementDate,
+                amount_kurus: amountKurus,
+                description: note,
+                actor_id: actorId,
+                payment_account_id: paymentGlAccountId,
+              }
+            : {
+                payment_date: movementDate,
+                amount_kurus: amountKurus,
+                description: note,
+                actor_id: actorId,
+                payment_account_id: paymentGlAccountId,
+              };
+        await apiFetch(`/entities/${entityId}/partners/${partnerId}/${path}`, {
+          method: "POST",
+          idempotencyKey,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        toast(
+          kind === "capital"
+            ? "Capital recorded"
+            : kind === "profit_paid"
+              ? "Profit payment recorded"
+              : "Cash returned recorded",
+        );
+      }
+      submitIdempotency.completeSubmit();
+      onSaved?.();
+      onClose();
+      setAmountText("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const fronted = Math.max(0, frontedBalanceKurus ?? 0);
+
+  return (
+    <FormDialogShell embedded={embedded} open={open} title="Record" onClose={onClose}>
+      <form onSubmit={onSubmit} className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Cash drawer only. Bank: classify on the statement.
+        </p>
+        <div>
+          <Label>What to record</Label>
+          <Combobox
+            value={kind}
+            onValueChange={(v) => setKind(v as PartnerRecordKind)}
+            options={kindOptions}
+            placeholder="Choose…"
+          />
+        </div>
+        {kind === "cash" && netBalanceKurus !== undefined && (
+          <p className="text-sm text-muted-foreground">
+            {partnerBalanceHeading(netBalanceKurus)}:{" "}
+            {partnerBalanceAmount(netBalanceKurus)}
+          </p>
+        )}
+        {kind === "cash" && fronted > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Fronted still owed: {formatTry(fronted)}
+            {netBalanceKurus !== undefined && netBalanceKurus !== fronted
+              ? ` · Net book: ${formatPartnerNetBalance(netBalanceKurus)}`
+              : null}
+            . Cash paid/taken settles fronted first; extra is a withdrawal.
+          </p>
+        )}
+        {kind === "profit_paid" && (
+          <p className="text-sm text-muted-foreground">
+            Unpaid allocated profit: {formatTry(unpaidProfitKurus)}
+          </p>
+        )}
+        {kind === "returned" && (
+          <p className="text-sm text-muted-foreground">
+            Outstanding drawing:{" "}
+            {partnerBalanceAmount(Math.abs(capitalBalanceKurus))}
+          </p>
+        )}
+        <div>
+          <Label htmlFor="pr-date">Date (DD.MM.YYYY)</Label>
+          <DateInput
+            id="pr-date"
+            value={dateText}
+            onChange={setDateText}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="pr-amount">Amount (TRY)</Label>
+          <MoneyInput
+            id="pr-amount"
+            value={amountText}
+            onChange={setAmountText}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="pr-desc">
+            {kind === "capital" ? "Note (required)" : "Description"}
+          </Label>
+          <Input
+            id="pr-desc"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+          />
+        </div>
+        <CashDrawerPicker
+          id="pr-cash"
+          accounts={accounts}
+          value={cashAccountId}
+          onValueChange={onDrawerChange}
+          label={kind === "capital" || kind === "returned" ? "Cash drawer" : "Pay from cash"}
+        />
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Recording…" : "Record"}
+        </Button>
+      </form>
+    </FormDialogShell>
+  );
+}
+
+/** @deprecated Use PartnerRecordForm */
+export const PartnerReimbursementForm = PartnerRecordForm;

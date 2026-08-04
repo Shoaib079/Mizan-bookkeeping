@@ -55,6 +55,8 @@ from app.features.partners.schema import (
     PartnerSplitBuyResponse,
     ReimbursementPaidCreate,
     ReimbursementPaidResponse,
+    PayPartnerCreate,
+    PayPartnerResponse,
     DrawingCreate,
     DrawingRepaymentCreate,
     DrawingResponse,
@@ -392,6 +394,48 @@ def record_reimbursement_paid(
             session, result.partner_ledger_entry, entity_id=entity_id
         ),
         balance_kurus=result.balance_kurus,
+    )
+
+
+def record_pay_partner(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: PayPartnerCreate,
+) -> PayPartnerResponse:
+    """Cash Pay partner — settle fronted owe first, excess as drawing."""
+    _require_manual_cash_payment_account(
+        session, entity_id, payload.payment_account_id
+    )
+    result = partner_posting.post_pay_partner(
+        session,
+        entity_id,
+        partner_id,
+        payment_date=payload.payment_date,
+        amount_kurus=payload.amount_kurus,
+        description=payload.description.strip(),
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+    )
+    journal_ids: list[uuid.UUID] = []
+    entries: list[PartnerLedgerEntry] = []
+    if result.reimbursement_journal_entry is not None:
+        journal_ids.append(result.reimbursement_journal_entry.id)
+    if result.drawing_journal_entry is not None:
+        journal_ids.append(result.drawing_journal_entry.id)
+    if result.reimbursement_ledger_entry is not None:
+        entries.append(result.reimbursement_ledger_entry)
+    if result.drawing_ledger_entry is not None:
+        entries.append(result.drawing_ledger_entry)
+    return PayPartnerResponse(
+        journal_entry_ids=journal_ids,
+        reimbursement_kurus=result.reimbursement_kurus,
+        drawing_kurus=result.drawing_kurus,
+        balance_kurus=result.balance_kurus,
+        net_balance_kurus=result.net_balance_kurus,
+        partner_ledger_entries=[
+            _partner_entry_read(session, row, entity_id=entity_id) for row in entries
+        ],
     )
 
 

@@ -2,6 +2,18 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-08-04 — Partner page: one Record dialog
+
+**Choice:** Partner detail has a single **Record** action (also Add → Record). Dialog kinds: **Cash paid/taken** (settle 2150 then drawing 3200), **Pay profit**, **Capital in**, **Cash returned**. Removed separate partner-page buttons and deleted Add entry points for drawing / capital / expense-fronted / split-buy forms (not hidden — removed). Split hub (`/split`) remains for bank/supplier personal peel. Daily expenses covers partner-fronted expenses.
+
+**Why:** One partner cash desk; options must not reappear as hidden stubs.
+
+## 2026-08-04 — One Pay partner cash button (settle then withdraw)
+
+**Choice:** Owner cash-out to a partner is one action — **Pay partner** (`POST .../partners/{id}/cash-payments`). Amount settles fronted reimbursement payable (`2150`) first; any remainder posts as a drawing (`3200`). UI: partner page + Add → Pay partner. Removed separate **Pay reimbursement** / **Record drawing** buttons for this path. Legacy `POST .../reimbursements` and `POST .../drawings` remain for statement classify and corrections. **Pay profit**, **Record capital**, and **Partner returned cash** (drawing repayment) stay separate.
+
+**Why:** One partner book — “paid him” and “he took cash” are the same desk action; books still keep 2150 vs 3200 for control-account integrity.
+
 ## 2026-08-04 — Split hub (bank expense → partner personal)
 
 **Choice:** One **Split** page (`/split`, also Record → Split) peels personal share off an already-posted **bank expense** (e.g. SGK) or a **supplier payment** onto a **partner drawing**. Enter personal; restaurant = total − personal. Bank is not touched again.

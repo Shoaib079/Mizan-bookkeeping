@@ -138,6 +138,25 @@ class ReimbursementPaidResponse(BaseModel):
     balance_kurus: int
 
 
+class PayPartnerCreate(BaseModel):
+    """Cash payout to partner — settle fronted owe first, remainder as drawing."""
+
+    payment_date: date
+    amount_kurus: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: OptionalActorId = None
+    payment_account_id: uuid.UUID
+
+
+class PayPartnerResponse(BaseModel):
+    journal_entry_ids: list[uuid.UUID]
+    reimbursement_kurus: int
+    drawing_kurus: int
+    balance_kurus: int
+    net_balance_kurus: int
+    partner_ledger_entries: list[PartnerLedgerEntryRead]
+
+
 class DrawingCreate(BaseModel):
     drawing_date: date
     amount_kurus: int = Field(gt=0)

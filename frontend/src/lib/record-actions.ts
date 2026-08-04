@@ -51,11 +51,6 @@ export type RecordActionKey =
   | "staffAccrual"
   | "staffAdvance"
   | "staffPayment"
-  | "partnerExpenseFronted"
-  | "partnerReimbursement"
-  | "partnerCapital"
-  | "partnerDrawing"
-  | "partnerDrawingRepayment"
   | "partnerProfitAllocation"
   | "splitExpense"
   | "customerCreditSale"
@@ -220,14 +215,6 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     hidden: true,
   },
   {
-    id: "partnerReimbursement",
-    label: "Partner reimbursement",
-    description: "Repay a partner for expenses they fronted.",
-    icon: Handshake,
-    section: "payments",
-    personKind: "partner",
-  },
-  {
     id: "splitExpense",
     label: "Split",
     description:
@@ -325,42 +312,6 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
     icon: Users,
     section: "occasional",
     personKind: "staff",
-    hidden: true,
-  },
-  {
-    id: "partnerExpenseFronted",
-    label: "Partner expense (fronted)",
-    description: "Partner paid a business expense from personal funds.",
-    icon: Handshake,
-    section: "occasional",
-    personKind: "partner",
-    hidden: true,
-  },
-  {
-    id: "partnerCapital",
-    label: "Partner capital",
-    description: "Partner invests cash or bank money as equity.",
-    icon: Handshake,
-    section: "occasional",
-    personKind: "partner",
-    hidden: true,
-  },
-  {
-    id: "partnerDrawing",
-    label: "Partner drawing",
-    description: "Partner withdraws cash — they owe the business.",
-    icon: Handshake,
-    section: "occasional",
-    personKind: "partner",
-    hidden: true,
-  },
-  {
-    id: "partnerDrawingRepayment",
-    label: "Partner drawing repayment",
-    description: "Partner repays an outstanding drawing.",
-    icon: Handshake,
-    section: "occasional",
-    personKind: "partner",
     hidden: true,
   },
   {

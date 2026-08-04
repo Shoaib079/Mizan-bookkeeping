@@ -19,9 +19,7 @@ describe("record-actions", () => {
     const visible = dailyVisibleSections(opts);
     expect(visible).toHaveLength(1);
     expect(visible[0]?.section).toBe("payments");
-    expect(visible[0]?.actions.map((a) => a.id)).toEqual([
-      "partnerReimbursement",
-    ]);
+    expect(visible[0]?.actions.map((a) => a.id)).toEqual(["splitExpense"]);
     expect(recordActionsBySection("upload", opts).length).toBe(0);
     expect(recordActionsBySection("today", opts).length).toBe(0);
     expect(recordActionsBySection("salesCards", opts).length).toBe(0);
@@ -58,15 +56,7 @@ describe("record-actions", () => {
     expect(withDelivery.some((action) => action.id === "deliveryReport")).toBe(true);
   });
 
-  it("hides sales & cards and bank-only actions from the Add hub", () => {
-    const hidden = RECORD_ACTIONS.filter(
-      (action) => action.section === "salesCards" && action.hidden,
-    );
-    expect(hidden.map((action) => action.id)).toEqual([
-      "cardSalesBatch",
-      "posSettlement",
-      "clearCommission",
-    ]);
+  it("keeps bank transfer and buy FX off the Add hub (statement / foreign exchange)", () => {
     const visible = RECORD_ACTIONS.filter((action) => !action.hidden).map(
       (action) => action.id,
     );
@@ -74,9 +64,12 @@ describe("record-actions", () => {
     expect(visible).not.toContain("buyFx");
   });
 
-  it("keeps only partner reimbursement in Add More cash actions", () => {
+  it("keeps Split in Add cash actions (partner Record is on the partner page)", () => {
     const payments = recordActionsBySection("payments", { deliveryEnabled: true });
-    expect(payments.map((action) => action.id)).toEqual(["partnerReimbursement"]);
+    expect(payments.map((action) => action.id)).toEqual(["splitExpense"]);
+    expect(RECORD_ACTIONS.some((a) => a.id === "partnerReimbursement")).toBe(
+      false,
+    );
   });
 
   it("hides staff, supplier, and page-owned actions from Add hub", () => {
@@ -86,25 +79,20 @@ describe("record-actions", () => {
     expect(hiddenIds).toContain("staffAccrual");
     expect(hiddenIds).toContain("cashMovement");
     expect(hiddenIds).toContain("customerPayment");
-    expect(hiddenIds).toContain("partnerDrawing");
-    expect(hiddenIds).toContain("partnerCapital");
     expect(hiddenIds).toContain("customerCreditSale");
     expect(hiddenIds).toContain("supplier");
   });
 
   it("uses person pickers for routable people actions", () => {
     expect(PERSON_PICKER_ACTIONS.has("staffAccrual")).toBe(true);
-    expect(PERSON_PICKER_ACTIONS.has("partnerReimbursement")).toBe(true);
     expect(PERSON_PICKER_ACTIONS.has("customerPayment")).toBe(true);
     expect(PERSON_PICKER_ACTIONS.has("supplierPayment")).toBe(true);
-    expect(PERSON_PICKER_ACTIONS.has("expense")).toBe(false);
+    expect(PERSON_PICKER_ACTIONS.has("partnerReimbursement" as never)).toBe(
+      false,
+    );
   });
 
-  it("identifies quick action keys correctly", () => {
-    expect(isQuickActionKey("expense")).toBe(true);
-    expect(isQuickActionKey("sales")).toBe(true);
-    expect(isQuickActionKey("fx")).toBe(true);
-    expect(isQuickActionKey("efatura")).toBe(true);
+  it("marks non-quick keys correctly", () => {
     expect(isQuickActionKey("closeDay")).toBe(false);
     expect(isQuickActionKey("countCash")).toBe(false);
     expect(isQuickActionKey("transfer")).toBe(false);
@@ -130,7 +118,7 @@ describe("record-actions", () => {
     expect(occasionalRecordActions({ deliveryEnabled: true })).toHaveLength(0);
     expect(
       recordActionsBySection("payments", { deliveryEnabled: true }).map((a) => a.id),
-    ).toEqual(["partnerReimbursement"]);
+    ).toEqual(["splitExpense"]);
   });
 
   it("still resolves hidden actions by key via recordActionById", () => {

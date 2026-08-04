@@ -472,8 +472,102 @@ def test_drawing_does_not_reduce_reimbursement_balance(db_session, partner_setup
     assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == -250_000
 
 
+def test_pay_partner_settles_fronted_then_drawing(db_session, partner_setup) -> None:
+    """Pay partner: owe first (2150), excess as drawing (3200)."""
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    accounts = partner_setup["accounts"]
+    drawer = partner_setup["drawer"]
+
+    partner_posting.post_expense_fronted(
+        db_session,
+        entity_id,
+        partner_id,
+        expense_date=date(2026, 6, 1),
+        amount_kurus=200_000,
+        description="Fronted",
+        actor_id=ACTOR_ID,
+        expense_account_id=accounts["5000"],
+    )
+    result = partner_posting.post_pay_partner(
+        db_session,
+        entity_id,
+        partner_id,
+        payment_date=date(2026, 6, 10),
+        amount_kurus=250_000,
+        description="Pay partner",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert result.reimbursement_kurus == 200_000
+    assert result.drawing_kurus == 50_000
+    assert result.reimbursement_journal_entry is not None
+    assert result.drawing_journal_entry is not None
+    assert partner_ledger.reimbursement_balance_kurus(db_session, entity_id, partner_id) == 0
+    assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == -50_000
+    assert partner_ledger.net_balance_kurus(db_session, entity_id, partner_id) == -50_000
+
+
+def test_pay_partner_drawing_only_when_nothing_fronted(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    drawer = partner_setup["drawer"]
+
+    result = partner_posting.post_pay_partner(
+        db_session,
+        entity_id,
+        partner_id,
+        payment_date=date(2026, 6, 10),
+        amount_kurus=75_000,
+        description="Partner took cash",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert result.reimbursement_kurus == 0
+    assert result.drawing_kurus == 75_000
+    assert result.reimbursement_journal_entry is None
+    assert result.drawing_journal_entry is not None
+    assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == -75_000
+
+
+def test_pay_partner_exact_fronted_only(db_session, partner_setup) -> None:
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    accounts = partner_setup["accounts"]
+    drawer = partner_setup["drawer"]
+
+    partner_posting.post_expense_fronted(
+        db_session,
+        entity_id,
+        partner_id,
+        expense_date=date(2026, 6, 1),
+        amount_kurus=100_000,
+        description="Fronted",
+        actor_id=ACTOR_ID,
+        expense_account_id=accounts["5000"],
+    )
+    result = partner_posting.post_pay_partner(
+        db_session,
+        entity_id,
+        partner_id,
+        payment_date=date(2026, 6, 10),
+        amount_kurus=100_000,
+        description="Settle",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert result.reimbursement_kurus == 100_000
+    assert result.drawing_kurus == 0
+    assert result.drawing_journal_entry is None
+    assert partner_ledger.reimbursement_balance_kurus(db_session, entity_id, partner_id) == 0
+
+
 def test_drawing_reduces_reimbursement_balance_first(db_session, partner_setup) -> None:
-    test_drawing_does_not_reduce_reimbursement_balance(db_session, partner_setup)
+    # Owner UX: use post_pay_partner (not raw drawing) to settle owe then withdraw.
+    test_pay_partner_settles_fronted_then_drawing(db_session, partner_setup)
 
 
 def test_net_balance_unifies_drawing_and_fronted(db_session, partner_setup) -> None:
@@ -539,17 +633,21 @@ def test_partners_api_e2e(client: TestClient, db_session, partner_setup) -> None
     assert ledger.json()["entries"][0]["movement_type"] == PartnerMovementType.EXPENSE_FRONTED.value
 
     paid = client.post(
-        f"/entities/{entity_id}/partners/{partner_id}/reimbursements",
+        f"/entities/{entity_id}/partners/{partner_id}/cash-payments",
         json={
             "payment_date": "2026-06-15",
-            "amount_kurus": 75_000,
-            "description": "API payback",
+            "amount_kurus": 100_000,
+            "description": "API pay partner",
             "actor_id": str(ACTOR_ID),
             "payment_account_id": str(drawer.gl_account_id),
         },
     )
     assert paid.status_code == 201
-    assert paid.json()["balance_kurus"] == 0
+    body = paid.json()
+    assert body["reimbursement_kurus"] == 75_000
+    assert body["drawing_kurus"] == 25_000
+    assert body["balance_kurus"] == 0
+    assert len(body["journal_entry_ids"]) == 2
 
     overpay = client.post(
         f"/entities/{entity_id}/partners/{partner_id}/reimbursements",

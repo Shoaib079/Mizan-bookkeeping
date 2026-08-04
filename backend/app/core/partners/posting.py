@@ -61,6 +61,20 @@ class PartnerDrawingRepaymentPostResult:
 
 
 @dataclass(frozen=True, slots=True)
+class PartnerPayCashPostResult:
+    """One cash payout: settle fronted owe (2150) first, remainder as drawing (3200)."""
+
+    reimbursement_journal_entry: JournalEntry | None
+    drawing_journal_entry: JournalEntry | None
+    reimbursement_ledger_entry: PartnerLedgerEntry | None
+    drawing_ledger_entry: PartnerLedgerEntry | None
+    reimbursement_kurus: int
+    drawing_kurus: int
+    balance_kurus: int
+    net_balance_kurus: int
+
+
+@dataclass(frozen=True, slots=True)
 class PartnerCapitalContributionPostResult:
     journal_entry: JournalEntry
     partner_ledger_entry: PartnerLedgerEntry
@@ -498,6 +512,124 @@ def post_drawing_repayment(
             journal_entry=journal_entry,
             partner_ledger_entry=partner_entry,
             balance_kurus=balance,
+        )
+
+
+def post_pay_partner(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    *,
+    payment_date: date,
+    amount_kurus: int,
+    description: str,
+    actor_id: uuid.UUID,
+    payment_account_id: uuid.UUID,
+) -> PartnerPayCashPostResult:
+    """Pay partner from cash — settle 2150 owe first, excess as drawing (3200).
+
+    One owner action for both “repay fronted expenses” and “partner took cash.”
+    Bank payouts stay on statement classify (not this helper).
+    """
+    if amount_kurus <= 0:
+        raise ValueError("amount_kurus must be positive")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        _get_partner(session, entity_id, partner_id)
+
+        payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
+        owe = max(0, _reimbursement_balance(session, entity_id, partner_id))
+        reimbursement_kurus = min(amount_kurus, owe)
+        drawing_kurus = amount_kurus - reimbursement_kurus
+
+        reimb_je: JournalEntry | None = None
+        reimb_row: PartnerLedgerEntry | None = None
+        drawing_je: JournalEntry | None = None
+        drawing_row: PartnerLedgerEntry | None = None
+
+        if reimbursement_kurus > 0:
+            partner_payable = _chart_account(
+                session, PARTNER_REIMBURSEMENT_PAYABLE_CODE
+            )
+            lines = build_reimbursement_paid_lines(
+                partner_payable_id=partner_payable.id,
+                payment_account_id=payment_gl.id,
+                amount_kurus=reimbursement_kurus,
+            )
+            reimb_je = prepare_journal_entry(
+                session,
+                entity_id,
+                payment_date,
+                description,
+                lines,
+                actor_id=actor_id,
+                source=JournalEntrySource.PARTNER_REIMBURSEMENT_PAID,
+            )
+            reimb_row = partner_ledger.persist_partner_ledger_entry(
+                session,
+                partner_id,
+                movement_date=payment_date,
+                movement_type=PartnerMovementType.REIMBURSEMENT_PAID,
+                amount_kurus=-reimbursement_kurus,
+                description=description,
+                actor_id=actor_id,
+                journal_entry_id=reimb_je.id,
+            )
+
+        if drawing_kurus > 0:
+            drawings_gl = _chart_account(session, OWNER_DRAWINGS_CODE)
+            lines = build_drawing_lines(
+                drawings_account_id=drawings_gl.id,
+                payment_account_id=payment_gl.id,
+                amount_kurus=drawing_kurus,
+            )
+            drawing_je = prepare_journal_entry(
+                session,
+                entity_id,
+                payment_date,
+                description,
+                lines,
+                actor_id=actor_id,
+                source=JournalEntrySource.PARTNER_DRAWING,
+            )
+            drawing_row = partner_ledger.persist_partner_ledger_entry(
+                session,
+                partner_id,
+                movement_date=payment_date,
+                movement_type=PartnerMovementType.DRAWING,
+                amount_kurus=-drawing_kurus,
+                description=description,
+                actor_id=actor_id,
+                journal_entry_id=drawing_je.id,
+            )
+
+        session.commit()
+        if reimb_je is not None:
+            session.refresh(reimb_je)
+            _ = list(reimb_je.lines)
+        if drawing_je is not None:
+            session.refresh(drawing_je)
+            _ = list(drawing_je.lines)
+        if reimb_row is not None:
+            session.refresh(reimb_row)
+        if drawing_row is not None:
+            session.refresh(drawing_row)
+
+        return PartnerPayCashPostResult(
+            reimbursement_journal_entry=reimb_je,
+            drawing_journal_entry=drawing_je,
+            reimbursement_ledger_entry=reimb_row,
+            drawing_ledger_entry=drawing_row,
+            reimbursement_kurus=reimbursement_kurus,
+            drawing_kurus=drawing_kurus,
+            balance_kurus=_reimbursement_balance(session, entity_id, partner_id),
+            net_balance_kurus=partner_ledger.net_balance_kurus(
+                session, entity_id, partner_id
+            ),
         )
 
 

@@ -34,6 +34,8 @@ from app.features.partners.schema import (
     PartnerSplitBuyResponse,
     ReimbursementPaidCreate,
     ReimbursementPaidResponse,
+    PayPartnerCreate,
+    PayPartnerResponse,
     DrawingCreate,
     DrawingRepaymentCreate,
     DrawingResponse,
@@ -270,6 +272,32 @@ def post_reimbursement_paid(
     except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except OverpaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidAccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PostingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{partner_id}/cash-payments",
+    response_model=PayPartnerResponse,
+    status_code=201,
+)
+def post_pay_partner(
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    payload: PayPartnerCreate,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> PayPartnerResponse:
+    """Pay partner from cash — settle fronted owe first, excess as drawing."""
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.record_pay_partner(session, entity_id, partner_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ZeroMovementError, ValueError, InvalidPartnerPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

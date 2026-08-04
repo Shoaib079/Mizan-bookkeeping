@@ -7,10 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import type { EmployeeRow } from "@/components/forms/employee-form";
-import { PartnerExpenseFrontedForm } from "@/components/forms/partner-expense-fronted-form";
-import { PartnerCashMovementForm } from "@/components/forms/partner-cash-movement-form";
 import type { PartnerRow } from "@/components/forms/partner-form";
-import { PartnerReimbursementForm } from "@/components/forms/partner-reimbursement-form";
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
 import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
@@ -43,7 +40,12 @@ type Props = {
   onClose: () => void;
 };
 
-type LedgerBalance = { balance_kurus: number; capital_balance_kurus?: number };
+type LedgerBalance = {
+  balance_kurus: number;
+  capital_balance_kurus?: number;
+  net_balance_kurus?: number;
+  unpaid_profit_kurus?: number;
+};
 
 const LIST_PATH: Record<PersonPickerKind, string> = {
   staff: "/staff/employees",
@@ -65,14 +67,8 @@ const STAFF_DATE_ACTIONS = new Set<RecordActionKey>([
 ]);
 
 const NEEDS_REIMBURSEMENT_BALANCE = new Set<RecordActionKey>([
-  "partnerReimbursement",
   "customerPayment",
   "supplierPayment",
-]);
-
-const NEEDS_CAPITAL_BALANCE = new Set<RecordActionKey>([
-  "partnerDrawing",
-  "partnerDrawingRepayment",
 ]);
 
 export function PeopleRecordDialog({
@@ -90,9 +86,15 @@ export function PeopleRecordDialog({
   const [balanceKurus, setBalanceKurus] = useState<number | undefined>(
     undefined,
   );
+  const [netBalanceKurus, setNetBalanceKurus] = useState<number | undefined>(
+    undefined,
+  );
   const [capitalBalanceKurus, setCapitalBalanceKurus] = useState<
     number | undefined
   >(undefined);
+  const [unpaidProfitKurus, setUnpaidProfitKurus] = useState<number | undefined>(
+    undefined,
+  );
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [dateText, setDateText] = useState("");
@@ -106,7 +108,9 @@ export function PeopleRecordDialog({
     setLoadError(null);
     setLoading(false);
     setBalanceKurus(undefined);
+    setNetBalanceKurus(undefined);
     setCapitalBalanceKurus(undefined);
+    setUnpaidProfitKurus(undefined);
     setBalanceLoading(false);
     setBalanceError(null);
     setDateText("");
@@ -150,14 +154,18 @@ export function PeopleRecordDialog({
   useEffect(() => {
     if (!open || !entityId || !selectedId) {
       setBalanceKurus(undefined);
+      setNetBalanceKurus(undefined);
       setCapitalBalanceKurus(undefined);
+      setUnpaidProfitKurus(undefined);
       setBalanceError(null);
       setBalanceLoading(false);
       return;
     }
-    if (!NEEDS_REIMBURSEMENT_BALANCE.has(action) && !NEEDS_CAPITAL_BALANCE.has(action)) {
+    if (!NEEDS_REIMBURSEMENT_BALANCE.has(action)) {
       setBalanceKurus(undefined);
+      setNetBalanceKurus(undefined);
       setCapitalBalanceKurus(undefined);
+      setUnpaidProfitKurus(undefined);
       setBalanceError(null);
       setBalanceLoading(false);
       return;
@@ -177,7 +185,9 @@ export function PeopleRecordDialog({
       .then((ledger) => {
         if (cancelled) return;
         setBalanceKurus(ledger.balance_kurus);
+        setNetBalanceKurus(ledger.net_balance_kurus ?? ledger.balance_kurus);
         setCapitalBalanceKurus(ledger.capital_balance_kurus ?? 0);
+        setUnpaidProfitKurus(ledger.unpaid_profit_kurus ?? 0);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -185,7 +195,9 @@ export function PeopleRecordDialog({
           err instanceof Error ? err.message : "Failed to load balance",
         );
         setBalanceKurus(undefined);
+        setNetBalanceKurus(undefined);
         setCapitalBalanceKurus(undefined);
+        setUnpaidProfitKurus(undefined);
       })
       .finally(() => {
         if (!cancelled) setBalanceLoading(false);
@@ -203,11 +215,9 @@ export function PeopleRecordDialog({
 
   const selected = items.find((item) => item.id === selectedId) ?? null;
   const needsReimbursementBalance = NEEDS_REIMBURSEMENT_BALANCE.has(action);
-  const needsCapitalBalance = NEEDS_CAPITAL_BALANCE.has(action);
   const formReady =
     Boolean(selected) &&
-    (!needsReimbursementBalance || (!balanceLoading && !balanceError)) &&
-    (!needsCapitalBalance || (!balanceLoading && !balanceError));
+    (!needsReimbursementBalance || (!balanceLoading && !balanceError));
 
   function handleClose() {
     reset();
@@ -272,7 +282,9 @@ export function PeopleRecordDialog({
                 action,
                 selected,
                 balanceKurus,
+                netBalanceKurus,
                 capitalBalanceKurus,
+                unpaidProfitKurus,
                 entityId,
                 handleClose,
                 paymentDateIso,
@@ -289,7 +301,9 @@ function renderEmbeddedForm(
   action: RecordActionKey,
   person: PersonPickerResult,
   balanceKurus: number | undefined,
+  netBalanceKurus: number | undefined,
   capitalBalanceKurus: number | undefined,
+  unpaidProfitKurus: number | undefined,
   entityId: string,
   onClose: () => void,
   paymentDateIso?: string,
@@ -325,44 +339,6 @@ function renderEmbeddedForm(
           source="staff"
           hidePaymentDate
           paymentDate={paymentDateIso}
-        />
-      );
-    case "partnerExpenseFronted":
-      return (
-        <PartnerExpenseFrontedForm {...formProps} partnerId={person.id} />
-      );
-    case "partnerReimbursement":
-      return (
-        <PartnerReimbursementForm
-          {...formProps}
-          partnerId={person.id}
-          balanceKurus={balanceKurus}
-        />
-      );
-    case "partnerCapital":
-      return (
-        <PartnerCashMovementForm
-          {...formProps}
-          partnerId={person.id}
-          kind="capital"
-        />
-      );
-    case "partnerDrawing":
-      return (
-        <PartnerCashMovementForm
-          {...formProps}
-          partnerId={person.id}
-          kind="drawing"
-          balanceKurus={capitalBalanceKurus}
-        />
-      );
-    case "partnerDrawingRepayment":
-      return (
-        <PartnerCashMovementForm
-          {...formProps}
-          partnerId={person.id}
-          kind="repayment"
-          balanceKurus={capitalBalanceKurus}
         />
       );
     case "customerCreditSale":

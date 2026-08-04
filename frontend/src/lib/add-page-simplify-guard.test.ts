@@ -46,13 +46,12 @@ describe("Add page amount-first desk", () => {
     expect(desk).not.toContain("RecordCard");
   });
 
-  it("surfaces partner reimbursement in the mode rail when it is the only extra action", () => {
+  it("surfaces Split in Add cash actions (partner Record is on Partners)", () => {
     const desk = read("components/record/record-desk.tsx");
     expect(desk).toContain("DeskExtraButton");
-    expect(desk).toContain("Partner reimb.");
     expect(desk).toContain("moreActions.length === 1");
     const payments = recordActionsBySection("payments", { deliveryEnabled: true });
-    expect(payments.map((action) => action.id)).toEqual(["partnerReimbursement"]);
+    expect(payments.map((action) => action.id)).toEqual(["splitExpense"]);
     expect(occasionalRecordActions({ deliveryEnabled: true })).toHaveLength(0);
     expect(dailyVisibleSections({ deliveryEnabled: true })).toHaveLength(1);
   });

@@ -25,7 +25,8 @@ describe("daily expense workflow (cash/partner/salary only)", () => {
   it("hides duplicate People cards for salary and partner-fronted", () => {
     const payments = recordActionsBySection("payments", { deliveryEnabled: true });
     const paymentIds = payments.map((action) => action.id);
-    expect(paymentIds).toEqual(["partnerReimbursement"]);
+    expect(paymentIds).toEqual(["splitExpense"]);
+    expect(paymentIds).not.toContain("partnerReimbursement");
     expect(paymentIds).not.toContain("staffPayment");
     expect(paymentIds).not.toContain("staffAdvance");
     expect(paymentIds).not.toContain("supplierPayment");
@@ -63,10 +64,10 @@ describe("daily expense workflow (cash/partner/salary only)", () => {
     expect(panel).not.toMatch(/salary is under Staff/i);
   });
 
-  it("partner drawing uses capital balance in people picker", () => {
+  it("partner Record lives on the partner page, not PeopleRecordDialog", () => {
     const people = read("components/record/people-record-dialog.tsx");
-    expect(people).toContain("NEEDS_CAPITAL_BALANCE");
-    expect(people).toContain("balanceKurus={capitalBalanceKurus}");
-    expect(people).not.toContain("capitalBalanceKurus ?? balanceKurus");
+    expect(people).not.toContain("PartnerRecordForm");
+    expect(people).not.toContain("partnerReimbursement");
+    expect(people).not.toContain("partnerDrawing");
   });
 });

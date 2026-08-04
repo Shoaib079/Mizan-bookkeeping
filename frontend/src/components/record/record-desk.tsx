@@ -443,7 +443,7 @@ function DeskExtraButton({
 }
 
 function morePillLabel(action: RecordActionDef): string {
-  if (action.id === "partnerReimbursement") return "Partner reimb.";
+  if (action.id === "splitExpense") return "Split";
   return action.label;
 }
 

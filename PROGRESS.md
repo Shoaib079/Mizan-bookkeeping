@@ -10,8 +10,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Partner pay-profit + split buy + Split hub |
-| **Last tag** | `v0.partner-splits` |
+| **Last completed slice** | Partner Record (settle-then-withdraw + profit/capital/return) |
+| **Last tag** | `v0.partner-record` |
 | **Unpushed** | *(none after push)* |
 | **Next up** | GS-FX forex-only group sales |
 
