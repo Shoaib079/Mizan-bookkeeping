@@ -340,7 +340,7 @@ export default function PartnerDetailPage() {
             partnerId={partnerId}
             netBalanceKurus={ledger.net_balance_kurus}
             frontedBalanceKurus={ledger.balance_kurus}
-            capitalBalanceKurus={ledger.capital_balance_kurus}
+            drawingsNetKurus={ledger.drawings_net_kurus}
             onClose={() => setRecordOpen(false)}
             onSaved={() => void reload()}
           />

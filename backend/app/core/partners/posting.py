@@ -463,14 +463,16 @@ def post_drawing_repayment(
         require_entity_context()
         _get_partner(session, entity_id, partner_id)
 
-        current = _capital_balance(session, entity_id, partner_id)
-        if current >= 0:
+        # Limit by drawings net, not capital balance — capital contributions and
+        # profit allocations make capital positive while drawings are still open.
+        drawn = partner_ledger.drawings_net_kurus(session, entity_id, partner_id)
+        if drawn >= 0:
             raise partner_ledger.OverRepaymentError(
                 "Partner has no outstanding drawing balance to repay"
             )
-        if amount_kurus > abs(current):
+        if amount_kurus > abs(drawn):
             raise partner_ledger.OverRepaymentError(
-                f"Repayment of {amount_kurus} exceeds partner drawing balance of {abs(current)}"
+                f"Repayment of {amount_kurus} exceeds partner drawing balance of {abs(drawn)}"
             )
 
         payment_gl = _validate_payment_account(session, entity_id, payment_account_id)

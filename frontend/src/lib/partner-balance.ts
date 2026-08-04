@@ -36,6 +36,7 @@ export function extractPartnerNetBalanceKurus(res: unknown): number {
   return n;
 }
 
-export function partnerDrawingRepaymentAllowed(capitalBalanceKurus: number): boolean {
-  return capitalBalanceKurus < 0;
+/** True when partner has outstanding drawings (negative drawings net). */
+export function partnerDrawingRepaymentAllowed(drawingsNetKurus: number): boolean {
+  return drawingsNetKurus < 0;
 }

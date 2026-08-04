@@ -412,6 +412,52 @@ def test_drawing_repayment_clears_negative_balance(db_session, partner_setup) ->
     assert result.balance_kurus == -60_000
 
 
+def test_drawing_repayment_allowed_when_capital_contributions_cover_drawings(
+    db_session, partner_setup
+) -> None:
+    """Contributions make capital_balance positive; drawings_net can still be open."""
+    entity_id = partner_setup["entity_id"]
+    partner_id = partner_setup["partner_id"]
+    drawer = partner_setup["drawer"]
+
+    partner_posting.post_capital_contribution(
+        db_session,
+        entity_id,
+        partner_id,
+        contribution_date=date(2026, 5, 1),
+        amount_kurus=1_000_000,
+        description="Capital in",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        partner_id,
+        drawing_date=date(2026, 6, 3),
+        amount_kurus=50_000,
+        description="Partner drawing",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    assert partner_ledger.capital_balance_kurus(db_session, entity_id, partner_id) == 950_000
+    assert partner_ledger.drawings_net_kurus(db_session, entity_id, partner_id) == -50_000
+
+    result = partner_posting.post_drawing_repayment(
+        db_session,
+        entity_id,
+        partner_id,
+        payment_date=date(2026, 6, 20),
+        amount_kurus=50_000,
+        description="Returned cash",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert result.journal_entry.source == JournalEntrySource.PARTNER_DRAWING_REPAYMENT
+    assert partner_ledger.drawings_net_kurus(db_session, entity_id, partner_id) == 0
+
+
 def test_drawing_repayment_overpayment_rejected(db_session, partner_setup) -> None:
     entity_id = partner_setup["entity_id"]
     partner_id = partner_setup["partner_id"]

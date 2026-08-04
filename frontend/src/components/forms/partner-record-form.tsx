@@ -40,7 +40,8 @@ type Props = {
   netBalanceKurus?: number;
   frontedBalanceKurus?: number;
   unpaidProfitKurus?: number;
-  capitalBalanceKurus?: number;
+  /** Outstanding drawings net — negative means repayable. */
+  drawingsNetKurus?: number;
   /** When set, skip type picker (e.g. dedicated Pay profit button). */
   lockedKind?: PartnerRecordKind;
   embedded?: boolean;
@@ -61,7 +62,7 @@ export function PartnerRecordForm({
   netBalanceKurus,
   frontedBalanceKurus,
   unpaidProfitKurus = 0,
-  capitalBalanceKurus = 0,
+  drawingsNetKurus = 0,
   lockedKind,
   embedded,
   onSaved,
@@ -70,7 +71,8 @@ export function PartnerRecordForm({
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
 
-  const canReturn = partnerDrawingRepaymentAllowed(capitalBalanceKurus);
+  const canReturn = partnerDrawingRepaymentAllowed(drawingsNetKurus);
+  const outstandingDrawingKurus = canReturn ? Math.abs(drawingsNetKurus) : 0;
 
   const kindOptions = useMemo(() => {
     if (lockedKind) {
@@ -201,9 +203,9 @@ export function PartnerRecordForm({
         setError("This partner has no outstanding drawing to repay.");
         return;
       }
-      if (amountKurus > Math.abs(capitalBalanceKurus)) {
+      if (amountKurus > outstandingDrawingKurus) {
         setError(
-          `Cannot exceed ${partnerBalanceAmount(Math.abs(capitalBalanceKurus))}.`,
+          `Cannot exceed ${partnerBalanceAmount(outstandingDrawingKurus)}.`,
         );
         return;
       }
@@ -351,13 +353,12 @@ export function PartnerRecordForm({
             {canReturn ? (
               <>
                 Outstanding drawing:{" "}
-                {partnerBalanceAmount(Math.abs(capitalBalanceKurus))}
+                {partnerBalanceAmount(outstandingDrawingKurus)}
               </>
             ) : (
               <>
-                Nothing to repay right now. This only closes a prior withdrawal
-                when drawings still exceed allocated capital. If they are putting
-                in new money, use Capital in instead.
+                Nothing to repay right now — there is no open withdrawal to
+                close. If they are putting in new money, use Capital in instead.
               </>
             )}
           </p>

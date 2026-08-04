@@ -4,6 +4,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-04
 
+**Partner returned cash vs capital contributions.**
+- **Partner returned cash** now looks at outstanding **drawings**, not capital balance. Capital contributed (e.g. 544k) no longer blocks returning a later withdrawal when the card still says Partner owes you.
+
 **Partner returned cash always visible.**
 - Record → **Partner returned cash** always appears in the type list (was hidden unless drawings exceeded capital). When nothing is repayable, Record stays disabled with an explanation; use **Capital in** for new money.
 

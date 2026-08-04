@@ -16,7 +16,7 @@ describe("partnerBalanceHeading", () => {
 });
 
 describe("partnerDrawingRepaymentAllowed", () => {
-  it("allows repayment only when partner owes the business", () => {
+  it("allows repayment only when drawings net is outstanding", () => {
     expect(partnerDrawingRepaymentAllowed(-1)).toBe(true);
     expect(partnerDrawingRepaymentAllowed(0)).toBe(false);
     expect(partnerDrawingRepaymentAllowed(100)).toBe(false);
