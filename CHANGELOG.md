@@ -2,6 +2,15 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-07-14 — Frontend rebuild on page archetypes
+
+**Slice 0 + 1 — the contract and the shells (`v0.archetypes-1`):** the app had 21 shared UI *atoms* but no shared **page shapes**, so every page hand-assembled its own layout — four entity detail pages ended up with four arrangements of the same four ingredients, and `rounded-lg border border-border bg-card` was pasted inline across 40+ files. That is the root cause of "it feels like different people made it"; atoms alone never buy consistency.
+
+- **`DESIGN_ARCHETYPES.md`** — the structural contract (companion to DESIGN_SYSTEM.md, which stays the paint). Documents the eight archetypes, the audit evidence, the 8 rules that stop drift, and a **checklist of all 88 routes** (58 live, 30 redirects) grouped into migration slices so nothing is missed.
+- **Built:** `PageHeader` (+`MetaFacts`), `EntityDetailPage` (+`DetailSection`), `ListPage`, `HubPage` (+`HubTileCard`), `SummaryPanel` (+`HeadlineFigure`), `FilterChips`. `ListPage` **owns the mobile breakpoint** — pages no longer write their own `isMobile ? cards : table` fork, which is how they drifted.
+- **Tests (6)** guard the contract structurally: one PageHeader per archetype, pager always available, money through the shared formatter, tokens only (no hex or Tailwind palette literals), mobile fork owned centrally.
+- Nothing migrated yet — no page behaviour changed in this slice.
+
 ## 2026-07-14
 
 **Partner page — profit and cash reported separately (`v0.partner-page-stickers`):** the balance box used to stack five figures (fronted expenses, capital contributed, profit allocated, unpaid profit, partner loan) as flat 11px grey lines, with profit and cash mixed together and no hierarchy. Replaced with two panels that stay the same size however many allocation periods accumulate.
