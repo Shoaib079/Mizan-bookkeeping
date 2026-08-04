@@ -376,3 +376,62 @@ def test_cross_entity_isolation(
         params={"from": "2026-01-01", "to": "2026-01-31"},
     )
     assert missing.status_code == 404
+
+
+def test_a_deactivated_account_keeps_the_balance_sheet_balanced(
+    db_session, fs_setup
+) -> None:
+    """Deactivating an account must not unbalance the sheet.
+
+    Deactivating does not remove postings. The live statements used to be built
+    from active accounts only, so one side of an entry vanished from the report
+    while the other stayed — the sheet stopped balancing and said only
+    "Accounting equation check failed", with nothing to point at.
+    """
+    entity_id = fs_setup["entity_id"]
+    as_of = date(2026, 6, 30)
+
+    # Cash in, revenue out — both sides reach the balance sheet, revenue via
+    # unclosed net income in equity.
+    with entity_context(db_session, entity_id):
+        accounts = {a.code: a for a in db_session.scalars(select(Account))}
+
+    post_journal_entry(
+        db_session,
+        entity_id,
+        date(2026, 6, 10),
+        "Sale for the deactivation test",
+        [
+            PostingLine(
+                account_id=fs_setup["bank_gl_id"],
+                amount_kurus=250_000,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=accounts[SALES_REVENUE_CODE].id,
+                amount_kurus=250_000,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ],
+        actor_id=ACTOR_ID,
+        source=JournalEntrySource.MANUAL,
+    )
+
+    before = financial_statements.get_balance_sheet(
+        db_session, entity_id, as_of, view=financial_statements.VIEW_LIVE
+    )
+    assert before.accounting_equation_balanced
+
+    # Now retire the revenue account while it still holds the sale.
+    with entity_context(db_session, entity_id):
+        revenue = db_session.get(Account, accounts[SALES_REVENUE_CODE].id)
+        revenue.is_active = False
+        db_session.commit()
+
+    after = financial_statements.get_balance_sheet(
+        db_session, entity_id, as_of, view=financial_statements.VIEW_LIVE
+    )
+    assert after.accounting_equation_balanced, (
+        "a deactivated account still holding a balance dropped out of the sheet"
+    )
+    assert after.equity.unclosed_net_income_kurus == before.equity.unclosed_net_income_kurus

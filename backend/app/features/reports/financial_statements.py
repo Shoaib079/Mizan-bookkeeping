@@ -60,6 +60,75 @@ def _active_accounts(
     )
 
 
+def _accounts_with_balances(
+    session: Session,
+    account_types: tuple[AccountType, ...],
+    as_of_date: date,
+) -> list[Account]:
+    """Active accounts, plus any deactivated one still carrying a balance.
+
+    Deactivating an account does not remove its postings. Filtering a statement
+    to active accounts alone therefore drops real money out of one side of the
+    equation while the ledger still holds both sides — and the balance sheet
+    stops balancing, with no clue as to why.
+
+    The sealed-snapshot path (`_accounts_by_id`) and the year-end close
+    (`year_end._temporary_accounts`) already refuse to filter on `is_active`
+    for exactly this reason; the live statements were the one place that still
+    did. Inactive accounts that are genuinely empty stay hidden, so a long
+    chart of accounts doesn't fill up with zero rows.
+    """
+    inactive_with_balance = [
+        account
+        for account in session.scalars(
+            select(Account)
+            .where(
+                Account.is_active.is_(False),
+                Account.account_type.in_(account_types),
+            )
+            .order_by(Account.code)
+        )
+        if balance_as_of_kurus(session, account, as_of_date) != 0
+    ]
+    accounts = _active_accounts(session, account_types) + inactive_with_balance
+    return sorted(accounts, key=lambda account: account.code)
+
+
+def _accounts_with_activity(
+    session: Session,
+    account_types: tuple[AccountType, ...],
+    from_date: date,
+    to_date: date,
+) -> list[Account]:
+    """Active accounts, plus any deactivated one that moved in the period.
+
+    The P&L equivalent of `_accounts_with_balances`: an expense account
+    deactivated after it was used would otherwise vanish from the statement and
+    the period would understate its own costs.
+    """
+    inactive_with_activity = [
+        account
+        for account in session.scalars(
+            select(Account)
+            .where(
+                Account.is_active.is_(False),
+                Account.account_type.in_(account_types),
+            )
+            .order_by(Account.code)
+        )
+        if period_activity_kurus(
+            session,
+            account,
+            from_date,
+            to_date,
+            exclude_sources=P_AND_L_EXCLUDED_SOURCES,
+        )
+        != 0
+    ]
+    accounts = _active_accounts(session, account_types) + inactive_with_activity
+    return sorted(accounts, key=lambda account: account.code)
+
+
 def _sealed_context(
     session: Session,
     *,
@@ -115,7 +184,9 @@ def _unclosed_net_income_kurus(session: Session, as_of_date: date) -> int:
     """
     revenue_total = 0
     expense_total = 0
-    for account in _active_accounts(session, (AccountType.REVENUE, AccountType.EXPENSE)):
+    for account in _accounts_with_balances(
+        session, (AccountType.REVENUE, AccountType.EXPENSE), as_of_date
+    ):
         balance = balance_as_of_kurus(session, account, as_of_date)
         if account.account_type == AccountType.REVENUE:
             revenue_total += balance
@@ -127,7 +198,9 @@ def _unclosed_net_income_kurus(session: Session, as_of_date: date) -> int:
 def _live_net_income_kurus(session: Session, from_date: date, to_date: date) -> int:
     revenue = 0
     expenses = 0
-    for account in _active_accounts(session, (AccountType.REVENUE, AccountType.EXPENSE)):
+    for account in _accounts_with_activity(
+        session, (AccountType.REVENUE, AccountType.EXPENSE), from_date, to_date
+    ):
         amount = period_activity_kurus(
             session,
             account,
@@ -174,8 +247,11 @@ def get_profit_and_loss(
                 if a.account_type in (AccountType.REVENUE, AccountType.EXPENSE)
             ]
         else:
-            accounts = _active_accounts(
-                session, (AccountType.REVENUE, AccountType.EXPENSE)
+            accounts = _accounts_with_activity(
+                session,
+                (AccountType.REVENUE, AccountType.EXPENSE),
+                from_date,
+                to_date,
             )
 
         for account in accounts:
@@ -269,9 +345,10 @@ def get_balance_sheet(
                 in (AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY)
             ]
         else:
-            accounts = _active_accounts(
+            accounts = _accounts_with_balances(
                 session,
                 (AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY),
+                as_of_date,
             )
 
         for account in accounts:
@@ -314,9 +391,13 @@ def get_balance_sheet(
             sealed_assets = sum(row.balance_kurus for row in asset_rows)
             drift = None
             if lock.dirty:
+                # Same population as the rows above, or the drift figure
+                # reports a difference that is only the filter.
                 live_assets = sum(
                     balance_as_of_kurus(session, account, as_of_date)
-                    for account in _active_accounts(session, (AccountType.ASSET,))
+                    for account in _accounts_with_balances(
+                        session, (AccountType.ASSET,), as_of_date
+                    )
                 )
                 drift = live_assets - sealed_assets
             sealed = SealedPeriodInfo(
