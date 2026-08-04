@@ -12,7 +12,7 @@ from sqlalchemy import select
 from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
-from app.core.chart_of_accounts.types import AccountNormalBalance
+from app.core.chart_of_accounts.types import AccountNormalBalance, AccountType
 from app.core.ledger.models import JournalEntrySource
 from app.core.ledger.posting import PostingLine, post_journal_entry, void_journal_entry
 from app.core.onboarding.posting import post_opening_balances
