@@ -4,6 +4,16 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-07-14
 
+**Partner page — profit and cash reported separately (`v0.partner-page-stickers`):** the balance box used to stack five figures (fronted expenses, capital contributed, profit allocated, unpaid profit, partner loan) as flat 11px grey lines, with profit and cash mixed together and no hierarchy. Replaced with two panels that stay the same size however many allocation periods accumulate.
+
+- **Profit sticker** — a small running statement: allocated to partner (cumulative, with the period count) → used to clear drawings → paid out in cash → **still unpaid** as the emphasised bottom line (the figure the "Pay profit" button acts on). Reads "No profit allocated yet" before the first allocation.
+- **Cash & expenses sticker** — drawings taken, drawings outstanding (red while open, green at zero), expenses fronted, capital contributed, ending in capital in business. Partner loans stay on the headline balance card.
+- **Ledger** gained filter chips (All / Profit / Cash / Expenses — no overlap between profit and cash types) and **period bands**: each profit allocation's settlement + capital rows group under one "June 2026 profit allocation" heading, so several months read as blocks instead of an undifferentiated list. Rows, edit/void actions, running balance and correction history are unchanged.
+- **No backend change.** New `partner-summary.ts` derives every figure from the ledger rows the API already returns (the engine splits one gross share into `profit_settlement` + `profit_allocation`, so earned = settlement + allocation); the authoritative `unpaid_profit_kurus` is used when present. Voided/superseded rows never count. New `partner-ledger-view.ts` owns the filter/grouping rules.
+- Tests: 16 new (`partner-summary.test.ts`, `partner-ledger-view.test.ts`) covering the netted-allocation split, the sticker reconciling (allocated − used − paid = unpaid), period counting per allocation event, exclusion of voided rows, filter exclusivity, and that grouping never drops a row.
+
+## 2026-07-14
+
 **Month pack joins the shared export design (`v0.report-export-presentation-2`):** the "download all reports" pack (Excel + PDF) now uses the same document language as the individual statements — one look across every download in the app.
 
 - **PDF (`month_pack_pdf.py`):** its private table style is gone; it now imports the shared palette and `header_elements` / `summary_band` / `_table_style` from `pdf_export.py`, so hairline rules, small-caps headers, right-aligned money, section bands and ruled totals match the statements exactly (was: blue-filled headers, full grid, striped rows). New **cover page** — masthead, KPI band (sales/expenses/net), the `CashBridge` books-balance proof promoted from a buried sentence into a green (or red) confirmation panel, a numbered **contents** list, and the figures/generated notes. Sections are numbered 1–9 to match the contents; every page carries the standard footer (entity · Month Pack · period · Page N).

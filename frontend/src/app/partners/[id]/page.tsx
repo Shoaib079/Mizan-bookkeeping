@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 import { PartnerRecordForm } from "@/components/forms/partner-record-form";
 import { PartnerLedgerDownloadMenu } from "@/components/partners/partner-ledger-download-menu";
@@ -39,7 +39,22 @@ import {
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
+import {
+  PartnerCashCard,
+  PartnerProfitCard,
+} from "@/components/partners/partner-summary-cards";
+import {
+  partnerCashSummary,
+  partnerProfitSummary,
+} from "@/lib/partner-summary";
+import {
+  PARTNER_LEDGER_FILTERS,
+  groupPartnerLedgerRows,
+  partnerLedgerFilterMatches,
+  type PartnerLedgerFilter,
+} from "@/lib/partner-ledger-view";
 import { partnerLedgerRowActions } from "@/lib/subledger-actions";
+import { cn } from "@/lib/utils";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 type LedgerEntry = {
@@ -79,7 +94,8 @@ export default function PartnerDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
   const [payProfitOpen, setPayProfitOpen] = useState(false);
-  const [correctEntry, setCorrectEntry] = useState<CorrectablePartnerLedgerRow | null>(null);
+  const [correctEntry, setCorrectEntry] =
+    useState<CorrectablePartnerLedgerRow | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
     journal_entry_id: string;
     description: string;
@@ -123,12 +139,36 @@ export default function PartnerDetailPage() {
     void reload();
   }, [reload]);
 
-  const {
-    showHistory,
-    setShowHistory,
-    hiddenCount,
-    visibleRows,
-  } = useLedgerHistoryView(ledger?.entries ?? []);
+  const { showHistory, setShowHistory, hiddenCount, visibleRows } =
+    useLedgerHistoryView(ledger?.entries ?? []);
+
+  const rows = useMemo(() => ledger?.entries ?? [], [ledger]);
+  const profitSummary = useMemo(
+    () => partnerProfitSummary(rows, ledger?.unpaid_profit_kurus),
+    [rows, ledger?.unpaid_profit_kurus],
+  );
+  const [ledgerFilter, setLedgerFilter] = useState<PartnerLedgerFilter>("all");
+  const filteredRows = useMemo(
+    () =>
+      visibleRows.filter((entry) =>
+        partnerLedgerFilterMatches(ledgerFilter, entry.movement_type),
+      ),
+    [visibleRows, ledgerFilter],
+  );
+  const bands = useMemo(
+    () => groupPartnerLedgerRows(filteredRows),
+    [filteredRows],
+  );
+  const cashSummary = useMemo(
+    () =>
+      partnerCashSummary(rows, {
+        drawingsNetKurus: ledger?.drawings_net_kurus,
+        capitalContributionKurus: ledger?.capital_contribution_kurus,
+        capitalBalanceKurus: ledger?.capital_balance_kurus,
+        reimbursementBalanceKurus: ledger?.balance_kurus,
+      }),
+    [rows, ledger],
+  );
 
   if (!entityId) {
     return (
@@ -180,43 +220,18 @@ export default function PartnerDetailPage() {
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {partnerBalanceAmount(ledger.net_balance_kurus)}
               </p>
-              {(ledger.balance_kurus !== 0 ||
-                ledger.capital_contribution_kurus !== 0 ||
-                ledger.profit_allocated_kurus !== 0 ||
-                (ledger.loan_balance_kurus ?? 0) !== 0) && (
-                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                  {ledger.balance_kurus !== 0 && (
-                    <p>
-                      Fronted expenses: {formatTry(ledger.balance_kurus)}
-                    </p>
-                  )}
-                  {ledger.capital_contribution_kurus !== 0 && (
-                    <p>
-                      Capital contributed:{" "}
-                      {formatTry(ledger.capital_contribution_kurus)}
-                    </p>
-                  )}
-                  {ledger.profit_allocated_kurus !== 0 && (
-                    <p>
-                      Profit allocated:{" "}
-                      {formatTry(ledger.profit_allocated_kurus)}
-                    </p>
-                  )}
-                  {(ledger.profit_allocated_kurus !== 0 ||
-                    (ledger.unpaid_profit_kurus ?? 0) !== 0) && (
-                    <p>
-                      Unpaid profit:{" "}
-                      {formatTry(ledger.unpaid_profit_kurus ?? 0)}
-                    </p>
-                  )}
-                  {(ledger.loan_balance_kurus ?? 0) !== 0 && (
-                    <p>
-                      Partner loan: {formatTry(ledger.loan_balance_kurus!)}
-                    </p>
-                  )}
-                </div>
+              {(ledger.loan_balance_kurus ?? 0) !== 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Partner loan: {formatTry(ledger.loan_balance_kurus!)}
+                </p>
               )}
             </div>
+          </div>
+
+          {/* Profit and cash reported separately — one sticker each. */}
+          <div className="mb-6 flex flex-wrap gap-3">
+            <PartnerProfitCard profit={profitSummary} />
+            <PartnerCashCard cash={cashSummary} />
           </div>
 
           <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
@@ -244,7 +259,27 @@ export default function PartnerDetailPage() {
             />
           </div>
 
-          <h2 className="mb-2 text-sm font-semibold">Ledger</h2>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">Ledger</h2>
+            <div className="flex flex-wrap gap-1">
+              {PARTNER_LEDGER_FILTERS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={ledgerFilter === tab.id}
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs transition-colors",
+                    ledgerFilter === tab.id
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "border border-border text-muted-foreground hover:bg-muted/60",
+                  )}
+                  onClick={() => setLedgerFilter(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <LedgerHistoryToggle
             hiddenCount={hiddenCount}
             showHistory={showHistory}
@@ -263,68 +298,91 @@ export default function PartnerDetailPage() {
                   <DataTableHeaderCell>Date</DataTableHeaderCell>
                   <DataTableHeaderCell>Type</DataTableHeaderCell>
                   <DataTableHeaderCell>Description</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">
+                    Amount
+                  </DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">
+                    Balance
+                  </DataTableHeaderCell>
                 </tr>
               </DataTableHead>
               <DataTableBody>
-                {visibleRows.map((entry) => {
-                  const actions = partnerLedgerRowActions(entry.movement_type);
-                  const canAct = actions.canEdit || actions.canVoid;
-                  return (
-                    <DataTableRow
-                      key={entry.id}
-                      className={subledgerRowClassName(entry.display_kind)}
-                    >
-                      <DataTableCell>
-                        {formatTrDate(entry.movement_date)}
-                      </DataTableCell>
-                      <DataTableCell>
-                        {partnerMovementLabels[entry.movement_type] ??
-                          entry.movement_type}
-                      </DataTableCell>
-                      <DataTableCell>
-                        <span>{entry.description}</span>
-                        {entry.was_corrected && (
-                          <span className="ml-2">
-                            <EditedBadge />
-                          </span>
-                        )}
-                        {canAct && (
-                          <SubledgerRowActions
-                            inline
-                            row={entry}
-                            showEdit={actions.canEdit}
-                            onEdit={() =>
-                              setCorrectEntry({
-                                journal_entry_id: entry.journal_entry_id!,
-                                movement_date: entry.movement_date,
-                                movement_type: entry.movement_type,
-                                amount_kurus: entry.amount_kurus,
-                                description: entry.description,
-                                payment_account_id: entry.payment_account_id,
-                              })
-                            }
-                            onVoid={() =>
-                              setVoidTarget({
-                                journal_entry_id: entry.journal_entry_id!,
-                                description: entry.description,
-                              })
-                            }
-                          />
-                        )}
-                      </DataTableCell>
-                      <DataTableCell align="right">
-                        {formatTry(entry.amount_kurus)}
-                      </DataTableCell>
-                      <DataTableCell align="right">
-                        {entry.running_balance_kurus != null
-                          ? formatPartnerNetBalance(entry.running_balance_kurus)
-                          : "—"}
-                      </DataTableCell>
-                    </DataTableRow>
-                  );
-                })}
+                {bands.map((band) => (
+                  <Fragment key={band.key}>
+                    {band.title && (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="bg-muted/40 px-4 py-1.5 text-xs font-medium uppercase tracking-wider text-primary"
+                        >
+                          {band.title}
+                        </td>
+                      </tr>
+                    )}
+                    {band.rows.map((entry) => {
+                      const actions = partnerLedgerRowActions(
+                        entry.movement_type,
+                      );
+                      const canAct = actions.canEdit || actions.canVoid;
+                      return (
+                        <DataTableRow
+                          key={entry.id}
+                          className={subledgerRowClassName(entry.display_kind)}
+                        >
+                          <DataTableCell>
+                            {formatTrDate(entry.movement_date)}
+                          </DataTableCell>
+                          <DataTableCell>
+                            {partnerMovementLabels[entry.movement_type] ??
+                              entry.movement_type}
+                          </DataTableCell>
+                          <DataTableCell>
+                            <span>{entry.description}</span>
+                            {entry.was_corrected && (
+                              <span className="ml-2">
+                                <EditedBadge />
+                              </span>
+                            )}
+                            {canAct && (
+                              <SubledgerRowActions
+                                inline
+                                row={entry}
+                                showEdit={actions.canEdit}
+                                onEdit={() =>
+                                  setCorrectEntry({
+                                    journal_entry_id: entry.journal_entry_id!,
+                                    movement_date: entry.movement_date,
+                                    movement_type: entry.movement_type,
+                                    amount_kurus: entry.amount_kurus,
+                                    description: entry.description,
+                                    payment_account_id:
+                                      entry.payment_account_id,
+                                  })
+                                }
+                                onVoid={() =>
+                                  setVoidTarget({
+                                    journal_entry_id: entry.journal_entry_id!,
+                                    description: entry.description,
+                                  })
+                                }
+                              />
+                            )}
+                          </DataTableCell>
+                          <DataTableCell align="right">
+                            {formatTry(entry.amount_kurus)}
+                          </DataTableCell>
+                          <DataTableCell align="right">
+                            {entry.running_balance_kurus != null
+                              ? formatPartnerNetBalance(
+                                  entry.running_balance_kurus,
+                                )
+                              : "—"}
+                          </DataTableCell>
+                        </DataTableRow>
+                      );
+                    })}
+                  </Fragment>
+                ))}
               </DataTableBody>
             </DataTable>
           )}

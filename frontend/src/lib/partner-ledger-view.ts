@@ -1,0 +1,123 @@
+/** Partner ledger grouping + filtering (2026-07-14).
+ *
+ * A partner ledger mixes three unrelated concerns — profit/equity, cash in and
+ * out, and expenses they fronted. Filter chips let the reader look at one at a
+ * time; period bands keep each profit allocation legible once several months
+ * have accumulated. */
+
+export type PartnerLedgerFilter = "all" | "profit" | "cash" | "expenses";
+
+export const PARTNER_LEDGER_FILTERS: {
+  id: PartnerLedgerFilter;
+  label: string;
+}[] = [
+  { id: "all", label: "All" },
+  { id: "profit", label: "Profit" },
+  { id: "cash", label: "Cash" },
+  { id: "expenses", label: "Expenses" },
+];
+
+const PROFIT_TYPES = new Set([
+  "profit_allocation",
+  "profit_settlement",
+  "profit_paid",
+]);
+
+const CASH_TYPES = new Set([
+  "drawing",
+  "drawing_repayment",
+  "capital_contribution",
+  "partner_loan_received",
+  "partner_loan_repaid",
+  "reimbursement_paid",
+]);
+
+const EXPENSE_TYPES = new Set(["expense_fronted"]);
+
+export function partnerLedgerFilterMatches(
+  filter: PartnerLedgerFilter,
+  movementType: string,
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "profit") return PROFIT_TYPES.has(movementType);
+  if (filter === "cash") return CASH_TYPES.has(movementType);
+  return EXPENSE_TYPES.has(movementType);
+}
+
+export function isAllocationRow(movementType: string): boolean {
+  return (
+    movementType === "profit_allocation" || movementType === "profit_settlement"
+  );
+}
+
+type BandableRow = {
+  movement_type: string;
+  movement_date: string;
+  journal_entry_id?: string | null;
+};
+
+export type LedgerBand<T> = {
+  /** Stable key for React. */
+  key: string;
+  /** What the band groups on — allocation id, or "other". */
+  groupKey: string;
+  /** Band heading; null renders an unlabelled group. */
+  title: string | null;
+  rows: T[];
+};
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function monthLabel(isoDate: string): string {
+  const [year, month] = isoDate.split("-");
+  const index = Number(month) - 1;
+  return index >= 0 && index < 12 ? `${MONTHS[index]} ${year}` : isoDate;
+}
+
+/** Group newest-first rows so each profit allocation reads as its own block.
+ *
+ * Consecutive rows from the same allocation (the settlement + capital pair the
+ * engine writes together) share one band. Everything else falls into the
+ * surrounding "other movements" band, so nothing is ever hidden. */
+export function groupPartnerLedgerRows<T extends BandableRow>(
+  rows: T[],
+): LedgerBand<T>[] {
+  const bands: LedgerBand<T>[] = [];
+
+  for (const row of rows) {
+    const allocationKey = isAllocationRow(row.movement_type)
+      ? `alloc-${row.journal_entry_id ?? row.movement_date}`
+      : null;
+    const wantedKey = allocationKey ?? "other";
+    const last = bands[bands.length - 1];
+
+    if (last && last.groupKey === wantedKey) {
+      last.rows.push(row);
+      continue;
+    }
+
+    bands.push({
+      key: `${wantedKey}-${bands.length}`,
+      groupKey: wantedKey,
+      title: allocationKey
+        ? `${monthLabel(row.movement_date)} profit allocation`
+        : null,
+      rows: [row],
+    });
+  }
+
+  return bands;
+}
