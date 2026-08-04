@@ -6,6 +6,11 @@
 -- So the equation can only fail if a counted entry is itself lopsided, or if
 -- some of its money lands on an account the report never looks at.
 --
+-- Comparisons are lower()ed on purpose: SQLAlchemy's Enum(native_enum=False)
+-- stores the enum NAME ('POSTED', 'DEBIT', 'ASSET'), not its value. Comparing
+-- to lowercase literals silently matches nothing and reports a clean bill of
+-- health on a broken ledger — which is exactly what happened the first time.
+--
 -- Run:  psql -h localhost -d mizan -f backend/scripts/diagnose_balance_sheet.sql
 
 \echo '=== 1. Counted entries whose debits do not equal their credits ==='
@@ -15,16 +20,16 @@ SELECT
   je.entry_date,
   je.source,
   je.description,
-  SUM(CASE WHEN l.side = 'debit'  THEN l.amount_kurus ELSE 0 END) AS debits,
-  SUM(CASE WHEN l.side = 'credit' THEN l.amount_kurus ELSE 0 END) AS credits,
-  SUM(CASE WHEN l.side = 'debit'  THEN l.amount_kurus ELSE -l.amount_kurus END)
+  SUM(CASE WHEN lower(l.side) = 'debit'  THEN l.amount_kurus ELSE 0 END) AS debits,
+  SUM(CASE WHEN lower(l.side) = 'credit' THEN l.amount_kurus ELSE 0 END) AS credits,
+  SUM(CASE WHEN lower(l.side) = 'debit'  THEN l.amount_kurus ELSE -l.amount_kurus END)
     AS difference_kurus
 FROM journal_entries je
 JOIN journal_entry_lines l ON l.journal_entry_id = je.id
-WHERE je.status = 'posted'
+WHERE lower(je.status) = 'posted'
   AND je.reverses_entry_id IS NULL
 GROUP BY je.id, je.entry_date, je.source, je.description
-HAVING SUM(CASE WHEN l.side = 'debit' THEN l.amount_kurus ELSE -l.amount_kurus END) <> 0
+HAVING SUM(CASE WHEN lower(l.side) = 'debit' THEN l.amount_kurus ELSE -l.amount_kurus END) <> 0
 ORDER BY je.entry_date;
 
 \echo ''
@@ -51,18 +56,18 @@ GROUP BY je.entity_id, a.entity_id;
 \echo '(assets - (liabilities + equity + net income) should be 0.)'
 SELECT
   a.entity_id,
-  SUM(CASE WHEN a.account_type = 'asset'
-      THEN CASE WHEN l.side = 'debit' THEN l.amount_kurus ELSE -l.amount_kurus END
+  SUM(CASE WHEN lower(a.account_type) = 'asset'
+      THEN CASE WHEN lower(l.side) = 'debit' THEN l.amount_kurus ELSE -l.amount_kurus END
       ELSE 0 END) AS assets,
-  SUM(CASE WHEN a.account_type IN ('liability', 'equity', 'revenue')
-      THEN CASE WHEN l.side = 'credit' THEN l.amount_kurus ELSE -l.amount_kurus END
+  SUM(CASE WHEN lower(a.account_type) IN ('liability', 'equity', 'revenue')
+      THEN CASE WHEN lower(l.side) = 'credit' THEN l.amount_kurus ELSE -l.amount_kurus END
       ELSE 0 END)
-  - SUM(CASE WHEN a.account_type = 'expense'
-      THEN CASE WHEN l.side = 'debit' THEN l.amount_kurus ELSE -l.amount_kurus END
+  - SUM(CASE WHEN lower(a.account_type) = 'expense'
+      THEN CASE WHEN lower(l.side) = 'debit' THEN l.amount_kurus ELSE -l.amount_kurus END
       ELSE 0 END) AS liabilities_equity_and_result
 FROM journal_entry_lines l
 JOIN journal_entries je ON je.id = l.journal_entry_id
 JOIN accounts a ON a.id = l.account_id
-WHERE je.status = 'posted'
+WHERE lower(je.status) = 'posted'
   AND je.reverses_entry_id IS NULL
 GROUP BY a.entity_id;
