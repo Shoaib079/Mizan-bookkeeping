@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 
 import { AccountMenu } from "@/components/layout/account-menu";
 import { MobileBottomTabs } from "@/components/layout/mobile-bottom-tabs";
@@ -76,6 +76,13 @@ function AppShellInner({
   const { entityId } = useEntity();
   const { grants } = useEntityAccess();
   const { counts: reviewCounts, loading: reviewLoading } = useReviewCounts(entityId);
+
+  // The window no longer scrolls, so Next's scroll restoration (which moves
+  // `window`) has nothing to move — a new page would open still scrolled down.
+  const mainRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
 
   const navSettings = { deliveryEnabled };
   const onReviewPage = pathname.startsWith("/review");
@@ -155,12 +162,13 @@ function AppShellInner({
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Pinned: nav stays put while the page scrolls, so you can switch
-       * section from the bottom of a long ledger without scrolling back up.
-       * `h-screen` + its own overflow means a tall nav scrolls inside the
-       * sidebar rather than pushing the page. */}
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-border bg-sidebar">
+    /* The window itself never scrolls — the shell is exactly one viewport tall
+     * and only <main> scrolls inside it. `sticky` was not enough: a sticky
+     * element still lives in the document's scroll, so rubber-banding past the
+     * top or bottom dragged the sidebar with it. With the document fixed there
+     * is no page scroll left to drag anything. */
+    <div className="flex h-screen overflow-hidden bg-background">
+      <aside className="flex h-full w-60 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-border bg-sidebar">
         <div className="border-b border-border px-4 py-4">
           <p className="text-lg font-semibold text-primary">Mizan</p>
           <p className="text-xs text-muted-foreground">Restaurant bookkeeping</p>
@@ -171,8 +179,8 @@ function AppShellInner({
           reviewTotal={reviewCounts.total}
         />
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background px-6">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-6">
           <div className="flex min-w-0 items-center gap-3">
             <Button
               type="button"
@@ -212,7 +220,11 @@ function AppShellInner({
             <AccountMenu />
           </div>
         </header>
-        <main className="flex-1 p-6" key={entityId}>
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-auto overscroll-contain p-6"
+          key={entityId}
+        >
           {mainChrome}
         </main>
       </div>

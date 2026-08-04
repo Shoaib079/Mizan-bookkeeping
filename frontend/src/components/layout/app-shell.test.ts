@@ -30,15 +30,35 @@ describe("AppShell mobile shell (C4)", () => {
     expect(source).not.toContain("onMobileTabRoot");
   });
 
-  it("pins the desktop sidebar so it does not scroll with the page", async () => {
-    // The nav used to scroll away with the content, so switching section from
-    // the bottom of a long ledger meant scrolling back to the top first.
+  it("the desktop sidebar cannot move — the window does not scroll at all", async () => {
+    // `sticky` was not enough: a sticky element still lives in the document's
+    // scroll, so rubber-banding past the top or bottom dragged the sidebar.
+    // The shell is one viewport tall with the document overflow hidden, so
+    // there is no page scroll left to drag anything.
     const source = await readAppShell();
-    const aside = source.slice(source.indexOf("<aside"), source.indexOf("</aside>"));
-    expect(aside).toContain("sticky top-0");
-    expect(aside).toContain("h-screen");
-    // A tall nav has to scroll inside the sidebar, not stretch the page.
+    const desktop = source.slice(source.lastIndexOf("  return ("));
+
+    expect(desktop).toContain("h-screen overflow-hidden");
+    const aside = desktop.slice(
+      desktop.indexOf("<aside"),
+      desktop.indexOf("</aside>"),
+    );
+    expect(aside).not.toContain("sticky");
+    // A tall nav scrolls inside the sidebar rather than stretching the page.
     expect(aside).toContain("overflow-y-auto");
+
+    // Only <main> scrolls...
+    expect(desktop).toMatch(/<main[\s\S]*?overflow-y-auto/);
+    // ...and it must not chain its overscroll back to the document.
+    expect(desktop).toMatch(/<main[\s\S]*?overscroll-contain/);
+  });
+
+  it("resets the scroll container on navigation", async () => {
+    // Next scrolls `window` on route change; the window no longer scrolls, so
+    // without this a new page opens still scrolled down the previous one.
+    const source = await readAppShell();
+    expect(source).toContain("mainRef.current?.scrollTo({ top: 0 })");
+    expect(source).toMatch(/\}, \[pathname\]\);/);
   });
 
   it("hides desktop sidebar on mobile branch", async () => {
