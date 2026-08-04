@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
+import { DocumentReviewPage } from "@/components/page/document-review-page";
+import { MetaFacts } from "@/components/page/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
@@ -217,16 +219,20 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
     totalKurusLive <= 0 || !moneyAccountId || cashText.trim() === "" || cardText.trim() === "";
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <StatusBadge status={summary.status} />
-          {summary.summary_date && (
-            <span className="text-sm text-muted-foreground">
-              {formatTrDate(summary.summary_date)}
-            </span>
-          )}
-        </div>
+    <DocumentReviewPage
+      title="Daily sales"
+      meta={
+        <MetaFacts
+          items={[
+            <StatusBadge key="status" status={summary.status} />,
+            summary.summary_date && formatTrDate(summary.summary_date),
+            summary.review_reason,
+          ].filter(Boolean)}
+        />
+      }
+      document={
+        <>
+        <h2 className="mb-3 text-sm font-semibold">What we read</h2>
         <dl className="grid gap-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Cash (extracted)</dt>
@@ -241,21 +247,16 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
             <dd className="tabular-nums">{formatTry(summary.total_kurus)}</dd>
           </div>
         </dl>
-        {summary.review_reason && (
-          <p className="mt-3 text-sm text-warning">{summary.review_reason}</p>
-        )}
         {typeof summary.extraction_payload.raw_text === "string" && (
           <pre className="mt-4 max-h-48 overflow-auto rounded-md border border-border bg-muted/30 p-2 text-xs">
             {summary.extraction_payload.raw_text}
           </pre>
         )}
-      </div>
-
-      {canConfirm && (
-        <form
-          onSubmit={onConfirm}
-          className="rounded-lg border border-border bg-card p-4"
-        >
+        </>
+      }
+      fields={
+        canConfirm ? (
+        <form onSubmit={onConfirm}>
           <h2 className="mb-3 text-sm font-semibold">Confirm & post</h2>
           <div className="space-y-3">
             <div>
@@ -352,18 +353,15 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
             </div>
           </div>
         </form>
-      )}
-
-      {isTerminal && (
-        <div className="rounded-lg border border-border bg-card p-4">
+        ) : isTerminal ? (
+          // Deliberately not the fallback for every non-confirmable status: a
+          // `duplicate` is neither confirmable nor terminal, and telling the
+          // reader it "cannot be changed" would be wrong.
           <p className="text-sm text-muted-foreground">
             This summary is {summary.status} and cannot be changed.
           </p>
-          {summary.review_reason && (
-            <p className="mt-2 text-sm text-warning">{summary.review_reason}</p>
-          )}
-        </div>
-      )}
-    </div>
+        ) : null
+      }
+    />
   );
 }

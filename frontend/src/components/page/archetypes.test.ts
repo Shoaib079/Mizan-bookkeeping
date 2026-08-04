@@ -173,16 +173,25 @@ describe("page archetypes", () => {
 
     const doc = await read("./document-review-page.tsx");
     expect(doc).toContain("lg:grid-cols-2");
-    expect(await read("../receipt-review.tsx")).toContain(
-      "<DocumentReviewPage",
-    );
+
+    for (const page of [
+      "../receipt-review.tsx",
+      "../pos-summary-review.tsx",
+    ]) {
+      const source = await read(page);
+      expect(source, page).toContain("<DocumentReviewPage");
+      // The archetype draws the two panes; the page fills them.
+      expect(
+        source.includes("grid gap-6 lg:grid-cols-2"),
+        `${page} draws its own two-pane grid`,
+      ).toBe(false);
+    }
   });
 
   it("no surface rolls its own filter chips", async () => {
     // Six places drew their own pill row — solid where the shared chip is
     // tinted, some as role="tablist", each with different padding.
     const { readdir } = await import("fs/promises");
-    const roots = ["../review/", "../../app/", "../"];
     const offenders: string[] = [];
 
     async function scan(dir: string, depth = 0): Promise<void> {

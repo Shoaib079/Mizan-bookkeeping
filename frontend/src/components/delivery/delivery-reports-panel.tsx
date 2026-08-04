@@ -16,6 +16,8 @@ import {
   DataTableHead,
   DataTableHeaderCell,
 } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/page/page-header";
+import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -120,13 +122,9 @@ export function DeliveryReportsPanel() {
         disabled={loading}
       />
 
-      <div className="mb-4 mt-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            {!entityId
-              ? "Select a restaurant in the sidebar"
-              : `${total} entr${total === 1 ? "y" : "ies"} in range`}
-          </p>
+      <PageHeader
+        title="Delivery sales"
+        primaryAction={
           <Button
             type="button"
             disabled={!entityId || !platform}
@@ -134,7 +132,24 @@ export function DeliveryReportsPanel() {
           >
             Record sales
           </Button>
+        }
+      />
+
+      {entityId && items.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-3">
+          <HeadlineFigure
+            label={`Posted sales total${selectedPlatform ? ` — ${selectedPlatform.name}` : ""}`}
+            amountKurus={postedTotal}
+          />
         </div>
+      )}
+
+      <div className="mb-4 mt-4 space-y-3">
+        <p className="text-sm text-muted-foreground">
+          {!entityId
+            ? "Select a restaurant in the sidebar"
+            : `${total} entr${total === 1 ? "y" : "ies"} in range`}
+        </p>
 
         {platformsLoading && (
           <p className="text-sm text-muted-foreground">Loading platforms…</p>
@@ -156,17 +171,6 @@ export function DeliveryReportsPanel() {
           />
         )}
       </div>
-
-      {entityId && items.length > 0 && (
-        <div className="mb-4 rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">
-            Posted sales total{selectedPlatform ? ` — ${selectedPlatform.name}` : ""}
-          </p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">
-            {formatTry(postedTotal)}
-          </p>
-        </div>
-      )}
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
       {loading && <TableSkeleton columns={platform ? 3 : 4} />}

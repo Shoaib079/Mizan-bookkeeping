@@ -15,7 +15,10 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { ListPage } from "@/components/page/list-page";
+import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { BookOpen } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -81,23 +84,26 @@ export function ManualJournalsPanel() {
   }
 
   return (
-    <>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Posted manual journals — void with audit trail (accountant access).
-      </p>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading journals…</p>
-      )}
-
-      {!loading && items.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No posted manual journals yet.
-        </p>
-      )}
-
-      {items.length > 0 && (
+    <ListPage
+      title="Manual journals"
+      meta="Posted manual journals — void with audit trail (accountant access)."
+      loading={loading}
+      error={error}
+      countLabel={
+        items.length > 0
+          ? `${items.length} posted journal${items.length === 1 ? "" : "s"}`
+          : undefined
+      }
+      skeletonColumns={5}
+      isEmpty={items.length === 0}
+      empty={
+        <EmptyState
+          icon={BookOpen}
+          title="No posted manual journals yet"
+          hint="Manual journals posted by your accountant appear here for review and void."
+        />
+      }
+      table={
         <DataTable>
           <DataTableHead>
             <tr>
@@ -138,14 +144,14 @@ export function ManualJournalsPanel() {
             ))}
           </DataTableBody>
         </DataTable>
-      )}
-
+      }
+    >
       <VoidManualJournalDialog
         open={voidTarget !== null}
         journal={voidTarget}
         onClose={() => setVoidTarget(null)}
         onSaved={() => void reload()}
       />
-    </>
+    </ListPage>
   );
 }

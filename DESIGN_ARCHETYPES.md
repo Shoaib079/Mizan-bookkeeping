@@ -120,8 +120,17 @@ What the slice turned up:
 - **A second tile component existed.** `BankingHubTile` duplicated `HubTileCard` with different emphasis. Deleted; the banking hub composes `HubPage`.
 - `/banking/banks`, `/banking/cards` and `/banking/fx` share one implementation that repeated its title twice — once as the page heading, once as the section header above the same list. The section keeps only the total now.
 
-### Slice 5 — review + documents (13) — **in progress 2026-08-04**
-☐ `/review/bank` ☐ `/review/sales` ☐ `/review/receipts` ☐ `/review/invoices` ☐ `/review/expenses` ☐ `/review/delivery` ☐ `/review/manual-journals` ☐ `/review/receipts/[id]` ☐ `/review/invoices/[id]` ☐ `/sales/[id]` ☐ `/banking/statements/[id]` ☐ `/delivery/reports` ☐ `/delivery/settlements`
+### Slice 5 — review + documents (13) — **done 2026-08-04**
+☑ `/review/bank` ☑ `/review/sales` ☑ `/review/receipts` ☑ `/review/invoices` ☑ `/review/expenses` ☑ `/review/delivery` ☑ `/review/manual-journals` ☑ `/review/receipts/[id]` ☑ `/review/invoices/[id]` ☑ `/sales/[id]` ☑ `/banking/statements/[id]` ☑ `/delivery/reports` ☑ `/delivery/settlements`
+
+`ReviewPage` was not built — see §5. The queues are `ListPage`s; the two-pane
+document pages use `DocumentReviewPage`.
+
+What the slice turned up:
+
+- **Six surfaces drew their own filter chips.** Solid where the shared chip is tinted, three as `role="tablist"`, each with its own padding: statement review, invoice review, expense review (two separate rows), the statement lines ledger, and daily sales. All shared now, and a test fails if a review surface rolls its own again.
+- **`/sales/[id]` had a status branch that wasn't exhaustive.** `canConfirm` covers draft/needs_review and `isTerminal` covers posted/rejected — a `duplicate` is neither. Collapsing it to a binary would have told the reader a duplicate "cannot be changed" when it can. Kept three-way, with a comment saying why.
+- `/banking/statements/[id]` keeps its own body: it is an import workspace (preview, mapping, line classification), not a document review.
 
 ### Slice 6 — reports (12, incl. the `/reports` hub)
 ☐ `/reports` ☐ `/reports/profit-and-loss` ☐ `/reports/balance-sheet` ☐ `/reports/cash-flow` ☐ `/reports/ledger` ☐ `/reports/kdv-input` ☐ `/reports/delivery-sales` ☐ `/reports/period-comparison` ☐ `/reports/cash-book` ☐ `/reports/expense-register` ☐ `/reports/bank-reconciliation` ☐ `/reports/month-close`

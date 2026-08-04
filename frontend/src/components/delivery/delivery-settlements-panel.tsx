@@ -15,6 +15,7 @@ import {
   DataTableHead,
   DataTableHeaderCell,
 } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/page/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { Truck } from "lucide-react";
@@ -101,13 +102,9 @@ export function DeliverySettlementsPanel() {
         disabled={loading}
       />
 
-      <div className="mb-4 mt-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            {!entityId
-              ? "Select a restaurant in the sidebar"
-              : `${total} settlement${total === 1 ? "" : "s"} in range`}
-          </p>
+      <PageHeader
+        title="Delivery settlements"
+        primaryAction={
           <Button
             type="button"
             disabled={!entityId}
@@ -115,7 +112,15 @@ export function DeliverySettlementsPanel() {
           >
             Record settlement
           </Button>
-        </div>
+        }
+      />
+
+      <div className="mb-4 mt-4 space-y-3">
+        <p className="text-sm text-muted-foreground">
+          {!entityId
+            ? "Select a restaurant in the sidebar"
+            : `${total} settlement${total === 1 ? "" : "s"} in range`}
+        </p>
 
         {platformsLoading && (
           <p className="text-sm text-muted-foreground">Loading platforms…</p>
