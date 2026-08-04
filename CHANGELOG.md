@@ -4,6 +4,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-04
 
+**Partner Record rename.**
+- Partner Record type **Cash paid / taken** → **Cash taken / withdrawn** (same money-out behavior).
+
 **Partner summary — no Drawings (net) line.**
 - Partner page card no longer lists “Drawings (net)”. **Partner owes you** already has the cash position; the drawings line stayed after profit settled and confused the picture.
 
@@ -16,9 +19,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 - First recipe `profit_allocation_v3`: past partner profit allocations get full Dr 3100 + Cr 3200 settlement + Cr 3300 capital (and matching subledger). Runs after migrate; API startup is a backup. Re-deploy is a no-op.
 
 **Partner Record (one button).**
-- Partners → **Record**: Cash paid/taken, Capital in, or Cash returned (when applicable).
+- Partners → **Record**: Cash taken / withdrawn, Capital in, or Cash returned (when applicable).
 - **Pay profit** is a separate button on the partner page (always visible; disabled until unpaid allocated profit > 0).
-- Cash paid/taken settles fronted expenses first; extra is a withdrawal.
+- Cash taken / withdrawn settles fronted expenses first; extra is a withdrawal.
 - Removed from the Record / Add sidebar (not hidden — deleted). Split stays on Record for bank/supplier peel.
 
 **One Pay partner button.**

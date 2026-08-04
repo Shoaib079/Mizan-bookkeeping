@@ -18,7 +18,7 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
 
 ## 2026-08-04 — Partner page: one Record dialog
 
-**Choice:** Partner detail has a single **Record** action (also Add → Record). Dialog kinds: **Cash paid/taken** (settle 2150 then drawing 3200), **Pay profit**, **Capital in**, **Cash returned**. Removed separate partner-page buttons and deleted Add entry points for drawing / capital / expense-fronted / split-buy forms (not hidden — removed). Split hub (`/split`) remains for bank/supplier personal peel. Daily expenses covers partner-fronted expenses.
+**Choice:** Partner detail has a single **Record** action (also Add → Record). Dialog kinds: **Cash taken / withdrawn** (settle 2150 then drawing 3200), **Pay profit**, **Capital in**, **Cash returned**. Removed separate partner-page buttons and deleted Add entry points for drawing / capital / expense-fronted / split-buy forms (not hidden — removed). Split hub (`/split`) remains for bank/supplier personal peel. Daily expenses covers partner-fronted expenses.
 
 **Why:** One partner cash desk; options must not reappear as hidden stubs.
 

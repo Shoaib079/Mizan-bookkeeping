@@ -48,7 +48,7 @@ type Props = {
 };
 
 const KIND_LABELS: Record<PartnerRecordKind, string> = {
-  cash: "Cash paid / taken",
+  cash: "Cash taken / withdrawn",
   profit_paid: "Pay profit",
   capital: "Capital in",
   returned: "Cash returned",
@@ -331,7 +331,7 @@ export function PartnerRecordForm({
             {netBalanceKurus !== undefined && netBalanceKurus !== fronted
               ? ` · Net book: ${formatPartnerNetBalance(netBalanceKurus)}`
               : null}
-            . Cash paid/taken settles fronted first; extra is a withdrawal.
+            . Cash taken / withdrawn settles fronted first; extra is a withdrawal.
           </p>
         )}
         {kind === "profit_paid" && (
