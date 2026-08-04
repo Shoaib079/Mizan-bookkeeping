@@ -499,3 +499,92 @@ def test_owner_drawings_reduce_equity_and_keep_the_sheet_balanced(
         r for r in after.equity.accounts if r.code == OWNER_DRAWINGS_CODE
     )
     assert row.balance_kurus == -100_000, "drawings should read as a deduction"
+
+
+def test_a_contra_revenue_account_reduces_revenue_on_the_p_and_l(
+    db_session, fs_setup
+) -> None:
+    """The P&L needs the same contra handling the balance sheet got.
+
+    No contra revenue or expense account exists in the default chart today, so
+    this builds one — a sales refunds account, revenue type with a DEBIT normal
+    balance. Without re-signing, a refund would *increase* reported revenue.
+    """
+    entity_id = fs_setup["entity_id"]
+
+    with entity_context(db_session, entity_id):
+        accounts = {a.code: a for a in db_session.scalars(select(Account))}
+        refunds = Account(
+            entity_id=entity_id,
+            code="4900",
+            name_en="Sales Refunds",
+            name_tr="Satis Iadeleri",
+            account_type=AccountType.REVENUE,
+            normal_balance=AccountNormalBalance.DEBIT,
+            is_active=True,
+        )
+        db_session.add(refunds)
+        db_session.commit()
+        db_session.refresh(refunds)
+        sales_id = accounts[SALES_REVENUE_CODE].id
+        refunds_id = refunds.id
+
+    post_journal_entry(
+        db_session,
+        entity_id,
+        date(2026, 6, 12),
+        "Sale",
+        [
+            PostingLine(
+                account_id=fs_setup["bank_gl_id"],
+                amount_kurus=500_000,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=sales_id,
+                amount_kurus=500_000,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ],
+        actor_id=ACTOR_ID,
+        source=JournalEntrySource.MANUAL,
+    )
+    post_journal_entry(
+        db_session,
+        entity_id,
+        date(2026, 6, 13),
+        "Refund to customer",
+        [
+            PostingLine(
+                account_id=refunds_id,
+                amount_kurus=120_000,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=fs_setup["bank_gl_id"],
+                amount_kurus=120_000,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ],
+        actor_id=ACTOR_ID,
+        source=JournalEntrySource.MANUAL,
+    )
+
+    pl = financial_statements.get_profit_and_loss(
+        db_session,
+        entity_id,
+        date(2026, 6, 1),
+        date(2026, 6, 30),
+        view=financial_statements.VIEW_LIVE,
+    )
+
+    # 5.000,00 sold less 1.200,00 refunded — not 6.200,00.
+    assert pl.total_revenue_kurus == 380_000
+    refund_row = next(r for r in pl.accounts if r.code == "4900")
+    assert refund_row.amount_kurus == -120_000
+
+    # And the balance sheet still ties with a contra account in play.
+    sheet = financial_statements.get_balance_sheet(
+        db_session, entity_id, date(2026, 6, 30), view=financial_statements.VIEW_LIVE
+    )
+    assert sheet.accounting_equation_balanced

@@ -233,12 +233,15 @@ def _live_net_income_kurus(session: Session, from_date: date, to_date: date) -> 
     for account in _accounts_with_activity(
         session, (AccountType.REVENUE, AccountType.EXPENSE), from_date, to_date
     ):
-        amount = period_activity_kurus(
-            session,
+        amount = _statement_signed_kurus(
             account,
-            from_date,
-            to_date,
-            exclude_sources=P_AND_L_EXCLUDED_SOURCES,
+            period_activity_kurus(
+                session,
+                account,
+                from_date,
+                to_date,
+                exclude_sources=P_AND_L_EXCLUDED_SOURCES,
+            ),
         )
         if account.account_type == AccountType.REVENUE:
             revenue += amount
@@ -303,6 +306,10 @@ def get_profit_and_loss(
                     to_date,
                     exclude_sources=P_AND_L_EXCLUDED_SOURCES,
                 )
+            # Same contra handling as the balance sheet: a refunds account
+            # sitting against revenue, or a rebate against an expense, must
+            # reduce its section rather than inflate it.
+            amount = _statement_signed_kurus(account, amount)
             rows.append(
                 ProfitAndLossAccountRow(
                     account_id=account.id,
