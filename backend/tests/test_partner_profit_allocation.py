@@ -567,3 +567,55 @@ def test_statement_partner_profit_paid_from_bank(db_session, three_partner_setup
     assert _gl_balance(
         db_session, entity_id, bank.gl_account_id, AccountNormalBalance.DEBIT
     ) == 5_000_000 - 200_000
+
+
+def test_profit_settlement_clears_drawings_net(db_session, three_partner_setup) -> None:
+    """Drawing netted by profit allocation reads as repaid — not withdrawn forever.
+
+    Regression (2026-07-13): drawings_net_kurus ignored PROFIT_SETTLEMENT rows,
+    so after netting the net balance zeroed but the partner page kept showing
+    the withdrawal as outstanding.
+    """
+    entity_id = three_partner_setup["entity_id"]
+    drawer = three_partner_setup["drawer"]
+    partner_ids = three_partner_setup["partner_ids"]
+    ali = partner_ids[0]  # 50% share
+
+    partner_posting.post_drawing(
+        db_session,
+        entity_id,
+        ali,
+        drawing_date=date(2026, 6, 10),
+        amount_kurus=100_000,
+        description="Cash taken",
+        actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    assert partner_ledger.drawings_net_kurus(db_session, entity_id, ali) == -100_000
+
+    pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=1_000_000,
+        description="H1 profit share",
+        actor_id=ACTOR_ID,
+        net_against_drawings=True,
+        netting_as_of=date(2026, 6, 30),
+    )
+
+    # Ali's 500_000 share: 100_000 settles the drawing, 400_000 to capital
+    # (capital is permanent equity — excluded from the operational net).
+    assert partner_ledger.drawings_net_kurus(db_session, entity_id, ali) == 0
+    assert partner_ledger.net_balance_kurus(db_session, entity_id, ali) == 0
+
+    with entity_context(db_session, entity_id):
+        settlement = db_session.scalar(
+            select(PartnerLedgerEntry).where(
+                PartnerLedgerEntry.partner_id == ali,
+                PartnerLedgerEntry.movement_type
+                == PartnerMovementType.PROFIT_SETTLEMENT,
+            )
+        )
+    assert settlement is not None
+    assert settlement.amount_kurus == 100_000

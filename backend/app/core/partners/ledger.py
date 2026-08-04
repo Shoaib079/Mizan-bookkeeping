@@ -308,7 +308,13 @@ def unpaid_profit_kurus(
 def drawings_net_kurus(
     session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
 ) -> int:
-    """Net drawings — negative when partner has taken cash out."""
+    """Net drawings — negative when partner has taken cash out.
+
+    PROFIT_SETTLEMENT counts as repayment: when a profit allocation nets
+    against drawings, the offset row ("Settled from profit") clears the
+    outstanding drawings exactly like a cash repayment would. Without it the
+    net balance zeroes but the drawings figure shows withdrawn forever.
+    """
     return _partner_balance_by_types(
         session,
         entity_id,
@@ -317,6 +323,7 @@ def drawings_net_kurus(
             {
                 PartnerMovementType.DRAWING,
                 PartnerMovementType.DRAWING_REPAYMENT,
+                PartnerMovementType.PROFIT_SETTLEMENT,
             }
         ),
     )

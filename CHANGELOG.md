@@ -2,6 +2,10 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+## 2026-07-13
+
+**Fix — profit-settled drawings no longer show as outstanding (`v0.partner-drawings-settlement`):** When a profit allocation nets against drawings, the engine writes a `PROFIT_SETTLEMENT` row ("Settled from profit") and the partner's **net** balance zeroes — but `drawings_net_kurus` summed only `DRAWING + DRAWING_REPAYMENT`, so the partner page kept showing the withdrawal as open forever (and kept offering "Repay drawing"). `PROFIT_SETTLEMENT` now counts as repayment in the drawings figure, matching `NET_BALANCE_MOVEMENT_TYPES` which always included it. Books model is now exactly: partner takes (−) / returns (+), and profit allocation settles what's open before crediting capital. One-line backend change in `core/partners/ledger.py`; frontend reads the API figure everywhere, so no UI changes. Regression test: drawing → allocate with netting → drawings 0, net 0, settlement row 100k (`test_profit_settlement_clears_drawings_net`).
+
 ## 2026-08-04
 
 **Partner returned cash vs capital contributions.**
