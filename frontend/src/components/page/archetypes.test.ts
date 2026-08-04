@@ -266,6 +266,19 @@ describe("page archetypes", () => {
     }
   });
 
+  it("the equity section totals every row it prints", async () => {
+    // The section prints Unclosed net income as a row but the subtotal summed
+    // only the GL accounts, so the column visibly did not add up — off by the
+    // whole period result. The KPI had the same gap, and it is the figure that
+    // has to balance against assets.
+    const source = await read("../../app/reports/balance-sheet/page.tsx");
+    const withUnclosed = /subtotal_kurus \+\s*report\.equity\.unclosed_net_income_kurus/;
+    expect(source).toMatch(withUnclosed);
+    expect(source).toMatch(
+      /total_equity_kurus \+\s*report\.equity\.unclosed_net_income_kurus/,
+    );
+  });
+
   it("row actions sit in a trailing column, weighted like siblings", async () => {
     // Edit and Void used to render inside the description cell on staff,
     // partners and supplier activity — so their left edge moved with the length

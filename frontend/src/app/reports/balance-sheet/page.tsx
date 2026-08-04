@@ -123,7 +123,14 @@ function BalanceSheetContent() {
                 label="Liabilities"
                 amountKurus={report.total_liabilities_kurus}
               />
-              <StatCard label="Equity" amountKurus={report.total_equity_kurus} />
+              <StatCard
+                label="Equity"
+                amountKurus={
+                  report.total_equity_kurus +
+                  report.equity.unclosed_net_income_kurus
+                }
+                caption="Including the result not yet closed to equity"
+              />
             </div>
           )
         }
@@ -140,7 +147,10 @@ function BalanceSheetContent() {
           <SectionTable title="Liabilities" subtotal={report.liabilities.subtotal_kurus} rows={report.liabilities.accounts} />
           <SectionTable
             title="Equity"
-            subtotal={report.equity.subtotal_kurus}
+            subtotal={
+              report.equity.subtotal_kurus +
+              report.equity.unclosed_net_income_kurus
+            }
             rows={report.equity.accounts}
             extra={
               report.equity.unclosed_net_income_kurus !== 0 ? (
