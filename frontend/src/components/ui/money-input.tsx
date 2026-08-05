@@ -4,7 +4,12 @@ import { forwardRef, useCallback } from "react";
 
 import { Input } from "@/components/ui/input";
 import { ValidationHint } from "@/components/ui/validation-hint";
-import { formatTry, parseTryToKurus, sanitizeTryInput } from "@/lib/money";
+import {
+  formatTry,
+  moneyInputProblem,
+  parseTryToKurus,
+  sanitizeTryInput,
+} from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 export type MoneyInputProps = Omit<
@@ -34,6 +39,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
   ) {
     const parsed = parseTryToKurus(value);
     const invalid = value.trim() !== "" && parsed === null;
+    const problem = moneyInputProblem(value);
 
     const handleChange = useCallback(
       (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,8 +73,11 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
           aria-invalid={invalid || undefined}
           {...props}
         />
-        {showInvalidHint && invalid && (
-          <ValidationHint>Enter a valid amount (numbers only).</ValidationHint>
+        {showInvalidHint && problem && (
+          <ValidationHint>
+            {problem.message}
+            {problem.suggestion && ` Try ${problem.suggestion}.`}
+          </ValidationHint>
         )}
         {showPreview && parsed !== null && (
           <p className="mt-1 text-xs text-muted-foreground">{formatTry(parsed)}</p>

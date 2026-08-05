@@ -339,7 +339,10 @@ export function GroupSaleForm({
               onChange={setFxRateText}
               placeholder="35,00"
             />
-            <ValidationHint>
+            {/* An explanation, not a complaint. ValidationHint defaults to
+                the error variant, so this sat in red under a field that was
+                perfectly valid and read as though the rate had been rejected. */}
+            <ValidationHint variant="hint">
               Objective rate for this sale date — revenue is booked in TRY at this rate.
             </ValidationHint>
           </div>

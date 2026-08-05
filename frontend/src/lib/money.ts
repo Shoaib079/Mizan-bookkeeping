@@ -96,3 +96,44 @@ export function formatTrDate(iso: string): string {
   const [year, month, day] = iso.split("-");
   return `${day}.${month}.${year}`;
 }
+
+/** Why a money field rejected what was typed.
+ *
+ * "Enter a valid amount (numbers only)" was shown for every rejection, so
+ * typing 15,66676 — which is numbers only — got told it was not. Amounts are
+ * held as whole kuruş, so more than two decimals is the actual complaint, and
+ * saying so lets someone fix it instead of re-reading their own digits.
+ */
+export function moneyInputProblem(
+  input: string,
+): { message: string; suggestion?: string } | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (parseTryToKurus(trimmed) !== null) return null;
+
+  const numeric = trimmed
+    .replace(/[₺]/g, "")
+    .replace(/\bTL\b/gi, "")
+    .replace(/\s/g, "")
+    .replace(/^-/, "");
+
+  if (/^[\d.,]+$/.test(numeric)) {
+    const frac = numeric.includes(",") ? numeric.split(",").pop() ?? "" : "";
+    if (frac.length > 2) {
+      // Rounded on the digits, not through a float. 1,005 * 100 is
+      // 100.49999999999999 in IEEE 754, so Math.round would suggest 1,00 for
+      // a value that is nearer 1,01 — the wrong direction, in a money field.
+      const whole = numeric.split(",")[0]?.replace(/\./g, "") ?? "0";
+      const roundUp = Number(frac[2]) >= 5;
+      const kurus = Number(`${whole}${frac.slice(0, 2)}`) + (roundUp ? 1 : 0);
+      if (!Number.isFinite(kurus)) return { message: "Enter a valid amount (numbers only)." };
+      const suggestion = `${Math.floor(kurus / 100)},${String(kurus % 100).padStart(2, "0")}`;
+      return {
+        message: "Amounts are kept to two decimals.",
+        suggestion,
+      };
+    }
+  }
+
+  return { message: "Enter a valid amount (numbers only)." };
+}
