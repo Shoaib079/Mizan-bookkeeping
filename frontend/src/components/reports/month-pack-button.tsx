@@ -80,7 +80,7 @@ export function MonthPackButton({ entityId, queryString, disabled, compact }: Pr
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-1 min-w-[14rem] overflow-hidden rounded-lg border border-border bg-card py-1 shadow-[var(--shadow-pop)]"
+          className="absolute left-0 top-full z-20 mt-1 min-w-[14rem] max-w-[calc(100vw-1.75rem)] overflow-hidden rounded-lg border border-border bg-card py-1 shadow-[var(--shadow-pop)] sm:left-auto sm:right-0"
         >
           <p className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Choose format

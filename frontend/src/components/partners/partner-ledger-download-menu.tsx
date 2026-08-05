@@ -68,7 +68,7 @@ export function PartnerLedgerDownloadMenu({
       {open && (
         <div
           className={cn(
-            "absolute right-0 z-20 mt-1 min-w-[10rem] rounded-md border border-border bg-card py-1 shadow-md",
+            "absolute left-0 z-20 mt-1 min-w-[10rem] rounded-md border border-border bg-card py-1 shadow-md max-w-[calc(100vw-1.75rem)] sm:left-auto sm:right-0",
           )}
         >
           <button

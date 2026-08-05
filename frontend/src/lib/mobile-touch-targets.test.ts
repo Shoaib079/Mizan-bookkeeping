@@ -49,3 +49,36 @@ describe("mobile touch targets", () => {
     expect(dateInput).toContain('isMobile ? "h-11 w-11" : "h-8 w-8"');
   });
 });
+
+describe("dropdowns stay on screen", () => {
+  /** `absolute right-0` anchors a menu's right edge to its trigger's, so the
+   * menu extends left by its own width. That is correct when the trigger sits
+   * at the far right of a desktop header. On a phone the action rows wrap and
+   * the trigger lands on the left, so a 13rem menu opened 110px off the edge —
+   * visible only as a sliver, which is how it looked empty. */
+  const MENUS = [
+    "components/ui/overflow-menu.tsx",
+    "components/partners/partner-ledger-download-menu.tsx",
+    "components/reports/report-download-menu.tsx",
+    "components/reports/month-pack-button.tsx",
+    "components/delivery/delivery-hub-toolbar.tsx",
+  ];
+
+  it("opens rightward on a phone and rightward-anchored above it", () => {
+    for (const file of MENUS) {
+      const s = source(file);
+      expect(s, `${file} still anchors right on mobile`).not.toMatch(
+        /absolute right-0 z-\d/,
+      );
+      expect(s, `${file} has no desktop anchor`).toContain("sm:right-0");
+    }
+  });
+
+  it("never exceeds the viewport width", () => {
+    // Belt and braces: even anchored left, a wide menu on a narrow phone
+    // would run off the other edge.
+    for (const file of MENUS.filter((f) => !f.includes("overflow-menu"))) {
+      expect(source(file), file).toContain("max-w-[calc(100vw-1.75rem)]");
+    }
+  });
+});
