@@ -143,7 +143,9 @@ function CalendarPanel({
           onClick={() => onShiftMonth(-1)}
           className={cn(
             "flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
-            isMobile ? "h-7 w-7" : "h-8 w-8",
+            // Was h-7 (28px) on mobile and h-8 on desktop — smaller on the
+            // one device driven by thumbs. 44px on a phone, unchanged above.
+            isMobile ? "h-11 w-11" : "h-8 w-8",
           )}
         >
           <ChevronLeft className={isMobile ? "h-4 w-4" : "h-5 w-5"} />
@@ -163,7 +165,9 @@ function CalendarPanel({
           onClick={() => onShiftMonth(1)}
           className={cn(
             "flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
-            isMobile ? "h-7 w-7" : "h-8 w-8",
+            // Was h-7 (28px) on mobile and h-8 on desktop — smaller on the
+            // one device driven by thumbs. 44px on a phone, unchanged above.
+            isMobile ? "h-11 w-11" : "h-8 w-8",
             !canGoNextMonth && "cursor-not-allowed opacity-40 hover:bg-transparent",
           )}
         >
@@ -484,7 +488,11 @@ export function DateInput({
           aria-expanded={open}
           onClick={toggleCalendar}
           className={cn(
-            "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground touch-manipulation",
+            // 28px is small for a thumb, but this sits inside the field, so
+            // 44px would overflow it. Taken to the input's own height on
+            // mobile — as large as it can be without breaking the box.
+            "absolute right-1 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground touch-manipulation",
+            isMobile ? "h-8 w-8" : "h-7 w-7",
             "hover:bg-muted hover:text-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
             disabled && "pointer-events-none opacity-50",

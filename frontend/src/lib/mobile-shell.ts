@@ -15,6 +15,20 @@ export const MOBILE_SHELL_MAX_WIDTH_PX = 819;
 export const MOBILE_TAB_BAR_PADDING =
   "pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]";
 
+/** Minimum comfortable hit area on a phone: 44px, per the iOS and Android
+ * guidelines.
+ *
+ * Applied as a CSS media query rather than through `useIsMobileShell` so it is
+ * correct on the first paint — a button that resizes after hydration is worse
+ * than one that was always small. The 819 must match
+ * `MOBILE_SHELL_MAX_WIDTH_PX`; a test holds them together, because Tailwind
+ * needs the literal and cannot read the constant.
+ *
+ * `min-h` rather than `h`: callers set `h-8` for desktop row rhythm and
+ * min-height wins over height only where it is larger, so desktop is untouched.
+ */
+export const MOBILE_TOUCH_TARGET = "max-[819px]:min-h-11";
+
 /** Offset that lifts a bottom-pinned element above the tabs (`FormPage`).
  *
  * Written out in full rather than composed from a raw measurement: Tailwind
