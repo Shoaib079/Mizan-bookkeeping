@@ -150,7 +150,7 @@ export function CashDrawerCloseForm({
           <Label htmlFor="counted">Counted balance (TRY)</Label>
           <MoneyInput
             id="counted"
-            placeholder="2.350,00"
+            placeholder="e.g. 2.350,00"
             value={countedText}
             onChange={setCountedText}
             required

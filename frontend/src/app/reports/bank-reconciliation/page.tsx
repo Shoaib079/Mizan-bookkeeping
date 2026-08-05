@@ -176,7 +176,7 @@ function AccountCard({
               <MoneyInput
                 id={`bal-${account.money_account_id}`}
                 className="w-44"
-                placeholder="46.680,00"
+                placeholder="e.g. 46.680,00"
                 value={balanceText}
                 onChange={setBalanceText}
               />

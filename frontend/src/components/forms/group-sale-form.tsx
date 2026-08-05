@@ -337,7 +337,7 @@ export function GroupSaleForm({
               id="group-sale-fx-rate"
               value={fxRateText}
               onChange={setFxRateText}
-              placeholder="35,00"
+              placeholder="e.g. 35,00"
             />
             {/* An explanation, not a complaint. ValidationHint defaults to
                 the error variant, so this sat in red under a field that was
@@ -393,7 +393,7 @@ export function GroupSaleForm({
                   onChange={(e) =>
                     updateLine(line.key, { paxText: e.target.value })
                   }
-                  placeholder="10"
+                  placeholder="e.g. 10"
                 />
               </div>
               <div className="sm:col-span-4">
@@ -403,7 +403,7 @@ export function GroupSaleForm({
                 <MoneyInput
                   value={line.rateText}
                   onChange={(text) => updateLine(line.key, { rateText: text })}
-                  placeholder={isForex ? "12,00" : "350,00"}
+                  placeholder={isForex ? "e.g. 12,00" : "e.g. 350,00"}
                 />
               </div>
               <div className="flex items-end justify-between sm:col-span-2">

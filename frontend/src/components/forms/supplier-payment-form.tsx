@@ -174,7 +174,7 @@ export function SupplierPaymentForm({
           <Label htmlFor="pay-amount">Amount (TRY)</Label>
           <MoneyInput
             id="pay-amount"
-            placeholder="1.500,00"
+            placeholder="e.g. 1.500,00"
             value={amountText}
             onChange={setAmountText}
             showPreview={false}

@@ -158,7 +158,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
           <MoneyInput
             id="commission-amount"
             className="w-48"
-            placeholder="12.400,00"
+            placeholder="e.g. 12.400,00"
             value={amountText}
             onChange={setAmountText}
           />

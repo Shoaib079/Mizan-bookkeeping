@@ -174,7 +174,7 @@ export function TransferForm({
           <Label htmlFor="xfer-amount">Amount (TRY)</Label>
           <MoneyInput
             id="xfer-amount"
-            placeholder="1.500,00"
+            placeholder="e.g. 1.500,00"
             value={amountText}
             onChange={setAmountText}
             showPreview={false}

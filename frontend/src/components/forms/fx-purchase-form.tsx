@@ -167,7 +167,7 @@ export function FxPurchaseFormFields({
         <Label htmlFor="fx-buy-native">{currency} amount</Label>
         <Input
           id="fx-buy-native"
-          placeholder="100,00"
+          placeholder="e.g. 100,00"
           value={nativeText}
           onChange={(e) => setNativeText(e.target.value)}
           required
@@ -177,7 +177,7 @@ export function FxPurchaseFormFields({
         <Label htmlFor="fx-buy-rate">Rate (TRY per 1 {currency})</Label>
         <MoneyInput
           id="fx-buy-rate"
-          placeholder="34,50"
+          placeholder="e.g. 34,50"
           value={rateText}
           onChange={setRateText}
         />
@@ -186,7 +186,7 @@ export function FxPurchaseFormFields({
         <Label htmlFor="fx-buy-try">TRY paid</Label>
         <MoneyInput
           id="fx-buy-try"
-          placeholder="3.450,00"
+          placeholder="e.g. 3.450,00"
           value={tryCostText}
           onChange={(value) => {
             setTryCostTouched(true);

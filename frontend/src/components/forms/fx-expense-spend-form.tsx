@@ -137,7 +137,7 @@ export function FxExpenseSpendForm({
           <Label htmlFor="fx-spend-native">{currency} amount</Label>
           <Input
             id="fx-spend-native"
-            placeholder="25,00"
+            placeholder="e.g. 25,00"
             value={nativeText}
             onChange={(e) => setNativeText(e.target.value)}
             required

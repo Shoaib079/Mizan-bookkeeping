@@ -240,7 +240,7 @@ function StaffAdvanceForm({
           {isTry ? (
             <MoneyInput
               id="staff-amount"
-              placeholder="15.000,00"
+              placeholder="e.g. 15.000,00"
               value={amountText}
               onChange={setAmountText}
               required
@@ -248,7 +248,7 @@ function StaffAdvanceForm({
           ) : (
             <Input
               id="staff-amount"
-              placeholder="1.000,00"
+              placeholder="e.g. 1.000,00"
               value={amountText}
               onChange={(e) => setAmountText(e.target.value)}
               required
@@ -260,7 +260,7 @@ function StaffAdvanceForm({
             <Label htmlFor="staff-try-cost">TRY cost</Label>
             <MoneyInput
               id="staff-try-cost"
-              placeholder="35.000,00"
+              placeholder="e.g. 35.000,00"
               value={tryCostText}
               onChange={setTryCostText}
               required

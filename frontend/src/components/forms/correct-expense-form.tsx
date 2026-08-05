@@ -241,7 +241,7 @@ export function CorrectExpenseForm({
           <Label htmlFor="correct-exp-amount">Amount (TRY)</Label>
           <MoneyInput
             id="correct-exp-amount"
-            placeholder="150,00"
+            placeholder="e.g. 150,00"
             value={amountText}
             onChange={setAmountText}
             required

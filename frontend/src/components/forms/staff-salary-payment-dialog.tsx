@@ -590,7 +590,7 @@ export function StaffSalaryPaymentDialog({
                   <Label htmlFor="pay-try-cost">TRY cost</Label>
                   <MoneyInput
                     id="pay-try-cost"
-                    placeholder="35.000,00"
+                    placeholder="e.g. 35.000,00"
                     value={tryCostText}
                     onChange={setTryCostText}
                     required
@@ -642,7 +642,7 @@ export function StaffSalaryPaymentDialog({
           {isTry ? (
             <MoneyInput
               id="pay-salary-amount"
-              placeholder="15.000,00"
+              placeholder="e.g. 15.000,00"
               value={salaryText}
               onChange={setSalaryText}
               required
@@ -664,7 +664,7 @@ export function StaffSalaryPaymentDialog({
           {isTry ? (
             <MoneyInput
               id="pay-cash-amount"
-              placeholder="5.000,00"
+              placeholder="e.g. 5.000,00"
               value={cashText}
               onChange={setCashText}
               disabled={lockCashAmount}
@@ -709,7 +709,7 @@ export function StaffSalaryPaymentDialog({
                   id="pay-extra-day-rate"
                   value={extraDayRateText}
                   onChange={setExtraDayRateText}
-                  placeholder="1.500,00"
+                  placeholder="e.g. 1.500,00"
                 />
               </div>
             </div>

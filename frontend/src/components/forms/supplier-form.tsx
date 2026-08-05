@@ -154,7 +154,7 @@ export function SupplierForm({ open, onClose, supplier, onSaved }: Props) {
             onChange={(e) => setVkn(e.target.value)}
             required
             disabled={editing}
-            placeholder="1234567890"
+            placeholder="e.g. 1234567890"
           />
         </div>
         <div>

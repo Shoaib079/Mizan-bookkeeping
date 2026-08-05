@@ -270,7 +270,7 @@ export function CashCountForm({
         <Label htmlFor="cash-count-counted">Counted balance (TRY)</Label>
         <MoneyInput
           id="cash-count-counted"
-          placeholder="2.350,00"
+          placeholder="e.g. 2.350,00"
           value={countedText}
           onChange={setCountedText}
           required

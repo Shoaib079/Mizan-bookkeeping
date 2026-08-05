@@ -204,7 +204,7 @@ export function StaffAccrualForm({
           {isTry ? (
             <MoneyInput
               id="acc-amount"
-              placeholder="15.000,00"
+              placeholder="e.g. 15.000,00"
               value={amountText}
               onChange={setAmountText}
               required
@@ -212,7 +212,7 @@ export function StaffAccrualForm({
           ) : (
             <Input
               id="acc-amount"
-              placeholder="1.000,00"
+              placeholder="e.g. 1.000,00"
               value={amountText}
               onChange={(e) => setAmountText(e.target.value)}
               required

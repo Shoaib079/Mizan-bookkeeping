@@ -253,7 +253,7 @@ export function CashMovementForm({
             <Label htmlFor="cash-amount">Amount (TRY)</Label>
             <MoneyInput
               id="cash-amount"
-              placeholder="500,00"
+              placeholder="e.g. 500,00"
               value={amountText}
               onChange={setAmountText}
               showPreview={false}

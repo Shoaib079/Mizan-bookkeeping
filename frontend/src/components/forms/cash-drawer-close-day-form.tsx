@@ -489,7 +489,7 @@ export function CashDrawerCloseDayForm({
           <Label htmlFor="close-day-counted">Counted balance (TRY)</Label>
           <MoneyInput
             id="close-day-counted"
-            placeholder="2.350,00"
+            placeholder="e.g. 2.350,00"
             value={countedText}
             onChange={setCountedText}
             required

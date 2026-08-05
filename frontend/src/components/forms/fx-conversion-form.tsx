@@ -149,7 +149,7 @@ export function FxConversionForm({
           <Label htmlFor="fx-conv-native">{currency} spent</Label>
           <Input
             id="fx-conv-native"
-            placeholder="50,00"
+            placeholder="e.g. 50,00"
             value={nativeText}
             onChange={(e) => setNativeText(e.target.value)}
             required
@@ -159,7 +159,7 @@ export function FxConversionForm({
           <Label htmlFor="fx-conv-try">TRY received</Label>
           <MoneyInput
             id="fx-conv-try"
-            placeholder="1.750,00"
+            placeholder="e.g. 1.750,00"
             value={tryReceivedText}
             onChange={setTryReceivedText}
             required

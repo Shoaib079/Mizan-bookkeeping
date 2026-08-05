@@ -607,7 +607,7 @@ export function ManualExpenseForm({
               <Label htmlFor="exp-amount">Amount (TRY)</Label>
               <MoneyInput
                 id="exp-amount"
-                placeholder="150,00"
+                placeholder="e.g. 150,00"
                 value={amountText}
                 onChange={setAmountText}
                 required
@@ -714,7 +714,7 @@ export function ManualExpenseForm({
           <Label htmlFor="exp-amount">Amount (TRY)</Label>
           <MoneyInput
             id="exp-amount"
-            placeholder="150,00"
+            placeholder="e.g. 150,00"
             value={amountText}
             onChange={setAmountText}
             required

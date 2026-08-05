@@ -132,7 +132,7 @@ export function StaffAdvanceReturnForm({
           <Label htmlFor="ret-amount">Amount (₺)</Label>
           <MoneyInput
             id="ret-amount"
-            placeholder="500,00"
+            placeholder="e.g. 500,00"
             value={amountText}
             onChange={setAmountText}
             required
