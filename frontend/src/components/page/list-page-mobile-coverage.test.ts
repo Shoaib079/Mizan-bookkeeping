@@ -18,7 +18,6 @@ import { describe, expect, it } from "vitest";
 
 const SRC = new URL("../..", import.meta.url).pathname;
 
-/** Call sites still owing a mobile view. Remove entries; never add one. */
 /** Empty, and meant to stay that way. Every ListPage now ships a phone view;
  * an entry here would mean one shipped without. */
 const AWAITING_MOBILE_VIEW: string[] = [];

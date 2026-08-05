@@ -423,3 +423,21 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     );
   });
 });
+
+describe("mobile: detail pages", () => {
+  it("LedgerTable counts its actions column when deciding to scroll", async () => {
+    // The partner ledger declares five columns and renders six — hasActions
+    // adds one. Counting declared columns only is exactly how it slipped past
+    // the sweep that marked every other wide table.
+    const source = await read("./ledger-table.tsx");
+    expect(source).toContain("columns.length + (hasActions ? 1 : 0) > 5");
+  });
+
+  it("EntityDetailPage stacks its headline and panels on a phone", async () => {
+    // The panels are flex-1, so in a plain flex-wrap row they shrink to share
+    // the width rather than wrapping — a headline and two summary cards came
+    // out around 110px each on a 375px screen.
+    const source = await read("./entity-detail-page.tsx");
+    expect(source).toContain("flex flex-col gap-3 sm:flex-row sm:flex-wrap");
+  });
+});

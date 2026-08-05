@@ -9,7 +9,6 @@
 import { PageHeader } from "@/components/page/page-header";
 import type { OverflowMenuItem } from "@/components/ui/overflow-menu";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 type Props = {
   title: string;
@@ -75,7 +74,12 @@ export function EntityDetailPage({
       ) : (
         <>
           {(headline || panels) && (
-            <div className={cn("mb-6 flex flex-wrap gap-3")}>
+            // Stacked on a phone, side by side above it. The panels are
+            // `flex-1`, and in a plain flex-wrap row they shrink to share the
+            // width rather than wrap — on a 375px screen a headline and two
+            // summary cards came out around 110px each, too narrow for the
+            // label-and-figure rows inside them.
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               {headline}
               {panels}
             </div>

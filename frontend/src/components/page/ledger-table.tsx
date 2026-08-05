@@ -83,7 +83,11 @@ export function LedgerTable({
       ) : isFiltered ? (
         <p className="text-sm text-muted-foreground">{filteredMessage}</p>
       ) : (
-        <DataTable>
+        // The frame knows its own column count, so it decides rather than
+        // asking every ledger to remember. `hasActions` counts: the partner
+        // ledger declares five columns and renders six, which is exactly how
+        // it slipped past a sweep that counted declared columns only.
+        <DataTable wide={columns.length + (hasActions ? 1 : 0) > 5}>
           <DataTableHead>
             <tr>
               {columns.map((column) => (
