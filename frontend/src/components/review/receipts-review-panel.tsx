@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/data-table";
 import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Receipt } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
@@ -62,6 +63,30 @@ export function ReceiptsReviewPanel() {
           title="Nothing to review"
           hint="Uploaded expense receipts awaiting review will appear here."
         />
+      }
+      mobile={
+        <MobileCardList>
+          {pending.map((row) => (
+            <MobileCardRow
+              key={row.id}
+              href={`/review/receipts/${row.id}`}
+              title={formatTrDate(row.expense_date)}
+              amount={
+                row.receipt_total_kurus != null
+                  ? formatTry(row.receipt_total_kurus)
+                  : "—"
+              }
+              meta={
+                <>
+                  <StatusBadge status={row.status} />
+                  {row.review_reason && (
+                    <span className="text-warning">{row.review_reason}</span>
+                  )}
+                </>
+              }
+            />
+          ))}
+        </MobileCardList>
       }
       table={
         <DataTable>

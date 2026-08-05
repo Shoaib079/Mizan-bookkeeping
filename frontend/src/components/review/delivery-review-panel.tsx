@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/data-table";
 import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Truck } from "lucide-react";
 import { useQuickActions } from "@/components/quick-actions";
@@ -65,6 +66,24 @@ export function DeliveryReviewPanel() {
           title="Nothing to review"
           hint="Platform sales awaiting review will appear here."
         />
+      }
+      mobile={
+        <MobileCardList>
+          {pending.map((row) => (
+            <MobileCardRow
+              key={row.id}
+              href={`/delivery/reports?report=${row.id}`}
+              title={row.platform_name}
+              amount={formatTry(row.gross_kurus)}
+              meta={
+                <>
+                  <span>{formatDeliveryPeriod(row)}</span>
+                  <StatusBadge status={row.status} />
+                </>
+              }
+            />
+          ))}
+        </MobileCardList>
       }
       table={
         <DataTable>

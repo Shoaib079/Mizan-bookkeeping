@@ -16,6 +16,7 @@ import {
 import { FilterChips } from "@/components/page/filter-chips";
 import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
@@ -34,6 +35,65 @@ import {
 import { useEntityList } from "@/lib/use-entity-list";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { useInvoicesReviewUrl } from "@/lib/use-invoices-review-url";
+
+/** The same list on a phone.
+ *
+ * The table has eight columns; on a 375px screen the counterparty alone wrapped
+ * to seven lines and everything past it was pushed off the edge. A card leads
+ * with who the invoice is from and what it costs — the two things you are
+ * looking for when reviewing — and puts date, number and status underneath.
+ *
+ * Tapping the card is the Review button: on a phone the whole row is the
+ * target, so a separate 32px button beside it would be the wrong shape.
+ */
+function InvoiceDraftCards({
+  rows,
+  expandedDraftId,
+  onToggleExpand,
+  onUpdated,
+  readOnly = false,
+}: {
+  rows: InvoiceDraftListRow[];
+  expandedDraftId: string | null;
+  onToggleExpand: (id: string) => void;
+  onUpdated: (outcome?: "removed" | "updated") => void;
+  readOnly?: boolean;
+}) {
+  return (
+    <div className="space-y-3">
+      <MobileCardList>
+        {rows.map((row) => (
+          <MobileCardRow
+            key={row.id}
+            onClick={() => onToggleExpand(row.id)}
+            title={invoiceCounterpartyLabel(row)}
+            amount={formatTry(row.gross_kurus)}
+            amountNote={expandedDraftId === row.id ? "Hide" : undefined}
+            meta={
+              <>
+                <span>{formatTrDate(row.invoice_date)}</span>
+                <span className="truncate">{row.invoice_number}</span>
+                <StatusBadge status={row.status} />
+              </>
+            }
+          />
+        ))}
+      </MobileCardList>
+
+      {expandedDraftId && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <InvoiceDraftReview
+            key={expandedDraftId}
+            draftId={expandedDraftId}
+            embedded
+            readOnly={readOnly}
+            onUpdated={onUpdated}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function InvoiceDraftTable({
   rows,
@@ -231,6 +291,15 @@ export function InvoicesReviewPanel() {
           icon={FileText}
           title={emptyCopy.title}
           hint={emptyCopy.hint}
+        />
+      }
+      mobile={
+        <InvoiceDraftCards
+          rows={visibleRows}
+          expandedDraftId={expandedDraftId}
+          onToggleExpand={toggleExpand}
+          onUpdated={onDraftUpdated}
+          readOnly={isPostedTab}
         />
       }
       table={

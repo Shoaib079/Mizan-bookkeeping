@@ -25,6 +25,7 @@ export function MobileCardList({
 
 export function MobileCardRow({
   href,
+  onClick,
   title,
   meta,
   amount,
@@ -32,7 +33,12 @@ export function MobileCardRow({
   amountClassName,
   trailing,
 }: {
-  href: string;
+  /** Where the row leads. Omit when it opens something in place. */
+  href?: string;
+  /** For rows that open a dialog rather than navigate — the review screens
+   * work that way, and without this they could not use this component at all
+   * and would have forked their own card instead. */
+  onClick?: () => void;
   title: React.ReactNode;
   meta?: React.ReactNode;
   amount?: React.ReactNode;
@@ -42,10 +48,7 @@ export function MobileCardRow({
   trailing?: React.ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      className="flex min-h-[52px] flex-col gap-1 px-4 py-3.5 active:bg-muted/60"
-    >
+    <RowShell href={href} onClick={onClick}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 truncate text-sm font-medium leading-snug">
           {title}
@@ -76,8 +79,39 @@ export function MobileCardRow({
           {meta}
         </div>
       )}
-    </Link>
+    </RowShell>
   );
+}
+
+/** A link, a button, or neither — whichever the row actually is.
+ *
+ * min-h-[52px] on all three: a card is the primary tap target on a phone and
+ * has to clear the same 44px a button does. */
+function RowShell({
+  href,
+  onClick,
+  children,
+}: {
+  href?: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  const shell = "flex min-h-[52px] w-full flex-col gap-1 px-4 py-3.5 text-left";
+  if (href) {
+    return (
+      <Link href={href} className={cn(shell, "active:bg-muted/60")}>
+        {children}
+      </Link>
+    );
+  }
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cn(shell, "active:bg-muted/60")}>
+        {children}
+      </button>
+    );
+  }
+  return <div className={shell}>{children}</div>;
 }
 
 export function MobileCardListSkeleton({

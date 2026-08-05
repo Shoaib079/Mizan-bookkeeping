@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { TransferForm } from "@/components/forms/transfer-form";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -88,6 +89,25 @@ export default function TransfersPage() {
           title="No transfers recorded yet"
           hint="Move money between bank and cash accounts."
         />
+      }
+      mobile={
+        <MobileCardList>
+          {items.map((row) => (
+            <MobileCardRow
+              key={row.id}
+              title={`${accountName(row.from_money_account_id)} → ${accountName(row.to_money_account_id)}`}
+              amount={formatTry(row.amount_kurus)}
+              meta={
+                <>
+                  <span>{formatTrDate(row.transfer_date)}</span>
+                  {row.description && (
+                    <span className="truncate">{row.description}</span>
+                  )}
+                </>
+              }
+            />
+          ))}
+        </MobileCardList>
       }
       table={
           <DataTable>

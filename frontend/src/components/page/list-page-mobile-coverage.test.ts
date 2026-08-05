@@ -9,8 +9,8 @@ import { describe, expect, it } from "vitest";
  * surfaces ended up with no phone view — the exact drift DESIGN_ARCHETYPES was
  * written to prevent. An archetype cannot enforce what it lets you leave out.
  *
- * The allowlist below shrinks as slice 4 lands. It exists so the gap cannot
- * widen in the meantime: a new `ListPage` without a `mobile` slot fails here.
+ * All fourteen now pass one. A new `ListPage` without a `mobile` slot fails
+ * here rather than quietly serving a table to a phone.
  *
  * Read from source rather than rendered, because the question is which call
  * sites pass a prop — a render test would have to mount all fourteen.
@@ -19,16 +19,9 @@ import { describe, expect, it } from "vitest";
 const SRC = new URL("../..", import.meta.url).pathname;
 
 /** Call sites still owing a mobile view. Remove entries; never add one. */
-const AWAITING_MOBILE_VIEW = [
-  "app/(customers-section)/customers/group-sales/page.tsx",
-  "app/banking/transfers/page.tsx",
-  "components/review/manual-journals-panel.tsx",
-  "components/review/receipts-review-panel.tsx",
-  "components/review/delivery-review-panel.tsx",
-  "components/review/invoices-review-panel.tsx",
-  "components/delivery/delivery-platforms-panel.tsx",
-  "components/group-sales/group-menus-panel.tsx",
-];
+/** Empty, and meant to stay that way. Every ListPage now ships a phone view;
+ * an entry here would mean one shipped without. */
+const AWAITING_MOBILE_VIEW: string[] = [];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {

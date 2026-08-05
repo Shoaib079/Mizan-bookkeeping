@@ -24,6 +24,7 @@ import Link from "next/link";
 import { ListPage } from "@/components/page/list-page";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { BookOpen } from "lucide-react";
 import { apiFetch } from "@/lib/api";
@@ -43,6 +44,22 @@ type ManualJournalRow = {
   status: string;
   lines: ManualJournalLine[];
 };
+
+/** The shape CorrectLedgerEntryForm needs. Shared so the phone card and the
+ * desktop row cannot describe the same entry differently. */
+function editTargetFor(row: ManualJournalRow): CorrectableLedgerEntry {
+  return {
+    id: row.id,
+    entry_date: row.entry_date,
+    description: row.description,
+    source: "manual",
+    lines: row.lines.map((line) => ({
+      account_id: line.account_id,
+      amount_kurus: line.amount_kurus,
+      side: line.side,
+    })),
+  };
+}
 
 export function ManualJournalsPanel() {
   const { entityId } = useEntity();
@@ -122,6 +139,52 @@ export function ManualJournalsPanel() {
           hint="Manual journals posted by your accountant appear here for review and void."
         />
       }
+      mobile={
+        // Description leads: it is the only record of why the entry exists,
+        // and in a five-column table on a phone it was the first thing
+        // squeezed. Edit and Void stay on the card rather than behind a tap —
+        // they are the whole reason this screen exists.
+        <MobileCardList>
+          {items.map((row) => (
+            <MobileCardRow
+              key={row.id}
+              title={row.description}
+              amount={formatTry(entryTotalKurus(row.lines))}
+              meta={
+                <>
+                  <span>{formatTrDate(row.entry_date)}</span>
+                  <StatusBadge status={row.status} />
+                </>
+              }
+              trailing={
+                row.status === "posted" ? (
+                  <div className="mt-1 flex gap-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="px-2 text-xs"
+                      onClick={() => setEditTarget(editTargetFor(row))}
+                    >
+                      Edit
+                    </Button>
+                    <VoidTriggerButton
+                      className="px-2 text-xs text-destructive"
+                      confirmDetail={row.description}
+                      onContinue={() =>
+                        setVoidTarget({
+                          id: row.id,
+                          entry_date: row.entry_date,
+                          description: row.description,
+                        })
+                      }
+                    />
+                  </div>
+                ) : undefined
+              }
+            />
+          ))}
+        </MobileCardList>
+      }
       table={
         <DataTable>
           <DataTableHead>
@@ -151,19 +214,7 @@ export function ManualJournalsPanel() {
                         type="button"
                         variant="ghost"
                         className="h-8 px-2"
-                        onClick={() =>
-                          setEditTarget({
-                            id: row.id,
-                            entry_date: row.entry_date,
-                            description: row.description,
-                            source: "manual",
-                            lines: row.lines.map((line) => ({
-                              account_id: line.account_id,
-                              amount_kurus: line.amount_kurus,
-                              side: line.side,
-                            })),
-                          })
-                        }
+                        onClick={() => setEditTarget(editTargetFor(row))}
                       >
                         Edit
                       </Button>

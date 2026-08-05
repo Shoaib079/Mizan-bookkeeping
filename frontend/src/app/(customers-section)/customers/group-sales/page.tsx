@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/data-table";
 import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Users } from "lucide-react";
 import Link from "next/link";
@@ -100,6 +101,27 @@ export default function GroupSalesPage() {
           title="No group sales yet"
           hint="Record a tour or agency booking with menu lines and pax."
         />
+      }
+      mobile={
+        <MobileCardList>
+          {items.map((sale) => (
+            <MobileCardRow
+              key={sale.id}
+              href={`/customers/group-sales/${sale.id}`}
+              title={agencyNameById.get(sale.customer_id) ?? "Agency"}
+              amount={formatSaleTotal(sale)}
+              meta={
+                <>
+                  <span>{formatTrDate(sale.sale_date)}</span>
+                  {sale.description && (
+                    <span className="truncate">{sale.description}</span>
+                  )}
+                  <StatusBadge status={statusBadge(sale.status)} />
+                </>
+              }
+            />
+          ))}
+        </MobileCardList>
       }
       table={
         <DataTable wide>

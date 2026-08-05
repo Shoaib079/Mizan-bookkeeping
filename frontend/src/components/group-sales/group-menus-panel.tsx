@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/data-table";
 import { ListPage } from "@/components/page/list-page";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { UtensilsCrossed } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
@@ -64,6 +65,23 @@ export function GroupMenusPanel() {
           title="No group menus yet"
           hint="Add menus your tour agencies can book (e.g. Veg lunch, Non-veg dinner)."
         />
+      }
+      mobile={
+        <MobileCardList>
+          {items.map((row) => (
+            <MobileCardRow
+              key={row.id}
+              onClick={() => {
+                setEditing(row);
+                setFormOpen(true);
+              }}
+              title={row.name}
+              meta={
+                <StatusBadge status={row.is_active ? "active" : "inactive"} />
+              }
+            />
+          ))}
+        </MobileCardList>
       }
       table={
         <DataTable>
