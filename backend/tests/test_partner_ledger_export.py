@@ -107,7 +107,7 @@ def test_partner_ledger_download_shows_the_ledger_as_it_now_stands(
     ws = load_workbook(io.BytesIO(resp.content)).active
     descriptions = [
         str(row[2].value)
-        for row in ws.iter_rows(min_row=11)
+        for row in ws.iter_rows(min_row=12)
         if row[2].value is not None
     ]
 
@@ -118,7 +118,7 @@ def test_partner_ledger_download_shows_the_ledger_as_it_now_stands(
 
     # Dates are real date cells, not text. Written as a string, Excel sorts
     # them alphabetically and cannot filter by month.
-    dates = [row[0].value for row in ws.iter_rows(min_row=11) if row[0].value]
+    dates = [row[0].value for row in ws.iter_rows(min_row=12) if row[0].value]
     assert dates, "expected a date on the surviving row"
     assert all(isinstance(value, (date, datetime)) for value in dates), dates
 

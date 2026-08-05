@@ -20,6 +20,7 @@ from app.core.partners.ledger import (
     loan_balance_kurus,
     net_balance_kurus,
     profit_allocated_kurus,
+    profit_settled_kurus,
     reimbursement_balance_kurus,
     unpaid_profit_kurus,
 )
@@ -245,6 +246,7 @@ def get_partner_ledger(
         capital = capital_balance_kurus(session, entity_id, partner_id)
         contribution = capital_contribution_kurus(session, entity_id, partner_id)
         profit_allocated = profit_allocated_kurus(session, entity_id, partner_id)
+        profit_settled = profit_settled_kurus(session, entity_id, partner_id)
         unpaid_profit = unpaid_profit_kurus(session, entity_id, partner_id)
         drawings = drawings_net_kurus(session, entity_id, partner_id)
         loan = loan_balance_kurus(session, entity_id, partner_id)
@@ -267,6 +269,7 @@ def get_partner_ledger(
         capital_balance_kurus=capital,
         capital_contribution_kurus=contribution,
         profit_allocated_kurus=profit_allocated,
+        profit_settled_kurus=profit_settled,
         unpaid_profit_kurus=unpaid_profit,
         drawings_net_kurus=drawings,
         net_balance_kurus=net,

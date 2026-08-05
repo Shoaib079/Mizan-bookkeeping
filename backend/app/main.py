@@ -117,6 +117,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Every export names its own file — "mizan-balance-sheet-2026-06-30.xlsx"
+    # — in Content-Disposition. That header is not CORS-safelisted, so without
+    # this the browser hands JavaScript nothing and apiDownload falls back to
+    # "download", which is why saved reports arrive as download-2.pdf. Note
+    # allow_headers governs the *request*; only expose_headers makes a
+    # response header readable. Same-origin dev never hits this.
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(entities_router)

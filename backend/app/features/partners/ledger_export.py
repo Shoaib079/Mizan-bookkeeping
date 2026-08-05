@@ -72,12 +72,16 @@ def build_partner_ledger_xlsx(
     write_money(ws, 5, 2, ledger.capital_contribution_kurus)
     ws.cell(row=6, column=1, value="Profit allocated")
     write_money(ws, 6, 2, ledger.profit_allocated_kurus)
-    ws.cell(row=7, column=1, value="Unpaid profit")
-    write_money(ws, 7, 2, ledger.unpaid_profit_kurus)
-    ws.cell(row=8, column=1, value="Partner loan")
-    write_money(ws, 8, 2, ledger.loan_balance_kurus)
+    # Reads as a chain: allocated, of which settled against drawings, leaving
+    # unpaid. Inserted here rather than appended so the three sit together.
+    ws.cell(row=7, column=1, value="Settled from drawings")
+    write_money(ws, 7, 2, ledger.profit_settled_kurus)
+    ws.cell(row=8, column=1, value="Unpaid profit")
+    write_money(ws, 8, 2, ledger.unpaid_profit_kurus)
+    ws.cell(row=9, column=1, value="Partner loan")
+    write_money(ws, 9, 2, ledger.loan_balance_kurus)
 
-    header_row = 10
+    header_row = 11
     headers = [
         "Date",
         "Movement",
@@ -194,6 +198,9 @@ def build_partner_ledger_pdf(
                 ("Fronted expenses", ledger.balance_kurus),
                 ("Capital contributed", ledger.capital_contribution_kurus),
                 ("Profit allocated", ledger.profit_allocated_kurus),
+                # The middle term. Without it, allocated 100.000 next to
+                # unpaid 0 leaves the reader to work out where the rest went.
+                ("Settled from drawings", ledger.profit_settled_kurus),
                 ("Unpaid profit", ledger.unpaid_profit_kurus),
                 ("Partner loan", ledger.loan_balance_kurus),
             ]

@@ -319,6 +319,20 @@ def test_profit_allocation_nets_prior_drawing(db_session, three_partner_setup) -
     assert _gl_balance(
         db_session, entity_id, accounts[PARTNER_CAPITAL_CODE], AccountNormalBalance.CREDIT
     ) == 800_000
+
+    # "Profit allocated" is the partner's share, not the cash residual. This
+    # partner was allocated 500k of the 1.000k profit; 200k of it cleared their
+    # drawings and 300k remained. Summing only PROFIT_ALLOCATION reported 300k,
+    # making a partner look allocated less than their ownership share.
+    assert (
+        partner_ledger.profit_allocated_kurus(db_session, entity_id, partner_id)
+        == 500_000
+    )
+    # Unpaid profit is unchanged: the settled 200k is discharged, not owed.
+    assert (
+        partner_ledger.unpaid_profit_kurus(db_session, entity_id, partner_id)
+        == 300_000
+    )
     assert _gl_balance(
         db_session, entity_id, accounts[OWNER_DRAWINGS_CODE], AccountNormalBalance.DEBIT
     ) == 0

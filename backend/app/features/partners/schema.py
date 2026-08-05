@@ -84,6 +84,9 @@ class PartnerLedgerRead(BaseModel):
     capital_balance_kurus: int = 0
     capital_contribution_kurus: int = 0
     profit_allocated_kurus: int = 0
+    #: Of the allocated profit, how much cleared drawings rather than being
+    #: paid. allocated = settled + paid + unpaid.
+    profit_settled_kurus: int = 0
     unpaid_profit_kurus: int = 0
     drawings_net_kurus: int = 0
     net_balance_kurus: int = 0

@@ -279,12 +279,48 @@ def capital_contribution_kurus(
 def profit_allocated_kurus(
     session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
 ) -> int:
-    """Total profit allocated to partner on 3300 (gross capital credits)."""
+    """Total profit allocated to partner on 3300 (gross capital credits).
+
+    Both halves of an allocation, not just the residual. When a partner has
+    drawings outstanding, `split_profit_by_ownership` divides their share in
+    two: PROFIT_SETTLEMENT for the part that clears the drawings, and
+    PROFIT_ALLOCATION for whatever is left. A 100.000 ₺ share against 80.000 ₺
+    of drawings posts 80.000 settlement + 20.000 allocation.
+
+    Counting only PROFIT_ALLOCATION reported that partner as having been
+    allocated 20.000 ₺, which is the cash residual, not their profit share —
+    and `split_profit_by_ownership` asserts the gross amounts sum to the
+    profit being distributed, so gross is what "allocated" has to mean.
+    DRAWINGS_NET already treats settlement as a repayment for the same reason.
+    """
     return _partner_balance_by_types(
         session,
         entity_id,
         partner_id,
-        frozenset({PartnerMovementType.PROFIT_ALLOCATION}),
+        frozenset(
+            {
+                PartnerMovementType.PROFIT_ALLOCATION,
+                PartnerMovementType.PROFIT_SETTLEMENT,
+            }
+        ),
+    )
+
+
+def profit_settled_kurus(
+    session: Session, entity_id: uuid.UUID, partner_id: uuid.UUID
+) -> int:
+    """Allocated profit that cleared drawings instead of being paid out.
+
+    The middle term between "profit allocated" and "unpaid profit": allocated
+    100.000, settled 80.000 against drawings already taken, 20.000 left to
+    pay. Without it those two figures sit side by side with the difference
+    unexplained.
+    """
+    return _partner_balance_by_types(
+        session,
+        entity_id,
+        partner_id,
+        frozenset({PartnerMovementType.PROFIT_SETTLEMENT}),
     )
 
 
