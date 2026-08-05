@@ -197,20 +197,20 @@ export function SalesReviewPanel({
         </>
       }
       toolbar={
-        <>
-          <ReportDateRange
-            from={from}
-            to={to}
-            disabled={loading || exporting}
-            onChange={setRange}
-          />
-          <FilterChips
-            chips={SALES_REVIEW_FILTERS}
-            value={review}
-            onChange={setReview}
-            ariaLabel="Filter daily sales"
-          />
-        </>
+        <ReportDateRange
+          from={from}
+          to={to}
+          disabled={loading || exporting}
+          onChange={setRange}
+        />
+      }
+      filters={
+        <FilterChips
+          chips={SALES_REVIEW_FILTERS}
+          value={review}
+          onChange={setReview}
+          ariaLabel="Filter daily sales"
+        />
       }
       countLabel={
         loading

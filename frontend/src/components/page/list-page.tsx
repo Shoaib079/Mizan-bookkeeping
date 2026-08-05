@@ -32,6 +32,11 @@ type Props = {
   table: React.ReactNode;
   /** Card list for narrow screens; falls back to the table when omitted. */
   mobile?: React.ReactNode;
+  /** `FilterChips` and anything like them. Given their own row under the
+   * toolbar: sharing a flex row with the period control left the chips
+   * stranded mid-line between the dates and the row count, reading as though
+   * they belonged to neither. */
+  filters?: React.ReactNode;
 
   /** Rendered when there are no rows — must name the next action. */
   empty?: React.ReactNode;
@@ -70,6 +75,7 @@ export function ListPage({
   summary,
   table,
   mobile,
+  filters,
   empty,
   isEmpty = false,
   pager,
@@ -108,6 +114,10 @@ export function ListPage({
             <p className="text-sm text-muted-foreground">{countLabel}</p>
           )}
         </div>
+      )}
+
+      {filters && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">{filters}</div>
       )}
 
       {summary && !forbidden && (

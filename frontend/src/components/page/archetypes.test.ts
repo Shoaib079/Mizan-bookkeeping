@@ -441,3 +441,23 @@ describe("mobile: detail pages", () => {
     expect(source).toContain("flex flex-col gap-3 sm:flex-row sm:flex-wrap");
   });
 });
+
+describe("filters read as choices", () => {
+  it("FilterChips carry colour like the buttons beside them", async () => {
+    // Inactive chips were a grey border around grey text, which reads as a
+    // row of disabled labels rather than filters you can press.
+    const source = await read("./filter-chips.tsx");
+    expect(source).not.toContain("border border-border text-muted-foreground");
+    expect(source).toContain("border-primary/40 text-primary");
+    // The active chip stays filled so it is still obvious which one is on.
+    expect(source).toContain("bg-primary/10 font-medium text-primary");
+  });
+
+  it("ListPage gives filters their own row", async () => {
+    // Sharing the toolbar row with the period control left the chips stranded
+    // mid-line between the dates and the row count.
+    const source = await read("./list-page.tsx");
+    expect(source).toContain("filters?: React.ReactNode");
+    expect(source).toContain("{filters && (");
+  });
+});

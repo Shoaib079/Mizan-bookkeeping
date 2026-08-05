@@ -44,9 +44,13 @@ export function FilterChips<T extends string>({
             aria-pressed={active}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-colors",
+              // The inactive chips were a grey border around grey text, so a
+              // row of filters read as disabled labels rather than as choices
+              // you could make. Tinted like the secondary buttons beside them;
+              // the active one stays filled so it is still obvious which is on.
               active
-                ? "bg-primary/10 font-medium text-primary"
-                : "border border-border text-muted-foreground hover:bg-muted/60",
+                ? "border border-primary bg-primary/10 font-medium text-primary"
+                : "border border-primary/40 text-primary hover:bg-primary/10",
             )}
             onClick={() => onChange(chip.id)}
           >

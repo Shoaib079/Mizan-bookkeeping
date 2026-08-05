@@ -269,20 +269,20 @@ export function InvoicesReviewPanel() {
       loading={loading}
       error={error}
       toolbar={
-        <>
-          <ReportDateRange
-            from={from}
-            to={to}
-            disabled={loading}
-            onChange={onRangeChange}
-          />
-          <FilterChips
-            chips={INVOICE_REVIEW_TABS}
-            value={activeTab}
-            onChange={onTabChange}
-            ariaLabel="Invoice status filters"
-          />
-        </>
+        <ReportDateRange
+          from={from}
+          to={to}
+          disabled={loading}
+          onChange={onRangeChange}
+        />
+      }
+      filters={
+        <FilterChips
+          chips={INVOICE_REVIEW_TABS}
+          value={activeTab}
+          onChange={onTabChange}
+          ariaLabel="Invoice status filters"
+        />
       }
       skeletonColumns={isPostedTab ? 7 : 8}
       isEmpty={visibleRows.length === 0}
