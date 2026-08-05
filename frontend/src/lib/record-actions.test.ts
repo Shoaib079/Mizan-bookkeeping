@@ -67,9 +67,11 @@ describe("record-actions", () => {
   it("keeps Split in Add cash actions (partner Record is on the partner page)", () => {
     const payments = recordActionsBySection("payments", { deliveryEnabled: true });
     expect(payments.map((action) => action.id)).toEqual(["splitExpense"]);
-    expect(RECORD_ACTIONS.some((a) => a.id === "partnerReimbursement")).toBe(
-      false,
-    );
+    // This used to also assert no "partnerReimbursement" action existed. The
+    // partner cash desk was unified into one Record action (fbcb6b1) and the
+    // key was dropped from RecordActionKey, so the union now makes that
+    // unrepresentable — the assertion could never fail, and tsc flagged it as
+    // a comparison with no overlap.
   });
 
   it("hides staff, supplier, and page-owned actions from Add hub", () => {

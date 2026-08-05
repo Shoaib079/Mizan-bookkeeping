@@ -49,6 +49,7 @@ describe("trackInflightStatementPreview", () => {
         amountCol: 2,
         debitCol: null,
         creditCol: null,
+        balanceCol: null,
         dateFormat: "DD.MM.YYYY",
         decimalFormat: "tr",
         csvEncoding: "auto",
