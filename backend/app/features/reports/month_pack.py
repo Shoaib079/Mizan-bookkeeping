@@ -23,7 +23,7 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.core.dates import format_as_of, format_period
+from app.core.dates import format_as_of, format_date, format_period
 from app.core.excel.labels import format_journal_source, format_staff_movement
 from app.features.reports.partner_sources import (
     economic_source_value,
@@ -368,8 +368,8 @@ def _write_summary(
         row=row,
         column=1,
         value=(
-            f"Opening ({cash_bridge.opening_date}) + lines below "
-            f"= closing ({cash_bridge.closing_date}). Books balance."
+            f"Opening ({format_date(cash_bridge.opening_date)}) + lines below "
+            f"= closing ({format_date(cash_bridge.closing_date)}). Books balance."
         ),
     )
     note.font = SUBTITLE_FONT
@@ -377,7 +377,7 @@ def _write_summary(
     ws.cell(
         row=row,
         column=1,
-        value=f"Opening cash & bank ({cash_bridge.opening_date})",
+        value=f"Opening cash & bank ({format_date(cash_bridge.opening_date)})",
     )
     write_money(ws, row, 2, cash_bridge.opening_cash_bank_kurus)
     tint_row(
@@ -405,7 +405,7 @@ def _write_summary(
     ws.cell(
         row=row,
         column=1,
-        value=f"Closing cash & bank ({cash_bridge.closing_date})",
+        value=f"Closing cash & bank ({format_date(cash_bridge.closing_date)})",
     )
     write_money(ws, row, 2, cash_bridge.closing_cash_bank_kurus)
     tint_row(
@@ -420,7 +420,10 @@ def _write_summary(
 
     row += 1
     row = write_section_header(
-        ws, row, f"What we hold / owe ({cash_bridge.closing_date})", end_col=2
+        ws,
+        row,
+        f"What we hold / owe ({format_date(cash_bridge.closing_date)})",
+        end_col=2,
     )
     for label, value in [
         ("Cash in hand", cash_bridge.cash_in_hand_kurus),

@@ -20,9 +20,11 @@ from app.core.ledger.subledger_display import (
     is_effective_subledger_row,
 )
 from app.core.money import format_try
-from app.core.pdf.fonts import register_bundled_fonts
+from app.core.pdf.fonts import PDF_FONT_NAME, register_bundled_fonts
 from app.features.partners.schema import PartnerLedgerRead
 from app.features.reports.pdf_export import (
+    _NEGATIVE,
+    _SLATE,
     PdfExportDependencyError,
     _build_pdf,
     _cell,
@@ -129,14 +131,53 @@ def build_partner_ledger_pdf(
     same KPI strip, same hairline accounting rules, same page footer.
     """
     try:
+        from reportlab.lib import colors
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import cm
-        from reportlab.platypus import Spacer, Table
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
     except ImportError as exc:
         raise PdfExportDependencyError(
             "reportlab is required for PDF export; install project dependencies"
         ) from exc
 
     register_bundled_fonts()
+
+    # Descriptions carry whole bank reference strings — account numbers, SGK
+    # references, counterparty names — and a plain string in a reportlab table
+    # cell does not wrap. It overflows, silently, straight across the Amount
+    # and Running columns. Only a Paragraph wraps, so the text columns are
+    # Paragraphs and the row grows to fit instead of colliding.
+    styles = getSampleStyleSheet()
+    body_style = ParagraphStyle(
+        "PartnerCell",
+        parent=styles["Normal"],
+        fontName=PDF_FONT_NAME,
+        fontSize=8.5,
+        leading=10.5,
+        textColor=colors.HexColor(_SLATE),
+    )
+    money_style = ParagraphStyle(
+        "PartnerMoney", parent=body_style, alignment=2  # right
+    )
+    money_out_style = ParagraphStyle(
+        "PartnerMoneyOut",
+        parent=money_style,
+        textColor=colors.HexColor(_NEGATIVE),
+    )
+
+    def cell_para(text: str, style: ParagraphStyle = body_style) -> Paragraph:
+        # Paragraph parses its input as markup, so & and < have to be escaped
+        # or a description containing them would break the render.
+        safe = _cell(text).replace("&", "&amp;").replace("<", "&lt;")
+        return Paragraph(safe, style)
+
+    def money_para(amount_kurus: int | None) -> Paragraph:
+        if amount_kurus is None:
+            return cell_para("—", money_style)
+        return cell_para(
+            format_try(amount_kurus),
+            money_out_style if amount_kurus < 0 else money_style,
+        )
 
     elements: list = header_elements(
         title=f"Partner ledger — {partner_name}",
@@ -170,29 +211,31 @@ def build_partner_ledger_pdf(
         ]
     ]
     for entry in _effective_entries(ledger):
-        running = (
-            format_try(entry.running_balance_kurus)
-            if entry.running_balance_kurus is not None
-            else "—"
-        )
         table_data.append(
             [
                 # dd.mm.yyyy, as everywhere else the app shows a date to a
                 # person. `str(movement_date)` printed ISO.
                 _cell(format_date(entry.movement_date)),
-                _cell(format_partner_movement(entry.movement_type)),
-                _cell(entry.description[:80]),
-                _cell(format_try(entry.amount_kurus)),
-                _cell(running),
+                cell_para(format_partner_movement(entry.movement_type)),
+                # No longer truncated at 80 characters. That cut references
+                # mid-string ("… Borç Kodu: 04101 · Bh") while still
+                # overflowing, because truncating does not make a string wrap.
+                cell_para(entry.description),
+                money_para(entry.amount_kurus),
+                money_para(entry.running_balance_kurus),
             ]
         )
 
     table = Table(
         table_data,
         repeatRows=1,
-        colWidths=["12%", "20%", "40%", "14%", "14%"],
+        colWidths=["10%", "16%", "42%", "16%", "16%"],
     )
-    table.setStyle(_table_style(money_cols=(3, 4)))
+    # Money columns are right-aligned by the Paragraph styles above, so the
+    # table style only needs the header rule and row hairlines. VALIGN TOP
+    # keeps a wrapped two-line description level with its date and amount.
+    table.setStyle(_table_style(money_cols=()))
+    table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
     elements.append(table)
     return _build_pdf(
         elements,

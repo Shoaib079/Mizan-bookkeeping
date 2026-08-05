@@ -328,8 +328,8 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     elements.append(Spacer(1, 0.08 * cm))
     elements.append(
         para(
-            f"Opening ({bridge.opening_date}) + lines below "
-            f"= closing ({bridge.closing_date}). Books balance.",
+            f"Opening ({_fmt_date(bridge.opening_date)}) + lines below "
+            f"= closing ({_fmt_date(bridge.closing_date)}). Books balance.",
             note_style,
         )
     )
@@ -339,7 +339,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     cash_highlights: list[tuple[int, str, str]] = []
     cash_rows.append(
         [
-            _cell(f"Opening cash & bank ({bridge.opening_date})"),
+            _cell(f"Opening cash & bank ({_fmt_date(bridge.opening_date)})"),
             _try_cell(bridge.opening_cash_bank_kurus),
         ]
     )
@@ -356,7 +356,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     close_idx = len(cash_rows)
     cash_rows.append(
         [
-            _cell(f"Closing cash & bank ({bridge.closing_date})"),
+            _cell(f"Closing cash & bank ({_fmt_date(bridge.closing_date)})"),
             _try_cell(bridge.closing_cash_bank_kurus),
         ]
     )
@@ -373,7 +373,10 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
 
     elements.append(Spacer(1, 0.3 * cm))
     elements.append(
-        para(f"What we hold / owe ({bridge.closing_date})", subsection_style)
+        para(
+            f"What we hold / owe ({_fmt_date(bridge.closing_date)})",
+            subsection_style,
+        )
     )
     elements.append(Spacer(1, 0.1 * cm))
     hold_rows: list[list] = [[_cell("Description"), _cell("Amount")]]

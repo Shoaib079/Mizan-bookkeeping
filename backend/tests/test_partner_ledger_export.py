@@ -182,6 +182,52 @@ def test_partner_ledger_pdf_uses_the_shared_report_furniture(
     assert "2026-06-30" not in text
 
 
+def test_partner_ledger_pdf_wraps_long_descriptions(
+    db_session, restaurant_a, client: TestClient
+) -> None:
+    """A bank reference has to wrap inside its column, not run over the money.
+
+    Descriptions carry whole payment references — IBANs, SGK numbers,
+    counterparty names. A plain string in a reportlab table cell does not
+    wrap; it overflows across the Amount and Running columns, which is what
+    this export used to do. The old guard against that was truncating to 80
+    characters, which mangled the reference without stopping the overflow.
+    """
+    entity_id, partner = _partner_setup(db_session, restaurant_a)
+    partner_id = partner.id
+    reference = (
+        "SYED FAIZAN ALI BUKHARI*TR470006400000175030614324*MASALY*"
+        "H2606620775209 Sicil: 25610010110437550500152000 Borc Kodu: 04101"
+    )
+    pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=100_000,
+        description=reference,
+        actor_id=ACTOR_ID,
+        net_against_drawings=False,
+        netting_as_of=date(2026, 6, 30),
+    )
+
+    resp = client.get(
+        f"/entities/{entity_id}/partners/{partner_id}/ledger/export/pdf"
+    )
+    assert resp.status_code == 200, resp.text
+
+    # Whitespace stripped entirely, not just normalised. A wrapped line is the
+    # point of this test, and pypdf reports the break as an extra space
+    # mid-reference ("…*MASALY *H2606620775209"), so any comparison that keeps
+    # spaces fails on precisely the behaviour being asserted.
+    squashed = "".join(_pdf_text(resp.content).split())
+
+    # Present in full — wrapping keeps it, truncation would have cut it at 80.
+    assert len(reference) > 80, "fixture must exceed the old truncation point"
+    assert "".join(reference.split()) in squashed, (
+        "description was truncated or dropped"
+    )
+
+
 def test_partner_ledger_export_missing_partner_404(
     db_session, restaurant_a, client: TestClient
 ) -> None:

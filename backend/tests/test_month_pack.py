@@ -439,8 +439,11 @@ def test_excel_summary_shows_rollforward_not_profit_walk(db_session, books):
     ]
     assert any("Sales & result" in label for label in labels)
     assert any(label == "Cash & bank" for label in labels)
-    assert any("Opening cash & bank (2026-05-31)" in label for label in labels)
-    assert any("Closing cash & bank (2026-06-30)" in label for label in labels)
+    # dd.mm.yyyy — these captions used to interpolate the date object straight
+    # into the f-string, so they read ISO while every other date on the sheet
+    # read 31.05.2026.
+    assert any("Opening cash & bank (31.05.2026)" in label for label in labels)
+    assert any("Closing cash & bank (30.06.2026)" in label for label in labels)
     assert any(label == "Cash movement" for label in labels)
     assert any("What we hold / owe" in label for label in labels)
     assert any(label == "Cash in hand" for label in labels)
