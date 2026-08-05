@@ -119,3 +119,30 @@ describe("everything clickable carries a colour", () => {
     ).toEqual([]);
   });
 });
+
+describe("a chosen option looks chosen", () => {
+  /** Segmented controls — Buy/Sell/Spend, USD/EUR/GBP, filter chips — say
+   * which option is active by filling it. The FX toggles filled with
+   * `bg-background`: white on a grey track, so the selected mode carried no
+   * colour and read as an unselected pill that happened to be lighter. */
+  it("no selected state is painted in the page background", () => {
+    const offenders: string[] = [];
+    for (const file of sourceFiles(SRC)) {
+      const source = readFileSync(file, "utf8");
+      // The tell: a ternary whose truthy branch is the page background.
+      for (const match of source.matchAll(
+        /\?\s*"bg-background text-foreground[^"]*"/g,
+      )) {
+        offenders.push(`${file.replace(SRC, "")}: ${match[0].slice(0, 60)}`);
+      }
+    }
+    expect(
+      offenders,
+      [
+        "A selected option filled with the page background reads as unselected.",
+        "Fill it with bg-primary text-primary-foreground:",
+        ...offenders,
+      ].join("\n"),
+    ).toEqual([]);
+  });
+});

@@ -158,7 +158,11 @@ export function FxUnifiedDialog({
                 className={cn(
                   "inline-flex h-8 flex-1 items-center justify-center rounded px-3 text-sm font-medium transition-colors",
                   mode === entry
-                    ? "bg-background text-foreground shadow-sm"
+                    // Filled when chosen, like the filter chips. It was
+                    // bg-background — white on the grey track — so the
+                    // selected mode carried no colour and read as an
+                    // unselected pill that happened to be lighter.
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
                 )}
                 onClick={() => setMode(entry)}
@@ -184,7 +188,7 @@ export function FxUnifiedDialog({
                   className={cn(
                     "inline-flex h-8 min-w-[3rem] flex-1 items-center justify-center rounded px-3 text-sm font-medium transition-colors",
                     active
-                      ? "bg-background text-foreground shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
                   )}
                   onClick={() => setSelectedId(account.id)}
