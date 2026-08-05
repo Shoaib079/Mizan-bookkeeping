@@ -139,6 +139,11 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         fontSize=8,
         leading=10,
     )
+    small_right_style = ParagraphStyle(
+        "PackSmallRight",
+        parent=small_style,
+        alignment=2,  # right, for wrapped money cells
+    )
     subsection_style = ParagraphStyle(
         "PackSubsection",
         parent=body_style,
@@ -152,14 +157,22 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         fontSize=8,
         textColor=colors.HexColor("#64748B"),
     )
+    # alignment=2 is right. A Paragraph positions its own text and ignores the
+    # table's ALIGN command, which only moves plain string cells — so these
+    # coloured amounts sat hard left in the Amount column while the header and
+    # the uncoloured opening/closing figures beside them sat right. It was a
+    # small offset while that column was 4.5cm wide and an obvious one once the
+    # tables were widened to fill the page.
     money_in_style = ParagraphStyle(
         "PackMoneyIn",
         parent=small_style,
+        alignment=2,
         textColor=colors.HexColor("#16A34A"),
     )
     money_out_style = ParagraphStyle(
         "PackMoneyOut",
         parent=small_style,
+        alignment=2,
         textColor=colors.HexColor("#DC2626"),
     )
 
@@ -202,16 +215,23 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         highlight_rows: list[tuple[int, str, str]] | None = None,
         amount_colors: list[tuple[int, int, str]] | None = None,
         repeat_rows: int | None = None,
+        money_cols: tuple[int, ...] = (-1,),
     ) -> Table:
         col_widths = _fill_width(col_widths)
         wrapped: list[list] = []
         for r_idx, row in enumerate(rows):
+            # Wrapping a cell in a Paragraph is what lets long text break, but
+            # it also takes that cell out of the table's ALIGN command, which
+            # only moves plain strings. A money column wrapped this way is
+            # silently left-aligned under a right-aligned header.
+            money_idx = {c % len(row) for c in money_cols}
             wrapped_row: list = []
             for c_idx, cell in enumerate(row):
                 if isinstance(cell, Paragraph):
                     wrapped_row.append(cell)
                 elif r_idx >= header_rows and c_idx in (1, 2, 3, 4) and len(row) > 2:
-                    wrapped_row.append(para(str(cell), small_style))
+                    style = small_right_style if c_idx in money_idx else small_style
+                    wrapped_row.append(para(str(cell), style))
                 else:
                     wrapped_row.append(_cell(cell))
             wrapped.append(wrapped_row)
@@ -501,6 +521,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
             col_widths=[2.3 * cm, 3.2 * cm, 3.2 * cm, 3.2 * cm, 3.4 * cm],
             bold_rows=sales_bold,
             highlight_rows=sales_highlights,
+            money_cols=(1, 2, 3, 4),
         )
     )
 
