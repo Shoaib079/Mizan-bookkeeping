@@ -1,0 +1,121 @@
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+/** Everything you can click has to look like you can click it.
+ *
+ * This exists because finding the colourless controls meant opening pages one
+ * at a time and photographing them. Two variants of `Button` and the filter
+ * chips had no colour at rest — 128 buttons plus every filter row — and the
+ * only way that surfaced was someone noticing. A rule that a person has to
+ * remember is not a rule; this is the same rule a test can hold.
+ *
+ * Two things are checked:
+ *
+ *  1. The shared components carry colour. Fix `Button` and 280 call sites are
+ *     fixed at once, which is the whole reason they are shared.
+ *  2. No hand-rolled `<button>` reintroduces the problem. A styled button that
+ *     names no colour is either invisible at rest or grey-on-grey.
+ *
+ * Read from source rather than rendered: the question is which classes exist,
+ * and mounting every screen to ask it would be slower and no more certain.
+ */
+
+const SRC = new URL("../..", import.meta.url).pathname;
+
+/** Tokens that count as "this is visibly interactive". */
+const COLOUR_TOKENS = [
+  "text-primary",
+  "bg-primary",
+  "border-primary",
+  "text-destructive",
+  "bg-destructive",
+  "border-destructive",
+  "text-foreground",
+  "text-muted-foreground",
+  "bg-muted",
+  "bg-card",
+  "bg-sidebar",
+  "text-warning",
+  "text-success",
+];
+
+/** Clickable, but deliberately not a button to look at. */
+const NOT_A_VISIBLE_BUTTON = [
+  // A full-screen scrim behind a drawer: clicking it closes, but it is a
+  // dimmed overlay, not a control.
+  "components/ledger/transaction-drawer.tsx",
+];
+
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) return sourceFiles(full);
+    return /\.tsx$/.test(entry) && !/\.test\.tsx$/.test(entry) ? [full] : [];
+  });
+}
+
+describe("everything clickable carries a colour", () => {
+  it("the shared Button variants are visible at rest", () => {
+    const button = readFileSync(new URL("./button.tsx", import.meta.url), "utf8");
+
+    // `secondary` was bg-background — the page's own colour behind a hairline.
+    expect(button).not.toContain("bg-background hover:bg-muted");
+    // `ghost` was hover-only, and a phone has no hover.
+    expect(button).not.toMatch(/variant === "ghost" && "hover:bg-muted"/);
+
+    for (const variant of ["primary", "secondary", "ghost"]) {
+      const line = button.match(
+        new RegExp(`variant === "${variant}" &&[\\s\\S]{0,140}`),
+      )?.[0];
+      expect(line, `${variant} has no style`).toBeTruthy();
+      expect(
+        COLOUR_TOKENS.some((token) => line!.includes(token)),
+        `Button "${variant}" names no colour — it will read as plain text`,
+      ).toBe(true);
+    }
+  });
+
+  it("filter chips are visible whether or not they are active", () => {
+    const chips = readFileSync(
+      new URL("../page/filter-chips.tsx", import.meta.url),
+      "utf8",
+    );
+    // The inactive chip was a grey border around grey text, so a filter row
+    // read as a row of disabled labels.
+    expect(chips).not.toContain("border border-border text-muted-foreground");
+    expect(chips).toContain("text-primary");
+  });
+
+  it("no hand-styled button reintroduces a colourless control", () => {
+    const offenders: string[] = [];
+
+    for (const file of sourceFiles(SRC)) {
+      const relative = file.replace(SRC, "");
+      if (NOT_A_VISIBLE_BUTTON.includes(relative)) continue;
+
+      const source = readFileSync(file, "utf8");
+      for (const match of source.matchAll(
+        /<button\b[^>]*?className=(?:"([^"]*)"|\{cn\(\s*([^)]*))/g,
+      )) {
+        const classes = (match[1] ?? match[2] ?? "").replace(/\s+/g, " ");
+        const styledLikeAControl = /rounded|border|bg-/.test(classes);
+        if (!styledLikeAControl) continue;
+        if (COLOUR_TOKENS.some((token) => classes.includes(token))) continue;
+        // Tokens can arrive via a shared constant rather than a literal.
+        if (/[A-Z_]{4,}/.test(classes)) continue;
+        offenders.push(`${relative}: ${classes.slice(0, 80)}`);
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        "These are styled like controls but name no colour, so they read as",
+        "plain text or grey-on-grey. Use <Button> instead, or add a colour:",
+        ...offenders,
+      ].join("\n"),
+    ).toEqual([]);
+  });
+});
