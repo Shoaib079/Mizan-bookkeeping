@@ -13,7 +13,8 @@
 -- invoice_drafts.status is the opposite: a plain String column holding the
 -- lowercase value.
 --
--- Run:  psql -h localhost -d mizan -f backend/scripts/diagnose_customer_fx.sql
+-- Run from the backend/ directory:
+--   psql -h localhost -d mizan -f scripts/diagnose_customer_fx.sql
 
 \echo '=== 1. Customers on file ==='
 SELECT e.name AS entity, count(*) AS customers
@@ -22,16 +23,19 @@ GROUP BY e.name ORDER BY e.name;
 
 \echo ''
 \echo '=== 2. Group sales, by booking currency ==='
-\echo '(A row with currency other than TRY is what the new display needs.)'
+\echo '(A row with forex_currency set is what the new display needs. A TRY-only'
+\echo ' book means there is nothing yet to see it with.)'
 SELECT
   e.name AS entity,
   g.currency,
+  g.forex_currency,
+  g.status,
   count(*) AS sales,
-  sum(g.total_minor) / 100.0 AS native_total,
+  sum(g.total_forex_minor) / 100.0 AS native_total,
   sum(g.total_kurus) / 100.0 AS try_total
 FROM group_sales g JOIN entities e ON e.id = g.entity_id
-GROUP BY e.name, g.currency
-ORDER BY e.name, g.currency;
+GROUP BY e.name, g.currency, g.forex_currency, g.status
+ORDER BY e.name, g.currency, g.forex_currency;
 
 \echo ''
 \echo '=== 3. The forex receivable movements the new code reads ==='
@@ -40,41 +44,59 @@ ORDER BY e.name, g.currency;
 SELECT
   forex_currency,
   movement_type,
+  -- Split out because a CREDIT_SALE row with amount_kurus <= 0 is a reversal,
+  -- and the app excludes those from the outstanding figure.
+  (amount_kurus > 0) AS positive_try,
   count(*) AS entries,
   sum(total_forex_minor) / 100.0 AS forex_total,
   sum(payment_native_quantity) / 100.0 AS forex_paid
 FROM customer_ledger_entries
 WHERE forex_currency IS NOT NULL
-GROUP BY forex_currency, movement_type
+GROUP BY forex_currency, movement_type, (amount_kurus > 0)
 ORDER BY forex_currency, movement_type;
 
 \echo ''
 \echo '=== 4. Which customer to open, and what the page should say ==='
 \echo '(Open this customer: the headline should read "Owed: <native>" under the'
 \echo ' lira balance, and the Record payment popup should agree.)'
-SELECT
-  e.name AS entity,
-  c.name AS customer,
-  cle.forex_currency AS currency,
-  (
+--
+-- This mirrors native_balance_for_currency() line for line, deliberately:
+--
+--   sales     CREDIT_SALE, and only where amount_kurus > 0. A reversed or
+--             corrected sale leaves a non-positive row behind; the app skips
+--             it, so a re-derivation without this filter would print a figure
+--             the page never shows and send you hunting a bug that is not one.
+--   discounts DISCOUNT rows store a NEGATIVE total_forex_minor, so they are
+--             added, not subtracted.
+--   payments  PAYMENT_RECEIVED, summed on payment_native_quantity — the amount
+--             actually handed over, not the lira it was carried at.
+--
+-- A settled currency nets to zero and is dropped by the HAVING, which is the
+-- same thing outstanding_by_currency() does before returning.
+WITH balance AS (
+  SELECT
+    cle.customer_id,
+    cle.forex_currency,
     COALESCE(SUM(cle.total_forex_minor) FILTER (
-      WHERE cle.movement_type IN ('CREDIT_SALE', 'DISCOUNT')
+      WHERE cle.movement_type = 'CREDIT_SALE' AND cle.amount_kurus > 0
+    ), 0)
+    + COALESCE(SUM(cle.total_forex_minor) FILTER (
+      WHERE cle.movement_type = 'DISCOUNT'
     ), 0)
     - COALESCE(SUM(cle.payment_native_quantity) FILTER (
       WHERE cle.movement_type = 'PAYMENT_RECEIVED'
-    ), 0)
-  ) / 100.0 AS still_owed_native
-FROM customer_ledger_entries cle
-JOIN customers c ON c.id = cle.customer_id
+    ), 0) AS still_owed_minor
+  FROM customer_ledger_entries cle
+  WHERE cle.forex_currency IS NOT NULL
+  GROUP BY cle.customer_id, cle.forex_currency
+)
+SELECT
+  e.name AS entity,
+  c.name AS customer,
+  b.forex_currency AS currency,
+  b.still_owed_minor / 100.0 AS still_owed_native
+FROM balance b
+JOIN customers c ON c.id = b.customer_id
 JOIN entities e ON e.id = c.entity_id
-WHERE cle.forex_currency IS NOT NULL
-GROUP BY e.name, c.name, cle.forex_currency
-HAVING (
-  COALESCE(SUM(cle.total_forex_minor) FILTER (
-    WHERE cle.movement_type IN ('CREDIT_SALE', 'DISCOUNT')
-  ), 0)
-  - COALESCE(SUM(cle.payment_native_quantity) FILTER (
-    WHERE cle.movement_type = 'PAYMENT_RECEIVED'
-  ), 0)
-) <> 0
-ORDER BY e.name, c.name;
+WHERE b.still_owed_minor <> 0
+ORDER BY e.name, c.name, b.forex_currency;
