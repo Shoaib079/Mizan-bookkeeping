@@ -132,6 +132,7 @@ describe("draftToPayload", () => {
         { account_id: "acc-3900", amount_kurus: 11075210, side: "DEBIT" },
         { account_id: "acc-3300", amount_kurus: 11075210, side: "CREDIT" },
       ],
+      cash_flow_category: "operating",
     });
   });
 
@@ -143,5 +144,42 @@ describe("draftToPayload", () => {
         "2026-08-04",
       ),
     ).toBeNull();
+  });
+});
+
+describe("payload extras", () => {
+  const good = [
+    line("acc-3900", "DEBIT", "110.752,10"),
+    line("acc-3300", "CREDIT", "110.752,10"),
+  ];
+
+  it("always states a cash flow category rather than letting the API guess", () => {
+    // Omitted, the API treats it as operating — right for most corrections but
+    // wrong for a loan repayment or equipment purchase, and silently so.
+    const payload = draftToPayload(good, "Clear opening equity", "2026-08-04");
+    expect(payload?.cash_flow_category).toBe("operating");
+
+    const financing = draftToPayload(good, "Loan repayment", "2026-08-04", {
+      cashFlowCategory: "financing",
+    });
+    expect(financing?.cash_flow_category).toBe("financing");
+  });
+
+  it("omits the unlock reason unless one was given", () => {
+    // Sending an empty reason would look like an unlock request for a month
+    // that is not even closed.
+    const payload = draftToPayload(good, "Something", "2026-08-04", {
+      cashFlowCategory: "operating",
+      periodUnlockReason: "   ",
+    });
+    expect(payload).not.toHaveProperty("period_unlock_reason");
+  });
+
+  it("passes a reason through, trimmed", () => {
+    const payload = draftToPayload(good, "Something", "2026-08-04", {
+      cashFlowCategory: "operating",
+      periodUnlockReason: "  Accountant asked after close  ",
+    });
+    expect(payload?.period_unlock_reason).toBe("Accountant asked after close");
   });
 });

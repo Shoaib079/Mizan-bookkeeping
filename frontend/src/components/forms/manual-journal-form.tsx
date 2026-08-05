@@ -26,10 +26,12 @@ import { useEntity } from "@/lib/entity-context";
 import { isoToday } from "@/lib/date-range";
 import { formatTry } from "@/lib/money";
 import {
+  CASH_FLOW_CATEGORIES,
   DRAFT_PROBLEM_MESSAGES,
   draftProblems,
   draftToPayload,
   draftTotals,
+  type CashFlowCategory,
   type DraftLine,
 } from "@/lib/manual-journal-draft";
 import { useToast } from "@/lib/toast";
@@ -61,6 +63,12 @@ export function ManualJournalForm() {
     emptyLine("DEBIT"),
     emptyLine("CREDIT"),
   ]);
+  const [cashFlowCategory, setCashFlowCategory] =
+    useState<CashFlowCategory>("operating");
+  const [unlockReason, setUnlockReason] = useState("");
+  // Only asked for once the API says the month is sealed. Showing it up front
+  // would invite people to unlock a period they had no need to touch.
+  const [periodLocked, setPeriodLocked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -107,7 +115,10 @@ export function ManualJournalForm() {
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const payload = draftToPayload(lines, description, entryDate);
+    const payload = draftToPayload(lines, description, entryDate, {
+      cashFlowCategory,
+      periodUnlockReason: unlockReason,
+    });
     if (!payload || !entityId) return;
 
     setSaving(true);
@@ -120,9 +131,18 @@ export function ManualJournalForm() {
       });
       toast("Journal posted");
       setDescription("");
+      setUnlockReason("");
+      setPeriodLocked(false);
+      setCashFlowCategory("operating");
       setLines([emptyLine("DEBIT"), emptyLine("CREDIT")]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not post the journal");
+      const message =
+        err instanceof Error ? err.message : "Could not post the journal";
+      // The API rejects a sealed month until a reason is given. Surface the
+      // field rather than the raw rejection — otherwise the entry is simply
+      // impossible with no hint that a way through exists.
+      if (/period|closed|sealed|lock/i.test(message)) setPeriodLocked(true);
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -161,10 +181,30 @@ export function ManualJournalForm() {
         }
       >
         <FormSection title="Entry">
-          <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
+          <div className="grid gap-3 sm:grid-cols-[12rem_10rem_1fr]">
             <div>
               <Label htmlFor="mj-date">Date</Label>
               <DateInput id="mj-date" value={entryDate} onChange={setEntryDate} required />
+            </div>
+            <div>
+              <Label htmlFor="mj-cashflow">Cash flow</Label>
+              <Select
+                id="mj-cashflow"
+                value={cashFlowCategory}
+                onChange={(event) =>
+                  setCashFlowCategory(event.target.value as CashFlowCategory)
+                }
+              >
+                {CASH_FLOW_CATEGORIES.map((category) => (
+                  <option
+                    key={category.id}
+                    value={category.id}
+                    title={category.hint}
+                  >
+                    {category.label}
+                  </option>
+                ))}
+              </Select>
             </div>
             <div>
               <Label htmlFor="mj-description">Why this entry exists</Label>
@@ -178,6 +218,22 @@ export function ManualJournalForm() {
             </div>
           </div>
         </FormSection>
+
+        {periodLocked && (
+          <FormSection
+            title="That month is closed"
+            hint="Posting into a sealed month is allowed, but it is recorded. Say why, and the month is flagged as changed since it was closed."
+          >
+            <Label htmlFor="mj-unlock">Reason for reopening</Label>
+            <Input
+              id="mj-unlock"
+              value={unlockReason}
+              maxLength={512}
+              placeholder="e.g. Accountant asked for the correction after close"
+              onChange={(event) => setUnlockReason(event.target.value)}
+            />
+          </FormSection>
+        )}
 
         <FormSection
           title="Lines"

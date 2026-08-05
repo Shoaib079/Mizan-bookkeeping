@@ -102,17 +102,61 @@ export const DRAFT_PROBLEM_MESSAGES: Record<DraftProblem, string> = {
   "no-description": "Describe why this entry exists — it is the audit trail.",
 };
 
+/** Where this entry belongs on the cash flow statement.
+ *
+ * The API defaults to operating when omitted, which is right for most manual
+ * entries and wrong for the two that matter most: a loan repayment is
+ * financing, buying equipment is investing (FINANCIAL_AUDIT F5). Left to the
+ * default, both would quietly land in operating and overstate how much cash the
+ * business generates from trading.
+ */
+export type CashFlowCategory = "operating" | "investing" | "financing";
+
+export const CASH_FLOW_CATEGORIES: {
+  id: CashFlowCategory;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    id: "operating",
+    label: "Operating",
+    hint: "Day-to-day trading — right for most corrections",
+  },
+  {
+    id: "investing",
+    label: "Investing",
+    hint: "Buying or selling equipment and other long-lived assets",
+  },
+  {
+    id: "financing",
+    label: "Financing",
+    hint: "Loans, capital in or out, drawings",
+  },
+];
+
+export type DraftExtras = {
+  cashFlowCategory: CashFlowCategory;
+  /** Required by the API only when the entry lands in a closed month. */
+  periodUnlockReason?: string;
+};
+
+export type ManualJournalPayload = {
+  entry_date: string;
+  description: string;
+  lines: { account_id: string; amount_kurus: number; side: string }[];
+  cash_flow_category: CashFlowCategory;
+  period_unlock_reason?: string;
+};
+
 /** The payload the API expects, or null when the draft is not postable. */
 export function draftToPayload(
   lines: DraftLine[],
   description: string,
   entryDate: string,
-): {
-  entry_date: string;
-  description: string;
-  lines: { account_id: string; amount_kurus: number; side: string }[];
-} | null {
+  extras: DraftExtras = { cashFlowCategory: "operating" },
+): ManualJournalPayload | null {
   if (draftProblems(lines, description).length > 0) return null;
+  const reason = extras.periodUnlockReason?.trim();
   return {
     entry_date: entryDate,
     description: description.trim(),
@@ -123,5 +167,7 @@ export function draftToPayload(
         amount_kurus: parseTryToKurus(line.amountText)!,
         side: line.side,
       })),
+    cash_flow_category: extras.cashFlowCategory,
+    ...(reason ? { period_unlock_reason: reason } : {}),
   };
 }
