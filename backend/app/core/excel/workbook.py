@@ -53,6 +53,13 @@ BLUE_DARK = _BLUE_DARK
 GREEN = _GREEN
 RED = _RED
 SUBTITLE_FONT = _SUBTITLE_FONT
+# "What we hold / owe": money on hand reads blue like the cash bridge, money
+# owed reads amber, foreign currency violet — matching the FX sheet tab colour.
+HOLD_FILL = _OPENING_FILL
+OWED_FILL = PatternFill("solid", fgColor="FEF3C7")
+OWED_DARK = "B45309"
+FX_FILL = PatternFill("solid", fgColor="EDE9FE")
+FX_DARK = "6D28D9"
 
 
 def create_workbook(sheet_title: str = "Report") -> tuple[Workbook, Worksheet]:

@@ -518,3 +518,78 @@ def test_month_pack_pdf_invalid_date_range(client, books):
         params={"from": "2026-06-02", "to": "2026-06-01"},
     )
     assert response.status_code == 422
+
+
+def test_what_we_hold_is_tinted_like_the_cash_bridge(db_session, books):
+    """Cash and bank are what a partner opens the pack to find.
+
+    They sat in a plain table while the cash bridge directly above them was
+    tinted, so the two figures people actually look for read like every
+    movement line on the sheet. Money held is blue, money owed amber.
+    """
+    _sale(db_session, books, date(2026, 6, 10), 100_000)
+    wb, _ = _pack(db_session, books)
+    summary = wb["Summary"]
+
+    def row_for(label: str) -> int:
+        for r in range(1, summary.max_row + 1):
+            if summary.cell(row=r, column=1).value == label:
+                return r
+        raise AssertionError(f"{label!r} not on the Summary sheet")
+
+    for label in ("Cash in hand", "Bank"):
+        cell = summary.cell(row=row_for(label), column=1)
+        assert cell.font.bold, f"{label} should be bold"
+        assert cell.fill.fgColor.rgb not in (None, "00000000"), (
+            f"{label} should be tinted, not left on the default fill"
+        )
+
+    # Held and owed must be visually distinct, or the colour says nothing.
+    held = summary.cell(row=row_for("Cash in hand"), column=1).fill.fgColor.rgb
+    owed = summary.cell(row=row_for("Owed to suppliers"), column=1).fill.fgColor.rgb
+    assert held != owed, "money held and money owed should not share a tint"
+
+
+def test_sales_sheet_carries_a_running_net(db_session, books):
+    """A day's net alone is misleading; the carried figure is the answer.
+
+    Expenses arrive in lumps — one supplier invoice can put a day deep into
+    the red while the month is well ahead — so the sheet showed a column of
+    wild swings with nothing saying where the period actually stood.
+    """
+    _sale(db_session, books, date(2026, 6, 10), 100_000)
+    _sale(db_session, books, date(2026, 6, 20), 250_000)
+    wb, _ = _pack(db_session, books)
+    sales = wb["Sales"]
+
+    assert sales.cell(row=4, column=5).value == money_header("Running net")
+
+    nets: list[float] = []
+    runnings: list[float] = []
+    for r in range(5, sales.max_row + 1):
+        if sales.cell(row=r, column=1).value in (None, "Total for the period"):
+            break
+        nets.append(sales.cell(row=r, column=4).value or 0)
+        runnings.append(sales.cell(row=r, column=5).value or 0)
+
+    assert nets, "expected daily rows"
+    # Each running figure is every net up to and including that day.
+    for i, running in enumerate(runnings):
+        assert round(running, 2) == round(sum(nets[: i + 1]), 2), f"row {i}"
+
+    # And the period total agrees with the last running figure.
+    total_row = next(
+        r
+        for r in range(5, sales.max_row + 1)
+        if sales.cell(row=r, column=1).value == "Total for the period"
+    )
+    assert round(sales.cell(row=total_row, column=4).value, 2) == round(
+        runnings[-1], 2
+    )
+    assert round(sales.cell(row=total_row, column=2).value, 2) == round(
+        sum(
+            sales.cell(row=r, column=2).value or 0
+            for r in range(5, total_row)
+        ),
+        2,
+    )

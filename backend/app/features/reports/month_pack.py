@@ -32,9 +32,14 @@ from app.features.reports.partner_sources import (
 from app.core.excel.workbook import (
     BLUE_DARK,
     CLOSING_FILL,
+    FX_DARK,
+    FX_FILL,
     GREEN,
+    HOLD_FILL,
     LOSS_FILL,
     OPENING_FILL,
+    OWED_DARK,
+    OWED_FILL,
     RED,
     SUBTITLE_FONT,
     TOTAL_FILL,
@@ -425,15 +430,18 @@ def _write_summary(
         f"What we hold / owe ({format_date(cash_bridge.closing_date)})",
         end_col=2,
     )
-    for label, value in [
-        ("Cash in hand", cash_bridge.cash_in_hand_kurus),
-        ("Bank", cash_bridge.bank_balance_kurus),
-        ("Owed to suppliers", dashboard.total_payables_kurus),
-        ("Owed by customers", dashboard.total_receivables_kurus),
+    # Tinted like the cash bridge above rather than left plain: what you hold
+    # and what you owe are the figures a partner scans for, and unstyled rows
+    # made them read the same as the movement lines.
+    for label, value, fill, font_color in [
+        ("Cash in hand", cash_bridge.cash_in_hand_kurus, HOLD_FILL, BLUE_DARK),
+        ("Bank", cash_bridge.bank_balance_kurus, HOLD_FILL, BLUE_DARK),
+        ("Owed to suppliers", dashboard.total_payables_kurus, OWED_FILL, OWED_DARK),
+        ("Owed by customers", dashboard.total_receivables_kurus, OWED_FILL, OWED_DARK),
     ]:
         ws.cell(row=row, column=1, value=label)
         write_money(ws, row, 2, value)
-        style_signed_money(ws, row, 2, value)
+        tint_row(ws, row, end_col=2, fill=fill, font_color=font_color, bold=True)
         row += 1
 
     if dashboard.fx_balances:
@@ -442,6 +450,9 @@ def _write_summary(
         for fx in dashboard.fx_balances:
             ws.cell(row=row, column=1, value=f"{fx.name} ({fx.currency})")
             write_quantity(ws, row, 2, fx.native_quantity)
+            # Held in a currency that is not lira — worth its own colour, and
+            # the quantities are small enough to be missed otherwise.
+            tint_row(ws, row, end_col=2, fill=FX_FILL, font_color=FX_DARK, bold=True)
             row += 1
 
     row += 1
@@ -477,25 +488,63 @@ def _write_sales(ws, series, dashboard, ctx: MonthPackContext) -> None:
         ws,
         "Sales, day by day",
         subtitles=[f"{ctx.entity_name} · {format_period(ctx.from_date, ctx.to_date)}"],
-        end_col=4,
+        end_col=5,
     )
     header_row = 4
     data_start = write_header_row(
         ws,
         header_row,
-        ["Date", money_header("Sales"), money_header("Expenses"), money_header("Net")],
+        [
+            "Date",
+            money_header("Sales"),
+            money_header("Expenses"),
+            money_header("Net"),
+            money_header("Running net"),
+        ],
     )
     row = data_start
+    # Net is one day standing alone, and expenses arrive in lumps — a single
+    # supplier invoice can put a day 148.000 ₺ under water while the month is
+    # comfortably ahead. Without a carried figure beside it that day reads as a
+    # disaster instead of as a big invoice, so the running total goes next to
+    # it: where the period actually stands as at that date.
+    running_kurus = 0
+    total_sales = 0
+    total_expenses = 0
     for point in series.daily:
+        running_kurus += point.net_kurus
+        total_sales += point.sales_kurus
+        total_expenses += point.expenses_kurus
         write_date(ws, row, 1, point.date)
         write_money(ws, row, 2, point.sales_kurus)
         write_money(ws, row, 3, point.expenses_kurus)
         write_money(ws, row, 4, point.net_kurus)
+        style_signed_money(ws, row, 4, point.net_kurus)
+        write_money(ws, row, 5, running_kurus)
+        style_signed_money(ws, row, 5, running_kurus)
         row += 1
 
     last_daily = row - 1
+
+    # The period totals, which the daily table never stated. Written after the
+    # filtered range so sorting or filtering the days cannot strand it.
+    if series.daily:
+        ws.cell(row=row, column=1, value="Total for the period")
+        write_money(ws, row, 2, total_sales)
+        write_money(ws, row, 3, total_expenses)
+        write_money(ws, row, 4, running_kurus)
+        tint_row(
+            ws,
+            row,
+            end_col=5,
+            fill=TOTAL_FILL,
+            font_color=BLUE_DARK,
+            bold=True,
+        )
+        row += 1
+
     row += 1
-    row = write_section_header(ws, row, "Where the sales came from (whole period)", end_col=4)
+    row = write_section_header(ws, row, "Where the sales came from (whole period)", end_col=5)
     for label, value in [
         ("Cash", dashboard.sales.cash_sales_kurus),
         ("Card", dashboard.sales.pos_card_sales_kurus),
@@ -510,17 +559,17 @@ def _write_sales(ws, series, dashboard, ctx: MonthPackContext) -> None:
         ws,
         header_row=header_row,
         last_data_row=max(last_daily, data_start),
-        end_col=4,
-        money_cols=(2, 3, 4),
+        end_col=5,
+        money_cols=(2, 3, 4, 5),
         print_footer=_print_footer(ctx, "Month Pack — Sales"),
     )
     fit_columns_from_content(
         ws,
         first_row=header_row,
         last_row=row - 1,
-        last_col=4,
-        min_widths={1: 12, 2: 14, 3: 14, 4: 14},
-        max_widths={1: 14, 2: 18, 3: 18, 4: 18},
+        last_col=5,
+        min_widths={1: 12, 2: 14, 3: 14, 4: 14, 5: 15},
+        max_widths={1: 14, 2: 18, 3: 18, 4: 18, 5: 18},
     )
 
 

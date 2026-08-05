@@ -379,17 +379,31 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         )
     )
     elements.append(Spacer(1, 0.1 * cm))
+    # What you actually hold gets the same weight as the cash bridge above:
+    # money on hand in blue, money owed in amber, and the foreign-currency
+    # block under its own banded heading. Previously the whole table was plain,
+    # so the two figures a partner looks for first — cash and bank — read the
+    # same as everything else on the page.
     hold_rows: list[list] = [[_cell("Description"), _cell("Amount")]]
-    for label, value in [
-        ("Cash in hand", bridge.cash_in_hand_kurus),
-        ("Bank", bridge.bank_balance_kurus),
-        ("Owed to suppliers", dashboard.total_payables_kurus),
-        ("Owed by customers", dashboard.total_receivables_kurus),
+    hold_bold: list[int] = []
+    hold_highlights: list[tuple[int, str, str]] = []
+    for label, value, tint in [
+        ("Cash in hand", bridge.cash_in_hand_kurus, ("#DBEAFE", "#1D4ED8")),
+        ("Bank", bridge.bank_balance_kurus, ("#DBEAFE", "#1D4ED8")),
+        ("Owed to suppliers", dashboard.total_payables_kurus, ("#FEF3C7", "#B45309")),
+        ("Owed by customers", dashboard.total_receivables_kurus, ("#FEF3C7", "#B45309")),
     ]:
         hold_rows.append([_cell(label), _try_cell(value)])
+        idx = len(hold_rows) - 1
+        hold_bold.append(idx)
+        hold_highlights.append((idx, tint[0], tint[1]))
     if dashboard.fx_balances:
         hold_rows.append(["", ""])
         hold_rows.append([_cell("Foreign currency held (native)"), ""])
+        heading_idx = len(hold_rows) - 1
+        hold_bold.append(heading_idx)
+        # Violet, matching the FX sheet's tab colour in the workbook.
+        hold_highlights.append((heading_idx, "#EDE9FE", "#6D28D9"))
         for fx in dashboard.fx_balances:
             hold_rows.append(
                 [
@@ -397,10 +411,13 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
                     _native_cell(fx.native_quantity),
                 ]
             )
+            hold_bold.append(len(hold_rows) - 1)
     elements.append(
         table(
             hold_rows,
             col_widths=[10 * cm, 4.5 * cm],
+            bold_rows=hold_bold,
+            highlight_rows=hold_highlights,
         )
     )
     elements.append(Spacer(1, 0.25 * cm))
@@ -420,21 +437,48 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
             _cell("Sales"),
             _cell("Expenses"),
             _cell("Net"),
+            _cell("Running net"),
         ]
     ]
+    # See the Excel sheet for why the carried figure matters: a day's net on
+    # its own swings hard whenever a large invoice is recorded, and without a
+    # running total beside it there is nothing saying where the period stands.
+    sales_running = 0
+    sales_totals = [0, 0]
     for point in bundle.series.daily:
+        sales_running += point.net_kurus
+        sales_totals[0] += point.sales_kurus
+        sales_totals[1] += point.expenses_kurus
         sales_rows.append(
             [
                 _date_cell(point.date),
                 _try_cell(point.sales_kurus),
                 _try_cell(point.expenses_kurus),
                 _try_cell(point.net_kurus),
+                _try_cell(sales_running),
             ]
         )
+    sales_bold: list[int] = []
+    sales_highlights: list[tuple[int, str, str]] = []
+    if bundle.series.daily:
+        sales_rows.append(
+            [
+                _cell("Total"),
+                _try_cell(sales_totals[0]),
+                _try_cell(sales_totals[1]),
+                _try_cell(sales_running),
+                _cell(""),
+            ]
+        )
+        total_idx = len(sales_rows) - 1
+        sales_bold.append(total_idx)
+        sales_highlights.append((total_idx, "#DBEAFE", "#1D4ED8"))
     elements.append(
         table(
             sales_rows,
-            col_widths=[2.5 * cm, 3.5 * cm, 3.5 * cm, 3.5 * cm],
+            col_widths=[2.3 * cm, 3.2 * cm, 3.2 * cm, 3.2 * cm, 3.4 * cm],
+            bold_rows=sales_bold,
+            highlight_rows=sales_highlights,
         )
     )
 
@@ -559,6 +603,8 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         fx_rows: list[list] = [
             [_cell("Wallet"), _cell("Currency"), _cell("Amount held"), _cell("TRY cost")]
         ]
+        fx_bold: list[int] = []
+        fx_highlights: list[tuple[int, str, str]] = []
         for fx in bundle.dashboard.fx_balances:
             fx_rows.append(
                 [
@@ -568,10 +614,18 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
                     _try_cell(fx.try_cost_kurus),
                 ]
             )
+            # Violet, as on the summary and the workbook's FX tabs. A wallet
+            # holding 1.200,00 € is easy to skim past when the row looks like
+            # every lira row on the page.
+            idx = len(fx_rows) - 1
+            fx_bold.append(idx)
+            fx_highlights.append((idx, "#EDE9FE", "#6D28D9"))
         elements.append(
             table(
                 fx_rows,
                 col_widths=[5 * cm, 2 * cm, 3.5 * cm, 3.5 * cm],
+                bold_rows=fx_bold,
+                highlight_rows=fx_highlights,
             )
         )
 
