@@ -192,12 +192,12 @@ def _expense_account_from_referenced_invoice(
 
 
 def _credit_note_description(draft: InvoiceDraft) -> str:
-    description = f"İade {draft.invoice_number}"
+    description = f"Credit note {draft.invoice_number}"
     if draft.referenced_invoice_number:
         ref = draft.referenced_invoice_number
         if draft.referenced_invoice_date is not None:
             ref = f"{ref} ({draft.referenced_invoice_date.isoformat()})"
-        description = f"{description} — iadeye konu fatura {ref}"
+        description = f"{description} — against invoice {ref}"
     return description
 
 

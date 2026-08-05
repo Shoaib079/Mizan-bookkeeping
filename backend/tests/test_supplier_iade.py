@@ -364,5 +364,5 @@ def test_supplier_activity_shows_credit_note_as_iade(
         r for r in activity.rows if r.movement_kind == SupplierMovementType.CREDIT_NOTE.value
     ]
     assert len(credit_rows) == 1
-    assert credit_rows[0].movement_label == "İade"
+    assert credit_rows[0].movement_label == "Credit note"
     assert credit_rows[0].amount_kurus == -GROSS_KURUS

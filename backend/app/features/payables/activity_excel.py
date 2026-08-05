@@ -20,26 +20,26 @@ def build_supplier_activity_xlsx(report: SupplierActivityRead) -> bytes:
     ws.cell(
         row=3,
         column=1,
-        value=f"Dönem: {report.from_date} – {report.to_date}",
+        value=f"Period: {report.from_date} – {report.to_date}",
     )
-    ws.cell(row=4, column=1, value="Açılış bakiyesi")
+    ws.cell(row=4, column=1, value="Opening balance")
     write_money(ws, 4, 2, report.opening_balance_kurus)
-    ws.cell(row=5, column=1, value="Kapanış bakiyesi")
+    ws.cell(row=5, column=1, value="Closing balance")
     write_money(ws, 5, 2, report.closing_balance_kurus)
 
     header_row = 7
     amount_label = money_header()
     headers = [
-        "Tarih",
-        "Hareket",
-        "Belge / ref",
-        "Açıklama",
-        money_header("Matrah"),
-        money_header("KDV"),
+        "Date",
+        "Movement",
+        "Document / ref",
+        "Detail",
+        money_header("Net"),
+        money_header("VAT"),
         amount_label,
-        "Banka",
-        "Dekont",
-        money_header("Bakiye"),
+        "Bank",
+        "Receipt",
+        money_header("Balance"),
     ]
     for col, header in enumerate(headers, start=1):
         ws.cell(row=header_row, column=col, value=header)

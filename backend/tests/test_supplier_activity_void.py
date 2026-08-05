@@ -104,7 +104,7 @@ def test_void_reversal_row_shows_negative_amount(
     )
 
     invoice_rows = [row for row in report.rows if row.movement_kind == "invoice"]
-    void_rows = [row for row in invoice_rows if row.movement_label == "İptal"]
+    void_rows = [row for row in invoice_rows if row.movement_label == "Voided"]
     live_rows = [
         row
         for row in invoice_rows

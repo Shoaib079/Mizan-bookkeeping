@@ -24,7 +24,7 @@ import { apiFetch } from "@/lib/api";
 import { formatChartAccountLabel } from "@/lib/chart-accounts";
 import { useEntity } from "@/lib/entity-context";
 import { isoToday } from "@/lib/date-range";
-import { formatTry } from "@/lib/money";
+import { formatTrDate, formatTry, parseTrDate } from "@/lib/money";
 import {
   CASH_FLOW_CATEGORIES,
   DRAFT_PROBLEM_MESSAGES,
@@ -57,7 +57,15 @@ export function ManualJournalForm() {
   const { entityId } = useEntity();
   const { toast } = useToast();
   const [accounts, setAccounts] = useState<ChartAccount[]>([]);
-  const [entryDate, setEntryDate] = useState(isoToday());
+  // DateInput speaks dd.mm.yyyy, like every date field in the app; the payload
+  // speaks ISO. This form handed DateInput the ISO string directly, so it
+  // showed "2026-08-05" where every other field shows "05.08.2026". Kept as
+  // display text and converted at submit, the way ReportDateRange does it —
+  // parsing on each keystroke would throw the value away mid-typing.
+  const [entryDateText, setEntryDateText] = useState(() =>
+    formatTrDate(isoToday()),
+  );
+  const entryDate = parseTrDate(entryDateText) ?? "";
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([
     emptyLine("DEBIT"),
@@ -137,6 +145,7 @@ export function ManualJournalForm() {
       setPeriodLocked(false);
       setCashFlowCategory("operating");
       setLines([emptyLine("DEBIT"), emptyLine("CREDIT")]);
+      setEntryDateText(formatTrDate(isoToday()));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Could not post the journal";
@@ -186,7 +195,12 @@ export function ManualJournalForm() {
           <div className="grid gap-3 sm:grid-cols-[12rem_10rem_1fr]">
             <div>
               <Label htmlFor="mj-date">Date</Label>
-              <DateInput id="mj-date" value={entryDate} onChange={setEntryDate} required />
+              <DateInput
+                id="mj-date"
+                value={entryDateText}
+                onChange={setEntryDateText}
+                required
+              />
             </div>
             <div>
               <Label htmlFor="mj-cashflow">Cash flow</Label>

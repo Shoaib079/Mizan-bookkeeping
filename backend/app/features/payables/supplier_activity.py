@@ -34,21 +34,21 @@ def _vat_total_kurus(draft: InvoiceDraft) -> int:
 
 def _movement_label(movement_type: SupplierMovementType) -> str:
     return {
-        SupplierMovementType.OPENING_BALANCE: "Açılış",
-        SupplierMovementType.INVOICE: "Fatura",
-        SupplierMovementType.PAYMENT: "Ödeme",
-        SupplierMovementType.ADJUSTMENT: "Düzeltme",
-        SupplierMovementType.CREDIT_NOTE: "İade",
+        SupplierMovementType.OPENING_BALANCE: "Opening",
+        SupplierMovementType.INVOICE: "Invoice",
+        SupplierMovementType.PAYMENT: "Payment",
+        SupplierMovementType.ADJUSTMENT: "Adjustment",
+        SupplierMovementType.CREDIT_NOTE: "Credit note",
     }.get(movement_type, movement_type.value)
 
 
 def _draft_status_label(status: InvoiceDraftStatus) -> str:
     if status == InvoiceDraftStatus.CONFIRMED:
-        return "Onaylı — kaydedilmedi"
+        return "Confirmed — not posted"
     if status == InvoiceDraftStatus.NEEDS_REVIEW:
-        return "İnceleme gerekli"
+        return "Needs review"
     if status == InvoiceDraftStatus.DRAFT:
-        return "Taslak"
+        return "Draft"
     return status.value
 
 
@@ -125,9 +125,9 @@ def get_supplier_activity(
                 SupplierActivityRow(
                     movement_date=from_date,
                     movement_kind="opening",
-                    movement_label="Açılış",
+                    movement_label="Opening",
                     document_ref="—",
-                    detail="Dönem başı bakiye",
+                    detail="Balance at start of period",
                     net_kurus=None,
                     vat_kurus=None,
                     amount_kurus=None,
@@ -186,7 +186,7 @@ def get_supplier_activity(
 
                 if is_void_reversal:
                     amount_kurus = entry.amount_kurus
-                    movement_label = "İptal"
+                    movement_label = "Voided"
                     detail = entry.description
                     document_ref = (
                         draft.invoice_number if draft is not None else document_ref
@@ -203,7 +203,7 @@ def get_supplier_activity(
                     net_kurus = draft.net_kurus
                     vat_kurus = _vat_total_kurus(draft)
                     amount_kurus = draft.gross_kurus
-                    detail = f"Kayıtlı · {draft.invoice_number}"
+                    detail = f"Posted · {draft.invoice_number}"
                 else:
                     amount_kurus = entry.amount_kurus
                     document_ref = entry.description[:64]
@@ -231,14 +231,14 @@ def get_supplier_activity(
 
                 if is_void_reversal:
                     amount_kurus = entry.amount_kurus
-                    movement_label = "İptal"
+                    movement_label = "Voided"
                     detail = entry.description
                     document_ref = (
                         draft.invoice_number if draft is not None else document_ref
                     )
                 elif is_superseded:
                     amount_kurus = entry.amount_kurus
-                    movement_label = "İade (iptal edildi)"
+                    movement_label = "Credit note (voided)"
                     detail = entry.description
                     affects_balance = False
                     if draft is not None:
@@ -248,10 +248,10 @@ def get_supplier_activity(
                     net_kurus = -draft.net_kurus
                     vat_kurus = -_vat_total_kurus(draft)
                     amount_kurus = -draft.gross_kurus
-                    detail = f"İade · {draft.invoice_number}"
+                    detail = f"Credit note · {draft.invoice_number}"
                     if draft.referenced_invoice_number:
                         detail = (
-                            f"{detail} (iadeye konu: {draft.referenced_invoice_number})"
+                            f"{detail} (against: {draft.referenced_invoice_number})"
                         )
                 else:
                     amount_kurus = entry.amount_kurus
@@ -265,7 +265,7 @@ def get_supplier_activity(
                 document_ref = entry.description[:64] if entry.description else "—"
 
             if is_void_reversal:
-                movement_label = "İptal"
+                movement_label = "Voided"
             if display_kind != SubledgerDisplayKind.EFFECTIVE:
                 can_edit = False
 
@@ -339,7 +339,7 @@ def get_supplier_activity(
                     SupplierActivityRow(
                         movement_date=draft.invoice_date,
                         movement_kind="unposted_invoice",
-                        movement_label="İade" if is_credit else "Fatura",
+                        movement_label="Credit note" if is_credit else "Invoice",
                         document_ref=draft.invoice_number,
                         detail=_draft_status_label(InvoiceDraftStatus(draft.status)),
                         net_kurus=-draft.net_kurus if is_credit else draft.net_kurus,
@@ -363,9 +363,9 @@ def get_supplier_activity(
                 SupplierActivityRow(
                     movement_date=to_date,
                     movement_kind="closing",
-                    movement_label="Kapanış",
+                    movement_label="Closing",
                     document_ref="—",
-                    detail="Kayıtlı hareketler sonrası bakiye",
+                    detail="Balance after posted movements",
                     net_kurus=None,
                     vat_kurus=None,
                     amount_kurus=None,
