@@ -38,8 +38,11 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
     ref,
   ) {
     const parsed = parseTryToKurus(value);
-    const invalid = value.trim() !== "" && parsed === null;
+    // One source of truth: the red border, the aria state and the message all
+    // mean "this could not be parsed". Computing that twice invites the border
+    // and the message to disagree.
     const problem = moneyInputProblem(value);
+    const invalid = problem !== null;
 
     const handleChange = useCallback(
       (event: React.ChangeEvent<HTMLInputElement>) => {
