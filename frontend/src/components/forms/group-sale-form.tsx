@@ -27,7 +27,9 @@ type LineDraft = {
   group_menu_id: string | null;
   menu_name: string;
   paxText: string;
+  /** Either of these, never both — whichever you fill drives the other. */
   rateText: string;
+  totalText: string;
 };
 
 type Props = {
@@ -48,7 +50,34 @@ function newLine(): LineDraft {
     menu_name: "",
     paxText: "",
     rateText: "",
+    totalText: "",
   };
+}
+
+/** The rate implied by a typed total — rounded, shown for reference. `≈` when
+ * it does not divide evenly, because the figure that posts is the total. */
+function derivedRateText(
+  parsed: { rate: number | null; pax: number | null; lineTotalMinor: number | null },
+  currency: string,
+): string {
+  if (parsed?.rate == null) return "";
+  const exact =
+    parsed.pax != null && parsed.rate * parsed.pax === parsed.lineTotalMinor;
+  return `${exact ? "" : "≈ "}${minorToText(parsed.rate, currency)}`;
+}
+
+/** The total implied by a typed rate. Always exact — it is pax × rate. */
+function derivedTotalText(
+  parsed: { lineTotalMinor: number | null },
+  currency: string,
+): string {
+  if (parsed?.lineTotalMinor == null) return "";
+  return minorToText(parsed.lineTotalMinor, currency);
+}
+
+function minorToText(minor: number, currency: string): string {
+  if (currency === "TRY") return (minor / 100).toFixed(2).replace(".", ",");
+  return formatFxNative(minor, currency).replace(/[^\d,.-]/g, "").trim();
 }
 
 function parseRateMinor(currency: string, text: string): number | null {
@@ -126,12 +155,24 @@ export function GroupSaleForm({
           group_menu_id: line.group_menu_id,
           menu_name: line.menu_name_snapshot,
           paxText: String(line.pax),
-          rateText:
-            correcting.currency === "TRY"
-              ? (line.rate_per_person_minor / 100).toFixed(2).replace(".", ",")
-              : formatFxNative(line.rate_per_person_minor, correcting.currency)
-                  .replace(/[^\d,.-]/g, "")
-                  .trim(),
+          // Reopened by total when the stored line does not divide evenly:
+          // showing the rounded rate and re-posting it would turn 94,00 into
+          // 94,02 on every correction.
+          ...(line.rate_per_person_minor * line.pax === line.line_total_minor
+            ? {
+                rateText: minorToText(
+                  line.rate_per_person_minor,
+                  correcting.currency,
+                ),
+                totalText: "",
+              }
+            : {
+                rateText: "",
+                totalText: minorToText(
+                  line.line_total_minor,
+                  correcting.currency,
+                ),
+              }),
         })),
       );
     } else {
@@ -150,12 +191,36 @@ export function GroupSaleForm({
   const parsedLines = useMemo(() => {
     return lines.map((line) => {
       const pax = Number.parseInt(line.paxText.trim(), 10);
-      const rate = parseRateMinor(currency, line.rateText);
       const validPax = Number.isFinite(pax) && pax > 0;
-      const validRate = rate !== null && rate > 0;
-      const lineTotalMinor =
-        validPax && validRate ? pax * rate : null;
-      return { ...line, pax: validPax ? pax : null, rate, lineTotalMinor };
+
+      const typedRate = parseRateMinor(currency, line.rateText);
+      const typedTotal = parseRateMinor(currency, line.totalText);
+      const hasRate = typedRate !== null && typedRate > 0;
+      const hasTotal = typedTotal !== null && typedTotal > 0;
+
+      // The total is exact; the rate derived from it is rounded and shown for
+      // reference only. 94,00 over 6 posts 94,00, not the 94,02 that storing
+      // 15,67 and multiplying would give. Mirrors _rate_per_person_minor on
+      // the API — half up, on integers, never through a float.
+      const lineTotalMinor = hasTotal
+        ? typedTotal
+        : validPax && hasRate
+          ? pax * typedRate
+          : null;
+      const rate = hasRate
+        ? typedRate
+        : validPax && hasTotal
+          ? Math.floor((typedTotal * 2 + pax) / (pax * 2))
+          : null;
+
+      return {
+        ...line,
+        pax: validPax ? pax : null,
+        rate,
+        lineTotalMinor,
+        /** Which field the reader typed — the other is derived and read-only. */
+        pricedBy: hasTotal ? ("total" as const) : hasRate ? ("rate" as const) : null,
+      };
     });
   }, [lines, currency]);
 
@@ -217,8 +282,8 @@ export function GroupSaleForm({
     }
 
     const apiLines = parsedLines.map((line) => {
-      if (line.pax === null || line.rate === null) {
-        throw new Error("Each line needs pax and a valid rate.");
+      if (line.pax === null || line.pricedBy === null) {
+        throw new Error("Each line needs pax and either a rate or a total.");
       }
       const menuName =
         line.menu_name.trim() ||
@@ -231,7 +296,10 @@ export function GroupSaleForm({
         group_menu_id: line.group_menu_id,
         menu_name: menuName || undefined,
         pax: line.pax,
-        rate_per_person_minor: line.rate,
+        // Exactly one, as the API requires. Sending the total keeps it exact.
+        ...(line.pricedBy === "total"
+          ? { line_total_minor: line.lineTotalMinor! }
+          : { rate_per_person_minor: line.rate! }),
       };
     });
 
@@ -396,14 +464,42 @@ export function GroupSaleForm({
                   placeholder="e.g. 10"
                 />
               </div>
+              {/* Fill either one. Whichever you type drives the other, and
+                  the one you typed is the figure that posts — enter a total of
+                  94,00 for 6 and 94,00 posts, not the 94,02 a rounded 15,67
+                  would multiply to. */}
               <div className="sm:col-span-4">
                 <Label className="text-xs">
                   Rate / person ({isForex ? currency : "TRY"})
                 </Label>
                 <MoneyInput
-                  value={line.rateText}
-                  onChange={(text) => updateLine(line.key, { rateText: text })}
+                  value={
+                    parsedLines[index]?.pricedBy === "total"
+                      ? derivedRateText(parsedLines[index], currency)
+                      : line.rateText
+                  }
+                  disabled={parsedLines[index]?.pricedBy === "total"}
+                  onChange={(text) =>
+                    updateLine(line.key, { rateText: text, totalText: "" })
+                  }
                   placeholder={isForex ? "e.g. 12,00" : "e.g. 350,00"}
+                />
+              </div>
+              <div className="sm:col-span-4">
+                <Label className="text-xs">
+                  Total for the line ({isForex ? currency : "TRY"})
+                </Label>
+                <MoneyInput
+                  value={
+                    parsedLines[index]?.pricedBy === "rate"
+                      ? derivedTotalText(parsedLines[index], currency)
+                      : line.totalText
+                  }
+                  disabled={parsedLines[index]?.pricedBy === "rate"}
+                  onChange={(text) =>
+                    updateLine(line.key, { totalText: text, rateText: "" })
+                  }
+                  placeholder={isForex ? "e.g. 94,00" : "e.g. 3.500,00"}
                 />
               </div>
               <div className="flex items-end justify-between sm:col-span-2">
