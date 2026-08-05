@@ -100,6 +100,12 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         TableStyle,
     ) = _require_reportlab()
 
+    # Decided once, up here, because the tables below are laid out against it
+    # and the document is built from it further down. Two places computing the
+    # page width independently is how they came to disagree.
+    pagesize = landscape(A4)
+    margin = 1.2 * cm
+
     ctx = bundle.ctx
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
@@ -172,6 +178,21 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
             return para(str(cell), money_out_style)
         return cell
 
+    # Every table's widths were written as absolute centimetres, and most of
+    # them add up to far less than the page holds: the summary tables came to
+    # 14.5cm of a 27.3cm landscape page — 53% — so the first pages read as a
+    # narrow strip while the ledger and expense register, at 74-77%, filled it.
+    # Scaling to the available width keeps each table's designed proportions
+    # and makes every page occupy the same measure.
+    usable_width = pagesize[0] - 2 * margin
+
+    def _fill_width(col_widths: list) -> list:
+        total = sum(col_widths)
+        if total <= 0:
+            return col_widths
+        scale = usable_width / total
+        return [w * scale for w in col_widths]
+
     def table(
         rows: list[list],
         *,
@@ -182,6 +203,7 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
         amount_colors: list[tuple[int, int, str]] | None = None,
         repeat_rows: int | None = None,
     ) -> Table:
+        col_widths = _fill_width(col_widths)
         wrapped: list[list] = []
         for r_idx, row in enumerate(rows):
             wrapped_row: list = []
@@ -722,8 +744,6 @@ def render_month_pack_pdf(session: Session, bundle: MonthPackBundle) -> bytes:
     )
 
     buffer = __import__("io").BytesIO()
-    pagesize = landscape(A4)
-    margin = 1.2 * cm
     footer_left = (
         f"{ctx.entity_name} · Month Pack · "
         f"{_period_text(ctx.from_date, ctx.to_date)}"
@@ -920,9 +940,10 @@ def _table_style(
     """Same accounting look as the standalone statements (pdf_export.py).
 
     Hairline rules instead of a grid, small-caps headers, right-aligned money,
-    banded section rows, ruled grand totals. ``highlight_rows`` is kept for the
-    pack's semantic tints (net result green/red) but now renders as a soft band
-    rather than a saturated fill.
+    banded section rows, ruled grand totals. ``highlight_rows`` carries the
+    pack's semantic tints — net result green or red, money held blue, money
+    owed amber, foreign currency violet — as (row, background, text) and
+    paints the background it is given.
     """
     colors, *_rest, TableStyle = _require_reportlab()
     commands: list = [
@@ -970,15 +991,27 @@ def _table_style(
                 ("TEXTCOLOR", (0, row), (-1, row), colors.HexColor(_INK)),
             ]
         )
-    for row, _bg, fg in highlight_rows or []:
+    # The caller's colour, not a fixed band. This loop used to bind the
+    # background to `_bg` and then paint every highlighted row with _BAND
+    # (#F8FAFC — near-white), so blue, green, amber and violet all came out as
+    # the same grey wash while the Excel sheets, which use real fills, looked
+    # right. Every caller passes a pastel meant to be seen.
+    highlighted = {row for row, _bg, _fg in highlight_rows or []}
+    for row, bg, fg in highlight_rows or []:
         commands.extend(
             [
-                ("BACKGROUND", (0, row), (-1, row), colors.HexColor(_BAND)),
+                ("BACKGROUND", (0, row), (-1, row), colors.HexColor(bg)),
                 ("FONTNAME", (0, row), (-1, row), PDF_FONT_BOLD_NAME),
                 ("TEXTCOLOR", (0, row), (-1, row), colors.HexColor(fg)),
-                ("LINEABOVE", (0, row), (-1, row), 1, colors.HexColor(_SLATE)),
             ]
         )
+        # A rule only where the band starts. Drawing one above every row of a
+        # run — "What we hold / owe" has four consecutive — turns a block into
+        # a ladder.
+        if (row - 1) not in highlighted:
+            commands.append(
+                ("LINEABOVE", (0, row), (-1, row), 1, colors.HexColor(_SLATE))
+            )
     for row in total_rows or []:
         commands.extend(
             [
