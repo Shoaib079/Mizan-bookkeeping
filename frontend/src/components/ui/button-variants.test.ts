@@ -25,10 +25,18 @@ describe("button variants carry colour", () => {
     expect(source).toMatch(/variant === "ghost" && "text-primary/);
   });
 
-  it("secondary carries no fill, so a recoloured button stays clean", () => {
-    // Void passes destructive border and text. tailwind-merge resolves those,
-    // but a bg-primary tint would survive underneath as blue behind red.
-    expect(source).not.toContain("bg-primary/5");
+  it("secondary carries a fill, and recolouring requires one too", () => {
+    // A border alone still read as an outline of nothing beside a filled
+    // primary — "border but no colour" was the report from three screens.
+    // The fill means a caller that recolours has to pass a background as
+    // well: tailwind-merge resolves the text and border but has nothing to
+    // override an unmentioned bg with, so red text would sit on blue.
+    expect(source).toContain("bg-primary/5");
+    const voidButton = readFileSync(
+      new URL("../ledger/void-confirm-dialog.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(voidButton).toContain("bg-destructive/5");
   });
 
   it("a caller's own colour still wins", () => {

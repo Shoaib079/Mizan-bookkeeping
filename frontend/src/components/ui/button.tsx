@@ -27,12 +27,13 @@ export function Button({
         // like plain text. Both now carry the primary tint, which is colour
         // enough to read as an action while staying clearly subordinate to the
         // filled primary. Callers' own colours still win — className is last.
-        // No background fill: a caller that recolours this button — Void
-        // passes destructive border and text — would otherwise keep a blue
-        // tint under red text, because tailwind-merge resolves the text and
-        // border but has nothing to override the background with.
+        // The fill matters: a border alone still reads as an outline of
+        // nothing beside a filled primary. A caller that recolours this —
+        // Void passes destructive border and text — has to pass a background
+        // too, since tailwind-merge resolves the text and border but has
+        // nothing to override an unmentioned bg with.
         variant === "secondary" &&
-          "border border-primary/40 text-primary hover:bg-primary/10",
+          "border border-primary/40 bg-primary/5 text-primary hover:bg-primary/10",
         variant === "ghost" && "text-primary hover:bg-primary/10",
         className,
       )}

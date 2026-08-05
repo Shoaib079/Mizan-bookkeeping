@@ -73,14 +73,14 @@ export function PartnerLedgerDownloadMenu({
         >
           <button
             type="button"
-            className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+            className="block w-full px-3 py-2 text-left text-sm hover:bg-primary/10"
             onClick={() => void download("excel")}
           >
             Excel (.xlsx)
           </button>
           <button
             type="button"
-            className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+            className="block w-full px-3 py-2 text-left text-sm hover:bg-primary/10"
             onClick={() => void download("pdf")}
           >
             PDF

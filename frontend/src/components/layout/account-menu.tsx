@@ -200,7 +200,7 @@ function AccountMenuPanel({
         type="button"
         className={cn(
           "inline-flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-2 text-sm",
-          "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          "hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         )}
         aria-expanded={open}
         aria-haspopup="menu"
@@ -277,7 +277,7 @@ function AccountMenuPanel({
                     <button
                       type="button"
                       role="menuitem"
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted/60"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-primary/10"
                       onClick={() => onPickRestaurant(entity.id, entity.name)}
                     >
                       <span
@@ -326,7 +326,7 @@ function AccountMenuPanel({
             <Link
               href="/settings/profile"
               role="menuitem"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted/60"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-primary/10"
               onClick={closeMenu}
             >
               <User className="size-4 text-muted-foreground" />
@@ -337,7 +337,7 @@ function AccountMenuPanel({
             <Link
               href="/settings/restaurant"
               role="menuitem"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted/60"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-primary/10"
               onClick={closeMenu}
             >
               <Settings className="size-4 text-muted-foreground" />
@@ -347,7 +347,7 @@ function AccountMenuPanel({
             <button
               type="button"
               role="menuitem"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted/60"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-primary/10"
               onClick={() => {
                 closeMenu();
                 setCreateOpen(true);

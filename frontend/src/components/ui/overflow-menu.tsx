@@ -41,7 +41,7 @@ export function OverflowMenu({ items, label = "More actions", className }: Props
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted",
+          "inline-flex h-9 items-center justify-center rounded-md border border-primary/40 bg-primary/5 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10",
           // A raw button, so it missed the hit area every <Button> gained.
           MOBILE_TOUCH_TARGET,
         )}
@@ -69,7 +69,7 @@ export function OverflowMenu({ items, label = "More actions", className }: Props
                 item.onSelect();
               }}
               className={cn(
-                "block w-full rounded px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                "block w-full rounded px-3 py-2 text-left text-sm transition-colors hover:bg-primary/10",
                 MOBILE_TOUCH_TARGET,
               )}
             >

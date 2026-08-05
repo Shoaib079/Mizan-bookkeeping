@@ -100,7 +100,7 @@ export function DeliveryHubToolbar({
             >
               <button
                 type="button"
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+                className="block w-full px-3 py-2 text-left text-sm hover:bg-primary/10"
                 onClick={() => void download(true)}
               >
                 Excel — all platforms

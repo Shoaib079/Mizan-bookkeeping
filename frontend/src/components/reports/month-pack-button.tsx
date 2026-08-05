@@ -88,7 +88,7 @@ export function MonthPackButton({ entityId, queryString, disabled, compact }: Pr
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
+            className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-primary/10"
             onClick={() => void download("xlsx")}
           >
             <FileSpreadsheet
@@ -105,7 +105,7 @@ export function MonthPackButton({ entityId, queryString, disabled, compact }: Pr
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
+            className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-primary/10"
             onClick={() => void download("pdf")}
           >
             <FileText

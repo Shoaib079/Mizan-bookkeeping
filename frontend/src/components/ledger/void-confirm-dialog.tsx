@@ -43,7 +43,7 @@ export function VoidConfirmDialog({
         <Button
           type="button"
           variant="secondary"
-          className="border-destructive/40 text-destructive hover:bg-destructive/10"
+          className="border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10"
           disabled={confirming}
           onClick={onConfirm}
         >
