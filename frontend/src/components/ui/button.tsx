@@ -20,9 +20,20 @@ export function Button({
         MOBILE_TOUCH_TARGET,
         variant === "primary" &&
           "bg-primary text-primary-foreground hover:bg-primary/90",
+        // `secondary` was `bg-background` — the page's own colour behind a
+        // hairline border, so on a white page 75 buttons read as outlines of
+        // nothing. `ghost` had neither background nor border and appeared only
+        // on hover, which does not exist on a phone: 53 buttons that looked
+        // like plain text. Both now carry the primary tint, which is colour
+        // enough to read as an action while staying clearly subordinate to the
+        // filled primary. Callers' own colours still win — className is last.
+        // No background fill: a caller that recolours this button — Void
+        // passes destructive border and text — would otherwise keep a blue
+        // tint under red text, because tailwind-merge resolves the text and
+        // border but has nothing to override the background with.
         variant === "secondary" &&
-          "border border-border bg-background hover:bg-muted",
-        variant === "ghost" && "hover:bg-muted",
+          "border border-primary/40 text-primary hover:bg-primary/10",
+        variant === "ghost" && "text-primary hover:bg-primary/10",
         className,
       )}
       {...props}
