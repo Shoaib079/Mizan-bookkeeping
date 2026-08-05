@@ -95,9 +95,13 @@ describe("month value round trip", () => {
     expect(parseMonthValue("")).toBeNull();
   });
 
-  it("labels in Turkish", () => {
-    expect(monthLabel(2026, 6)).toBe("Haziran 2026");
-    expect(monthLabel(2026, 12)).toBe("Aralık 2026");
+  it("names the month in English, like the rest of the interface", () => {
+    // Money and dates follow Turkish convention because those are read off a
+    // bank statement. A month name is interface text, and the interface is
+    // English throughout.
+    expect(monthLabel(2026, 1)).toBe("January 2026");
+    expect(monthLabel(2026, 6)).toBe("June 2026");
+    expect(monthLabel(2026, 12)).toBe("December 2026");
   });
 });
 

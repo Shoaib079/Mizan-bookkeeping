@@ -58,9 +58,11 @@ describe("formatRatePercent", () => {
 });
 
 describe("ratePeriodLabel", () => {
-  it("names the month in Turkish", () => {
+  it("names the month in English but keeps the figure Turkish", () => {
+    // The rate is a number and reads like one on a statement — 3,7% not 3.7%.
+    // The month beside it is a label.
     expect(ratePeriodLabel(period({ month: 6, rate_percent: 3.7 }))).toBe(
-      "Haziran 3,7%",
+      "June 3,7%",
     );
   });
 });

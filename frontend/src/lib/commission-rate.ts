@@ -43,24 +43,27 @@ export function formatRatePercent(rate: number | null): string {
   return `${rate.toFixed(1).replace(".", ",")}%`;
 }
 
-const MONTH_NAMES_TR = [
-  "Ocak",
-  "Şubat",
-  "Mart",
-  "Nisan",
-  "Mayıs",
-  "Haziran",
-  "Temmuz",
-  "Ağustos",
-  "Eylül",
-  "Ekim",
-  "Kasım",
-  "Aralık",
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
-/** "Haziran 3,7%" — compact enough to sit in a row beside the amount box. */
+/** "June 3,7%" — compact enough to sit in a row beside the amount box.
+ *
+ * The percentage keeps its Turkish decimal comma: it is a figure, and figures
+ * in this app read the way they do on a statement. The month is label text. */
 export function ratePeriodLabel(period: CommissionRatePeriod): string {
-  const name = MONTH_NAMES_TR[period.month - 1] ?? String(period.month);
+  const name = MONTH_NAMES[period.month - 1] ?? String(period.month);
   return `${name} ${formatRatePercent(period.rate_percent)}`;
 }
 

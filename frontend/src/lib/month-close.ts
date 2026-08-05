@@ -19,23 +19,26 @@ export type MonthOption = {
   label: string;
 };
 
-const MONTH_NAMES_TR = [
-  "Ocak",
-  "Şubat",
-  "Mart",
-  "Nisan",
-  "Mayıs",
-  "Haziran",
-  "Temmuz",
-  "Ağustos",
-  "Eylül",
-  "Ekim",
-  "Kasım",
-  "Aralık",
+/** The app's interface language is English throughout; only money and dates
+ * follow Turkish convention (1.234,56 ₺ and dd.mm.yyyy), because those are
+ * what people read off a bank statement. Month names are interface text. */
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 export function monthLabel(year: number, month: number): string {
-  return `${MONTH_NAMES_TR[month - 1]} ${year}`;
+  return `${MONTH_NAMES[month - 1]} ${year}`;
 }
 
 export function monthValue(year: number, month: number): string {
