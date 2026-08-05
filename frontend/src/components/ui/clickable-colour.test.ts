@@ -121,6 +121,27 @@ describe("everything clickable carries a colour", () => {
 });
 
 describe("a chosen option looks chosen", () => {
+  /** Segmented rows go through SegmentedControl. The FX dialog hand-rolled one
+   * twice in a single file and both copies were colourless; a third would have
+   * been too. Options are data, so a wallet or currency added later inherits
+   * the styling without anyone having to remember to give it any. */
+  it("segmented rows are not hand-rolled", () => {
+    const offenders: string[] = [];
+    for (const file of sourceFiles(SRC)) {
+      const relative = file.replace(SRC, "");
+      if (relative === "components/ui/segmented-control.tsx") continue;
+      const source = readFileSync(file, "utf8");
+      // The track: a bordered pill row holding the options.
+      if (source.includes('rounded-md border border-border bg-muted/40 p-1')) {
+        offenders.push(relative);
+      }
+    }
+    expect(
+      offenders,
+      `These build their own segmented row — use <SegmentedControl>:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+
   /** Segmented controls — Buy/Sell/Spend, USD/EUR/GBP, filter chips — say
    * which option is active by filling it. The FX toggles filled with
    * `bg-background`: white on a grey track, so the selected mode carried no

@@ -16,7 +16,7 @@ import {
 } from "@/lib/load-money-accounts";
 import { fxWalletToggleLabel } from "@/lib/fx-purchase-helpers";
 import { useEntity } from "@/lib/entity-context";
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 export type FxUnifiedMode = "buy" | "convert" | "spend";
 
@@ -144,60 +144,26 @@ export function FxUnifiedDialog({
 
       {entityId && !loading && !loadError && accounts.length > 0 && selected && selectedCurrency && (
         <div className="space-y-4">
-          <div
-            className="flex gap-1 rounded-md border border-border bg-muted/40 p-1"
+          <SegmentedControl
             role="tablist"
-            aria-label="FX action"
-          >
-            {(["buy", "convert", "spend"] as const).map((entry) => (
-              <button
-                key={entry}
-                type="button"
-                role="tab"
-                aria-selected={mode === entry}
-                className={cn(
-                  "inline-flex h-8 flex-1 items-center justify-center rounded px-3 text-sm font-medium transition-colors",
-                  mode === entry
-                    // Filled when chosen, like the filter chips. It was
-                    // bg-background — white on the grey track — so the
-                    // selected mode carried no colour and read as an
-                    // unselected pill that happened to be lighter.
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-                )}
-                onClick={() => setMode(entry)}
-              >
-                {MODE_LABELS[entry]}
-              </button>
-            ))}
-          </div>
+            ariaLabel="FX action"
+            options={(["buy", "convert", "spend"] as const).map((entry) => ({
+              value: entry,
+              label: MODE_LABELS[entry],
+            }))}
+            value={mode}
+            onChange={setMode}
+          />
 
-          <div
-            className="flex flex-wrap gap-1 rounded-md border border-border bg-muted/40 p-1"
-            role="group"
-            aria-label="Currency"
-          >
-            {accounts.map((account) => {
-              const label = fxWalletToggleLabel(account.currency ?? "");
-              const active = account.id === selectedId;
-              return (
-                <button
-                  key={account.id}
-                  type="button"
-                  aria-pressed={active}
-                  className={cn(
-                    "inline-flex h-8 min-w-[3rem] flex-1 items-center justify-center rounded px-3 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-                  )}
-                  onClick={() => setSelectedId(account.id)}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+          <SegmentedControl
+            ariaLabel="Currency"
+            options={accounts.map((account) => ({
+              value: account.id,
+              label: fxWalletToggleLabel(account.currency ?? ""),
+            }))}
+            value={selectedId}
+            onChange={setSelectedId}
+          />
 
           <div key={`${selected.id}-${mode}`} className="border-t border-border pt-4">
             {mode === "buy" && (
