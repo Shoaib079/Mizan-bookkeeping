@@ -35,6 +35,7 @@ from app.features.customers.schema import (
     CustomerCreate,
     CustomerLedgerEntryRead,
     CustomerLedgerRead,
+    ForexOutstanding,
     CustomerPaymentCreate,
     CustomerPaymentCorrect,
     CustomerPaymentCorrectOut,
@@ -194,9 +195,18 @@ def get_customer_ledger(
         balance = receivables_ledger.current_balance_kurus(session, entity_id, customer_id)
         entries = receivables_ledger.list_ledger_entries(session, entity_id, customer_id)
         reads = _customer_entry_reads(session, entries)
+        # Imported here, not at module level: group_sales imports customers,
+        # so a top-level import would close the circle.
+        from app.features.group_sales.fx_receivable import outstanding_by_currency
+
+        forex = outstanding_by_currency(session, customer_id)
     return CustomerLedgerRead(
         customer_id=customer_id,
         balance_kurus=balance,
+        outstanding_by_currency=[
+            ForexOutstanding(currency=currency, minor=minor)
+            for currency, minor in forex
+        ],
         entries=reads,
     )
 

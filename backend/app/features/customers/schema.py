@@ -86,9 +86,21 @@ class CustomerLedgerEntryRead(BaseModel):
     was_corrected: bool = False
 
 
+class ForexOutstanding(BaseModel):
+    """What the customer still owes in the currency they agreed to pay in."""
+
+    currency: str
+    minor: int
+
+
 class CustomerLedgerRead(BaseModel):
     customer_id: uuid.UUID
     balance_kurus: int
+    #: One line per currency still owed. The TRY balance above stays the
+    #: ledger's truth; this is what the customer will actually hand over, and
+    #: the lira equivalent moves with the rate until they do. Empty for a
+    #: customer who has only ever been billed in lira.
+    outstanding_by_currency: list[ForexOutstanding] = []
     entries: list[CustomerLedgerEntryRead]
 
 

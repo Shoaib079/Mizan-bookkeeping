@@ -48,6 +48,36 @@ def native_balance_for_currency(
     return int(sales or 0) + int(discounts or 0) - int(payments or 0)
 
 
+def outstanding_by_currency(
+    session: Session,
+    customer_id: uuid.UUID,
+) -> list[tuple[str, int]]:
+    """Every currency this customer still owes in, and how much.
+
+    An agency can owe USD on one booking and EUR on another, so a single
+    figure cannot describe them — the caller gets one line per currency,
+    highest first, with settled currencies dropped.
+
+    The TRY book balance is unaffected and remains the ledger's truth. This is
+    what the customer agreed to pay, which is what they will hand over; the
+    lira equivalent moves with the rate until they do.
+    """
+    currencies = session.scalars(
+        select(CustomerLedgerEntry.forex_currency)
+        .where(
+            CustomerLedgerEntry.customer_id == customer_id,
+            CustomerLedgerEntry.forex_currency.is_not(None),
+        )
+        .distinct()
+    ).all()
+
+    balances = [
+        (currency, native_balance_for_currency(session, customer_id, currency))
+        for currency in sorted(c for c in currencies if c)
+    ]
+    return [(currency, minor) for currency, minor in balances if minor != 0]
+
+
 def try_balance_for_currency(
     session: Session,
     customer_id: uuid.UUID,

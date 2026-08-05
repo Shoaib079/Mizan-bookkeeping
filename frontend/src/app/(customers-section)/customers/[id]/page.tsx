@@ -67,10 +67,23 @@ type LedgerEntry = {
   was_corrected?: boolean;
 };
 
+type ForexOutstanding = { currency: string; minor: number };
+
 type LedgerResponse = {
   balance_kurus: number;
+  /** One line per currency still owed. Empty when only ever billed in lira. */
+  outstanding_by_currency?: ForexOutstanding[];
   entries: LedgerEntry[];
 };
+
+/** "Owed: 94,00 USD · 1.200,00 EUR", or null when nothing is owed in forex. */
+function formatForexOutstanding(
+  outstanding: ForexOutstanding[] | undefined,
+): string | null {
+  if (!outstanding || outstanding.length === 0) return null;
+  const parts = outstanding.map((row) => formatFxNative(row.minor, row.currency));
+  return `Owed: ${parts.join(" · ")}`;
+}
 
 function formatLedgerGroupMeta(entry: LedgerEntry): string | null {
   const parts: string[] = [];
@@ -234,9 +247,14 @@ export default function CustomerDetailPage() {
             label="Receivable balance"
             amountKurus={ledger.balance_kurus}
             caption={
-              ledger.balance_kurus > 0
+              // The books are in lira and the figure above is the ledger's
+              // truth. What the agency agreed to pay is what they will hand
+              // over, though, so it is named here — the lira equivalent moves
+              // with the rate until they do.
+              formatForexOutstanding(ledger.outstanding_by_currency) ??
+              (ledger.balance_kurus > 0
                 ? "Owed by this customer"
-                : "Nothing outstanding"
+                : "Nothing outstanding")
             }
           />
         )
@@ -377,6 +395,7 @@ export default function CustomerDetailPage() {
             open={paymentOpen}
             customerId={customerId}
             balanceKurus={ledger?.balance_kurus}
+            outstandingByCurrency={ledger?.outstanding_by_currency}
             onClose={() => setPaymentOpen(false)}
             onSaved={() => void reload()}
           />

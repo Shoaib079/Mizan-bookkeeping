@@ -27,6 +27,9 @@ type Props = {
   onClose: () => void;
   customerId: string;
   balanceKurus?: number;
+  /** Everything this customer owes, per currency — the whole account, not the
+   * one sale being paid. Shown when there is no single FX sale in context. */
+  outstandingByCurrency?: { currency: string; minor: number }[];
   groupSaleId?: string;
   /** When set, payment clears native FX receivable — enter native amount only. */
   forexReceivableCurrency?: string | null;
@@ -47,6 +50,7 @@ export function CustomerPaymentForm({
   onClose,
   customerId,
   balanceKurus,
+  outstandingByCurrency,
   groupSaleId,
   forexReceivableCurrency,
   remainingForexMinor,
@@ -248,6 +252,17 @@ export function CustomerPaymentForm({
         {balanceKurus !== undefined && balanceKurus > 0 && !isFxReceivable && (
           <p className="text-sm text-muted-foreground">
             Outstanding receivable: {formatTry(balanceKurus)}
+            {/* Named in the currency it was agreed in: that is the sum the
+                customer will hand over, while the lira figure beside it moves
+                with the rate until they do. */}
+            {outstandingByCurrency && outstandingByCurrency.length > 0 && (
+              <>
+                {" — "}
+                {outstandingByCurrency
+                  .map((row) => formatFxNative(row.minor, row.currency))
+                  .join(" · ")}
+              </>
+            )}
           </p>
         )}
         {isFxReceivable && remainingForexMinor != null && remainingForexMinor > 0 && (
