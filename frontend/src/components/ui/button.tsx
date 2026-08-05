@@ -33,8 +33,8 @@ export function Button({
         // too, since tailwind-merge resolves the text and border but has
         // nothing to override an unmentioned bg with.
         variant === "secondary" &&
-          "border border-primary/40 bg-primary/5 text-primary hover:bg-primary/10",
-        variant === "ghost" && "text-primary hover:bg-primary/10",
+          "border border-primary/40 bg-primary/15 text-primary hover:bg-primary/25",
+        variant === "ghost" && "text-primary hover:bg-primary/15",
         className,
       )}
       {...props}

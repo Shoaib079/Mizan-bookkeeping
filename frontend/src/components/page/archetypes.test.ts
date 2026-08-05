@@ -449,8 +449,11 @@ describe("filters read as choices", () => {
     const source = await read("./filter-chips.tsx");
     expect(source).not.toContain("border border-border text-muted-foreground");
     expect(source).toContain("border-primary/40 text-primary");
-    // The active chip stays filled so it is still obvious which one is on.
-    expect(source).toContain("bg-primary/10 font-medium text-primary");
+    // The active chip stays filled so it is still obvious which one is on,
+    // and the fill has to be strong enough to see: /5 over white computes to
+    // #f4f7fe, which is a fill in the markup and nothing to the eye.
+    const activeFill = source.match(/bg-primary\/(\d+) font-medium/)?.[1];
+    expect(Number(activeFill), "active chip has no visible fill").toBeGreaterThanOrEqual(10);
   });
 
   it("ListPage gives filters their own row", async () => {

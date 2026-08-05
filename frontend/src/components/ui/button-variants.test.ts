@@ -31,7 +31,18 @@ describe("button variants carry colour", () => {
     // The fill means a caller that recolours has to pass a background as
     // well: tailwind-merge resolves the text and border but has nothing to
     // override an unmentioned bg with, so red text would sit on blue.
-    expect(source).toContain("bg-primary/5");
+    // /15, not /5. bg-primary/5 over white computes to #f4f7fe — three units
+    // from white in red, eleven in blue. It is a fill in the markup and
+    // nothing to the eye, which is why "no colour" was reported after it was
+    // supposedly fixed. A minimum opacity stops that recurring.
+    // Scoped to the secondary line: matching the whole file grabbed
+    // hover:bg-primary/90 from the primary variant, so this passed happily
+    // with the secondary fill back at /5.
+    const secondaryLine = source.match(
+      /variant === "secondary" &&[\s\S]{0,160}/,
+    )?.[0] ?? "";
+    const fill = secondaryLine.match(/[^:]bg-primary\/(\d+)/)?.[1];
+    expect(Number(fill), "secondary has no fill").toBeGreaterThanOrEqual(10);
     const voidButton = readFileSync(
       new URL("../ledger/void-confirm-dialog.tsx", import.meta.url),
       "utf8",
@@ -40,8 +51,8 @@ describe("button variants carry colour", () => {
   });
 
   it("a caller's own colour still wins", () => {
-    const secondary = "border border-primary/40 text-primary hover:bg-primary/10";
-    const ghost = "text-primary hover:bg-primary/10";
+    const secondary = "border border-primary/40 bg-primary/15 text-primary hover:bg-primary/25";
+    const ghost = "text-primary hover:bg-primary/15";
 
     const voidSecondary = twMerge(
       secondary,

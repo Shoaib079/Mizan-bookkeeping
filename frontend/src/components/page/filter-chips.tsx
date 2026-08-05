@@ -49,8 +49,8 @@ export function FilterChips<T extends string>({
               // you could make. Tinted like the secondary buttons beside them;
               // the active one stays filled so it is still obvious which is on.
               active
-                ? "border border-primary bg-primary/10 font-medium text-primary"
-                : "border border-primary/40 text-primary hover:bg-primary/10",
+                ? "border border-primary bg-primary/20 font-medium text-primary"
+                : "border border-primary/40 text-primary hover:bg-primary/15",
             )}
             onClick={() => onChange(chip.id)}
           >
