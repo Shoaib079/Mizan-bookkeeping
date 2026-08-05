@@ -12,6 +12,41 @@ export function formatFxNative(quantity: number, currency: string): string {
   }).format(major);
 }
 
+/** One line of what a customer still owes, or has paid ahead, in one currency.
+ *
+ * A negative balance is not a negative debt — it means more was received than
+ * was ever billed in that currency, so the customer is in credit. Printing it
+ * as "Owed: -$298.00" asks the reader to do the sign arithmetic themselves,
+ * and reads as a bug even when the figure is right.
+ *
+ * Shared because the customer page and the Record payment popup both show
+ * this, and two copies would drift the moment one of them was corrected.
+ */
+export function formatForexBalanceLine(
+  minor: number,
+  currency: string,
+): { label: string; amount: string; isCredit: boolean } {
+  const isCredit = minor < 0;
+  return {
+    label: isCredit ? "Paid ahead" : "Owed",
+    amount: formatFxNative(Math.abs(minor), currency),
+    isCredit,
+  };
+}
+
+/** Several currencies on one line: "Owed: $94.00 · Paid ahead: €12.00". */
+export function formatForexBalanceSummary(
+  rows: { currency: string; minor: number }[] | undefined,
+): string | null {
+  if (!rows || rows.length === 0) return null;
+  return rows
+    .map((row) => {
+      const { label, amount } = formatForexBalanceLine(row.minor, row.currency);
+      return `${label}: ${amount}`;
+    })
+    .join(" · ");
+}
+
 /** FX amount for an editable input — plain number, no currency symbol.
  *
  * `formatFxNative` is for display; its output ("$1,000.50") can't be parsed

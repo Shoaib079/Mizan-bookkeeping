@@ -37,7 +37,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
-import { formatFxNative } from "@/lib/fx-money";
+import { formatForexBalanceSummary, formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
 import { customerLedgerRowActions } from "@/lib/subledger-actions";
@@ -76,13 +76,15 @@ type LedgerResponse = {
   entries: LedgerEntry[];
 };
 
-/** "Owed: 94,00 USD · 1.200,00 EUR", or null when nothing is owed in forex. */
+/** "Owed: $94.00 · Paid ahead: €12.00", or null when forex is settled.
+ *
+ * A currency the customer has overpaid comes back negative; it is labelled
+ * rather than printed with a minus, because "Owed: -$298.00" makes the reader
+ * work out the sign and looks like a fault even when it is not one. */
 function formatForexOutstanding(
   outstanding: ForexOutstanding[] | undefined,
 ): string | null {
-  if (!outstanding || outstanding.length === 0) return null;
-  const parts = outstanding.map((row) => formatFxNative(row.minor, row.currency));
-  return `Owed: ${parts.join(" · ")}`;
+  return formatForexBalanceSummary(outstanding);
 }
 
 function formatLedgerGroupMeta(entry: LedgerEntry): string | null {

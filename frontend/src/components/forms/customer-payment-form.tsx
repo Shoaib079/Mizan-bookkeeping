@@ -13,7 +13,11 @@ import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
-import { formatFxNative, parseFxNative } from "@/lib/fx-money";
+import {
+  formatForexBalanceSummary,
+  formatFxNative,
+  parseFxNative,
+} from "@/lib/fx-money";
 import { computeTryCostKurusFromRate } from "@/lib/fx-purchase-helpers";
 import {
   loadPaymentReceiveAccounts,
@@ -128,6 +132,7 @@ export function CustomerPaymentForm({
 
   const amountKurus = parseTryToKurus(amountText);
   const forexMinor = parseFxNative(forexAmountText);
+  const forexSummary = formatForexBalanceSummary(outstandingByCurrency);
   const amountInvalid =
     amountText.trim() !== "" && (amountKurus === null || amountKurus <= 0);
   const forexInvalid =
@@ -255,14 +260,7 @@ export function CustomerPaymentForm({
             {/* Named in the currency it was agreed in: that is the sum the
                 customer will hand over, while the lira figure beside it moves
                 with the rate until they do. */}
-            {outstandingByCurrency && outstandingByCurrency.length > 0 && (
-              <>
-                {" — "}
-                {outstandingByCurrency
-                  .map((row) => formatFxNative(row.minor, row.currency))
-                  .join(" · ")}
-              </>
-            )}
+            {forexSummary && <>{` — ${forexSummary}`}</>}
           </p>
         )}
         {isFxReceivable && remainingForexMinor != null && remainingForexMinor > 0 && (
