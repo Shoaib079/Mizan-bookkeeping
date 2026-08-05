@@ -15,7 +15,10 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import Link from "next/link";
+
 import { ListPage } from "@/components/page/list-page";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { BookOpen } from "lucide-react";
@@ -87,6 +90,11 @@ export function ManualJournalsPanel() {
     <ListPage
       title="Manual journals"
       meta="Posted manual journals — void with audit trail (accountant access)."
+      primaryAction={
+        <Link href="/review/manual-journals/new">
+          <Button type="button">New journal</Button>
+        </Link>
+      }
       loading={loading}
       error={error}
       countLabel={

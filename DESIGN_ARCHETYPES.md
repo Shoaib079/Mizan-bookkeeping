@@ -81,7 +81,7 @@ Two-pane: original document left, extracted fields + confidence + actions right.
 
 Legend: ☐ pending · ☑ done.
 
-**Coverage proof:** 88 routes total − 30 redirects = **58 live pages**, and the slices below list exactly 58: 7 detail + 11 lists + 8 overview/hubs + 13 review/documents + 12 reports + 7 forms/settings/auth. Redirects need no design work (they render nothing) but are counted here so the arithmetic can be checked.
+**Coverage proof:** 89 routes total − 30 redirects = **59 live pages**, and the slices below list exactly 59: 7 detail + 11 lists + 8 overview/hubs + 13 review/documents + 12 reports + 8 forms/settings/auth. (`/review/manual-journals/new` added 2026-08-04 — the coverage test caught it the moment the file appeared, which is the whole point of it.) Redirects need no design work (they render nothing) but are counted here so the arithmetic can be checked.
 
 ### Slice 1 — archetype components
 ☑ `PageHeader` ☑ `EntityDetailPage` ☑ `ListPage` ☑ `HubPage` ☑ ~~`ReviewPage`~~ (folded into `ListPage`) ☑ `DocumentReviewPage` ☑ `FormPage` ☑ `ReportPage` ☑ `OverviewPage` ☑ `SummaryPanel` ☑ `StatCard` ☑ `LedgerTable` ☑ `FilterChips`
@@ -144,7 +144,7 @@ What the slice turned up:
 - The balance sheet's KPI band is the one that was reporting a broken accounting equation until the contra-account fix earlier the same day — worth re-reading on production.
 
 ### Slice 7 — forms + settings + auth (7) — **done 2026-08-04**
-☑ `/settings/restaurant` ☑ `/settings/profile` ☑ `/onboarding/opening-balances` ☑ `/banking/accounts/[id]/import` ☑ `/split` ☑ `/sign-in` ☑ `/sign-up`
+☑ `/settings/restaurant` ☑ `/settings/profile` ☑ `/onboarding/opening-balances` ☑ `/banking/accounts/[id]/import` ☑ `/split` ☑ `/sign-in` ☑ `/sign-up` ☑ `/review/manual-journals/new`
 
 Four compose `FormPage`. **`/split`** is a workflow rather than a settings form, so it takes `PageHeader` only. **`/sign-in` and `/sign-up`** live outside `AppShell` entirely — they are Clerk's own components on a centred background, with no app chrome, and giving them an archetype would be pretending they are app pages.
 
