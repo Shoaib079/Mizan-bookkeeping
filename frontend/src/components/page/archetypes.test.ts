@@ -323,6 +323,19 @@ describe("page archetypes", () => {
     expect(warning).not.toContain("disabled");
   });
 
+  it("the balance sheet explains a negative retained earnings", async () => {
+    // Allocating profit debits retained earnings. Do it before the year is
+    // closed and the account goes negative while equity is unchanged — correct,
+    // but it reads like a mistake, and it cost an afternoon to establish that
+    // it wasn't one.
+    const source = await read("../../app/reports/balance-sheet/page.tsx");
+    expect(source).toContain("RETAINED_EARNINGS_CODE");
+    // Only when both conditions hold — a negative balance alone may be real.
+    expect(source).toMatch(/balance_kurus < 0/);
+    expect(source).toMatch(/unclosed_net_income_kurus \?\? 0\) > 0/);
+    expect(source).toContain("It resolves at year-end close.");
+  });
+
   it("row actions sit in a trailing column, weighted like siblings", async () => {
     // Edit and Void used to render inside the description cell on staff,
     // partners and supplier activity — so their left edge moved with the length

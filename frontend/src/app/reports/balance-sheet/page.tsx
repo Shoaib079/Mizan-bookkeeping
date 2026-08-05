@@ -24,6 +24,9 @@ import { StatCard } from "@/components/page/stat-card";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
+
+/** Chart code for retained earnings — mirrors the backend default chart. */
+const RETAINED_EARNINGS_CODE = "3100";
 import type { BalanceSheetRead, ReportSource } from "@/lib/report-types";
 import { SealedPeriodBanner } from "@/components/reports/sealed-period-banner";
 import { useReportAsOfFromUrl } from "@/lib/use-report-url";
@@ -66,6 +69,22 @@ function BalanceSheetContent() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // Allocating profit debits retained earnings (Dr 3100 / Cr 3300). Do that
+  // before the year is closed and the profit is still sitting in unclosed net
+  // income, so retained earnings goes negative by the allocated amount even
+  // though equity as a whole is unchanged — it is a transfer within equity.
+  // Correct, but it reads like a mistake, so the page says so rather than
+  // leaving the owner (or their accountant) to work it out.
+  const retained = report?.equity.accounts.find(
+    (row) => row.code === RETAINED_EARNINGS_CODE,
+  );
+  const retainedEarningsNote =
+    retained &&
+    retained.balance_kurus < 0 &&
+    (report?.equity.unclosed_net_income_kurus ?? 0) > 0
+      ? "Retained earnings is negative because profit has been allocated to partners while this year's result is still in Unclosed net income. Equity as a whole is unaffected — the allocation moves money from retained earnings to partner capital. It resolves at year-end close."
+      : undefined;
 
   return (
     <AppShell title="Balance sheet">
@@ -163,6 +182,7 @@ function BalanceSheetContent() {
                 </DataTableRow>
               ) : null
             }
+            note={retainedEarningsNote}
           />
 
           <p className="text-sm text-muted-foreground">
@@ -183,11 +203,14 @@ function SectionTable({
   subtotal,
   rows,
   extra,
+  note,
 }: {
   title: string;
   subtotal: number;
   rows: BalanceSheetRead["assets"]["accounts"];
   extra?: ReactNode;
+  /** Explains a figure that reads oddly but is correct. */
+  note?: ReactNode;
 }) {
   if (rows.length === 0 && !extra) return null;
   return (
@@ -220,6 +243,7 @@ function SectionTable({
           {formatTry(subtotal)}
         </span>
       </p>
+      {note && <p className="mt-1 text-xs text-muted-foreground">{note}</p>}
     </section>
   );
 }
