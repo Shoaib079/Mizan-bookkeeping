@@ -52,6 +52,9 @@ import type {
 
 type NamedRow = { id: string; name: string };
 
+/** Just enough of a chart account to label a preview row. */
+type ChartAccountName = { code: string; name_en?: string; name_tr?: string };
+
 function newLine(): OpeningBalanceLineDraft {
   return {
     id: crypto.randomUUID(),
@@ -158,6 +161,7 @@ export default function OpeningBalancesPage() {
   const [customers, setCustomers] = useState<NamedRow[]>([]);
   const [goLiveDate, setGoLiveDate] = useState("");
   const [lines, setLines] = useState<OpeningBalanceLineDraft[]>([newLine()]);
+  const [chartNames, setChartNames] = useState<ChartAccountName[]>([]);
   const [preview, setPreview] = useState<JournalLineOut[] | null>(null);
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [posted, setPosted] = useState<OpeningBalancePostResponse | null>(null);
@@ -166,6 +170,24 @@ export default function OpeningBalancesPage() {
   const [posting, setPosting] = useState(false);
   const [focusLineId, setFocusLineId] = useState<string | null>(null);
   const goLiveFocusedRef = useRef(false);
+
+  /** "1100 — Bank" rather than "1100".
+   *
+   * The code alone means nothing unless you have the chart memorised, and this
+   * preview is the last thing anyone reads before opening balances hit the
+   * ledger — the one screen where the accounts should be unambiguous. Falls
+   * back to the bare code if the chart has not loaded or lacks the account,
+   * which is still the old behaviour rather than a blank cell.
+   */
+  const accountLabel = useCallback(
+    (code: string): string => {
+      const match =
+        chartNames.find((a) => a.code === code) ??
+        obAccounts.find((a) => a.code === code);
+      return match ? formatChartAccountLabel(match) : code;
+    },
+    [chartNames, obAccounts],
+  );
 
   const draftSnapshot = useMemo<OpeningBalancesDraft>(
     () => ({ goLiveDate, lines }),
@@ -222,6 +244,7 @@ export default function OpeningBalancesPage() {
   const resetOpeningBalancesState = useCallback(() => {
     setWizardSteps([]);
     setObAccounts([]);
+    setChartNames([]);
     setMoneyAccounts([]);
     setSuppliers([]);
     setPartners([]);
@@ -244,10 +267,18 @@ export default function OpeningBalancesPage() {
     if (!entityId) return;
     setError(null);
     try {
-      const [obRes, money, supRes, partRes, custRes] = await Promise.all([
+      const [obRes, chartRes, money, supRes, partRes, custRes] = await Promise.all([
           apiFetch<OpeningBalanceAccount[]>(
             "/chart-of-accounts/default/opening-balance-accounts",
           ),
+          // The whole chart, only so the journal preview can name its rows.
+          // opening-balance-accounts is filtered to accepts_opening_balance,
+          // which excludes the control accounts (receivables, payables,
+          // partner capital) that the preview derives from supplier, customer
+          // and partner lines — those would have stayed bare codes.
+          apiFetch<{ items: ChartAccountName[] }>(
+            `/entities/${entityId}/chart-of-accounts?limit=500`,
+          ).catch(() => ({ items: [] as ChartAccountName[] })),
           loadBankAndCashAccounts(entityId),
           apiFetch<{ items: NamedRow[] }>(
             `/entities/${entityId}/suppliers?limit=100`,
@@ -260,6 +291,7 @@ export default function OpeningBalancesPage() {
           ),
         ]);
       setObAccounts(obRes);
+      setChartNames(chartRes.items);
       setMoneyAccounts(money);
       setSuppliers(supRes.items);
       setPartners(partRes.items);
@@ -740,7 +772,7 @@ export default function OpeningBalancesPage() {
                 <DataTableBody>
                   {preview.map((row, i) => (
                     <DataTableRow key={`${row.account_code}-${i}`}>
-                      <DataTableCell>{row.account_code}</DataTableCell>
+                      <DataTableCell>{accountLabel(row.account_code)}</DataTableCell>
                       <DataTableCell className="capitalize">{row.side}</DataTableCell>
                       <DataTableCell align="right" className="tabular-nums">
                         {formatTry(row.amount_kurus)}
