@@ -31,10 +31,29 @@ class GroupMenuRead(BaseModel):
 
 
 class GroupSaleLineInput(BaseModel):
+    """A menu line, priced either per head or as an agreed total.
+
+    Exactly one of `rate_per_person_minor` or `line_total_minor` is given.
+    Sending the total keeps it exact: 94,00 for 6 pax posts 94,00, not the
+    94,02 you would get from storing a rounded 15,67 rate and multiplying.
+    The rate is then a derived, displayed figure.
+    """
+
     group_menu_id: uuid.UUID | None = None
     menu_name: str | None = Field(default=None, max_length=255)
     pax: int = Field(gt=0)
-    rate_per_person_minor: int = Field(gt=0)
+    rate_per_person_minor: int | None = Field(default=None, gt=0)
+    line_total_minor: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def exactly_one_price(self) -> "GroupSaleLineInput":
+        has_rate = self.rate_per_person_minor is not None
+        has_total = self.line_total_minor is not None
+        if has_rate == has_total:
+            raise ValueError(
+                "give either rate_per_person_minor or line_total_minor, not both"
+            )
+        return self
 
 
 class GroupSaleCreate(AcknowledgeDuplicateMixin):

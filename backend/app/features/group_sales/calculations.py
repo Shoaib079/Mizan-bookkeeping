@@ -30,7 +30,26 @@ class ComputedGroupSale:
 
 
 def _line_total_minor(line: GroupSaleLineInput) -> int:
+    """What the line is worth — the agreed total when one was given.
+
+    A total is exact and a rate is not: 94,00 over 6 pax is 15,6666…, and
+    storing the rounded 15,67 then multiplying posts 94,02. The schema
+    guarantees exactly one of the two is set.
+    """
+    if line.line_total_minor is not None:
+        return line.line_total_minor
+    assert line.rate_per_person_minor is not None  # schema guarantees one
     return line.pax * line.rate_per_person_minor
+
+
+def _rate_per_person_minor(line: GroupSaleLineInput) -> int:
+    """The per-head figure to display. Derived, and rounded, when a total was
+    given — the total remains the number that posts."""
+    if line.rate_per_person_minor is not None:
+        return line.rate_per_person_minor
+    assert line.line_total_minor is not None
+    # Rounded half up on integers, never through a float.
+    return (line.line_total_minor * 2 + line.pax) // (line.pax * 2)
 
 
 def compute_group_sale(payload: GroupSaleCreate, menu_names: dict) -> ComputedGroupSale:
@@ -47,7 +66,7 @@ def compute_group_sale(payload: GroupSaleCreate, menu_names: dict) -> ComputedGr
                 group_menu_id=line.group_menu_id,
                 menu_name_snapshot=_menu_name(line, menu_names),
                 pax=line.pax,
-                rate_per_person_minor=line.rate_per_person_minor,
+                rate_per_person_minor=_rate_per_person_minor(line),
                 line_total_minor=_line_total_minor(line),
                 line_total_kurus=_line_total_minor(line),
             )
@@ -90,7 +109,7 @@ def compute_group_sale(payload: GroupSaleCreate, menu_names: dict) -> ComputedGr
             group_menu_id=line.group_menu_id,
             menu_name_snapshot=_menu_name(line, menu_names),
             pax=line.pax,
-            rate_per_person_minor=line.rate_per_person_minor,
+            rate_per_person_minor=_rate_per_person_minor(line),
             line_total_minor=_line_total_minor(line),
             line_total_kurus=line_kurus,
         )
