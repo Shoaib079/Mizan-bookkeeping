@@ -111,8 +111,13 @@ def get_expense_register(
         amount_kurus,
         side,
     ) in records:
-        # Turkish name first, matching the account pickers elsewhere.
-        acct_name = acct_name_tr or acct_name_en
+        # English first, like everywhere else that names an account: the
+        # chart pickers (chartAccountDisplayName is en || tr || code) and the
+        # month pack's own labels (name_en or name_tr). This line read
+        # tr-then-en, justified by a comment claiming it matched the pickers,
+        # which it did not — so the expense pages came out in Turkish while
+        # the rest of the same document was English.
+        acct_name = acct_name_en or acct_name_tr
         # Expenses are debit-normal; a credit to an expense account is a refund
         # or allocation out, so it reduces the register.
         signed = (
