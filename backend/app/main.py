@@ -117,7 +117,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    # Every export names its own file — "mizan-balance-sheet-2026-06-30.xlsx"
+    # Every export names its own file — "india-gate-balance-sheet-2026-06-30.xlsx"
     # — in Content-Disposition. That header is not CORS-safelisted, so without
     # this the browser hands JavaScript nothing and apiDownload falls back to
     # "download", which is why saved reports arrive as download-2.pdf. Note

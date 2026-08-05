@@ -139,7 +139,7 @@ def test_balance_sheet_export(
     _assert_xlsx_export(response, header_text="Assets")
 
     disposition = response.headers.get("content-disposition", "")
-    assert 'filename="mizan-balance-sheet-2026-01-31.xlsx"' in disposition
+    assert 'filename="restaurant-a-balance-sheet-2026-01-31.xlsx"' in disposition
 
 
 def test_kdv_input_export(
@@ -283,3 +283,119 @@ def test_every_exporter_still_imports() -> None:
 
     for module in (delivery_export, activity_excel, pos_export, month_pack):
         assert module is not None
+
+
+def test_filename_slug_handles_turkish_names() -> None:
+    """Restaurant names are Turkish; filenames have to be ascii.
+
+    "İ".lower() is "i" followed by a combining dot in Python, so relying on
+    lower() alone would put a stray mark in the filename. Each Turkish letter
+    is mapped explicitly instead.
+    """
+    from app.features.reports.excel_export import filename_slug
+
+    assert filename_slug("India Gate") == "india-gate"
+    assert filename_slug("İstanbul Şubesi") == "istanbul-subesi"
+    assert filename_slug("Çiğköfte & Co") == "cigkofte-co"
+    assert filename_slug("Ali  Veli") == "ali-veli"
+    # Nothing usable — callers leave the segment out rather than emit a leading hyphen.
+    assert filename_slug("＊＊＊") == ""
+
+
+def test_filename_slug_truncates_long_names_at_a_word_boundary() -> None:
+    """Turkish trade names run long and must not be chopped mid-word.
+
+    "MEHMET ÖZKAN GIDA SANAYİ VE TİCARET LİMİTED ŞİRKETİ" slugs to 51
+    characters. A hard slice produced "...ticaret-limi" and a 82-character
+    filename; cutting at the last hyphen gives what a person would have
+    shortened it to.
+    """
+    from app.features.reports.excel_export import filename_slug
+
+    assert (
+        filename_slug("MEHMET ÖZKAN GIDA SANAYİ VE TİCARET LİMİTED ŞİRKETİ")
+        == "mehmet-ozkan-gida"
+    )
+    # A dangling conjunction is dropped — "zaina-turizm-ve" reads as damaged.
+    assert (
+        filename_slug("ZAİNA TURİZM VE ORGANİZASYON HİZMETLERİ LTD ŞTİ")
+        == "zaina-turizm"
+    )
+    # A real three-letter word at the end is kept.
+    assert (
+        filename_slug("ANADOLU ET VE SÜT ÜRÜNLERİ PAZARLAMA A.Ş.")
+        == "anadolu-et-ve-sut"
+    )
+    # Short enough to survive whole.
+    assert filename_slug("Metro Gastro") == "metro-gastro"
+    # No word boundary to cut at — a hard slice is the only option.
+    assert filename_slug("Supercalifragilisticexpialidocious") == (
+        "supercalifragilisticexpi"
+    )
+    # Never ends on a hyphen, whatever the input.
+    for name in ("A very long supplier name that keeps going and going", "x-" * 40):
+        assert not filename_slug(name).endswith("-")
+
+
+def test_export_filename_names_the_restaurant() -> None:
+    """Two restaurants must not produce the same download.
+
+    Without the entity segment every balance sheet arrives as
+    balance-sheet-<date>, and India Gate's collides with Spice
+    Corner's in the Downloads folder with nothing to tell them apart.
+    """
+    from datetime import date as date_cls
+
+    from app.features.reports.excel_export import export_filename
+
+    as_of = date_cls(2026, 6, 30)
+    assert (
+        export_filename("balance-sheet", entity_name="India Gate", as_of=as_of)
+        == "india-gate-balance-sheet-2026-06-30.xlsx"
+    )
+    assert (
+        export_filename("balance-sheet", entity_name="Spice Corner", as_of=as_of)
+        != export_filename("balance-sheet", entity_name="India Gate", as_of=as_of)
+    )
+    # Dates stay ISO so filenames sort chronologically.
+    assert "2026-06-30" in export_filename(
+        "balance-sheet", entity_name="India Gate", as_of=as_of
+    )
+    # No entity given: no leading hyphen.
+    assert (
+        export_filename("balance-sheet", as_of=as_of)
+        == "balance-sheet-2026-06-30.xlsx"
+    )
+
+
+def test_a_whole_month_is_written_as_one_segment() -> None:
+    """2026-06 says what 2026-06-01-2026-06-30 says, in fourteen fewer
+    characters, and most exports are whole months. A partial range has no
+    shorter form, so it keeps both dates."""
+    from datetime import date as date_cls
+
+    from app.features.reports.excel_export import export_filename, period_segment
+
+    assert period_segment(date_cls(2026, 6, 1), date_cls(2026, 6, 30)) == "2026-06"
+    # Leap-aware: February ends on the 28th here, and that is still whole.
+    assert period_segment(date_cls(2026, 2, 1), date_cls(2026, 2, 28)) == "2026-02"
+    assert period_segment(date_cls(2024, 2, 1), date_cls(2024, 2, 29)) == "2024-02"
+    # Not a whole month — both dates survive.
+    assert (
+        period_segment(date_cls(2026, 6, 10), date_cls(2026, 6, 20))
+        == "2026-06-10-2026-06-20"
+    )
+    assert (
+        period_segment(date_cls(2026, 2, 1), date_cls(2026, 2, 27))
+        == "2026-02-01-2026-02-27"
+    )
+
+    assert (
+        export_filename(
+            "profit-and-loss",
+            entity_name="India Gate",
+            from_date=date_cls(2026, 6, 1),
+            to_date=date_cls(2026, 6, 30),
+        )
+        == "india-gate-profit-and-loss-2026-06.xlsx"
+    )

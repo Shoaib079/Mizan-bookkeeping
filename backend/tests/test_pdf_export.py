@@ -108,7 +108,7 @@ def test_profit_and_loss_pdf_export(
         params={"from": "2026-01-01", "to": "2026-01-31"},
     )
     data = _assert_pdf_export(
-        response, filename_fragment='filename="mizan-profit-and-loss-2026-01-01-2026-01-31.pdf"'
+        response, filename_fragment='filename="restaurant-a-profit-and-loss-2026-01.pdf"'
     )
 
     pl_report = financial_statements.get_profit_and_loss(
@@ -131,7 +131,7 @@ def test_balance_sheet_pdf_export(
         params={"as_of": "2026-01-31"},
     )
     data = _assert_pdf_export(
-        response, filename_fragment='filename="mizan-balance-sheet-2026-01-31.pdf"'
+        response, filename_fragment='filename="restaurant-a-balance-sheet-2026-01-31.pdf"'
     )
 
     bs_report = financial_statements.get_balance_sheet(
@@ -155,7 +155,7 @@ def test_cash_flow_pdf_export(
         params={"from": "2026-01-01", "to": "2026-01-31"},
     )
     data = _assert_pdf_export(
-        response, filename_fragment='filename="mizan-cash-flow-2026-01-01-2026-01-31.pdf"'
+        response, filename_fragment='filename="restaurant-a-cash-flow-2026-01.pdf"'
     )
 
     text = _pdf_text(data)
@@ -175,8 +175,15 @@ def test_pdf_renders_turkish_entity_name_and_glyphs(
         f"/entities/{setup['entity_id']}/reports/profit-and-loss/export/pdf",
         params={"from": "2026-01-01", "to": "2026-01-31"},
     )
+    # "İstanbul Şişli Çağdaş Balık Restoranı" — the one place the suite has a
+    # real Turkish entity name, so it is also the real test of the slug:
+    # transliterated to ascii, then cut back to a word boundary rather than
+    # sliced mid-word at "…cagdas-ba".
     data = _assert_pdf_export(
-        response, filename_fragment='filename="mizan-profit-and-loss-2026-01-01-2026-01-31.pdf"'
+        response,
+        filename_fragment=(
+            'filename="istanbul-sisli-cagdas-profit-and-loss-2026-01.pdf"'
+        ),
     )
 
     text = _pdf_text(data)

@@ -184,6 +184,18 @@ def header_elements(
         parent=sub_style,
         alignment=2,  # right
     )
+    # Whose books these are is the first thing to establish on a printed
+    # report, and it used to sit in the muted grey subline at the same weight
+    # as the period — easy to miss, and easy to mistake one restaurant's
+    # balance sheet for another's. Given its own line, dark and bold.
+    entity_style = ParagraphStyle(
+        "PdfEntity",
+        parent=styles["Normal"],
+        fontName=PDF_FONT_BOLD_NAME,
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor(_INK),
+    )
 
     # Local time, not UTC — these are read by people in the restaurant's timezone.
     generated = datetime.now().strftime("%d.%m.%Y %H:%M")
@@ -194,10 +206,12 @@ def header_elements(
                 Paragraph(_cell("Mizan"), stamp_style),
             ],
             [
-                Paragraph(
-                    _cell(f"{entity_name} · {period_label}: {period_value}"), sub_style
-                ),
+                Paragraph(_cell(entity_name), entity_style),
                 Paragraph(_cell(f"Generated {generated}"), stamp_style),
+            ],
+            [
+                Paragraph(_cell(f"{period_label}: {period_value}"), sub_style),
+                Paragraph("", stamp_style),
             ],
         ],
         colWidths=["70%", "30%"],
@@ -209,9 +223,12 @@ def header_elements(
                 ("LEFTPADDING", (0, 0), (-1, -1), 0),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                 ("TOPPADDING", (0, 0), (-1, -1), 0),
+                # Three rows now — title, entity, period — so the brand rule
+                # sits under the last one rather than under row 1.
                 ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
-                ("BOTTOMPADDING", (0, 1), (-1, 1), 6),
-                ("LINEBELOW", (0, 1), (-1, 1), 2, colors.HexColor(_BRAND_BLUE)),
+                ("BOTTOMPADDING", (0, 1), (-1, 1), 1),
+                ("BOTTOMPADDING", (0, 2), (-1, 2), 6),
+                ("LINEBELOW", (0, 2), (-1, 2), 2, colors.HexColor(_BRAND_BLUE)),
             ]
         )
     )
@@ -622,12 +639,14 @@ def build_cash_flow_pdf(report: CashFlowRead, entity_name: str) -> bytes:
 def pdf_export_filename(
     report_slug: str,
     *,
+    entity_name: str | None = None,
     from_date: date | None = None,
     to_date: date | None = None,
     as_of: date | None = None,
 ) -> str:
     return export_filename(
         report_slug,
+        entity_name=entity_name,
         from_date=from_date,
         to_date=to_date,
         as_of=as_of,

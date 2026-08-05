@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import calendar
 import uuid
 from datetime import date
 
@@ -411,15 +412,91 @@ def build_period_comparison_xlsx(report: PeriodComparisonRead) -> bytes:
     return save_workbook_to_bytes(wb)
 
 
+#: Turkish letters have no ASCII equivalent that str.lower() knows about, and
+#: "İ".lower() is "i̇" — an i with a combining dot, which is not what anyone
+#: wants in a filename. Mapped explicitly before anything else runs.
+_SLUG_TRANSLITERATIONS = str.maketrans(
+    {
+        "ı": "i", "İ": "i", "ş": "s", "Ş": "s", "ğ": "g", "Ğ": "g",
+        "ü": "u", "Ü": "u", "ö": "o", "Ö": "o", "ç": "c", "Ç": "c",
+    }
+)
+
+
+def filename_slug(value: str, *, max_length: int = 24) -> str:
+    """A name safe to put in a filename: ascii, lowercase, hyphenated.
+
+    "İndia Gate" becomes "india-gate". Returns "" for a name with nothing
+    usable in it, so callers can leave the segment out rather than emit a
+    stray hyphen.
+
+    Truncation happens at a word boundary, never mid-word. Turkish trade names
+    run long — "MEHMET ÖZKAN GIDA SANAYİ VE TİCARET LİMİTED ŞİRKETİ" is 51
+    characters slugged — and a hard slice left filenames ending in
+    "...ticaret-limi". Cutting at the last hyphen gives "mehmet-ozkan-gida",
+    which is what anyone would have shortened it to by hand.
+
+    A supplier long enough to be truncated can in principle collide with
+    another sharing its opening words. That is tolerable for a download name:
+    the file's own contents say which supplier it is, and the browser
+    de-duplicates with (1), (2).
+    """
+    ascii_only = value.translate(_SLUG_TRANSLITERATIONS).lower()
+    cleaned = "".join(ch if ch.isascii() and ch.isalnum() else "-" for ch in ascii_only)
+    slug = "-".join(part for part in cleaned.split("-") if part)
+    if len(slug) <= max_length:
+        return slug
+
+    cut = slug[:max_length]
+    if "-" in cut:
+        cut = cut[: cut.rindex("-")]
+    # Drop a trailing stub like the "ve" in "zaina-turizm-ve" — a conjunction
+    # left hanging off the end reads like the name was damaged.
+    parts = [part for part in cut.split("-") if part]
+    while len(parts) > 1 and len(parts[-1]) < 3:
+        parts.pop()
+    return "-".join(parts)
+
+
+def period_segment(from_date: date, to_date: date) -> str:
+    """`2026-06` for a whole calendar month, both dates otherwise.
+
+    A full month written as 2026-06-01-2026-06-30 spends fourteen characters
+    saying what seven say, and most exports are whole months. Partial ranges
+    keep both dates because there is no shorter way to state them.
+    """
+    whole_month = (
+        from_date.day == 1
+        and (from_date.year, from_date.month) == (to_date.year, to_date.month)
+        and to_date.day == calendar.monthrange(to_date.year, to_date.month)[1]
+    )
+    if whole_month:
+        return f"{from_date.year:04d}-{from_date.month:02d}"
+    return f"{from_date}-{to_date}"
+
+
 def export_filename(
     report_slug: str,
     *,
+    entity_name: str | None = None,
     from_date: date | None = None,
     to_date: date | None = None,
     as_of: date | None = None,
     extension: str = ".xlsx",
 ) -> str:
+    """`india-gate-balance-sheet-2026-06-30.xlsx`.
+
+    The restaurant leads: it is what someone scans for in a Downloads folder,
+    and it makes files from the same books sort together. There is no "mizan-"
+    prefix — it was on every file, so it distinguished nothing while occupying
+    the position that does the most work.
+
+    Dates stay ISO on purpose. Filenames sort chronologically that way, which
+    dd.mm.yyyy does not.
+    """
+    slug = filename_slug(entity_name) if entity_name else ""
+    stem = f"{slug}-{report_slug}" if slug else report_slug
     if as_of is not None:
-        return f"mizan-{report_slug}-{as_of}{extension}"
+        return f"{stem}-{as_of}{extension}"
     assert from_date is not None and to_date is not None
-    return f"mizan-{report_slug}-{from_date}-{to_date}{extension}"
+    return f"{stem}-{period_segment(from_date, to_date)}{extension}"

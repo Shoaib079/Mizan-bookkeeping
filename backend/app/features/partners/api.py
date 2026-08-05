@@ -244,7 +244,11 @@ def export_partner_ledger(
 
     from app.features.entities import service as entity_service
     from app.features.partners import ledger_export
-    from app.features.reports.excel_export import export_filename, xlsx_response
+    from app.features.reports.excel_export import (
+        export_filename,
+        filename_slug,
+        xlsx_response,
+    )
 
     try:
         partner = service.get_partner(session, entity_id, partner_id)
@@ -259,9 +263,9 @@ def export_partner_ledger(
         partner_name=partner.name,
         ledger=ledger,
     )
-    safe_name = partner.name.replace(" ", "_")[:40]
     filename = export_filename(
-        f"partner-ledger-{safe_name}",
+        f"partner-{filename_slug(partner.name)}",
+        entity_name=entity_name,
         as_of=date_cls.today(),
     )
     return xlsx_response(data, filename)
@@ -278,7 +282,7 @@ def export_partner_ledger_pdf(
 
     from app.features.entities import service as entity_service
     from app.features.partners import ledger_export
-    from app.features.reports.excel_export import export_filename
+    from app.features.reports.excel_export import export_filename, filename_slug
     from app.features.reports.pdf_export import PdfExportDependencyError, pdf_response
 
     try:
@@ -297,9 +301,9 @@ def export_partner_ledger_pdf(
         )
     except PdfExportDependencyError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    safe_name = partner.name.replace(" ", "_")[:40]
     filename = export_filename(
-        f"partner-ledger-{safe_name}",
+        f"partner-{filename_slug(partner.name)}",
+        entity_name=entity_name,
         as_of=date_cls.today(),
         extension=".pdf",
     )

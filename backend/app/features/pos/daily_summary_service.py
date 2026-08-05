@@ -344,8 +344,10 @@ def export_pos_daily_summaries(
         review_label=review_label,
         summaries=reads,
     )
+    entity = entity_service.get_entity(session, entity_id)
     filename = export_filename(
         "pos-sales",
+        entity_name=entity.name if entity is not None else None,
         from_date=from_date,
         to_date=to_date,
     )

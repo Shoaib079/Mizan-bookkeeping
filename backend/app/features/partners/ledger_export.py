@@ -14,6 +14,7 @@ from app.core.excel.workbook import (
     save_workbook_to_bytes,
     write_date,
     write_money,
+    write_sheet_title,
 )
 from app.core.ledger.subledger_display import (
     SubledgerDisplayKind,
@@ -62,8 +63,10 @@ def build_partner_ledger_xlsx(
     ledger: PartnerLedgerRead,
 ) -> bytes:
     wb, ws = create_workbook("Partner")
-    ws.cell(row=1, column=1, value=entity_name)
-    ws.cell(row=2, column=1, value=partner_name)
+    # Written by hand rather than through write_sheet_title because the KPI
+    # rows below are at fixed positions. Styled to match it: the restaurant
+    # reads as the title, the partner as the subject beneath.
+    write_sheet_title(ws, entity_name, subtitles=[f"Partner ledger — {partner_name}"])
     ws.cell(row=3, column=1, value="Net balance")
     write_money(ws, 3, 2, ledger.net_balance_kurus)
     ws.cell(row=4, column=1, value="Fronted expenses")

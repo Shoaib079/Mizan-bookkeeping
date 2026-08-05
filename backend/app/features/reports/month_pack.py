@@ -1104,14 +1104,26 @@ def build_month_pack_xlsx(
     return save_workbook_to_bytes(wb), ctx
 
 
-def month_pack_filename(ctx: MonthPackContext) -> str:
+def _month_pack_stem(ctx: MonthPackContext) -> str:
+    """`india-gate-books-2026-06-live`.
+
+    The restaurant leads, as in every other export: a month pack for June from
+    two different sets of books is otherwise the same filename twice.
+    """
+    from app.features.reports.excel_export import filename_slug, period_segment
+
+    slug = filename_slug(ctx.entity_name)
     suffix = "as-closed" if ctx.sealed else "live"
-    return f"books-{ctx.from_date}-to-{ctx.to_date}-{suffix}.xlsx"
+    stem = f"{slug}-books" if slug else "books"
+    return f"{stem}-{period_segment(ctx.from_date, ctx.to_date)}-{suffix}"
+
+
+def month_pack_filename(ctx: MonthPackContext) -> str:
+    return f"{_month_pack_stem(ctx)}.xlsx"
 
 
 def month_pack_pdf_filename(ctx: MonthPackContext) -> str:
-    suffix = "as-closed" if ctx.sealed else "live"
-    return f"books-{ctx.from_date}-to-{ctx.to_date}-{suffix}.pdf"
+    return f"{_month_pack_stem(ctx)}.pdf"
 
 
 def build_month_pack_pdf(

@@ -98,7 +98,10 @@ def export_delivery_sales(
         )
         data = excel_export.build_delivery_sales_xlsx(report)
         filename = excel_export.export_filename(
-            "delivery-sales", from_date=from_date, to_date=to_date
+            "delivery-sales",
+            entity_name=_entity_name_for_export(session, entity_id),
+            from_date=from_date,
+            to_date=to_date,
         )
         return excel_export.xlsx_response(data, filename)
     except LookupError as exc:
@@ -206,7 +209,10 @@ def export_profit_and_loss(
         )
         data = excel_export.build_profit_and_loss_xlsx(report)
         filename = excel_export.export_filename(
-            "profit-and-loss", from_date=from_date, to_date=to_date
+            "profit-and-loss",
+            entity_name=_entity_name_for_export(session, entity_id),
+            from_date=from_date,
+            to_date=to_date,
         )
         return excel_export.xlsx_response(data, filename)
     except LookupError as exc:
@@ -230,7 +236,10 @@ def export_profit_and_loss_pdf(
         )
         data = pdf_export.build_profit_and_loss_pdf(report, entity_name)
         filename = pdf_export.pdf_export_filename(
-            "profit-and-loss", from_date=from_date, to_date=to_date
+            "profit-and-loss",
+            entity_name=_entity_name_for_export(session, entity_id),
+            from_date=from_date,
+            to_date=to_date,
         )
         return pdf_export.pdf_response(data, filename)
     except LookupError as exc:
@@ -307,7 +316,11 @@ def export_balance_sheet(
     try:
         report = financial_statements.get_balance_sheet(session, entity_id, as_of)
         data = excel_export.build_balance_sheet_xlsx(report)
-        filename = excel_export.export_filename("balance-sheet", as_of=as_of)
+        filename = excel_export.export_filename(
+            "balance-sheet",
+            entity_name=_entity_name_for_export(session, entity_id),
+            as_of=as_of,
+        )
         return excel_export.xlsx_response(data, filename)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -324,7 +337,11 @@ def export_balance_sheet_pdf(
         entity_name = _entity_name_for_export(session, entity_id)
         report = financial_statements.get_balance_sheet(session, entity_id, as_of)
         data = pdf_export.build_balance_sheet_pdf(report, entity_name)
-        filename = pdf_export.pdf_export_filename("balance-sheet", as_of=as_of)
+        filename = pdf_export.pdf_export_filename(
+            "balance-sheet",
+            entity_name=_entity_name_for_export(session, entity_id),
+            as_of=as_of,
+        )
         return pdf_export.pdf_response(data, filename)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -358,7 +375,10 @@ def export_cash_flow(
         report = cash_flow.get_cash_flow(session, entity_id, from_date, to_date)
         data = excel_export.build_cash_flow_xlsx(report)
         filename = excel_export.export_filename(
-            "cash-flow", from_date=from_date, to_date=to_date
+            "cash-flow",
+            entity_name=_entity_name_for_export(session, entity_id),
+            from_date=from_date,
+            to_date=to_date,
         )
         return excel_export.xlsx_response(data, filename)
     except LookupError as exc:
@@ -380,7 +400,10 @@ def export_cash_flow_pdf(
         report = cash_flow.get_cash_flow(session, entity_id, from_date, to_date)
         data = pdf_export.build_cash_flow_pdf(report, entity_name)
         filename = pdf_export.pdf_export_filename(
-            "cash-flow", from_date=from_date, to_date=to_date
+            "cash-flow",
+            entity_name=_entity_name_for_export(session, entity_id),
+            from_date=from_date,
+            to_date=to_date,
         )
         return pdf_export.pdf_response(data, filename)
     except LookupError as exc:
@@ -419,7 +442,10 @@ def export_kdv_input(
         )
         data = excel_export.build_kdv_input_xlsx(report)
         filename = excel_export.export_filename(
-            "kdv-input", from_date=from_date, to_date=to_date
+            "kdv-input",
+            entity_name=_entity_name_for_export(session, entity_id),
+            from_date=from_date,
+            to_date=to_date,
         )
         return excel_export.xlsx_response(data, filename)
     except LookupError as exc:
@@ -474,7 +500,10 @@ def export_period_comparison(
         )
         data = excel_export.build_period_comparison_xlsx(report)
         filename = excel_export.export_filename(
-            "period-comparison", from_date=from_date, to_date=to_date
+            "period-comparison",
+            entity_name=_entity_name_for_export(session, entity_id),
+            from_date=from_date,
+            to_date=to_date,
         )
         return excel_export.xlsx_response(data, filename)
     except LookupError as exc:

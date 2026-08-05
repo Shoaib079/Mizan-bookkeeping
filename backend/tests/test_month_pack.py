@@ -506,7 +506,7 @@ def test_month_pack_pdf_api(db_session, client, books):
     )
     assert response.status_code == 200
     assert response.headers["content-type"] == pdf_export.PDF_CONTENT_TYPE
-    assert 'filename="books-2026-06-01-to-2026-06-30-live.pdf"' in response.headers.get(
+    assert 'filename="restaurant-a-books-2026-06-live.pdf"' in response.headers.get(
         "content-disposition", ""
     )
     assert response.content[:4] == b"%PDF"

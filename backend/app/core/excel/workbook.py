@@ -25,6 +25,8 @@ _MUTED = "64748B"
 
 _TITLE_FONT = Font(name="Calibri", size=16, bold=True, color=_BLUE_DARK)
 _SUBTITLE_FONT = Font(name="Calibri", size=10, color=_MUTED)
+#: First subtitle line — carries the restaurant name. See write_sheet_title.
+_SUBTITLE_LEAD_FONT = Font(name="Calibri", size=11, bold=True, color=_SLATE)
 _META_LABEL_FONT = Font(name="Calibri", size=10, bold=True, color=_SLATE)
 _HEADER_FONT = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
 _HEADER_FILL = PatternFill("solid", fgColor=_BLUE)
@@ -251,9 +253,14 @@ def write_sheet_title(
     title_cell.alignment = Alignment(vertical="center")
     ws.row_dimensions[1].height = 24
     row = 2
-    for line in subtitles or []:
+    for index, line in enumerate(subtitles or []):
         cell = ws.cell(row=row, column=1, value=line)
-        cell.font = _SUBTITLE_FONT
+        # The first subtitle is the one carrying the restaurant name, and in
+        # muted grey at the same weight as everything under it there was
+        # nothing to say whose books a sheet belonged to. Darker and bold —
+        # without adding a row, because callers downstream hardcode where the
+        # content starts.
+        cell.font = _SUBTITLE_LEAD_FONT if index == 0 else _SUBTITLE_FONT
         row += 1
     return row + 1  # blank spacer before content
 

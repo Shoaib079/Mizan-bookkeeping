@@ -136,7 +136,12 @@ def export_supplier_activity(
     session: Session = Depends(get_session),
     _: None = Depends(member_read_guard),
 ):
-    from app.features.reports.excel_export import export_filename, xlsx_response
+    from app.features.entities import service as entity_service
+    from app.features.reports.excel_export import (
+        export_filename,
+        filename_slug,
+        xlsx_response,
+    )
 
     try:
         report = supplier_activity.get_supplier_activity(
@@ -152,9 +157,10 @@ def export_supplier_activity(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     data = activity_excel.build_supplier_activity_xlsx(report)
-    safe_name = report.supplier_name.replace(" ", "_")[:40]
+    entity = entity_service.get_entity(session, entity_id)
     filename = export_filename(
-        f"supplier-activity-{safe_name}",
+        f"supplier-{filename_slug(report.supplier_name)}",
+        entity_name=entity.name if entity is not None else None,
         from_date=from_date,
         to_date=to_date,
     )
