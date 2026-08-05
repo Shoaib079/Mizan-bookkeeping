@@ -20,20 +20,17 @@ export function Button({
         MOBILE_TOUCH_TARGET,
         variant === "primary" &&
           "bg-primary text-primary-foreground hover:bg-primary/90",
-        // `secondary` was `bg-background` — the page's own colour behind a
-        // hairline border, so on a white page 75 buttons read as outlines of
-        // nothing. `ghost` had neither background nor border and appeared only
-        // on hover, which does not exist on a phone: 53 buttons that looked
-        // like plain text. Both now carry the primary tint, which is colour
-        // enough to read as an action while staying clearly subordinate to the
-        // filled primary. Callers' own colours still win — className is last.
-        // The fill matters: a border alone still reads as an outline of
-        // nothing beside a filled primary. A caller that recolours this —
-        // Void passes destructive border and text — has to pass a background
-        // too, since tailwind-merge resolves the text and border but has
-        // nothing to override an unmentioned bg with.
+        // secondary renders exactly like primary: filled, same blue, white
+        // text. An outline — however tinted — was reported as "border, no
+        // colour" on five separate screens, and the tint that finally read as
+        // colour was the one that filled.
+        //
+        // The variant is kept rather than collapsed into primary because
+        // callers still use it to mean "the supporting action here", and
+        // because Void recolours it wholesale. Two names, one look, on
+        // purpose.
         variant === "secondary" &&
-          "border border-primary/40 bg-primary/15 text-primary hover:bg-primary/25",
+          "bg-primary text-primary-foreground hover:bg-primary/90",
         variant === "ghost" && "text-primary hover:bg-primary/15",
         className,
       )}

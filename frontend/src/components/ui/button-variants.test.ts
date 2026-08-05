@@ -14,8 +14,9 @@ const source = readFileSync(new URL("./button.tsx", import.meta.url), "utf8");
 describe("button variants carry colour", () => {
   it("secondary is not painted in the page background", () => {
     expect(source).not.toContain('"border border-border bg-background');
-    expect(source).toContain("border-primary/40");
-    expect(source).toContain("text-primary");
+    // Filled, so there is no outline left to assert. What matters is that
+    // secondary is not painted in the page background.
+    expect(source).toContain("bg-primary text-primary-foreground");
   });
 
   it("ghost is visible before it is hovered", () => {
@@ -31,18 +32,17 @@ describe("button variants carry colour", () => {
     // The fill means a caller that recolours has to pass a background as
     // well: tailwind-merge resolves the text and border but has nothing to
     // override an unmentioned bg with, so red text would sit on blue.
-    // /15, not /5. bg-primary/5 over white computes to #f4f7fe — three units
-    // from white in red, eleven in blue. It is a fill in the markup and
-    // nothing to the eye, which is why "no colour" was reported after it was
-    // supposedly fixed. A minimum opacity stops that recurring.
-    // Scoped to the secondary line: matching the whole file grabbed
-    // hover:bg-primary/90 from the primary variant, so this passed happily
-    // with the secondary fill back at /5.
+    // Solid, not tinted. Every tinted outline — /5, then /15 — was reported
+    // as "border, no colour"; the treatment that finally read as coloured was
+    // a full fill, so secondary now matches primary exactly.
     const secondaryLine = source.match(
-      /variant === "secondary" &&[\s\S]{0,160}/,
+      /variant === "secondary" &&[\s\S]{0,120}/,
     )?.[0] ?? "";
-    const fill = secondaryLine.match(/[^:]bg-primary\/(\d+)/)?.[1];
-    expect(Number(fill), "secondary has no fill").toBeGreaterThanOrEqual(10);
+    expect(secondaryLine).toContain("bg-primary text-primary-foreground");
+    // hover:bg-primary/90 is legitimate; a resting bg-primary/N is the tint.
+    expect(secondaryLine, "secondary is still a tint, not a fill").not.toMatch(
+      /[^:]bg-primary\/\d/,
+    );
     const voidButton = readFileSync(
       new URL("../ledger/void-confirm-dialog.tsx", import.meta.url),
       "utf8",
@@ -51,7 +51,7 @@ describe("button variants carry colour", () => {
   });
 
   it("a caller's own colour still wins", () => {
-    const secondary = "border border-primary/40 bg-primary/15 text-primary hover:bg-primary/25";
+    const secondary = "bg-primary text-primary-foreground hover:bg-primary/90";
     const ghost = "text-primary hover:bg-primary/15";
 
     const voidSecondary = twMerge(
@@ -60,7 +60,7 @@ describe("button variants carry colour", () => {
     );
     expect(voidSecondary).toContain("text-destructive");
     expect(voidSecondary).not.toContain("text-primary");
-    expect(voidSecondary).not.toContain("border-primary/40");
+    expect(voidSecondary).not.toContain("text-primary-foreground");
 
     const mutedGhost = twMerge(ghost, "text-muted-foreground");
     expect(mutedGhost).toContain("text-muted-foreground");

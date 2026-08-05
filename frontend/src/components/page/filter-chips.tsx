@@ -45,11 +45,13 @@ export function FilterChips<T extends string>({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-colors",
               // The inactive chips were a grey border around grey text, so a
-              // row of filters read as disabled labels rather than as choices
-              // you could make. Tinted like the secondary buttons beside them;
-              // the active one stays filled so it is still obvious which is on.
+              // row of filters read as disabled labels rather than choices.
+              // The chosen filter is filled; the others stay outlined. Unlike
+              // the action buttons these are a set you pick from, so telling
+              // the picked one apart is the whole job — filling all of them
+              // would say nothing.
               active
-                ? "border border-primary bg-primary/20 font-medium text-primary"
+                ? "bg-primary font-medium text-primary-foreground"
                 : "border border-primary/40 text-primary hover:bg-primary/15",
             )}
             onClick={() => onChange(chip.id)}
