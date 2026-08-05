@@ -12,6 +12,7 @@ from app.core.excel.workbook import (
     create_workbook,
     money_header,
     save_workbook_to_bytes,
+    write_date,
     write_money,
 )
 from app.core.ledger.subledger_display import (
@@ -95,7 +96,11 @@ def build_partner_ledger_xlsx(
             else str(entry.display_kind)
         )
         status = "Corrected" if entry.was_corrected else kind.replace("_", " ").title()
-        ws.cell(row=row, column=1, value=str(entry.movement_date))
+        # A real date cell, not text. `str(movement_date)` wrote "2026-06-30"
+        # as a string, which Excel sorts alphabetically and will not filter by
+        # month or feed to a formula. write_date carries the app's display
+        # format with it, so it reads dd.mm.yyyy while staying a date.
+        write_date(ws, row, 1, entry.movement_date)
         ws.cell(row=row, column=2, value=format_partner_movement(entry.movement_type))
         ws.cell(row=row, column=3, value=entry.description)
         write_money(ws, row, 4, entry.amount_kurus)

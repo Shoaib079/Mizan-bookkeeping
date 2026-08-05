@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
@@ -115,6 +115,12 @@ def test_partner_ledger_download_shows_the_ledger_as_it_now_stands(
     assert not any(d.startswith("Void:") for d in descriptions), descriptions
     assert not any("First figure" in d for d in descriptions), descriptions
     assert any("Corrected figure" in d for d in descriptions), descriptions
+
+    # Dates are real date cells, not text. Written as a string, Excel sorts
+    # them alphabetically and cannot filter by month.
+    dates = [row[0].value for row in ws.iter_rows(min_row=11) if row[0].value]
+    assert dates, "expected a date on the surviving row"
+    assert all(isinstance(value, (date, datetime)) for value in dates), dates
 
 
 def _pdf_text(data: bytes) -> str:
