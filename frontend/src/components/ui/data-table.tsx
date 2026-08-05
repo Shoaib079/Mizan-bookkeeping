@@ -8,10 +8,22 @@ export function DataTable({
   children,
   className,
   tableClassName,
+  wide = false,
 }: {
   children: React.ReactNode;
   className?: string;
   tableClassName?: string;
+  /** A table with more columns than a phone can show.
+   *
+   * `overflow-auto` around a `w-full` table does not scroll — the table fits
+   * itself to the container and compresses the columns instead, wrapping each
+   * cell into a tall stack and pushing the last columns off the edge where
+   * they cannot be reached at all. On a supplier ledger that meant the NET
+   * column was simply invisible on a phone.
+   *
+   * A minimum width gives the overflow something to scroll, and the first
+   * column is pinned so the date or name stays in view while you do. */
+  wide?: boolean;
 }) {
   return (
     <div
@@ -20,7 +32,22 @@ export function DataTable({
         className,
       )}
     >
-      <table className={cn("w-full text-sm", tableClassName)}>{children}</table>
+      <table
+        className={cn(
+          "w-full text-sm",
+          wide && [
+            "min-w-[46rem]",
+            // Keep the first column readable while the rest scrolls under it.
+            "[&_th:first-child]:sticky [&_td:first-child]:sticky",
+            "[&_th:first-child]:left-0 [&_td:first-child]:left-0",
+            "[&_td:first-child]:bg-card [&_th:first-child]:bg-muted",
+            "[&_th:first-child]:z-20",
+          ],
+          tableClassName,
+        )}
+      >
+        {children}
+      </table>
     </div>
   );
 }

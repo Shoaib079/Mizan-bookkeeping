@@ -227,7 +227,7 @@ export function SalesReviewPanel({
         />
       }
       table={
-        <DataTable>
+        <DataTable wide>
           <DataTableHead>
             <tr>
               <DataTableHeaderCell>Date</DataTableHeaderCell>

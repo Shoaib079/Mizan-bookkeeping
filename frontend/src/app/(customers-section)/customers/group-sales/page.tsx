@@ -102,7 +102,7 @@ export default function GroupSalesPage() {
         />
       }
       table={
-        <DataTable>
+        <DataTable wide>
           <DataTableHead>
             <tr>
               <DataTableHeaderCell>Date</DataTableHeaderCell>

@@ -269,7 +269,7 @@ export function CardsPageContent() {
             No card batches in this period.
           </p>
         ) : (
-          <DataTable>
+          <DataTable wide>
             <DataTableHead>
               <tr>
                 <DataTableHeaderCell>Date</DataTableHeaderCell>
@@ -308,7 +308,7 @@ export function CardsPageContent() {
             No settlements in this period.
           </p>
         ) : (
-          <DataTable>
+          <DataTable wide>
             <DataTableHead>
               <tr>
                 <DataTableHeaderCell>Date</DataTableHeaderCell>

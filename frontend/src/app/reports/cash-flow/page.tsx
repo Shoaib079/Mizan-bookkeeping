@@ -101,7 +101,7 @@ function CashFlowContent() {
 
           <section>
             <h2 className="mb-2 text-sm font-semibold">By category</h2>
-            <DataTable>
+            <DataTable wide>
               <DataTableHead>
                 <tr>
                   <DataTableHeaderCell>Category</DataTableHeaderCell>
@@ -138,7 +138,7 @@ function CashFlowContent() {
           {report.by_source.length > 0 && (
             <section>
               <h2 className="mb-2 text-sm font-semibold">By source</h2>
-              <DataTable>
+              <DataTable wide>
                 <DataTableHead>
                   <tr>
                     <DataTableHeaderCell>Source</DataTableHeaderCell>

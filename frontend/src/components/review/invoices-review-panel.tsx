@@ -50,7 +50,7 @@ function InvoiceDraftTable({
 }) {
   return (
     <div className="space-y-3">
-      <DataTable>
+      <DataTable wide>
         <DataTableHead>
           <tr>
             <DataTableHeaderCell>Date</DataTableHeaderCell>

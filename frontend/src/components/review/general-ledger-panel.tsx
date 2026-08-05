@@ -157,7 +157,7 @@ function EntryDetailPanel({
         </div>
       )}
 
-      <DataTable>
+      <DataTable wide>
         <DataTableHead>
           <tr>
             <DataTableHeaderCell>Account</DataTableHeaderCell>
@@ -522,7 +522,7 @@ function LedgerPanelContent() {
           )}
 
           {items.length > 0 && (
-            <DataTable>
+            <DataTable wide>
               <DataTableHead>
                 <tr>
                   <DataTableHeaderCell>&nbsp;</DataTableHeaderCell>

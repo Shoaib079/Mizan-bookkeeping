@@ -205,7 +205,7 @@ export function AccountDetailPageContent() {
                   No statements imported yet.
                 </p>
               ) : (
-                <DataTable>
+                <DataTable wide>
                   <DataTableHead>
                     <tr>
                       <DataTableHeaderCell>Period</DataTableHeaderCell>
@@ -270,7 +270,7 @@ export function AccountDetailPageContent() {
                   record via statement review.
                 </p>
               ) : (
-                <DataTable>
+                <DataTable wide>
                   <DataTableHead>
                     <tr>
                       <DataTableHeaderCell>Date</DataTableHeaderCell>

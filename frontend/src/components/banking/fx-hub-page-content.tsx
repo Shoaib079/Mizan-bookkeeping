@@ -337,7 +337,7 @@ export function FxHubPageContent() {
                 No FX movements in this date range.
               </p>
             ) : (
-              <DataTable>
+              <DataTable wide>
                 <DataTableHead>
                   <tr>
                     <DataTableHeaderCell>Date</DataTableHeaderCell>

@@ -331,7 +331,7 @@ export default function SplitHubPage() {
           </p>
         ) : (
           <div className="mb-8 overflow-x-auto">
-            <DataTable>
+            <DataTable wide>
               <DataTableHead>
                 <tr>
                   <DataTableHeaderCell>Date</DataTableHeaderCell>
@@ -376,7 +376,7 @@ export default function SplitHubPage() {
         </p>
       ) : (
         <div className="mb-8 overflow-x-auto">
-          <DataTable>
+          <DataTable wide>
             <DataTableHead>
               <tr>
                 <DataTableHeaderCell>Date</DataTableHeaderCell>

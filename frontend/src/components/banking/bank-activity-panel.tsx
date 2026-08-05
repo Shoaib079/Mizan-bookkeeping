@@ -118,7 +118,7 @@ export function BankActivityPanel({ accountId, accountName }: Props) {
             </div>
           </dl>
 
-          <DataTable>
+          <DataTable wide>
             <DataTableHead>
               <tr>
                 <DataTableHeaderCell>Date</DataTableHeaderCell>

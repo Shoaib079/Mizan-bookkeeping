@@ -139,7 +139,7 @@ function ExpenseRegisterContent() {
           {report.account_totals.length > 0 && (
             <section>
               <h2 className="mb-2 text-sm font-semibold">By account</h2>
-              <DataTable>
+              <DataTable wide>
                 <DataTableHead>
                   <tr>
                     <DataTableHeaderCell>Account</DataTableHeaderCell>
@@ -179,7 +179,7 @@ function ExpenseRegisterContent() {
                 hint="Widen the date range, or clear the search and account filter."
               />
             ) : (
-              <DataTable>
+              <DataTable wide>
                 <DataTableHead>
                   <tr>
                     <DataTableHeaderCell>Date</DataTableHeaderCell>

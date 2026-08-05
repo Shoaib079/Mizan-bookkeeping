@@ -202,7 +202,7 @@ function CashBookContent() {
           {report.source_totals.length > 0 && (
             <section>
               <h2 className="mb-2 text-sm font-semibold">Where it came from and went</h2>
-              <DataTable>
+              <DataTable wide>
                 <DataTableHead>
                   <tr>
                     <DataTableHeaderCell>Recorded as</DataTableHeaderCell>
@@ -249,7 +249,7 @@ function CashBookContent() {
                   </span>
                 </p>
               </div>
-              <DataTable>
+              <DataTable wide>
                 <DataTableHead>
                   <tr>
                     <DataTableHeaderCell>Date</DataTableHeaderCell>
@@ -303,7 +303,7 @@ function CashBookContent() {
                 hint="Widen the date range, or pick another account."
               />
             ) : (
-              <DataTable>
+              <DataTable wide>
                 <DataTableHead>
                   <tr>
                     <DataTableHeaderCell>Date</DataTableHeaderCell>

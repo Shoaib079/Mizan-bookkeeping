@@ -266,7 +266,7 @@ export function ExpensesReviewPanel() {
           )}
 
           {!loading && items.length > 0 && (
-            <DataTable>
+            <DataTable wide>
               <DataTableHead>
                 <tr>
                   <DataTableHeaderCell>Date</DataTableHeaderCell>

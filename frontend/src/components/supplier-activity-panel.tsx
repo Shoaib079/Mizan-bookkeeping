@@ -220,7 +220,7 @@ export function SupplierActivityPanel({
             onToggle={setShowHistory}
           />
 
-          <DataTable>
+          <DataTable wide>
             <DataTableHead>
               <tr>
                 <DataTableHeaderCell>Date</DataTableHeaderCell>

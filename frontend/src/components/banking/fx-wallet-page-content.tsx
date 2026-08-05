@@ -211,7 +211,7 @@ export function FxWalletPageContent() {
                 No current entries — show correction history to see voided rows.
               </p>
             ) : (
-              <DataTable>
+              <DataTable wide>
                 <DataTableHead>
                   <tr>
                     <DataTableHeaderCell>Date</DataTableHeaderCell>
