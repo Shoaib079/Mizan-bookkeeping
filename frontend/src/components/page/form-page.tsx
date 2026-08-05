@@ -14,6 +14,8 @@
 import { PageHeader } from "@/components/page/page-header";
 import type { OverflowMenuItem } from "@/components/ui/overflow-menu";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { MOBILE_TAB_BAR_OFFSET } from "@/lib/mobile-shell";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -52,6 +54,7 @@ export function FormPage({
   error,
   className,
 }: Props) {
+  const isMobile = useIsMobileShell();
   return (
     <div className={className}>
       <PageHeader
@@ -72,7 +75,19 @@ export function FormPage({
       {saveBar && (
         // Sticky rather than parked at the bottom of a long form: on Settings
         // you could scroll past Save and not know it was there.
-        <div className="sticky bottom-0 z-10 mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-background/95 py-3 backdrop-blur">
+        //
+        // On mobile it has to be lifted clear of the tab bar. A sticky element
+        // offset to zero resolves against the scrollport's padding box, and
+        // <main> runs underneath the fixed tabs — so the bar came to rest
+        // behind them, and lost on z-index too (10 against 30). Save was
+        // unreachable on every form in the app, and the desktop fix above is
+        // what created it.
+        <div
+          className={cn(
+            "sticky z-10 mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-background/95 py-3 backdrop-blur",
+            isMobile ? MOBILE_TAB_BAR_OFFSET : "bottom-0",
+          )}
+        >
           {saveBar}
         </div>
       )}

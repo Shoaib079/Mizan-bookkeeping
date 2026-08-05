@@ -373,3 +373,53 @@ describe("page archetypes", () => {
     expect(source).toContain("aria-pressed");
   });
 });
+
+describe("mobile: the tab bar must not cover what pages pin to the bottom", () => {
+  it("FormPage lifts its save bar clear of the tabs", async () => {
+    // sticky bottom-0 resolves against the scrollport's padding box, and
+    // <main> runs underneath the fixed tab bar — so the save bar came to rest
+    // behind it, and lost on z-index too (10 against 30). Save was unreachable
+    // on every form in the app.
+    const source = await read("./form-page.tsx");
+    // The applied conditional, not merely the imported token: an earlier
+    // version of this test asserted the name appeared somewhere in the file
+    // and passed happily with the offset removed from the className.
+    expect(source).toContain(
+      'isMobile ? MOBILE_TAB_BAR_OFFSET : "bottom-0"',
+    );
+    expect(source).toContain("useIsMobileShell");
+    // The unconditional `sticky bottom-0` is what caused it.
+    expect(source).not.toContain("sticky bottom-0");
+  });
+
+  it("the shell and the save bar clear the tabs by the same amount", async () => {
+    // Two hand-written copies of a number that has to agree is how they stop
+    // agreeing. Both now come from one token.
+    const shell = await read("../layout/app-shell.tsx");
+    const form = await read("./form-page.tsx");
+    expect(shell).toContain("MOBILE_TAB_BAR_PADDING");
+    expect(form).toContain("MOBILE_TAB_BAR_OFFSET");
+    expect(shell).not.toContain("pb-[calc(4.75rem");
+    expect(form).not.toContain("bottom-[calc(4.75rem");
+
+    const tokens = await read("../../lib/mobile-shell.ts");
+    const measurements = [
+      ...tokens.matchAll(/(?:pb|bottom)-\[calc\(([^)]*rem)\+/g),
+    ].map((m) => m[1]);
+    expect(measurements.length).toBe(2);
+    expect(new Set(measurements).size).toBe(1);
+  });
+
+  it("the clearance tokens are literal classes Tailwind can see", async () => {
+    // Tailwind scans source for complete class strings. A class built by
+    // interpolation — pb-[${TOKEN}] — generates no CSS at all, fails silently,
+    // and looks exactly like a layout bug.
+    const tokens = await read("../../lib/mobile-shell.ts");
+    expect(tokens).toContain(
+      '"pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]"',
+    );
+    expect(tokens).toContain(
+      '"bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]"',
+    );
+  });
+});

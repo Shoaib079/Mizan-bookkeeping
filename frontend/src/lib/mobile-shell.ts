@@ -2,6 +2,28 @@
 
 export const MOBILE_SHELL_MAX_WIDTH_PX = 819;
 
+/** How much room the fixed bottom tab bar takes, plus the phone's home
+ * indicator.
+ *
+ * Anything that pins itself to the bottom of the mobile viewport has to clear
+ * this or it renders underneath the tabs. `AppShell` uses it as padding on
+ * `<main>`; `FormPage` uses it to offset its sticky save bar, which sat behind
+ * the tab bar until this became a shared value. Two hand-written copies of a
+ * number that has to agree is how they stop agreeing.
+ */
+/** Padding that keeps scrolling content clear of the tabs (`AppShell`). */
+export const MOBILE_TAB_BAR_PADDING =
+  "pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]";
+
+/** Offset that lifts a bottom-pinned element above the tabs (`FormPage`).
+ *
+ * Written out in full rather than composed from a raw measurement: Tailwind
+ * scans source for complete class strings, so a class built by interpolation
+ * generates no CSS at all — it fails silently and looks like a layout bug.
+ */
+export const MOBILE_TAB_BAR_OFFSET =
+  "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]";
+
 export const MOBILE_TAB_ROOTS = [
   "/",
   "/review",

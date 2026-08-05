@@ -23,6 +23,7 @@ import { shouldShowNewMenu } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
 import { pushNavHistory } from "@/lib/nav-history";
 import { useEntityAccess } from "@/lib/use-entity-access";
+import { MOBILE_TAB_BAR_PADDING } from "@/lib/mobile-shell";
 import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { ReviewCountsProvider } from "@/lib/review-counts-context";
 import { useReviewCounts } from "@/lib/use-review-counts";
@@ -129,8 +130,7 @@ function AppShellInner({
           key={entityId}
           className={cn(
             "flex-1 overflow-y-auto overscroll-y-contain px-3.5 py-3",
-            isMobile &&
-              "pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]",
+            isMobile && MOBILE_TAB_BAR_PADDING,
             mobileGroupedShell && "bg-muted px-4",
           )}
         >
