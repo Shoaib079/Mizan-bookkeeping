@@ -276,9 +276,12 @@ export default function OpeningBalancesPage() {
           // which excludes the control accounts (receivables, payables,
           // partner capital) that the preview derives from supplier, customer
           // and partner lines — those would have stayed bare codes.
+          // 200 is MAX_LIST_LIMIT on the API. This asked for 500, which fails
+          // validation with a 422, and the catch swallowed it — so every
+          // preview row fell back to a bare code and nothing said why.
           apiFetch<{ items: ChartAccountName[] }>(
-            `/entities/${entityId}/chart-of-accounts?limit=500`,
-          ).catch(() => ({ items: [] as ChartAccountName[] })),
+            `/entities/${entityId}/chart-of-accounts?limit=200`,
+          ),
           loadBankAndCashAccounts(entityId),
           apiFetch<{ items: NamedRow[] }>(
             `/entities/${entityId}/suppliers?limit=100`,

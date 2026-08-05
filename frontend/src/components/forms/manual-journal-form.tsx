@@ -79,7 +79,9 @@ export function ManualJournalForm() {
     }
     let cancelled = false;
     void apiFetch<{ items: ChartAccount[] }>(
-      `/entities/${entityId}/chart-of-accounts?limit=500`,
+      // 200 is MAX_LIST_LIMIT on the API; 500 fails validation with a 422 and
+      // the .catch below turned that into an empty account picker.
+      `/entities/${entityId}/chart-of-accounts?limit=200`,
     )
       .then((res) => {
         if (!cancelled) setAccounts(res.items.filter((a) => a.is_active));
