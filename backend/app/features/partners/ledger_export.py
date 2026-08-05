@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import date
+
+from app.core.dates import format_date
 from app.core.excel.labels import format_partner_movement
 from app.core.excel.workbook import (
     autosize_columns,
@@ -16,14 +19,16 @@ from app.core.ledger.subledger_display import (
     is_effective_subledger_row,
 )
 from app.core.money import format_try
-from app.core.pdf.fonts import (
-    PDF_FONT_BOLD_NAME,
-    PDF_FONT_NAME,
-    assert_text_renderable,
-    register_bundled_fonts,
-)
+from app.core.pdf.fonts import register_bundled_fonts
 from app.features.partners.schema import PartnerLedgerRead
-from app.features.reports.pdf_export import PdfExportDependencyError, _build_pdf, _cell
+from app.features.reports.pdf_export import (
+    PdfExportDependencyError,
+    _build_pdf,
+    _cell,
+    _table_style,
+    header_elements,
+    summary_band,
+)
 
 
 def _effective_entries(ledger: PartnerLedgerRead) -> list:
@@ -109,51 +114,46 @@ def build_partner_ledger_pdf(
     partner_name: str,
     ledger: PartnerLedgerRead,
 ) -> bytes:
+    """Built from the shared report furniture, not its own.
+
+    This used to hand-roll a Heading1 title, four plain meta paragraphs and a
+    full-grid table with a grey header band — which is why it read as a
+    printout of a table rather than as a statement, next to the P&L and
+    balance sheet. Those come from `header_elements` / `summary_band` /
+    `_table_style` in reports.pdf_export, so this does too: same masthead,
+    same KPI strip, same hairline accounting rules, same page footer.
+    """
     try:
-        from reportlab.lib import colors
-        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import cm
-        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.platypus import Spacer, Table
     except ImportError as exc:
         raise PdfExportDependencyError(
             "reportlab is required for PDF export; install project dependencies"
         ) from exc
 
     register_bundled_fonts()
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        "PartnerLedgerTitle",
-        parent=styles["Heading1"],
-        fontName=PDF_FONT_BOLD_NAME,
-        fontSize=14,
-        spaceAfter=6,
-    )
-    meta_style = ParagraphStyle(
-        "PartnerLedgerMeta",
-        parent=styles["Normal"],
-        fontName=PDF_FONT_NAME,
-        fontSize=9,
-        spaceAfter=4,
-    )
 
-    elements: list = [
-        Paragraph(_cell(entity_name), title_style),
-        Paragraph(_cell(partner_name), meta_style),
-        Paragraph(
-            _cell(f"Net balance: {format_try(ledger.net_balance_kurus)}"),
-            meta_style,
-        ),
-        Paragraph(
-            _cell(
-                f"Fronted: {format_try(ledger.balance_kurus)} · "
-                f"Capital: {format_try(ledger.capital_contribution_kurus)} · "
-                f"Profit allocated: {format_try(ledger.profit_allocated_kurus)} · "
-                f"Unpaid profit: {format_try(ledger.unpaid_profit_kurus)}"
-            ),
-            meta_style,
-        ),
-        Spacer(1, 0.4 * cm),
-    ]
+    elements: list = header_elements(
+        title=f"Partner ledger — {partner_name}",
+        entity_name=entity_name,
+        period_label="As at",
+        period_value=format_date(date.today()),
+    )
+    # The figures someone opens this to find, before the movements that
+    # produced them. Order matches the partner page.
+    elements.extend(
+        summary_band(
+            [
+                ("Net balance", ledger.net_balance_kurus),
+                ("Fronted expenses", ledger.balance_kurus),
+                ("Capital contributed", ledger.capital_contribution_kurus),
+                ("Profit allocated", ledger.profit_allocated_kurus),
+                ("Unpaid profit", ledger.unpaid_profit_kurus),
+                ("Partner loan", ledger.loan_balance_kurus),
+            ]
+        )
+    )
+    elements.append(Spacer(1, 0.45 * cm))
 
     table_data: list[list[str]] = [
         [
@@ -172,7 +172,9 @@ def build_partner_ledger_pdf(
         )
         table_data.append(
             [
-                _cell(str(entry.movement_date)),
+                # dd.mm.yyyy, as everywhere else the app shows a date to a
+                # person. `str(movement_date)` printed ISO.
+                _cell(format_date(entry.movement_date)),
                 _cell(format_partner_movement(entry.movement_type)),
                 _cell(entry.description[:80]),
                 _cell(format_try(entry.amount_kurus)),
@@ -180,19 +182,15 @@ def build_partner_ledger_pdf(
             ]
         )
 
-    table = Table(table_data, repeatRows=1)
-    table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), PDF_FONT_BOLD_NAME),
-                ("FONTNAME", (0, 1), (-1, -1), PDF_FONT_NAME),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.Color(0.92, 0.92, 0.92)),
-                ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
-            ]
-        )
+    table = Table(
+        table_data,
+        repeatRows=1,
+        colWidths=["12%", "20%", "40%", "14%", "14%"],
     )
+    table.setStyle(_table_style(money_cols=(3, 4)))
     elements.append(table)
-    return _build_pdf(elements, landscape_mode=True)
+    return _build_pdf(
+        elements,
+        landscape_mode=True,
+        footer_left=f"{entity_name} · {partner_name}",
+    )

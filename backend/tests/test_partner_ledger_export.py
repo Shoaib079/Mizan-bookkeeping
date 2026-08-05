@@ -117,6 +117,65 @@ def test_partner_ledger_download_shows_the_ledger_as_it_now_stands(
     assert any("Corrected figure" in d for d in descriptions), descriptions
 
 
+def _pdf_text(data: bytes) -> str:
+    import io
+
+    from pypdf import PdfReader
+
+    reader = PdfReader(io.BytesIO(data))
+    return "".join(page.extract_text() or "" for page in reader.pages)
+
+
+def test_partner_ledger_pdf_uses_the_shared_report_furniture(
+    db_session, restaurant_a, client: TestClient
+) -> None:
+    """Masthead, KPI strip and footer — not a bare table.
+
+    This export used to hand-roll its own title and a full-grid table, so it
+    came out looking like a printout rather than a statement next to the P&L
+    and balance sheet. It now builds from header_elements / summary_band /
+    _table_style like they do.
+    """
+    entity_id, partner = _partner_setup(db_session, restaurant_a)
+    # Read off the instance before anything commits. Posting the allocation
+    # expires it, and touching an attribute afterwards makes SQLAlchemy refresh
+    # a row this session can no longer see — ObjectDeletedError, not a real
+    # deletion. The other tests in this file capture the id the same way.
+    partner_id = partner.id
+    partner_name = partner.name
+    pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=100_000,
+        description="Export sample",
+        actor_id=ACTOR_ID,
+        net_against_drawings=False,
+        netting_as_of=date(2026, 6, 30),
+    )
+
+    resp = client.get(
+        f"/entities/{entity_id}/partners/{partner_id}/ledger/export/pdf"
+    )
+    assert resp.status_code == 200, resp.text
+    # Whitespace-normalised: pypdf's line breaks depend on the layout, and
+    # this test is about what the page says, not where it wraps.
+    text = " ".join(_pdf_text(resp.content).split())
+
+    # Masthead: titled, attributed, dated.
+    assert "Partner ledger" in text
+    assert partner_name in text
+    assert "As at" in text
+    # KPI strip, in the partner page's order.
+    for label in ("NET BALANCE", "CAPITAL CONTRIBUTED", "UNPAID PROFIT"):
+        assert label in text, f"missing KPI {label!r}"
+    # Footer stamp that every other report PDF carries.
+    assert "Mizan" in text
+    # Dates read the way the app shows them everywhere else, not ISO.
+    assert "30.06.2026" in text
+    assert "2026-06-30" not in text
+
+
 def test_partner_ledger_export_missing_partner_404(
     db_session, restaurant_a, client: TestClient
 ) -> None:
