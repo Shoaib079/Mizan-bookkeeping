@@ -376,6 +376,7 @@ def _correct_journal_entry_in_transaction(
     reason: str | None = None,
     void_date: date | None = None,
     period_unlock_reason: str | None = None,
+    cash_flow_category: str | None = None,
 ) -> tuple[JournalEntry, JournalEntry, JournalEntry]:
     """Void and repost without commit — caller must hold entity_context and commit."""
     from app.core.period_locks.guards import assert_entry_dates_allowed, mark_periods_dirty_for_dates
@@ -411,6 +412,17 @@ def _correct_journal_entry_in_transaction(
         lines,
         source=original.source,
         amends_entry_id=original.id,
+        # Inherited, not defaulted. An amendment changes what the entry says,
+        # not which section of the cash flow statement it belongs to — and
+        # `_persist_journal_entry` defaults this to None, which the cash flow
+        # report reads as operating (FINANCIAL_AUDIT F5). Left alone, amending
+        # a loan repayment would quietly move it out of financing and overstate
+        # cash generated from trading. Callers may still override.
+        cash_flow_category=(
+            cash_flow_category
+            if cash_flow_category is not None
+            else original.cash_flow_category
+        ),
     )
     _record_audit_event(session, corrected.id, LedgerAuditAction.POST, actor_id)
     _record_audit_event(
@@ -449,8 +461,13 @@ def correct_journal_entry(
     reason: str | None = None,
     void_date: date | None = None,
     period_unlock_reason: str | None = None,
+    cash_flow_category: str | None = None,
 ) -> tuple[JournalEntry, JournalEntry, JournalEntry]:
-    """Atomically void an entry and post a corrected replacement linked to the original."""
+    """Atomically void an entry and post a corrected replacement linked to the original.
+
+    `cash_flow_category` defaults to the original's — see the note at the
+    repost. Pass one only to deliberately reclassify.
+    """
     with entity_context(session, entity_id):
         require_entity_context()
 
@@ -465,6 +482,7 @@ def correct_journal_entry(
             reason=reason,
             void_date=void_date,
             period_unlock_reason=period_unlock_reason,
+            cash_flow_category=cash_flow_category,
         )
         session.commit()
 

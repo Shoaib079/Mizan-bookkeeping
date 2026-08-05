@@ -11,6 +11,10 @@ from app.core.excel.workbook import (
     save_workbook_to_bytes,
     write_money,
 )
+from app.core.ledger.subledger_display import (
+    SubledgerDisplayKind,
+    is_effective_subledger_row,
+)
 from app.core.money import format_try
 from app.core.pdf.fonts import (
     PDF_FONT_BOLD_NAME,
@@ -20,6 +24,27 @@ from app.core.pdf.fonts import (
 )
 from app.features.partners.schema import PartnerLedgerRead
 from app.features.reports.pdf_export import PdfExportDependencyError, _build_pdf, _cell
+
+
+def _effective_entries(ledger: PartnerLedgerRead) -> list:
+    """The rows a download should contain: the ledger as it now stands.
+
+    `get_partner_ledger` returns the correction history too — the voided
+    original and the `Void: …` reversal that cancelled it — tagged with a
+    display kind, because the partner screen offers a "show history" toggle.
+    A downloaded file has no toggle, so it gets the effective view, which is
+    what every other export already does (month pack §staff/fx, general
+    ledger). Without this a voided movement reads as a real one: the running
+    balance beside it does not move, because `get_partner_ledger` only
+    advances the running total on effective rows.
+    """
+    return [
+        entry
+        for entry in ledger.entries
+        if is_effective_subledger_row(
+            getattr(entry, "display_kind", SubledgerDisplayKind.EFFECTIVE)
+        )
+    ]
 
 
 def build_partner_ledger_xlsx(
@@ -58,7 +83,7 @@ def build_partner_ledger_xlsx(
     bold_row(ws, header_row, end_col=len(headers))
 
     row = header_row + 1
-    for entry in ledger.entries:
+    for entry in _effective_entries(ledger):
         kind = (
             entry.display_kind.value
             if hasattr(entry.display_kind, "value")
@@ -139,7 +164,7 @@ def build_partner_ledger_pdf(
             _cell("Running"),
         ]
     ]
-    for entry in ledger.entries:
+    for entry in _effective_entries(ledger):
         running = (
             format_try(entry.running_balance_kurus)
             if entry.running_balance_kurus is not None

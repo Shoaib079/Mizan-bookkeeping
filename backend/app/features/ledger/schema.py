@@ -42,6 +42,8 @@ class CorrectJournalEntryRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=512)
     void_date: date | None = None
     period_unlock_reason: str | None = Field(default=None, max_length=512)
+    # Omit to keep the original's classification. Only set to reclassify.
+    cash_flow_category: str | None = Field(default=None, max_length=32)
 
 
 class JournalEntryLineOut(BaseModel):

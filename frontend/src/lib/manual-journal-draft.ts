@@ -143,7 +143,7 @@ export type DraftExtras = {
 export type ManualJournalPayload = {
   entry_date: string;
   description: string;
-  lines: { account_id: string; amount_kurus: number; side: string }[];
+  lines: { account_id: string; amount_kurus: number; side: "debit" | "credit" }[];
   cash_flow_category: CashFlowCategory;
   period_unlock_reason?: string;
 };
@@ -165,7 +165,11 @@ export function draftToPayload(
       .map((line) => ({
         account_id: line.accountId,
         amount_kurus: parseTryToKurus(line.amountText)!,
-        side: line.side,
+        // Lowercased on the way out. `AccountNormalBalance` is a value enum —
+        // its members are "debit"/"credit" — and pydantic matches on value, so
+        // "DEBIT" is a 422, not a near miss. The draft keeps the uppercase form
+        // because that is what the ledger and the side <select> use in the UI.
+        side: line.side.toLowerCase() as "debit" | "credit",
       })),
     cash_flow_category: extras.cashFlowCategory,
     ...(reason ? { period_unlock_reason: reason } : {}),

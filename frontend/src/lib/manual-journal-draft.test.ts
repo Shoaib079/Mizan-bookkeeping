@@ -129,11 +129,25 @@ describe("draftToPayload", () => {
       entry_date: "2026-08-04",
       description: "Clear opening balance equity to partner capital",
       lines: [
-        { account_id: "acc-3900", amount_kurus: 11075210, side: "DEBIT" },
-        { account_id: "acc-3300", amount_kurus: 11075210, side: "CREDIT" },
+        { account_id: "acc-3900", amount_kurus: 11075210, side: "debit" },
+        { account_id: "acc-3300", amount_kurus: 11075210, side: "credit" },
       ],
       cash_flow_category: "operating",
     });
+  });
+
+  it("sends the side lowercase, as the API's enum defines it", () => {
+    // This assertion previously read "DEBIT", which is what the form was
+    // sending — and `PostingLineIn.side` is an AccountNormalBalance whose
+    // members are "debit"/"credit". Pydantic matches enums by value, so every
+    // post came back 422. The test agreed with the bug because it only ever
+    // checked the payload against itself.
+    const payload = draftToPayload(
+      [line("a", "DEBIT", "100"), line("b", "CREDIT", "100")],
+      "Lowercase sides",
+      "2026-08-04",
+    );
+    expect(payload?.lines.map((l) => l.side)).toEqual(["debit", "credit"]);
   });
 
   it("refuses to build a payload from a draft that cannot post", () => {

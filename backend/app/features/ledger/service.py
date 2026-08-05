@@ -171,6 +171,7 @@ def correct_entry(
         reason=payload.reason,
         void_date=payload.void_date,
         period_unlock_reason=payload.period_unlock_reason,
+        cash_flow_category=payload.cash_flow_category,
     )
 
 

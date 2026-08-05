@@ -62,6 +62,61 @@ def test_partner_ledger_export_xlsx_and_pdf(
     assert pdf.content[:4] == b"%PDF"
 
 
+def test_partner_ledger_download_shows_the_ledger_as_it_now_stands(
+    db_session, restaurant_a, client: TestClient
+) -> None:
+    """A corrected allocation downloads as one row, not three.
+
+    Correcting voids the original and reposts, so `get_partner_ledger` holds
+    three rows: the superseded original, the `Void: …` reversal, and the
+    replacement. The screen hides the first two behind a history toggle. A
+    download has no toggle, and the PDF has no status column either — so an
+    unfiltered export reads as three real movements, two of which never
+    happened.
+    """
+    import io
+
+    from openpyxl import load_workbook
+
+    entity_id, partner = _partner_setup(db_session, restaurant_a)
+    partner_id = partner.id
+    posted = pa.post_profit_allocation(
+        db_session,
+        entity_id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=100_000,
+        description="First figure",
+        actor_id=ACTOR_ID,
+        net_against_drawings=False,
+        netting_as_of=date(2026, 6, 30),
+    )
+    pa.correct_profit_allocation(
+        db_session,
+        entity_id,
+        posted.journal_entry.id,
+        allocation_date=date(2026, 6, 30),
+        profit_kurus=250_000,
+        description="Corrected figure",
+        actor_id=ACTOR_ID,
+        net_against_drawings=False,
+        netting_as_of=date(2026, 6, 30),
+    )
+
+    resp = client.get(f"/entities/{entity_id}/partners/{partner_id}/ledger/export")
+    assert resp.status_code == 200, resp.text
+    ws = load_workbook(io.BytesIO(resp.content)).active
+    descriptions = [
+        str(row[2].value)
+        for row in ws.iter_rows(min_row=11)
+        if row[2].value is not None
+    ]
+
+    assert descriptions, "expected at least the surviving allocation row"
+    assert not any(d.startswith("Void:") for d in descriptions), descriptions
+    assert not any("First figure" in d for d in descriptions), descriptions
+    assert any("Corrected figure" in d for d in descriptions), descriptions
+
+
 def test_partner_ledger_export_missing_partner_404(
     db_session, restaurant_a, client: TestClient
 ) -> None:

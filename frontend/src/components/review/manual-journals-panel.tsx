@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  CorrectLedgerEntryForm,
+  type CorrectableLedgerEntry,
+} from "@/components/forms/correct-ledger-entry-form";
+import {
   VoidManualJournalDialog,
   type VoidableManualJournal,
 } from "@/components/forms/void-manual-journal-dialog";
@@ -27,8 +31,9 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 
 type ManualJournalLine = {
+  account_id: string;
   amount_kurus: number;
-  side: string;
+  side: "debit" | "credit";
 };
 
 type ManualJournalRow = {
@@ -45,6 +50,12 @@ export function ManualJournalsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<VoidableManualJournal | null>(
+    null,
+  );
+  // Amending reuses the general ledger's correction form: a manual journal is
+  // a MANUAL-source entry, which is generic-correctable, so the same
+  // void-and-repost endpoint applies. Nothing manual-journal-specific here.
+  const [editTarget, setEditTarget] = useState<CorrectableLedgerEntry | null>(
     null,
   );
 
@@ -135,17 +146,39 @@ export function ManualJournalsPanel() {
                 </DataTableCell>
                 <DataTableCell align="right">
                   {row.status === "posted" && (
-                    <VoidTriggerButton
-                      className="h-8 px-2 text-foreground hover:text-destructive"
-                      confirmDetail={row.description}
-                      onContinue={() =>
-                        setVoidTarget({
-                          id: row.id,
-                          entry_date: row.entry_date,
-                          description: row.description,
-                        })
-                      }
-                    />
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-8 px-2"
+                        onClick={() =>
+                          setEditTarget({
+                            id: row.id,
+                            entry_date: row.entry_date,
+                            description: row.description,
+                            source: "manual",
+                            lines: row.lines.map((line) => ({
+                              account_id: line.account_id,
+                              amount_kurus: line.amount_kurus,
+                              side: line.side,
+                            })),
+                          })
+                        }
+                      >
+                        Edit
+                      </Button>
+                      <VoidTriggerButton
+                        className="h-8 px-2 text-foreground hover:text-destructive"
+                        confirmDetail={row.description}
+                        onContinue={() =>
+                          setVoidTarget({
+                            id: row.id,
+                            entry_date: row.entry_date,
+                            description: row.description,
+                          })
+                        }
+                      />
+                    </div>
                   )}
                 </DataTableCell>
               </DataTableRow>
@@ -158,6 +191,12 @@ export function ManualJournalsPanel() {
         open={voidTarget !== null}
         journal={voidTarget}
         onClose={() => setVoidTarget(null)}
+        onSaved={() => void reload()}
+      />
+      <CorrectLedgerEntryForm
+        open={editTarget !== null}
+        entry={editTarget}
+        onClose={() => setEditTarget(null)}
         onSaved={() => void reload()}
       />
     </ListPage>
