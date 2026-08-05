@@ -41,7 +41,9 @@ export function ReportAsOfDate({ asOf, onChange, disabled }: Props) {
           }}
         />
       </div>
-      <Button type="button" variant="secondary" disabled={disabled} onClick={apply}>
+      {/* Primary — same reasoning as ReportDateRange: `secondary` is the page
+          background, so the button that applies the date looked disabled. */}
+      <Button type="button" disabled={disabled} onClick={apply}>
         Apply
       </Button>
       <Button

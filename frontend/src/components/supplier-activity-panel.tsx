@@ -169,8 +169,12 @@ export function SupplierActivityPanel({
           disabled={!entityId || loading}
           onChange={(from, to) => setRange({ from, to })}
         />
+        {/* Secondary, matching ReportDownloadMenu on the report screens.
+            Exporting supports the task; choosing the period is the task, and
+            two filled buttons side by side say neither is the main one. */}
         <Button
           type="button"
+          variant="secondary"
           disabled={!entityId || exporting || loading}
           onClick={() => void onExport()}
         >

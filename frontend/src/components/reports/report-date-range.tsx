@@ -70,7 +70,12 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
         />
       </div>
       <div className="flex flex-wrap items-stretch gap-2 sm:items-end sm:pt-6">
-        <Button type="button" variant="secondary" disabled={disabled} onClick={apply}>
+        {/* Primary, not secondary. This is the action the whole control exists
+            for, and `secondary` is `bg-background` — the page's own colour with
+            a hairline border — so beside two filled date inputs it read as
+            nothing at all. Downloads on these screens are `secondary`, which
+            leaves Apply as the single filled button. */}
+        <Button type="button" disabled={disabled} onClick={apply}>
           Apply
         </Button>
         <Button
