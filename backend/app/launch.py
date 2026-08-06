@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from app.config import _DEFAULT_CORS_ORIGINS, settings
+from app.config import _DEFAULT_CORS_ORIGINS, Settings, settings
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +76,13 @@ def disarmed_guards_warning(app_env: str) -> str:
     )
 
 
-def warn_if_deployed_but_not_production() -> None:
+def warn_if_deployed_but_not_production(config: Settings | None = None) -> None:
     """Say so when a live-looking deployment is not marked as production.
+
+    Takes the settings it reads, defaulting to the global. Without that, the
+    only environment a test could run this in was the test environment — where
+    CORS and the database are both localhost, so it returns before reaching
+    the line that logs. "It never raises" was true and proved nothing.
 
     Every guard below is written `if settings.is_production`, and `app_env`
     defaults to "development" — so a deployment that simply never set
@@ -94,11 +99,14 @@ def warn_if_deployed_but_not_production() -> None:
     *should* stop a bad launch already exist below. This only makes the
     silence audible.
     """
+    cfg = config if config is not None else settings
     if not should_warn_about_environment(
-        settings.is_production, settings.cors_origins, settings.database_url
+        cfg.is_production, cfg.cors_origins, cfg.database_url
     ):
         return
-    logger.warning("%s", disarmed_guards_warning(settings.app_env))
+    # "%s" with the message as an argument, not as the format string: a
+    # database URL can contain a literal % and would raise mid-log otherwise.
+    logger.warning("%s", disarmed_guards_warning(cfg.app_env))
 
 
 def validate_launch_settings() -> None:

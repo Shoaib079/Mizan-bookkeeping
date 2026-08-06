@@ -22,7 +22,7 @@ would see if the code were broken. A test whose failure cannot distinguish
 from __future__ import annotations
 
 from app import launch
-from app.config import _DEFAULT_CORS_ORIGINS
+from app.config import _DEFAULT_CORS_ORIGINS, Settings
 
 REMOTE_DB = "postgresql+psycopg://user:pw@ep-cool-name.eu-central-1.aws.neon.tech/mizan"
 REMOTE_CORS = "https://mizan.vercel.app"
@@ -109,11 +109,39 @@ def test_the_warning_lists_what_is_not_running():
         assert guard in message, f"{guard} is silently disarmed but unmentioned"
 
 
+def _deployed_but_undeclared() -> Settings:
+    """The exact shape that went unnoticed on Railway for weeks."""
+    return Settings(
+        app_env="development",
+        cors_origins=REMOTE_CORS,
+        database_url=REMOTE_DB,
+    )
+
+
 def test_the_warning_never_raises():
     """The guards that should stop a bad launch already exist. This one only
-    makes their absence audible, so it must not be able to take the app down —
-    whatever the real environment happens to look like when this runs."""
-    launch.warn_if_deployed_but_not_production()  # no exception is the assertion
+    makes their absence audible, so it must not be able to take the app down.
+
+    Given settings that *do* trigger it, so the logging line is actually
+    reached. Called with the ambient test settings it returned immediately —
+    CORS and the database are both localhost there — and proved nothing.
+    """
+    launch.warn_if_deployed_but_not_production(_deployed_but_undeclared())
+
+
+def test_a_percent_sign_in_the_database_url_does_not_break_the_log():
+    """A URL-encoded password is ordinary; `%` in a format string is not.
+
+    Logged as an argument rather than as the format string, so a password
+    containing %2F cannot raise inside the very warning meant to help.
+    """
+    launch.warn_if_deployed_but_not_production(
+        Settings(
+            app_env="development",
+            cors_origins=REMOTE_CORS,
+            database_url="postgresql+psycopg://u:p%2Fw@db.neon.tech/mizan",
+        )
+    )
 
 
 def test_validate_launch_settings_runs_the_warning_first(monkeypatch):
@@ -125,7 +153,12 @@ def test_validate_launch_settings_runs_the_warning_first(monkeypatch):
     """
     calls: list[int] = []
     monkeypatch.setattr(
-        launch, "warn_if_deployed_but_not_production", lambda: calls.append(1)
+        launch,
+        "warn_if_deployed_but_not_production",
+        # *args so this keeps testing the wiring rather than the signature —
+        # it now takes an optional config, and a stricter stub would fail on
+        # that change while telling us nothing about whether it is called.
+        lambda *args, **kwargs: calls.append(1),
     )
     launch.validate_launch_settings()
     assert calls == [1], "validate_launch_settings no longer runs the warning"
