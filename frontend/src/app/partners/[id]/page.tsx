@@ -14,7 +14,7 @@ import { LedgerTable } from "@/components/page/ledger-table";
 import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { PartnerRecordForm } from "@/components/forms/partner-record-form";
-import { PartnerLedgerDownloadMenu } from "@/components/partners/partner-ledger-download-menu";
+import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
@@ -228,9 +228,12 @@ export default function PartnerDetailPage() {
             >
               Pay profit
             </Button>
-            <PartnerLedgerDownloadMenu
-              entityId={entityId}
-              partnerId={partnerId}
+            <SubledgerDownloadMenu
+              basePath={
+                entityId && partnerId
+                  ? `/entities/${entityId}/partners/${partnerId}/ledger`
+                  : null
+              }
               disabled={loading}
             />
           </>

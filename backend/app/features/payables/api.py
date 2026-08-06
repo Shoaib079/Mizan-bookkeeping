@@ -101,6 +101,82 @@ def get_supplier_ledger(
     )
 
 
+def _supplier_ledger_for_export(session: Session, entity_id: uuid.UUID, supplier_id: uuid.UUID):
+    """Name, ledger — or 404. Shared by both export routes."""
+    from app.features.suppliers import service as supplier_service
+
+    try:
+        supplier = supplier_service.get_supplier(session, entity_id, supplier_id)
+        balance, entries = service.get_supplier_ledger(session, entity_id, supplier_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        reads = service.supplier_entry_reads(session, entries)
+    ledger = SupplierLedgerRead(
+        supplier_id=supplier_id, balance_kurus=balance, entries=reads
+    )
+    return supplier.name, ledger
+
+
+@router.get("/suppliers/{supplier_id}/ledger/export")
+def export_supplier_ledger(
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+):
+    from app.features.entities import service as entity_service
+    from app.features.payables import ledger_export
+    from app.features.reports.excel_export import xlsx_response
+    from app.features.reports.subledger_export import subledger_export_filename
+
+    supplier_name, ledger = _supplier_ledger_for_export(session, entity_id, supplier_id)
+    entity = entity_service.get_entity(session, entity_id)
+    entity_name = entity.name if entity is not None else "Mizan"
+    data = ledger_export.build_supplier_ledger_xlsx(
+        entity_name=entity_name,
+        supplier_name=supplier_name,
+        ledger=ledger,
+    )
+    return xlsx_response(
+        data,
+        subledger_export_filename("supplier", supplier_name, entity_name=entity_name),
+    )
+
+
+@router.get("/suppliers/{supplier_id}/ledger/export/pdf")
+def export_supplier_ledger_pdf(
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+):
+    from app.features.entities import service as entity_service
+    from app.features.payables import ledger_export
+    from app.features.reports.pdf_export import PdfExportDependencyError, pdf_response
+    from app.features.reports.subledger_export import subledger_export_filename
+
+    supplier_name, ledger = _supplier_ledger_for_export(session, entity_id, supplier_id)
+    entity = entity_service.get_entity(session, entity_id)
+    entity_name = entity.name if entity is not None else "Mizan"
+    try:
+        data = ledger_export.build_supplier_ledger_pdf(
+            entity_name=entity_name,
+            supplier_name=supplier_name,
+            ledger=ledger,
+        )
+    except PdfExportDependencyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return pdf_response(
+        data,
+        subledger_export_filename(
+            "supplier", supplier_name, entity_name=entity_name, extension=".pdf"
+        ),
+    )
+
+
 @router.get(
     "/suppliers/{supplier_id}/activity",
     response_model=SupplierActivityRead,

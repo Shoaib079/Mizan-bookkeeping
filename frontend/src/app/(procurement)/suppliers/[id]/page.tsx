@@ -24,6 +24,7 @@ import {
 import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
 import { SupplierActivityPanel } from "@/components/supplier-activity-panel";
+import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
@@ -188,11 +189,20 @@ export default function SupplierDetailPage() {
         <Button onClick={() => setPaymentOpen(true)}>Record payment</Button>
       }
       actions={
-        <Link href="/record">
-          <Button type="button" variant="secondary">
-            Upload invoice
-          </Button>
-        </Link>
+        <>
+          <Link href="/record">
+            <Button type="button" variant="secondary">
+              Upload invoice
+            </Button>
+          </Link>
+          <SubledgerDownloadMenu
+            basePath={
+              entityId && supplierId
+                ? `/entities/${entityId}/suppliers/${supplierId}/ledger`
+                : null
+            }
+          />
+        </>
       }
       overflowActions={[
         { label: "Edit supplier", onSelect: () => setEditOpen(true) },

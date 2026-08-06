@@ -58,7 +58,9 @@ describe("dropdowns stay on screen", () => {
    * visible only as a sliver, which is how it looked empty. */
   const MENUS = [
     "components/ui/overflow-menu.tsx",
-    "components/partners/partner-ledger-download-menu.tsx",
+    // Was components/partners/partner-ledger-download-menu.tsx — now shared by
+    // all four subledgers, so fixing it once fixes it everywhere.
+    "components/ledger/subledger-download-menu.tsx",
     "components/reports/report-download-menu.tsx",
     "components/reports/month-pack-button.tsx",
     "components/delivery/delivery-hub-toolbar.tsx",

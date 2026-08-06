@@ -123,6 +123,73 @@ def get_staff_ledger(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.get("/employees/{employee_id}/ledger/export")
+def export_staff_ledger(
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+):
+    from app.features.entities import service as entity_service
+    from app.features.reports.excel_export import xlsx_response
+    from app.features.reports.subledger_export import subledger_export_filename
+    from app.features.staff import ledger_export
+
+    try:
+        employee = service.get_employee(session, entity_id, employee_id)
+        ledger = service.get_staff_ledger(session, entity_id, employee_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    entity = entity_service.get_entity(session, entity_id)
+    entity_name = entity.name if entity is not None else "Mizan"
+    data = ledger_export.build_staff_ledger_xlsx(
+        entity_name=entity_name,
+        employee_name=employee.name,
+        ledger=ledger,
+    )
+    return xlsx_response(
+        data,
+        subledger_export_filename("staff", employee.name, entity_name=entity_name),
+    )
+
+
+@router.get("/employees/{employee_id}/ledger/export/pdf")
+def export_staff_ledger_pdf(
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+):
+    from app.features.entities import service as entity_service
+    from app.features.reports.pdf_export import PdfExportDependencyError, pdf_response
+    from app.features.reports.subledger_export import subledger_export_filename
+    from app.features.staff import ledger_export
+
+    try:
+        employee = service.get_employee(session, entity_id, employee_id)
+        ledger = service.get_staff_ledger(session, entity_id, employee_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    entity = entity_service.get_entity(session, entity_id)
+    entity_name = entity.name if entity is not None else "Mizan"
+    try:
+        data = ledger_export.build_staff_ledger_pdf(
+            entity_name=entity_name,
+            employee_name=employee.name,
+            ledger=ledger,
+        )
+    except PdfExportDependencyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return pdf_response(
+        data,
+        subledger_export_filename(
+            "staff", employee.name, entity_name=entity_name, extension=".pdf"
+        ),
+    )
+
+
 @router.get(
     "/employees/{employee_id}/salary-periods/{period_year}/{period_month}",
     response_model=SalaryPeriodStatusRead,

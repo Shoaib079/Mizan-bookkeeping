@@ -17,6 +17,7 @@ import {
   CorrectStaffLedgerForm,
   type CorrectableStaffLedgerRow,
 } from "@/components/forms/correct-staff-ledger-form";
+import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
@@ -237,13 +238,22 @@ export default function StaffDetailPage() {
           </Button>
         }
         actions={
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setAdvanceOpen(true)}
-          >
-            Give advance
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setAdvanceOpen(true)}
+            >
+              Give advance
+            </Button>
+            <SubledgerDownloadMenu
+              basePath={
+                entityId && employeeId
+                  ? `/entities/${entityId}/staff/employees/${employeeId}/ledger`
+                  : null
+              }
+            />
+          </>
         }
         overflowActions={[
           {

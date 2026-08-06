@@ -14,6 +14,7 @@ import { LedgerTable } from "@/components/page/ledger-table";
 import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
+import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import {
@@ -226,13 +227,22 @@ export default function CustomerDetailPage() {
         </Button>
       }
       actions={
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => setSaleOpen(true)}
-        >
-          Group sale
-        </Button>
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setSaleOpen(true)}
+          >
+            Group sale
+          </Button>
+          <SubledgerDownloadMenu
+            basePath={
+              entityId && customerId
+                ? `/entities/${entityId}/customers/${customerId}/ledger`
+                : null
+            }
+          />
+        </>
       }
       overflowActions={[
         {

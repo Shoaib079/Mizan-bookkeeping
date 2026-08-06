@@ -124,6 +124,44 @@ def format_partner_movement(movement_type: object) -> str:
     return _PARTNER_MOVEMENT_LABELS.get(raw, raw.replace("_", " ").title())
 
 
+# Books language for the receivables subledger. "Credit sale" rather than
+# "credit_sale": a customer reading their own statement should not have to
+# decode a database enum.
+_CUSTOMER_MOVEMENT_LABELS: dict[str, str] = {
+    "opening_balance": "Opening balance",
+    "adjustment": "Adjustment",
+    "credit_sale": "Credit sale",
+    "payment_received": "Payment received",
+    "discount": "Discount",
+}
+
+
+def format_customer_movement(movement_type: object) -> str:
+    raw = movement_type.value if hasattr(movement_type, "value") else str(movement_type or "")
+    raw = raw.strip()
+    if not raw:
+        return ""
+    return _CUSTOMER_MOVEMENT_LABELS.get(raw, raw.replace("_", " ").title())
+
+
+#: Payables equivalent. "Credit note", not "credit_note".
+_SUPPLIER_MOVEMENT_LABELS: dict[str, str] = {
+    "opening_balance": "Opening balance",
+    "adjustment": "Adjustment",
+    "invoice": "Invoice",
+    "payment": "Payment",
+    "credit_note": "Credit note",
+}
+
+
+def format_supplier_movement(movement_type: object) -> str:
+    raw = movement_type.value if hasattr(movement_type, "value") else str(movement_type or "")
+    raw = raw.strip()
+    if not raw:
+        return ""
+    return _SUPPLIER_MOVEMENT_LABELS.get(raw, raw.replace("_", " ").title())
+
+
 def assert_partner_journal_labels_complete() -> None:
     """Fail fast if a journal source has no partner label or uses app jargon."""
     missing = sorted(
