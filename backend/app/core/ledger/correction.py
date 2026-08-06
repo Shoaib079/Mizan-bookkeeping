@@ -1634,6 +1634,44 @@ def void_customer_payment(
     )
 
 
+def void_customer_write_off(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    """Undo a receivable write-off.
+
+    Every other row on a customer ledger could be voided; this one could not,
+    so a write-off entered by mistake was permanent. It is also the only way
+    to repair a write-off posted before `native_balance_for_currency` was
+    fixed: those recorded no forex amount, because the balance they consulted
+    came back negative and the native leg was skipped. The row itself is
+    immutable — correctly — so the remedy is to void and re-post, which now
+    writes the native leg it should have written the first time.
+    """
+    with entity_context(session, entity_id):
+        require_entity_context()
+        original_row = _get_customer_ledger_row(session, journal_entry_id)
+        if original_row.movement_type != CustomerMovementType.DISCOUNT:
+            raise CorrectionNotFoundError("journal entry is not a receivable write-off")
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        customer_row=original_row,
+    )
+
+
 def void_credit_sale(
     session: Session,
     entity_id: uuid.UUID,

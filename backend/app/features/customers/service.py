@@ -557,6 +557,47 @@ def void_customer_payment_entry(
     )
 
 
+def void_customer_write_off_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date=None,
+    period_unlock_reason: str | None = None,
+):
+    from app.core.ledger.correction import void_customer_write_off
+    from app.core.receivables.types import CustomerMovementType
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    with entity_context(session, entity_id):
+        row = session.scalar(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if row is None or row.customer_id != customer_id:
+            raise CorrectionNotFoundError("write-off not found")
+        if row.movement_type != CustomerMovementType.DISCOUNT:
+            raise CorrectionNotFoundError("journal entry is not a receivable write-off")
+
+    result = void_customer_write_off(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )
+
+
 def void_credit_sale_entry(
     session: Session,
     entity_id: uuid.UUID,

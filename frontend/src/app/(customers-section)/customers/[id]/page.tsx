@@ -77,6 +77,21 @@ type LedgerResponse = {
   entries: LedgerEntry[];
 };
 
+/** The rows on a customer ledger that can be undone, and where to send it.
+ *
+ * A lookup rather than a chain of ternaries: there were two kinds and a
+ * nested conditional was already hard to read; the write-off made three. Each
+ * entry pairs the dialog's wording with the API path segment, so the two
+ * cannot drift into saying different things about the same row.
+ */
+const VOIDABLE_ROWS = {
+  payment: { title: "Void customer payment", segment: "payments" },
+  credit_sale: { title: "Void credit sale", segment: "credit-sales" },
+  write_off: { title: "Void receivable write-off", segment: "write-offs" },
+} as const;
+
+type VoidableRowKind = keyof typeof VOIDABLE_ROWS;
+
 /** "Owed: $94.00 · Paid ahead: €12.00", or null when forex is settled.
  *
  * A currency the customer has overpaid comes back negative; it is labelled
@@ -139,7 +154,7 @@ export default function CustomerDetailPage() {
   const [voidTarget, setVoidTarget] = useState<{
     journal_entry_id: string;
     description: string;
-    kind: "payment" | "credit_sale";
+    kind: VoidableRowKind;
   } | null>(null);
 
   const resetDetailState = useCallback(() => {
@@ -366,7 +381,9 @@ export default function CustomerDetailPage() {
                               kind:
                                 entry.movement_type === "payment_received"
                                   ? "payment"
-                                  : "credit_sale",
+                                  : entry.movement_type === "discount"
+                                    ? "write_off"
+                                    : "credit_sale",
                             })
                           }
                         />
@@ -427,17 +444,13 @@ export default function CustomerDetailPage() {
           />
           <VoidSubledgerDialog
             open={voidTarget !== null}
-            title={
-              voidTarget?.kind === "credit_sale"
-                ? "Void credit sale"
-                : "Void customer payment"
-            }
+            title={voidTarget ? VOIDABLE_ROWS[voidTarget.kind].title : ""}
             description={voidTarget?.description}
             voidPath={
               entityId && voidTarget
-                ? voidTarget.kind === "credit_sale"
-                  ? `/entities/${entityId}/customers/${customerId}/credit-sales/${voidTarget.journal_entry_id}/void`
-                  : `/entities/${entityId}/customers/${customerId}/payments/${voidTarget.journal_entry_id}/void`
+                ? `/entities/${entityId}/customers/${customerId}/${
+                    VOIDABLE_ROWS[voidTarget.kind].segment
+                  }/${voidTarget.journal_entry_id}/void`
                 : null
             }
             onClose={() => setVoidTarget(null)}

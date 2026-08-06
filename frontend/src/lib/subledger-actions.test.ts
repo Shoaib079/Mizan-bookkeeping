@@ -81,6 +81,18 @@ describe("subledger-actions", () => {
     ).toEqual({ canEdit: true, canVoid: true });
   });
 
+  it("a write-off can be undone but not amended", () => {
+    // Void only: there is nothing to edit on a write-off except the amount,
+    // and a different amount is a different write-off. It had no actions at
+    // all until recently, which made a mistaken write-off permanent — and
+    // left no way to repair the ones posted before the forex balance was
+    // fixed, which recorded no currency leg.
+    expect(customerLedgerRowActions({ movementType: "discount" })).toEqual({
+      canEdit: false,
+      canVoid: true,
+    });
+  });
+
   it("GL uses generic endpoints only for the safe allowlist", () => {
     expect(generalLedgerEntryActions("manual").useGenericEndpoints).toBe(true);
     expect(generalLedgerEntryActions("expense_entry").useGenericEndpoints).toBe(
