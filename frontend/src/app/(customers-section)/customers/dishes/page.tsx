@@ -10,6 +10,7 @@
 import { useMemo, useState } from "react";
 import { UtensilsCrossed } from "lucide-react";
 
+import { CopyDishesDialog } from "@/components/forms/copy-dishes-dialog";
 import {
   DishForm,
   SUITABILITY,
@@ -69,6 +70,7 @@ export default function DishesPage() {
   } = useEntityList<DishRow>(listPath, entityId);
 
   const [formOpen, setFormOpen] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
   const [editing, setEditing] = useState<DishRow | null>(null);
 
   const openNew = () => {
@@ -143,6 +145,16 @@ export default function DishesPage() {
           New dish
         </Button>
       }
+      actions={
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={!entityId}
+          onClick={() => setCopyOpen(true)}
+        >
+          Copy from…
+        </Button>
+      }
       toolbar={
         <Input
           value={searchDraft}
@@ -179,6 +191,11 @@ export default function DishesPage() {
         dish={editing}
         onClose={() => setFormOpen(false)}
         onSaved={() => void reload()}
+      />
+      <CopyDishesDialog
+        open={copyOpen}
+        onClose={() => setCopyOpen(false)}
+        onCopied={() => void reload()}
       />
     </ListPage>
   );

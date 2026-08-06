@@ -89,3 +89,13 @@ class DishDescriptionSuggestOut(BaseModel):
 
     description: str
     description_tr: str
+
+
+class DishCopyRequest(BaseModel):
+    source_entity_id: uuid.UUID
+
+
+class DishCopyOut(BaseModel):
+    copied: int
+    #: Names already present in this restaurant, left untouched.
+    skipped: list[str]

@@ -7,7 +7,13 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.auth.deps import member_read_guard, operations_write_guard
+from app.core.auth.deps import (
+    member_read_guard,
+    operations_write_guard,
+    require_permission,
+)
+from app.core.auth.permissions import Permission
+from app.features.auth.models import User
 from app.core.listing import (
     ListParams,
     PaginatedListOut,
@@ -17,6 +23,8 @@ from app.core.listing import (
 from app.db.session import get_session
 from app.features.menu import service
 from app.features.menu.schema import (
+    DishCopyOut,
+    DishCopyRequest,
     DishCreate,
     DishDescriptionSuggestOut,
     DishDescriptionSuggestRequest,
@@ -132,3 +140,31 @@ def suggest_dish_description(
         description=draft.description,
         description_tr=draft.description_tr,
     )
+
+
+@router.post("/copy-from", response_model=DishCopyOut)
+def copy_dishes_from_another_restaurant(
+    entity_id: uuid.UUID,
+    payload: DishCopyRequest,
+    session: Session = Depends(get_session),
+    guard: User | None = Depends(operations_write_guard),
+) -> DishCopyOut:
+    """Seed this restaurant's dish list from another you have access to.
+
+    The path guard covers the target. The source is checked explicitly below,
+    because it is not in the path and nothing else would check it — without
+    this, knowing a restaurant's id would be enough to read its menu.
+    """
+    if guard is not None:
+        require_permission(
+            session, payload.source_entity_id, guard, Permission.OPERATIONS_WRITE
+        )
+    try:
+        result = service.copy_dishes_between_entities(
+            session, entity_id, payload.source_entity_id
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return DishCopyOut(copied=result.copied, skipped=result.skipped)

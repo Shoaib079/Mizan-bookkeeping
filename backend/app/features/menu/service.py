@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -121,3 +122,74 @@ def update_dish(
             ) from exc
         session.refresh(dish)
         return dish
+
+
+@dataclass(frozen=True)
+class DishCopyResult:
+    copied: int
+    skipped: list[str]
+
+
+def copy_dishes_between_entities(
+    session: Session,
+    target_entity_id: uuid.UUID,
+    source_entity_id: uuid.UUID,
+) -> DishCopyResult:
+    """Seed one restaurant's dish list from another's.
+
+    **The only place menu data crosses restaurants**, and it does so as a copy:
+    the rows are new, belong to the target, and diverge from that moment. The
+    caller is responsible for proving the user may read the source — the route
+    does that explicitly, because row-level security protects a *session*, not
+    a function, and this function deliberately opens two.
+
+    Names already present in the target are skipped rather than overwritten. A
+    restaurant that has started editing its own "Dal Tadka" should not have it
+    replaced by another restaurant's wording — the whole reason these lists are
+    separate.
+    """
+    if target_entity_id == source_entity_id:
+        raise ValueError("source and target are the same restaurant")
+    for candidate in (target_entity_id, source_entity_id):
+        if entity_service.get_entity(session, candidate) is None:
+            raise LookupError("Entity not found")
+
+    with entity_context(session, source_entity_id):
+        require_entity_context()
+        source_dishes = list(
+            session.scalars(
+                select(Dish).where(Dish.is_active.is_(True)).order_by(Dish.name)
+            ).all()
+        )
+        # Read the values out while the source context is open: the objects
+        # expire on commit below, and reloading them under the *target*
+        # context would find nothing.
+        payloads = [
+            {
+                "name": dish.name,
+                "description": dish.description,
+                "description_tr": dish.description_tr,
+                "suits_veg": dish.suits_veg,
+                "suits_non_veg": dish.suits_non_veg,
+                "suits_jain": dish.suits_jain,
+            }
+            for dish in source_dishes
+        ]
+
+    with entity_context(session, target_entity_id):
+        require_entity_context()
+        existing = {
+            name.casefold()
+            for name in session.scalars(select(Dish.name)).all()
+        }
+        skipped: list[str] = []
+        copied = 0
+        for payload in payloads:
+            if payload["name"].casefold() in existing:
+                skipped.append(payload["name"])
+                continue
+            session.add(Dish(**payload))
+            copied += 1
+        session.commit()
+
+    return DishCopyResult(copied=copied, skipped=skipped)
