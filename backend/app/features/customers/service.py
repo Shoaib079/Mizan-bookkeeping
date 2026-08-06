@@ -255,12 +255,74 @@ def record_credit_sale(
     )
 
 
+def _forex_overpayment_warning(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    payload: CustomerPaymentCreate,
+) -> str | None:
+    """Does this receipt take the customer past settled, in their own currency?
+
+    Only asked on the path nothing else checks. When `amount_kurus` is given,
+    `_resolve_customer_payment` returns before `compute_try_payment_from_native`
+    runs — and that function is where "payment exceeds forex receivable
+    balance" lives. So the native quantity is stored exactly as handed over,
+    with nothing comparing it to what is owed.
+
+    A warning rather than a refusal, deliberately. Overpaying is a real thing
+    a customer does; a deposit against future work is not a mistake, and the
+    lira ledger is correct either way. This exists so a mistyped figure is
+    visible to *any* client of the API, not only to someone who happened to be
+    looking at the form that warns before submitting.
+
+    Returns None whenever it cannot answer — a missing account, a lira wallet,
+    no forex history. Silence here must never be mistaken for approval, which
+    is why it never raises.
+    """
+    if payload.amount_kurus is None or payload.payment_native_quantity is None:
+        return None
+
+    # Imported here, as in _resolve_customer_payment below: banking imports
+    # customers, so a module-level import would close the circle.
+    from app.features.banking.models import MoneyAccount, MoneyAccountKind
+    from app.features.group_sales.fx_receivable import native_balance_for_currency
+
+    with entity_context(session, entity_id):
+        money_account = session.scalar(
+            select(MoneyAccount).where(
+                MoneyAccount.gl_account_id == payload.payment_account_id,
+            )
+        )
+        if money_account is None:
+            return None
+        if money_account.account_kind != MoneyAccountKind.FOREIGN_CURRENCY:
+            return None
+        currency = money_account.currency
+        if not currency:
+            return None
+
+        outstanding = native_balance_for_currency(session, customer_id, currency)
+
+    if payload.payment_native_quantity <= outstanding:
+        return None
+
+    ahead = payload.payment_native_quantity - outstanding
+    return (
+        f"Receipt of {payload.payment_native_quantity / 100:.2f} {currency} "
+        f"exceeds the {outstanding / 100:.2f} {currency} outstanding; "
+        f"the customer is now {ahead / 100:.2f} {currency} paid ahead."
+    )
+
+
 def record_customer_payment(
     session: Session,
     entity_id: uuid.UUID,
     customer_id: uuid.UUID,
     payload: CustomerPaymentCreate,
 ) -> CustomerPaymentResponse:
+    # Computed before posting: afterwards the balance already includes this
+    # receipt, and every payment would look like it settled exactly.
+    warning = _forex_overpayment_warning(session, entity_id, customer_id, payload)
     amount_kurus, reference_type, reference_id = _resolve_customer_payment(
         session, entity_id, customer_id, payload
     )
@@ -283,6 +345,7 @@ def record_customer_payment(
             session, result.customer_ledger_entry, entity_id=entity_id
         ),
         balance_kurus=result.balance_kurus,
+        warnings=[warning] if warning else [],
     )
 
 

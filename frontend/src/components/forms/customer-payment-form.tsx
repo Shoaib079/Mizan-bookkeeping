@@ -243,7 +243,7 @@ export function CustomerPaymentForm({
         body.amount_kurus = amountKurus;
         if (isFxWallet) body.payment_native_quantity = forexMinor;
       }
-      await apiFetch(
+      const recorded = await apiFetch<{ warnings?: string[] }>(
         `/entities/${entityId}/customers/${customerId}/payments`,
         {
           method: "POST",
@@ -252,6 +252,14 @@ export function CustomerPaymentForm({
           body: JSON.stringify(body),
         },
       );
+      // The API decides against the balance as it stood a moment ago, which
+      // the form's own pre-submit warning cannot: the outstanding figure it
+      // compares against was fetched when the page loaded. Shown after the
+      // fact because the payment is already recorded — this reports, it does
+      // not ask.
+      for (const warning of recorded?.warnings ?? []) {
+        toast(warning, "warning");
+      }
       submitIdempotency.completeSubmit();
       onSaved?.();
       toast("Payment received");

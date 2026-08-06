@@ -162,6 +162,10 @@ class CustomerPaymentResponse(BaseModel):
     journal_entry_id: uuid.UUID
     customer_ledger_entry: CustomerLedgerEntryRead
     balance_kurus: int
+    #: Things worth knowing about a receipt that was nonetheless recorded.
+    #: Currently only forex over-payment. Never a reason to reject: the lira
+    #: ledger is correct either way, and paying ahead is legitimate.
+    warnings: list[str] = []
 
 
 class CustomerWriteOffCreate(BaseModel):

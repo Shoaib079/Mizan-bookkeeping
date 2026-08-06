@@ -13,7 +13,12 @@ import {
 
 import { cn } from "@/lib/utils";
 
-type ToastVariant = "success" | "error";
+/** "warning" is for something that worked but is worth knowing — a receipt
+ * that was recorded and took the customer past settled, say. It existed as
+ * neither before, so such messages had to pick between reading as an error
+ * (red, implying the save failed) or as a success (silent about the thing
+ * being reported). Both were wrong. */
+type ToastVariant = "success" | "error" | "warning";
 
 type ToastItem = {
   id: string;
@@ -79,6 +84,8 @@ function ToastMessage({
           "border-success/30 bg-card text-foreground",
         item.variant === "error" &&
           "border-destructive/30 bg-card text-destructive",
+        item.variant === "warning" &&
+          "border-warning/40 bg-card text-amber-800 dark:text-amber-200",
       )}
       role="status"
     >
