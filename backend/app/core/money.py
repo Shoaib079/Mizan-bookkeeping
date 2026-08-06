@@ -21,6 +21,29 @@ def format_try(amount_kurus: Kurus) -> str:
     return f"{sign}{lira_str},{kurus:02d} ₺"
 
 
+#: Currencies the app quotes menus and group sales in.
+_CURRENCY_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£", "TRY": "₺"}
+
+
+def format_minor_units(minor: int, currency: str) -> str:
+    """Foreign-currency amount for display: `$15.00`, `€1,234.50`.
+
+    Deliberately the frontend's `formatFxNative` convention — symbol first,
+    comma thousands, dot decimal — and not `format_try`'s Turkish one, because
+    the only place this is used is a document quoting prices to international
+    agencies, and the figure has to match what the same price looks like on
+    the screen it was typed into. A price that reads `$15.00` in the app and
+    `15,00 $` on the PDF invites someone to ask which is right.
+    """
+    sign = "-" if minor < 0 else ""
+    whole, frac = divmod(abs(minor), 100)
+    symbol = _CURRENCY_SYMBOLS.get(currency.upper())
+    amount = f"{whole:,}.{frac:02d}"
+    if symbol is None:
+        return f"{sign}{amount} {currency.upper()}"
+    return f"{sign}{symbol}{amount}"
+
+
 def _frac_digits_to_kurus(frac: str) -> int:
     """Fractional digits → kuruş, rounded half-up (never truncated).
 

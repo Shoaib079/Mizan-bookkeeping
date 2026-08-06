@@ -117,6 +117,44 @@ def list_group_menus(
     )
 
 
+@router.get("/group-menus/export.pdf", response_model=None)
+def export_menu_pdf(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+):
+    """The menu document, as a PDF and only as a PDF.
+
+    Every other download in this app offers Excel or PDF. This one does not,
+    on purpose: an agency that receives a `.docx` can change a price and pass
+    it on, and nothing in the file records that it was altered. A spreadsheet
+    is worse — the numbers are already sitting in editable cells.
+
+    **This route must stay above `/group-menus/{menu_id}`.** Registered after
+    it, FastAPI matches `export.pdf` as a menu id, fails to parse it as a UUID
+    and returns 422 — a broken download with an error message about the wrong
+    thing entirely. `test_menu_pdf.py` pins the behaviour, not the ordering,
+    so moving this breaks a test rather than a customer's menu.
+    """
+    from app.features.entities import service as entity_service
+    from app.features.menu.document_service import build_menu_document
+    from app.features.menu.menu_pdf import build_menu_pdf, menu_pdf_filename
+    from app.features.reports import pdf_export
+
+    entity = entity_service.get_entity(session, entity_id)
+    if entity is None:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    document = build_menu_document(session, entity_id)
+    if document.is_empty():
+        raise HTTPException(
+            status_code=422,
+            detail="This restaurant has no active menus to print yet.",
+        )
+    return pdf_export.pdf_response(
+        build_menu_pdf(document), menu_pdf_filename(entity.name)
+    )
+
+
 @router.patch("/group-menus/{menu_id}", response_model=GroupMenuRead)
 def update_group_menu(
     entity_id: uuid.UUID,

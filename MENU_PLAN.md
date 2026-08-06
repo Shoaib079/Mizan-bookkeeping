@@ -317,7 +317,7 @@ Each slice is useful on its own and leaves the app working.
 | 1 | ✅ Dishes: model, list, form | Nothing can reference dishes until they exist. Small, self-contained. |
 | 2 | ✅ Menu content: price, category, lines, detail screen | The heart of it. After this the data is real, even without a PDF. |
 | 3 | ✅ Restaurant branding: logo upload, address, contacts, terms | Needed only by the PDF, so it waits until the content is right. |
-| 4 | The PDF | Once the content is settled, the document is layout work. |
+| 4 | ✅ The PDF | Once the content is settled, the document is layout work. |
 | 5 | Group sale pre-fill | Last: depends on prices existing, and is the only piece that touches the books. |
 
 Choosing A removed the brand tier, the per-restaurant price table and the RLS

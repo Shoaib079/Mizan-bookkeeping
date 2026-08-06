@@ -22,6 +22,8 @@ import { MENU_CATEGORIES, type GroupMenuRow } from "@/lib/group-sales-types";
 import { formatFxNative } from "@/lib/fx-money";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { apiDownload, triggerBlobDownload } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { useEntityList } from "@/lib/use-entity-list";
 
 /** "$15.00 +KDV", or "$27.00 + $2.00" for the catering menus. */
@@ -50,6 +52,25 @@ export function GroupMenusPanel() {
     );
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<GroupMenuRow | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const { toast } = useToast();
+
+  async function onDownload() {
+    if (!entityId) return;
+    setDownloading(true);
+    try {
+      const { blob, filename } = await apiDownload(
+        `/entities/${entityId}/group-menus/export.pdf`,
+      );
+      triggerBlobDownload(blob, filename);
+    } catch (err) {
+      // Surfaced rather than swallowed: the common failure is "no active
+      // menus yet", and a button that does nothing looks broken.
+      toast(err instanceof Error ? err.message : "Could not build the menu");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   if (!entityId) {
     return (
@@ -77,16 +98,29 @@ export function GroupMenusPanel() {
         </Button>
       }
       actions={
-        // The logo, address and terms the menu prints live in Settings, with
-        // the rest of the restaurant record. Nobody building a menu would
-        // think to look there, so the way there is on this page.
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => router.push("/settings/restaurant?full=1")}
-        >
-          Document details
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* PDF alone — no Excel, no Word. An agency that receives an
+              editable file can change a price and pass it on, and nothing in
+              the file says it was altered (MENU_PLAN.md §5). */}
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={downloading || items.length === 0}
+            onClick={() => void onDownload()}
+          >
+            {downloading ? "Preparing…" : "Download menu (PDF)"}
+          </Button>
+          {/* The logo, address and terms the menu prints live in Settings,
+              with the rest of the restaurant record. Nobody building a menu
+              would think to look there, so the way there is on this page. */}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => router.push("/settings/restaurant?full=1")}
+          >
+            Document details
+          </Button>
+        </div>
       }
       countLabel={`${total} menu${total === 1 ? "" : "s"}`}
       skeletonColumns={5}
