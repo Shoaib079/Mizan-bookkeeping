@@ -24,6 +24,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { UserCircle } from "lucide-react";
 import { useEntity } from "@/lib/entity-context";
+import { formatForexBalanceSummary } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useEntityList } from "@/lib/use-entity-list";
@@ -57,6 +58,9 @@ export default function CustomersPage() {
             <DataTableBody>
               {items.map((row) => {
                 const balance = balancesState.balances.get(row.id) ?? 0;
+                const forexSummary = formatForexBalanceSummary(
+                  balancesState.forex.get(row.id),
+                );
                 return (
                   <DataTableRow key={row.id} href={`/customers/${row.id}`}>
                     <DataTableCell>
@@ -71,11 +75,20 @@ export default function CustomersPage() {
                     <DataTableCell>
                       <StatusBadge status={row.is_active ? "active" : "inactive"} />
                     </DataTableCell>
+                    {/* The lira figure is the ledger's truth, so it stays the
+                        headline. The agreed currency sits under it, because
+                        that is the sum the customer will actually hand over
+                        and it is the one they will quote back at you. */}
                     <DataTableCell
                       align="right"
                       className={cn("tabular-nums", balance > 0 && "text-success")}
                     >
                       {balance === 0 ? "—" : formatTry(balance)}
+                      {forexSummary && (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {forexSummary}
+                        </span>
+                      )}
                     </DataTableCell>
                   </DataTableRow>
                 );
@@ -88,6 +101,9 @@ export default function CustomersPage() {
             <MobileCardList>
               {items.map((row) => {
                 const balance = balancesState.balances.get(row.id) ?? 0;
+                const forexSummary = formatForexBalanceSummary(
+                  balancesState.forex.get(row.id),
+                );
                 return (
                   <MobileCardRow
                     key={row.id}
@@ -97,6 +113,10 @@ export default function CustomersPage() {
                       <>
                         <span>{row.identifier ?? "No ID"}</span>
                         <StatusBadge status={row.is_active ? "active" : "inactive"} />
+                        {/* On a phone the amount column is narrow, so the
+                            agreed currency goes in the meta row rather than
+                            wrapping under a number. */}
+                        {forexSummary && <span>{forexSummary}</span>}
                       </>
                     }
                     amount={balance === 0 ? "—" : formatTry(balance)}

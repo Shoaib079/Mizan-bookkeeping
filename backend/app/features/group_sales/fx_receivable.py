@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -76,6 +77,77 @@ def outstanding_by_currency(
         for currency in sorted(c for c in currencies if c)
     ]
     return [(currency, minor) for currency, minor in balances if minor != 0]
+
+
+def outstanding_by_currency_for_customers(
+    session: Session,
+    customer_ids: Sequence[uuid.UUID],
+) -> dict[uuid.UUID, list[tuple[str, int]]]:
+    """`outstanding_by_currency` for many customers, in a single query.
+
+    The per-customer version runs one query to find the currencies and another
+    per currency. That is fine for a detail page and wrong for a directory:
+    the receivables list loads up to 200 customers at once, which would be
+    several hundred round trips to render one table.
+
+    The arithmetic below must stay identical to `native_balance_for_currency`
+    — same movement types, same `amount_kurus > 0` guard on sales, discounts
+    added because they are stored negative. A test asserts the two agree on
+    the same data rather than trusting that they look similar.
+    """
+    if not customer_ids:
+        return {}
+
+    sales = func.coalesce(
+        func.sum(CustomerLedgerEntry.total_forex_minor).filter(
+            CustomerLedgerEntry.movement_type == CustomerMovementType.CREDIT_SALE,
+            CustomerLedgerEntry.amount_kurus > 0,
+        ),
+        0,
+    )
+    discounts = func.coalesce(
+        func.sum(CustomerLedgerEntry.total_forex_minor).filter(
+            CustomerLedgerEntry.movement_type == CustomerMovementType.DISCOUNT,
+        ),
+        0,
+    )
+    payments = func.coalesce(
+        func.sum(CustomerLedgerEntry.payment_native_quantity).filter(
+            CustomerLedgerEntry.movement_type == CustomerMovementType.PAYMENT_RECEIVED,
+        ),
+        0,
+    )
+    outstanding = sales + discounts - payments
+
+    rows = session.execute(
+        select(
+            CustomerLedgerEntry.customer_id,
+            CustomerLedgerEntry.forex_currency,
+            outstanding.label("outstanding"),
+        )
+        .where(
+            CustomerLedgerEntry.customer_id.in_(customer_ids),
+            CustomerLedgerEntry.forex_currency.is_not(None),
+        )
+        .group_by(
+            CustomerLedgerEntry.customer_id,
+            CustomerLedgerEntry.forex_currency,
+        )
+        # Settled currencies drop out, exactly as the per-customer version does
+        # before returning.
+        .having(outstanding != 0)
+        .order_by(
+            CustomerLedgerEntry.customer_id,
+            CustomerLedgerEntry.forex_currency,
+        )
+    ).all()
+
+    grouped: dict[uuid.UUID, list[tuple[str, int]]] = {}
+    for customer_id, currency, minor in rows:
+        if currency is None:
+            continue
+        grouped.setdefault(customer_id, []).append((currency, int(minor or 0)))
+    return grouped
 
 
 def try_balance_for_currency(

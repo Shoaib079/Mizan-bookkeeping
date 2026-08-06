@@ -11,6 +11,7 @@ from app.core.listing import ListParams, list_params_dependency
 
 from app.core.auth.deps import member_read_guard
 from app.db.session import get_session
+from app.features.customers.schema import ForexOutstanding
 from app.features.receivables import service
 from app.features.receivables.schema import (
     CustomerReceivableBalanceRead,
@@ -43,8 +44,12 @@ def list_receivables(
                 customer_name=customer.name,
                 identifier=customer.identifier,
                 balance_kurus=balance,
+                outstanding_by_currency=[
+                    ForexOutstanding(currency=currency, minor=minor)
+                    for currency, minor in forex
+                ],
             )
-            for customer, balance in rows
+            for customer, balance, forex in rows
         ],
         total=total,
         limit=list_params.limit,
