@@ -53,6 +53,26 @@ ROW_SHAPES = [
 
 
 def _journal(db_session, entity_id, *, status, reverses: bool) -> JournalEntry:
+    """A journal entry, optionally marked as reversing another.
+
+    `reverses_entry_id` is a real foreign key, so it cannot be filled with an
+    arbitrary UUID — the row it points at has to exist. The first version of
+    this helper used `uuid.uuid4()` and every insert failed on the constraint.
+    """
+    reverses_entry_id = None
+    if reverses:
+        original = JournalEntry(
+            id=uuid.uuid4(),
+            entity_id=entity_id,
+            entry_date=date(2026, 5, 1),
+            description="Original",
+            status=JournalEntryStatus.VOIDED,
+            source=JournalEntrySource.MANUAL,
+        )
+        db_session.add(original)
+        db_session.flush()
+        reverses_entry_id = original.id
+
     journal = JournalEntry(
         id=uuid.uuid4(),
         entity_id=entity_id,
@@ -60,7 +80,7 @@ def _journal(db_session, entity_id, *, status, reverses: bool) -> JournalEntry:
         description="Test",
         status=status,
         source=JournalEntrySource.MANUAL,
-        reverses_entry_id=uuid.uuid4() if reverses else None,
+        reverses_entry_id=reverses_entry_id,
     )
     db_session.add(journal)
     db_session.flush()
