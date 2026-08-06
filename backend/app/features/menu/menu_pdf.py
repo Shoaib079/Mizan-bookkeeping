@@ -32,6 +32,11 @@ from app.features.menu.document import MenuBlock, MenuDocument
 _INK = "#1A1A1A"
 _MUTED = "#6B6B6B"
 _HAIRLINE = "#D8D8D8"
+# A warm off-white behind each menu's title row, and a muted gold for the
+# category headings. Both are quiet enough to survive a black-and-white print,
+# which is how half of these will be read.
+_BAND = "#F4F1EA"
+_GOLD = "#8A6D2F"
 
 #: The logo box on the first page. Bounds, not a size — the image is scaled to
 #: fit inside while keeping its proportions, so a wide logo and a tall one both
@@ -110,28 +115,41 @@ def _styles() -> dict:
             leading=24,
             alignment=1,
         ),
+        # Centred and gold, above the boxes it introduces.
         "category": make(
             "category",
             fontName=PDF_FONT_BOLD_NAME,
-            fontSize=12,
-            leading=15,
-            spaceBefore=14,
-            spaceAfter=4,
+            fontSize=10.5,
+            leading=14,
+            alignment=1,
+            textColor=_GOLD,
+            spaceBefore=8,
+            spaceAfter=8,
         ),
+        # Left column of the title row inside a box.
         "menuName": make(
-            "menuName", fontName=PDF_FONT_BOLD_NAME, fontSize=11.5, leading=14
+            "menuName", fontName=PDF_FONT_BOLD_NAME, fontSize=11, leading=14
         ),
         "menuPrice": make(
             "menuPrice",
             fontName=PDF_FONT_BOLD_NAME,
-            fontSize=11.5,
+            fontSize=11,
             leading=14,
             alignment=2,
         ),
-        "menuDesc": make("menuDesc", fontSize=9, leading=12, textColor=_MUTED),
-        "dish": make("dish", fontSize=10, leading=13.5),
+        "menuDesc": make("menuDesc", fontSize=8.5, leading=11, textColor=_MUTED),
+        "dish": make("dish", fontSize=9.5, leading=12.5),
         "dishDesc": make(
-            "dishDesc", fontSize=8.5, leading=11, leftIndent=10, textColor=_MUTED
+            "dishDesc", fontSize=8, leading=10, leftIndent=6, textColor=_MUTED
+        ),
+        # "Terms and conditions" on the closing page. Left-aligned and in ink,
+        # because the category style is centred gold and belongs over menus.
+        "sectionLeft": make(
+            "sectionLeft",
+            fontName=PDF_FONT_BOLD_NAME,
+            fontSize=11,
+            leading=14,
+            spaceAfter=6,
         ),
         "terms": make("terms", fontSize=9, leading=13),
         "contact": make("contact", fontSize=9.5, leading=13, alignment=1),
@@ -178,51 +196,64 @@ def _logo_flowable(logo: bytes | None):
 
 
 def _menu_parts(menu: MenuBlock, styles: dict, content_width: float) -> list:
-    """One menu: its name and price, then its dishes."""
+    """One menu, drawn as a bordered box.
+
+    The Word document this replaces boxes each menu, and the agencies reading
+    it are used to that shape — a menu is a self-contained thing you can point
+    at, not a run of paragraphs. What is dropped is the restaurant's name
+    repeated across the top of every box: the logo at the head of the document
+    already says whose menu this is, and eight repetitions of it were most of
+    what made the original look like a Word table.
+
+    One table rather than stacked flowables, so the border wraps the whole
+    menu and a dish can never be split from its own description.
+    """
     rl = _rl()
     price = menu.price_line()
+    price_width = 4.6 * rl.cm
 
-    if price:
-        # Name hard left, price hard right, across the full column. Run inline
-        # after the name instead and the whole document crowds into the left
-        # half of the page while the reader hunts for the figure.
-        #
-        # A table rather than a tab stop because the name cell is a Paragraph:
-        # a menu called "Vegetarian Set Menu for Groups of Twenty or More"
-        # wraps within its column instead of colliding with the price.
-        price_width = 5.0 * rl.cm
-        heading = rl.Table(
-            [[
-                rl.Paragraph(_escape(menu.name), styles["menuName"]),
-                rl.Paragraph(_escape(price), styles["menuPrice"]),
-            ]],
-            colWidths=[content_width - price_width, price_width],
-            style=rl.TableStyle([
-                ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ]),
-        )
-    else:
-        heading = rl.Paragraph(_escape(menu.name), styles["menuName"])
-
-    parts: list = [heading]
+    # Title row: name left, price right. Two cells rather than one string, so
+    # a long menu name wraps inside its column instead of pushing the price
+    # off the edge of the box.
+    rows: list = [[
+        rl.Paragraph(_escape(menu.name), styles["menuName"]),
+        rl.Paragraph(_escape(price), styles["menuPrice"]) if price else "",
+    ]]
+    spans: list = []
     if menu.description:
-        parts.append(rl.Paragraph(_escape(menu.description), styles["menuDesc"]))
-    parts.append(rl.Spacer(1, 3))
+        rows.append([rl.Paragraph(_escape(menu.description), styles["menuDesc"]), ""])
+        spans.append(("SPAN", (0, 1), (1, 1)))
 
+    title_rows = len(rows)
     for dish in menu.dishes:
-        parts.append(rl.Paragraph(f"• {_escape(dish.heading())}", styles["dish"]))
-        # English then Turkish, each on its own line. Both print when both
-        # exist: the agencies these go to read one or the other.
+        cell: list = [rl.Paragraph(_escape(dish.heading()), styles["dish"])]
+        # English then Turkish, in the same cell as the dish. Both print when
+        # both exist: the agencies these go to read one or the other.
         for text in (dish.description, dish.description_tr):
             if text:
-                parts.append(rl.Paragraph(_escape(text), styles["dishDesc"]))
+                cell.append(rl.Paragraph(_escape(text), styles["dishDesc"]))
+        rows.append([cell, ""])
+        spans.append(("SPAN", (0, len(rows) - 1), (1, len(rows) - 1)))
 
-    parts.append(rl.Spacer(1, 10))
-    return parts
+    ink = rl.colors.HexColor(_INK)
+    box = rl.Table(
+        rows,
+        colWidths=[content_width - price_width, price_width],
+        style=rl.TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.6, ink),
+            ("BACKGROUND", (0, 0), (-1, title_rows - 1), rl.colors.HexColor(_BAND)),
+            # Hairlines between dishes, a firm rule under the title block.
+            ("LINEBELOW", (0, 0), (-1, -2), 0.35, rl.colors.HexColor(_HAIRLINE)),
+            ("LINEBELOW", (0, title_rows - 1), (-1, title_rows - 1), 0.6, ink),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            *spans,
+        ]),
+    )
+    return [box, rl.Spacer(1, 13)]
 
 
 def _group_elements(group, styles: dict, content_width: float) -> list:
@@ -265,7 +296,7 @@ def _closing_elements(document: MenuDocument, styles: dict) -> list:
     parts: list = [rl.PageBreak()]
 
     if terms:
-        parts.append(rl.Paragraph("Terms and conditions", styles["category"]))
+        parts.append(rl.Paragraph("Terms and conditions", styles["sectionLeft"]))
         parts.extend(
             rl.Paragraph(f"• {_escape(line)}", styles["terms"]) for line in terms
         )
