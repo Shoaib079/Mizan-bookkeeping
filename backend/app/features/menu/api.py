@@ -132,9 +132,18 @@ def suggest_dish_description(
     except DishDescriptionError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     if draft is None:
+        # Names the setting rather than saying "not configured". The person
+        # reading this message is the person who can set it — telling them a
+        # feature is unavailable, without saying what would make it available,
+        # wastes the only chance to say so.
         raise HTTPException(
             status_code=503,
-            detail="Description drafting is not configured for this deployment",
+            detail=(
+                "Drafting needs an AI endpoint. Set EXPENSE_RECEIPT_VISION_URL "
+                "and EXPENSE_RECEIPT_VISION_API_KEY on the API service — the "
+                "same two that receipt scanning uses. Descriptions can be "
+                "typed in by hand meanwhile."
+            ),
         )
     return DishDescriptionSuggestOut(
         description=draft.description,

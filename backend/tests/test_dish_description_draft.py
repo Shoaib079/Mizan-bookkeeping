@@ -53,7 +53,12 @@ def test_the_endpoint_says_so_when_drafting_is_unavailable(
         json={"name": "Dal Tadka"},
     )
     assert resp.status_code == 503, resp.text
-    assert "not configured" in resp.json()["detail"]
+    # The message names the setting. The person who sees it is the person who
+    # can change it, so "not configured for this deployment" — which is what
+    # this said, and what the owner hit — spends the one chance to say how.
+    detail = resp.json()["detail"]
+    assert "EXPENSE_RECEIPT_VISION_URL" in detail
+    assert "by hand" in detail, "no mention of the way forward without it"
 
 
 def test_a_draft_comes_back_in_both_languages(
