@@ -161,6 +161,36 @@ export function CustomerPaymentForm({
       overBalance ||
       (isFxWallet && (forexMinor === null || forexMinor <= 0));
 
+  /** Would this receipt take the customer past settled, into credit?
+   *
+   * Only asked on the path that nothing else checks. When a TRY amount is
+   * entered alongside the foreign one, the API takes the lira figure and
+   * returns before `compute_try_payment_from_native` runs — and that function
+   * is where "payment exceeds forex receivable balance" lives. So the native
+   * quantity is stored exactly as typed, with nothing comparing it to what is
+   * owed. That is how 922 USD came to sit against 624 USD of sales.
+   *
+   * A warning, not a block: overpaying is a real thing a customer does, and a
+   * deposit against future work is not a mistake. This only says what the
+   * books will show, and leaves the decision alone.
+   */
+  const outstandingInWalletCurrency = isFxWallet
+    ? outstandingByCurrency?.find(
+        (row) => row.currency === selectedAccount?.currency,
+      )?.minor ?? null
+    : null;
+  const paysAhead =
+    !nativeOnlyPayment &&
+    isFxWallet &&
+    forexMinor !== null &&
+    forexMinor > 0 &&
+    outstandingInWalletCurrency !== null &&
+    forexMinor > outstandingInWalletCurrency;
+  const creditAfterPayment =
+    paysAhead && outstandingInWalletCurrency !== null
+      ? forexMinor! - outstandingInWalletCurrency
+      : 0;
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!entityId) {
@@ -381,6 +411,23 @@ export function CustomerPaymentForm({
             required
           />
         </div>
+        {/* Deliberately not a ValidationHint and not wired to submitBlocked:
+            those mean "you cannot do this", and this is allowed. It states
+            the consequence and gets out of the way. */}
+        {paysAhead && selectedAccount?.currency && (
+          <p className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+            That is more than{" "}
+            {formatFxNative(
+              outstandingInWalletCurrency ?? 0,
+              selectedAccount.currency,
+            )}{" "}
+            outstanding in {selectedAccount.currency}. Recording it leaves the
+            customer{" "}
+            {formatFxNative(creditAfterPayment, selectedAccount.currency)} paid
+            ahead. Fine if that is a deposit — worth a second look if it is a
+            typo.
+          </p>
+        )}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={submitting || submitBlocked}>
           {submitting ? "Recording…" : "Record payment"}
