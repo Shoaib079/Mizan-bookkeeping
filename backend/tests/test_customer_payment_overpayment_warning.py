@@ -38,6 +38,13 @@ ACTOR = uuid.UUID("00000000-0000-4000-8000-000000000001")
 def _setup(db_session, entity_id, *, billed_minor: int = 31_200):
     """A customer owing `billed_minor` USD, and a USD wallet to receive into.
 
+    Returns ids, not ORM instances. A commit expires every loaded attribute,
+    so touching `customer.id` afterwards sends SQLAlchemy back to the database
+    — and outside `entity_context` the row-level security policy hides the
+    row, which surfaces as ObjectDeletedError rather than as anything to do
+    with RLS. Reading the ids while the context is still open avoids the
+    reload entirely.
+
     The wallet is created rather than looked up. An earlier draft searched the
     seeded chart for one and skipped the test when it found none — which would
     have made every assertion below pass without running.
@@ -69,18 +76,20 @@ def _setup(db_session, entity_id, *, billed_minor: int = 31_200):
         )
         db_session.commit()
         db_session.refresh(customer)
-    return customer, wallet
+        customer_id = customer.id
+        wallet_gl_id = wallet.gl_account_id
+    return customer_id, wallet_gl_id
 
 
-def _post(client, entity_id, customer, wallet, *, native: int, kurus: int):
+def _post(client, entity_id, customer_id, wallet_gl_id, *, native: int, kurus: int):
     return client.post(
-        f"/entities/{entity_id}/customers/{customer.id}/payments",
+        f"/entities/{entity_id}/customers/{customer_id}/payments",
         json={
             "payment_date": "2026-05-29",
             "amount_kurus": kurus,
             "description": "Customer payment",
             "actor_id": str(ACTOR),
-            "payment_account_id": str(wallet.gl_account_id),
+            "payment_account_id": str(wallet_gl_id),
             "payment_native_quantity": native,
         },
     )
@@ -88,9 +97,9 @@ def _post(client, entity_id, customer, wallet, *, native: int, kurus: int):
 
 def test_an_overpayment_is_still_recorded(db_session, restaurant_a, client: TestClient):
     """The point of the whole design: nothing is blocked."""
-    customer, wallet = _setup(db_session, restaurant_a.id)
+    customer_id, wallet_gl_id = _setup(db_session, restaurant_a.id)
     resp = _post(
-        client, restaurant_a.id, customer, wallet, native=92_200, kurus=1_372_800
+        client, restaurant_a.id, customer_id, wallet_gl_id, native=92_200, kurus=1_372_800
     )
     assert resp.status_code == 201, resp.text
     assert resp.json()["journal_entry_id"]
@@ -99,9 +108,9 @@ def test_an_overpayment_is_still_recorded(db_session, restaurant_a, client: Test
 def test_an_overpayment_comes_back_with_a_warning(
     db_session, restaurant_a, client: TestClient
 ):
-    customer, wallet = _setup(db_session, restaurant_a.id)
+    customer_id, wallet_gl_id = _setup(db_session, restaurant_a.id)
     resp = _post(
-        client, restaurant_a.id, customer, wallet, native=92_200, kurus=1_372_800
+        client, restaurant_a.id, customer_id, wallet_gl_id, native=92_200, kurus=1_372_800
     )
     assert resp.status_code == 201, resp.text
     warnings = resp.json()["warnings"]
@@ -114,9 +123,9 @@ def test_a_payment_within_the_balance_says_nothing(
     db_session, restaurant_a, client: TestClient
 ):
     """Silence is the normal case; a warning on every receipt is no warning."""
-    customer, wallet = _setup(db_session, restaurant_a.id)
+    customer_id, wallet_gl_id = _setup(db_session, restaurant_a.id)
     resp = _post(
-        client, restaurant_a.id, customer, wallet, native=30_000, kurus=1_320_000
+        client, restaurant_a.id, customer_id, wallet_gl_id, native=30_000, kurus=1_320_000
     )
     assert resp.status_code == 201, resp.text
     assert resp.json()["warnings"] == []
@@ -124,9 +133,9 @@ def test_a_payment_within_the_balance_says_nothing(
 
 def test_settling_exactly_says_nothing(db_session, restaurant_a, client: TestClient):
     """The boundary: paying the balance to zero is not paying ahead."""
-    customer, wallet = _setup(db_session, restaurant_a.id)
+    customer_id, wallet_gl_id = _setup(db_session, restaurant_a.id)
     resp = _post(
-        client, restaurant_a.id, customer, wallet, native=31_200, kurus=1_372_800
+        client, restaurant_a.id, customer_id, wallet_gl_id, native=31_200, kurus=1_372_800
     )
     assert resp.status_code == 201, resp.text
     assert resp.json()["warnings"] == []
@@ -152,20 +161,29 @@ def test_a_lira_wallet_is_not_asked_about_forex(
         )
         db_session.commit()
         db_session.refresh(customer)
+        # Read inside the context: creating the till below commits, which
+        # expires this instance, and reloading it out here runs into RLS.
+        customer_id = customer.id
 
     cash = banking_service.create_money_account(
         db_session,
         restaurant_a.id,
         MoneyAccountCreate(account_kind=MoneyAccountKind.CASH, name="Till"),
     )
+    # Same reason as above: creating it committed, so this attribute is
+    # expired and reading it goes back to the database, which needs the
+    # context to see the row.
+    with entity_context(db_session, restaurant_a.id):
+        cash_gl_id = cash.gl_account_id
+
     resp = client.post(
-        f"/entities/{restaurant_a.id}/customers/{customer.id}/payments",
+        f"/entities/{restaurant_a.id}/customers/{customer_id}/payments",
         json={
             "payment_date": "2026-05-29",
             "amount_kurus": 50_000,
             "description": "Customer payment",
             "actor_id": str(ACTOR),
-            "payment_account_id": str(cash.gl_account_id),
+            "payment_account_id": str(cash_gl_id),
         },
     )
     assert resp.status_code == 201, resp.text
