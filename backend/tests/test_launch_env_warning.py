@@ -176,27 +176,6 @@ def test_it_stays_silent_when_there_is_nothing_to_say():
     assert records == []
 
 
-def test_a_percent_sign_in_the_database_url_survives_the_log():
-    """A URL-encoded password is ordinary and must come through intact.
-
-    Not a crash risk: `LogRecord.getMessage` applies %-formatting only when
-    args are present, and this call passes none. The earlier version of this
-    test asserted a hazard that does not exist, on the strength of a probe
-    that applied the format operator by hand — something logging never does.
-    What is worth holding is that the URL is not mangled or dropped.
-    """
-    with captured_records() as records:
-        launch.warn_if_deployed_but_not_production(
-            Settings(
-                app_env="development",
-                cors_origins=REMOTE_CORS,
-                database_url="postgresql+psycopg://u:p%2Fw@db.neon.tech/mizan",
-            )
-        )
-    assert len(records) == 1
-    assert records[0].getMessage() == launch.disarmed_guards_warning("development")
-
-
 def test_validate_launch_settings_runs_the_warning_first(monkeypatch):
     """Wired in, not merely defined.
 

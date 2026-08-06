@@ -104,8 +104,6 @@ def warn_if_deployed_but_not_production(config: Settings | None = None) -> None:
         cfg.is_production, cfg.cors_origins, cfg.database_url
     ):
         return
-    # No args, so logging never runs %-formatting over this string — see
-    # LogRecord.getMessage, which formats only when args are present.
     logger.warning(disarmed_guards_warning(cfg.app_env))
 
 
