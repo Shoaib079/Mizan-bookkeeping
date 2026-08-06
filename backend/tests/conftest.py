@@ -1,4 +1,25 @@
-"""Pytest fixtures — PostgreSQL test database with RLS (entity isolation tests)."""
+"""Pytest fixtures — PostgreSQL test database with RLS (entity isolation tests).
+
+**Read an ORM object's id before you commit, not after.**
+
+A commit expires every loaded attribute, so the next attribute access goes
+back to the database. Outside `entity_context` the row-level security policy
+hides the row, and SQLAlchemy concludes it was deleted — the error is
+`ObjectDeletedError`, which says nothing about RLS and sends you looking for a
+delete that never happened.
+
+    with entity_context(db_session, entity_id):
+        ...
+        db_session.commit()
+        customer_id = customer.id      # while the context is open
+    resp = client.post(f".../customers/{customer_id}/...")
+
+The trap is easy to miss because it only fires when something commits *after*
+you hold the object — creating a second record, for instance — so a test can
+pass for a year and then break when a line is added above it. Entity-scoped
+tables are all affected; `entities` itself is not, which is why
+`restaurant_a.id` can be read anywhere.
+"""
 
 from __future__ import annotations
 

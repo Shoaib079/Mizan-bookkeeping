@@ -189,11 +189,15 @@ def test_a_write_off_can_be_voided(db_session, restaurant_a, client: TestClient)
         description="Receivable write-off",
         actor_id=ACTOR,
     )
+    # Read before the commit: a commit expires the instance, and reloading
+    # it outside entity_context meets RLS, which surfaces as
+    # ObjectDeletedError rather than anything mentioning row security.
+    entry_id = entry.id
     db_session.commit()
 
     resp = client.post(
         f"/entities/{restaurant_a.id}/customers/{customer_id}"
-        f"/write-offs/{entry.id}/void",
+        f"/write-offs/{entry_id}/void",
         json={"actor_id": str(ACTOR), "reason": "Posted in error"},
     )
     assert resp.status_code == 200, resp.text
@@ -225,11 +229,15 @@ def test_a_write_off_can_be_corrected_to_a_smaller_amount(
         description="Receivable write-off",
         actor_id=ACTOR,
     )
+    # Read before the commit: a commit expires the instance, and reloading
+    # it outside entity_context meets RLS, which surfaces as
+    # ObjectDeletedError rather than anything mentioning row security.
+    entry_id = entry.id
     db_session.commit()
 
     resp = client.post(
         f"/entities/{restaurant_a.id}/customers/{customer_id}"
-        f"/write-offs/{entry.id}/correct",
+        f"/write-offs/{entry_id}/correct",
         json={
             "write_off_date": "2026-07-08",
             "amount_kurus": 4_400,
@@ -260,11 +268,15 @@ def test_correcting_a_write_off_beyond_the_balance_is_rejected(
         description="Receivable write-off",
         actor_id=ACTOR,
     )
+    # Read before the commit: a commit expires the instance, and reloading
+    # it outside entity_context meets RLS, which surfaces as
+    # ObjectDeletedError rather than anything mentioning row security.
+    entry_id = entry.id
     db_session.commit()
 
     resp = client.post(
         f"/entities/{restaurant_a.id}/customers/{customer_id}"
-        f"/write-offs/{entry.id}/correct",
+        f"/write-offs/{entry_id}/correct",
         json={
             "write_off_date": "2026-07-08",
             "amount_kurus": 99_999,
