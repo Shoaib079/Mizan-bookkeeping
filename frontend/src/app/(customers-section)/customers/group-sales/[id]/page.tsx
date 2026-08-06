@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatFxNative } from "@/lib/fx-money";
@@ -102,6 +103,7 @@ export default function GroupSaleDetailPage() {
     try {
       await apiFetch(`/entities/${entityId}/group-sales/${sale.id}/void`, {
         method: "POST",
+        idempotencyKey: newIdempotencyKey(),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });

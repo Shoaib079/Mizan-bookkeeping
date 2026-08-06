@@ -117,3 +117,26 @@ def test_a_name_is_required(restaurant_a, client: TestClient):
         f"/entities/{restaurant_a.id}/dishes/suggest-description", json={"name": ""}
     )
     assert resp.status_code == 422, resp.text
+
+
+def test_drafting_needs_no_idempotency_key(restaurant_a, client: TestClient, monkeypatch):
+    """The bug the owner hit: "Idempotency-Key header required" on Draft for me.
+
+    The middleware demands a key on every POST unless the path is exempt, and
+    production sets `IDEMPOTENCY_ENFORCEMENT=true` while every local `.env`
+    sets it false — so this was invisible until it was deployed.
+
+    Drafting stores nothing, and a key would return a cached first answer.
+    Asking twice is how you get a second draft.
+    """
+    from app.config import settings as app_settings
+    from app.core.idempotency.service import should_skip_idempotency
+
+    monkeypatch.setattr(app_settings, "idempotency_enforcement", True, raising=False)
+    path = f"/entities/{restaurant_a.id}/dishes/suggest-description"
+    assert should_skip_idempotency("POST", path), (
+        "suggest-description is not exempt — the Draft button will 400 in production"
+    )
+
+    resp = client.post(path, json={"name": "Dal Tadka"})
+    assert resp.status_code != 400 or "Idempotency-Key" not in resp.text

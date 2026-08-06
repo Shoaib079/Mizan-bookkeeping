@@ -16,6 +16,7 @@ import { Label, Select } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useToast } from "@/lib/toast";
+import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 
 type Props = {
   open: boolean;
@@ -50,6 +51,7 @@ export function CopyDishesDialog({ open, onClose, onCopied }: Props) {
         `/entities/${entityId}/dishes/copy-from`,
         {
           method: "POST",
+          idempotencyKey: newIdempotencyKey(),
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ source_entity_id: sourceId }),
         },

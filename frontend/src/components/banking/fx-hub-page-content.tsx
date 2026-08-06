@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/data-table";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
+import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 import { filterLedgerRows } from "@/lib/ledger-display";
 import type { FxLedgerEntryRead, MoneyAccountTree } from "@/lib/banking-types";
 import {
@@ -180,6 +181,7 @@ export function FxHubPageContent() {
     try {
       await apiFetch(`/entities/${entityId}/banking/accounts/${walletId}`, {
         method: "PATCH",
+        idempotencyKey: newIdempotencyKey(),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_active: false }),
       });

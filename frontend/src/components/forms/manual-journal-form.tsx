@@ -21,6 +21,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch } from "@/lib/api";
+import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 import { formatChartAccountLabel } from "@/lib/chart-accounts";
 import { useEntity } from "@/lib/entity-context";
 import { isoToday } from "@/lib/date-range";
@@ -136,6 +137,7 @@ export function ManualJournalForm() {
     try {
       await apiFetch(`/entities/${entityId}/manual-journals`, {
         method: "POST",
+        idempotencyKey: newIdempotencyKey(),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });

@@ -31,6 +31,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative } from "@/lib/fx-money";
 import {
@@ -98,6 +99,7 @@ export default function GroupMenuDetailPage() {
             `/entities/${entityId}/group-menus/${menuId}/lines`,
             {
               method: "PUT",
+              idempotencyKey: newIdempotencyKey(),
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(
                 lines.map((line) => ({

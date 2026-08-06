@@ -18,10 +18,17 @@ from app.core.idempotency.models import IdempotencyRecord
 ANONYMOUS_SCOPE = "__anonymous__"
 MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 SKIP_PATH_PREFIXES = ("/docs", "/redoc", "/openapi.json")
+#: POSTs that compute and return, storing nothing.
+#:
+#: They are POSTs only because they carry a request body — a GET with a
+#: statement file in it is not a thing. An idempotency key would give them a
+#: cached first answer, which is the opposite of what they are for: asking
+#: twice is how you get a second draft.
 SKIP_PATH_SUFFIXES = (
     "/statements/preview",
     "/detect-document-type",
     "/profit-allocation/preview",
+    "/dishes/suggest-description",
 )
 SKIP_EXACT_PATHS = frozenset({"/", "/health", "/health/ready"})
 

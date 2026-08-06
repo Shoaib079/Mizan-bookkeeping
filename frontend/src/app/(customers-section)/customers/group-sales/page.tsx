@@ -25,6 +25,7 @@ import { formatTrDate, formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { apiFetch } from "@/lib/api";
+import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
 /** A group sale is posted, voided or amended — nothing else.
@@ -74,6 +75,7 @@ export default function GroupSalesPage() {
     try {
       await apiFetch(`/entities/${entityId}/group-sales/${sale.id}/void`, {
         method: "POST",
+        idempotencyKey: newIdempotencyKey(),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });

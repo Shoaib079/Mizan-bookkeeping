@@ -20,7 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
-import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
+import {
+  newIdempotencyKey,
+  useSubmitIdempotency,
+} from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
 type EntityBranding = {
@@ -169,7 +172,7 @@ export function RestaurantBrandingPanel() {
       body.append("file", file);
       const updated = await apiFetch<EntityBranding>(
         `/entities/${entityId}/logo`,
-        { method: "PUT", body },
+        { method: "PUT", body, idempotencyKey: newIdempotencyKey() },
       );
       applyBranding(updated);
       toast("Logo uploaded");
@@ -188,7 +191,7 @@ export function RestaurantBrandingPanel() {
     try {
       const updated = await apiFetch<EntityBranding>(
         `/entities/${entityId}/logo`,
-        { method: "DELETE" },
+        { method: "DELETE", idempotencyKey: newIdempotencyKey() },
       );
       applyBranding(updated);
       toast("Logo removed");

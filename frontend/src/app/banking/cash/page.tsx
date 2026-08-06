@@ -170,6 +170,7 @@ export default function CashDrawerPage() {
     try {
       await apiFetch(`/entities/${entityId}/banking/accounts/${accountId}`, {
         method: "PATCH",
+        idempotencyKey: newIdempotencyKey(),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
