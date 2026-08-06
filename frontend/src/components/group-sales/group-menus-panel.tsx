@@ -21,6 +21,7 @@ import { useEntity } from "@/lib/entity-context";
 import { MENU_CATEGORIES, type GroupMenuRow } from "@/lib/group-sales-types";
 import { formatFxNative } from "@/lib/fx-money";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEntityList } from "@/lib/use-entity-list";
 
 /** "$15.00 +KDV", or "$27.00 + $2.00" for the catering menus. */
@@ -41,6 +42,7 @@ function categoryLabel(menu: GroupMenuRow): string {
 
 export function GroupMenusPanel() {
   const { entityId } = useEntity();
+  const router = useRouter();
   const { items, total, loading, error, reload, offset, setOffset, pageSize } =
     useEntityList<GroupMenuRow>(
       "/group-menus?include_inactive=true",
@@ -72,6 +74,18 @@ export function GroupMenusPanel() {
           }}
         >
           New menu
+        </Button>
+      }
+      actions={
+        // The logo, address and terms the menu prints live in Settings, with
+        // the rest of the restaurant record. Nobody building a menu would
+        // think to look there, so the way there is on this page.
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => router.push("/settings/restaurant?full=1")}
+        >
+          Document details
         </Button>
       }
       countLabel={`${total} menu${total === 1 ? "" : "s"}`}

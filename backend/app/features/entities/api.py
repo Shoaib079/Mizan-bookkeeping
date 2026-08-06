@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Header, Query, UploadFile
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
+from app.adapters.storage import load_upload_document, save_upload, upload_exists
+from app.core.content_fingerprint import file_fingerprint
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.config import settings
 from app.core.auth.deps import (
@@ -19,6 +22,7 @@ from app.core.auth.deps import (
 from app.db.session import get_session
 from app.features.auth.models import User
 from app.features.entities import service
+from app.features.entities.logo import InvalidLogoError, validate_logo
 from app.features.entities.schema import (
     EntityCreate,
     EntityRead,
@@ -62,7 +66,7 @@ def list_entities(
     else:
         entities, total = service.list_entities(session, q=q, list_params=list_params)
     return paginated_list(
-        [EntityRead.model_validate(e) for e in entities],
+        [EntityRead.from_entity(e) for e in entities],
         total=total,
         limit=list_params.limit,
         offset=list_params.offset,
@@ -78,7 +82,7 @@ def get_entity(
     entity = service.get_entity(session, entity_id)
     if entity is None:
         raise HTTPException(status_code=404, detail="Entity not found")
-    return entity
+    return EntityRead.from_entity(entity)
 
 
 @router.patch("/{entity_id}", response_model=EntityRead)
@@ -90,12 +94,83 @@ def update_entity(
 ) -> EntityRead:
     if service.get_entity(session, entity_id) is None:
         raise HTTPException(status_code=404, detail="Entity not found")
-    if payload.name is None and payload.legal_name is None and payload.vkn is None:
+    # `exclude_unset`, not a list of field names: the old check named the three
+    # fields that existed at the time, so slice 3's six new ones would have
+    # been rejected as an empty payload with a message saying the opposite.
+    if not payload.model_dump(exclude_unset=True):
         raise HTTPException(status_code=422, detail="At least one field is required")
     entity = service.update_entity(session, entity_id, payload)
     if entity is None:
         raise HTTPException(status_code=404, detail="Entity not found")
-    return entity
+    return EntityRead.from_entity(entity)
+
+
+@router.put("/{entity_id}/logo", response_model=EntityRead)
+async def upload_entity_logo(
+    entity_id: uuid.UUID,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> EntityRead:
+    """Replace this restaurant's logo.
+
+    PUT rather than POST: there is one logo, and uploading a second one
+    replaces the first rather than adding to a collection.
+    """
+    if service.get_entity(session, entity_id) is None:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    content = await file.read()
+    try:
+        fmt = validate_logo(content)
+    except InvalidLogoError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    stored_path = save_upload(
+        entity_id,
+        file_fingerprint(content),
+        content,
+        extension=fmt.extension,
+    )
+    entity = service.set_entity_logo(
+        session, entity_id, stored_path=stored_path, media_type=fmt.media_type
+    )
+    if entity is None:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return EntityRead.from_entity(entity)
+
+
+@router.get("/{entity_id}/logo", response_model=None)
+def get_entity_logo(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+):
+    entity = service.get_entity(session, entity_id)
+    if entity is None:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    stored = entity.logo_stored_path
+    if not stored or not upload_exists(stored):
+        raise HTTPException(status_code=404, detail="No logo uploaded")
+    document = load_upload_document(
+        stored, media_type=entity.logo_media_type or "image/png"
+    )
+    local_path, content, media_type = document.as_file_response_args()
+    if local_path is not None:
+        return FileResponse(local_path, media_type=media_type)
+    assert content is not None
+    return Response(content=content, media_type=media_type)
+
+
+@router.delete("/{entity_id}/logo", response_model=EntityRead)
+def delete_entity_logo(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> EntityRead:
+    entity = service.clear_entity_logo(session, entity_id)
+    if entity is None:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return EntityRead.from_entity(entity)
 
 
 @router.post("/{entity_id}/settings", response_model=EntitySettingRead, status_code=201)

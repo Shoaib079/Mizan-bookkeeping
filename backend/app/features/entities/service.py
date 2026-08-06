@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.adapters.storage import delete_stored_upload
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.auth.types import EntityRole
 from app.db.session import entity_context, require_entity_context, user_membership_lookup, user_membership_lookup
@@ -129,6 +130,20 @@ def get_entity(session: Session, entity_id: uuid.UUID) -> Entity | None:
     return session.get(Entity, entity_id)
 
 
+#: Fields where an empty string means "clear this", and null means "leave it".
+#: `name` is not among them — a restaurant without a name is not a state the
+#: rest of the app can render.
+_OPTIONAL_TEXT_FIELDS = (
+    "legal_name",
+    "address",
+    "phone_primary",
+    "phone_secondary",
+    "email",
+    "menu_terms",
+    "menu_validity_note",
+)
+
+
 def update_entity(
     session: Session, entity_id: uuid.UUID, payload: EntityUpdate
 ) -> Entity | None:
@@ -138,13 +153,55 @@ def update_entity(
 
     if payload.name is not None:
         entity.name = payload.name.strip()
-    if payload.legal_name is not None:
-        entity.legal_name = payload.legal_name.strip() or None
     if payload.vkn is not None:
         entity.vkn = payload.vkn
+    for field in _OPTIONAL_TEXT_FIELDS:
+        value = getattr(payload, field)
+        if value is not None:
+            setattr(entity, field, value.strip() or None)
 
     session.commit()
     session.refresh(entity)
+    return entity
+
+
+def set_entity_logo(
+    session: Session,
+    entity_id: uuid.UUID,
+    *,
+    stored_path: str,
+    media_type: str,
+) -> Entity | None:
+    """Point the restaurant at a newly stored logo, discarding the old file.
+
+    The previous file is deleted *after* the row is committed. The other order
+    — delete then save — leaves the restaurant with a path to nothing if the
+    commit fails, and a missing logo is harder to notice than an orphaned one.
+    """
+    entity = get_entity(session, entity_id)
+    if entity is None:
+        return None
+    previous = entity.logo_stored_path
+    entity.logo_stored_path = stored_path
+    entity.logo_media_type = media_type
+    session.commit()
+    session.refresh(entity)
+    if previous and previous != stored_path:
+        delete_stored_upload(previous)
+    return entity
+
+
+def clear_entity_logo(session: Session, entity_id: uuid.UUID) -> Entity | None:
+    entity = get_entity(session, entity_id)
+    if entity is None:
+        return None
+    previous = entity.logo_stored_path
+    entity.logo_stored_path = None
+    entity.logo_media_type = None
+    session.commit()
+    session.refresh(entity)
+    if previous:
+        delete_stored_upload(previous)
     return entity
 
 

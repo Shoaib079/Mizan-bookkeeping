@@ -204,22 +204,31 @@ Cappadocia mistake made structurally impossible.
 
 Following the existing archetypes; no new page shapes.
 
-**`/menu` — hub, three tabs**
+- **`/customers/group-menus`** (`ListPage`) — name, category, price, dish
+  count, active. Where menus are added and removed.
+- **`/customers/dishes`** (`ListPage`) — name, which menus it can go on,
+  description, active. The reusable list menus are built from.
+- **Menu detail** (`EntityDetailPage`) — the price and category at the top,
+  then the dish lines: add from the dish list, reorder, remove, set a note.
+  This is the screen you will actually live in.
+- **Document details** — a section on **Restaurant settings**, not a page of
+  its own.
 
-1. **Menus** (`ListPage`) — name, category, price, dish count, active. This is
-   where you add and remove menus.
-2. **Dishes** (`ListPage`) — name, dietary, description, how many menus use it.
-   The usage count is the safety net: it tells you what you are about to
-   change before you change it.
-3. **Document** (`FormPage`) — logo upload, address, contacts, terms, validity.
+### Where the branding ended up, and why (slice 3)
 
-**Menu detail** (`EntityDetailPage`) — the price and category at the top, then
-the dish lines: add from the dish list, reorder, remove, set a note. This is
-the screen you will actually live in.
+The plan above put the logo, address, contacts and terms on a third tab of a
+new `/menu` hub. Built, they went into Restaurant settings instead.
 
-The current `/customers/group-menus` page is a 5-line wrapper around
-`GroupMenusPanel`. It becomes a link to the new hub rather than a second place
-to edit menus.
+Two reasons. They are facts about the *restaurant*, not about the menu — the
+address and phone number will be wanted by an invoice or a statement long
+before a second menu format exists, and a copy per document is exactly the
+duplication this whole plan exists to remove. And a new page is not free: the
+route registry is guard-tested at a fixed count, so a page is a decision rather
+than a side effect, and this one would have held a single form.
+
+The cost is discoverability — nobody building a menu thinks to open Settings.
+So the Group menus page carries a **Document details** button that goes
+straight there.
 
 ---
 
@@ -305,9 +314,9 @@ Each slice is useful on its own and leaves the app working.
 | # | Slice | Why this order |
 | --- | --- | --- |
 | 0 | *(yours)* Add the missing restaurants, when you are ready | Not blocking — see below. |
-| 1 | Dishes: model, list, form | Nothing can reference dishes until they exist. Small, self-contained. |
-| 2 | Menu content: price, category, lines, detail screen | The heart of it. After this the data is real, even without a PDF. |
-| 3 | Restaurant branding: logo upload, address, contacts, terms | Needed only by the PDF, so it waits until the content is right. |
+| 1 | ✅ Dishes: model, list, form | Nothing can reference dishes until they exist. Small, self-contained. |
+| 2 | ✅ Menu content: price, category, lines, detail screen | The heart of it. After this the data is real, even without a PDF. |
+| 3 | ✅ Restaurant branding: logo upload, address, contacts, terms | Needed only by the PDF, so it waits until the content is right. |
 | 4 | The PDF | Once the content is settled, the document is layout work. |
 | 5 | Group sale pre-fill | Last: depends on prices existing, and is the only piece that touches the books. |
 

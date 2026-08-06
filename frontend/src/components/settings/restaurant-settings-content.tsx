@@ -9,6 +9,7 @@ import { BackupsInfoPanel } from "@/components/settings/backups-info-panel";
 import {
   EntityFeatureToggles,
 } from "@/components/settings/entity-feature-toggles";
+import { RestaurantBrandingPanel } from "@/components/settings/restaurant-branding-panel";
 import { TeamPanel } from "@/components/settings/team-panel";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -210,6 +211,8 @@ export function RestaurantSettingsContent() {
           </form>
         )}
       </FormSection>
+
+      <RestaurantBrandingPanel />
 
       <FormSection>
         <h2 className="text-sm font-semibold">Modules</h2>
