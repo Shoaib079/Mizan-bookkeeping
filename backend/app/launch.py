@@ -38,6 +38,44 @@ def looks_deployed(cors_origins: str, database_url: str) -> bool:
     return remote_cors and remote_db
 
 
+def should_warn_about_environment(
+    is_production: bool, cors_origins: str, database_url: str
+) -> bool:
+    """Is this the situation worth saying something about?
+
+    Separate from the logging so the decision can be tested by calling it —
+    including the case that matters least often and most: production, where
+    the answer must be no. `looks_deployed` alone cannot express that, and an
+    earlier refactor lost the assertion when the decision lived inline.
+    """
+    if is_production:
+        return False
+    return looks_deployed(cors_origins, database_url)
+
+
+#: Named so the wording can be asserted. The distinction it draws — skipped,
+#: not passed — is the entire content of the warning, and it was previously
+#: only checked through a log capture that a refactor quietly dropped.
+_DISARMED_GUARDS = (
+    "live Clerk keys (sk_test_/pk_test_ accepted)",
+    "AUTH_ENFORCEMENT must be on",
+    "CLERK_TEST_MODE must be off",
+    "CORS_ORIGINS must not be the localhost default",
+)
+
+
+def disarmed_guards_warning(app_env: str) -> str:
+    """What to say, given the environment name it found."""
+    return (
+        f"APP_ENV={app_env!r} but this looks like a real deployment (remote "
+        "database, non-local CORS origins). Every production guard is "
+        "therefore skipped, not passed: "
+        + "; ".join(_DISARMED_GUARDS)
+        + ". Set APP_ENV=production — but only in the same deploy that "
+        "switches Clerk to live keys, or startup will refuse the test ones."
+    )
+
+
 def warn_if_deployed_but_not_production() -> None:
     """Say so when a live-looking deployment is not marked as production.
 
@@ -56,25 +94,11 @@ def warn_if_deployed_but_not_production() -> None:
     *should* stop a bad launch already exist below. This only makes the
     silence audible.
     """
-    if settings.is_production:
+    if not should_warn_about_environment(
+        settings.is_production, settings.cors_origins, settings.database_url
+    ):
         return
-    if not looks_deployed(settings.cors_origins, settings.database_url):
-        return
-
-    disarmed = [
-        "live Clerk keys (sk_test_/pk_test_ accepted)",
-        "AUTH_ENFORCEMENT must be on",
-        "CLERK_TEST_MODE must be off",
-        "CORS_ORIGINS must not be the localhost default",
-    ]
-    logger.warning(
-        "APP_ENV=%r but this looks like a real deployment (remote database, "
-        "non-local CORS origins). Every production guard is therefore skipped, "
-        "not passed: %s. Set APP_ENV=production — but only in the same deploy "
-        "that switches Clerk to live keys, or startup will refuse the test ones.",
-        settings.app_env,
-        "; ".join(disarmed),
-    )
+    logger.warning("%s", disarmed_guards_warning(settings.app_env))
 
 
 def validate_launch_settings() -> None:
