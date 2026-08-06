@@ -318,7 +318,29 @@ Each slice is useful on its own and leaves the app working.
 | 2 | ✅ Menu content: price, category, lines, detail screen | The heart of it. After this the data is real, even without a PDF. |
 | 3 | ✅ Restaurant branding: logo upload, address, contacts, terms | Needed only by the PDF, so it waits until the content is right. |
 | 4 | ✅ The PDF | Once the content is settled, the document is layout work. |
-| 5 | Group sale pre-fill | Last: depends on prices existing, and is the only piece that touches the books. |
+| 5 | ✅ Group sale pre-fill | Last: depends on prices existing, and is the only piece that touches the books. |
+
+### The catalogue fills a box; it never posts (slice 5)
+
+Picking a menu on the sale form pre-fills the rate, and that is the whole of
+it. What is in the box when Save is pressed is what reaches the ledger — the
+server does not look the price up and substitute it.
+
+A menu price is edited whenever prices change; a sale is a fact about a day.
+If the server priced from the catalogue, the same request replayed after a
+price rise would post a different figure and nothing on screen would have
+said so. `tests/test_group_sale_catalogue_price.py` holds that line.
+
+Three rules fell out of building it:
+
+- **A pre-fill never overwrites typing.** Correcting the menu on a line where
+  a negotiated figure is already entered leaves the figure alone.
+- **No pre-fill across currencies.** Writing `15,00` into a lira sale because
+  the menu says `$15.00` is a 34-fold error that looks like a filled-in form.
+  A note names the catalogue price instead; the app does not know what rate
+  this agency was quoted and will not invent one.
+- **The note never blocks.** Agencies negotiate. A line priced away from the
+  catalogue says so and posts.
 
 Choosing A removed the brand tier, the per-restaurant price table and the RLS
 exemption — roughly a third of the work, and the third with the most risk in it.

@@ -16,6 +16,7 @@ import { useEntity } from "@/lib/entity-context";
 import { formatFxNative, parseFxNative } from "@/lib/fx-money";
 import type { CustomerRow } from "@/components/forms/customer-form";
 import type { GroupMenuRow, GroupSaleRead } from "@/lib/group-sales-types";
+import { menuPriceNote, menuRatePrefill } from "@/lib/menu-prefill";
 import { FOREX_CURRENCIES } from "@/lib/group-sales-types";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
@@ -438,9 +439,20 @@ export function GroupSaleForm({
                   value={line.group_menu_id ?? ""}
                   onValueChange={(value) => {
                     const menu = menus.find((m) => m.id === value);
+                    // The catalogue price fills the box; it does not post.
+                    // Only into an empty line — someone who has already typed
+                    // a negotiated figure must not have it overwritten by
+                    // correcting the menu they picked (MENU_PLAN.md slice 5).
+                    const untouched =
+                      !line.rateText.trim() && !line.totalText.trim();
+                    const prefill =
+                      menu && untouched
+                        ? menuRatePrefill(menu, currency)
+                        : null;
                     updateLine(line.key, {
                       group_menu_id: value || null,
                       menu_name: menu?.name ?? line.menu_name,
+                      ...(prefill !== null ? { rateText: prefill } : {}),
                     });
                   }}
                 />
@@ -484,6 +496,19 @@ export function GroupSaleForm({
                   }
                   placeholder={isForex ? "e.g. 12,00" : "e.g. 350,00"}
                 />
+                {(() => {
+                  // A note, never a block: agencies negotiate, and a line at
+                  // a price the catalogue does not carry is ordinary. The
+                  // point is to make sure it was meant.
+                  const note = menuPriceNote(
+                    menus.find((m) => m.id === line.group_menu_id) ?? null,
+                    currency,
+                    parsedLines[index]?.rate ?? null,
+                  );
+                  return note ? (
+                    <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+                  ) : null;
+                })()}
               </div>
               <div className="sm:col-span-4">
                 <Label className="text-xs">
