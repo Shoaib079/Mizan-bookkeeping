@@ -42,8 +42,13 @@ class Dish(EntityScopedMixin, Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     #: The detail the current menus lack entirely. Optional: a dish with none
-    #: prints as its name alone, exactly as the Word file does today.
+    #: prints as its name alone, exactly as the Word file does today. Written
+    #: for agencies, so it describes the food rather than the recipe.
     description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    #: Turkish, for Turkish-speaking agencies. Only the description is
+    #: translated — the dish names stay as they are, because "Dal Tadka" is
+    #: what it is called on the menu in any language.
+    description_tr: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # Three independent flags rather than one classification. A single value
     # could not say that Dal Tadka belongs on the veg, non-veg *and* Jain
     # menus, which is how it is actually used. Default true: a new dish is

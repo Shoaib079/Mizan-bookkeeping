@@ -7,6 +7,7 @@
  * reason the menu stopped being a Word file.
  */
 
+import { Sparkles } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ export type DishRow = {
   id: string;
   name: string;
   description: string | null;
+  description_tr: string | null;
   suits_veg: boolean;
   suits_non_veg: boolean;
   suits_jain: boolean;
@@ -55,6 +57,8 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [descriptionTr, setDescriptionTr] = useState("");
+  const [drafting, setDrafting] = useState(false);
   const [suits, setSuits] = useState<Record<SuitabilityKey, boolean>>({
     suits_veg: true,
     suits_non_veg: true,
@@ -76,6 +80,7 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
     if (!open) return;
     setName(dish?.name ?? "");
     setDescription(dish?.description ?? "");
+    setDescriptionTr(dish?.description_tr ?? "");
     setSuits({
       suits_veg: dish?.suits_veg ?? true,
       suits_non_veg: dish?.suits_non_veg ?? true,
@@ -84,6 +89,41 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
     setIsActive(dish?.is_active ?? true);
     setError(null);
   }, [open, dish]);
+
+  /** Fill both description boxes from the dish name.
+   *
+   * Fills the form; it does not save. What comes back is a starting point
+   * from something that has never eaten here — the "or similar" scattered
+   * through these menus exists because the dish varies by day.
+   */
+  async function draftDescription() {
+    if (!entityId || !name.trim()) return;
+    setDrafting(true);
+    setError(null);
+    try {
+      const draft = await apiFetch<{
+        description: string;
+        description_tr: string;
+      }>(`/entities/${entityId}/dishes/suggest-description`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      // Only fill what is empty: a description already written by hand is not
+      // improved by being overwritten.
+      if (draft.description && !description.trim()) {
+        setDescription(draft.description);
+      }
+      if (draft.description_tr && !descriptionTr.trim()) {
+        setDescriptionTr(draft.description_tr);
+      }
+      toast("Draft written — check it before saving", "warning");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not write a draft");
+    } finally {
+      setDrafting(false);
+    }
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -102,6 +142,7 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
     const body = {
       name: name.trim(),
       description: description.trim() || null,
+      description_tr: descriptionTr.trim() || null,
       ...suits,
       ...(editing ? { is_active: isActive } : {}),
     };
@@ -147,7 +188,21 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
           />
         </div>
         <div>
-          <Label htmlFor="dish-desc">Description (optional)</Label>
+          <div className="mb-1 flex items-baseline justify-between gap-3">
+            <Label htmlFor="dish-desc" className="mb-0">
+              Description (optional)
+            </Label>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-7 gap-1.5 px-2 text-xs"
+              disabled={!name.trim() || drafting}
+              onClick={() => void draftDescription()}
+            >
+              <Sparkles className="size-3.5" />
+              {drafting ? "Writing…" : "Draft for me"}
+            </Button>
+          </div>
           <Input
             id="dish-desc"
             value={description}
@@ -157,6 +212,18 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
           <p className="mt-1 text-xs text-muted-foreground">
             Printed under the dish on the menu you send agencies. Leave blank to
             print the name alone.
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="dish-desc-tr">Turkish description (optional)</Label>
+          <Input
+            id="dish-desc-tr"
+            value={descriptionTr}
+            onChange={(e) => setDescriptionTr(e.target.value)}
+            placeholder="Kimyon ve sarımsakla kavrulmuş sarı mercimek"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            For Turkish-speaking agencies. The dish name stays as it is.
           </p>
         </div>
         <fieldset>

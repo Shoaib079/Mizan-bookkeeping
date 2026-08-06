@@ -89,6 +89,44 @@ def test_suitability_can_be_changed_later(restaurant_a, client: TestClient):
     assert resp.json()["suits_non_veg"] is True
 
 
+def test_a_turkish_description_is_stored_alongside_the_english(
+    restaurant_a, client: TestClient
+):
+    """Descriptions go to agencies, and some of them read Turkish.
+
+    Only the description is translated — the dish name stays as it is, because
+    "Dal Tadka" is what it is called on the menu in any language.
+    """
+    body = _create(
+        client,
+        restaurant_a.id,
+        description="Yellow lentils tempered with cumin",
+        description_tr="Kimyonla kavrulmuş sarı mercimek",
+    ).json()
+    assert body["description"] == "Yellow lentils tempered with cumin"
+    assert body["description_tr"] == "Kimyonla kavrulmuş sarı mercimek"
+
+
+def test_the_turkish_description_can_be_cleared_on_its_own(
+    restaurant_a, client: TestClient
+):
+    created = _create(
+        client,
+        restaurant_a.id,
+        description="Yellow lentils",
+        description_tr="Sarı mercimek",
+    ).json()
+    resp = client.patch(
+        f"/entities/{restaurant_a.id}/dishes/{created['id']}",
+        json={"description_tr": None},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["description_tr"] is None
+    assert resp.json()["description"] == "Yellow lentils", (
+        "clearing one description wiped the other"
+    )
+
+
 def test_a_blank_description_is_stored_as_absent(restaurant_a, client: TestClient):
     """A form posts "" for a field left alone.
 

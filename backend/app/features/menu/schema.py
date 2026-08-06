@@ -24,6 +24,7 @@ def _clean(value: str | None) -> str | None:
 class DishCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1024)
+    description_tr: str | None = Field(default=None, max_length=1024)
     # Default true: a new dish is offered on every menu until told otherwise,
     # so rice, naan, salad and water need no ticking at all.
     suits_veg: bool = True
@@ -38,7 +39,7 @@ class DishCreate(BaseModel):
             raise ValueError("name is required")
         return trimmed
 
-    @field_validator("description")
+    @field_validator("description", "description_tr")
     @classmethod
     def clean_description(cls, value: str | None) -> str | None:
         return _clean(value)
@@ -47,6 +48,7 @@ class DishCreate(BaseModel):
 class DishUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1024)
+    description_tr: str | None = Field(default=None, max_length=1024)
     suits_veg: bool | None = None
     suits_non_veg: bool | None = None
     suits_jain: bool | None = None
@@ -69,9 +71,21 @@ class DishRead(BaseModel):
     id: uuid.UUID
     name: str
     description: str | None
+    description_tr: str | None
     suits_veg: bool
     suits_non_veg: bool
     suits_jain: bool
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class DishDescriptionSuggestRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+
+
+class DishDescriptionSuggestOut(BaseModel):
+    """A draft, not a saved value — the caller fills the form with it."""
+
+    description: str
+    description_tr: str

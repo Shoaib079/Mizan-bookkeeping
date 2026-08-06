@@ -16,7 +16,13 @@ from app.core.listing import (
 )
 from app.db.session import get_session
 from app.features.menu import service
-from app.features.menu.schema import DishCreate, DishRead, DishUpdate
+from app.features.menu.schema import (
+    DishCreate,
+    DishDescriptionSuggestOut,
+    DishDescriptionSuggestRequest,
+    DishRead,
+    DishUpdate,
+)
 from app.features.menu.service import DuplicateDishError
 
 router = APIRouter(prefix="/entities/{entity_id}/dishes", tags=["menu"])
@@ -94,3 +100,35 @@ def update_dish(
     except DuplicateDishError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return DishRead.model_validate(dish)
+
+
+@router.post("/suggest-description", response_model=DishDescriptionSuggestOut)
+def suggest_dish_description(
+    entity_id: uuid.UUID,
+    payload: DishDescriptionSuggestRequest,
+    _: None = Depends(operations_write_guard),
+) -> DishDescriptionSuggestOut:
+    """Draft a description for a dish name, in English and Turkish.
+
+    Nothing is stored. The caller puts the text in the form, where it is
+    edited or discarded — a model that has never eaten in this kitchen should
+    not be describing its food unchallenged.
+    """
+    from app.adapters.ocr_ai.dish_description import (
+        DishDescriptionError,
+        draft_dish_description,
+    )
+
+    try:
+        draft = draft_dish_description(payload.name)
+    except DishDescriptionError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    if draft is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Description drafting is not configured for this deployment",
+        )
+    return DishDescriptionSuggestOut(
+        description=draft.description,
+        description_tr=draft.description_tr,
+    )

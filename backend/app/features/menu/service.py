@@ -27,6 +27,7 @@ def create_dish(session: Session, entity_id: uuid.UUID, payload: DishCreate) -> 
         dish = Dish(
             name=payload.name,
             description=payload.description,
+            description_tr=payload.description_tr,
             suits_veg=payload.suits_veg,
             suits_non_veg=payload.suits_non_veg,
             suits_jain=payload.suits_jain,
@@ -101,8 +102,9 @@ def update_dish(
         # plain `is not None` check would silently ignore. That is why the
         # update is checked against the fields actually sent.
         fields_sent = payload.model_fields_set
-        if "description" in fields_sent:
-            dish.description = payload.description
+        for field in ("description", "description_tr"):
+            if field in fields_sent:
+                setattr(dish, field, getattr(payload, field))
         for field in SUITABILITY_FIELDS:
             value = getattr(payload, field)
             if value is not None:

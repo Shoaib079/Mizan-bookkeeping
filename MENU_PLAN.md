@@ -131,12 +131,22 @@ every other business table. No new scoping concepts.
 
 ### `dishes` — new
 
+**Built.** As shipped:
+
 | Field | Notes |
 | --- | --- |
-| `name` | "Dal Tadka" |
-| `description` | The detail you want to add. Optional — the current document has none. |
-| `dietary` | `veg` / `non_veg` / `jain`, optional. Lets the menu builder filter, and catches a meat dish landing on a Jain menu. |
+| `name` | "Dal Tadka". Unique per restaurant — two rows with one name means the wrong one gets picked. |
+| `description` | English, for agencies. Optional; a dish with none prints as its name alone. |
+| `description_tr` | Turkish. Only the description is translated; names are not. |
+| `suits_veg`, `suits_non_veg`, `suits_jain` | Three flags, all true by default. |
 | `is_active` | Retired dishes stay, so old menus still read correctly. |
+
+**Three flags, not one classification.** The first version had a single
+`dietary` value and it was wrong within an hour of use: Dal Tadka belongs on
+the veg, non-veg *and* Jain menus, and the current Non-Veg Menu 1 opens with
+it. One value could not say that. Defaulting all three to true means rice,
+naan, salad and water need no ticking at all — you untick where a dish does
+not belong, which is really just meat off the veg and Jain menus.
 
 ### `group_menus` — extend the existing table
 
@@ -344,17 +354,37 @@ correcting anything I misread is a text field — not a Word table.
 
 ## 9. Open questions
 
-1. **Descriptions in the PDF** — printed for agencies, or for your own
-   reference only? The mockup shows them printed. It changes the layout, not
-   the data.
-2. **Turkish menu names.** The document is English only. If agencies ever need
-   Turkish, a second name field is far cheaper to add now than later.
-3. **Does Spice Corner need this too**, or is the menu an India Gate thing? It
-   changes nothing structurally — only how many times slice 2 runs.
+All settled.
 
-Settled since the first draft: locations are yours to add and are not a
-dependency; the 2026 `.docx` does not exist, so seeding works as described in
-§8 with a short verification list.
+| Question | Answer |
+| --- | --- |
+| Descriptions in the PDF? | **Printed.** They are written for agencies. |
+| Turkish? | **Descriptions yes, names no.** "Dal Tadka" is what it is called in any language. |
+| Locations | Yours to add, not a dependency (§8). |
+| The 2026 `.docx` | Does not exist. Seeding works as described in §8. |
+| Does every restaurant get this? | The **feature** yes — every restaurant has the pages. The **dishes** are its own, per §2a. |
 
-**Nothing blocks slice 1.** Dishes are self-contained and needed under every
-version of this. Say the word and that is where I would start.
+### "Global" — feature, not data
+
+Worth stating plainly because it is easy to read the other way. Every
+restaurant added later gets the Dishes page, its own menus and its own PDF.
+What it does *not* get is India Gate Istanbul's dish list: that is the
+separation chosen in §2a, for the reason given there — separate companies,
+separate VKNs, and an isolation model worth keeping whole.
+
+The practical cost is typing the list once per restaurant. If that becomes
+tiresome, the answer is **a "copy dishes from another restaurant" button** at
+setup — one click, then the two diverge and neither can alter the other. That
+is a slice-2 convenience, not an architectural change, and it stays available
+whenever it is wanted.
+
+### Descriptions can be drafted
+
+Since descriptions go to agencies and there are a lot of dishes, the form has
+a **Draft for me** button: it writes an English and a Turkish sentence from
+the dish name and puts them in the boxes.
+
+It fills the form and saves nothing. What comes back is a starting point from
+something that has never eaten in the kitchen — the "or similar" on a dozen
+of these lines exists because the dish varies by day. It also declines to
+overwrite a description already written by hand.
