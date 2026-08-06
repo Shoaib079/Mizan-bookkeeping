@@ -84,6 +84,11 @@ Backend (Railway dashboard → `mizan-api` → Variables):
 - [ ] `APP_ENV=production`, `AUTH_ENFORCEMENT=true` (the launch guard enforces
       this; also what makes the auth model real).
 - [ ] Clerk live keys present (`CLERK_*`), R2 backup vars, `DATABASE_URL` (the Neon connection string).
+      Getting live keys means creating a Clerk **production instance**, which
+      needs a domain you own — see [CLERK_GO_LIVE.md](CLERK_GO_LIVE.md).
+      `APP_ENV=production` and the live keys must ship in the *same* deploy:
+      production with test keys refuses to boot, and live keys without
+      `APP_ENV` silently skip every guard below.
 
 Frontend (Vercel dashboard):
 - [ ] `NEXT_PUBLIC_API_URL` = Railway API URL (e.g. `https://mizan-api-....up.railway.app`).

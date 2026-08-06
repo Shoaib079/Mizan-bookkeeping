@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+
 from app.config import _DEFAULT_CORS_ORIGINS, settings
+
+logger = logging.getLogger(__name__)
+
+_LOCAL_HOSTS = ("localhost", "127.0.0.1", "::1")
 
 
 def _is_clerk_test_key(key: str | None) -> bool:
@@ -12,8 +18,64 @@ def _is_clerk_test_key(key: str | None) -> bool:
     return normalized.startswith("sk_test_") or normalized.startswith("pk_test_")
 
 
+def _looks_deployed() -> bool:
+    """Does this process look like it is serving real users?
+
+    Two independent signals, because either alone has a false positive: a
+    developer can point at a hosted database while working locally, and a
+    CORS list can name a staging origin. Both together means something is
+    talking to this from a real browser against real data.
+    """
+    remote_cors = bool(settings.cors_origins.strip()) and not any(
+        host in settings.cors_origins for host in _LOCAL_HOSTS
+    )
+    remote_db = not any(host in settings.database_url for host in _LOCAL_HOSTS)
+    return remote_cors and remote_db
+
+
+def warn_if_deployed_but_not_production() -> None:
+    """Say so when a live-looking deployment is not marked as production.
+
+    Every guard below is written `if settings.is_production`, and `app_env`
+    defaults to "development" — so a deployment that simply never set
+    APP_ENV gets none of them. Not one check fails; they are all skipped,
+    silently, which is the worst way for a safety net to be absent.
+
+    That is not hypothetical. Railway ran with a Clerk `pk_test_` key for
+    weeks: the guard that rejects test keys in production was there and
+    correct, and never ran. The symptom reached the surface as users being
+    logged out, which points nowhere near an unset environment variable.
+
+    Deliberately a log and never a raise. Refusing to boot on a heuristic
+    would mean a false positive takes the books offline, and the guards that
+    *should* stop a bad launch already exist below. This only makes the
+    silence audible.
+    """
+    if settings.is_production or not _looks_deployed():
+        return
+
+    disarmed = [
+        "live Clerk keys (sk_test_/pk_test_ accepted)",
+        "AUTH_ENFORCEMENT must be on",
+        "CLERK_TEST_MODE must be off",
+        "CORS_ORIGINS must not be the localhost default",
+    ]
+    logger.warning(
+        "APP_ENV=%r but this looks like a real deployment (remote database, "
+        "non-local CORS origins). Every production guard is therefore skipped, "
+        "not passed: %s. Set APP_ENV=production — but only in the same deploy "
+        "that switches Clerk to live keys, or startup will refuse the test ones.",
+        settings.app_env,
+        "; ".join(disarmed),
+    )
+
+
 def validate_launch_settings() -> None:
     """Refuse production boot when auth enforcement is disabled."""
+    # First, because everything after it is conditional on the flag this
+    # checks — and a skipped guard should not be a quiet one.
+    warn_if_deployed_but_not_production()
+
     if settings.is_production and not settings.auth_enforcement:
         raise RuntimeError(
             "AUTH_ENFORCEMENT must be true in production (APP_ENV=production)"
