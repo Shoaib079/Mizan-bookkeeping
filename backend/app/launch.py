@@ -18,18 +18,23 @@ def _is_clerk_test_key(key: str | None) -> bool:
     return normalized.startswith("sk_test_") or normalized.startswith("pk_test_")
 
 
-def _looks_deployed() -> bool:
+def looks_deployed(cors_origins: str, database_url: str) -> bool:
     """Does this process look like it is serving real users?
 
     Two independent signals, because either alone has a false positive: a
     developer can point at a hosted database while working locally, and a
     CORS list can name a staging origin. Both together means something is
     talking to this from a real browser against real data.
+
+    Takes its inputs rather than reading `settings`, so it can be tested by
+    calling it. The version that read the global had to be exercised by
+    patching module state, and when that quietly failed to take effect the
+    test reported "no warning" — indistinguishable from the code being wrong.
     """
-    remote_cors = bool(settings.cors_origins.strip()) and not any(
-        host in settings.cors_origins for host in _LOCAL_HOSTS
+    remote_cors = bool(cors_origins.strip()) and not any(
+        host in cors_origins for host in _LOCAL_HOSTS
     )
-    remote_db = not any(host in settings.database_url for host in _LOCAL_HOSTS)
+    remote_db = not any(host in database_url for host in _LOCAL_HOSTS)
     return remote_cors and remote_db
 
 
@@ -51,7 +56,9 @@ def warn_if_deployed_but_not_production() -> None:
     *should* stop a bad launch already exist below. This only makes the
     silence audible.
     """
-    if settings.is_production or not _looks_deployed():
+    if settings.is_production:
+        return
+    if not looks_deployed(settings.cors_origins, settings.database_url):
         return
 
     disarmed = [
