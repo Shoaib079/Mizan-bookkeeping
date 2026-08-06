@@ -29,6 +29,21 @@ export const MOBILE_TAB_BAR_PADDING =
  */
 export const MOBILE_TOUCH_TARGET = "max-[819px]:min-h-11";
 
+/** Hides desktop-only chrome below the breakpoint, in CSS rather than in JS.
+ *
+ * `useIsMobileShell` starts `false` — it cannot call matchMedia until after
+ * hydration — so the very first paint on a phone is the *desktop* shell. The
+ * sidebar, wordmark and logo render, the effect runs, and the whole thing is
+ * replaced by the mobile shell. That is the flash: the logo appears and
+ * vanishes on every load, worst on a slow connection where the gap is longest.
+ *
+ * Applying this to the desktop chrome means a narrow viewport never paints it,
+ * whatever JS believes. Same reasoning as MOBILE_TOUCH_TARGET above, and the
+ * same 819 that a test holds against MOBILE_SHELL_MAX_WIDTH_PX, since Tailwind
+ * needs the literal and cannot read the constant.
+ */
+export const DESKTOP_CHROME_ONLY = "max-[819px]:hidden";
+
 /** Offset that lifts a bottom-pinned element above the tabs (`FormPage`).
  *
  * Written out in full rather than composed from a raw measurement: Tailwind

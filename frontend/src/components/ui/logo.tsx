@@ -18,10 +18,14 @@ import { cn } from "@/lib/utils";
 export function Logo({
   size = 26,
   tone = "brand",
+  /** Hide from screen readers. Use wherever the name is already announced
+   * next to the mark — otherwise every such place is read out twice. */
+  decorative = false,
   className,
 }: {
   size?: number;
   tone?: "brand" | "mono";
+  decorative?: boolean;
   className?: string;
 }) {
   const mono = tone === "mono";
@@ -38,8 +42,10 @@ export function Logo({
       viewBox="0 0 64 64"
       width={size}
       height={size}
-      role="img"
-      aria-label="Mizan"
+      role={decorative ? undefined : "img"}
+      aria-label={decorative ? undefined : "Mizan"}
+      aria-hidden={decorative || undefined}
+      focusable="false"
       className={cn("shrink-0", className)}
     >
       {discs.map((disc) => (

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { Logo } from "@/components/ui/logo";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { isMobileTabRoot, mobileBackDestination } from "@/lib/mobile-shell";
 import { previousNavPath } from "@/lib/nav-history";
@@ -94,6 +95,14 @@ export function MobileTopBar({
           <ChevronLeft className="size-6" />
         </button>
       )}
+
+      {/* The mark only on tab roots — the top-level screens.
+       *
+       * On a drill-in the back button owns this slot, and it has to: getting
+       * out of a page matters more than being reminded which app you are in.
+       * aria-hidden because the bar already announces the page title, and a
+       * phone screen reader repeating "Mizan" before every heading is noise. */}
+      {onTabRoot && <Logo size={24} decorative className="ml-1.5" />}
 
       <div className="min-w-0 flex-1 px-1">
         <p className="truncate text-[17px] font-semibold leading-tight">

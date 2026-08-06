@@ -23,7 +23,7 @@ import { shouldShowNewMenu } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
 import { pushNavHistory } from "@/lib/nav-history";
 import { useEntityAccess } from "@/lib/use-entity-access";
-import { MOBILE_TAB_BAR_PADDING } from "@/lib/mobile-shell";
+import { DESKTOP_CHROME_ONLY, MOBILE_TAB_BAR_PADDING } from "@/lib/mobile-shell";
 import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { ReviewCountsProvider } from "@/lib/review-counts-context";
 import { useReviewCounts } from "@/lib/use-review-counts";
@@ -154,7 +154,12 @@ function AppShellInner({
      * top or bottom dragged the sidebar with it. With the document fixed there
      * is no page scroll left to drag anything. */
     <div className="flex h-screen overflow-hidden bg-background">
-      <aside className="flex h-full w-60 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-border bg-sidebar">
+      <aside
+        className={cn(
+          "flex h-full w-60 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-border bg-sidebar",
+          DESKTOP_CHROME_ONLY,
+        )}
+      >
         {/* The wordmark is text-brand-ink, not text-primary. It is the
             identity, not a control, so it does not follow the button colour. */}
         <div className="flex items-center gap-2.5 border-b border-border px-4 py-4">
@@ -173,7 +178,12 @@ function AppShellInner({
         />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-6">
+        <header
+          className={cn(
+            "z-20 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-6",
+            DESKTOP_CHROME_ONLY,
+          )}
+        >
           <div className="flex min-w-0 items-center gap-3">
             {/* Styled as a field, not a button, even though it is one.
                 It opens the command palette, so mechanically it is a button —
