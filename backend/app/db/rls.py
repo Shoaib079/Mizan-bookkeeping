@@ -39,6 +39,7 @@ RLS_TABLES = (
     "customers",
     "customer_ledger_entries",
     "group_menus",
+    "group_menu_lines",
     "group_sales",
     "group_sale_lines",
     "dishes",

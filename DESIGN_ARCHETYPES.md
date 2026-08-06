@@ -106,6 +106,11 @@ Nine compose `ListPage`. Two do not, and shouldn't: **`/banking/cash`** (drawers
 (MENU_PLAN.md slice 1). Composes `ListPage` with search, mobile cards and a
 dialog form, like the nine above.
 
+### Added since — detail pages
+☑ `/customers/group-menus/[id]` — one menu, its price and its ordered dish
+list (MENU_PLAN.md slice 2). Composes `EntityDetailPage`: the price is the
+headline figure, the dishes are the activity table.
+
 What the slice turned up:
 
 - **Rule 5 was being broken in three places.** `/staff` and `/partners` had no pager at all; daily sales fetched 200 rows and told the reader *"showing 200 — download Excel for the full list"*. Sales now pages properly (`SALES_PAGE_SIZE`, resetting to page one when the period or filter changes). `/partners` is the one list still capped — it fetches `limit=50` through its own `apiFetch` for the ownership-share warning rather than `useEntityList`, so paging it means reworking that call. Left deliberately, noted here, guarded in the test.

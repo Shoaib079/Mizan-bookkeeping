@@ -38,7 +38,12 @@ from app.features.expenses.models import ExpenseEntry, ExpenseItem, ExpenseItemA
 from app.features.auth.models import EntityMembership, User, AuthAuditEvent  # noqa: F401
 from app.core.idempotency.models import IdempotencyRecord  # noqa: F401
 from app.features.entities.models import Entity, EntitySetting  # noqa: F401
-from app.features.group_sales.models import GroupMenu, GroupSale, GroupSaleLine  # noqa: F401
+from app.features.group_sales.models import (  # noqa: F401
+    GroupMenu,
+    GroupMenuLine,
+    GroupSale,
+    GroupSaleLine,
+)
 from app.features.menu.models import Dish  # noqa: F401
 
 

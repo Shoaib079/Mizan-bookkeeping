@@ -86,10 +86,11 @@ const TAB_ONLY_HREFS = [
 ] as const;
 
 describe("REGISTERED_PAGE_ROUTES", () => {
-  it("lists exactly 88 app pages", () => {
-    // 87 → 88 when /customers/dishes arrived (MENU_PLAN.md slice 1). The count
-    // is deliberate: adding a page should be a decision, not a side effect.
-    expect(REGISTERED_PAGE_ROUTES).toHaveLength(88);
+  it("lists exactly 89 app pages", () => {
+    // 87 → 88 with /customers/dishes (MENU_PLAN.md slice 1), → 89 with the
+    // menu detail page (slice 2). The count is deliberate: adding a page
+    // should be a decision, not a side effect.
+    expect(REGISTERED_PAGE_ROUTES).toHaveLength(89);
   });
 
   it("assigns each route exactly one entry kind", () => {

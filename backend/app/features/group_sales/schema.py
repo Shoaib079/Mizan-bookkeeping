@@ -7,6 +7,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
+from app.features.group_sales.models import MenuCategory
 
 SUPPORTED_FOREX = frozenset({"USD", "EUR", "GBP"})
 GROUP_SALE_REFERENCE = "group_sale"
@@ -14,11 +15,46 @@ GROUP_SALE_REFERENCE = "group_sale"
 
 class GroupMenuCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1024)
+    price_minor: int | None = Field(default=None, ge=0)
+    currency: str = Field(default="USD", min_length=3, max_length=3)
+    surcharge_minor: int | None = Field(default=None, ge=0)
+    surcharge_label: str | None = Field(default=None, max_length=255)
+    price_excludes_vat: bool = True
+    category: MenuCategory | None = None
+    sort_order: int = 0
 
 
 class GroupMenuUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1024)
+    price_minor: int | None = Field(default=None, ge=0)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    surcharge_minor: int | None = Field(default=None, ge=0)
+    surcharge_label: str | None = Field(default=None, max_length=255)
+    price_excludes_vat: bool | None = None
+    category: MenuCategory | None = None
+    sort_order: int | None = None
     is_active: bool | None = None
+
+
+class GroupMenuLineInput(BaseModel):
+    """One dish on a menu. Order comes from the position in the list."""
+
+    dish_id: uuid.UUID
+    note: str | None = Field(default=None, max_length=255)
+
+
+class GroupMenuLineRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    dish_id: uuid.UUID
+    dish_name: str
+    dish_description: str | None
+    dish_description_tr: str | None
+    sort_order: int
+    note: str | None
 
 
 class GroupMenuRead(BaseModel):
@@ -26,8 +62,19 @@ class GroupMenuRead(BaseModel):
 
     id: uuid.UUID
     name: str
+    description: str | None
+    price_minor: int | None
+    currency: str
+    surcharge_minor: int | None
+    surcharge_label: str | None
+    price_excludes_vat: bool
+    category: MenuCategory | None
+    sort_order: int
     is_active: bool
     created_at: datetime
+    #: Filled on the detail read; the list leaves it empty and sends a count.
+    lines: list[GroupMenuLineRead] = []
+    line_count: int = 0
 
 
 class GroupSaleLineInput(BaseModel):

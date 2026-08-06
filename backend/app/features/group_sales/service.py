@@ -26,10 +26,17 @@ from app.features.customers.models import Customer
 from app.features.entities import service as entity_service
 from app.features.group_sales.calculations import compute_group_sale
 from app.features.group_sales.fx_receivable import native_balance_for_currency, remaining_on_group_sale
-from app.features.group_sales.models import GroupMenu, GroupSale, GroupSaleLine, GroupSaleStatus
+from app.features.group_sales.models import (
+    GroupMenu,
+    GroupMenuLine,
+    GroupSale,
+    GroupSaleLine,
+    GroupSaleStatus,
+)
 from app.features.group_sales.schema import (
     GROUP_SALE_REFERENCE,
     GroupMenuCreate,
+    GroupMenuLineInput,
     GroupMenuUpdate,
     GroupSaleCreate,
     GroupSaleRead,
@@ -64,16 +71,40 @@ def _menu_name_map(session: Session, lines: list) -> dict[uuid.UUID, str]:
     return {row.id: row.name for row in rows}
 
 
+def _menu_with_lines(session: Session, menu_id: uuid.UUID) -> GroupMenu | None:
+    """Load a menu with its lines and their dishes, inside the caller's context.
+
+    Eager, deliberately. `GroupMenuLine.dish` is `lazy="raise"` so that a load
+    after `entity_context` closes fails loudly instead of quietly returning
+    nothing — row-level security would hide the dish and the menu would print
+    without its names.
+    """
+    return session.scalars(
+        select(GroupMenu)
+        .where(GroupMenu.id == menu_id)
+        .options(selectinload(GroupMenu.lines).selectinload(GroupMenuLine.dish))
+    ).unique().one_or_none()
+
+
 def create_group_menu(
     session: Session, entity_id: uuid.UUID, payload: GroupMenuCreate
 ) -> GroupMenu:
     _require_entity(session, entity_id)
     with entity_context(session, entity_id):
-        menu = GroupMenu(name=payload.name.strip())
+        menu = GroupMenu(
+            name=payload.name.strip(),
+            description=payload.description,
+            price_minor=payload.price_minor,
+            currency=payload.currency.upper(),
+            surcharge_minor=payload.surcharge_minor,
+            surcharge_label=payload.surcharge_label,
+            price_excludes_vat=payload.price_excludes_vat,
+            category=payload.category,
+            sort_order=payload.sort_order,
+        )
         session.add(menu)
         session.commit()
-        session.refresh(menu)
-        return menu
+        return _menu_with_lines(session, menu.id)
 
 
 def update_group_menu(
@@ -89,11 +120,29 @@ def update_group_menu(
             raise LookupError("Group menu not found")
         if payload.name is not None:
             menu.name = payload.name.strip()
+        if payload.currency is not None:
+            menu.currency = payload.currency.upper()
+        if payload.price_excludes_vat is not None:
+            menu.price_excludes_vat = payload.price_excludes_vat
+        if payload.sort_order is not None:
+            menu.sort_order = payload.sort_order
         if payload.is_active is not None:
             menu.is_active = payload.is_active
+        # Clearable: sending null removes a price, a surcharge or a category.
+        # An `is not None` check would make an unpriced menu unreachable once
+        # a price had been set by mistake.
+        sent = payload.model_fields_set
+        for field in (
+            "description",
+            "price_minor",
+            "surcharge_minor",
+            "surcharge_label",
+            "category",
+        ):
+            if field in sent:
+                setattr(menu, field, getattr(payload, field))
         session.commit()
-        session.refresh(menu)
-        return menu
+        return _menu_with_lines(session, menu_id)
 
 
 def list_group_menus(
@@ -114,8 +163,89 @@ def list_group_menus(
         search = text_search_filter(q, GroupMenu.name)
         if search is not None:
             filters.append(search)
-        stmt = select(GroupMenu).where(*filters).order_by(GroupMenu.name)
+        # Document order, then name: alphabetical would put Catering first
+        # and Veg Menu 1 in the middle.
+        stmt = (
+            select(GroupMenu)
+            .where(*filters)
+            .options(selectinload(GroupMenu.lines).selectinload(GroupMenuLine.dish))
+            .order_by(GroupMenu.sort_order, GroupMenu.name)
+        )
         return fetch_paginated(session, stmt, params)
+
+
+def get_group_menu(
+    session: Session, entity_id: uuid.UUID, menu_id: uuid.UUID
+) -> GroupMenu:
+    _require_entity(session, entity_id)
+    with entity_context(session, entity_id):
+        require_entity_context()
+        menu = _menu_with_lines(session, menu_id)
+        if menu is None:
+            raise LookupError("Group menu not found")
+        return menu
+
+
+class MenuLineError(ValueError):
+    """The dish list could not be saved as given."""
+
+
+def replace_group_menu_lines(
+    session: Session,
+    entity_id: uuid.UUID,
+    menu_id: uuid.UUID,
+    lines: list[GroupMenuLineInput],
+) -> GroupMenu:
+    """Set a menu's dish list, in the order given.
+
+    Replaces wholesale rather than patching row by row. Reordering is the
+    common edit — rice and naan belong at the end — and expressing that as a
+    sequence of moves would be more code and more ways to end up half-applied.
+
+    `sort_order` comes from the position in the list, so the caller never
+    computes it and two lines cannot claim the same place.
+    """
+    from app.features.menu.models import Dish
+
+    _require_entity(session, entity_id)
+    with entity_context(session, entity_id):
+        require_entity_context()
+        menu = session.get(GroupMenu, menu_id)
+        if menu is None:
+            raise LookupError("Group menu not found")
+
+        seen: set[uuid.UUID] = set()
+        for line in lines:
+            if line.dish_id in seen:
+                # The Jain menu listed White Rice twice for three years. In a
+                # Word table that is invisible; here it is refused.
+                raise MenuLineError("The same dish is on this menu twice")
+            seen.add(line.dish_id)
+
+        if seen:
+            known = set(
+                session.scalars(select(Dish.id).where(Dish.id.in_(seen))).all()
+            )
+            missing = seen - known
+            if missing:
+                # Also what stops a dish from another restaurant being linked:
+                # the lookup runs inside this entity's context, so a foreign id
+                # simply is not found.
+                raise MenuLineError("One of those dishes does not exist here")
+
+        menu.lines.clear()
+        session.flush()
+        for position, line in enumerate(lines):
+            menu.lines.append(
+                GroupMenuLine(
+                    entity_id=entity_id,
+                    dish_id=line.dish_id,
+                    sort_order=position,
+                    note=(line.note or None),
+                )
+            )
+        session.commit()
+        return _menu_with_lines(session, menu_id)
 
 
 def _has_linked_payments(session: Session, group_sale_id: uuid.UUID) -> bool:

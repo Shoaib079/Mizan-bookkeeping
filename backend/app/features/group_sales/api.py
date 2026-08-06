@@ -15,6 +15,8 @@ from app.features.auth.models import User
 from app.features.group_sales import service
 from app.features.group_sales.schema import (
     GroupMenuCreate,
+    GroupMenuLineInput,
+    GroupMenuLineRead,
     GroupMenuRead,
     GroupMenuUpdate,
     GroupSaleCorrect,
@@ -30,6 +32,31 @@ from app.core.receivables import ledger as receivables_ledger
 router = APIRouter(prefix="/entities/{entity_id}", tags=["group-sales"])
 
 
+def _menu_read(menu, *, with_lines: bool) -> GroupMenuRead:
+    """Serialise a menu, joining each line to its dish.
+
+    The dish name is read through the relationship rather than stored on the
+    line: that is the point of referencing dishes, and it is why correcting a
+    spelling in one place fixes every menu.
+    """
+    lines = [
+        GroupMenuLineRead(
+            id=line.id,
+            dish_id=line.dish_id,
+            dish_name=line.dish.name,
+            dish_description=line.dish.description,
+            dish_description_tr=line.dish.description_tr,
+            sort_order=line.sort_order,
+            note=line.note,
+        )
+        for line in menu.lines
+    ]
+    read = GroupMenuRead.model_validate(menu)
+    return read.model_copy(
+        update={"lines": lines if with_lines else [], "line_count": len(lines)}
+    )
+
+
 @router.post("/group-menus", response_model=GroupMenuRead, status_code=201)
 def create_group_menu(
     entity_id: uuid.UUID,
@@ -41,7 +68,7 @@ def create_group_menu(
         menu = service.create_group_menu(session, entity_id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return GroupMenuRead.model_validate(menu)
+    return _menu_read(menu, with_lines=True)
 
 
 @router.get("/group-menus", response_model=PaginatedListOut[GroupMenuRead])
@@ -64,7 +91,9 @@ def list_group_menus(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return paginated_list(
-        [GroupMenuRead.model_validate(m) for m in menus],
+        # The list sends a count, not the dishes: eleven menus of ten lines
+        # each is a lot of payload for a table that shows a number.
+        [_menu_read(m, with_lines=False) for m in menus],
         total=total,
         limit=list_params.limit,
         offset=list_params.offset,
@@ -83,7 +112,43 @@ def update_group_menu(
         menu = service.update_group_menu(session, entity_id, menu_id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return GroupMenuRead.model_validate(menu)
+    return _menu_read(menu, with_lines=True)
+
+
+@router.get("/group-menus/{menu_id}", response_model=GroupMenuRead)
+def get_group_menu(
+    entity_id: uuid.UUID,
+    menu_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> GroupMenuRead:
+    try:
+        menu = service.get_group_menu(session, entity_id, menu_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _menu_read(menu, with_lines=True)
+
+
+@router.put("/group-menus/{menu_id}/lines", response_model=GroupMenuRead)
+def replace_group_menu_lines(
+    entity_id: uuid.UUID,
+    menu_id: uuid.UUID,
+    payload: list[GroupMenuLineInput],
+    session: Session = Depends(get_session),
+    _: None = Depends(operations_write_guard),
+) -> GroupMenuRead:
+    """Set the whole dish list at once, in the order given.
+
+    PUT rather than POST: the body is the complete list, and sending it twice
+    leaves the same menu.
+    """
+    try:
+        menu = service.replace_group_menu_lines(session, entity_id, menu_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.MenuLineError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _menu_read(menu, with_lines=True)
 
 
 @router.post("/group-sales", response_model=GroupSalePostResponse, status_code=201)
