@@ -21,6 +21,9 @@ would see if the code were broken. A test whose failure cannot distinguish
 
 from __future__ import annotations
 
+import logging
+from contextlib import contextmanager
+
 from app import launch
 from app.config import _DEFAULT_CORS_ORIGINS, Settings
 
@@ -118,30 +121,80 @@ def _deployed_but_undeclared() -> Settings:
     )
 
 
-def test_the_warning_never_raises():
-    """The guards that should stop a bad launch already exist. This one only
-    makes their absence audible, so it must not be able to take the app down.
+@contextmanager
+def captured_records():
+    """Records emitted by `app.launch`, read outside logging's own handling.
 
-    Given settings that *do* trigger it, so the logging line is actually
-    reached. Called with the ambient test settings it returned immediately —
-    CORS and the database are both localhost there — and proved nothing.
+    Logging swallows exceptions raised inside handlers, so a test that merely
+    calls the function and expects no error cannot see a broken log call. The
+    record is inspected here, in the test body, where a failure surfaces.
     """
-    launch.warn_if_deployed_but_not_production(_deployed_but_undeclared())
+    records: list[logging.LogRecord] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    handler = _Capture(level=logging.WARNING)
+    previous = launch.logger.level
+    launch.logger.addHandler(handler)
+    launch.logger.setLevel(logging.WARNING)
+    try:
+        yield records
+    finally:
+        launch.logger.removeHandler(handler)
+        launch.logger.setLevel(previous)
 
 
-def test_a_percent_sign_in_the_database_url_does_not_break_the_log():
-    """A URL-encoded password is ordinary; `%` in a format string is not.
+def test_it_actually_emits_the_warning():
+    """The wiring between the decision, the wording and the logger.
 
-    Logged as an argument rather than as the format string, so a password
-    containing %2F cannot raise inside the very warning meant to help.
+    Each of the three is covered on its own above; nothing checked that the
+    function joins them up. It could have returned early, or logged something
+    else, and every other test here would still pass.
     """
-    launch.warn_if_deployed_but_not_production(
-        Settings(
-            app_env="development",
-            cors_origins=REMOTE_CORS,
-            database_url="postgresql+psycopg://u:p%2Fw@db.neon.tech/mizan",
+    with captured_records() as records:
+        launch.warn_if_deployed_but_not_production(_deployed_but_undeclared())
+
+    assert len(records) == 1, "expected exactly one warning"
+    # Rendered in the test, not in a handler, so a bad log call fails here
+    # rather than being suppressed by logging.
+    assert records[0].getMessage() == launch.disarmed_guards_warning("development")
+
+
+def test_it_stays_silent_when_there_is_nothing_to_say():
+    """The other half of the wiring — and the check that keeps this warning
+    from becoming background noise a developer learns to ignore."""
+    with captured_records() as records:
+        launch.warn_if_deployed_but_not_production(
+            Settings(
+                app_env="development",
+                cors_origins=_DEFAULT_CORS_ORIGINS,
+                database_url=LOCAL_DB,
+            )
         )
-    )
+    assert records == []
+
+
+def test_a_percent_sign_in_the_database_url_survives_the_log():
+    """A URL-encoded password is ordinary and must come through intact.
+
+    Not a crash risk: `LogRecord.getMessage` applies %-formatting only when
+    args are present, and this call passes none. The earlier version of this
+    test asserted a hazard that does not exist, on the strength of a probe
+    that applied the format operator by hand — something logging never does.
+    What is worth holding is that the URL is not mangled or dropped.
+    """
+    with captured_records() as records:
+        launch.warn_if_deployed_but_not_production(
+            Settings(
+                app_env="development",
+                cors_origins=REMOTE_CORS,
+                database_url="postgresql+psycopg://u:p%2Fw@db.neon.tech/mizan",
+            )
+        )
+    assert len(records) == 1
+    assert records[0].getMessage() == launch.disarmed_guards_warning("development")
 
 
 def test_validate_launch_settings_runs_the_warning_first(monkeypatch):

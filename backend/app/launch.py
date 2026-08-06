@@ -104,9 +104,9 @@ def warn_if_deployed_but_not_production(config: Settings | None = None) -> None:
         cfg.is_production, cfg.cors_origins, cfg.database_url
     ):
         return
-    # "%s" with the message as an argument, not as the format string: a
-    # database URL can contain a literal % and would raise mid-log otherwise.
-    logger.warning("%s", disarmed_guards_warning(cfg.app_env))
+    # No args, so logging never runs %-formatting over this string — see
+    # LogRecord.getMessage, which formats only when args are present.
+    logger.warning(disarmed_guards_warning(cfg.app_env))
 
 
 def validate_launch_settings() -> None:
