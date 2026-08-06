@@ -56,7 +56,7 @@ export function isCorrectableLine(line: BankStatementLine): boolean {
   );
 }
 
-export function sortStatementLines(lines: BankStatementLine[]): BankStatementLine[] {
+function sortStatementLines(lines: BankStatementLine[]): BankStatementLine[] {
   return [...lines].sort((a, b) => {
     const dateCmp = a.transaction_date.localeCompare(b.transaction_date);
     if (dateCmp !== 0) return dateCmp;

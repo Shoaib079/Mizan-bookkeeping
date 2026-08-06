@@ -1,5 +1,3 @@
-import type { EntityRole } from "@/lib/settings-types";
-
 export type ExpenseItemRow = {
   id: string;
   canonical_name: string;

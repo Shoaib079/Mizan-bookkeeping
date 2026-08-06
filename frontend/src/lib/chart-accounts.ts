@@ -8,7 +8,7 @@ export type ChartAccountLike = {
   name?: string;
 };
 
-export function chartAccountDisplayName(
+function chartAccountDisplayName(
   account: ChartAccountLike,
 ): string {
   const en = account.name_en?.trim();

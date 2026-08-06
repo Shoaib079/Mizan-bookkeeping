@@ -25,7 +25,6 @@ import {
   weekdayLabels,
 } from "@/lib/dates";
 import { shouldOpenCalendarOnClick } from "@/lib/date-input-open";
-import { MOBILE_SHELL_MAX_WIDTH_PX } from "@/lib/mobile-shell";
 import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { cn } from "@/lib/utils";
 
@@ -516,6 +515,3 @@ export function DateInput({
     </div>
   );
 }
-
-/** Exported for tests — mobile calendar width cap matches shell breakpoint. */
-export const dateInputMobileMaxWidthPx = MOBILE_SHELL_MAX_WIDTH_PX;

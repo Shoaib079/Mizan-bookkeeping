@@ -5,6 +5,3 @@ export function EditedBadge() {
     </span>
   );
 }
-
-/** @deprecated Use EditedBadge */
-export const CorrectedBadge = EditedBadge;

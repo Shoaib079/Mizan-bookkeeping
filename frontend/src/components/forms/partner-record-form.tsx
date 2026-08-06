@@ -416,4 +416,3 @@ export function PartnerRecordForm({
 }
 
 /** @deprecated Use PartnerRecordForm */
-export const PartnerReimbursementForm = PartnerRecordForm;

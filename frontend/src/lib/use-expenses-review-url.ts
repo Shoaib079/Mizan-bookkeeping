@@ -22,9 +22,9 @@ export const EXPENSE_REVIEW_VIEWS: { id: ExpenseReviewView; label: string }[] = 
   { id: "items", label: "Items" },
 ];
 
-export const EXPENSE_REVIEW_PAGE_SIZE = 50;
+const EXPENSE_REVIEW_PAGE_SIZE = 50;
 
-export const REVIEW_EXPENSES_HREF = "/review/expenses";
+const REVIEW_EXPENSES_HREF = "/review/expenses";
 export const REVIEW_EXPENSES_ITEMS_HREF = "/review/expenses?view=items";
 
 export function reviewExpensesFilteredHref(

@@ -27,10 +27,22 @@ import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 
-function statusBadge(status: string) {
-  if (status === "posted") return "active" as const;
-  if (status === "voided") return "inactive" as const;
-  return "pending" as const;
+/** A group sale is posted, voided or amended — nothing else.
+ *
+ * This used to translate posted → "active" and voided → "inactive", then let
+ * anything unrecognised fall through to "pending". Amended was unrecognised,
+ * so a sale you had corrected was labelled as though it were waiting for
+ * something. It is not waiting; it has been replaced, and nothing in this app
+ * is ever pending.
+ *
+ * Only "posted" is translated now, because a group sale being live reads
+ * better as Active than as Posted. The other two go to StatusBadge as they
+ * are, so they get that component's wording and its struck-through styling —
+ * and a status added to the backend later shows up rather than being
+ * quietly relabelled.
+ */
+function statusBadge(status: string): string {
+  return status === "posted" ? "active" : status;
 }
 
 function formatSaleTotal(sale: GroupSaleRead): string {

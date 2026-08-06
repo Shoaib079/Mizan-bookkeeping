@@ -7,7 +7,6 @@ export type SessionRevokeReason = "inactive" | "removed" | "unprovisioned";
 
 /** Background poll for role changes and access revocation (~15s). */
 export const MEMBERSHIP_SYNC_POLL_MS = 15_000;
-export const SESSION_ACCESS_POLL_MS = MEMBERSHIP_SYNC_POLL_MS;
 
 export function sessionRevokeReasonFromMessage(
   message: string,

@@ -12,7 +12,7 @@ function applyTheme(dark: boolean) {
   document.documentElement.classList.toggle("dark", dark);
 }
 
-export function initialDarkPreference(): boolean {
+function initialDarkPreference(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const stored = window.localStorage.getItem(KEY);

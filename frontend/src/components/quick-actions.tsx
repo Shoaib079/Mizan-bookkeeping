@@ -55,7 +55,7 @@ const QuickActionsContext = createContext<QuickActionsContextValue | null>(null)
  * dialog components shared with their owning pages, so hosting them here is one
  * implementation with two entry points — not a duplicate. Pages still honour
  * `?new=1` for deep links. */
-export const RECORD_ACTION_PAGE_HREFS: Partial<Record<RecordActionKey, string>> = {
+const RECORD_ACTION_PAGE_HREFS: Partial<Record<RecordActionKey, string>> = {
   splitExpense: "/split",
 };
 
@@ -198,10 +198,3 @@ export function useQuickActions() {
   return ctx;
 }
 
-export function useRecordActions() {
-  const ctx = useQuickActions();
-  return {
-    openRecordAction: ctx.openRecordAction,
-    deliveryEnabled: ctx.deliveryEnabled,
-  };
-}

@@ -15,6 +15,10 @@ const statusStyles: Record<string, string> = {
   classified: "bg-primary/10 text-primary",
   linked: "bg-success/10 text-success",
   voided: "bg-muted text-muted-foreground line-through",
+  // A record that was corrected: the superseded original is kept for the
+  // audit trail but no longer counts. Struck through like a void, because
+  // that is what it is to a reader — replaced, not pending.
+  amended: "bg-muted text-muted-foreground line-through",
 };
 
 const statusLabels: Record<string, string> = {
@@ -32,6 +36,7 @@ const statusLabels: Record<string, string> = {
   classified: "Classified",
   linked: "Linked",
   voided: "Voided",
+  amended: "Amended",
 };
 
 export function StatusBadge({

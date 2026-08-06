@@ -134,7 +134,7 @@ export function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export function isAfterDay(a: Date, b: Date): boolean {
+function isAfterDay(a: Date, b: Date): boolean {
   return startOfDay(a).getTime() > startOfDay(b).getTime();
 }
 

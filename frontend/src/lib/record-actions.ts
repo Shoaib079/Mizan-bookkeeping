@@ -101,7 +101,7 @@ export const PRIMARY_RECORD_ACTION_IDS = [
 export type PrimaryRecordActionId = (typeof PRIMARY_RECORD_ACTION_IDS)[number];
 
 /** Always-visible sections below the primary row (Add → More menu). */
-export const DAILY_VISIBLE_SECTIONS: RecordSectionId[] = ["payments"];
+const DAILY_VISIBLE_SECTIONS: RecordSectionId[] = ["payments"];
 
 export const RECORD_ACTIONS: RecordActionDef[] = [
   {
@@ -341,7 +341,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
   },
 ];
 
-export const QUICK_ACTION_KEYS = new Set<QuickActionKey>([
+const QUICK_ACTION_KEYS = new Set<QuickActionKey>([
   "expense",
   "sales",
   "fx",

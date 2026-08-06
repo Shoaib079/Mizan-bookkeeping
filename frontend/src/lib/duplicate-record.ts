@@ -9,7 +9,7 @@ export type DuplicateRecordDetail = {
   existing_id: string | null;
 };
 
-export function isDuplicateRecordDetail(
+function isDuplicateRecordDetail(
   detail: unknown,
 ): detail is DuplicateRecordDetail {
   if (typeof detail !== "object" || detail === null) return false;

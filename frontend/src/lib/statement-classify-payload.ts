@@ -8,7 +8,7 @@ import type { ClassifyLinePayload } from "@/lib/statement-review-actions";
 import { classificationOption } from "@/lib/statement-classification-options";
 import type { StatementLineFormTargets } from "@/lib/statement-line-form-state";
 
-export function learnMatchTokenForLine(
+function learnMatchTokenForLine(
   line: BankStatementLine,
   learnAs: string,
 ): string | undefined {

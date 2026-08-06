@@ -3,7 +3,7 @@
 import { dateToIsoLocal } from "@/lib/dates";
 import { sourceLabel } from "@/lib/transaction-registry";
 
-export const RECENT_ENTRIES_LIMIT = 10;
+const RECENT_ENTRIES_LIMIT = 10;
 
 export type RecentEntriesListOptions = {
   limit?: number;

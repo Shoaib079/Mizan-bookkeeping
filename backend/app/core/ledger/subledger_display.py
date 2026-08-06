@@ -54,6 +54,38 @@ def is_effective_subledger_row(kind: SubledgerDisplayKind) -> bool:
     return kind == SubledgerDisplayKind.EFFECTIVE
 
 
+def effective_subledger_sql_filter(description_col, journal_cls=JournalEntry):
+    """`is_effective_subledger_row` expressed in SQL, for aggregates.
+
+    The Python classifier works on rows already loaded with their journal.
+    An aggregate cannot afford that, and the version that was written by hand
+    instead got it wrong: the forex receivable balance excluded reversed
+    *sales* (via `amount_kurus > 0`) but counted voided *payments* in full, so
+    a customer who had a payment corrected appeared to have paid twice. On
+    India Gate that read as "$298.00 paid ahead" on a ledger that was settled.
+
+    Derivation, so the two definitions can be checked against each other:
+
+        effective  ⟺  not void_reversal and not superseded
+                   ⟺  not void_reversal and not (VOIDED and not void_reversal)
+                   ⟺  not void_reversal and not VOIDED
+
+    Requires the caller to outer-join `journal_cls`; a row with no journal is
+    effective, because there is nothing that could have voided it.
+    """
+    from sqlalchemy import and_, or_
+
+    not_void_reversal = and_(
+        or_(journal_cls.id.is_(None), journal_cls.reverses_entry_id.is_(None)),
+        description_col.not_like(f"{VOID_DESCRIPTION_PREFIX}%"),
+    )
+    not_voided = or_(
+        journal_cls.id.is_(None),
+        journal_cls.status != JournalEntryStatus.VOIDED,
+    )
+    return and_(not_void_reversal, not_voided)
+
+
 def load_journals_for_rows(
     session: Session, journal_entry_ids: Sequence[uuid.UUID | None]
 ) -> dict[uuid.UUID, JournalEntry]:

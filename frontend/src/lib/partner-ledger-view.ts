@@ -44,7 +44,7 @@ export function partnerLedgerFilterMatches(
   return EXPENSE_TYPES.has(movementType);
 }
 
-export function isAllocationRow(movementType: string): boolean {
+function isAllocationRow(movementType: string): boolean {
   return (
     movementType === "profit_allocation" || movementType === "profit_settlement"
   );

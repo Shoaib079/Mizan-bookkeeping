@@ -8,6 +8,8 @@ from collections.abc import Sequence
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.ledger.models import JournalEntry
+from app.core.ledger.subledger_display import effective_subledger_sql_filter
 from app.core.receivables.models import CustomerLedgerEntry
 from app.core.receivables.types import CustomerMovementType
 from app.features.group_sales.models import GroupSale
@@ -17,32 +19,58 @@ class FxReceivableError(ValueError):
     """FX receivable allocation failed."""
 
 
+def _effective_movements(customer_id: uuid.UUID, forex_currency: str):
+    """Rows that still stand, for one customer in one currency.
+
+    Voided movements and the `Void: …` reversals that cancelled them are
+    excluded here rather than at each call site. They used to be excluded only
+    for sales — through an `amount_kurus > 0` guard that happens to drop a
+    reversed sale — while payments were summed whole. A customer whose payment
+    was corrected therefore had it counted twice, and read as paid ahead on a
+    ledger that was square.
+    """
+    return (
+        select(CustomerLedgerEntry)
+        .outerjoin(
+            JournalEntry,
+            JournalEntry.id == CustomerLedgerEntry.journal_entry_id,
+        )
+        .where(
+            CustomerLedgerEntry.customer_id == customer_id,
+            CustomerLedgerEntry.forex_currency == forex_currency,
+            effective_subledger_sql_filter(CustomerLedgerEntry.description),
+        )
+    )
+
+
 def native_balance_for_currency(
     session: Session,
     customer_id: uuid.UUID,
     forex_currency: str,
 ) -> int:
     """Outstanding native amount owed in one forex currency."""
+    base = _effective_movements(customer_id, forex_currency)
+
     sales = session.scalar(
-        select(func.coalesce(func.sum(CustomerLedgerEntry.total_forex_minor), 0)).where(
-            CustomerLedgerEntry.customer_id == customer_id,
-            CustomerLedgerEntry.forex_currency == forex_currency,
+        base.with_only_columns(
+            func.coalesce(func.sum(CustomerLedgerEntry.total_forex_minor), 0)
+        ).where(
             CustomerLedgerEntry.movement_type == CustomerMovementType.CREDIT_SALE,
             CustomerLedgerEntry.amount_kurus > 0,
         )
     )
     payments = session.scalar(
-        select(func.coalesce(func.sum(CustomerLedgerEntry.payment_native_quantity), 0)).where(
-            CustomerLedgerEntry.customer_id == customer_id,
-            CustomerLedgerEntry.forex_currency == forex_currency,
+        base.with_only_columns(
+            func.coalesce(func.sum(CustomerLedgerEntry.payment_native_quantity), 0)
+        ).where(
             CustomerLedgerEntry.movement_type == CustomerMovementType.PAYMENT_RECEIVED,
         )
     )
     # Discount write-offs store a negative total_forex_minor, so they reduce the balance.
     discounts = session.scalar(
-        select(func.coalesce(func.sum(CustomerLedgerEntry.total_forex_minor), 0)).where(
-            CustomerLedgerEntry.customer_id == customer_id,
-            CustomerLedgerEntry.forex_currency == forex_currency,
+        base.with_only_columns(
+            func.coalesce(func.sum(CustomerLedgerEntry.total_forex_minor), 0)
+        ).where(
             CustomerLedgerEntry.movement_type == CustomerMovementType.DISCOUNT,
         )
     )
@@ -125,9 +153,16 @@ def outstanding_by_currency_for_customers(
             CustomerLedgerEntry.forex_currency,
             outstanding.label("outstanding"),
         )
+        .outerjoin(
+            JournalEntry,
+            JournalEntry.id == CustomerLedgerEntry.journal_entry_id,
+        )
         .where(
             CustomerLedgerEntry.customer_id.in_(customer_ids),
             CustomerLedgerEntry.forex_currency.is_not(None),
+            # Same exclusion as the per-customer version, or the directory
+            # would disagree with the detail page about voided movements.
+            effective_subledger_sql_filter(CustomerLedgerEntry.description),
         )
         .group_by(
             CustomerLedgerEntry.customer_id,

@@ -45,14 +45,3 @@ export function FormDialogShell({
     </Dialog>
   );
 }
-
-/** Guarded close for Cancel buttons inside FormDialogShell. */
-export function useFormDialogClose(
-  closeRef: MutableRefObject<(() => void) | undefined> | undefined,
-  onClose: () => void,
-) {
-  return () => {
-    if (closeRef?.current) closeRef.current();
-    else onClose();
-  };
-}

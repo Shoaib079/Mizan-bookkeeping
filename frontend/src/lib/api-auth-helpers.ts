@@ -1,5 +1,5 @@
 export const AUTH_LOADED_POLL_MS = 100;
-export const AUTH_LOADED_MAX_WAIT_MS = 8000;
+const AUTH_LOADED_MAX_WAIT_MS = 8000;
 export const AUTH_TOKEN_MAX_ATTEMPTS = 3;
 export const AUTH_TOKEN_RETRY_DELAY_MS = 100;
 
