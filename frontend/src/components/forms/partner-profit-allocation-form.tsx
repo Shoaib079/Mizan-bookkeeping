@@ -217,7 +217,15 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
       : null;
 
   return (
-    <Dialog open={open} title="Allocate profit to partners" onClose={onClose}>
+    // `wide`: the preview is a five-column money table, and at the default
+    // width the Allocate column fell off the edge — the one figure you open
+    // this to check before confirming.
+    <Dialog
+      open={open}
+      title="Allocate profit to partners"
+      size="wide"
+      onClose={onClose}
+    >
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <Label htmlFor="alloc-date">Allocation date</Label>
@@ -325,7 +333,10 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
                 {formatTrDate(preview.netting_as_of)}.
               </p>
             )}
-            <div className="rounded-lg border border-border">
+            {/* Scrolls rather than clips where the width still is not enough
+                — a phone dialog is full-screen at every size, and the money
+                columns no longer wrap to make themselves fit. */}
+            <div className="overflow-x-auto rounded-lg border border-border">
             <DataTable>
               <DataTableHead>
                 <DataTableRow>
@@ -347,17 +358,17 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
                     <DataTableCell>{line.ownership_share_pct}%</DataTableCell>
                     {preview.net_against_drawings && (
                       <>
-                        <DataTableCell align="right" className="tabular-nums">
+                        <DataTableCell align="right" className="whitespace-nowrap tabular-nums">
                           {formatTry(line.gross_amount_kurus)}
                         </DataTableCell>
-                        <DataTableCell align="right" className="tabular-nums">
+                        <DataTableCell align="right" className="whitespace-nowrap tabular-nums">
                           {line.offset_kurus > 0
                             ? `−${formatTry(line.offset_kurus)}`
                             : "—"}
                         </DataTableCell>
                       </>
                     )}
-                    <DataTableCell align="right" className="tabular-nums">
+                    <DataTableCell align="right" className="whitespace-nowrap tabular-nums">
                       {formatTry(line.amount_kurus)}
                     </DataTableCell>
                   </DataTableRow>
@@ -367,13 +378,13 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
                   <DataTableCell>{""}</DataTableCell>
                   {preview.net_against_drawings && (
                     <>
-                      <DataTableCell align="right" className="font-medium tabular-nums">
+                      <DataTableCell align="right" className="whitespace-nowrap font-medium tabular-nums">
                         {formatTry(preview.total_profit_kurus)}
                       </DataTableCell>
                       <DataTableCell>{""}</DataTableCell>
                     </>
                   )}
-                  <DataTableCell align="right" className="font-medium tabular-nums">
+                  <DataTableCell align="right" className="whitespace-nowrap font-medium tabular-nums">
                     {formatTry(preview.total_allocated_kurus)}
                   </DataTableCell>
                 </DataTableRow>

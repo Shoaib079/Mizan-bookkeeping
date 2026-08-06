@@ -36,7 +36,15 @@ export function Dialog({
   children: React.ReactNode;
   className?: string;
   /** Compact fits short person-picker + payment forms. */
-  size?: "default" | "compact";
+  /** "wide" is for a dialog whose content is a table.
+   *
+   * `default` caps at max-w-lg, which is right for a stack of form fields and
+   * too narrow for anything with five columns of money — the profit
+   * allocation preview clipped its last column and wrapped amounts mid-figure,
+   * so "75.000,00 ₺" came out over two lines and the total you were checking
+   * was off the edge. Only affects desktop; a phone dialog is full-width at
+   * every size, and wide tables there scroll instead. */
+  size?: "default" | "compact" | "wide";
   /** Mobile layout — sheet keeps context visible behind quick confirms/forms. */
   mobilePresentation?: "fullscreen" | "sheet";
   /** When true, Esc/backdrop/X paths ask before closing. */
@@ -154,10 +162,9 @@ export function Dialog({
             !isMobileSheet &&
             "flex min-h-0 flex-1 flex-col rounded-none border-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]",
           !isMobile && "rounded-lg border",
-          !isMobile &&
-            (size === "compact"
-              ? "max-h-[85vh] max-w-sm p-4"
-              : "max-h-[90vh] max-w-lg p-5"),
+          !isMobile && size === "compact" && "max-h-[85vh] max-w-sm p-4",
+          !isMobile && size === "default" && "max-h-[90vh] max-w-lg p-5",
+          !isMobile && size === "wide" && "max-h-[90vh] max-w-3xl p-5",
           isMobile && "p-4",
           className,
         )}
