@@ -28,13 +28,15 @@ def test_a_dish_can_be_created_and_read_back(restaurant_a, client: TestClient):
         client,
         restaurant_a.id,
         description="Yellow lentils tempered with cumin",
-        dietary="veg",
+        suits_jain=False,
     )
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert body["name"] == "Dal Tadka"
     assert body["description"] == "Yellow lentils tempered with cumin"
-    assert body["dietary"] == "veg"
+    assert body["suits_veg"] is True
+    assert body["suits_non_veg"] is True
+    assert body["suits_jain"] is False
     assert body["is_active"] is True
 
     got = client.get(f"/entities/{restaurant_a.id}/dishes/{body['id']}")
@@ -47,7 +49,44 @@ def test_a_dish_needs_no_description(restaurant_a, client: TestClient):
     resp = _create(client, restaurant_a.id, name="White Rice")
     assert resp.status_code == 201, resp.text
     assert resp.json()["description"] is None
-    assert resp.json()["dietary"] is None
+
+
+def test_a_new_dish_suits_every_menu_by_default(restaurant_a, client: TestClient):
+    """Rice, naan, salad and water go everywhere and should need no ticking.
+
+    A single classification could not express this: Dal Tadka belongs on the
+    veg, non-veg *and* Jain menus, which is why these are three flags.
+    """
+    body = _create(client, restaurant_a.id, name="White Rice").json()
+    assert body["suits_veg"] is True
+    assert body["suits_non_veg"] is True
+    assert body["suits_jain"] is True
+
+
+def test_a_meat_dish_can_be_kept_off_the_veg_menus(restaurant_a, client: TestClient):
+    body = _create(
+        client,
+        restaurant_a.id,
+        name="Butter Chicken",
+        suits_veg=False,
+        suits_jain=False,
+    ).json()
+    assert body["suits_veg"] is False
+    assert body["suits_non_veg"] is True
+    assert body["suits_jain"] is False
+
+
+def test_suitability_can_be_changed_later(restaurant_a, client: TestClient):
+    """Ticking one flag must not silently reset the other two."""
+    created = _create(client, restaurant_a.id, name="Chana Masala").json()
+    resp = client.patch(
+        f"/entities/{restaurant_a.id}/dishes/{created['id']}",
+        json={"suits_jain": False},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["suits_jain"] is False
+    assert resp.json()["suits_veg"] is True
+    assert resp.json()["suits_non_veg"] is True
 
 
 def test_a_blank_description_is_stored_as_absent(restaurant_a, client: TestClient):

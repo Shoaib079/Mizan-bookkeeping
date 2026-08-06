@@ -11,27 +11,34 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 
-export type DietaryKind = "veg" | "non_veg" | "jain";
-
 export type DishRow = {
   id: string;
   name: string;
   description: string | null;
-  dietary: DietaryKind | null;
+  suits_veg: boolean;
+  suits_non_veg: boolean;
+  suits_jain: boolean;
   is_active: boolean;
 };
 
-export const DIETARY_LABELS: Record<DietaryKind, string> = {
-  veg: "Vegetarian",
-  non_veg: "Non-vegetarian",
-  jain: "Jain",
-};
+/** The menu kinds a dish can go on, in the order they appear in the document.
+ *
+ * Independent rather than a single classification: Dal Tadka belongs on the
+ * vegetarian, non-vegetarian *and* Jain menus, and one value could not say so.
+ */
+export const SUITABILITY = [
+  { key: "suits_veg", label: "Veg menus" },
+  { key: "suits_non_veg", label: "Non-veg menus" },
+  { key: "suits_jain", label: "Jain menus" },
+] as const;
+
+export type SuitabilityKey = (typeof SUITABILITY)[number]["key"];
 
 type Props = {
   open: boolean;
@@ -48,10 +55,18 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [dietary, setDietary] = useState<DietaryKind | "">("");
+  const [suits, setSuits] = useState<Record<SuitabilityKey, boolean>>({
+    suits_veg: true,
+    suits_non_veg: true,
+    suits_jain: true,
+  });
   const [isActive, setIsActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Allowed, but worth saying out loud: a dish ticked for nothing never
+  // appears when building a menu, which looks like the dish went missing.
+  const noMenus = SUITABILITY.every((option) => !suits[option.key]);
 
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
@@ -61,7 +76,11 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
     if (!open) return;
     setName(dish?.name ?? "");
     setDescription(dish?.description ?? "");
-    setDietary(dish?.dietary ?? "");
+    setSuits({
+      suits_veg: dish?.suits_veg ?? true,
+      suits_non_veg: dish?.suits_non_veg ?? true,
+      suits_jain: dish?.suits_jain ?? true,
+    });
     setIsActive(dish?.is_active ?? true);
     setError(null);
   }, [open, dish]);
@@ -83,7 +102,7 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
     const body = {
       name: name.trim(),
       description: description.trim() || null,
-      dietary: dietary || null,
+      ...suits,
       ...(editing ? { is_active: isActive } : {}),
     };
     try {
@@ -140,19 +159,36 @@ export function DishForm({ open, onClose, dish, onSaved }: Props) {
             print the name alone.
           </p>
         </div>
-        <div>
-          <Label htmlFor="dish-diet">Suitable for (optional)</Label>
-          <Select
-            id="dish-diet"
-            value={dietary}
-            onChange={(e) => setDietary(e.target.value as DietaryKind | "")}
-          >
-            <option value="">Not specified</option>
-            <option value="veg">{DIETARY_LABELS.veg}</option>
-            <option value="non_veg">{DIETARY_LABELS.non_veg}</option>
-            <option value="jain">{DIETARY_LABELS.jain}</option>
-          </Select>
-        </div>
+        <fieldset>
+          <legend className="mb-1 block text-xs text-muted-foreground">
+            Can go on
+          </legend>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {SUITABILITY.map((option) => (
+              <label
+                key={option.key}
+                className="flex items-center gap-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={suits[option.key]}
+                  onChange={(e) =>
+                    setSuits((prev) => ({
+                      ...prev,
+                      [option.key]: e.target.checked,
+                    }))
+                  }
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {noMenus
+              ? "With none ticked this dish will not be offered on any menu."
+              : "All three by default. Untick where it does not belong — meat off the veg and Jain menus."}
+          </p>
+        </fieldset>
         {editing && (
           <>
             <label className="flex items-center gap-2 text-sm">

@@ -12,7 +12,7 @@ import { UtensilsCrossed } from "lucide-react";
 
 import {
   DishForm,
-  DIETARY_LABELS,
+  SUITABILITY,
   type DishRow,
 } from "@/components/forms/dish-form";
 import { ListPage } from "@/components/page/list-page";
@@ -33,6 +33,18 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useEntity } from "@/lib/entity-context";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useEntityList } from "@/lib/use-entity-list";
+
+/** "Every menu", or the ones it is ticked for.
+ *
+ * Collapsed to a single phrase when all three are ticked, which is the common
+ * case — rice, naan, salad, water and most vegetarian dishes. Spelling out
+ * "Veg · Non-veg · Jain" on nearly every row would make the column noise. */
+function menusLabel(dish: DishRow): string {
+  const on = SUITABILITY.filter((option) => dish[option.key]);
+  if (on.length === SUITABILITY.length) return "Every menu";
+  if (on.length === 0) return "None";
+  return on.map((option) => option.label.replace(" menus", "")).join(" · ");
+}
 
 export default function DishesPage() {
   const { entityId } = useEntity();
@@ -73,7 +85,7 @@ export default function DishesPage() {
       <DataTableHead>
         <DataTableRow>
           <DataTableHeaderCell>Dish</DataTableHeaderCell>
-          <DataTableHeaderCell>Suitable for</DataTableHeaderCell>
+          <DataTableHeaderCell>Can go on</DataTableHeaderCell>
           <DataTableHeaderCell>Description</DataTableHeaderCell>
           <DataTableHeaderCell>Status</DataTableHeaderCell>
         </DataTableRow>
@@ -84,9 +96,7 @@ export default function DishesPage() {
             <DataTableCell className="font-medium text-foreground">
               {dish.name}
             </DataTableCell>
-            <DataTableCell>
-              {dish.dietary ? DIETARY_LABELS[dish.dietary] : "—"}
-            </DataTableCell>
+            <DataTableCell>{menusLabel(dish)}</DataTableCell>
             <DataTableCell className="text-muted-foreground">
               {dish.description ?? "—"}
             </DataTableCell>
@@ -108,7 +118,7 @@ export default function DishesPage() {
           onClick={() => openEdit(dish)}
           meta={
             <>
-              <span>{dish.dietary ? DIETARY_LABELS[dish.dietary] : "Any"}</span>
+              <span>{menusLabel(dish)}</span>
               <StatusBadge status={dish.is_active ? "active" : "inactive"} />
               {dish.description && <span>{dish.description}</span>}
             </>

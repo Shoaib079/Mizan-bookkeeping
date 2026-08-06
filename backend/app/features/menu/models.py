@@ -13,27 +13,19 @@ record and one restaurant can never read or alter another's menu.
 
 from __future__ import annotations
 
-import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Enum, String, UniqueConstraint, Uuid
+from sqlalchemy import Boolean, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, EntityScopedMixin, utcnow
 
-
-class DietaryKind(str, enum.Enum):
-    """What a dish is suitable for.
-
-    Optional — the existing menus classify at the menu level, not per dish.
-    Useful when building a menu: it is what catches a meat dish landing on the
-    Jain menu.
-    """
-
-    VEG = "veg"
-    NON_VEG = "non_veg"
-    JAIN = "jain"
+#: The menu kinds a dish can be offered on. Named after the menus rather than
+#: after diets, because that is the question being answered: *where can this
+#: appear?* Dal Tadka is a vegetarian dish and belongs on the non-veg menus
+#: too — which is exactly how the current Non-Veg Menu 1 is built.
+SUITABILITY_FIELDS = ("suits_veg", "suits_non_veg", "suits_jain")
 
 
 class Dish(EntityScopedMixin, Base):
@@ -52,15 +44,14 @@ class Dish(EntityScopedMixin, Base):
     #: The detail the current menus lack entirely. Optional: a dish with none
     #: prints as its name alone, exactly as the Word file does today.
     description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
-    dietary: Mapped[DietaryKind | None] = mapped_column(
-        Enum(
-            DietaryKind,
-            name="dietary_kind",
-            native_enum=False,
-            length=16,
-        ),
-        nullable=True,
-    )
+    # Three independent flags rather than one classification. A single value
+    # could not say that Dal Tadka belongs on the veg, non-veg *and* Jain
+    # menus, which is how it is actually used. Default true: a new dish is
+    # offered everywhere until told otherwise, so the common case — rice,
+    # naan, salad, water — needs no ticking at all.
+    suits_veg: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    suits_non_veg: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    suits_jain: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     #: Retired rather than deleted, so a menu that still lists it keeps reading
     #: correctly and last year's document can still be explained.
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

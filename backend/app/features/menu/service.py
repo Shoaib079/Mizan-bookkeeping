@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
-from app.features.menu.models import Dish
+from app.features.menu.models import Dish, SUITABILITY_FIELDS
 from app.features.menu.schema import DishCreate, DishUpdate
 
 
@@ -27,7 +27,9 @@ def create_dish(session: Session, entity_id: uuid.UUID, payload: DishCreate) -> 
         dish = Dish(
             name=payload.name,
             description=payload.description,
-            dietary=payload.dietary,
+            suits_veg=payload.suits_veg,
+            suits_non_veg=payload.suits_non_veg,
+            suits_jain=payload.suits_jain,
         )
         session.add(dish)
         try:
@@ -95,14 +97,16 @@ def update_dish(
 
         if payload.name is not None:
             dish.name = payload.name
-        # `description` and `dietary` are clearable: sending null means "remove
-        # it", which a plain `is not None` check would silently ignore. That is
-        # why the update schema is checked against the fields actually sent.
+        # `description` is clearable: sending null means "remove it", which a
+        # plain `is not None` check would silently ignore. That is why the
+        # update is checked against the fields actually sent.
         fields_sent = payload.model_fields_set
         if "description" in fields_sent:
             dish.description = payload.description
-        if "dietary" in fields_sent:
-            dish.dietary = payload.dietary
+        for field in SUITABILITY_FIELDS:
+            value = getattr(payload, field)
+            if value is not None:
+                setattr(dish, field, value)
         if payload.is_active is not None:
             dish.is_active = payload.is_active
 
