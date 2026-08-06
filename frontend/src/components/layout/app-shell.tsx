@@ -16,7 +16,6 @@ import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { CommandPalette } from "@/components/command-palette";
 import { useQuickActions } from "@/components/quick-actions";
-import { Button } from "@/components/ui/button";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { navGroups, isNavItemActive } from "@/lib/app-routes";
 import { shouldShowNewMenu } from "@/lib/entity-access";
@@ -168,20 +167,25 @@ function AppShellInner({
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <Button
+            {/* Styled as a field, not a button, even though it is one.
+                It opens the command palette, so mechanically it is a button —
+                but it reads as a search box, and filling it solid made the
+                header look like it held a large blue Search action. Buttons
+                carry the primary fill because pressing them does something;
+                this one is a promise that you can type here. */}
+            <button
               type="button"
-              variant="secondary"
-              className="hidden gap-2 sm:inline-flex"
+              className="hidden h-9 w-64 items-center gap-2 rounded-md border border-border bg-background px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
               onClick={() =>
                 window.dispatchEvent(new Event("mizan:command-palette"))
               }
             >
-              <Search className="size-4" />
-              <span className="text-muted-foreground">Search…</span>
-              <kbd className="rounded border border-border px-1 text-[10px] text-muted-foreground">
+              <Search className="size-4 shrink-0" />
+              <span className="flex-1 text-left">Search…</span>
+              <kbd className="shrink-0 rounded border border-border px-1 text-[10px] text-muted-foreground">
                 ⌘K
               </kbd>
-            </Button>
+            </button>
             {reviewCounts.total > 0 && !onReviewPage && (
               <Link
                 href="/review"

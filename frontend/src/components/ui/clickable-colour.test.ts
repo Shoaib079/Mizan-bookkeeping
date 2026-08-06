@@ -120,6 +120,37 @@ describe("everything clickable carries a colour", () => {
   });
 });
 
+describe("a field is not an action", () => {
+  /** The colour rule has an edge, and this is it.
+   *
+   * The header search opens the command palette, so mechanically it is a
+   * button — and when `secondary` became the solid primary fill, it turned
+   * into a large blue slab in the header reading "Search…". It was obeying the
+   * rule and still wrong: a solid fill says "press this and something
+   * happens", where a search box says "you can type here".
+   *
+   * So it is styled like an Input. Pinned because the obvious tidy-up is to
+   * put it back to <Button variant="secondary">, which looks like a
+   * simplification and undoes this. */
+  it("the header search reads as a search box, not a filled button", () => {
+    const shell = readFileSync(
+      new URL("../layout/app-shell.tsx", import.meta.url),
+      "utf8",
+    );
+    const trigger = shell.match(
+      /<button[\s\S]{0,900}?mizan:command-palette[\s\S]{0,400}?<\/button>/,
+    )?.[0];
+    expect(trigger, "the command-palette trigger is no longer a <button>").toBeTruthy();
+
+    // Field clothing: same border and surface as Input.
+    expect(trigger).toContain("border border-border");
+    expect(trigger).toContain("bg-background");
+    // Not action clothing.
+    expect(trigger).not.toContain("bg-primary");
+    expect(trigger).not.toContain("text-primary-foreground");
+  });
+});
+
 describe("a chosen option looks chosen", () => {
   /** Segmented rows go through SegmentedControl. The FX dialog hand-rolled one
    * twice in a single file and both copies were colourless; a third would have
