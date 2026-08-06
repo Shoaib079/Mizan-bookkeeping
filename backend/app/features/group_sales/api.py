@@ -35,9 +35,14 @@ router = APIRouter(prefix="/entities/{entity_id}", tags=["group-sales"])
 def _menu_read(menu, *, with_lines: bool) -> GroupMenuRead:
     """Serialise a menu, joining each line to its dish.
 
-    The dish name is read through the relationship rather than stored on the
-    line: that is the point of referencing dishes, and it is why correcting a
-    spelling in one place fixes every menu.
+    Built field by field rather than `model_validate(menu)`. Validating the
+    ORM object walks into `menu.lines` and tries to make a `GroupMenuLineRead`
+    out of each row — which has no `dish_name`, `dish_description` or
+    `dish_description_tr`, because those live on the dish it points at. That
+    produced exactly three validation errors per line.
+
+    The dish is read through the relationship, which is the point of
+    referencing dishes: correcting a spelling in one place fixes every menu.
     """
     lines = [
         GroupMenuLineRead(
@@ -51,9 +56,23 @@ def _menu_read(menu, *, with_lines: bool) -> GroupMenuRead:
         )
         for line in menu.lines
     ]
-    read = GroupMenuRead.model_validate(menu)
-    return read.model_copy(
-        update={"lines": lines if with_lines else [], "line_count": len(lines)}
+    return GroupMenuRead(
+        id=menu.id,
+        name=menu.name,
+        description=menu.description,
+        price_minor=menu.price_minor,
+        currency=menu.currency,
+        surcharge_minor=menu.surcharge_minor,
+        surcharge_label=menu.surcharge_label,
+        price_excludes_vat=menu.price_excludes_vat,
+        category=menu.category,
+        sort_order=menu.sort_order,
+        is_active=menu.is_active,
+        created_at=menu.created_at,
+        # The list sends a count, not the dishes: eleven menus of ten lines
+        # each is a lot of payload for a table that shows a number.
+        lines=lines if with_lines else [],
+        line_count=len(lines),
     )
 
 
@@ -91,8 +110,6 @@ def list_group_menus(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return paginated_list(
-        # The list sends a count, not the dishes: eleven menus of ten lines
-        # each is a lot of payload for a table that shows a number.
         [_menu_read(m, with_lines=False) for m in menus],
         total=total,
         limit=list_params.limit,
