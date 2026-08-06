@@ -6,17 +6,26 @@ therefore gets none of them — and nothing fails, because nothing runs. Railway
 served real data with a Clerk `pk_test_` key for weeks in exactly that state:
 the guard rejecting test keys existed, was correct, and was never reached.
 
-Three things are pinned here, each by asking the question directly rather than
+Four things are pinned, each by asking the question directly rather than
 through module state:
 
   * `looks_deployed` recognises the shape — by being called with the strings.
-  * The warning never raises, so a false positive cannot take the app offline.
-  * It is wired into `validate_launch_settings`, checked with a spy.
+  * `should_warn_about_environment` stays quiet in production.
+  * `disarmed_guards_warning` says *skipped*, not passed, and names what is
+    not running. "Every guard passed" and "no guard ran" look identical in a
+    log and mean opposite things.
+  * The whole thing emits — and is wired into `validate_launch_settings`.
+
+Two habits this file was written against, both learned the hard way here.
 
 An earlier version patched `app.launch.settings` and asserted on the log. When
-the patch did not take, the test saw no warning — which is exactly what it
-would see if the code were broken. A test whose failure cannot distinguish
-"the code is wrong" from "the setup did not work" is not worth much.
+the patch did not take, the test saw no warning — exactly what it would see if
+the code were broken. A test whose failure cannot distinguish "the code is
+wrong" from "the setup did not work" is not worth much.
+
+And logging swallows exceptions raised inside handlers, so calling the function
+and expecting no error proves nothing about the log call. The records are
+captured and rendered in the test body, where a failure actually surfaces.
 """
 
 from __future__ import annotations
