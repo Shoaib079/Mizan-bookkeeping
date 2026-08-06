@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Mizan">
+  <title>Mizan — Tabak</title>
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#2563eb" stroke-width="4"/>
+  <path d="M13 32 H51" stroke="#2563eb" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="4.5" fill="#2563eb"/>
+</svg>

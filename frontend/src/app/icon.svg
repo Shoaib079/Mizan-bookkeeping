@@ -1,0 +1,21 @@
+<!--
+  Favicon. Next.js App Router picks this up from app/icon.svg automatically.
+
+  Redrawn rather than scaled. The sidebar mark overlaps its discs so the stack
+  reads as depth, but overlapping leaves each upper disc only a thin visible
+  band — at 16px those bands close up and the mark turns into a smudge. Here
+  the three discs are spaced so their edges just meet: same idea, but every
+  band survives the shrink.
+
+  Colours are literal hex, not var(--brand-*). A favicon is fetched as a
+  standalone document and never sees the page's stylesheet, so a CSS variable
+  would resolve to nothing and render invisible. If the brand changes in
+  globals.css, change it here too — these are the only hardcoded brand colours
+  in the app, and they are hardcoded because they have to be.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Mizan">
+  <title>Mizan</title>
+  <ellipse cx="32" cy="16" rx="23" ry="8" fill="#F0A93B"/>
+  <ellipse cx="32" cy="32" rx="23" ry="8" fill="#D9622D"/>
+  <ellipse cx="32" cy="48" rx="23" ry="8" fill="#8C3A18"/>
+</svg>

@@ -24,6 +24,10 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-ring: var(--ring);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-1: var(--brand-1);
+  --color-brand-2: var(--brand-2);
+  --color-brand-3: var(--brand-3);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -51,6 +55,19 @@
   --sidebar-foreground: #334155;
   --sidebar-accent: #eff6ff;
   --ring: #2563eb;
+  /* Brand — the logo and the name only. Deliberately NOT --primary.
+   *
+   * --primary is a UI role: it means "this is the thing to press". The brand
+   * is an identity, and the two change for unrelated reasons — a rebrand
+   * should not restyle every button, and picking a new button colour should
+   * not repaint the logo. Keeping them separate means either can move without
+   * dragging the other along.
+   *
+   * --brand-1/2/3 are the three discs of the mark, back to front. */
+  --brand-ink: #2E241D;
+  --brand-1: #F0A93B;
+  --brand-2: #D9622D;
+  --brand-3: #8C3A18;
   /* Charts — series reuse semantic tokens; distinct hues get light/dark overrides in .dark */
   --chart-axis: var(--muted-foreground);
   --chart-grid: var(--border);
@@ -93,6 +110,13 @@
   --sidebar-foreground: #e2e8f0;
   --sidebar-accent: #172554;
   --ring: #60a5fa;
+  /* Brand on dark. The espresso ink is invisible on a navy background, so the
+   * wordmark flips to a warm off-white; the discs lift a step to hold their
+   * separation against a dark surface rather than merging into one blob. */
+  --brand-ink: #F4EDE6;
+  --brand-1: #F7BE5C;
+  --brand-2: #E87844;
+  --brand-3: #B14F26;
   --chart-pos: #a78bfa;
   --chart-group: #2dd4bf;
   --entity-0: #3b82f6;

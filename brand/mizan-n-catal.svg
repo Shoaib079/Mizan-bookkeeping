@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Mizan">
+  <title>Mizan — Çatal</title>
+  <g fill="#D9622D">
+    <rect x="15" y="12" width="7" height="24" rx="3.5"/>
+    <rect x="28.5" y="6" width="7" height="30" rx="3.5"/>
+    <rect x="42" y="17" width="7" height="19" rx="3.5"/>
+    <path d="M15 34 H49 V40 A4 4 0 0 1 45 44 H35.5 V55 A3.5 3.5 0 0 1 28.5 55 V44 H19 A4 4 0 0 1 15 40 Z"/>
+  </g>
+</svg>

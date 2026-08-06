@@ -16,6 +16,7 @@ import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { CommandPalette } from "@/components/command-palette";
 import { useQuickActions } from "@/components/quick-actions";
+import { Logo } from "@/components/ui/logo";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { navGroups, isNavItemActive } from "@/lib/app-routes";
 import { shouldShowNewMenu } from "@/lib/entity-access";
@@ -154,9 +155,16 @@ function AppShellInner({
      * is no page scroll left to drag anything. */
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className="flex h-full w-60 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-border bg-sidebar">
-        <div className="border-b border-border px-4 py-4">
-          <p className="text-lg font-semibold text-primary">Mizan</p>
-          <p className="text-xs text-muted-foreground">Restaurant bookkeeping</p>
+        {/* The wordmark is text-brand-ink, not text-primary. It is the
+            identity, not a control, so it does not follow the button colour. */}
+        <div className="flex items-center gap-2.5 border-b border-border px-4 py-4">
+          <Logo />
+          <div className="min-w-0">
+            <p className="text-lg font-semibold leading-tight text-brand-ink">
+              Mizan
+            </p>
+            <p className="text-xs text-muted-foreground">Restaurant bookkeeping</p>
+          </div>
         </div>
         <SidebarNav
           pathname={pathname}

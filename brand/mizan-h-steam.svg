@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Mizan">
+  <title>Mizan — Steam</title>
+  <g fill="#D9622D">
+    <rect x="21" y="21" width="6.5" height="13" rx="3.25"/>
+    <rect x="30.5" y="13" width="6.5" height="21" rx="3.25"/>
+    <rect x="40" y="18" width="6.5" height="16" rx="3.25"/>
+  </g>
+  <path d="M8 38 Q32 60 56 38 Z" fill="#2E241D"/>
+</svg>

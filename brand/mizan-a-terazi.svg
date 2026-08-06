@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Mizan">
+  <title>Mizan — Terazi</title>
+  <g fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round">
+    <path d="M12 20 H52"/>
+    <path d="M32 20 V48"/>
+    <path d="M22 48 H42"/>
+    <path d="M12 20 V27"/>
+    <path d="M52 20 V27"/>
+    <path d="M5 27 Q12 37 19 27"/>
+    <path d="M45 27 Q52 37 59 27"/>
+  </g>
+  <circle cx="32" cy="20" r="4" fill="#2563eb"/>
+</svg>

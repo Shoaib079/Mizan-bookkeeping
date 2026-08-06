@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Mizan">
+  <title>Mizan — app icon</title>
+  <rect x="0" y="0" width="64" height="64" rx="15" fill="#2563eb"/>
+  <rect x="14" y="21" width="36" height="6" rx="3" fill="#ffffff"/>
+  <path d="M32 28 L42 46 H22 Z" fill="#ffffff"/>
+</svg>

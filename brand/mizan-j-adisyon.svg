@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Mizan">
+  <title>Mizan — Adisyon</title>
+  <path d="M12 8 H52 V46 L42 51 L32 46 L22 51 L12 46 Z" fill="#D9622D"/>
+  <g stroke="#FFFDFB" stroke-width="3.5" stroke-linecap="round">
+    <path d="M20 20 H44"/>
+    <path d="M20 28 H38"/>
+    <path d="M20 36 H31"/>
+  </g>
+</svg>
