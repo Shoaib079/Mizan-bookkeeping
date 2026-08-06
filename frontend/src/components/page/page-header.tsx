@@ -13,6 +13,13 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   title: string;
+  /** Sits beside the title, for acting on the *name* rather than the record.
+   *
+   * "Edit customer" belongs here rather than in the overflow: it changes the
+   * heading you are looking at, so putting it next to that heading says what
+   * it edits. The overflow is for things you rarely do; renaming is not rare,
+   * and hiding it behind "⋯" made it feel like an advanced operation. */
+  titleAction?: React.ReactNode;
   /** Small facts under the title: badges, VKN, pay currency, share %. */
   meta?: React.ReactNode;
   /** Rendered first, filled style — the action this page is for. */
@@ -26,6 +33,7 @@ type Props = {
 
 export function PageHeader({
   title,
+  titleAction,
   meta,
   primaryAction,
   actions,
@@ -45,7 +53,10 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0">
-        <h1 className="truncate text-xl font-semibold">{title}</h1>
+        <div className="flex min-w-0 items-center gap-2">
+          <h1 className="truncate text-xl font-semibold">{title}</h1>
+          {titleAction}
+        </div>
         {meta && (
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             {meta}

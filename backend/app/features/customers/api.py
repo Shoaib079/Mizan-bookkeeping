@@ -389,6 +389,31 @@ def void_customer_payment(
 
 
 @router.post(
+    "/{customer_id}/write-offs/{journal_entry_id}/correct",
+    response_model=CustomerWriteOffResponse,
+)
+def correct_customer_write_off(
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: CustomerWriteOffCreate,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> CustomerWriteOffResponse:
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return service.correct_customer_write_off_entry(
+            session, entity_id, customer_id, journal_entry_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (OverpaymentError, PostingError, InvalidAccountError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
     "/{customer_id}/write-offs/{journal_entry_id}/void",
     response_model=SubledgerVoidOut,
 )

@@ -12,6 +12,8 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 
 type Props = {
   title: string;
+  /** Acts on the name itself — "Edit customer" — beside the heading. */
+  titleAction?: React.ReactNode;
   meta?: React.ReactNode;
   primaryAction?: React.ReactNode;
   actions?: React.ReactNode;
@@ -35,6 +37,7 @@ type Props = {
 
 export function EntityDetailPage({
   title,
+  titleAction,
   meta,
   primaryAction,
   actions,
@@ -61,6 +64,7 @@ export function EntityDetailPage({
     <div className={className}>
       <PageHeader
         title={title}
+        titleAction={titleAction}
         meta={meta}
         primaryAction={primaryAction}
         actions={actions}

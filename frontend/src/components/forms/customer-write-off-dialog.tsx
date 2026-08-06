@@ -12,10 +12,18 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { useToast } from "@/lib/toast";
 
+export type CorrectableWriteOffRow = {
+  journal_entry_id: string;
+  amount_kurus: number;
+  description: string;
+};
+
 type Props = {
   open: boolean;
   customerId: string;
   balanceKurus: number;
+  /** Set to amend an existing write-off instead of posting a new one. */
+  correcting?: CorrectableWriteOffRow | null;
   onClose: () => void;
   onSaved?: () => void;
 };
@@ -32,6 +40,7 @@ export function CustomerWriteOffDialog({
   open,
   customerId,
   balanceKurus,
+  correcting,
   onClose,
   onSaved,
 }: Props) {
@@ -41,12 +50,23 @@ export function CustomerWriteOffDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Amending puts the original amount back on the balance first, so the cap
+  // is the balance plus what this write-off already took. Capping at the
+  // current balance would refuse to leave a write-off at its own size.
+  const ceilingKurus = correcting
+    ? balanceKurus + Math.abs(correcting.amount_kurus)
+    : balanceKurus;
+
   useEffect(() => {
     if (open) {
       setError(null);
-      setAmountText(defaultAmount(balanceKurus));
+      setAmountText(
+        defaultAmount(
+          correcting ? Math.abs(correcting.amount_kurus) : balanceKurus,
+        ),
+      );
     }
-  }, [open, balanceKurus]);
+  }, [open, balanceKurus, correcting]);
 
   async function onSubmit() {
     if (!entityId) return;
@@ -55,25 +75,30 @@ export function CustomerWriteOffDialog({
       setError("Enter a valid amount.");
       return;
     }
-    if (kurus > balanceKurus) {
+    if (kurus > ceilingKurus) {
       setError("Amount exceeds the receivable balance.");
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      await apiFetch(`/entities/${entityId}/customers/${customerId}/write-off`, {
-        method: "POST",
-        idempotencyKey: crypto.randomUUID(),
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          write_off_date: parseTrDate(todayTrDate()),
-          amount_kurus: kurus,
-          description: "Receivable write-off",
-          actor_id: actorId,
-        }),
-      });
-      toast("Write-off recorded");
+      await apiFetch(
+        correcting
+          ? `/entities/${entityId}/customers/${customerId}/write-offs/${correcting.journal_entry_id}/correct`
+          : `/entities/${entityId}/customers/${customerId}/write-off`,
+        {
+          method: "POST",
+          idempotencyKey: crypto.randomUUID(),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            write_off_date: parseTrDate(todayTrDate()),
+            amount_kurus: kurus,
+            description: correcting?.description || "Receivable write-off",
+            actor_id: actorId,
+          }),
+        },
+      );
+      toast(correcting ? "Write-off updated" : "Write-off recorded");
       onSaved?.();
       onClose();
     } catch (err) {
@@ -84,10 +109,14 @@ export function CustomerWriteOffDialog({
   }
 
   return (
-    <FormDialogShell open={open} title="Write off receivable" onClose={onClose}>
+    <FormDialogShell
+      open={open}
+      title={correcting ? "Edit write-off" : "Write off receivable"}
+      onClose={onClose}
+    >
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Receivable balance: {formatTry(balanceKurus)}
+          Receivable balance: {formatTry(ceilingKurus)}
         </p>
         <div>
           <Label htmlFor="wo-amt">Amount to write off (₺)</Label>

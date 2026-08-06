@@ -213,12 +213,13 @@ export function customerLedgerRowActions(
     }
     return { canEdit: true, canVoid: true };
   }
-  // A write-off can be undone but not amended: there is nothing to edit
-  // except the amount, and changing the amount of a write-off is a different
-  // write-off. Voidable because it was previously the one row on a customer
-  // ledger with no way back — a mistaken write-off was permanent.
+  // A write-off is corrected the same way as everything else here: void and
+  // re-post in one transaction. It had no actions at all until recently, so a
+  // mistaken write-off was permanent — and there was no way to repair the
+  // ones posted before the forex balance was fixed, which recorded no
+  // currency leg.
   if (ctx.movementType === "discount") {
-    return { canEdit: false, canVoid: true };
+    return { canEdit: true, canVoid: true };
   }
   return { canEdit: false, canVoid: false };
 }

@@ -204,6 +204,77 @@ def test_a_write_off_can_be_voided(db_session, restaurant_a, client: TestClient)
         assert native_balance_for_currency(db_session, customer_id, "USD") == 200
 
 
+def test_a_write_off_can_be_corrected_to_a_smaller_amount(
+    db_session, restaurant_a, client: TestClient
+):
+    """Halving the lira releases half the currency.
+
+    The share is worked out after the reversal is appended, so it is measured
+    against the balance as it stood *before* the original write-off. Measuring
+    against what remains afterwards would apportion against zero.
+    """
+    customer_id = _customer_owing_usd(
+        db_session, restaurant_a.id, try_kurus=8_800, usd_minor=200
+    )
+    entry = receivables_posting.post_customer_write_off(
+        db_session,
+        restaurant_a.id,
+        customer_id,
+        write_off_date=date(2026, 7, 8),
+        amount_kurus=8_800,
+        description="Receivable write-off",
+        actor_id=ACTOR,
+    )
+    db_session.commit()
+
+    resp = client.post(
+        f"/entities/{restaurant_a.id}/customers/{customer_id}"
+        f"/write-offs/{entry.id}/correct",
+        json={
+            "write_off_date": "2026-07-08",
+            "amount_kurus": 4_400,
+            "description": "Receivable write-off",
+            "actor_id": str(ACTOR),
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    # Half the lira written off, so half the currency is still owed.
+    assert resp.json()["balance_kurus"] == 4_400
+    with entity_context(db_session, restaurant_a.id):
+        assert native_balance_for_currency(db_session, customer_id, "USD") == 100
+
+
+def test_correcting_a_write_off_beyond_the_balance_is_rejected(
+    db_session, restaurant_a, client: TestClient
+):
+    """The cap survives the correction path, not just the posting one."""
+    customer_id = _customer_owing_usd(
+        db_session, restaurant_a.id, try_kurus=8_800, usd_minor=200
+    )
+    entry = receivables_posting.post_customer_write_off(
+        db_session,
+        restaurant_a.id,
+        customer_id,
+        write_off_date=date(2026, 7, 8),
+        amount_kurus=4_400,
+        description="Receivable write-off",
+        actor_id=ACTOR,
+    )
+    db_session.commit()
+
+    resp = client.post(
+        f"/entities/{restaurant_a.id}/customers/{customer_id}"
+        f"/write-offs/{entry.id}/correct",
+        json={
+            "write_off_date": "2026-07-08",
+            "amount_kurus": 99_999,
+            "description": "Too much",
+            "actor_id": str(ACTOR),
+        },
+    )
+    assert resp.status_code == 422, resp.text
+
+
 def test_voiding_something_that_is_not_a_write_off_is_rejected(
     db_session, restaurant_a, client: TestClient
 ):

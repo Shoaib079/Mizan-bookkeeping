@@ -2,6 +2,7 @@
 
 /** Customer detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -28,7 +29,10 @@ import {
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
-import { CustomerWriteOffDialog } from "@/components/forms/customer-write-off-dialog";
+import {
+  CustomerWriteOffDialog,
+  type CorrectableWriteOffRow,
+} from "@/components/forms/customer-write-off-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DataTableCell,
@@ -147,6 +151,8 @@ export default function CustomerDetailPage() {
   const [saleOpen, setSaleOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [writeOffOpen, setWriteOffOpen] = useState(false);
+  const [correctWriteOff, setCorrectWriteOff] =
+    useState<CorrectableWriteOffRow | null>(null);
   const [correctPayment, setCorrectPayment] =
     useState<CorrectableCustomerPaymentRow | null>(null);
   const [correctCreditSale, setCorrectCreditSale] =
@@ -259,6 +265,17 @@ export default function CustomerDetailPage() {
           />
         </>
       }
+      titleAction={
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-8 shrink-0 gap-1.5 px-2"
+          onClick={() => setEditOpen(true)}
+        >
+          <Pencil className="size-4" />
+          Edit
+        </Button>
+      }
       overflowActions={[
         {
           label: "Write off balance",
@@ -266,7 +283,6 @@ export default function CustomerDetailPage() {
           show: (ledger?.balance_kurus ?? 0) > 0,
           onSelect: () => setWriteOffOpen(true),
         },
-        { label: "Edit customer", onSelect: () => setEditOpen(true) },
       ]}
       headline={
         ledger && (
@@ -355,6 +371,14 @@ export default function CustomerDetailPage() {
                           row={entry}
                           showEdit={actions.canEdit}
                           onEdit={() => {
+                            if (entry.movement_type === "discount") {
+                              setCorrectWriteOff({
+                                journal_entry_id: entry.journal_entry_id!,
+                                amount_kurus: entry.amount_kurus,
+                                description: entry.description,
+                              });
+                              return;
+                            }
                             if (entry.movement_type === "payment_received") {
                               setCorrectPayment({
                                 journal_entry_id: entry.journal_entry_id!,
@@ -412,11 +436,18 @@ export default function CustomerDetailPage() {
             onSaved={() => void reload()}
           />
           {ledger && (
+            // One dialog for both jobs: posting a write-off and amending one.
+            // `correcting` decides which endpoint it calls and how it caps the
+            // amount, so the two cannot drift apart in wording or validation.
             <CustomerWriteOffDialog
-              open={writeOffOpen}
+              open={writeOffOpen || correctWriteOff !== null}
               customerId={customerId}
               balanceKurus={ledger.balance_kurus}
-              onClose={() => setWriteOffOpen(false)}
+              correcting={correctWriteOff}
+              onClose={() => {
+                setWriteOffOpen(false);
+                setCorrectWriteOff(null);
+              }}
               onSaved={() => void reload()}
             />
           )}
