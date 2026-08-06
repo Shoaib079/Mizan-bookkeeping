@@ -11,7 +11,7 @@ import {
 } from "@/components/page/entity-detail-page";
 import { FilterChips } from "@/components/page/filter-chips";
 import { LedgerTable } from "@/components/page/ledger-table";
-import { MetaFacts } from "@/components/page/page-header";
+import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { PartnerRecordForm } from "@/components/forms/partner-record-form";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
@@ -238,9 +238,7 @@ export default function PartnerDetailPage() {
             />
           </>
         }
-        overflowActions={[
-          { label: "Edit partner", onSelect: () => setEditOpen(true) },
-        ]}
+        titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
         headline={
           ledger && (
             <HeadlineFigure

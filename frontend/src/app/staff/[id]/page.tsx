@@ -27,7 +27,7 @@ import {
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
 import { LedgerTable } from "@/components/page/ledger-table";
-import { MetaFacts } from "@/components/page/page-header";
+import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
 import { Button } from "@/components/ui/button";
 import {
@@ -277,8 +277,8 @@ export default function StaffDetailPage() {
             onSelect: () => setApplyAdvanceOpen(true),
           },
           { label: "Adjust accrual", onSelect: () => setAccrualOpen(true) },
-          { label: "Edit employee", onSelect: () => setEditOpen(true) },
         ]}
+        titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
         headline={
           ledger && (
             <HeadlineFigure

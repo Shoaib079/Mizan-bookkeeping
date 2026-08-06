@@ -21,7 +21,7 @@ import {
   DetailSection,
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
-import { MetaFacts } from "@/components/page/page-header";
+import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
 import { SupplierActivityPanel } from "@/components/supplier-activity-panel";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
@@ -204,9 +204,7 @@ export default function SupplierDetailPage() {
           />
         </>
       }
-      overflowActions={[
-        { label: "Edit supplier", onSelect: () => setEditOpen(true) },
-      ]}
+      titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
       headline={
         ledger && (
           <HeadlineFigure

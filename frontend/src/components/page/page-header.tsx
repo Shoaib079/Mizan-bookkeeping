@@ -5,6 +5,9 @@
  * Title, the facts that identify the thing, and the actions you can take on
  * it — always in the same place, so the eye never has to re-learn a page. */
 
+import { Pencil } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import {
   OverflowMenu,
   type OverflowMenuItem,
@@ -74,6 +77,37 @@ export function PageHeader({
         </div>
       )}
     </header>
+  );
+}
+
+/** "Edit", beside the name it edits — the standard `titleAction`.
+ *
+ * Every entity detail page had this buried in the overflow menu, where it read
+ * as a rare or advanced operation. Renaming a supplier is neither. Shared
+ * rather than written out four times, so the four pages cannot drift into
+ * different icons, sizes or wording for the same act.
+ *
+ * Ghost, not filled: it sits next to a heading, and a solid button there
+ * competes with the page's actual primary action.
+ */
+export function EditTitleButton({
+  label = "Edit",
+  onClick,
+}: {
+  /** Overridden only where "Edit" alone would be ambiguous. */
+  label?: string;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className="h-8 shrink-0 gap-1.5 px-2"
+      onClick={onClick}
+    >
+      <Pencil className="size-4" />
+      {label}
+    </Button>
   );
 }
 

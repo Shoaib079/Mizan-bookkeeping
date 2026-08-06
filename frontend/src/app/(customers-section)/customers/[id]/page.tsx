@@ -2,7 +2,6 @@
 
 /** Customer detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
-import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -12,7 +11,7 @@ import {
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
 import { LedgerTable } from "@/components/page/ledger-table";
-import { MetaFacts } from "@/components/page/page-header";
+import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
@@ -265,17 +264,7 @@ export default function CustomerDetailPage() {
           />
         </>
       }
-      titleAction={
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-8 shrink-0 gap-1.5 px-2"
-          onClick={() => setEditOpen(true)}
-        >
-          <Pencil className="size-4" />
-          Edit
-        </Button>
-      }
+      titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
       overflowActions={[
         {
           label: "Write off balance",
