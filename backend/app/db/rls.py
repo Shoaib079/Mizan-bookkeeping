@@ -41,6 +41,7 @@ RLS_TABLES = (
     "group_menus",
     "group_sales",
     "group_sale_lines",
+    "dishes",
     "expense_items",
     "expense_item_aliases",
     "expense_entries",

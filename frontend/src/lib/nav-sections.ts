@@ -143,6 +143,11 @@ export const NAV_SECTIONS: NavSection[] = [
         match: (path) => path.startsWith("/customers/group-menus"),
       },
       {
+        href: "/customers/dishes",
+        label: "Dishes",
+        match: (path) => path.startsWith("/customers/dishes"),
+      },
+      {
         href: "/customers/group-sales",
         label: "Group sales",
         match: (path) => path.startsWith("/customers/group-sales"),
@@ -321,6 +326,7 @@ export const REGISTERED_PAGE_ROUTES: { pattern: string; kind: RouteEntryKind }[]
   { pattern: "/customers", kind: "tab" },
   { pattern: "/customers/[id]", kind: "drill-down" },
   { pattern: "/customers/group-menus", kind: "tab" },
+  { pattern: "/customers/dishes", kind: "tab" },
   { pattern: "/customers/group-sales", kind: "tab" },
   { pattern: "/customers/group-sales/[id]", kind: "drill-down" },
   { pattern: "/receivables", kind: "redirect" },
@@ -446,6 +452,7 @@ export function pageTitleForPathname(pathname: string): string {
     "/suppliers": "Suppliers",
     "/customers": "Customers",
     "/customers/group-menus": "Group menus",
+    "/customers/dishes": "Dishes",
     "/customers/group-sales": "Group sales",
     "/staff": "Staff",
     "/partners": "Partners",

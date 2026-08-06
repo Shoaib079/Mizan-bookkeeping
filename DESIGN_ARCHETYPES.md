@@ -101,6 +101,11 @@ All seven now compose `EntityDetailPage`; none draws its own title or balance ca
 
 Nine compose `ListPage`. Two do not, and shouldn't: **`/banking/cash`** (drawers + sessions + movements) and **`/cards`** (reconciliation + batches + settlements) are workspaces, not lists — forcing them into a list shape would be the drift the archetypes exist to stop. They take `PageHeader` so their identity and actions match, and keep their own bodies.
 
+### Added since — lists
+☑ `/customers/dishes` — the reusable dish list menus are built from
+(MENU_PLAN.md slice 1). Composes `ListPage` with search, mobile cards and a
+dialog form, like the nine above.
+
 What the slice turned up:
 
 - **Rule 5 was being broken in three places.** `/staff` and `/partners` had no pager at all; daily sales fetched 200 rows and told the reader *"showing 200 — download Excel for the full list"*. Sales now pages properly (`SALES_PAGE_SIZE`, resetting to page one when the period or filter changes). `/partners` is the one list still capped — it fetches `limit=50` through its own `apiFetch` for the ownership-share warning rather than `useEntityList`, so paging it means reworking that call. Left deliberately, noted here, guarded in the test.
