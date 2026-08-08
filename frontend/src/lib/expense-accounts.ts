@@ -103,3 +103,26 @@ export async function fetchExpenseAccounts(
   );
   return filterExpenseAccounts(chart.items);
 }
+
+/** Kept in step with `default_chart.DELIVERY_COMMISSION_EXPENSE_CODE`.
+ *  The account a platform commission lands in, and so the one a correction
+ *  should default to rather than falling back to general supplies. */
+export const DELIVERY_COMMISSION_EXPENSE_CODE = "5500";
+
+/** Accounts a delivery commission correction may use.
+ *
+ * `filterExpenseAccounts` hides 5500 on purpose — a commission must not be
+ * bookable as a free-form manual expense. But this *is* the commission flow,
+ * and hiding the account here would leave the form unable to offer the one
+ * account the invoice already posts to, silently defaulting the correction
+ * somewhere else. */
+export function filterCommissionExpenseAccounts(
+  accounts: ChartAccount[],
+): ChartAccount[] {
+  return accounts.filter(
+    (a) =>
+      a.account_type === "expense" &&
+      (a.code === DELIVERY_COMMISSION_EXPENSE_CODE ||
+        !NON_MANUAL_EXPENSE_CODES.has(a.code)),
+  );
+}

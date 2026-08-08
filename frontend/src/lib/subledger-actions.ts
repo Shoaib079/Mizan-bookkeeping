@@ -40,6 +40,10 @@ export const DEDICATED_CORRECTION_JOURNAL_SOURCES = new Set<string>([
   "partner_drawing_repayment",
   "expense_entry",
   "partner_profit_allocation",
+  // A commission invoice is an invoice. It sat in the void-only set and
+  // resolved to neither edit nor void, so a wrong one was stuck in the books
+  // with no way out of the app at all.
+  "delivery_commission",
 ]);
 
 /** Void and re-enter — no edit/correct API (bank classify, POS batch, etc.). */
@@ -51,7 +55,6 @@ export const VOID_ONLY_JOURNAL_SOURCES = new Set<string>([
   "pos_card_tip",
   "delivery_report",
   "delivery_settlement",
-  "delivery_commission",
   "credit_card_payment",
   "cash_movement",
   "cash_drawer_close",

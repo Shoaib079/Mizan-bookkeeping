@@ -31,6 +31,12 @@ from app.features.invoices.schema import (
     SetInvoiceKindRequest,
     UnconfirmDraftRequest,
 )
+from app.features.invoices.schema import (
+    DeliveryCommissionCorrect,
+    DeliveryCommissionCorrectOut,
+    DeliveryCommissionVoid,
+    DeliveryCommissionVoidOut,
+)
 from app.features.delivery.settings import DeliveryNotEnabledError
 
 router = APIRouter(prefix="/entities/{entity_id}/invoices", tags=["invoices"])
@@ -375,3 +381,94 @@ def post_invoice_draft(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/delivery-commission/{journal_entry_id}/correct",
+    response_model=DeliveryCommissionCorrectOut,
+)
+def correct_delivery_commission(
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: DeliveryCommissionCorrect,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> DeliveryCommissionCorrectOut:
+    """Correct a posted delivery commission invoice.
+
+    Lives with the invoices rather than under `/delivery`: a commission
+    arrives as an e-Fatura and is reviewed with the other invoices. The
+    settlement screens reconcile the money, and never touch the document.
+    """
+    from app.core.ledger.correction import (
+        CorrectionNotFoundError,
+        correct_delivery_commission_invoice,
+    )
+
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        result = correct_delivery_commission_invoice(
+            session,
+            entity_id,
+            journal_entry_id,
+            invoice_date=payload.invoice_date,
+            description=payload.description,
+            actor_id=actor_id,
+            expense_account_id=payload.expense_account_id,
+            net_kurus=payload.net_kurus,
+            gross_kurus=payload.gross_kurus,
+            vat_breakdown=[line.model_dump() for line in payload.vat_breakdown],
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (InvalidAccountError, PostingError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return DeliveryCommissionCorrectOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+        corrected_journal_entry_id=result.corrected.id,
+    )
+
+
+@router.post(
+    "/delivery-commission/{journal_entry_id}/void",
+    response_model=DeliveryCommissionVoidOut,
+)
+def void_delivery_commission(
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: DeliveryCommissionVoid,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> DeliveryCommissionVoidOut:
+    from app.core.ledger.correction import (
+        CorrectionNotFoundError,
+        void_delivery_commission_invoice,
+    )
+
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        result = void_delivery_commission_invoice(
+            session,
+            entity_id,
+            journal_entry_id,
+            actor_id=actor_id,
+            reason=payload.reason,
+            void_date=payload.void_date,
+            period_unlock_reason=payload.period_unlock_reason,
+        )
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (PostingError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return DeliveryCommissionVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )

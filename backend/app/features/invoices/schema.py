@@ -117,3 +117,42 @@ class DuplicateDraftErrorDetail(BaseModel):
 class InvoiceDraftDuplicateOut(BaseModel):
     detail: DuplicateDraftErrorDetail
     existing: InvoiceDraftOut
+
+
+class DeliveryCommissionCorrect(BaseModel):
+    """Correcting a posted delivery commission invoice.
+
+    Mirrors `SupplierInvoiceCorrect` field for field, minus the supplier: a
+    commission credits the platform's clearing account, and the platform comes
+    from the draft rather than the request — the caller cannot silently move
+    an invoice to another platform's clearing account by editing amounts.
+    """
+
+    invoice_date: date
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: OptionalActorId = None
+    expense_account_id: uuid.UUID
+    net_kurus: int = Field(gt=0)
+    gross_kurus: int = Field(gt=0)
+    vat_breakdown: list[VatBreakdownOut] = Field(min_length=1)
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
+class DeliveryCommissionCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
+
+
+class DeliveryCommissionVoid(BaseModel):
+    actor_id: OptionalActorId = None
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
+class DeliveryCommissionVoidOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID

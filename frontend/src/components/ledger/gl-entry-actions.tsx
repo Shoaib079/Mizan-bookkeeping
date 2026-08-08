@@ -27,6 +27,10 @@ import {
   type CorrectableCreditSaleRow,
 } from "@/components/forms/correct-credit-sale-form";
 import {
+  CorrectDeliveryCommissionForm,
+  type CorrectableDeliveryCommissionRow,
+} from "@/components/forms/correct-delivery-commission-form";
+import {
   CorrectSupplierInvoiceForm,
   type CorrectableSupplierInvoiceRow,
 } from "@/components/forms/correct-supplier-invoice-form";
@@ -100,6 +104,8 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
     supplierId: string;
     payment: CorrectableSupplierPaymentRow;
   } | null>(null);
+  const [commissionEdit, setCommissionEdit] =
+    useState<CorrectableDeliveryCommissionRow | null>(null);
   const [busy, setBusy] = useState(false);
 
   const preview = generalLedgerEntryActions(row.source);
@@ -252,6 +258,14 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
             },
           });
           return;
+        case "delivery_commission":
+          setCommissionEdit({
+            journal_entry_id: row.id,
+            movement_date: String(ctx.movement_date),
+            amount_kurus: Number(ctx.gross_kurus),
+            description: String(ctx.description),
+          });
+          return;
         default:
           // Loud, not silent. This arm is how Edit came to render on supplier
           // invoices and do nothing at all when pressed — the backend offered
@@ -377,6 +391,17 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
           onClose={() => setSupplierInvoiceEdit(null)}
           onSaved={() => {
             setSupplierInvoiceEdit(null);
+            onSaved();
+          }}
+        />
+      )}
+      {commissionEdit && (
+        <CorrectDeliveryCommissionForm
+          open
+          invoice={commissionEdit}
+          onClose={() => setCommissionEdit(null)}
+          onSaved={() => {
+            setCommissionEdit(null);
             onSaved();
           }}
         />

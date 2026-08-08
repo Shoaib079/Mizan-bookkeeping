@@ -392,6 +392,31 @@ def resolve_ledger_entry_actions(
                 ),
             )
 
+        if source == JournalEntrySource.DELIVERY_COMMISSION:
+            from app.features.invoices.models import InvoiceDraft
+
+            draft = session.scalar(
+                select(InvoiceDraft).where(InvoiceDraft.journal_entry_id == entry_id)
+            )
+            if draft is None:
+                return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+            return LedgerEntryActions(
+                can_edit=True,
+                can_void=True,
+                void_path=f"invoices/delivery-commission/{entry_id}/void",
+                edit=LedgerEntryEditContext(
+                    kind="delivery_commission",
+                    context={
+                        "draft_id": str(draft.id),
+                        "invoice_number": draft.invoice_number,
+                        "movement_date": draft.invoice_date.isoformat(),
+                        "net_kurus": draft.net_kurus,
+                        "gross_kurus": draft.gross_kurus,
+                        "description": entry.description,
+                    },
+                ),
+            )
+
         if source == JournalEntrySource.FX_PURCHASE:
             row = session.scalar(
                 select(FxLedgerEntry).where(FxLedgerEntry.journal_entry_id == entry_id)
