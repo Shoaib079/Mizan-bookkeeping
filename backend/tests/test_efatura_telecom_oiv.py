@@ -22,6 +22,7 @@ from app.features.invoices.validation import (
 )
 from tests.fixtures.efatura.regression_constants import (
     REGRESSION_FIXTURE_BUYER_VKN,
+    TTMOBIL_NEXT_DUE_DATE_62,
     TURKTELEKOM_OIV_55,
 )
 
@@ -232,3 +233,62 @@ def test_turktelekom_oiv_55_supplier_vkn_with_pymupdf() -> None:
         f"supplier_vkn should be 8590491872 but got {result!r} "
         f"(extractor={extractor})"
     )
+
+
+# --- TT Mobil: the invoice that posted itself into the future ---
+
+
+def _ttmobil() -> EInvoiceExtraction:
+    from app.adapters.ocr_ai.efatura import extract_efatura_pdf_for_intake
+
+    path = FIXTURES / "ttmobil_next_due_date_62.pdf"
+    return extract_efatura_pdf_for_intake(path.read_bytes()).extraction
+
+
+def test_ttmobil_takes_the_invoice_date_not_the_next_due_date() -> None:
+    """The document reads "Fatura Tarihi: 31-07-2026". It was read as
+    16/09/2026 — the value of "Bir Sonraki Son Ödeme Fatura Tarihi".
+
+    The old guard looked back a fixed 24 characters for "Sonraki", which
+    catches "Bir Sonraki Fatura Tarihi" and misses this one: "Son Ödeme"
+    sits in between and pushes the word out of the window. The wrong label
+    also appears *above* the right one, and the scan takes the first match it
+    accepts.
+    """
+    assert _ttmobil().invoice_date == TTMOBIL_NEXT_DUE_DATE_62["invoice_date"]
+
+
+def test_ttmobil_reads_the_printed_kdv_rather_than_assuming_one() -> None:
+    """585,75 was booked as reclaimable VAT where the document says 185,83.
+
+    This layout writes "KDV (20%) (Matrah 929.13 TL )" with the amount on the
+    next line; the reader only knew "KDV %20 (Matrah 929,13) 132,15". Missing
+    both tax lines, it assumed a single 20% line covering everything between
+    net and gross — which swept up the communication tax and a radio licence
+    fee and called them input KDV.
+    """
+    extraction = _ttmobil()
+    vat = sum(line["vat_kurus"] for line in extraction.vat_breakdown)
+    assert vat == 18583, f"reclaimed {vat} kuruş of VAT; the invoice says 18583"
+    assert vat != 58575, "still assuming one VAT line for every tax on the page"
+
+
+def test_ttmobil_keeps_the_communication_tax_out_of_vat() -> None:
+    """Özel İletişim Vergisi is not reclaimable. Counted as VAT it overstates
+    the input KDV on the return."""
+    assert _ttmobil().other_taxes_kurus == 9291
+
+
+def test_ttmobil_totals_add_up() -> None:
+    """net + VAT + other taxes = the printed total. The arithmetic is what
+    makes the three numbers above trustworthy together rather than separately.
+    """
+    e = _ttmobil()
+    vat = sum(line["vat_kurus"] for line in e.vat_breakdown)
+    assert e.net_kurus + vat + e.other_taxes_kurus == e.gross_kurus == 150450
+
+
+def test_ttmobil_supplier_and_number() -> None:
+    e = _ttmobil()
+    assert e.supplier_vkn == TTMOBIL_NEXT_DUE_DATE_62["supplier_vkn"]
+    assert e.invoice_number == TTMOBIL_NEXT_DUE_DATE_62["invoice_number"]

@@ -338,6 +338,32 @@ _PDF_DATE_LABEL_PATTERNS: tuple[str, ...] = (
 _PDF_AMOUNT = r"([\d.,]+)"
 _PDF_AMOUNT_SUFFIX = r"(?:\s*TL)?"
 
+# The tax lines on a telecom or utility invoice, in the two shapes they come
+# in. Türk Telekom writes "KDV %20 (Matrah 660,77) 132,15"; TT Mobil writes
+# "KDV (20%) (Matrah 929.13 TL )" with the amount on the *next line*.
+#
+# Only the first shape was matched. On the second both patterns missed, so
+# `kdv_matrah_vat` came back empty and the reader fell through to its last
+# resort — assume one 20% line for everything between net and gross. On a
+# 1.504,50 invoice that called 585,75 VAT when the document says 185,83: the
+# other 400 lira are Özel İletişim Vergisi and a radio licence fee, neither of
+# them reclaimable. That is the "assumed VAT" warning, and it is input KDV
+# overstated by a factor of three on the return.
+_TAX_RATE = r"(?:%\s*(?P<r1>\d+(?:[.,]\d+)?)|\(\s*(?P<r2>\d+(?:[.,]\d+)?)\s*%\s*\))"
+_TAX_MATRAH = r"\(\s*Matrah\s+(?P<base>[\d.,]+)\s*(?:TL)?\s*\)"
+#: `\s*` rather than `[ \t]*` — the amount sits on the following line in the
+#: TT Mobil layout, and requiring it on the same line is what missed it.
+_TAX_AMOUNT = r"\s*(?P<amt>-?[\d.,]+)"
+
+_KDV_MATRAH_RE = re.compile(
+    rf"KDV\s*{_TAX_RATE}\s*{_TAX_MATRAH}{_TAX_AMOUNT}", re.IGNORECASE
+)
+_OIV_MATRAH_RE = re.compile(
+    rf"(?:[ÖO][İI]V|Özel\s+İleti[şs]im\s+Vergisi)\s*{_TAX_RATE}\s*"
+    rf"{_TAX_MATRAH}{_TAX_AMOUNT}",
+    re.IGNORECASE,
+)
+
 _PDF_NET_LABELS: tuple[str, ...] = (
     r"Malzeme\s*/?\s*Hizmet\s*Toplam\s*Tutar[ıi]?",
     r"Mal\s*/?\s*Hizmet\s*Toplam\s*Tutar[ıi]?",
@@ -370,12 +396,48 @@ _PDF_GROSS_LABELS: tuple[str, ...] = (
 )
 
 
+#: Words that mean the label names a date other than this invoice's own.
+#:
+#: "Bir Sonraki Fatura Tarihi" is next month's billing date; "Son Ödeme
+#: Tarihi" and "Vade Tarihi" are when payment is due. All three are dates in
+#: the future sitting beside the one we want, on invoices from every utility
+#: and telecom.
+_OTHER_DATE_LABEL_WORDS: tuple[str, ...] = (
+    "sonraki",
+    "son ödeme",
+    "son odeme",
+    "vade",
+)
+
+
+def _label_names_another_date(text: str, match_start: int) -> bool:
+    """Does the label leading up to this date belong to a different date?
+
+    Judged on the whole label *line*, not a fixed window ending at the match.
+    The old check looked back 24 characters for "Sonraki" anchored to the end,
+    which caught "Bir Sonraki Fatura Tarihi" and missed **"Bir Sonraki Son
+    Ödeme Fatura Tarihi"** — the words "Son Ödeme" push "Sonraki" out of the
+    anchor. A TT Mobil invoice dated 31-07-2026 was read as 16/09/2026, its
+    next payment due date, and auto-posted six weeks into the future.
+
+    The wrong label also wins on order: it appears above the real "Fatura
+    Tarihi" in the text, and the scan returns the first match it accepts.
+
+    A line carrying a real invoice date *and* one of these words would now be
+    skipped, and a later pattern would answer instead. That direction is the
+    safe one: a missed label falls through to another, while a due date taken
+    as the invoice date posts silently into a period nobody looks at.
+    """
+    line_start = text.rfind("\n", 0, match_start) + 1
+    label = text[line_start:match_start].casefold()
+    return any(word in label for word in _OTHER_DATE_LABEL_WORDS)
+
+
 def _parse_pdf_tr_date(text: str) -> date:
     """Parse DD.MM.YYYY from common Turkish e-Fatura PDF labels."""
     for pattern in _PDF_DATE_LABEL_PATTERNS:
         for match in re.finditer(pattern, text, re.IGNORECASE | re.MULTILINE):
-            prefix = text[max(0, match.start() - 24) : match.start()]
-            if re.search(r"Sonraki\s*$", prefix, re.IGNORECASE):
+            if _label_names_another_date(text, match.start()):
                 continue
             raw_date = _normalize_tr_date_token(match.group(1))
             day, month, year = raw_date.split("-")
@@ -910,28 +972,23 @@ def _parse_pdf_heuristics(
 
     gross_match = _find_labeled_amount(text, _PDF_GROSS_LABELS)
 
-    # KDV %<rate> (Matrah <base>) <vat> — telecom/utility format
+    # The tax block on a telecom/utility invoice.
     kdv_matrah_vat: list[VatBreakdownLine] = []
-    for m in re.finditer(
-        r"KDV\s*%\s*(\d+(?:[.,]\d+)?)\s*\(\s*Matrah\s+([\d.,]+)\s*\)\s*([\d.,]+)",
-        text,
-        re.IGNORECASE,
-    ):
-        rate = float(m.group(1).replace(",", "."))
-        base = amount_text_to_kurus(_normalize_tr_amount(m.group(2)))
-        vat = amount_text_to_kurus(_normalize_tr_amount(m.group(3)))
+    for m in _KDV_MATRAH_RE.finditer(text):
+        rate = float((m.group("r1") or m.group("r2")).replace(",", "."))
+        base = amount_text_to_kurus(_normalize_tr_amount(m.group("base")))
+        vat = amount_text_to_kurus(_normalize_tr_amount(m.group("amt")))
         kdv_matrah_vat.append(
             {"rate_percent": rate, "base_kurus": base, "vat_kurus": vat}
         )
 
-    # ÖİV %<rate> (Matrah <base>) <oiv> — telecom special consumption tax
+    # Özel İletişim Vergisi — a communication tax, not VAT, and not
+    # reclaimable. Reading it as VAT overstates input KDV on the return.
     other_taxes_kurus = 0
-    for m in re.finditer(
-        r"[ÖO][İI]V\s*%\s*(\d+(?:[.,]\d+)?)\s*\(\s*Matrah\s+([\d.,]+)\s*\)\s*([\d.,]+)",
-        text,
-        re.IGNORECASE,
-    ):
-        other_taxes_kurus += amount_text_to_kurus(_normalize_tr_amount(m.group(3)))
+    for m in _OIV_MATRAH_RE.finditer(text):
+        other_taxes_kurus += amount_text_to_kurus(
+            _normalize_tr_amount(m.group("amt"))
+        )
 
     has_net = net_match is not None or bool(kdv_matrah_vat)
     if not has_net or not gross_match:
