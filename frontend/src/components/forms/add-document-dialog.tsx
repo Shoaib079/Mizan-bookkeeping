@@ -6,7 +6,7 @@
  */
 
 import { Upload } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -48,6 +48,10 @@ type Props = {
   deliveryEnabled?: boolean;
   onOpenDeliveryReport?: () => void;
   embedded?: boolean;
+  /** A file already chosen — dropped on the window, say. Detection runs on it
+   *  straight away, so a drop does not open an empty dialog asking for the
+   *  file that was just dropped. */
+  initialFile?: File | null;
 };
 
 export function AddDocumentDialog({
@@ -57,6 +61,7 @@ export function AddDocumentDialog({
   deliveryEnabled = false,
   onOpenDeliveryReport,
   embedded = false,
+  initialFile = null,
 }: Props) {
   const { entityId } = useEntity();
   const [file, setFile] = useState<File | null>(null);
@@ -110,6 +115,21 @@ export function AddDocumentDialog({
     },
     [entityId],
   );
+
+  // A dropped file runs detection the moment the dialog opens, so the drop
+  // finishes the job rather than opening a picker for the file just dropped.
+  // Keyed on the File object: re-running for the same one would re-detect on
+  // every render, and clearing it would fight the user.
+  const detectedInitial = useRef<File | null>(null);
+  useEffect(() => {
+    if (!open) {
+      detectedInitial.current = null;
+      return;
+    }
+    if (!initialFile || detectedInitial.current === initialFile) return;
+    detectedInitial.current = initialFile;
+    void handleFileChange(initialFile);
+  }, [open, initialFile, handleFileChange]);
 
   const handleConfirm = useCallback(() => {
     if (!file || !selectedType) return;

@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 
+import { DropAnywhere } from "@/components/drop-anywhere";
 import { RecordActionModals } from "@/components/record-action-modals";
 import { recordActionUsage } from "@/lib/action-usage";
 import { useApiAuth } from "@/lib/api-auth";
@@ -180,6 +181,15 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   return (
     <QuickActionsContext.Provider value={value}>
       {children}
+      {/* The whole window is the drop target, not a dashed box someone has to
+          aim at. Disabled while a record dialog is already open so that
+          dialog's own file field keeps its drop, and disabled entirely
+          without write access — dropping a file only to be told no is worse
+          than nothing happening. */}
+      <DropAnywhere
+        enabled={canWriteDailyTransactions && active === null}
+        onFile={(file) => openRecordActionWithFile("addDocument", file)}
+      />
       <RecordActionModals
         active={active}
         onClose={closeQuickAction}

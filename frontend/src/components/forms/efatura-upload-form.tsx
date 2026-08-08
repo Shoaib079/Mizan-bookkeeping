@@ -2,6 +2,7 @@
 
 /** e-Fatura PDF/XML upload → invoice draft — Phase 9 Slice 3. */
 
+import { CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
@@ -11,7 +12,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
-import { formatTry } from "@/lib/money";
+import { formatTrDate, formatTry } from "@/lib/money";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useRegisterUnsaved } from "@/lib/unsaved-work";
@@ -22,7 +23,12 @@ type InvoiceDraftRead = {
   status: string;
   supplier_name: string | null;
   linked_supplier_name: string | null;
+  invoice_number: string;
+  invoice_date: string;
+  net_kurus: number;
   gross_kurus: number;
+  currency: string;
+  journal_entry_id: string | null;
 };
 
 type Props = {
@@ -45,26 +51,31 @@ type Props = {
 export function afterUpload(
   draft: InvoiceDraftRead,
   supplierId?: string,
-): { message: string; navigateTo: string | null } {
+): { showReceipt: boolean; message: string | null; navigateTo: string | null } {
   if (draft.status === "posted") {
-    const supplier = draft.linked_supplier_name ?? draft.supplier_name;
-    const amount = formatTry(draft.gross_kurus);
-    // Names the supplier and the amount rather than saying "Posted". This is
-    // the only confirmation an auto-posted invoice gets, and it should be
-    // enough to notice that the wrong file went up.
-    return {
-      message: supplier
-        ? `Posted to the ledger — ${supplier}, ${amount}`
-        : `Posted to the ledger — ${amount}`,
-      navigateTo: null,
-    };
+    // A receipt, not a toast. Auto-post puts money in the books without
+    // anyone reading a screen, so the one moment it can be checked is now —
+    // and a line that fades after four seconds is not a place to check the
+    // supplier, the number and the amount. It stays until dismissed.
+    return { showReceipt: true, message: null, navigateTo: null };
   }
   return {
+    showReceipt: false,
     message: "Invoice uploaded",
     navigateTo: supplierId
       ? `/suppliers/${supplierId}?draft=${draft.id}`
       : `/record?invoice=${draft.id}`,
   };
+}
+
+/** The supplier as the books know it, falling back to what the file said. */
+export function receiptSupplier(draft: InvoiceDraftRead): string {
+  return draft.linked_supplier_name ?? draft.supplier_name ?? "Unknown supplier";
+}
+
+export function receiptAmount(draft: InvoiceDraftRead): string {
+  // Gross is what lands in payables, and it is the figure on the paper.
+  return formatTry(draft.gross_kurus);
 }
 
 export function EfaturaUploadForm({ open, onClose, supplierId, initialFile }: Props) {
@@ -78,10 +89,13 @@ export function EfaturaUploadForm({ open, onClose, supplierId, initialFile }: Pr
   }, [open, submitIdempotency]);
   const [file, setFile] = useState<File | null>(null);
 
+  const [posted, setPosted] = useState<InvoiceDraftRead | null>(null);
+
   useEffect(() => {
     if (!open) {
       setFile(null);
       setError(null);
+      setPosted(null);
       return;
     }
     if (initialFile) setFile(initialFile);
@@ -89,7 +103,14 @@ export function EfaturaUploadForm({ open, onClose, supplierId, initialFile }: Pr
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useRegisterUnsaved("efatura-upload", Boolean(file), open);
+  // Not "unsaved" once it is in the ledger — the receipt is a confirmation,
+  // not a draft, and warning about losing work on the way out would be wrong.
+  useRegisterUnsaved("efatura-upload", Boolean(file) && posted === null, open);
+
+  function dismissReceipt() {
+    setPosted(null);
+    onClose();
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -112,17 +133,101 @@ export function EfaturaUploadForm({ open, onClose, supplierId, initialFile }: Pr
         { method: "POST", body, idempotencyKey },
       );
       submitIdempotency.completeSubmit();
-      onClose();
       setFile(null);
 
       const next = afterUpload(draft, supplierId);
-      toast(next.message);
+      if (next.showReceipt) {
+        // The dialog stays open and becomes the receipt. Closing first and
+        // opening a second dialog loses the modal on the way through.
+        setPosted(draft);
+        return;
+      }
+      onClose();
+      if (next.message) toast(next.message);
       if (next.navigateTo) router.push(next.navigateTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (posted) {
+    return (
+      <Dialog open={open} title="Invoice posted" onClose={dismissReceipt}>
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 p-3">
+            <CheckCircle2
+              className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+              aria-hidden
+            />
+            <div className="min-w-0 text-sm">
+              <p className="font-medium text-foreground">
+                Posted to the ledger
+              </p>
+              <p className="mt-0.5 text-muted-foreground">
+                This supplier is trusted, so the invoice was posted on upload.
+                Nothing is waiting for you in Review.
+              </p>
+            </div>
+          </div>
+
+          <dl className="divide-y divide-border rounded-md border border-border">
+            {[
+              ["Supplier", receiptSupplier(posted)],
+              ["Invoice no.", posted.invoice_number],
+              ["Invoice date", formatTrDate(posted.invoice_date)],
+              ["Net", formatTry(posted.net_kurus)],
+              ["KDV", formatTry(posted.gross_kurus - posted.net_kurus)],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="flex items-baseline justify-between gap-4 px-3 py-2 text-sm"
+              >
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="text-right font-medium text-foreground">
+                  {value}
+                </dd>
+              </div>
+            ))}
+            {/* Gross last and heavier: it is the figure that reaches payables
+                and the one worth checking against the paper. */}
+            <div className="flex items-baseline justify-between gap-4 px-3 py-2.5">
+              <dt className="text-sm font-medium text-foreground">Total</dt>
+              <dd className="text-right text-base font-semibold text-foreground tabular-nums">
+                {receiptAmount(posted)}
+              </dd>
+            </div>
+          </dl>
+
+          <p className="text-xs text-muted-foreground">
+            Wrong invoice? Open it and void it — the entry stays in the ledger
+            with its reversal, so the correction is visible rather than silent.
+          </p>
+
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                const id = posted.id;
+                dismissReceipt();
+                router.push(
+                  supplierId
+                    ? `/suppliers/${supplierId}?draft=${id}`
+                    : `/record?invoice=${id}`,
+                );
+              }}
+            >
+              View invoice
+            </Button>
+            <Button type="button" onClick={dismissReceipt}>
+              Done
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    );
   }
 
   return (

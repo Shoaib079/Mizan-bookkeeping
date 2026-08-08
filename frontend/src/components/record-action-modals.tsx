@@ -109,6 +109,9 @@ export function RecordActionModals({
       <AddDocumentDialog
         open={modalAction === "addDocument"}
         onClose={closeAll}
+        initialFile={
+          routedTo === "addDocument" ? routedFile ?? undefined : undefined
+        }
         onConfirm={handleDocumentConfirm}
         deliveryEnabled={deliveryEnabled}
         onOpenDeliveryReport={() => {

@@ -8,22 +8,32 @@
 
 import { describe, expect, it } from "vitest";
 
-import { afterUpload } from "@/components/forms/efatura-upload-form";
+import {
+  afterUpload,
+  receiptAmount,
+  receiptSupplier,
+} from "@/components/forms/efatura-upload-form";
 
 const posted = {
   id: "draft-1",
   status: "posted",
   supplier_name: "METRO GROSMARKET",
   linked_supplier_name: null,
+  invoice_number: "EF2026000123",
+  invoice_date: "2026-08-07",
+  net_kurus: 102880,
   gross_kurus: 123456,
+  currency: "TRY",
+  journal_entry_id: "entry-1",
 };
 
 const needsReview = {
+  ...posted,
   id: "draft-2",
   status: "needs_review",
   supplier_name: "Unknown Supplier",
-  linked_supplier_name: null,
   gross_kurus: 5000,
+  journal_entry_id: null,
 };
 
 describe("afterUpload", () => {
@@ -32,32 +42,37 @@ describe("afterUpload", () => {
     expect(afterUpload(posted).navigateTo).toBeNull();
   });
 
-  it("says it reached the ledger, with the supplier and the amount", () => {
-    const { message } = afterUpload(posted);
-    expect(message).toContain("Posted to the ledger");
-    expect(message).toContain("METRO GROSMARKET");
-    expect(message).toContain("1.234,56");
+  it("shows a receipt rather than a fading line", () => {
+    // Auto-post puts money in the books without anyone reading a screen, so
+    // the one moment it can be checked is now. A toast is gone in four
+    // seconds and was, on a phone, never visible at all.
+    const { showReceipt, message } = afterUpload(posted);
+    expect(showReceipt).toBe(true);
+    expect(message).toBeNull();
   });
 
-  it("prefers the linked supplier's name over the one on the file", () => {
-    // The linked name is the one in the books; the extracted one is whatever
-    // the PDF happened to say.
-    const { message } = afterUpload({
-      ...posted,
-      linked_supplier_name: "Metro Toptancı A.Ş.",
-    });
-    expect(message).toContain("Metro Toptancı A.Ş.");
-    expect(message).not.toContain("METRO GROSMARKET");
+  it("names the supplier the books know, not the one on the file", () => {
+    // The linked name is the supplier in the ledger; the extracted one is
+    // whatever the PDF happened to say.
+    expect(
+      receiptSupplier({ ...posted, linked_supplier_name: "Metro Toptancı A.Ş." }),
+    ).toBe("Metro Toptancı A.Ş.");
+    expect(receiptSupplier(posted)).toBe("METRO GROSMARKET");
   });
 
-  it("still names the amount when no supplier could be read", () => {
-    const { message } = afterUpload({
-      ...posted,
-      supplier_name: null,
-      linked_supplier_name: null,
-    });
-    expect(message).toContain("Posted to the ledger");
-    expect(message).toContain("1.234,56");
+  it("falls back rather than showing an empty supplier", () => {
+    expect(
+      receiptSupplier({
+        ...posted,
+        supplier_name: null,
+        linked_supplier_name: null,
+      }),
+    ).toBe("Unknown supplier");
+  });
+
+  it("shows gross as the total", () => {
+    // Gross is what reaches payables and what is printed on the paper.
+    expect(receiptAmount(posted)).toContain("1.234,56");
   });
 
   it("routes to review when the invoice was not posted", () => {
