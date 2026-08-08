@@ -379,3 +379,74 @@ def test_reuploading_the_same_posted_file_makes_no_new_review_row(
     with entity_context(db_session, restaurant_a.id):
         after = len(list(db_session.scalars(select(InvoiceDraft))))
     assert after == before, "re-uploading a posted file left a duplicate to clean up"
+
+
+def test_a_voided_invoice_can_be_uploaded_again(
+    db_session, restaurant_a, seeded_accounts
+) -> None:
+    """Void it because it was a duplicate, and the file is usable again.
+
+    Reported: "i voided an invoice bcz the invoice was duplicate ... when i
+    try to upload the same invoice it says it already in ledger. while i
+    voided it already."
+
+    A voided invoice leaves its draft row reading `posted` — the status
+    records what was done to the draft, not whether the entry still stands.
+    The same-file check read that status alone and refused the file for good:
+    the app said the ledger held it when the ledger did not, and offered no
+    way round. `find_live_posted_supplier_invoice` had always drawn this
+    distinction for the invoice-number check; the same-file check had to draw
+    it too, or the two disagree about what "posted" means.
+    """
+    from app.core.ledger.correction import void_supplier_invoice
+
+    supplier_id = _supplier(db_session, restaurant_a)
+    content = SAMPLE_XML.read_bytes()
+
+    first = invoice_service.create_efatura_draft_from_upload(
+        db_session, restaurant_a.id, content, filename="sample.xml"
+    )
+    with entity_context(db_session, restaurant_a.id):
+        draft = db_session.get(InvoiceDraft, first.id)
+        draft.supplier_id = supplier_id
+        draft.status = InvoiceDraftStatus.CONFIRMED.value
+        draft.confirmed_by = ACTOR_ID
+        db_session.commit()
+    posted = post_confirmed_draft(
+        db_session,
+        restaurant_a.id,
+        first.id,
+        expense_account_id=seeded_accounts["5200"],
+        actor_id=ACTOR_ID,
+    )
+
+    # Refused while it stands — the behaviour that was asked for.
+    with pytest.raises(invoice_service.DuplicateInvoiceDraftError):
+        invoice_service.create_efatura_draft_from_upload(
+            db_session, restaurant_a.id, content, filename="sample.xml"
+        )
+
+    with entity_context(db_session, restaurant_a.id):
+        journal_entry_id = db_session.get(InvoiceDraft, first.id).journal_entry_id
+    void_supplier_invoice(
+        db_session,
+        restaurant_a.id,
+        journal_entry_id,
+        actor_id=ACTOR_ID,
+        reason="Duplicate invoice",
+    )
+
+    # Accepted once it does not.
+    again = invoice_service.create_efatura_draft_from_upload(
+        db_session, restaurant_a.id, content, filename="sample.xml"
+    )
+    assert again.id != first.id
+    # Not flagged as a duplicate either: nothing live carries that number, so
+    # this is an ordinary invoice waiting to be reviewed.
+    assert again.status is not InvoiceDraftStatus.DUPLICATE
+
+    # And the voided draft survives — it is the record of what was posted and
+    # then reversed, and journal entries point at it.
+    with entity_context(db_session, restaurant_a.id):
+        assert db_session.get(InvoiceDraft, first.id) is not None
+    assert posted is not None

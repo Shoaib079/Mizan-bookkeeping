@@ -629,6 +629,35 @@ def _learn_from_draft_classification(
     )
 
 
+def _posting_was_voided(
+    session: Session, entity_id: uuid.UUID, draft: InvoiceDraft
+) -> bool:
+    """Was this draft posted and then taken back out of the books?
+
+    A voided invoice leaves its draft row reading `posted` — the status
+    records what was done to the draft, not whether the entry still stands.
+    Reading it alone, an invoice voided as a duplicate could never be uploaded
+    again: the file was refused as "already posted to the ledger" when the
+    ledger no longer held it, and there was no way around it from the app.
+
+    `find_live_posted_supplier_invoice` already draws this distinction for the
+    invoice-number check ("live = draft posted and linked journal entry
+    posted"). The same-file check has to draw it too, or the two disagree
+    about what counts as posted.
+    """
+    if _draft_status(draft) is not InvoiceDraftStatus.POSTED:
+        return False
+    if draft.journal_entry_id is None:
+        return False
+    from app.core.ledger.models import JournalEntry, JournalEntryStatus
+
+    with entity_context(session, entity_id):
+        entry = session.get(JournalEntry, draft.journal_entry_id)
+        # A missing entry counts as gone: whatever removed it, the invoice is
+        # not in the books, and refusing the file would strand the user.
+        return entry is None or entry.status != JournalEntryStatus.POSTED.value
+
+
 def _discard_invoice_draft(
     session: Session,
     draft: InvoiceDraft,
@@ -733,16 +762,29 @@ def create_efatura_draft_from_upload(
     # re-uploading one posted file left a fresh review row every time, and
     # three uploads left three. That is what "it must delete that duplicate"
     # was about: they should never have been created.
+    #
+    # But "already uploaded" is only a reason to refuse while the earlier
+    # upload still stands. Rejected, or posted and since voided, it does not.
     existing = _find_by_fingerprint(session, entity_id, fingerprint)
+    superseded_upload = False
     if existing is not None:
         if _draft_status(existing) == InvoiceDraftStatus.REJECTED:
             with entity_context(session, entity_id):
                 _discard_invoice_draft(session, existing)
                 session.commit()
+        elif _posting_was_voided(session, entity_id, existing):
+            superseded_upload = True
         else:
             raise DuplicateInvoiceDraftError(existing)
 
     draft_fingerprint = fingerprint
+    if superseded_upload:
+        # The voided draft is kept: it is the record of what was posted and
+        # then reversed, and the journal entries point at it. So the new
+        # upload takes its own fingerprint rather than the file's.
+        draft_fingerprint = hashlib.sha256(
+            f"{fingerprint}:revoided:{uuid.uuid4()}".encode()
+        ).hexdigest()
     if duplicate_of_posted:
         # A *different* file carrying an invoice number already posted. That
         # is worth a person's eye — a supplier re-issuing a corrected copy and
