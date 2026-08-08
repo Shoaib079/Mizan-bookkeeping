@@ -26,10 +26,19 @@ import {
   CorrectCreditSaleForm,
   type CorrectableCreditSaleRow,
 } from "@/components/forms/correct-credit-sale-form";
+import {
+  CorrectSupplierInvoiceForm,
+  type CorrectableSupplierInvoiceRow,
+} from "@/components/forms/correct-supplier-invoice-form";
+import {
+  CorrectSupplierPaymentForm,
+  type CorrectableSupplierPaymentRow,
+} from "@/components/forms/correct-supplier-payment-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useToast } from "@/lib/toast";
 import {
   canUseGenericLedgerCorrect,
   generalLedgerEntryActions,
@@ -59,6 +68,7 @@ type Props = {
 
 export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
   const { entityId } = useEntity();
+  const { toast } = useToast();
   const [voidOpen, setVoidOpen] = useState(false);
   const [voidPath, setVoidPath] = useState<string | null>(null);
   const [partnerEdit, setPartnerEdit] = useState<{
@@ -82,6 +92,14 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
   );
   const [profitAllocationEdit, setProfitAllocationEdit] =
     useState<CorrectableProfitAllocationRow | null>(null);
+  const [supplierInvoiceEdit, setSupplierInvoiceEdit] = useState<{
+    supplierId: string;
+    invoice: CorrectableSupplierInvoiceRow;
+  } | null>(null);
+  const [supplierPaymentEdit, setSupplierPaymentEdit] = useState<{
+    supplierId: string;
+    payment: CorrectableSupplierPaymentRow;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const preview = generalLedgerEntryActions(row.source);
@@ -212,7 +230,39 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
             },
           });
           return;
+        case "supplier_invoice":
+          setSupplierInvoiceEdit({
+            supplierId: String(ctx.supplier_id),
+            invoice: {
+              journal_entry_id: row.id,
+              movement_date: String(ctx.movement_date),
+              amount_kurus: Number(ctx.amount_kurus),
+              description: String(ctx.description),
+            },
+          });
+          return;
+        case "supplier_payment":
+          setSupplierPaymentEdit({
+            supplierId: String(ctx.supplier_id),
+            payment: {
+              journal_entry_id: row.id,
+              movement_date: String(ctx.movement_date),
+              amount_kurus: Number(ctx.amount_kurus),
+              description: String(ctx.description),
+            },
+          });
+          return;
         default:
+          // Loud, not silent. This arm is how Edit came to render on supplier
+          // invoices and do nothing at all when pressed — the backend offered
+          // an edit kind the switch had no case for, and `return` swallowed
+          // it. A button that does nothing is worse than no button: it reads
+          // as the app being broken, with nothing to report.
+          toast(
+            `Editing is not available here for this entry (${actions.edit.kind}). ` +
+              "Open it from its own page.",
+            "warning",
+          );
           return;
       }
     } finally {
@@ -315,6 +365,30 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
           onClose={() => setProfitAllocationEdit(null)}
           onSaved={() => {
             setProfitAllocationEdit(null);
+            onSaved();
+          }}
+        />
+      )}
+      {supplierInvoiceEdit && (
+        <CorrectSupplierInvoiceForm
+          open
+          supplierId={supplierInvoiceEdit.supplierId}
+          invoice={supplierInvoiceEdit.invoice}
+          onClose={() => setSupplierInvoiceEdit(null)}
+          onSaved={() => {
+            setSupplierInvoiceEdit(null);
+            onSaved();
+          }}
+        />
+      )}
+      {supplierPaymentEdit && (
+        <CorrectSupplierPaymentForm
+          open
+          supplierId={supplierPaymentEdit.supplierId}
+          payment={supplierPaymentEdit.payment}
+          onClose={() => setSupplierPaymentEdit(null)}
+          onSaved={() => {
+            setSupplierPaymentEdit(null);
             onSaved();
           }}
         />

@@ -225,7 +225,11 @@ export function SupplierActivityPanel({
               <tr>
                 <DataTableHeaderCell>Date</DataTableHeaderCell>
                 <DataTableHeaderCell>Type</DataTableHeaderCell>
-                <DataTableHeaderCell>Ref</DataTableHeaderCell>
+                {/* "Ref" said nothing: on an invoice row this column holds
+                    the supplier's invoice number, which is what anyone
+                    matching a statement is actually looking for. Payments
+                    keep their dekont number, and the header says so. */}
+                <DataTableHeaderCell>Invoice / dekont no.</DataTableHeaderCell>
                 <DataTableHeaderCell>Detail</DataTableHeaderCell>
                 <DataTableHeaderCell align="right">Net</DataTableHeaderCell>
                 <DataTableHeaderCell align="right">KDV</DataTableHeaderCell>
