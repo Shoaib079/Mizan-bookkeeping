@@ -129,6 +129,25 @@ const SOURCE_LABELS: Record<string, string> = {
   rule_auto: "Bank transaction",
 };
 
+/** The source column, for a row that may be a reversal.
+ *
+ * A void writes its reversal with source `system`, which is also what genuine
+ * other bank income uses — so the reversal of a supplier invoice appeared in
+ * the ledger reading "Other income", directly above the invoice it cancelled.
+ * In a bookkeeping app that is not a cosmetic problem.
+ *
+ * The reversal is told apart by `reverses_entry_id`, which it always carries
+ * and ordinary income never does. No data changes: a posted entry's source is
+ * part of the record and the database enforces that.
+ */
+export function ledgerRowSourceLabel(
+  source: string,
+  reversesEntryId: string | null | undefined,
+): string {
+  if (reversesEntryId) return "Void reversal";
+  return sourceLabel(source);
+}
+
 export function sourceLabel(source: string): string {
   if (SOURCE_LABELS[source]) return SOURCE_LABELS[source];
   return source

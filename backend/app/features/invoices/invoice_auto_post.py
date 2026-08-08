@@ -80,16 +80,31 @@ def confirm_and_post_trusted_supplier_draft(
     *,
     expense_account_id: uuid.UUID,
     actor_id: uuid.UUID,
-    journal_source: JournalEntrySource = JournalEntrySource.INVOICE,
+    auto_posted: bool = False,
 ) -> InvoicePostResult:
-    """Confirm + post atomically; caller holds entity_context."""
+    """Confirm + post atomically; caller holds entity_context.
+
+    Posted as `INVOICE`, the same as one confirmed by hand.
+
+    It used to post as `RULE_AUTO`, a source bank-statement auto-posting
+    already owned. Sharing it meant an auto-posted supplier invoice inherited
+    that source's identity everywhere downstream: the ledger labelled it
+    "Bank transaction", and `resolve_ledger_entry_actions` marks `RULE_AUTO`
+    uneditable, so Edit vanished from every invoice the app posted for you.
+    Both were reported as separate bugs; they were one reuse.
+
+    That it was automatic is not lost — `posted_by_rule_auto` on the draft
+    records it, and the review screen shows it. It is a fact about *how the
+    draft was handled*, which is where it belongs; the journal entry is a
+    supplier invoice either way.
+    """
     draft.status = InvoiceDraftStatus.CONFIRMED.value
     draft.confirmed_at = utcnow()
     draft.confirmed_by = actor_id
     draft.review_reason = None
     _learn_from_draft_classification(session, draft)
 
-    if journal_source == JournalEntrySource.RULE_AUTO:
+    if auto_posted:
         payload = dict(draft.extraction_payload or {})
         payload["posted_by_rule_auto"] = True
         draft.extraction_payload = payload
@@ -100,7 +115,7 @@ def confirm_and_post_trusted_supplier_draft(
         draft,
         expense_account_id=expense_account_id,
         actor_id=actor_id,
-        journal_source=journal_source,
+        journal_source=JournalEntrySource.INVOICE,
     )
 
 
@@ -140,7 +155,7 @@ def try_auto_post_supplier_draft_on_upload(
                 draft,
                 expense_account_id=expense_suggestion.account_id,
                 actor_id=RULE_AUTO_ACTOR_ID,
-                journal_source=JournalEntrySource.RULE_AUTO,
+                auto_posted=True,
             )
             session.commit()
             session.refresh(draft)

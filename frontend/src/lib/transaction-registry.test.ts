@@ -6,6 +6,7 @@ import {
   JOURNAL_SOURCES,
   genericVoidPath,
   ledgerEntryHref,
+  ledgerRowSourceLabel,
   sourceFlow,
   sourceLabel,
 } from "@/lib/transaction-registry";
@@ -59,5 +60,24 @@ describe("transaction registry (audit C1)", () => {
       if (GENERIC_CORRECTABLE_SOURCES.has(source) || source === "system") continue;
       expect(sourceFlow(source)?.href, source).not.toBe("/reports/ledger");
     }
+  });
+});
+
+describe("ledgerRowSourceLabel", () => {
+  it("names a reversal a reversal", () => {
+    // A void writes its reversal with source `system`, which genuine other
+    // bank income also uses — so the reversal of a supplier invoice read
+    // "Other income" in the ledger, right above the invoice it cancelled.
+    expect(ledgerRowSourceLabel("system", "entry-1")).toBe("Void reversal");
+  });
+
+  it("leaves real other income alone", () => {
+    // The distinction is `reverses_entry_id`, which only a reversal carries.
+    expect(ledgerRowSourceLabel("system", null)).toBe("Other income");
+    expect(ledgerRowSourceLabel("system", undefined)).toBe("Other income");
+  });
+
+  it("does not relabel other sources that happen to reverse something", () => {
+    expect(ledgerRowSourceLabel("invoice", null)).toBe("Supplier invoice");
   });
 });

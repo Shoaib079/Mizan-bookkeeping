@@ -46,6 +46,7 @@ import { generalLedgerEntryActions } from "@/lib/subledger-actions";
 import {
   JOURNAL_SOURCES,
   sourceFlow,
+  ledgerRowSourceLabel,
   sourceLabel,
 } from "@/lib/transaction-registry";
 import { cn } from "@/lib/utils";
@@ -141,7 +142,9 @@ function EntryDetailPanel({
         <span>
           Entry ID: <span className="font-mono">{row.id}</span>
         </span>
-        <span>Source: {sourceLabel(row.source)}</span>
+        <span>
+          Source: {ledgerRowSourceLabel(row.source, row.reverses_entry_id)}
+        </span>
       </div>
 
       {chainLinks.length > 0 && (
@@ -568,7 +571,9 @@ function LedgerPanelContent() {
                           </button>
                         </DataTableCell>
                         <DataTableCell>{formatTrDate(row.entry_date)}</DataTableCell>
-                        <DataTableCell>{sourceLabel(row.source)}</DataTableCell>
+                        <DataTableCell>
+                          {ledgerRowSourceLabel(row.source, row.reverses_entry_id)}
+                        </DataTableCell>
                         <DataTableCell>{row.description}</DataTableCell>
                         <DataTableCell>
                           <StatusBadge status={row.status} />

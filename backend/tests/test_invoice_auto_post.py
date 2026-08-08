@@ -120,7 +120,16 @@ def test_auto_post_when_enabled_and_trusted(
     with entity_context(db_session, restaurant_a.id):
         journal = db_session.get(JournalEntry, uuid.UUID(body["journal_entry_id"]))
         assert journal is not None
-        assert journal.source == JournalEntrySource.RULE_AUTO
+        # INVOICE, not RULE_AUTO. Bank-statement auto-posting owns RULE_AUTO,
+        # and sharing it made an auto-posted supplier invoice inherit that
+        # identity everywhere downstream: the ledger called it "Bank
+        # transaction", and resolve_ledger_entry_actions marks RULE_AUTO
+        # uneditable, so Edit disappeared from every invoice the app posted.
+        #
+        # That it was automatic is still recorded — on the draft, above,
+        # which is where a fact about handling belongs. The journal entry is
+        # a supplier invoice either way.
+        assert journal.source == JournalEntrySource.INVOICE
 
 
 def test_auto_post_skipped_without_high_expense_learning(
@@ -136,3 +145,42 @@ def test_auto_post_skipped_without_high_expense_learning(
     body = response.json()
     assert body["status"] == "draft"
     assert body["posted_by_rule_auto"] is False
+
+
+def test_an_auto_posted_invoice_is_editable_like_any_other(
+    client, db_session, restaurant_a, seeded_accounts
+) -> None:
+    """The reported symptom: Edit on one invoice and not the rest.
+
+    Auto-posted invoices used to carry RULE_AUTO, which
+    `resolve_ledger_entry_actions` marks uneditable, so Edit appeared only on
+    the one invoice that had been posted by hand. Nothing about an invoice
+    changes because the app pressed the button.
+    """
+    _enable_auto_post(db_session, restaurant_a.id)
+    with entity_context(db_session, restaurant_a.id):
+        supplier = Supplier(name="Metro Gida", vkn="1234567890")
+        db_session.add(supplier)
+        db_session.commit()
+        supplier_id = supplier.id
+    _seed_expense_learning(
+        db_session, restaurant_a, supplier_id, seeded_accounts["5220"]
+    )
+
+    body = client.post(
+        f"/entities/{restaurant_a.id}/invoices/efatura/draft",
+        files={"file": ("sample.xml", SAMPLE_XML.read_bytes(), "application/xml")},
+    ).json()
+    assert body["status"] == "posted", body
+    entry_id = body["journal_entry_id"]
+
+    actions = client.get(
+        f"/entities/{restaurant_a.id}/ledger/entries/{entry_id}/actions"
+    )
+    assert actions.status_code == 200, actions.text
+    payload = actions.json()
+    assert payload["can_edit"] is True, "Edit is missing on an auto-posted invoice"
+    assert payload["edit"]["kind"] == "supplier_invoice"
+    assert "invoices" in payload["void_path"], (
+        "void should go through the supplier-invoice path, not the generic one"
+    )
