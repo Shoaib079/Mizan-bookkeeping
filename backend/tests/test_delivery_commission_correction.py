@@ -29,20 +29,15 @@ from app.core.chart_of_accounts.default_chart import (
     INPUT_VAT_CODE,
 )
 from app.core.chart_of_accounts.models import Account
-from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.delivery.commission_posting import post_delivery_commission_draft
+from app.core.ledger.balances import balance_as_of_kurus
 from app.core.ledger.correction import (
     CorrectionNotFoundError,
     correct_delivery_commission_invoice,
     void_delivery_commission_invoice,
 )
 from app.core.ledger.entry_actions import resolve_ledger_entry_actions
-from app.core.ledger.models import (
-    JournalEntry,
-    JournalEntryLine,
-    JournalEntrySource,
-    JournalEntryStatus,
-)
+from app.core.ledger.models import JournalEntry, JournalEntryStatus
 from app.db.session import entity_context
 from app.features.invoices.models import (
     InvoiceDraft,
@@ -50,7 +45,6 @@ from app.features.invoices.models import (
     InvoiceKind,
     InvoiceSourceType,
 )
-from app.features.invoices import service as invoice_service
 from app.features.suppliers.models import Supplier
 from tests.delivery_helpers import ACTOR_ID, delivery_setup as build_delivery_setup
 
@@ -116,21 +110,31 @@ def commission(db_session, restaurant_a):
     }
 
 
-def _account_balance(db_session, entity_id, account_id) -> int:
-    """Signed movement on an account across *live* entries only."""
+def _balance(db_session, entity_id, account_id) -> int:
+    """The balance the app itself reports for this account.
+
+    Deliberately `balance_as_of_kurus` rather than a sum written here. The
+    first version of this file summed lines with `status == POSTED`, which
+    sounds right and is not: a void marks the original VOIDED and writes a
+    *reversal* that stays POSTED, so filtering the original out while keeping
+    its reversal leaves half a cancelling pair. A cleanly voided 75.000 read
+    as −75.000, and a correction as −27.000 instead of 48.000. The code was
+    fine; the test was measuring wrongly.
+
+    `balances.py` drops both halves — `status == POSTED` *and*
+    `reverses_entry_id IS NULL`. Calling it means these tests assert the
+    figure the reports and the trial balance actually show, and cannot drift
+    from it.
+
+    Signs are natural to the account, which for a commission is worth stating
+    plainly: the platform clearing account is an **asset** — what the platform
+    owes the restaurant — and a commission invoice *credits* it. So a posted
+    commission shows as a negative clearing balance: it reduces the payout
+    still to come. The expense and the input VAT are debits and read positive.
+    """
     with entity_context(db_session, entity_id):
-        rows = db_session.execute(
-            select(JournalEntryLine.side, JournalEntryLine.amount_kurus)
-            .join(JournalEntry, JournalEntryLine.journal_entry_id == JournalEntry.id)
-            .where(
-                JournalEntryLine.account_id == account_id,
-                JournalEntry.status == JournalEntryStatus.POSTED,
-            )
-        ).all()
-    return sum(
-        amount if side == AccountNormalBalance.CREDIT else -amount
-        for side, amount in rows
-    )
+        account = db_session.get(Account, account_id)
+        return balance_as_of_kurus(db_session, account, date(2030, 1, 1))
 
 
 # --- the actions it offers ----------------------------------------------
@@ -172,8 +176,10 @@ def test_correcting_leaves_only_the_new_figure_on_the_clearing_account(
     entries balance on their own.
     """
     entity_id = commission["entity_id"]
-    before = _account_balance(db_session, entity_id, commission["clearing_id"])
-    assert before == GROSS
+    before = _balance(db_session, entity_id, commission["clearing_id"])
+    # Negative: the commission credits the clearing asset, reducing the payout
+    # the platform still owes.
+    assert before == -GROSS
 
     correct_delivery_commission_invoice(
         db_session,
@@ -195,10 +201,10 @@ def test_correcting_leaves_only_the_new_figure_on_the_clearing_account(
         reason="Platform reissued at a lower amount",
     )
 
-    after = _account_balance(db_session, entity_id, commission["clearing_id"])
-    assert after == CORRECTED_GROSS, (
-        f"clearing carries {after}, expected {CORRECTED_GROSS} — the original "
-        "was not reversed"
+    after = _balance(db_session, entity_id, commission["clearing_id"])
+    assert after == -CORRECTED_GROSS, (
+        f"clearing carries {after}, expected {-CORRECTED_GROSS} — the original "
+        "was not reversed, so both invoices are still weighing on the platform"
     )
 
 
@@ -222,9 +228,9 @@ def test_the_expense_and_vat_move_with_it(db_session, commission):
             }
         ],
     )
-    # Debits are negative in the helper's sign convention.
-    assert _account_balance(db_session, entity_id, commission["expense_id"]) == -CORRECTED_NET
-    assert _account_balance(db_session, entity_id, commission["vat_id"]) == -(
+    # Both are debit-normal, so a corrected invoice reads positive.
+    assert _balance(db_session, entity_id, commission["expense_id"]) == CORRECTED_NET
+    assert _balance(db_session, entity_id, commission["vat_id"]) == (
         CORRECTED_GROSS - CORRECTED_NET
     )
 
@@ -298,7 +304,7 @@ def test_voiding_clears_the_clearing_account(db_session, commission):
         actor_id=ACTOR_ID,
         reason="Not our invoice",
     )
-    assert _account_balance(db_session, entity_id, commission["clearing_id"]) == 0
+    assert _balance(db_session, entity_id, commission["clearing_id"]) == 0
 
 
 def test_voiding_puts_the_draft_back_where_it_can_be_used(db_session, commission):
