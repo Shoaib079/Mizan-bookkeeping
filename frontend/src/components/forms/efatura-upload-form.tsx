@@ -11,6 +11,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
 import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { formatTry } from "@/lib/money";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useRegisterUnsaved } from "@/lib/unsaved-work";
@@ -19,6 +20,9 @@ import { useEntity } from "@/lib/entity-context";
 type InvoiceDraftRead = {
   id: string;
   status: string;
+  supplier_name: string | null;
+  linked_supplier_name: string | null;
+  gross_kurus: number;
 };
 
 type Props = {
@@ -27,6 +31,41 @@ type Props = {
   supplierId?: string;
   initialFile?: File;
 };
+
+/** What to say, and where to go, once the upload comes back.
+ *
+ * A pure function because the interesting case is easy to get wrong and
+ * impossible to see: with auto-post on for a trusted supplier, the invoice is
+ * already in the ledger by the time this resolves. Routing to the review
+ * screen anyway makes finished work look outstanding, and "Invoice uploaded"
+ * never mentions the ledger — the one thing worth confirming.
+ *
+ * `navigateTo: null` means stay put. There is nothing to review.
+ */
+export function afterUpload(
+  draft: InvoiceDraftRead,
+  supplierId?: string,
+): { message: string; navigateTo: string | null } {
+  if (draft.status === "posted") {
+    const supplier = draft.linked_supplier_name ?? draft.supplier_name;
+    const amount = formatTry(draft.gross_kurus);
+    // Names the supplier and the amount rather than saying "Posted". This is
+    // the only confirmation an auto-posted invoice gets, and it should be
+    // enough to notice that the wrong file went up.
+    return {
+      message: supplier
+        ? `Posted to the ledger — ${supplier}, ${amount}`
+        : `Posted to the ledger — ${amount}`,
+      navigateTo: null,
+    };
+  }
+  return {
+    message: "Invoice uploaded",
+    navigateTo: supplierId
+      ? `/suppliers/${supplierId}?draft=${draft.id}`
+      : `/record?invoice=${draft.id}`,
+  };
+}
 
 export function EfaturaUploadForm({ open, onClose, supplierId, initialFile }: Props) {
   const router = useRouter();
@@ -75,11 +114,10 @@ export function EfaturaUploadForm({ open, onClose, supplierId, initialFile }: Pr
       submitIdempotency.completeSubmit();
       onClose();
       setFile(null);
-      toast("Invoice uploaded");
-      const reviewPath = supplierId
-        ? `/suppliers/${supplierId}?draft=${draft.id}`
-        : `/record?invoice=${draft.id}`;
-      router.push(reviewPath);
+
+      const next = afterUpload(draft, supplierId);
+      toast(next.message);
+      if (next.navigateTo) router.push(next.navigateTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
