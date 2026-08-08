@@ -159,16 +159,35 @@ def test_upload_marks_duplicate_when_live_posted_exists(
     assert "EF2026000123" in out.review_reason
 
 
-def test_reject_reupload_blocked_when_posted_exists(
+#: The same invoice number in a file that is not byte-identical — a supplier
+#: re-sending a corrected copy, and a supplier billing twice, look like this.
+ALTERED_SAME_NUMBER = SAMPLE_XML.read_bytes().replace(
+    b"Metro Gida Ticaret A.S.", b"Metro Gida Ticaret A.S. "
+)
+
+
+def test_rejecting_a_duplicate_does_not_blacklist_the_invoice(
     client, db_session, restaurant_a, seeded_accounts
 ) -> None:
+    """Reject by mistake and you can upload it again.
+
+    This is the property worth keeping: rejection is a decision about one row,
+    not a permanent ban on a document.
+
+    It used to be shown with the *same file* uploaded twice, which also pinned
+    something else — that re-uploading a posted file creates a fresh review
+    row every time. That was the owner's complaint ("it must delete that
+    duplicate invoice"), and identical bytes are the same document, so the
+    same file now returns 409 and creates nothing. The number-matches case is
+    the one that still needs a person, and it is the one demonstrated here.
+    """
     supplier_id = _supplier(db_session, restaurant_a)
-    expense_id = seeded_accounts["5200"]
     entity_id = restaurant_a.id
-    content = SAMPLE_XML.read_bytes()
     url = f"/entities/{entity_id}/invoices/efatura/draft"
 
-    first = client.post(url, files={"file": ("sample.xml", content, "application/xml")})
+    first = client.post(
+        url, files={"file": ("sample.xml", SAMPLE_XML.read_bytes(), "application/xml")}
+    )
     assert first.status_code == 201
     draft_id = first.json()["id"]
 
@@ -184,12 +203,14 @@ def test_reject_reupload_blocked_when_posted_exists(
         db_session,
         entity_id,
         uuid.UUID(draft_id),
-        expense_account_id=expense_id,
+        expense_account_id=seeded_accounts["5200"],
         actor_id=ACTOR_ID,
     )
 
-    second = client.post(url, files={"file": ("sample.xml", content, "application/xml")})
-    assert second.status_code == 201
+    second = client.post(
+        url, files={"file": ("reissued.xml", ALTERED_SAME_NUMBER, "application/xml")}
+    )
+    assert second.status_code == 201, second.text
     second_id = second.json()["id"]
     assert second.json()["status"] == "duplicate"
 
@@ -199,10 +220,51 @@ def test_reject_reupload_blocked_when_posted_exists(
     )
     assert reject.status_code == 204
 
-    third = client.post(url, files={"file": ("sample.xml", content, "application/xml")})
-    assert third.status_code == 201
+    third = client.post(
+        url, files={"file": ("reissued.xml", ALTERED_SAME_NUMBER, "application/xml")}
+    )
+    assert third.status_code == 201, third.text
     assert third.json()["status"] == "duplicate"
     assert third.json()["id"] != second_id
+
+
+def test_reuploading_a_posted_file_is_refused_not_queued(
+    client, db_session, restaurant_a, seeded_accounts
+) -> None:
+    """The other half of the same change, through the API.
+
+    409 with a message saying it is already posted, rather than a 201 that
+    leaves a row to discard by hand.
+    """
+    supplier_id = _supplier(db_session, restaurant_a)
+    entity_id = restaurant_a.id
+    content = SAMPLE_XML.read_bytes()
+    url = f"/entities/{entity_id}/invoices/efatura/draft"
+
+    first = client.post(url, files={"file": ("sample.xml", content, "application/xml")})
+    assert first.status_code == 201
+    draft_id = first.json()["id"]
+
+    with entity_context(db_session, entity_id):
+        draft = db_session.get(InvoiceDraft, uuid.UUID(draft_id))
+        draft.supplier_id = supplier_id
+        draft.status = InvoiceDraftStatus.CONFIRMED.value
+        draft.confirmed_by = ACTOR_ID
+        db_session.commit()
+
+    post_confirmed_draft(
+        db_session,
+        entity_id,
+        uuid.UUID(draft_id),
+        expense_account_id=seeded_accounts["5200"],
+        actor_id=ACTOR_ID,
+    )
+
+    again = client.post(url, files={"file": ("sample.xml", content, "application/xml")})
+    assert again.status_code == 409, again.text
+    detail = again.json()["detail"]
+    assert "already posted" in detail["message"]
+    assert detail["existing_draft_id"] == draft_id
 
 
 def test_correction_same_number_is_exempt(
