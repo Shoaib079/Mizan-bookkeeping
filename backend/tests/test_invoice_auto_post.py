@@ -184,3 +184,37 @@ def test_an_auto_posted_invoice_is_editable_like_any_other(
     assert "invoices" in payload["void_path"], (
         "void should go through the supplier-invoice path, not the generic one"
     )
+
+
+def test_a_future_dated_invoice_never_auto_posts(
+    client, db_session, restaurant_a, seeded_accounts, monkeypatch
+) -> None:
+    """The gate that would have stopped the invoice that started this.
+
+    Everything else about it was trustworthy — known supplier, learned
+    expense account, totals that validate — so every other gate passed and it
+    posted itself into a period six weeks out.
+    """
+    from app.features.invoices import one_click_post
+
+    _enable_auto_post(db_session, restaurant_a.id)
+    with entity_context(db_session, restaurant_a.id):
+        supplier = Supplier(name="Metro Gida", vkn="1234567890")
+        db_session.add(supplier)
+        db_session.commit()
+        supplier_id = supplier.id
+    _seed_expense_learning(
+        db_session, restaurant_a, supplier_id, seeded_accounts["5220"]
+    )
+
+    monkeypatch.setattr(one_click_post, "is_future_dated", lambda _d: True)
+
+    body = client.post(
+        f"/entities/{restaurant_a.id}/invoices/efatura/draft",
+        files={"file": ("sample.xml", SAMPLE_XML.read_bytes(), "application/xml")},
+    ).json()
+    assert body["status"] != "posted", (
+        "a future-dated invoice posted itself — right money, wrong period, "
+        "and invisible on every date-filtered screen"
+    )
+    assert body["posted_by_rule_auto"] is False

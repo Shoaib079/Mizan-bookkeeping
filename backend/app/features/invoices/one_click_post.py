@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
 from app.features.invoices.supplier_expense_learning import SupplierExpenseAccountSuggestion
 from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
@@ -42,9 +44,32 @@ def _has_blocking_review_reason(
     return any(marker.casefold() in lowered for marker in markers)
 
 
+def is_future_dated(invoice_date: date, *, today: date | None = None) -> bool:
+    """An invoice dated after today is a misread, not an invoice.
+
+    Suppliers do not send invoices before they are issued. When this appears
+    it means the reader picked up the wrong label — a payment due date, a next
+    billing date, something further down the page — and the date it chose is
+    not the one on the document.
+
+    Why it earns a gate of its own: a wrong date is the one extraction error
+    that hides its own evidence. Amounts wrong by a digit show up in the
+    balance; a wrong *date* posts a correct amount into a period nobody is
+    looking at, and every screen that helps you find it is filtered by date.
+    A real one did exactly that — right supplier, right money, dated six weeks
+    out, invisible everywhere except payables.
+    """
+    return invoice_date > (today or date.today())
+
+
 def _common_gates(draft: InvoiceDraft, classification_confidence: str) -> bool:
     """Shared gates for both supplier and commission one-click post."""
     if _is_vision_extraction(draft):
+        return False
+
+    # Never post a future-dated invoice on its own. It can still be posted by
+    # hand once someone has looked at the document and fixed the date.
+    if is_future_dated(draft.invoice_date):
         return False
 
     status = InvoiceDraftStatus(draft.status)

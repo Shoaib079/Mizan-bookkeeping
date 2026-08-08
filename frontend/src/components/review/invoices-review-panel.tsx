@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
 import { InvoiceDocumentPreview } from "@/components/invoice-document-preview";
+import { Dialog } from "@/components/ui/dialog";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import {
   DataTable,
@@ -81,8 +82,13 @@ function InvoiceDraftCards({
         ))}
       </MobileCardList>
 
-      {expandedDraftId && (
-        <div className="rounded-lg border border-border bg-card p-4">
+      <Dialog
+        open={expandedDraftId !== null}
+        title="Review invoice"
+        size="wide"
+        onClose={() => expandedDraftId && onToggleExpand(expandedDraftId)}
+      >
+        {expandedDraftId && (
           <InvoiceDraftReview
             key={expandedDraftId}
             draftId={expandedDraftId}
@@ -90,8 +96,8 @@ function InvoiceDraftCards({
             readOnly={readOnly}
             onUpdated={onUpdated}
           />
-        </div>
-      )}
+        )}
+      </Dialog>
     </div>
   );
 }
@@ -191,8 +197,17 @@ function InvoiceDraftTable({
         </DataTableBody>
       </DataTable>
 
-      {expandedDraftId && (
-        <div className="rounded-lg border border-border bg-card p-4">
+      {/* A dialog, not a panel appended under the table. Expanded inline, the
+          review opened *below* every row on the page — on a long list that
+          meant scrolling past forty invoices to reach the one just clicked,
+          with nothing on screen to say it had opened at all. */}
+      <Dialog
+        open={expandedDraftId !== null}
+        title="Review invoice"
+        size="wide"
+        onClose={() => expandedDraftId && onToggleExpand(expandedDraftId)}
+      >
+        {expandedDraftId && (
           <InvoiceDraftReview
             key={expandedDraftId}
             draftId={expandedDraftId}
@@ -200,8 +215,8 @@ function InvoiceDraftTable({
             readOnly={readOnly}
             onUpdated={onUpdated}
           />
-        </div>
-      )}
+        )}
+      </Dialog>
     </div>
   );
 }

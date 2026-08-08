@@ -53,7 +53,10 @@ from app.features.invoices.supplier_expense_learning import (
     suggest_commission_expense_account,
     suggest_supplier_expense_account,
 )
-from app.features.invoices.one_click_post import is_one_click_post_eligible
+from app.features.invoices.one_click_post import (
+    is_future_dated,
+    is_one_click_post_eligible,
+)
 from app.features.invoices.invoice_auto_post import confirm_and_post_trusted_supplier_draft
 from app.features.invoices.invoice_uniqueness import (
     duplicate_invoice_review_reason,
@@ -694,6 +697,19 @@ def create_efatura_draft_from_upload(
     )
 
     review_reason: str | None = pdf_intake_review_reason
+
+    # A date after today is a misread, not an invoice, and it is the misread
+    # that hides itself: the amount is right, so nothing looks wrong, and
+    # every screen that would show you the invoice is filtered by date. Said
+    # plainly here so the reason is on the row rather than left to be worked
+    # out from an empty list.
+    if is_future_dated(extraction.invoice_date):
+        review_reason = _merge_review_reasons(
+            review_reason,
+            f"Invoice date {extraction.invoice_date.isoformat()} is in the future — "
+            "check it against the document before posting",
+        )
+
     if linked_supplier is None and extraction.supplier_vkn:
         if entity.vkn and extraction.supplier_vkn == entity.vkn:
             review_reason = _merge_review_reasons(
