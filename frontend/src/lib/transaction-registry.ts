@@ -184,9 +184,13 @@ const SOURCE_FLOWS: Record<string, SourceFlow> = {
     href: "/delivery/settlements",
     label: "Delivery settlements",
   },
+  // A commission invoice is an invoice: it arrives as an e-Fatura and is
+  // reviewed with the others. It pointed at Delivery settlements, which is
+  // where the *money* is reconciled and where the invoice cannot be touched —
+  // so "edit or void it in Delivery settlements" was a dead end.
   delivery_commission: {
-    href: "/delivery/settlements",
-    label: "Delivery settlements",
+    href: "/review/invoices",
+    label: "Invoices",
   },
   bank_fee: { href: "/reports/ledger", label: "General ledger" },
   credit_card_payment: { href: "/banking/cards", label: "Credit cards" },
