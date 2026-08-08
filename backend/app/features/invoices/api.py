@@ -58,11 +58,24 @@ async def upload_efatura_draft(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.DuplicateInvoiceDraftError as exc:
+        # Says what became of the file already uploaded. "Duplicate invoice
+        # document for this entity" left someone re-uploading, wondering
+        # whether the first one had gone through — which is exactly what
+        # auto-post makes hardest to tell.
+        already_posted = (
+            service.InvoiceDraftStatus(exc.existing.status)
+            is service.InvoiceDraftStatus.POSTED
+        )
         raise HTTPException(
             status_code=409,
             detail={
-                "message": "Duplicate invoice document for this entity",
+                "message": (
+                    "This invoice is already posted to the ledger."
+                    if already_posted
+                    else "This file has already been uploaded — it is waiting in Review."
+                ),
                 "existing_draft_id": str(exc.existing.id),
+                "existing_status": exc.existing.status,
             },
         ) from exc
     except ValueError as exc:

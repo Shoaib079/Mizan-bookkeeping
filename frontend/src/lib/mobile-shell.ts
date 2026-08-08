@@ -53,6 +53,21 @@ export const DESKTOP_CHROME_ONLY = "max-[819px]:hidden";
 export const MOBILE_TAB_BAR_OFFSET =
   "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]";
 
+/** The same lift for toasts, applied in CSS rather than through JS.
+ *
+ * Toasts are rendered by `ToastProvider`, which sits above the router and so
+ * cannot ask `useIsMobileShell` whether this page has tabs — and a toast that
+ * appears one frame after the state it reports has already been missed.
+ *
+ * It pinned itself to `bottom-4` and therefore rendered *underneath* the tab
+ * bar on every phone, which is not a subtle misalignment: the toast was
+ * invisible. Four seconds later it was gone. Every confirmation this app has
+ * ever shown on mobile — "Invoice uploaded", "Payment recorded", "Posted to
+ * the ledger" — was never seen, and the app looked like it did nothing.
+ */
+export const MOBILE_TOAST_OFFSET =
+  "max-[819px]:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]";
+
 export const MOBILE_TAB_ROOTS = [
   "/",
   "/review",

@@ -727,20 +727,31 @@ def create_efatura_draft_from_upload(
         ):
             duplicate_of_posted = True
 
+    # The same file, whatever its invoice number says, is never a second
+    # invoice. Checked before the duplicate-number branch below, because that
+    # branch mints a random fingerprint to dodge the unique constraint — so
+    # re-uploading one posted file left a fresh review row every time, and
+    # three uploads left three. That is what "it must delete that duplicate"
+    # was about: they should never have been created.
+    existing = _find_by_fingerprint(session, entity_id, fingerprint)
+    if existing is not None:
+        if _draft_status(existing) == InvoiceDraftStatus.REJECTED:
+            with entity_context(session, entity_id):
+                _discard_invoice_draft(session, existing)
+                session.commit()
+        else:
+            raise DuplicateInvoiceDraftError(existing)
+
     draft_fingerprint = fingerprint
     if duplicate_of_posted:
+        # A *different* file carrying an invoice number already posted. That
+        # is worth a person's eye — a supplier re-issuing a corrected copy and
+        # a supplier billing twice look identical from here — so it becomes a
+        # review row rather than being dropped. The random fingerprint keeps
+        # it from colliding with the posted original.
         draft_fingerprint = hashlib.sha256(
             f"{fingerprint}:num-dup:{uuid.uuid4()}".encode()
         ).hexdigest()
-    else:
-        existing = _find_by_fingerprint(session, entity_id, fingerprint)
-        if existing is not None:
-            if _draft_status(existing) == InvoiceDraftStatus.REJECTED:
-                with entity_context(session, entity_id):
-                    _discard_invoice_draft(session, existing)
-                    session.commit()
-            else:
-                raise DuplicateInvoiceDraftError(existing)
 
     if duplicate_of_posted:
         initial_status = InvoiceDraftStatus.DUPLICATE

@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 
+import { MOBILE_TOAST_OFFSET } from "@/lib/mobile-shell";
 import { cn } from "@/lib/utils";
 
 /** "warning" is for something that worked but is worth knowing — a receipt
@@ -52,7 +53,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex max-w-sm flex-col gap-2"
+        className={cn(
+          "pointer-events-none fixed z-[100] flex flex-col gap-2",
+          // Full width on a phone, a card on the right on desktop. `max-w-sm`
+          // alone is 384px, wider than the usable width of a small phone, so
+          // a long message ran off the edge.
+          "inset-x-4 max-[819px]:items-stretch sm:inset-x-auto sm:right-4 sm:max-w-sm",
+          "bottom-4",
+          MOBILE_TOAST_OFFSET,
+        )}
         aria-live="polite"
         aria-relevant="additions"
       >

@@ -392,22 +392,44 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     expect(source).not.toContain("sticky bottom-0");
   });
 
-  it("the shell and the save bar clear the tabs by the same amount", async () => {
+  it("everything pinned to the bottom clears the tabs by the same amount", async () => {
     // Two hand-written copies of a number that has to agree is how they stop
-    // agreeing. Both now come from one token.
+    // agreeing. All three now come from one file.
     const shell = await read("../layout/app-shell.tsx");
     const form = await read("./form-page.tsx");
+    const toast = await read("../../lib/toast.tsx");
     expect(shell).toContain("MOBILE_TAB_BAR_PADDING");
     expect(form).toContain("MOBILE_TAB_BAR_OFFSET");
+    expect(toast).toContain("MOBILE_TOAST_OFFSET");
     expect(shell).not.toContain("pb-[calc(4.75rem");
     expect(form).not.toContain("bottom-[calc(4.75rem");
+    expect(toast).not.toContain("bottom-[calc(4.75rem");
 
     const tokens = await read("../../lib/mobile-shell.ts");
     const measurements = [
       ...tokens.matchAll(/(?:pb|bottom)-\[calc\(([^)]*rem)\+/g),
     ].map((m) => m[1]);
-    expect(measurements.length).toBe(2);
+    // A floor, not a count: the point is that they agree, and pinning the
+    // exact number meant adding a fourth pinned element failed this test for
+    // the wrong reason.
+    expect(measurements.length).toBeGreaterThanOrEqual(3);
     expect(new Set(measurements).size).toBe(1);
+  });
+
+  it("the toast clears the tab bar", async () => {
+    // It pinned itself to bottom-4 and rendered *underneath* the tabs on
+    // every phone — not a misalignment, an invisible toast. Every "Payment
+    // recorded" and "Posted to the ledger" this app has shown on mobile went
+    // unseen, so the app looked like it had done nothing.
+    const toast = await read("../../lib/toast.tsx");
+
+    // The token inside the className, not merely imported at the top. The
+    // first version of this test checked the file for the name and passed
+    // with the class deleted from the container — the same way the FormPage
+    // test above it once did. Verified by deleting the line and watching it
+    // go red.
+    const container = /className=\{cn\(([\s\S]*?)\)\}/.exec(toast)?.[1] ?? "";
+    expect(container).toContain("MOBILE_TOAST_OFFSET");
   });
 
   it("the clearance tokens are literal classes Tailwind can see", async () => {

@@ -270,3 +270,50 @@ def test_correction_same_number_is_exempt(
             expense_account_id=supplies_id,
             actor_id=ACTOR_ID,
         )
+
+
+def test_reuploading_the_same_posted_file_makes_no_new_review_row(
+    db_session, restaurant_a, seeded_accounts
+) -> None:
+    """The same file is never a second invoice.
+
+    The duplicate-number branch mints a random fingerprint so the row can sit
+    beside the posted original. That branch used to run *before* the ordinary
+    same-file check, so re-uploading one posted file left a fresh review row
+    every time — three uploads, three rows to discard by hand.
+
+    A different file with the same number still becomes a review row; that is
+    the case a person has to judge, and the test above covers it.
+    """
+    supplier_id = _supplier(db_session, restaurant_a)
+    content = SAMPLE_XML.read_bytes()
+
+    first = invoice_service.create_efatura_draft_from_upload(
+        db_session, restaurant_a.id, content, filename="sample.xml"
+    )
+    with entity_context(db_session, restaurant_a.id):
+        draft = db_session.get(InvoiceDraft, first.id)
+        draft.status = InvoiceDraftStatus.CONFIRMED.value
+        draft.supplier_id = supplier_id
+        db_session.commit()
+    post_confirmed_draft(
+        db_session,
+        restaurant_a.id,
+        first.id,
+        expense_account_id=seeded_accounts["5200"],
+        actor_id=ACTOR_ID,
+    )
+
+    with entity_context(db_session, restaurant_a.id):
+        before = len(list(db_session.scalars(select(InvoiceDraft))))
+
+    with pytest.raises(invoice_service.DuplicateInvoiceDraftError) as caught:
+        invoice_service.create_efatura_draft_from_upload(
+            db_session, restaurant_a.id, content, filename="sample.xml"
+        )
+    # It points at the invoice already in the books, so the caller can say so.
+    assert caught.value.existing.id == first.id
+
+    with entity_context(db_session, restaurant_a.id):
+        after = len(list(db_session.scalars(select(InvoiceDraft))))
+    assert after == before, "re-uploading a posted file left a duplicate to clean up"
