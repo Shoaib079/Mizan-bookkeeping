@@ -205,20 +205,32 @@ function LedgerPanelContent() {
   const router = useRouter();
   const defaults = useMemo(() => currentMonthRange(), []);
 
+  // Arriving with `?focus=` means something linked here to show one entry —
+  // from an invoice, a receipt, a subledger row. Applying the default month
+  // on top of that hides the entry the link exists to show, and an invoice
+  // dated last month and uploaded this month lands there every time. Without
+  // an explicit range in the URL, a focused link starts unfiltered.
+  const focusId = searchParams.get("focus") ?? "";
+  const hasExplicitRange =
+    searchParams.get("from") !== null || searchParams.get("to") !== null;
+  const rangeDefaults = useMemo(
+    () => (focusId && !hasExplicitRange ? { from: "", to: "" } : defaults),
+    [defaults, focusId, hasExplicitRange],
+  );
+
   const { from, to } = useMemo(
     () =>
       resolveReportRange(
         searchParams.get("from"),
         searchParams.get("to"),
-        defaults,
+        rangeDefaults,
       ),
-    [defaults, searchParams],
+    [rangeDefaults, searchParams],
   );
   const q = searchParams.get("q") ?? "";
   const source = searchParams.get("source") ?? "";
   const status = searchParams.get("status") ?? "";
   const offset = Number(searchParams.get("offset") ?? "0");
-  const focusId = searchParams.get("focus") ?? "";
   /** Default view is the live books: voided entries and their "Void: …"
    * reversals are audit trail, not current state. `history=1` reveals them. */
   const showHistory = searchParams.get("history") === "1";
@@ -260,8 +272,10 @@ function LedgerPanelContent() {
 
   const apiQuery = useMemo(() => {
     const params = new URLSearchParams();
-    params.set("from", from);
-    params.set("to", to);
+    // Omitted rather than sent empty: `from=` is not "no filter" to a date
+    // query parameter, and this is the unfiltered case a focused link needs.
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     params.set("limit", String(PAGE_SIZE));
     params.set("offset", String(offset));
     if (q.trim()) params.set("q", q.trim());

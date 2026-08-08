@@ -47,20 +47,22 @@ export function invoiceReviewEmptyState(tab: InvoiceReviewTab): {
         title: "No posted invoices for this period",
         hint: "Posted supplier and commission e-Faturas appear here after booking. Adjust the date range or post invoices from the workbench tabs.",
       };
+    // These three no longer honour the date range, so the hints must not
+    // send someone off to change dates that are not being applied.
     case "ready":
       return {
         title: "Nothing ready to post",
-        hint: "No confirmed invoices in this period. Change the dates or confirm drafts from Pending review.",
+        hint: "Confirmed invoices appear here, waiting to be posted. Confirm one from Pending review.",
       };
     case "all":
       return {
-        title: "No invoices",
-        hint: "Nothing in this period. Change the dates or upload e-Fatura from Record.",
+        title: "No invoices yet",
+        hint: "Upload an e-Fatura from Record and it will appear here.",
       };
     default:
       return {
         title: "No supplier invoices in progress",
-        hint: "Nothing in this period for pending review. Change the dates or upload e-Fatura from Record.",
+        hint: "Uploaded invoices wait here until posted. Upload an e-Fatura from Record.",
       };
   }
 }
@@ -111,23 +113,39 @@ export function postedInvoicesListPath(from: string, to: string): string {
   });
 }
 
-/** Review hub list query — date range applies to every tab. */
+/** Review hub list query.
+ *
+ * **The queues are not date-filtered.** Work waiting on you is waiting
+ * whatever the invoice is dated, and the date on an invoice is the supplier's
+ * date, not the day you uploaded it. The range defaulted to the current
+ * month and applied to every tab, so an invoice dated 31 July and uploaded on
+ * 8 August — the ordinary case, since you upload last month's invoices at the
+ * start of this one — was in the books, visible in payables, and absent from
+ * every tab of the review screen. It looked lost.
+ *
+ * `posted` keeps the range: that tab is for browsing history, where a period
+ * is the point. `pending`, `ready` and `all` show everything.
+ */
 export function invoiceReviewListPath(
   tab: InvoiceReviewTab,
   from: string,
   to: string,
 ): string {
-  const range = { from, to, limit: 100 };
   switch (tab) {
     case "ready":
-      return invoiceDraftsListPath({ ...range, status: "confirmed" });
+      return invoiceDraftsListPath({ status: "confirmed", limit: 100 });
     case "posted":
-      return invoiceDraftsListPath({ ...range, status: "posted" });
+      return invoiceDraftsListPath({ status: "posted", from, to, limit: 100 });
     case "all":
-      return invoiceDraftsListPath(range);
+      return invoiceDraftsListPath({ limit: 100 });
     default:
-      return invoiceDraftsListPath(range);
+      return invoiceDraftsListPath({ limit: 100 });
   }
+}
+
+/** Does this tab's list honour the date range shown in the toolbar? */
+export function invoiceReviewTabUsesRange(tab: InvoiceReviewTab): boolean {
+  return tab === "posted";
 }
 
 export function postedCommissionInvoicesListPath(from?: string, to?: string): string {

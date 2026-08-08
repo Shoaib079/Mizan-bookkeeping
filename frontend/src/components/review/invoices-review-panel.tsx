@@ -29,6 +29,7 @@ import {
   INVOICE_REVIEW_TABS,
   invoiceCounterpartyLabel,
   invoiceReviewEmptyState,
+  invoiceReviewTabUsesRange,
   type InvoiceDraftListRow,
   type InvoiceReviewTab,
 } from "@/lib/invoice-draft-list";
@@ -269,12 +270,18 @@ export function InvoicesReviewPanel() {
       loading={loading}
       error={error}
       toolbar={
-        <ReportDateRange
-          from={from}
-          to={to}
-          disabled={loading}
-          onChange={onRangeChange}
-        />
+        // Shown only where it applies. The queues ignore the range now, and a
+        // date picker that changes nothing is worse than none: it was the
+        // first thing anyone reached for when an invoice seemed missing, and
+        // it was never the reason.
+        invoiceReviewTabUsesRange(activeTab) ? (
+          <ReportDateRange
+            from={from}
+            to={to}
+            disabled={loading}
+            onChange={onRangeChange}
+          />
+        ) : undefined
       }
       filters={
         <FilterChips
