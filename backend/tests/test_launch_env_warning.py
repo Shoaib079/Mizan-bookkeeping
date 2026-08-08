@@ -137,6 +137,15 @@ def captured_records():
     Logging swallows exceptions raised inside handlers, so a test that merely
     calls the function and expects no error cannot see a broken log call. The
     record is inspected here, in the test body, where a failure surfaces.
+
+    **Makes its own preconditions true.** Attaching a handler is not enough:
+    `Logger.warning` drops the record before any handler when the logger is
+    disabled or `logging.disable()` has been raised, and both are global state
+    that any of the other 1600 tests can leave behind. Running this file alone
+    passed; the full suite in CI reported `assert 0 == 1` — a message that
+    cannot tell "the code stopped warning" from "something switched logging
+    off two hundred tests ago". Whatever that something is, it is not what
+    this file is about, so the state is pinned here and restored after.
     """
     records: list[logging.LogRecord] = []
 
@@ -145,14 +154,31 @@ def captured_records():
             records.append(record)
 
     handler = _Capture(level=logging.WARNING)
-    previous = launch.logger.level
+    previous_level = launch.logger.level
+    previous_disabled = launch.logger.disabled
+    previous_manager_disable = logging.Logger.manager.disable
+
     launch.logger.addHandler(handler)
     launch.logger.setLevel(logging.WARNING)
+    launch.logger.disabled = False
+    logging.disable(logging.NOTSET)
     try:
         yield records
     finally:
         launch.logger.removeHandler(handler)
-        launch.logger.setLevel(previous)
+        launch.logger.setLevel(previous_level)
+        launch.logger.disabled = previous_disabled
+        logging.disable(previous_manager_disable)
+
+
+def _logging_state() -> str:
+    """What the logger was actually willing to emit, for a failure message."""
+    return (
+        f"logger.disabled={launch.logger.disabled}, "
+        f"logger.level={launch.logger.level}, "
+        f"manager.disable={logging.Logger.manager.disable}, "
+        f"isEnabledFor(WARNING)={launch.logger.isEnabledFor(logging.WARNING)}"
+    )
 
 
 def test_it_actually_emits_the_warning():
@@ -162,13 +188,34 @@ def test_it_actually_emits_the_warning():
     function joins them up. It could have returned early, or logged something
     else, and every other test here would still pass.
     """
-    with captured_records() as records:
-        launch.warn_if_deployed_but_not_production(_deployed_but_undeclared())
+    config = _deployed_but_undeclared()
+    # Asserted before the log call, so a failure says which half broke. On its
+    # own, "expected exactly one warning" is true both when the decision
+    # changed and when the record never reached a handler.
+    assert launch.should_warn_about_environment(
+        config.is_production, config.cors_origins, config.database_url
+    ), f"the decision itself said no: {config.app_env=} {config.cors_origins=}"
 
-    assert len(records) == 1, "expected exactly one warning"
+    with captured_records() as records:
+        launch.warn_if_deployed_but_not_production(config)
+        state = _logging_state()
+
+    assert len(records) == 1, (
+        f"expected exactly one warning, captured {len(records)} — {state}"
+    )
     # Rendered in the test, not in a handler, so a bad log call fails here
     # rather than being suppressed by logging.
-    assert records[0].getMessage() == launch.disarmed_guards_warning("development")
+    logged = records[0].getMessage()
+
+    # Against the content, not against `disarmed_guards_warning(...)`. Comparing
+    # the two called the same function on both sides: replacing the wording
+    # with "everything is fine" changed the log and the expectation together
+    # and the test stayed green. It was checking that a function equals itself.
+    assert "skipped, not passed" in logged
+    assert "'development'" in logged
+    assert "APP_ENV=production" in logged
+    # And it is the real message, not a paraphrase that drifted from it.
+    assert logged == launch.disarmed_guards_warning(_deployed_but_undeclared().app_env)
 
 
 def test_it_stays_silent_when_there_is_nothing_to_say():
