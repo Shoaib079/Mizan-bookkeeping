@@ -46,17 +46,22 @@ export const DEDICATED_CORRECTION_JOURNAL_SOURCES = new Set<string>([
   "delivery_commission",
 ]);
 
-/** Void and re-enter — no edit/correct API (bank classify, POS batch, etc.). */
+/** Void and re-enter — no edit/correct API (bank classify, POS batch, etc.).
+ *
+ * `opening_balance`, `pos_card_tip`, `credit_card_payment` and `cash_movement`
+ * were here and are not any more. The backend offers no void path for them —
+ * each is corrected through the record that owns it, and voiding half of one
+ * from the General ledger would leave the other half standing. Listing them
+ * here drew a Void button whose handler then read `void_path: null` from the
+ * API and returned without a word: four buttons that did nothing, which is
+ * indistinguishable from four buttons that are broken.
+ */
 export const VOID_ONLY_JOURNAL_SOURCES = new Set<string>([
-  "opening_balance",
   "transfer",
   "pos_settlement",
   "card_sales",
-  "pos_card_tip",
   "delivery_report",
   "delivery_settlement",
-  "credit_card_payment",
-  "cash_movement",
   "cash_drawer_close",
   "rule_auto",
   "system",
@@ -162,6 +167,31 @@ export function generalLedgerEntryActions(source: string): RowActions & {
     flowHref: flow?.href ?? null,
   };
 }
+
+/* ------------------------------------------------------------------------
+ * Below here the question is different, and that is why these stayed.
+ *
+ * Everything above answers "what may be done to this journal *entry*", keyed
+ * on its source, and the backend's capability table answers the same question
+ * — so the two are compared by a guard and must agree.
+ *
+ * These answer "what may be done from this *row*", keyed on movement type,
+ * and one entry can own several rows:
+ *
+ *   - a profit allocation writes one partner row per partner, all against the
+ *     same journal entry. A Void on Ali's row would void Burak's and Cem's
+ *     share too.
+ *   - a salary payment that applied an advance writes two rows on one entry;
+ *     a period payment writes three. The offset leg is derived, not something
+ *     to edit on its own.
+ *
+ * The backend has no way to say that yet — it is answering about the entry,
+ * correctly. Until it can (see HARDENING_PLAN.md, owed item D2), these rules
+ * stay here, and hiding those buttons is deliberate rather than drift.
+ *
+ * Customer rows are one-per-entry and already agree with the backend, so they
+ * are safe to migrate whenever D2 lands.
+ * --------------------------------------------------------------------- */
 
 export function partnerLedgerRowActions(movementType: string): RowActions {
   if (PARTNER_EDITABLE_MOVEMENT_TYPES.has(movementType)) {

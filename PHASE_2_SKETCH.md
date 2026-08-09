@@ -245,6 +245,54 @@ default arm now says so rather than doing nothing. Not this phase's job.
 
 ---
 
+## How it actually ended — steps 3 and 4 were the wrong plan
+
+Steps 1 and 2 landed as designed: 46 branches became a 31-row table, and
+`entry_actions.py` went from 546 lines to 76.
+
+Steps 3 and 4 — point the five frontend surfaces at the endpoint, delete
+`subledger-actions.ts` — were **abandoned on evidence**, and the evidence came
+from the difference list rather than from building it and finding out.
+
+**The differences, measured.** On the *source* axis, four disagreed:
+`opening_balance`, `pos_card_tip`, `credit_card_payment`, `cash_movement` —
+frontend said void-only, backend said nothing at all. Those turned out to be
+four **dead buttons**: the General ledger draws its buttons from the frontend's
+list and only asks the API what a click should *do*, so it drew a Void, then
+read `void_path: null` and returned in silence. Fixed by deleting the four from
+the frontend's set, and pinned by a guard comparing the two lists.
+
+**Then the axis problem.** The per-entity pages do not key on journal source at
+all — they key on *movement type*, and one journal entry can own several rows:
+
+| Subledger | Rows per entry |
+| --- | --- |
+| Partner profit allocation | one per partner, written in a loop |
+| Staff salary payment | two; a period payment writes three |
+| Customer | one — every path writes exactly one |
+
+So the backend is right about the *entry* and would be wrong about the *row*.
+A Void on one partner's profit-allocation row voids every partner's share. The
+frontend hiding those buttons is not drift — it is a guard the backend cannot
+currently express, and "backend wins" was the wrong instruction for that half.
+
+**What was done instead.** The source-keyed half is now guarded against drift.
+The movement-type half stays, with the reason written where someone deleting
+it would read it. Migrating it is recorded as owed item D2, and it is *cheaper*
+now than before: the table already knows each source's owner model, so the row
+count is one query in one place rather than a change to 46 branches.
+
+The check also turned up a live bug that predates all of this — owed item D3,
+voiding a group-sale discount voids the whole sale.
+
+**The lesson worth keeping.** The plan said "five places decide this, collapse
+them to one". Four of the five were the same question. The fifth was a
+different question wearing the same words, and the only thing that revealed it
+was counting rows per journal entry — which nobody had asked, because the plan
+had already decided what the answer was.
+
+---
+
 ## What is deliberately not in this phase
 
 - **Supplier credit notes (iade)** still have no correction or void route.
