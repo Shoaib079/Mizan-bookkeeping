@@ -272,6 +272,37 @@ where a missing branch is invisible.
 
 Ordered so each step makes the next one smaller.
 
+### Phase 0 — Ask the real books what is already wrong
+
+Everything else on this list is reasoning about code. This phase reads
+production data and reports facts. It is read-only, it changes nothing, and it
+is the only item that can find a bug **nobody has noticed yet** — including
+ones introduced before tonight.
+
+**The machinery already exists and has never been pointed at real data.**
+`assert_entity_control_accounts_tied` walks every registered subledger and
+checks it against its GL control account. It is called from exactly one place:
+a test, against an *empty* seeded entity. It has never once run against the
+actual books.
+
+| # | Check | Would have caught |
+| --- | --- | --- |
+| 0.1 | Every subledger ties to its control account, per entity | silent drift of any kind |
+| 0.2 | Draft says `posted` but its journal entry is voided or missing | tonight's void bug |
+| 0.3 | Statement line says LINKED/POSTED but its entry is voided | Class 2, still live |
+| 0.4 | Any posted entry dated after today | the 16.09.2026 invoice |
+| 0.5 | Any journal entry where debits ≠ credits | the thing that must never happen |
+| 0.6 | Posted invoices still flagged `assumed_vat` | overstated input KDV |
+| 0.7 | Any subledger row whose `journal_entry_id` points at nothing | orphaned money |
+
+Run it before the refactor, and again after: a report that is identical
+either side is stronger evidence the split changed nothing than any number of
+green tests.
+
+**Output is a report, not a fix.** Each finding gets triaged on its own —
+some will be real bugs, some will be data from before a rule existed, some
+will be nothing.
+
 ### Phase 1 — Stop the bleeding (highest risk, live now)
 
 | # | Work | Class |
@@ -413,6 +444,36 @@ one *growing* fails. Shrinking one is a one-line edit to the list. The list is
 the debt, visible and going one direction only.
 
 ---
+
+## What "checked and double-checked" can honestly mean
+
+The hope is that after the split everything works and no bug survives,
+including the ones nobody has hit yet. Two of those are achievable and one is
+not, and it is worth being exact about which.
+
+**Achievable: the split provably changes nothing.** For `correction.py` the
+moves are textual. A script can compare each moved function body against its
+original byte-for-byte and refuse the commit if anything differs, with the
+suite green per commit and the Phase 0 report identical either side. That is
+evidence, not hope. For `statements.py` the same standard is met by
+characterisation tests over all 48 branches before a line moves.
+
+**Achievable: a known class cannot come back silently.** That is what the
+guards are for. Nine classes, nine guards, each verified by breaking the fix
+and watching the test go red.
+
+**Not achievable: proof that no bug remains.** No amount of reading proves
+absence. Anyone who promises it is guessing, and my own night argues the
+point — I introduced three regressions and wrote three tests that could not
+fail, one of them minutes after writing a commit message complaining about
+exactly that.
+
+**One trap worth naming.** Characterisation tests pin *current* behaviour,
+which includes current bugs. They make the refactor safe and they also lock
+the wrong behaviour in. So reading those 48 branches for correctness is a
+**separate pass with its own findings list** — never a silent fix inside a
+move commit. A commit that moves code and changes behaviour at the same time
+cannot be reviewed by anyone, including me.
 
 ## How to judge whether this worked
 
