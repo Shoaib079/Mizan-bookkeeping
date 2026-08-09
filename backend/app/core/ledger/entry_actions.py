@@ -375,6 +375,17 @@ def resolve_ledger_entry_actions(
             )
             if row is None:
                 return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+            # A supplier credit note (iade) posts with source INVOICE but a
+            # CREDIT_NOTE movement type, and both `correct_supplier_invoice`
+            # and `void_supplier_invoice` reject that outright. Offering the
+            # invoice paths for it drew an Edit and a Void that answered "404
+            # supplier invoice not found". No route exists for correcting one
+            # yet, so the honest answer is no buttons rather than two that
+            # fail.
+            from app.core.payables.models import SupplierMovementType
+
+            if row.movement_type != SupplierMovementType.INVOICE:
+                return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
             return LedgerEntryActions(
                 can_edit=True,
                 can_void=True,
