@@ -13,9 +13,23 @@ type Props = {
   to: string;
   onChange: (from: string, to: string) => void;
   disabled?: boolean;
+  /** Let the end date be after today. Set by the general ledger only.
+   *
+   * Everywhere else the clamp is right — a report to a future date has no
+   * answer. But this control also silently rewrote what someone typed: enter
+   * a future end date and it snapped back to today with no explanation, so
+   * an entry misdated into the future could not be brought into range and so
+   * could not be voided. */
+  allowFuture?: boolean;
 };
 
-export function ReportDateRange({ from, to, onChange, disabled }: Props) {
+export function ReportDateRange({
+  from,
+  to,
+  onChange,
+  disabled,
+  allowFuture = false,
+}: Props) {
   const [fromDisplay, setFromDisplay] = useState(() => formatTrDate(from));
   const [toDisplay, setToDisplay] = useState(() => formatTrDate(to));
 
@@ -32,6 +46,8 @@ export function ReportDateRange({ from, to, onChange, disabled }: Props) {
       parsedFrom,
       parsedTo,
       { from: parsedFrom, to: parsedTo },
+      new Date(),
+      { allowFuture },
     );
     if (nextTo !== parsedTo) {
       setToDisplay(formatTrDate(nextTo));

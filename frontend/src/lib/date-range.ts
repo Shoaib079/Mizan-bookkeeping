@@ -20,7 +20,20 @@ export function currentMonthRange(reference = new Date()): { from: string; to: s
   return { from: toIso(from), to: toIso(reference) };
 }
 
-/** Clamp report range end to today; reset invalid ranges to month-to-date. */
+/** Clamp report range end to today; reset invalid ranges to month-to-date.
+ *
+ * `allowFuture` exists for the general ledger, and only for it.
+ *
+ * Clamping is right for a report: a profit and loss "to" next month is a
+ * question with no answer, so the end date is pulled back to today. A ledger
+ * is not a report — it is the list of entries that exist. When a misread date
+ * put a real invoice six weeks ahead, the clamp meant no range could reach
+ * it: typing a future end date silently snapped back to today, and the entry
+ * could not be opened, corrected or voided from anywhere in the app.
+ *
+ * Refusing to *show* an entry does not stop it existing; it stops it being
+ * fixed.
+ */
 export function resolveReportRange(
   fromParam: string | null,
   toParam: string | null,
@@ -28,11 +41,12 @@ export function resolveReportRange(
   /** Injectable so the clamp is testable — it used to read the real clock even
    * when `defaults` came from a fixed date, which made results drift by day. */
   now: Date = new Date(),
+  options: { allowFuture?: boolean } = {},
 ): { from: string; to: string } {
   const from = fromParam ?? defaults.from;
   let to = toParam ?? defaults.to;
   const today = isoToday(now);
-  if (to > today) to = today;
+  if (!options.allowFuture && to > today) to = today;
   if (from > to) return currentMonthRange(now);
   return { from, to };
 }

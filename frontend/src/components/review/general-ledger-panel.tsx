@@ -224,6 +224,11 @@ function LedgerPanelContent() {
         searchParams.get("from"),
         searchParams.get("to"),
         rangeDefaults,
+        new Date(),
+        // The ledger lists entries, it does not project. An entry dated in
+        // the future exists and has to be reachable — otherwise a misread
+        // date makes an invoice impossible to void from inside the app.
+        { allowFuture: true },
       ),
     [rangeDefaults, searchParams],
   );
@@ -397,6 +402,7 @@ function LedgerPanelContent() {
 
       <div className="mb-6 space-y-4">
         <ReportDateRange
+          allowFuture
           from={from}
           to={to}
           disabled={loading}
