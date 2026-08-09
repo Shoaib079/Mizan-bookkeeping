@@ -18,6 +18,7 @@ from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
 from app.features.delivery import platform_service
 from app.features.entities import service as entity_service
+from app.features.invoices.invoice_uniqueness import find_live_posted_duplicate_of
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
 from app.features.invoices.validation import InvoiceTotalsError, validate_invoice_totals
 
@@ -102,6 +103,18 @@ def post_delivery_commission_draft(
             )
         if draft.delivery_platform_id is None:
             raise DraftPostError("Delivery platform must be linked before posting")
+
+        # The gate this path never had. "Already posted" above only catches
+        # *this* draft row being posted twice; a second draft of the same
+        # commission invoice — a re-downloaded PDF, whose bytes differ so the
+        # file fingerprint does not match — went straight through and booked
+        # the commission again.
+        existing = find_live_posted_duplicate_of(session, entity_id, draft)
+        if existing is not None:
+            raise DraftPostError(
+                "This platform already has a posted commission invoice with "
+                f"number {draft.invoice_number!r}"
+            )
 
         _validate_expense_account(session, entity_id, expense_account_id)
 

@@ -59,9 +59,10 @@ from app.features.invoices.one_click_post import (
 )
 from app.features.invoices.invoice_auto_post import confirm_and_post_trusted_supplier_draft
 from app.features.invoices.invoice_uniqueness import (
+    counterparty_field_for,
     duplicate_invoice_review_reason,
-    live_posted_invoice_exists,
-    live_posted_supplier_credit_exists,
+    find_live_posted_duplicate_of,
+    find_live_posted_invoice,
 )
 from app.core.delivery.commission_posting import post_delivery_commission_draft
 from app.core.invoices.posting import (
@@ -757,30 +758,24 @@ def create_efatura_draft_from_upload(
             )
 
     supplier_id_for_draft = linked_supplier.id if linked_supplier else None
-    duplicate_of_posted = False
+    # One question, asked once, for whatever kind this turns out to be. The two
+    # hand-written branches this replaces covered supplier invoices and credit
+    # notes and silently skipped delivery commissions.
+    counterparty_for_kind = {
+        "supplier_id": supplier_id_for_draft,
+        "delivery_platform_id": delivery_platform_id,
+    }[counterparty_field_for(invoice_kind)]
     with entity_context(session, entity_id):
-        if (
-            invoice_kind == InvoiceKind.SUPPLIER.value
-            and supplier_id_for_draft is not None
-            and live_posted_invoice_exists(
+        duplicate_of_posted = (
+            find_live_posted_invoice(
                 session,
                 entity_id,
-                supplier_id_for_draft,
-                extraction.invoice_number,
+                kind=invoice_kind,
+                counterparty_id=counterparty_for_kind,
+                invoice_number=extraction.invoice_number,
             )
-        ):
-            duplicate_of_posted = True
-        elif (
-            invoice_kind == InvoiceKind.SUPPLIER_CREDIT.value
-            and supplier_id_for_draft is not None
-            and live_posted_supplier_credit_exists(
-                session,
-                entity_id,
-                supplier_id_for_draft,
-                extraction.invoice_number,
-            )
-        ):
-            duplicate_of_posted = True
+            is not None
+        )
 
     # The same file, whatever its invoice number says, is never a second
     # invoice. Checked before the duplicate-number branch below, because that
@@ -972,28 +967,10 @@ def link_supplier_to_draft(
 
     with entity_context(session, entity_id):
         draft.supplier_id = supplier.id
-        if (
-            InvoiceKind(draft.invoice_kind) == InvoiceKind.SUPPLIER
-            and live_posted_invoice_exists(
-                session,
-                entity_id,
-                supplier.id,
-                draft.invoice_number,
-                exclude_draft_id=draft.id,
-            )
-        ):
-            draft.status = InvoiceDraftStatus.DUPLICATE.value
-            draft.review_reason = duplicate_invoice_review_reason(draft.invoice_number)
-        elif (
-            InvoiceKind(draft.invoice_kind) == InvoiceKind.SUPPLIER_CREDIT
-            and live_posted_supplier_credit_exists(
-                session,
-                entity_id,
-                supplier.id,
-                draft.invoice_number,
-                exclude_draft_id=draft.id,
-            )
-        ):
+        # Linking a supplier is the moment a duplicate becomes visible — until
+        # now there was nobody to compare against. Asked for whatever kind this
+        # draft is; the two branches here used to cover two of three.
+        if find_live_posted_duplicate_of(session, entity_id, draft) is not None:
             draft.status = InvoiceDraftStatus.DUPLICATE.value
             draft.review_reason = duplicate_invoice_review_reason(draft.invoice_number)
         session.commit()

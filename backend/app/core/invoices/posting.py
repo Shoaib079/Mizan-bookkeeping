@@ -28,8 +28,7 @@ from app.db.base import utcnow
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.invoices.invoice_uniqueness import (
-    live_posted_invoice_exists,
-    live_posted_supplier_credit_exists,
+    find_live_posted_duplicate_of,
     normalize_invoice_number,
 )
 from app.features.invoices.models import InvoiceDraft, InvoiceDraftStatus, InvoiceKind
@@ -218,13 +217,7 @@ def post_supplier_credit_draft_to_ledger(
     if draft.supplier_id is None:
         raise DraftPostError("Supplier must be linked before posting")
 
-    if live_posted_supplier_credit_exists(
-        session,
-        entity_id,
-        draft.supplier_id,
-        draft.invoice_number,
-        exclude_draft_id=draft.id,
-    ):
+    if find_live_posted_duplicate_of(session, entity_id, draft) is not None:
         raise DraftPostError(
             f"Supplier already has a posted credit note with number {draft.invoice_number!r}"
         )
@@ -372,13 +365,7 @@ def post_supplier_invoice_draft_to_ledger(
     if draft.supplier_id is None:
         raise DraftPostError("Supplier must be linked before posting")
 
-    if live_posted_invoice_exists(
-        session,
-        entity_id,
-        draft.supplier_id,
-        draft.invoice_number,
-        exclude_draft_id=draft.id,
-    ):
+    if find_live_posted_duplicate_of(session, entity_id, draft) is not None:
         raise DraftPostError(
             f"Supplier already has a posted invoice with number {draft.invoice_number!r}"
         )
