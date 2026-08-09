@@ -643,13 +643,23 @@ def _posting_was_voided(
     again: the file was refused as "already posted to the ledger" when the
     ledger no longer held it, and there was no way around it from the app.
 
-    `find_live_posted_supplier_invoice` already draws this distinction for the
+    `find_live_posted_invoice` already draws this distinction for the
     invoice-number check ("live = draft posted and linked journal entry
     posted"). The same-file check has to draw it too, or the two disagree
     about what counts as posted.
+
+    **Asked of the link, not the status.** The first version of this also
+    required the draft to read `posted`, which was true at the time and
+    stopped being true the moment voiding started releasing the draft back to
+    `confirmed`. Two fixes written the same evening, each right on its own,
+    that between them made this unreachable — the file was refused again and
+    the test that proved otherwise went red.
+
+    The link is the durable fact: a draft carrying a `journal_entry_id` was
+    posted, whatever its status says now. That covers all four shapes without
+    a special case — live, voided-and-released, voided-but-not-released from
+    before the release existed, and never posted at all.
     """
-    if _draft_status(draft) is not InvoiceDraftStatus.POSTED:
-        return False
     if draft.journal_entry_id is None:
         return False
     from app.core.ledger.models import JournalEntry, JournalEntryStatus

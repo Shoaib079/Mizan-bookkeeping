@@ -1208,7 +1208,18 @@ def _release_posted_draft(draft: InvoiceDraft | None):
         draft.status = InvoiceDraftStatus.CONFIRMED.value
         draft.posted_at = None
         draft.posted_by = None
-        draft.journal_entry_id = None
+        # `journal_entry_id` is deliberately kept. It is the only record that
+        # this draft was ever in the books, and clearing it made a released
+        # draft indistinguishable from one that was reviewed and never posted
+        # — which broke re-uploading a voided invoice, the very complaint the
+        # release was written for. Status is what every screen reads, and it
+        # now says `confirmed`; the link is history, and history is the thing
+        # you cannot reconstruct once it is gone.
+        #
+        # Safe because "posted" is decided by status everywhere that matters:
+        # `find_live_posted_invoice` requires the draft to read
+        # posted *and* the entry to be live, and no frontend screen infers
+        # posting from this field.
         sess.flush()
 
     return release

@@ -394,7 +394,7 @@ def test_a_voided_invoice_can_be_uploaded_again(
     records what was done to the draft, not whether the entry still stands.
     The same-file check read that status alone and refused the file for good:
     the app said the ledger held it when the ledger did not, and offered no
-    way round. `find_live_posted_supplier_invoice` had always drawn this
+    way round. `find_live_posted_invoice` had always drawn this
     distinction for the invoice-number check; the same-file check had to draw
     it too, or the two disagree about what "posted" means.
     """

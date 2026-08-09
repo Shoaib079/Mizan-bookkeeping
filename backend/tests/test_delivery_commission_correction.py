@@ -321,8 +321,12 @@ def test_voiding_puts_the_draft_back_where_it_can_be_used(db_session, commission
     with entity_context(db_session, entity_id):
         draft = db_session.get(InvoiceDraft, commission["draft_id"])
         assert draft.status == InvoiceDraftStatus.CONFIRMED
-        assert draft.journal_entry_id is None
         assert draft.posted_at is None
+        # The link is kept on purpose — see
+        # test_the_draft_remembers_the_entry_it_was_posted_to. `status` is what
+        # puts this back in Ready to post; the link is what lets the same file
+        # be uploaded again.
+        assert draft.journal_entry_id == commission["journal_entry_id"]
 
 
 # --- what it refuses ----------------------------------------------------

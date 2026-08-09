@@ -103,9 +103,35 @@ def test_the_draft_stops_saying_posted(db_session, posted_invoice):
     with entity_context(db_session, posted_invoice["entity_id"]):
         draft = db_session.get(InvoiceDraft, posted_invoice["draft_id"])
         assert draft.status == InvoiceDraftStatus.CONFIRMED
-        assert draft.journal_entry_id is None
         assert draft.posted_at is None
         assert draft.posted_by is None
+
+
+def test_the_draft_remembers_the_entry_it_was_posted_to(db_session, posted_invoice):
+    """Deliberately kept, and this reverses an assertion in the first version
+    of this file.
+
+    That version checked `journal_entry_id is None` alongside the three fields
+    above, as if clearing it were part of the same idea. It was not, and it
+    cost the fix it belonged to: the same-file check reads this link to decide
+    whether an upload may be repeated, so clearing it made a voided invoice
+    permanently un-re-uploadable — restoring the exact complaint the release
+    was written for.
+
+    Status is what every screen goes by, and it says `confirmed`. The link is
+    history: it records that this document was once in the books. That is not
+    reconstructable once thrown away, and something has to be able to tell a
+    draft that was posted and undone from one that was never posted at all.
+    """
+    with entity_context(db_session, posted_invoice["entity_id"]):
+        draft = db_session.get(InvoiceDraft, posted_invoice["draft_id"])
+        assert draft.journal_entry_id == posted_invoice["journal_entry_id"]
+
+    _void(db_session, posted_invoice)
+
+    with entity_context(db_session, posted_invoice["entity_id"]):
+        draft = db_session.get(InvoiceDraft, posted_invoice["draft_id"])
+        assert draft.journal_entry_id == posted_invoice["journal_entry_id"]
 
 
 def test_the_draft_is_kept_not_discarded(db_session, posted_invoice):
