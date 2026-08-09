@@ -272,7 +272,12 @@ export function ExpensesReviewPanel() {
             <EmptyState
               icon={Wallet}
               title="No expenses in this view"
-              hint="Change the dates or filter, or record daily expenses from Record."
+              hint={
+                // Only mention dates where there is a date control to change.
+                expenseFilterUsesRange(filter)
+                  ? "Change the dates or filter, or record daily expenses from Record."
+                  : "Change the filter, or record daily expenses from Record."
+              }
             />
           )}
 

@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/data-table";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import {
@@ -85,20 +84,6 @@ export default function SplitHubPage() {
     setNote("");
     setFormError(null);
   }, []);
-
-  const reset = useCallback(() => {
-    setExpenses([]);
-    setPayments([]);
-    setPartners([]);
-    setExpenseAccounts([]);
-    setLoading(true);
-    setError(null);
-    setSearch("");
-    setTab("bank_expense");
-    closeDialog();
-  }, [closeDialog]);
-
-  useEntitySwitchReset(entityId, reset);
 
   const reload = useCallback(async () => {
     if (!entityId) return;

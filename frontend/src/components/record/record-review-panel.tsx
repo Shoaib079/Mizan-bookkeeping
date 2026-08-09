@@ -6,13 +6,10 @@ import { Suspense, useCallback } from "react";
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
 import { ReceiptReview } from "@/components/receipt-review";
 import { Dialog } from "@/components/ui/dialog";
-import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 
 function RecordReviewPanelInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { entityId } = useEntity();
 
   const invoiceId = searchParams.get("invoice");
   const receiptId = searchParams.get("receipt");
@@ -22,7 +19,6 @@ function RecordReviewPanelInner() {
     router.replace("/record");
   }, [router]);
 
-  useEntitySwitchReset(entityId, clearReview);
 
   function handleUpdated(outcome?: "removed" | "updated") {
     if (outcome === "removed") clearReview();

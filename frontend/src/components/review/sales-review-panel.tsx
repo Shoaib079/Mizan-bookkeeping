@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Download } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
@@ -34,7 +34,6 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
 import { isPendingReviewStatus } from "@/lib/review-status";
-import { createEntitySwitchTracker } from "@/lib/use-entity-reset";
 import {
   SALES_REVIEW_FILTERS,
   salesFilterUsesRange,
@@ -89,7 +88,6 @@ export function SalesReviewPanel({
       );
     }
   }, [showCreate]);
-  const entityTrackerRef = useRef(createEntitySwitchTracker());
   const [items, setItems] = useState<PosDailySummary[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -99,14 +97,6 @@ export function SalesReviewPanel({
   const [correctSummary, setCorrectSummary] = useState<PosDailySummary | null>(
     null,
   );
-
-  useLayoutEffect(() => {
-    if (!entityTrackerRef.current.sync(entityId)) return;
-    setItems([]);
-    setTotal(0);
-    setError(null);
-    setLoading(Boolean(entityId));
-  }, [entityId]);
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -219,17 +209,30 @@ export function SalesReviewPanel({
         />
       }
       countLabel={
+        // "in this period" was true when every view was date-scoped. The
+        // queues no longer are, and a count that names a period it does not
+        // have is the same wrong label as "Period total" on the expenses page.
         loading
           ? "Loading…"
-          : `${total} daily sale${total === 1 ? "" : "s"} in this period`
+          : `${total} daily sale${total === 1 ? "" : "s"}` +
+            (salesFilterUsesRange(review) ? " in this period" : "")
       }
       skeletonColumns={6}
       isEmpty={items.length === 0}
       empty={
         <EmptyState
           icon={ShoppingBag}
-          title="No sales in this period"
-          hint="Change the dates or filter, or upload sales via Record."
+          title={
+            salesFilterUsesRange(review) ? "No sales in this period" : "No sales"
+          }
+          hint={
+            // Telling someone to change dates they cannot see sends them
+            // looking for a control that is not on the screen — which is the
+            // same wrong turn the date picker itself used to cause.
+            salesFilterUsesRange(review)
+              ? "Change the dates or filter, or upload sales via Record."
+              : "Change the filter, or upload sales via Record."
+          }
         />
       }
       table={

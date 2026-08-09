@@ -40,7 +40,6 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatForexBalanceSummary, formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
@@ -161,21 +160,6 @@ export default function CustomerDetailPage() {
     description: string;
     kind: VoidableRowKind;
   } | null>(null);
-
-  const resetDetailState = useCallback(() => {
-    setCustomer(null);
-    setLedger(null);
-    setLoading(true);
-    setError(null);
-    setEditOpen(false);
-    setSaleOpen(false);
-    setPaymentOpen(false);
-    setCorrectPayment(null);
-    setCorrectCreditSale(null);
-    setVoidTarget(null);
-  }, []);
-
-  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !customerId) return;

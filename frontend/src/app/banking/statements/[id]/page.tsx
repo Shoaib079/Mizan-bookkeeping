@@ -22,7 +22,6 @@ import {
   toggleLineIdSet,
 } from "@/lib/statement-bulk-selection";
 import { useStatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 
 export default function StatementDetailPage() {
   const params = useParams<{ id: string }>();
@@ -38,19 +37,6 @@ export default function StatementDetailPage() {
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const discardKeyRef = useRef<string | null>(null);
-
-  const resetDetailState = useCallback(() => {
-    setStatement(null);
-    setLoading(true);
-    setError(null);
-    setSelectedLineId(null);
-    setSelectedLineIds(new Set());
-    setDiscardOpen(false);
-    setDiscarding(false);
-    discardKeyRef.current = null;
-  }, []);
-
-  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !statementId) return;

@@ -37,7 +37,6 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
   netPositionCaption,
@@ -129,24 +128,6 @@ export default function StaffDetailPage() {
     journal_entry_id: string;
     description: string;
   } | null>(null);
-
-  const resetDetailState = useCallback(() => {
-    setEmployee(null);
-    setLedger(null);
-    setLoading(true);
-    setError(null);
-    setEditOpen(false);
-    setAccrualOpen(false);
-    setAdvanceOpen(false);
-    setReturnOpen(false);
-    setApplyAdvanceOpen(false);
-    setExtraDaysOpen(false);
-    setPaymentOpen(false);
-    setCorrectEntry(null);
-    setVoidTarget(null);
-  }, []);
-
-  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !employeeId) return;

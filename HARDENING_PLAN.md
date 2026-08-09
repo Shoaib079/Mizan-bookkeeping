@@ -452,7 +452,7 @@ permanent.
 
 | # | Owed | Why it was deferred | Blocked until |
 | --- | --- | --- | --- |
-| D1 | Delete the 17 `useEntitySwitchReset` call sites, and any `resetX` function left with no other caller | `EntityScopedTree` remounts the page tree on switch, so every one of them is now unreachable. Removing the old mechanism in the same change as the new one means a misbehaving switch cannot be attributed to either half. | The owner has switched restaurants in the running app and confirmed pages come back clean |
+| ~~D1~~ | ~~Delete the inert `useEntitySwitchReset` call sites~~ | **Done 9 Aug.** 16 of 17 removed. The seventeenth stays: `statement-import-panel` keys on `(entityId, moneyAccountId)`, and a half-finished column mapping belongs to that account's import — changing account within one entity remounts nothing, so the remount covers the entity dimension only. | — |
 
 `entityResetKey` stays either way — `EntityScopedTree` is built on it.
 

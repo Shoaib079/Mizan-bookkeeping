@@ -32,7 +32,19 @@ export function createEntitySwitchTracker(): EntitySwitchTracker {
   };
 }
 
-/** Run `reset` synchronously before paint when `sessionKey` changes (after `ready`). */
+/** Run `reset` synchronously before paint when `sessionKey` changes (after `ready`).
+ *
+ * Sixteen pages used to call this to clear their own state on entity switch.
+ * They no longer need to: `EntityScopedTree` keys the whole page tree by
+ * entity id, so switching restaurant remounts everything below it and there
+ * is nothing left for a page to remember.
+ *
+ * One caller remains, and it is the reason this still exists. The statement
+ * import panel keys on `statementImportSessionKey(entityId, moneyAccountId)`
+ * — a half-finished column mapping belongs to *this account's* import, not
+ * just to this restaurant, and changing account within one entity does not
+ * remount anything. The remount covers the entity dimension only.
+ */
 export function useEntitySwitchReset(
   sessionKey: string,
   reset: () => void,

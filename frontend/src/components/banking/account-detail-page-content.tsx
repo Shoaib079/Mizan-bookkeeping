@@ -32,7 +32,6 @@ import type {
 } from "@/lib/banking-types";
 import { formatFxNative } from "@/lib/fx-money";
 import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
 
@@ -53,18 +52,6 @@ export function AccountDetailPageContent() {
     const params = new URLSearchParams({ from, to, limit: "50" });
     return params.toString();
   }, [from, to]);
-
-  const resetDetailState = useCallback(() => {
-    setAccount(null);
-    setStatements([]);
-    setCardPayments([]);
-    setBankNames({});
-    setLoading(true);
-    setError(null);
-    setTransferOpen(false);
-  }, []);
-
-  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !accountId) return;

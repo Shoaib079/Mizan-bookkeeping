@@ -29,7 +29,6 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { isSupplierAdvanceBalance } from "@/lib/supplier-balance";
 import {
@@ -84,21 +83,6 @@ export default function SupplierDetailPage() {
   const [expandedDraftId, setExpandedDraftId] = useState<string | null>(
     highlightDraftId,
   );
-
-  const resetDetailState = useCallback(() => {
-    setSupplier(null);
-    setLedger(null);
-    setDrafts([]);
-    setLoading(true);
-    setError(null);
-    setEditOpen(false);
-    setPaymentOpen(false);
-    setCorrectPayment(null);
-    setCorrectInvoice(null);
-    setExpandedDraftId(null);
-  }, []);
-
-  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !supplierId) return;

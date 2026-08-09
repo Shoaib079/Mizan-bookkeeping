@@ -32,7 +32,6 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
   partnerBalanceHeading,
@@ -107,20 +106,6 @@ export default function PartnerDetailPage() {
     journal_entry_id: string;
     description: string;
   } | null>(null);
-
-  const resetDetailState = useCallback(() => {
-    setPartner(null);
-    setLedger(null);
-    setLoading(true);
-    setError(null);
-    setEditOpen(false);
-    setRecordOpen(false);
-    setPayProfitOpen(false);
-    setCorrectEntry(null);
-    setVoidTarget(null);
-  }, []);
-
-  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !partnerId) return;

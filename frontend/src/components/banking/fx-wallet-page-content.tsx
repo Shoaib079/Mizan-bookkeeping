@@ -44,7 +44,6 @@ import type {
 } from "@/lib/banking-types";
 import { formatFxNative } from "@/lib/fx-money";
 import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { subledgerRowClassName } from "@/lib/ledger-display";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
@@ -76,22 +75,6 @@ export function FxWalletPageContent() {
     const params = new URLSearchParams({ from, to, limit: "50" });
     return params.toString();
   }, [from, to]);
-
-  const resetDetailState = useCallback(() => {
-    setAccount(null);
-    setBalance(null);
-    setLedger([]);
-    setLoading(true);
-    setError(null);
-    setPurchaseOpen(false);
-    setConvertOpen(false);
-    setSpendOpen(false);
-    setCorrectPurchase(null);
-    setCorrectSpend(null);
-    setVoidTarget(null);
-  }, []);
-
-  useEntitySwitchReset(entityId, resetDetailState);
 
   const reload = useCallback(async () => {
     if (!entityId || !accountId) return;

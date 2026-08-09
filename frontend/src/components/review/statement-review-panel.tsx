@@ -22,7 +22,6 @@ import {
 import { replaceStatementLine } from "@/lib/statement-line-filters";
 import { useEntity } from "@/lib/entity-context";
 import { invalidateReviewCounts } from "@/lib/review-counts-types";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { useStatementReviewUrl } from "@/lib/use-statement-review-url";
 import { useStatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
 import { FilterChips } from "@/components/page/filter-chips";
@@ -39,15 +38,6 @@ export function StatementReviewPanel() {
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(
     () => new Set(),
   );
-
-  const resetState = useCallback(() => {
-    setLines([]);
-    setLoading(true);
-    setError(null);
-    setSelectedLineIds(new Set());
-  }, []);
-
-  useEntitySwitchReset(entityId, resetState);
 
   const reload = useCallback(async () => {
     if (!entityId) return;

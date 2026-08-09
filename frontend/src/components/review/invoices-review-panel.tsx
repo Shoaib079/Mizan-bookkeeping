@@ -35,7 +35,6 @@ import {
   type InvoiceReviewTab,
 } from "@/lib/invoice-draft-list";
 import { useEntityList } from "@/lib/use-entity-list";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { useInvoicesReviewUrl } from "@/lib/use-invoices-review-url";
 
 /** The same list on a phone.
@@ -227,9 +226,6 @@ export function InvoicesReviewPanel() {
     useInvoicesReviewUrl();
   const [expandedDraftId, setExpandedDraftId] = useState<string | null>(null);
 
-  useEntitySwitchReset(entityId, () => {
-    setExpandedDraftId(null);
-  });
 
   const { items, loading, error, reload } = useEntityList<InvoiceDraftListRow>(
     listPath,

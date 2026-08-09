@@ -29,7 +29,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
-import { useEntitySwitchReset } from "@/lib/use-entity-reset";
 import { formatFxNative } from "@/lib/fx-money";
 import type { GroupSaleRead } from "@/lib/group-sales-types";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -54,17 +53,6 @@ export default function GroupSaleDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [voiding, setVoiding] = useState(false);
-
-  const resetState = useCallback(() => {
-    setSale(null);
-    setCustomer(null);
-    setLoading(true);
-    setError(null);
-    setEditOpen(false);
-    setPaymentOpen(false);
-  }, []);
-
-  useEntitySwitchReset(entityId, resetState);
 
   const reload = useCallback(async () => {
     if (!entityId || !saleId) return;
