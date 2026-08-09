@@ -453,6 +453,87 @@ CHECKS = (
 )
 
 
+@dataclass(frozen=True, slots=True)
+class AccountEntry:
+    """One journal line on an account, named so a person can recognise it."""
+
+    entry_date: date
+    source: str
+    description: str
+    signed_kurus: int
+
+
+def account_entries(
+    session: Session,
+    entity_id: uuid.UUID,
+    account_code: str,
+    *,
+    sources: set[str] | None = None,
+    limit: int = 50,
+) -> list[AccountEntry]:
+    """The individual lines behind a total, newest first.
+
+    A breakdown by movement type says *what kind* of thing is on an account.
+    It cannot say when it got there or who put it, and that is the question
+    that decides whether a mismatch is a check measuring the wrong thing or
+    the books actually holding something they should not.
+
+    Spice Corner is the case that asked for this: a partner drawing sitting
+    on the reimbursement payable, when all three code paths that post a
+    drawing send it to owner drawings instead. Totals cannot tell you whether
+    that is a live bug or a scar from an older version — a date does.
+
+    `sources` narrows to the ones worth reading, because on a busy account
+    the answer is usually one odd source among several ordinary ones.
+    """
+    from app.core.chart_of_accounts.models import Account
+    from app.core.ledger.balances import live_entry_clauses
+    from app.core.ledger.models import JournalEntryLine
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        account_id = session.scalar(
+            select(Account.id).where(Account.code == account_code)
+        )
+        if account_id is None:
+            return []
+
+        query = (
+            select(
+                JournalEntry.entry_date,
+                JournalEntry.source,
+                JournalEntry.description,
+                JournalEntryLine.side,
+                JournalEntryLine.amount_kurus,
+            )
+            .join(JournalEntry, JournalEntry.id == JournalEntryLine.journal_entry_id)
+            .where(
+                JournalEntryLine.account_id == account_id,
+                *live_entry_clauses(),
+            )
+            .order_by(JournalEntry.entry_date.desc())
+            .limit(limit)
+        )
+
+        rows = []
+        for entry_date, source, description, side, amount in session.execute(query):
+            name = source.value if hasattr(source, "value") else str(source)
+            if sources is not None and name not in sources:
+                continue
+            signed = int(amount or 0)
+            if side == AccountNormalBalance.DEBIT:
+                signed = -signed
+            rows.append(
+                AccountEntry(
+                    entry_date=entry_date,
+                    source=name,
+                    description=description or "",
+                    signed_kurus=signed,
+                )
+            )
+        return rows
+
+
 def explain_account(
     session: Session, entity_id: uuid.UUID, account_code: str
 ) -> tuple[list[tuple[str, int]], list[tuple[str, int]]]:
@@ -468,6 +549,7 @@ def explain_account(
     check is broken" but "show me the movements".
     """
     from app.core.chart_of_accounts.models import Account
+    from app.core.ledger.balances import live_entry_clauses
     from app.core.ledger.models import JournalEntryLine
     from app.core.partners.models import PartnerLedgerEntry
 
@@ -497,15 +579,21 @@ def explain_account(
                 .join(JournalEntry, JournalEntry.id == JournalEntryLine.journal_entry_id)
                 .where(
                     JournalEntryLine.account_id == account_id,
-                    JournalEntry.status == JournalEntryStatus.POSTED,
+                    # Not `status == POSTED` alone. This groups by side and
+                    # signs the total itself, so a void's reversal survives
+                    # while the original it cancels does not — the account
+                    # then appears short by the voided amount. See
+                    # `live_entry_clauses` for why the pair is inseparable.
+                    *live_entry_clauses(),
                 )
                 .group_by(JournalEntry.source, JournalEntryLine.side)
             ).all():
                 name = source.value if hasattr(source, "value") else str(source)
                 signed = int(total or 0)
+                side_name = "debit" if side == AccountNormalBalance.DEBIT else "credit"
                 if side == AccountNormalBalance.DEBIT:
                     signed = -signed
-                by_source.append((f"{name} ({side})", signed))
+                by_source.append((f"{name} ({side_name})", signed))
 
     return sorted(by_movement, key=lambda r: -abs(r[1])), sorted(
         by_source, key=lambda r: -abs(r[1])

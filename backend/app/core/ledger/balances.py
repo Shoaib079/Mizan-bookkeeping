@@ -20,9 +20,36 @@ from app.core.ledger.models import (
 __all__ = [
     "balance_as_of_kurus",
     "debit_credit_activity_kurus",
+    "live_entry_clauses",
     "net_cash_effect_on_accounts",
     "period_activity_kurus",
 ]
+
+
+def live_entry_clauses() -> tuple:
+    """The two conditions that make a journal entry count toward a balance.
+
+    A void does not delete anything. The original is marked VOIDED and a
+    mirror-image reversal is written alongside it. So a balance must drop
+    *both*: keep the reversal and you have not undone the entry, you have
+    subtracted it a second time.
+
+    Filtering on `status == POSTED` alone looks complete and is not. It is
+    also usually harmless, because most queries pin `JournalEntryLine.side`
+    and a reversal flips every side — so the reversal falls out anyway. The
+    queries that do get bitten are the ones that group by side and sign the
+    result themselves, which is precisely what the account explainer did:
+    it reported a 205.000 ₺ phantom debit on 3300 that was nothing but old
+    voids, and sent me looking for a hole in the books that wasn't there.
+
+    Kept here as one callable so the pair travels together. Two conditions
+    that are only correct as a pair should not be written out by hand in
+    each place that needs them.
+    """
+    return (
+        JournalEntry.status == JournalEntryStatus.POSTED.value,
+        JournalEntry.reverses_entry_id.is_(None),
+    )
 
 
 def _debit_credit_totals_kurus(
@@ -42,8 +69,7 @@ def _debit_credit_totals_kurus(
         .join(JournalEntry, JournalEntry.id == JournalEntryLine.journal_entry_id)
         .where(
             JournalEntryLine.account_id == account_id,
-            JournalEntry.status == JournalEntryStatus.POSTED.value,
-            JournalEntry.reverses_entry_id.is_(None),
+            *live_entry_clauses(),
         )
         .group_by(JournalEntryLine.side)
     )

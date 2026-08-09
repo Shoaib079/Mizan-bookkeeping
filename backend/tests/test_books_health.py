@@ -392,3 +392,77 @@ def test_explaining_an_account_shows_both_sides(db_session, books):
     by_movement, by_source = explain_account(db_session, books, "3300")
     assert isinstance(by_movement, list)
     assert isinstance(by_source, list)
+
+
+# --- listing the lines behind a total ------------------------------------
+
+
+def test_entries_are_listed_with_a_date_so_a_mismatch_can_be_aged(db_session, books):
+    """Totals cannot say *when*, and when is what decides the triage.
+
+    Spice Corner had a partner drawing on the reimbursement payable while
+    every code path that posts a drawing sends it elsewhere. Whether that is
+    a live bug or a scar from an older build is a question about dates, and
+    the breakdown by movement type could not answer it.
+    """
+    from app.core.health.books_health import account_entries
+
+    _post_entry(db_session, books, entry_date=date(2026, 7, 1), amount=10_000)
+    _post_entry(db_session, books, entry_date=date(2026, 7, 20), amount=25_000)
+
+    rows = account_entries(db_session, books, ACCOUNTS_PAYABLE_CODE)
+    assert [r.entry_date for r in rows] == [date(2026, 7, 20), date(2026, 7, 1)], (
+        "newest first — the recent one is the one being triaged"
+    )
+    assert [r.signed_kurus for r in rows] == [25_000, 10_000], "payable credits are positive"
+
+
+def test_a_voided_entry_and_its_reversal_both_disappear(db_session, books):
+    """The bug that sent me hunting a hole in India Gate that was not there.
+
+    A void leaves two rows: the original marked VOIDED and a mirror reversal
+    marked POSTED. Filtering on POSTED alone drops the original and keeps the
+    reversal, so the account reports a debit that undoes an entry it is no
+    longer counting. The listing must show neither.
+    """
+    from app.core.health.books_health import account_entries
+    from app.core.ledger.posting import void_journal_entry
+
+    entry_id = _post_entry(db_session, books, entry_date=date(2026, 7, 1), amount=10_000)
+    _post_entry(db_session, books, entry_date=date(2026, 7, 2), amount=7_000)
+    assert len(account_entries(db_session, books, ACCOUNTS_PAYABLE_CODE)) == 2
+
+    void_journal_entry(db_session, books, entry_id, actor_id=ACTOR_ID, reason="test")
+
+    rows = account_entries(db_session, books, ACCOUNTS_PAYABLE_CODE)
+    assert [r.signed_kurus for r in rows] == [7_000], (
+        "the voided 10.000 and its reversal must both be gone, not net to zero "
+        "and not appear as a lone -10.000"
+    )
+
+
+def test_the_source_filter_narrows_rather_than_empties(db_session, books):
+    """Both halves: the right source is kept, a wrong one returns nothing.
+
+    A filter tested only on the matching case passes just as well when it
+    matches everything, which is how a guard ends up unable to fail.
+    """
+    from app.core.health.books_health import account_entries
+
+    _post_entry(db_session, books, entry_date=date(2026, 7, 1), amount=10_000)
+
+    kept = account_entries(
+        db_session, books, ACCOUNTS_PAYABLE_CODE, sources={"manual"}
+    )
+    assert len(kept) == 1
+
+    assert account_entries(
+        db_session, books, ACCOUNTS_PAYABLE_CODE, sources={"partner_drawing"}
+    ) == []
+
+
+def test_an_account_that_does_not_exist_is_empty_not_an_error(db_session, books):
+    """A typo in a code should print nothing, not stack trace at someone."""
+    from app.core.health.books_health import account_entries
+
+    assert account_entries(db_session, books, "9999") == []

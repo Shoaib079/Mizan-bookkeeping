@@ -109,6 +109,36 @@ def _money(kurus: int) -> str:
     return f"{sign}{whole:,}".replace(",", ".") + f",{frac:02d} ₺"
 
 
+def _print_entries(
+    session, entity: tuple[uuid.UUID, str], account_code: str, source: str | None
+) -> None:
+    """The individual lines behind a total, so a mismatch can be dated.
+
+    Totals answer "what kind of thing is on this account". They cannot answer
+    "when did it get there", which is the question that separates a live bug
+    from an old one already fixed.
+    """
+    from app.core.health.books_health import account_entries
+
+    entity_id, name = entity
+    wanted = {source} if source else None
+    rows = account_entries(session, entity_id, account_code, sources=wanted)
+
+    heading = f"{name} — entries on {account_code}"
+    if source:
+        heading += f", source {source}"
+    print(f"{heading}\n")
+
+    if not rows:
+        print("    (nothing matched)")
+        return
+    for row in rows:
+        print(
+            f"    {row.entry_date}  {row.source:34} {_money(row.signed_kurus):>18}"
+            f"  {row.description[:48]}"
+        )
+
+
 def _print_explanation(session, entity: tuple[uuid.UUID, str], account_code: str) -> None:
     """Both sides of a control-account tie, side by side.
 
@@ -160,6 +190,20 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--entries",
+        action="store_true",
+        help=(
+            "With --explain: list the individual journal lines on the account "
+            "rather than the totals, newest first, so a mismatch can be dated. "
+            "Narrow it with --source."
+        ),
+    )
+    parser.add_argument(
+        "--source",
+        metavar="JOURNAL_SOURCE",
+        help="With --entries: only this journal source. Example: --source partner_drawing",
+    )
+    parser.add_argument(
         "--fail-on",
         choices=SEVERITIES,
         help="Exit non-zero when a finding at this severity or worse appears.",
@@ -187,11 +231,18 @@ def main(argv: list[str] | None = None) -> int:
                 for row in session.scalars(select(Entity).order_by(Entity.name))
             ]
 
+        if args.entries and not args.explain:
+            print("--entries needs --explain ACCOUNT_CODE", file=sys.stderr)
+            return 2
+
         if args.explain:
             if not args.entity:
                 print("--explain needs --entity", file=sys.stderr)
                 return 2
-            _print_explanation(session, entities[0], args.explain)
+            if args.entries:
+                _print_entries(session, entities[0], args.explain, args.source)
+            else:
+                _print_explanation(session, entities[0], args.explain)
             return 0
 
         print(f"Books health — {len(entities)} restaurant(s)\n")
