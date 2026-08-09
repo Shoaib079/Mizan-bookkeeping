@@ -44,10 +44,18 @@ def _void_path_templates() -> set[str]:
 
 
 def _registered_void_routes() -> set[str]:
+    """Registered paths, read from the OpenAPI schema.
+
+    Not by walking `app.routes`. That list is not flat in every FastAPI
+    version — newer ones keep an included router's paths nested behind a
+    wrapper object whose own `path` is `None`, so the obvious scan finds no
+    routes at all and every void path looks broken. The schema is the app's
+    own answer to "what URLs exist", and it is stable across versions.
+    """
     return {
-        _normalise(route.path)
-        for route in app.routes
-        if getattr(route, "path", "").endswith("/void")
+        _normalise(path)
+        for path in app.openapi()["paths"]
+        if path.endswith("/void")
     }
 
 
@@ -57,21 +65,38 @@ def _normalise(path: str) -> str:
 
 
 def test_the_scan_finds_both_sides() -> None:
-    """Otherwise the assertion below passes by comparing two empty sets."""
-    assert len(_void_path_templates()) >= 15
-    assert len(_registered_void_routes()) >= 15
+    """Otherwise the assertion below passes by comparing two empty sets — or
+    fails claiming every path is broken.
+
+    Both counts are in the message on purpose. The first version of this file
+    read `app.routes` and found nothing, so it reported nineteen 404s that did
+    not exist; "assert 0 >= 15" said which number was zero but not which of
+    the two it belonged to.
+    """
+    templates = _void_path_templates()
+    routes = _registered_void_routes()
+    assert len(templates) >= 15, (
+        f"only {len(templates)} void_path templates found in entry_actions.py "
+        "— the scan is looking in the wrong place or the format changed"
+    )
+    assert len(routes) >= 15, (
+        f"only {len(routes)} /void routes found in the OpenAPI schema — the "
+        "scan is broken, not the app"
+    )
 
 
 def test_every_void_path_matches_a_route() -> None:
     registered = _registered_void_routes()
+    templates = _void_path_templates()
     missing = sorted(
         path
-        for path in _void_path_templates()
+        for path in templates
         if _normalise(CLIENT_PREFIX + path) not in registered
     )
     assert not missing, (
-        "These void paths 404 — the ledger offers a Void button that cannot "
-        "work:\n" + "\n".join(missing)
+        f"These void paths 404 — the ledger offers a Void button that cannot "
+        f"work ({len(templates)} templates against {len(registered)} routes):\n"
+        + "\n".join(missing)
     )
 
 
