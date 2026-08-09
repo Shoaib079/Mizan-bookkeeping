@@ -104,6 +104,17 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     };
   }, [entityId, isAuthReady]);
 
+  // This provider sits *above* `EntityScopedTree`, so switching restaurant
+  // does not remount it — deliberately, because the delivery-enabled cache is
+  // keyed by entity and re-fetching it on every switch would flash the whole
+  // nav. But an open Record sheet is not cached, it is a form: left alone it
+  // stays open across the switch, still holding whatever was typed for the
+  // restaurant you just left, and posts it to the new one.
+  useEffect(() => {
+    setActive(null);
+    setDocumentRoute(null);
+  }, [entityId]);
+
   useEffect(() => {
     if (!entityId) return;
 

@@ -11,6 +11,7 @@ import { QueryProvider } from "@/lib/query-client";
 import { ToastProvider } from "@/lib/toast";
 import { UnsavedWorkProvider } from "@/lib/unsaved-work";
 import { EntityAccessProvider } from "@/lib/use-entity-access";
+import { EntityScopedTree } from "@/components/layout/entity-scoped-tree";
 import { EntitySwitchGuard } from "@/components/layout/entity-switch-guard";
 import { RouteAccessGuard } from "@/components/layout/route-access-guard";
 import { SessionAccessGuard } from "@/components/layout/session-access-guard";
@@ -30,7 +31,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <SessionAccessGuard />
                 <QuickActionsProvider>
                   <FirstRunOnboardingModal />
-                  <AuthReadyGate>{children}</AuthReadyGate>
+                  <AuthReadyGate>
+                    {/* Below here, switching restaurant remounts everything.
+                        Placed inside UnsavedWorkProvider on purpose: the
+                        "you have unsaved work" prompt must survive the
+                        remount it is warning you about. */}
+                    <EntityScopedTree>{children}</EntityScopedTree>
+                  </AuthReadyGate>
                 </QuickActionsProvider>
               </ToastProvider>
             </UnsavedWorkProvider>
