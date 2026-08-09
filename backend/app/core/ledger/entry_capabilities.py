@@ -413,6 +413,8 @@ def _group_sale_or_credit_sale(session: Session, entry: JournalEntry):
         LedgerEntryEditContext,
     )
 
+    from app.core.receivables.models import CustomerMovementType
+
     row = session.scalar(
         select(CustomerLedgerEntry).where(
             CustomerLedgerEntry.journal_entry_id == entry.id
@@ -420,6 +422,37 @@ def _group_sale_or_credit_sale(session: Session, entry: JournalEntry):
     )
     if row is None:
         return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+
+    # A write-off and a group-sale discount both post under GROUP_SALE, and a
+    # discount against a sale also carries that sale's `reference_id`. Read in
+    # the order below, that made a discount look exactly like the sale itself:
+    # pressing Void on 200 TL knocked off a group sale voided the **whole
+    # sale**. The route exists, so nothing failed — it reversed the wrong
+    # record, which is the one outcome worse than a button that does nothing.
+    #
+    # A plain write-off had the opposite problem: no `reference_id`, so it fell
+    # through to the credit-sale route, which rejects a DISCOUNT row. A dead
+    # button, failing safely.
+    #
+    # Both are the same movement type and both void through the same endpoint,
+    # which accepts any DISCOUNT row. Checked first, because it is the narrower
+    # question: what the row *is* beats what its source and reference imply.
+    #
+    # Void only, though `/write-offs/{id}/correct` does exist. The General
+    # ledger has no form for it — `gl-entry-actions.tsx` has no write-off case
+    # — and the fallback it used to take opened a *credit-sale* form, which
+    # posts to a route that rejects a DISCOUNT row. Correcting a write-off
+    # works on the customer page, which owns the right form.
+    #
+    # So this is a capability the ledger declines to offer rather than one the
+    # app lacks. Wiring it is a form, not a rule; see HARDENING_PLAN.md D3.
+    if row.movement_type == CustomerMovementType.DISCOUNT:
+        return LedgerEntryActions(
+            can_edit=False,
+            can_void=True,
+            void_path=f"customers/{row.customer_id}/write-offs/{entry.id}/void",
+        )
+
     if entry.source == JournalEntrySource.GROUP_SALE and row.reference_id is not None:
         return LedgerEntryActions(
             can_edit=True,
