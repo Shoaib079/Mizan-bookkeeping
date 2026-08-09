@@ -281,6 +281,10 @@ Ordered so each step makes the next one smaller.
 | 1.3 | Badge and list share one query, + guard | 5 |
 | 1.4 | Audit posted invoices flagged `assumed_vat`; block auto-post on it | 7 |
 
+*(1.1 is the "statement-line reset" item; 1.2 and 1.3 are the "review queue
+date filter, one query for badge and list" item; 3.1 and 3.2 are the
+"production smoke test" item.)*
+
 **Why first:** 1.1 means the bank import can currently claim to be reconciled
 when it is not. 1.2 and 1.3 are the bug you hit last night, still live in three
 other queues. 1.4 touches a tax return.
@@ -310,8 +314,103 @@ patching it. It is also the largest, which is why the bleeding stops first.
 
 ### Phase 4 — Pay down what hides the rest
 
-Split the six worst files, starting with `correction.py` and `statements.py`.
-Not for tidiness: both are where a missing branch went unnoticed.
+Not tidiness. Both of these files are where a missing branch went unnoticed,
+and they need **opposite** treatment — which is the point of measuring before
+splitting.
+
+#### 4a. `correction.py` — 2,343 lines, splits cleanly
+
+The file is already organised; it is just all in one place. Measured shape:
+
+| group | functions | lines |
+| --- | --- | --- |
+| `correct_*` (per document type) | 13 | 1,170 |
+| `void_*` (per document type) | 13 | 479 |
+| private helpers | 18 | 377 |
+
+And the pairs fall into domains with no overlap:
+
+| would become | functions | lines |
+| --- | --- | --- |
+| `correction/customer.py` | 4 | 330 |
+| `correction/supplier.py` | 4 | 240 |
+| `correction/fx.py` | 4 | 236 |
+| `correction/pos.py` | 2 | 218 |
+| `correction/staff.py` | 2 | 130 |
+| `correction/gl.py` | 2 | 128 |
+| `correction/delivery.py` | 2 | 112 |
+| `correction/partner.py` | 2 | 91 |
+| `correction/credit_sale.py` | 2 | 85 |
+| `correction/expense.py` | 2 | 79 |
+
+Everything lands under 400 lines, most far under. What stays in a shared
+`correction/core.py` is the machinery every domain calls —
+`correct_gl_with_subledger_rows`, `void_gl_with_subledger_rows`, the source
+registries, `_release_posted_draft`.
+
+**Method.** Pure moves, no behaviour change, one domain per commit, suite green
+between each. Keep `correction.py` as a re-export shim so no import in the app
+changes in the same commit as a move; delete the shim last, once nothing
+imports through it. If a commit does anything other than move lines, it is the
+wrong commit.
+
+**What it buys.** Tonight's `void_supplier_invoice` bug was a missing line in a
+2,300-line file where the delivery-commission version — with a comment
+explaining the exact hazard — sat 500 lines away. In a 240-line
+`correction/supplier.py` beside a 112-line `correction/delivery.py`, the two
+are readable side by side.
+
+#### 4b. `statements.py` — 3,065 lines, and splitting the *file* would achieve nothing
+
+The measurement says something different here:
+
+```
+classify_statement_line   1,713 lines, 140 branch points, 48 classification branches
+next longest function       105 lines
+```
+
+**One function is 56% of the file.** Moving it into a module of its own leaves
+a 1,713-line function — the same problem with a new filename. This is the code
+that decides how every imported bank line is classified and posted across
+thirteen journal sources, and it is where the statement-line reset gap
+(Class 2) lives.
+
+**Method — decompose the function, not the file.** The same seam that worked
+for the menu PDF (`document.py` holds facts, `menu_pdf.py` renders them):
+
+1. **Extract the decision.** A pure function: line + rules + context →
+   `ClassificationOutcome` describing what should happen. No session, no
+   writes. Testable by calling it with a row.
+2. **Extract the effects.** One small module per classification family that
+   takes the outcome and performs it — post, link, learn, reset. Thirteen
+   sources, but they share four shapes.
+3. **Leave a thin `classify_statement_line`** that gets the outcome and hands
+   it to the effect. Tens of lines, not seventeen hundred.
+
+Do this **after Phase 1.1**, not before: the statement-line release belongs in
+the shared void machinery first, so the decomposition does not have to carry a
+known bug through it.
+
+**Method note that matters more than the target.** This function posts money.
+Every step must be a refactor with the behaviour pinned first: before moving a
+line, add characterisation tests that assert the *current* outcome for each of
+the forty-eight branches — including the wrong ones. Then move code and watch
+them stay green. Changing behaviour and moving it in the same commit is how a
+refactor becomes an outage.
+
+#### 4c. The rest
+
+The remaining oversized files — `efatura.py` (1,597), `partners/posting.py`
+(1,510), `staff/posting.py` (1,507), `invoices/service.py` (1,444) — get
+measured the same way before anything is moved. Some will be 4a-shaped, some
+4b-shaped. **Measure, then split; never split by line count alone.**
+
+#### The guard that keeps it from creeping back
+
+A file-size test with a declared allow-list of the files currently over the
+limit and their current sizes. A new file over 400 lines fails. An existing
+one *growing* fails. Shrinking one is a one-line edit to the list. The list is
+the debt, visible and going one direction only.
 
 ---
 
