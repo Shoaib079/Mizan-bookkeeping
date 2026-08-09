@@ -36,8 +36,9 @@ Counted on 9 August 2026.
 | Files past the ~400-line rule | 82 (9% of files, 40% of all code) |
 | Golden rules with an automated guard | 6 of 19 |
 | Places that decide "can this be edited or voided" | 5, ~165 decision points |
-| Pages that reset on entity switch (rule 16) | 16 of 91 |
+| Pages that reset on entity switch (rule 16) | ~~16 of 91~~ → all 91, by remount |
 | Weak assertions in frontend tests | 29 |
+| Real faults found by running Phase 0 on the books | 1 (Class 10), plus 2 checks that were themselves wrong |
 
 ---
 
@@ -268,6 +269,215 @@ where a missing branch is invisible.
 
 ---
 
+## Class 10 — A posting rule changed, its old entries stayed put
+
+**The mistake.** The account a movement posts to is changed in code. Every
+entry written from then on is right. Every entry written *before* is still
+sitting on the old account, and nothing goes back for it.
+
+**Found in the books, not in the code.** Commit `5cad923` (4 July 2026)
+changed `post_drawing` from `Dr 2150` to `Dr 3200`:
+
+```
+-    """Partner withdraws cash — Dr 2150 / Cr cash; subledger -amount (may go negative)."""
++    """Partner withdraws cash — Dr 3200 / Cr cash; capital subledger -amount."""
+```
+
+No migration moved what the old rule had already written. Spice Corner has
+one drawing from 1 February 2026 still on the reimbursement payable —
+40.000 ₺ that makes liabilities look 40.000 ₺ smaller and equity 40.000 ₺
+larger than they are. Cash and P&L are untouched; it is a misclassification
+between a liability and an equity account, not a lost transaction.
+
+**Why this class is nastier than it looks.** Nothing in the codebase is
+wrong. Every test passes, every current path is correct, and reading the
+code will never find it — the evidence exists only in the data. This is the
+one class Phase 0 was the only way to catch.
+
+**What it costs to check.** Almost nothing, once asked: a rule change that
+moves an account should come with either a backfill migration or a
+deliberate written decision not to. Neither happened here, and neither was
+noticed for five weeks.
+
+**The guard.** The control-account tie already is the guard — it fired.
+What was missing was anyone running it against real books.
+
+---
+
+## Class 11 — Two fixes that each work, and cancel
+
+**The mistake.** One change writes a state; another reads it. Both are
+correct in isolation. Nothing connects them, so nothing objects when the
+first stops producing what the second looks for.
+
+**Found by the full suite, an evening after both landed.**
+`_release_posted_draft` hands a voided invoice's draft back to `confirmed` so
+it stops showing as posted — and cleared `journal_entry_id` while doing it.
+`_posting_was_voided` decides whether the same file may be uploaded again,
+and answered by reading `journal_entry_id`. Between them they restored the
+original complaint exactly: *"i voided an invoice ... when i try to upload the
+same invoice it says it already in ledger."*
+
+Each had a test. Each test passed. Neither test knew about the other change,
+and the collision only surfaced because the whole suite was run at once —
+1,663 tests to find it, which is the honest cost of not having pinned the
+coupling.
+
+**The fix is the general one, not the local one.** The draft now *keeps* its
+`journal_entry_id` after release. The link is the durable fact — a draft
+carrying one was posted, whatever its status says now — and that single
+predicate covers all four shapes without a special case: live, voided and
+released, voided before the release hook existed, and never posted. Status
+still governs every screen, so nothing reads it as posted.
+
+**The guard.** A test that pins the two functions to each other: release a
+draft, then assert the same-file check still recognises it. Changing either
+one alone now fails there instead of in production.
+
+---
+
+## Class 12 — A rule written per case, and a case nobody wrote
+
+**The mistake.** The same question gets its own function per variant —
+`live_posted_invoice_exists`, `live_posted_supplier_credit_exists` — and call
+sites branch on the variant by hand. Adding a variant means adding a function
+*and* finding every branch. Miss it and there is no error: the chain of
+`if kind ==` simply falls through, which reads exactly like "no problem found".
+
+**Found by asking what the owner actually cares about.** Not the mechanism —
+*"i care about is if one invoice or receipt or delivery invoice etc already
+exsist app does not re post it."* Two duplicate rules existed, branched on at
+four call sites, and **delivery commissions were in none of them**. A second
+copy of the same commission invoice posted without complaint whenever the
+file bytes differed, which a re-downloaded PDF does. `post_delivery_commission_draft`
+had no duplicate gate at all — only a check that *this draft row* was not
+already posted.
+
+**The fix.** One `_COUNTERPARTY_FIELD` map from `InvoiceKind` to the column
+naming the other party, one `find_live_posted_invoice`, one
+`find_live_posted_duplicate_of(session, entity_id, draft)` that every posting
+path calls. The four hand-written branches are gone, and the three per-kind
+function names were deleted rather than kept as wrappers — a name per kind is
+what made it possible to add a kind and answer it for none of them.
+
+**The guard, in three parts.** Every `InvoiceKind` member must appear in the
+map (enumerated from the enum, so a new one fails immediately); the column it
+names must exist on `InvoiceDraft`; and every function that writes a journal
+entry from a draft must call the gate. An unknown kind now raises rather than
+returning None, because silence was the failure.
+
+**Checked at posting, not only at upload.** A draft can reach the ledger
+without going through intake — created before its supplier was linked, or
+posted by another route. The ledger is the last place that can still say no.
+
+**And the behaviour, separately.** The structural guard proves the gate is
+*called*; it would pass just as well against a gate that always returns None.
+So the commission case — the one that had no rule — is pinned by money:
+posting the same number twice is refused *and the expense account does not
+move*, the same number from a different platform still posts (platforms
+number their own invoices), and a voided commission stops being a duplicate
+so the corrected one can go in. That last one is the same trap as the voided
+file that could never be re-uploaded, in a different place.
+
+---
+
+### Phase 3.1 / 3.2 as built
+
+**Entity switch.** The scoreboard said 16 of 91 pages reset on switch. The fix
+was not to add the hook to the other 75 — that leaves page 92 to remember it.
+`EntityScopedTree` keys the page tree by entity id in `providers.tsx`, so the
+whole subtree unmounts and rebuilds and there is no per-page step left.
+
+What sits above the key on purpose: React Query's cache (its keys already
+carry the entity id), auth, toasts, and `UnsavedWorkProvider` — which must
+outlive the remount it is warning about. `useRegisterUnsaved` clears on
+unmount, so the remount does not strand dirty flags.
+
+One hole the remount did **not** close, found by asking what else lives above
+the key: `QuickActionsProvider` holds the open Record sheet. Correctly above —
+its delivery-enabled cache is per entity and refetching would flash the nav —
+but a sheet is a form, not a cache. It stayed open across a switch holding
+what had been typed for the restaurant you just left, and would post it to the
+new one. Now cleared on entity change.
+
+**Production smoke.** Two findings, one of them the reason the item existed.
+
+The exempt list was written twice — `SKIP_PATH_SUFFIXES` in Python,
+`EXEMPT_PATH_FRAGMENTS` in the frontend guard's TypeScript — with a comment
+saying *"kept in step"* and nothing checking. The dangerous direction is the
+quiet one: a path the **frontend** exempts and the server does not is a call
+that returns 400 in production and passes every local check, which is the
+original eleven-mutation bug restored. A test now reads the Python tuple and
+compares.
+
+And nobody had ever verified that production enforces at all. Every guard in
+this area assumes `IDEMPOTENCY_ENFORCEMENT=true`; if it were unset, they
+protect nothing and everything still looks fine.
+`scripts/smoke_production.py` checks it **without credentials**, because the
+middleware is registered outside the auth dependency: an unauthenticated POST
+with no key gets `400` rather than `401`, and the difference between those two
+codes is the whole signal. It also checks the reverse — that an exempt path is
+still exempt in the deployed build — since a broken exempt list would make
+drafting fail in production only.
+
+**First real run, 9 August 2026** — `mizan-api-production-e574.up.railway.app`,
+all four checks pass. `POST` without a key returns `400`, not `401`, so the
+middleware refuses before authentication runs: **production is enforcing.**
+That is the assumption the frontend idempotency scan and the exempt-list test
+are both built on, and until this run nobody had ever confirmed it.
+
+Two bugs in the script itself, found by running it rather than reading it, and
+both the same class as everything else here — a check written as *"not the bad
+answer"* rather than *"the right answer"*:
+
+- Against a URL that did not resolve it printed `PASS  exempt endpoints are
+  still exempt`. The test was `status != 400`, and a dead connection is not
+  400. It now stops at the first unreachable response and asserts something
+  answered.
+- Against a TLS trust-store problem — a python.org Python with no
+  certificates, on a deployment that was up — it offered three guesses,
+  placeholder / down / wrong hostname, all wrong. Each cause now gets its own
+  answer, with a test per cause asserting it does not produce another's.
+
+The script cannot run in CI, so its *judgement* is tested with canned replies:
+a deployment that is up, has a live database, and returns 401 where 400 was
+expected must fail, because that deployment is the one the guards cannot see.
+
+---
+
+## Owed — deliberately deferred, not forgotten
+
+Written down because "we'll tidy it after" is how dead code becomes
+permanent.
+
+| # | Owed | Why it was deferred | Blocked until |
+| --- | --- | --- | --- |
+| D1 | Delete the 17 `useEntitySwitchReset` call sites, and any `resetX` function left with no other caller | `EntityScopedTree` remounts the page tree on switch, so every one of them is now unreachable. Removing the old mechanism in the same change as the new one means a misbehaving switch cannot be attributed to either half. | The owner has switched restaurants in the running app and confirmed pages come back clean |
+
+`entityResetKey` stays either way — `EntityScopedTree` is built on it.
+
+---
+
+## The standing rule
+
+> *"everything we build we build globally so anything that may come tomorrow
+> is not missed out"*
+
+Stated 9 August 2026, and it is the through-line of every class above. In
+practice it means three things when writing a fix:
+
+1. **Fix the funnel, not the call sites.** If a rule has to be remembered in
+   six places it is already broken in four. See 1.1.
+2. **No allowlist.** Where the rule cannot possibly matter — a profit
+   allocation has no bank line — apply it anyway. The exception list is where
+   the next gap hides, and a guard with no exceptions needs no maintenance.
+3. **Scan by shape, not by name.** A guard that holds a list of known helpers
+   goes blind the day someone adds one. The first version of the draft-release
+   scan looked for two specific helper names and found one route out of two;
+   matching *any* name containing `draft` found both, and will find the third.
+
+---
+
 ## The plan
 
 Ordered so each step makes the next one smaller.
@@ -303,14 +513,54 @@ green tests.
 some will be real bugs, some will be data from before a rule existed, some
 will be nothing.
 
+#### Triage log
+
+| Finding | Verdict | Cause |
+| --- | --- | --- |
+| India Gate 3300 out by 220.000 ₺ | **check was wrong, books fine** | Class 1. `entity_capital_total_kurus` listed the two movement types that *credit* partner capital and omitted the one that debits it, so every profit payment widened a phantom gap. Fixed by naming the set once as `CAPITAL_ACCOUNT_MOVEMENT_TYPES`. |
+| `--explain` showed a 205.000 ₺ debit from `system` | **the explainer was wrong** | Class 1 again, mine. It filtered `status == POSTED` without excluding reversals, so old voids appeared as live debits. `live_entry_clauses()` now carries both conditions as one thing. |
+| Spice Corner 2150 out by 40.000 ₺ | **the books, confirmed — Class 10** | One drawing dated 1 Feb 2026, posted by the code as it stood before commit `5cad923` (4 Jul 2026) moved `post_drawing` from `Dr 2150` to `Dr 3200`. No migration moved the rows the old rule had written. Widening the tie would be the wrong fix — it would then break for every correct drawing since July. **Blocked on Phase 1.1:** see below. |
+
+| Spice Corner, 5 posted invoices flagged `assumed_vat` | **scratch data, live rule** | The rows need no repair. The rule that produced them runs everywhere — see Phase 1.4, now done. |
+
+**Spice Corner's data is scratch. Its code is not.** It is a half-finished
+trial entity, so nothing in it needs repairing and **India Gate, the real
+books, is clean.** But the correction the owner made on 9 August is the one
+that matters:
+
+> *"so nothing is only for one company. spice corner everything is global
+> rule so everything works everywhere"*
+
+A finding against a scratch entity is still evidence about code that runs on
+the real one. Reading "scratch data" as "ignore" would have parked Phase 1.4,
+and Phase 1.4 turned out to be about a number that goes on a KDV return.
+
+That changes what the Class 10 finding is *for*. There is nothing to fix in
+the data. What survives is the process lesson: a commit moved an account and
+no migration went back for what the old rule had written. Had that drawing
+been on India Gate, the repair would have been blocked behind Phase 1.1
+anyway — voiding it would strand the bank statement line that still points
+at it, trading one finding for another.
+
+Worth recording what this cost and what it bought: the first two rows were
+**checks disagreeing with correct books**, not corrupt data. That is the
+expected shape of a first run — but it is also why Phase 0 had to report
+rather than repair. A tool that had "fixed" the 220.000 ₺ would have
+corrupted books that were right.
+
+Note also which class both turned out to be. Two of two findings so far are
+Class 1: a fact about the posting code, written out by hand a second time
+somewhere that reads it. That is the argument for Phase 2, made with data
+instead of assertion.
+
 ### Phase 1 — Stop the bleeding (highest risk, live now)
 
 | # | Work | Class |
 | --- | --- | --- |
-| 1.1 | Statement-line release moved into the shared void machinery, + guard | 2 |
-| 1.2 | Remove the date filter from the three remaining review queues | 5 |
-| 1.3 | Badge and list share one query, + guard | 5 |
-| 1.4 | Audit posted invoices flagged `assumed_vat`; block auto-post on it | 7 |
+| 1.1 | ✅ **Done.** Statement-line release moved into the shared void machinery, + guard | 2 |
+| 1.2 | ✅ **Done.** Date filter removed from the two queues that still had one | 5 |
+| 1.3 | ✅ **Done.** One guard over all three queues' filter sets | 5 |
+| 1.4 | ✅ **Done.** Auto-post refuses an assumed VAT outright; confirming no longer erases the flag | 7 |
 
 *(1.1 is the "statement-line reset" item; 1.2 and 1.3 are the "review queue
 date filter, one query for badge and list" item; 3.1 and 3.2 are the
@@ -319,6 +569,117 @@ date filter, one query for badge and list" item; 3.1 and 3.2 are the
 **Why first:** 1.1 means the bank import can currently claim to be reconciled
 when it is not. 1.2 and 1.3 are the bug you hit last night, still live in three
 other queues. 1.4 touches a tax return.
+
+#### 1.2 / 1.3 as built
+
+Traced all six review tabs rather than assuming the plan's count of three:
+
+| Queue | Sent a date range? |
+| --- | --- |
+| Expenses | yes — `from`/`to` always, current month |
+| Sales | yes — same |
+| Bank | no — `filterLinesForReviewTab` already skips the range for `needs_review`, and the tab count reads the unfiltered list |
+| Receipts | no — lists everything, filters pending in the browser |
+| Delivery | no — same |
+| Invoices | already fixed |
+
+So two, not three. The rule now reads the same in all three places that have
+one: **the range applies only to settled views** (`posted`, `voided`).
+`all` sits with the queues, not with `posted` — it contains outstanding work,
+and outstanding work must never be hidden by a date default nobody chose.
+
+The picker is hidden where it does not apply rather than left inert. It was
+the first thing reached for when a row seemed missing, and it was never the
+reason. On the expenses panel the money label changes with it: "Period total"
+over a list spanning every date is a wrong label on a money figure, which is
+worse than no label.
+
+The guard iterates the exported filter sets, not a retyped list, so a tab
+added later is covered on the day it is added. It has two halves — no
+unsettled view may use the range, **and** every settled view must — because a
+`usesRange` that always returned false would satisfy the first alone and
+quietly break every report period. Mutation-checked: forcing sales back to
+always-ranged fails exactly one test, by name.
+
+#### 1.4 as built
+
+Auto-post was already refusing an assumed VAT — **incidentally**. An assumed
+VAT sets `classification_confidence` to `"low"` at intake, and `_common_gates`
+refuses anything that is not `"high"`. Nothing anywhere said "do not post a
+guessed tax unattended"; it fell out of a side effect two files away, and the
+marker that causes it is cleared the moment anyone confirms.
+
+That is a guarantee nobody wrote down, so it was one confidence tweak from
+disappearing. It now says what it means: `vat_was_assumed(draft)` is its own
+gate, and the test that pins it hands the draft confidence `"high"` so it
+cannot be passing for the old reason.
+
+The second half is the one with teeth. Confirming used to strip `assumed_vat`
+along with the parse-quality markers, so a posted invoice kept no record that
+its input KDV was inferred rather than read. That is the only way to answer
+"which invoices on this return claimed a guessed VAT" — the question check
+0.6 exists for. Accepting an assumption does not turn it into a reading, and
+the flag now survives. `net_adjusted`, `fields_missing` and `no_text_layer`
+still clear, because once the owner has read the fields, how well they parsed
+genuinely stops mattering.
+
+Blocked on the unattended path only, per the standing instruction: *"u can add
+warning if that matters. but i hope it wont stop user or me from recording."*
+Posting by hand still works — the preview says the VAT was assumed, and the
+decision is the owner's.
+
+#### 1.1 measured
+
+The reset function already exists and reads like it was written for exactly
+this: `reset_statement_lines_for_voided_journal` — *"Unlink bank lines when
+their journal was voided outside the statement UI."* It is called from **one**
+place. Six paths void an entry:
+
+| Void path | Resets the statement line? |
+| --- | --- |
+| `features/staff/service.py` | ✅ |
+| `features/banking/statements.py` (correct-a-line) | ✅ |
+| `features/ledger/service.py` — **the generic Void button** | ❌ |
+| `core/ledger/correction.py` `_void_journal_entry_in_transaction` — **41 registered sources** | ❌ (the file does not mention statement lines once) |
+| `features/pos/service.py` | ❌ |
+| `features/manual_journals/service.py` | ❌ |
+
+This is Class 1 with the copies missing rather than drifting, and it explains
+the symptom reported on 8 August word for word: *"i voided it but i can still
+see the invoice in review invoices… clicked void again nothing happened just
+kinda flickered but still everything there."* The entry was voided. The line
+that points at it was never told.
+
+**The fix that holds:** call the reset from inside `void_journal_entry` and
+`_void_journal_entry_in_transaction`, not at the four call sites — a rule that
+has to be remembered at six places has already failed at four. Core importing
+a `features` module is a layering inversion, but one this codebase already
+makes (`books_health` imports `features.entities`), and the alternative is
+keeping the thing that just broke.
+
+**Guard:** a scan asserting every path that voids an entry routes through the
+machinery that resets, in the shape of the existing void-path resolution
+test — so a seventh path added next month cannot quietly skip it.
+
+**As built.** The rule now lives at the two void funnels and the one correct
+funnel, and the scan walks the AST rather than the text so it knows which
+*function body* a call sits in. It found a fourth void path nobody had
+listed — `void_profit_allocation`. That one can never have a bank line
+pointing at it, and it calls the retarget anyway: the rule holds everywhere
+so the guard needs no allowlist, and an allowlist is where the next gap
+would have hidden.
+
+The fork matters more than the reset does. A **void** releases the line; a
+**correction** re-points it at the replacement entry. Releasing on a
+correction would have been worse than the original bug — the money is still
+posted, so a line handed back to the queue as unclassified invites a second
+classification and books the same transaction twice. Corrections already
+re-point invoice drafts (`draft.journal_entry_id = corrected.id`); bank
+lines now follow the same convention.
+
+The explicit call in `features/staff/service.py` was deleted rather than
+left in place. It was correct, but it was a second copy of a rule that now
+has one home — and Class 1 is copies.
 
 ### Phase 2 — Collapse the copies
 
