@@ -2909,11 +2909,34 @@ def _reset_line_for_correction(line: BankStatementLine) -> None:
     line.candidate_account_transfer_id = None
 
 
-def reset_statement_lines_for_voided_journal(
+def retarget_statement_lines_for_journal(
     session: Session,
     journal_entry_id: uuid.UUID,
+    *,
+    replacement_entry_id: uuid.UUID | None = None,
 ) -> int:
-    """Unlink bank lines when their journal was voided outside the statement UI."""
+    """Follow a bank line when the entry it points at stops being the truth.
+
+    A statement line carries `journal_entry_id`, and every reconciliation
+    screen believes it. When that entry is voided or replaced and nobody
+    tells the line, the bank import goes on reporting itself reconciled
+    against money that is no longer in the ledger.
+
+    Two cases, and the difference matters:
+
+    - **Voided outright** (`replacement_entry_id` is None) — the line is
+      reset to unclassified. There is nothing left for it to point at.
+    - **Corrected** (a replacement given) — the line is re-pointed at the new
+      entry and keeps its classification. Resetting here would be actively
+      dangerous: the money *is* posted, so a line handed back to the queue as
+      unclassified invites someone to classify it a second time and book it
+      twice. This mirrors what corrections already do for invoice drafts,
+      which are re-pointed rather than released.
+
+    Called from the void and correct funnels rather than by their callers.
+    The previous arrangement asked six call sites to remember it and was
+    honoured by two.
+    """
     lines = list(
         session.scalars(
             select(BankStatementLine).where(
@@ -2921,16 +2944,26 @@ def reset_statement_lines_for_voided_journal(
             )
         )
     )
-    reset_count = 0
+    if not lines:
+        return 0
+
+    touched = 0
     for line in lines:
-        if line.status in (
+        if line.status not in (
             StatementLineStatus.POSTED,
             StatementLineStatus.LINKED,
             StatementLineStatus.CLASSIFIED,
         ):
+            continue
+        if replacement_entry_id is None:
             _reset_line_for_correction(line)
-            reset_count += 1
-    return reset_count
+        else:
+            line.journal_entry_id = replacement_entry_id
+        touched += 1
+
+    if touched:
+        session.flush()
+    return touched
 
 
 def correct_statement_line(

@@ -186,10 +186,12 @@ def check_statement_lines_claiming_posted(
 ) -> list[Finding]:
     """A bank line reading LINKED/POSTED whose entry is voided or gone.
 
-    `reset_statement_lines_for_voided_journal` exists for this and is called
-    from one place only, so voiding through any other route leaves the line
-    claiming to be reconciled. **The bank import then looks reconciled when it
-    is not**, and the line cannot be classified again.
+    `retarget_statement_lines_for_journal` now runs inside the void and
+    correct funnels, so new occurrences should not appear. This check stays
+    for the ones already in the books from when it was called from a single
+    call site out of six, and because a seventh void path added later would
+    show up here before anyone noticed the bank import claiming to be
+    reconciled against money that is no longer in the ledger.
     """
     from app.features.banking.statement_models import (
         BankStatementLine,

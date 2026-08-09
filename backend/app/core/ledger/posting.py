@@ -314,6 +314,29 @@ def _mark_original_voided(
     )
 
 
+def _retarget_statement_lines(
+    session: Session,
+    entry_id: uuid.UUID,
+    replacement_entry_id: uuid.UUID | None = None,
+) -> None:
+    """Keep bank statement lines pointing at an entry that still exists.
+
+    Imported here rather than at module scope because `statements` imports
+    this module — the cycle is real, the lazy import is not laziness.
+
+    That `core` reaches into `features` at all is the wrong direction, and
+    worth naming rather than hiding. The alternative was leaving the rule at
+    six call sites, where four of them had already forgotten it and produced
+    the bug this exists to stop: an entry voided, the line still claiming to
+    be reconciled against it, and a second press of Void doing nothing.
+    """
+    from app.features.banking.statements import retarget_statement_lines_for_journal
+
+    retarget_statement_lines_for_journal(
+        session, entry_id, replacement_entry_id=replacement_entry_id
+    )
+
+
 def void_journal_entry(
     session: Session,
     entity_id: uuid.UUID,
@@ -352,6 +375,7 @@ def void_journal_entry(
             _mark_original_voided(
                 session, original, reversal, actor_id=actor_id, reason=reason
             )
+            _retarget_statement_lines(session, entry_id)
             session.commit()
         mark_periods_dirty_for_dates(
             session,
@@ -440,6 +464,10 @@ def _correct_journal_entry_in_transaction(
             reason=reason,
             amended_by_entry_id=corrected.id,
         )
+        # Re-pointed, not reset: the money is still posted, just under a new
+        # entry. A line handed back to the queue here would invite a second
+        # classification and a double booking.
+        _retarget_statement_lines(session, entry_id, corrected.id)
         session.flush()
     mark_periods_dirty_for_dates(
         session,

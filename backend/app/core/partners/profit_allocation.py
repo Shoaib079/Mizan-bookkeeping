@@ -24,6 +24,7 @@ from app.core.ledger.posting import (
     _create_reversal_entry,
     _get_voidable_entry,
     _mark_original_voided,
+    _retarget_statement_lines,
     prepare_journal_entry,
 )
 from app.core.partners import ledger as partner_ledger
@@ -377,6 +378,12 @@ def void_profit_allocation(
             _mark_original_voided(
                 session, original, reversal, actor_id=actor_id, reason=reason
             )
+            # A profit allocation moves no cash, so no bank line can be
+            # pointing at it and this finds nothing. Called anyway: the rule
+            # is "every void retargets", and a rule with one documented
+            # exception is a rule with somewhere for the next gap to hide.
+            # The guard test that enforces it needs no allowlist as a result.
+            _retarget_statement_lines(session, original.id)
             session.commit()
         mark_periods_dirty_for_dates(
             session,

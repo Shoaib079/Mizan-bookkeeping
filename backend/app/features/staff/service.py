@@ -812,13 +812,11 @@ def void_staff_journal_entry_http(
         void_date=void_date,
         period_unlock_reason=period_unlock_reason,
     )
+    # The statement-line reset used to be done here by hand. It now happens
+    # inside the void machinery itself, so staff is no longer the one path in
+    # six that remembered — and this no longer has to.
     original_id = result.original.id
     reversal_id = result.reversal.id
-    from app.features.banking.statements import reset_statement_lines_for_voided_journal
-
-    with entity_context(session, entity_id):
-        reset_statement_lines_for_voided_journal(session, journal_entry_id)
-        session.commit()
     return SubledgerVoidOut(
         original_journal_entry_id=original_id,
         reversal_journal_entry_id=reversal_id,

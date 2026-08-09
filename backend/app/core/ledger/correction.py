@@ -2094,7 +2094,11 @@ def _void_journal_entry_in_transaction(
     void_date: date | None = None,
     period_unlock_reason: str | None = None,
 ) -> tuple[JournalEntry, JournalEntry]:
-    from app.core.ledger.posting import _create_reversal_entry, _mark_original_voided
+    from app.core.ledger.posting import (
+        _create_reversal_entry,
+        _mark_original_voided,
+        _retarget_statement_lines,
+    )
     from app.core.period_locks.guards import assert_entry_dates_allowed, utc_today
 
     original = _get_voidable_entry(session, entry_id)
@@ -2116,6 +2120,10 @@ def _void_journal_entry_in_transaction(
         period_unlock_reason=period_unlock_reason,
     )
     _mark_original_voided(session, original, reversal, actor_id=actor_id, reason=reason)
+    # The other void funnel. Both do this, because a rule kept in one of two
+    # places is a rule that works half the time — and this is the half the
+    # 41 registered correction sources go through.
+    _retarget_statement_lines(session, entry_id)
     return original, reversal
 
 
