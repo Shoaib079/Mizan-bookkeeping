@@ -195,7 +195,7 @@ def resolve_ledger_entry_actions(
                 can_edit=False,
                 can_void=True,
                 void_path=(
-                    f"payables/suppliers/{supplier_row.supplier_id}/payments/{entry_id}/void"
+                    f"suppliers/{supplier_row.supplier_id}/payments/{entry_id}/void"
                 ),
             )
 
@@ -354,7 +354,7 @@ def resolve_ledger_entry_actions(
                 can_edit=True,
                 can_void=True,
                 void_path=(
-                    f"payables/suppliers/{row.supplier_id}/payments/{entry_id}/void"
+                    f"suppliers/{row.supplier_id}/payments/{entry_id}/void"
                 ),
                 edit=LedgerEntryEditContext(
                     kind="supplier_payment",
@@ -379,7 +379,7 @@ def resolve_ledger_entry_actions(
                 can_edit=True,
                 can_void=True,
                 void_path=(
-                    f"payables/suppliers/{row.supplier_id}/invoices/{entry_id}/void"
+                    f"suppliers/{row.supplier_id}/invoices/{entry_id}/void"
                 ),
                 edit=LedgerEntryEditContext(
                     kind="supplier_invoice",
