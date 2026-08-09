@@ -633,3 +633,117 @@ def test_profit_settlement_clears_drawings_net(db_session, three_partner_setup) 
         )
     assert settlement is not None
     assert settlement.amount_kurus == 100_000
+
+
+def _capital_gl_balance(db_session, entity_id) -> int:
+    """GL 3300, read the way the application reads it.
+
+    Deliberately not the `_gl_balance` helper above: that one sums every line
+    on the account, and a hand-rolled balance is how this whole area went
+    wrong in the first place. `balance_as_of_kurus` is the function the books
+    themselves use, so a test built on it cannot quietly disagree with them.
+    """
+    from app.core.ledger.balances import balance_as_of_kurus
+
+    with entity_context(db_session, entity_id):
+        account = db_session.scalar(
+            select(Account).where(Account.code == PARTNER_CAPITAL_CODE)
+        )
+        return balance_as_of_kurus(db_session, account, date(2030, 1, 1))
+
+
+def test_the_3300_tie_holds_after_every_partner_movement(
+    db_session, three_partner_setup
+) -> None:
+    """The subledger total must equal GL 3300 no matter what has happened.
+
+    Written after the health report found India Gate's partner subledger
+    220.000 ₺ above its own capital account. The books were right; the tie
+    was summing allocations and contributions and ignoring profit *paid*, so
+    every payment to a partner widened a gap that looked like missing money.
+
+    The earlier tests here each asserted the tie after one kind of movement,
+    and every one of them passed — because none of them ever paid a partner.
+    So this exercises the lot in sequence: a drawing, an allocation big enough
+    to be split into settlement plus residual, a repayment, a contribution,
+    and a payment out. Add a movement type that reaches 3300 later and this
+    fails, which is the entire point of it.
+    """
+    entity_id = three_partner_setup["entity_id"]
+    partner_id = three_partner_setup["partner_ids"][0]
+    drawer = three_partner_setup["drawer"]
+
+    partner_posting.post_drawing(
+        db_session, entity_id, partner_id,
+        drawing_date=date(2026, 6, 1), amount_kurus=200_000,
+        description="Took cash", actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    partner_posting.post_capital_contribution(
+        db_session, entity_id, partner_id,
+        contribution_date=date(2026, 6, 5), amount_kurus=1_500_000,
+        description="Put money in", actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    partner_posting.post_drawing_repayment(
+        db_session, entity_id, partner_id,
+        payment_date=date(2026, 6, 10), amount_kurus=50_000,
+        description="Paid some back", actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+    # 50% of 1.000.000 = 500.000 against 150.000 still drawn: settles the
+    # 150.000 and leaves 350.000 as the partner's residual capital credit.
+    pa.post_profit_allocation(
+        db_session, entity_id,
+        allocation_date=date(2026, 6, 30), profit_kurus=1_000_000,
+        description="H1 profit", actor_id=ACTOR_ID,
+        netting_as_of=date(2026, 6, 30),
+    )
+    partner_posting.post_profit_paid(
+        db_session, entity_id, partner_id,
+        payment_date=date(2026, 7, 1), amount_kurus=100_000,
+        description="Profit share out", actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    with entity_context(db_session, entity_id):
+        moved = set(db_session.scalars(select(PartnerLedgerEntry.movement_type)).all())
+    assert PartnerMovementType.PROFIT_SETTLEMENT in moved, "no settlement — the split never happened"
+    assert PartnerMovementType.PROFIT_PAID in moved, "no payment — the case that broke it"
+
+    subledger = partner_ledger.entity_capital_total_kurus(db_session, entity_id)
+    assert subledger == _capital_gl_balance(db_session, entity_id)
+
+
+def test_a_profit_payment_moves_both_sides_of_the_tie_together(
+    db_session, three_partner_setup
+) -> None:
+    """Narrower: the payment itself, before and after, one movement apart.
+
+    The test above would also pass if two unrelated errors cancelled. This
+    pins the actual claim — paying a partner reduces the subledger by exactly
+    what it reduces the account by.
+    """
+    entity_id = three_partner_setup["entity_id"]
+    partner_id = three_partner_setup["partner_ids"][0]
+    drawer = three_partner_setup["drawer"]
+
+    pa.post_profit_allocation(
+        db_session, entity_id,
+        allocation_date=date(2026, 6, 30), profit_kurus=1_000_000,
+        description="Profit", actor_id=ACTOR_ID,
+        netting_as_of=date(2026, 6, 30),
+    )
+    before_sub = partner_ledger.entity_capital_total_kurus(db_session, entity_id)
+    before_gl = _capital_gl_balance(db_session, entity_id)
+    assert before_sub == before_gl == 1_000_000
+
+    partner_posting.post_profit_paid(
+        db_session, entity_id, partner_id,
+        payment_date=date(2026, 7, 1), amount_kurus=300_000,
+        description="Paid out", actor_id=ACTOR_ID,
+        payment_account_id=drawer.gl_account_id,
+    )
+
+    assert _capital_gl_balance(db_session, entity_id) == 700_000
+    assert partner_ledger.entity_capital_total_kurus(db_session, entity_id) == 700_000

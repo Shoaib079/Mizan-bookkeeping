@@ -38,6 +38,26 @@ CAPITAL_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
     }
 )
 
+# The movements that actually reach GL 3300, and so the ones the control
+# account tie must sum. Narrower than CAPITAL_MOVEMENT_TYPES above, which is
+# the *category* a movement belongs to — a drawing is capital business but it
+# posts to owner drawings, and a profit settlement credits owner drawings too
+# (see `build_profit_allocation_lines`: only the residual `amount_kurus` is
+# credited to partner capital). Neither one touches 3300.
+#
+# This existed as a hand-written pair inside `entity_capital_total_kurus` that
+# listed the two credits and forgot the debit, so every profit payment made the
+# subledger look 220.000 ₺ richer than the account it is supposed to mirror.
+# Named and placed here because the answer is a property of the posting code,
+# not of whoever happens to be writing a query.
+CAPITAL_ACCOUNT_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
+    {
+        PartnerMovementType.CAPITAL_CONTRIBUTION,
+        PartnerMovementType.PROFIT_ALLOCATION,
+        PartnerMovementType.PROFIT_PAID,
+    }
+)
+
 LOAN_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
     {
         PartnerMovementType.PARTNER_LOAN_RECEIVED,

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import (
+    CAPITAL_ACCOUNT_MOVEMENT_TYPES,
     CAPITAL_MOVEMENT_TYPES,
     LOAN_MOVEMENT_TYPES,
     NET_BALANCE_MOVEMENT_TYPES,
@@ -446,22 +447,18 @@ def entity_reimbursement_total_kurus(session: Session, entity_id: uuid.UUID) -> 
 
 
 def entity_capital_total_kurus(session: Session, entity_id: uuid.UUID) -> int:
-    """Sum profit-allocation subledger for 3300 control-account tie."""
+    """Subledger side of the 3300 control-account tie.
+
+    Sums exactly the movements that post to partner capital — see
+    `CAPITAL_ACCOUNT_MOVEMENT_TYPES` for why that is three types and not the
+    six in `CAPITAL_MOVEMENT_TYPES`.
+    """
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
 
     with entity_context(session, entity_id):
         require_entity_context()
-        return _sum_balance(
-            session,
-            None,
-            frozenset(
-                {
-                    PartnerMovementType.PROFIT_ALLOCATION,
-                    PartnerMovementType.CAPITAL_CONTRIBUTION,
-                }
-            ),
-        )
+        return _sum_balance(session, None, CAPITAL_ACCOUNT_MOVEMENT_TYPES)
 
 
 def entity_total_balance_kurus(session: Session, entity_id: uuid.UUID) -> int:
