@@ -27,6 +27,42 @@ from app.db.session import SessionLocal
 from app.features.entities.models import Entity
 
 
+class SchemaBehindError(RuntimeError):
+    """The database is older than the code reading it."""
+
+
+def _require_current_schema(session) -> None:
+    """Fail with a sentence, not a stack trace.
+
+    A tool meant to be reached for when something looks wrong should not
+    answer a stale local database with sixty lines of SQLAlchemy. The first
+    real run of this hit exactly that: `column entities.address does not
+    exist`, because the branding migration had never been applied locally.
+
+    Checked by reading one row of the table every later query joins from, so
+    the failure happens here with an explanation rather than five checks in.
+    """
+    from sqlalchemy import select
+    from sqlalchemy.exc import ProgrammingError
+
+    from app.features.entities.models import Entity
+
+    try:
+        session.execute(select(Entity).limit(1)).first()
+    except ProgrammingError as exc:
+        session.rollback()
+        raise SchemaBehindError(
+            "This database is behind the code — a column the models expect is "
+            "missing.\n"
+            f"  {str(exc.orig).strip().splitlines()[0]}\n\n"
+            "Bring it up to date, then run this again:\n"
+            "  cd backend && .venv/bin/alembic upgrade head\n\n"
+            "Production migrates itself on deploy (render.yaml preDeployCommand "
+            "→ scripts/migrate_production.sh), so this is normally a local "
+            "database that has not caught up."
+        ) from exc
+
+
 def _format(entity_name: str, findings: list[Finding]) -> str:
     if not findings:
         return f"  {entity_name}: clean"
@@ -58,6 +94,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     session = SessionLocal()
+    try:
+        _require_current_schema(session)
+    except SchemaBehindError as exc:
+        print(str(exc), file=sys.stderr)
+        session.close()
+        return 3
+
     try:
         if args.entity:
             entity = session.get(Entity, uuid.UUID(args.entity))

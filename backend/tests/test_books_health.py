@@ -328,3 +328,36 @@ def test_the_cli_reports_without_touching_anything(db_session, books, capsys):
     assert "critical" in text
     assert "unbalanced_entry" in text
     assert "out by 1 kuruş" in text
+
+
+def test_a_stale_database_says_so_instead_of_stack_tracing():
+    """The first real run of this hit a local database missing a column and
+    answered with sixty lines of SQLAlchemy.
+
+    A tool reached for when something already looks wrong has to fail in a
+    sentence. The message names the missing column, the command that fixes
+    it, and where production stands — so it cannot be mistaken for the books
+    being broken.
+    """
+    from sqlalchemy.exc import ProgrammingError
+
+    from app.core.health.cli import SchemaBehindError, _require_current_schema
+
+    class Stale:
+        def execute(self, *_):
+            raise ProgrammingError(
+                "SELECT entities.address", {}, Exception(
+                    "column entities.address does not exist"
+                )
+            )
+
+        def rollback(self):
+            pass
+
+    with pytest.raises(SchemaBehindError) as caught:
+        _require_current_schema(Stale())
+
+    message = str(caught.value)
+    assert "behind the code" in message
+    assert "alembic upgrade head" in message
+    assert "entities.address" in message
