@@ -57,7 +57,10 @@ import {
   partnerLedgerFilterMatches,
   type PartnerLedgerFilter,
 } from "@/lib/partner-ledger-view";
-import { partnerLedgerRowActions } from "@/lib/subledger-actions";
+import {
+  actionsForOneOwnersRow,
+  useEntryActions,
+} from "@/lib/use-entry-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
 type LedgerEntry = {
@@ -150,6 +153,18 @@ export default function PartnerDetailPage() {
   const bands = useMemo(
     () => groupPartnerLedgerRows(filteredRows),
     [filteredRows],
+  );
+  // One request for the rows on screen, rather than a rule kept here that has
+  // to agree with the backend's.
+  const { rowActions } = useEntryActions(
+    entityId,
+    useMemo(
+      () =>
+        filteredRows
+          .map((entry) => entry.journal_entry_id)
+          .filter((id): id is string => Boolean(id)),
+      [filteredRows],
+    ),
   );
   const cashSummary = useMemo(
     () =>
@@ -295,10 +310,14 @@ export default function PartnerDetailPage() {
                       </tr>
                     )}
                     {band.rows.map((entry) => {
-                      const actions = partnerLedgerRowActions(
-                        entry.movement_type,
+                      // Asked, not decided here. The page used to key on
+                      // movement type, which does not always describe the
+                      // entry: a personal expense split writes a `drawing`
+                      // whose other leg this page knows nothing about.
+                      const actions = actionsForOneOwnersRow(
+                        rowActions(entry.journal_entry_id),
                       );
-                      const canAct = actions.canEdit || actions.canVoid;
+                      const canAct = actions.can_edit || actions.can_void;
                       return (
                         <DataTableRow
                           key={entry.id}
@@ -337,7 +356,7 @@ export default function PartnerDetailPage() {
                             {canAct && (
                               <SubledgerRowActions
                                 row={entry}
-                                showEdit={actions.canEdit}
+                                showEdit={actions.can_edit}
                                 onEdit={() =>
                                   setCorrectEntry({
                                     journal_entry_id: entry.journal_entry_id!,

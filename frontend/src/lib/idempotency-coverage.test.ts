@@ -33,6 +33,7 @@ const EXEMPT_PATH_FRAGMENTS = [
   "/detect-document-type",
   "/profit-allocation/preview",
   "/dishes/suggest-description",
+  "/entries/actions",
 ];
 
 function sourceFiles(dir: string): string[] {

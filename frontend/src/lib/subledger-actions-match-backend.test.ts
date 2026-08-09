@@ -58,7 +58,12 @@ function genericSets(): { correctable: Set<string>; voidSafe: Set<string> } {
 /** Each source's row in the capability table, as `[can_edit, can_void]`. */
 function tableVerdicts(): Map<string, [boolean, boolean]> {
   const source = read("entry_capabilities.py");
-  const table = source.slice(source.indexOf("CAPABILITIES: dict"));
+  // Bounded at the dict's closing brace. Without the end bound the final
+  // row's chunk ran on into the escape functions below it and picked up their
+  // `can_void=True`, reporting `opening_balance` as voidable — the same
+  // unbounded-match mistake as the version before this one, one line lower.
+  const start = source.indexOf("CAPABILITIES: dict");
+  const table = source.slice(start, source.indexOf("\n}", start) + 2);
   const verdicts = new Map<string, [boolean, boolean]>();
   // Split on the key rather than matching a closing paren. Rows are written
   // both multi-line and as one-liners, and a pattern anchored on `\n    ),`

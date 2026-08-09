@@ -29,6 +29,10 @@ SKIP_PATH_SUFFIXES = (
     "/detect-document-type",
     "/profit-allocation/preview",
     "/dishes/suggest-description",
+    # Asks which buttons a page may draw. Reads nothing, writes nothing, and a
+    # cached first answer would be actively wrong — the second ask is usually
+    # after a void, when the answer is meant to have changed.
+    "/entries/actions",
 )
 SKIP_EXACT_PATHS = frozenset({"/", "/health", "/health/ready"})
 

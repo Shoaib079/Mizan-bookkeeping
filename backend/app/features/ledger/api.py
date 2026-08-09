@@ -17,10 +17,13 @@ from app.core.auth.deps import member_read_guard, operations_write_guard, resolv
 from app.features.auth.models import User
 from app.features.ledger import service
 from app.features.ledger.schema import (
+    MAX_ACTIONS_BATCH,
     CorrectJournalEntryOut,
     CorrectJournalEntryRequest,
     JournalEntryListOut,
     JournalEntryOut,
+    LedgerEntryActionsBatchIn,
+    LedgerEntryActionsBatchOut,
     LedgerEntryActionsOut,
     LedgerEntryEditContextOut,
     VoidJournalEntryOut,
@@ -88,12 +91,55 @@ def get_entry_actions(
             kind=actions.edit.kind,
             context=actions.edit.context,
         )
+    return _actions_out(actions)
+
+
+def _actions_out(actions) -> LedgerEntryActionsOut:
+    edit = None
+    if actions.edit is not None:
+        edit = LedgerEntryEditContextOut(
+            kind=actions.edit.kind, context=actions.edit.context
+        )
     return LedgerEntryActionsOut(
         can_edit=actions.can_edit,
         can_void=actions.can_void,
         void_path=actions.void_path,
         edit=edit,
+        owner_count=actions.owner_count,
     )
+
+
+@router.post("/entries/actions", response_model=LedgerEntryActionsBatchOut)
+def get_entry_actions_batch(
+    entity_id: uuid.UUID,
+    payload: LedgerEntryActionsBatchIn,
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+) -> LedgerEntryActionsBatchOut:
+    """The same answer as the single route, for a page of rows.
+
+    A supplier or partner page lists fifty movements, each needing to know
+    whether it may be edited or voided. Fifty requests is not an option, and
+    putting the rule into each list endpoint would spread it back across the
+    six places this phase spent its time collapsing. One request, one rule.
+
+    A POST because the list of ids goes in the body — it reads and writes
+    nothing, which is why it joins the idempotency exempt list rather than
+    demanding a key for a question.
+
+    Entries that do not exist are simply absent from the reply. A page asks
+    about the rows it is showing; if one has gone, the honest answer is
+    nothing rather than an error that hides the other forty-nine.
+    """
+    out: dict[str, LedgerEntryActionsOut] = {}
+    for entry_id in payload.entry_ids[:MAX_ACTIONS_BATCH]:
+        try:
+            out[str(entry_id)] = _actions_out(
+                service.get_entry_actions(session, entity_id, entry_id)
+            )
+        except (LookupError, EntryNotFoundError):
+            continue
+    return LedgerEntryActionsBatchOut(actions=out)
 
 
 @router.post("/entries/{entry_id}/void", response_model=VoidJournalEntryOut)

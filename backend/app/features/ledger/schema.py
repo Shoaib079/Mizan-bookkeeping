@@ -107,3 +107,18 @@ class LedgerEntryActionsOut(BaseModel):
     #: Owners sharing this entry — see `LedgerEntryActions.owner_count`.
     #: A page showing one owner's row of several must not offer to void it.
     owner_count: int = 1
+
+
+#: One page of rows. Capped so a caller cannot ask about the whole ledger in
+#: one request — each id costs a subledger lookup.
+MAX_ACTIONS_BATCH = 200
+
+
+class LedgerEntryActionsBatchIn(BaseModel):
+    entry_ids: list[uuid.UUID]
+
+
+class LedgerEntryActionsBatchOut(BaseModel):
+    #: Keyed by entry id as a string, so it can be read straight from JSON.
+    #: Missing ids mean the entry is gone — see the route's docstring.
+    actions: dict[str, LedgerEntryActionsOut]
