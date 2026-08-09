@@ -78,13 +78,86 @@ def _format(entity_name: str, findings: list[Finding]) -> str:
     return "\n".join(lines)
 
 
+def _resolve_entity(session, given: str) -> tuple[uuid.UUID, str] | None:
+    """A restaurant by name or by id.
+
+    By name because that is how they are actually referred to — nobody holds
+    a UUID in their head, and asking for one turns a two-second question into
+    a database lookup first.
+    """
+    try:
+        entity = session.get(Entity, uuid.UUID(given))
+        return (entity.id, entity.name) if entity else None
+    except ValueError:
+        pass
+
+    matches = list(
+        session.scalars(select(Entity).where(Entity.name.ilike(f"%{given}%")))
+    )
+    if len(matches) == 1:
+        return (matches[0].id, matches[0].name)
+    if len(matches) > 1:
+        names = ", ".join(m.name for m in matches)
+        print(f"{given!r} matches several: {names}", file=sys.stderr)
+    return None
+
+
+def _money(kurus: int) -> str:
+    """Kuruş as lira, because the numbers here are read by a person."""
+    sign = "-" if kurus < 0 else ""
+    whole, frac = divmod(abs(kurus), 100)
+    return f"{sign}{whole:,}".replace(",", ".") + f",{frac:02d} ₺"
+
+
+def _print_explanation(session, entity: tuple[uuid.UUID, str], account_code: str) -> None:
+    """Both sides of a control-account tie, side by side.
+
+    A tie failure says two numbers differ. What is worth seeing is which
+    movements each side counts — that is what tells you whether the books
+    drifted or the check is measuring the wrong thing.
+    """
+    from app.core.health.books_health import explain_account
+
+    entity_id, name = entity
+    by_movement, by_source = explain_account(session, entity_id, account_code)
+
+    print(f"{name} — account {account_code}\n")
+
+    print("  Subledger, by movement type")
+    if not by_movement:
+        print("    (no partner ledger rows)")
+    for movement, total in by_movement:
+        print(f"    {movement:28} {_money(total):>18}")
+
+    print("\n  General ledger, by what posted it (credit positive)")
+    if not by_source:
+        print("    (nothing posted to this account)")
+    for source, total in by_source:
+        print(f"    {source:28} {_money(total):>18}")
+
+    print(
+        "\n  A movement type that appears above but is not counted by the tie "
+        "is the\n  usual answer: the check measuring something narrower than "
+        "the account."
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Read-only consistency checks over the books. Writes nothing."
     )
     parser.add_argument(
         "--entity",
-        help="One entity id. Default: every entity.",
+        help="One restaurant, by name or id. Default: every restaurant.",
+    )
+    parser.add_argument(
+        "--explain",
+        metavar="ACCOUNT_CODE",
+        help=(
+            "Instead of the report: break one control account down by "
+            "subledger movement type and by journal source, so a tie "
+            "mismatch can be read. Needs --entity. Example: --explain 3300"
+        ),
     )
     parser.add_argument(
         "--fail-on",
@@ -103,16 +176,23 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.entity:
-            entity = session.get(Entity, uuid.UUID(args.entity))
-            if entity is None:
-                print(f"no entity {args.entity}", file=sys.stderr)
+            resolved = _resolve_entity(session, args.entity)
+            if resolved is None:
+                print(f"no restaurant matching {args.entity!r}", file=sys.stderr)
                 return 2
-            entities = [(entity.id, entity.name)]
+            entities = [resolved]
         else:
             entities = [
                 (row.id, row.name)
                 for row in session.scalars(select(Entity).order_by(Entity.name))
             ]
+
+        if args.explain:
+            if not args.entity:
+                print("--explain needs --entity", file=sys.stderr)
+                return 2
+            _print_explanation(session, entities[0], args.explain)
+            return 0
 
         print(f"Books health — {len(entities)} restaurant(s)\n")
         worst_rank = len(SEVERITIES)

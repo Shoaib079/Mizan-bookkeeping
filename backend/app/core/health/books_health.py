@@ -453,6 +453,65 @@ CHECKS = (
 )
 
 
+def explain_account(
+    session: Session, entity_id: uuid.UUID, account_code: str
+) -> tuple[list[tuple[str, int]], list[tuple[str, int]]]:
+    """Both sides of one control-account tie, so a mismatch can be read.
+
+    Returns `(subledger by movement type, GL by journal source)`. A tie
+    failure says only that two numbers differ; the useful question is *which
+    movements one side counts and the other does not*, and that is a
+    breakdown, not a total.
+
+    Written because the first real run produced a tie mismatch of 220.000 TL
+    and the honest next step was neither "the books are broken" nor "the
+    check is broken" but "show me the movements".
+    """
+    from app.core.chart_of_accounts.models import Account
+    from app.core.ledger.models import JournalEntryLine
+    from app.core.partners.models import PartnerLedgerEntry
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        by_movement = [
+            (str(row[0].value if hasattr(row[0], "value") else row[0]), int(row[1] or 0))
+            for row in session.execute(
+                select(
+                    PartnerLedgerEntry.movement_type,
+                    func.sum(PartnerLedgerEntry.amount_kurus),
+                ).group_by(PartnerLedgerEntry.movement_type)
+            ).all()
+        ]
+
+        account_id = session.scalar(
+            select(Account.id).where(Account.code == account_code)
+        )
+        by_source: list[tuple[str, int]] = []
+        if account_id is not None:
+            for source, side, total in session.execute(
+                select(
+                    JournalEntry.source,
+                    JournalEntryLine.side,
+                    func.sum(JournalEntryLine.amount_kurus),
+                )
+                .join(JournalEntry, JournalEntry.id == JournalEntryLine.journal_entry_id)
+                .where(
+                    JournalEntryLine.account_id == account_id,
+                    JournalEntry.status == JournalEntryStatus.POSTED,
+                )
+                .group_by(JournalEntry.source, JournalEntryLine.side)
+            ).all():
+                name = source.value if hasattr(source, "value") else str(source)
+                signed = int(total or 0)
+                if side == AccountNormalBalance.DEBIT:
+                    signed = -signed
+                by_source.append((f"{name} ({side})", signed))
+
+    return sorted(by_movement, key=lambda r: -abs(r[1])), sorted(
+        by_source, key=lambda r: -abs(r[1])
+    )
+
+
 def order_findings(findings: list[Finding]) -> list[Finding]:
     """Worst first, then by check so a report is stable between runs.
 

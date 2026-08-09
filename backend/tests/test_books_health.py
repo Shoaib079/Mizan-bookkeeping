@@ -361,3 +361,34 @@ def test_a_stale_database_says_so_instead_of_stack_tracing():
     assert "behind the code" in message
     assert "alembic upgrade head" in message
     assert "entities.address" in message
+
+
+def test_money_is_formatted_the_way_it_is_read():
+    """The explain output is read by a person, so kuruş become lira."""
+    from app.core.health.cli import _money
+
+    assert _money(22_000_000) == "220.000,00 ₺"
+    assert _money(-4_000_000) == "-40.000,00 ₺"
+    assert _money(150_450) == "1.504,50 ₺"
+
+
+def test_a_restaurant_can_be_named_rather_than_uuided(db_session, restaurant_a):
+    """Nobody holds a UUID in their head."""
+    from app.core.health.cli import _resolve_entity
+
+    found = _resolve_entity(db_session, restaurant_a.name)
+    assert found is not None
+    assert found[0] == restaurant_a.id
+
+    assert _resolve_entity(db_session, "no such restaurant") is None
+
+
+def test_explaining_an_account_shows_both_sides(db_session, books):
+    """A tie failure says two numbers differ. What is worth seeing is which
+    movements each side counts — that is what separates drifted books from a
+    check measuring the wrong thing."""
+    from app.core.health.books_health import explain_account
+
+    by_movement, by_source = explain_account(db_session, books, "3300")
+    assert isinstance(by_movement, list)
+    assert isinstance(by_source, list)
