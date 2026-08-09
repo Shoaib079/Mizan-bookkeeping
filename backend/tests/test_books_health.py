@@ -26,11 +26,12 @@ from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
 from app.core.health.books_health import (
     CHECKS,
+    Finding,
     check_assumed_vat_posted,
     check_drafts_claiming_posted,
     check_future_dated_entries,
-    check_unbalanced_entries,
     run_books_health,
+    unbalanced_findings,
 )
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource
 from app.core.ledger.posting import PostingLine, prepare_journal_entry
@@ -175,26 +176,49 @@ def test_todays_entry_is_not_flagged(db_session, books):
 # --- 0.5 unbalanced entries ---------------------------------------------
 
 
-def test_an_unbalanced_entry_is_found(db_session, books):
-    """Posting cannot produce this, so it is written directly — the check
-    exists for whatever wrote to the ledger without going through posting."""
+def test_the_database_refuses_to_create_an_unbalanced_entry(db_session, books):
+    """Writing the fault is impossible, and that is the point worth pinning.
+
+    `journal_entry_lines` carries an immutability trigger — no UPDATE at all
+    — so an entry cannot be knocked out of balance after posting, and posting
+    refuses to write one unbalanced. This test exists because the first
+    version of the unbalanced test tried to create the state and was stopped
+    by the database. Two guards, both in code a migration can change; this
+    asserts one of them is still there.
+    """
+    from app.core.ledger.models import ImmutableJournalError
+
     entry_id = _post_entry(db_session, books, entry_date=date(2026, 7, 31))
-    assert check_unbalanced_entries(db_session, books) == []
-
-    with entity_context(db_session, books):
-        line = db_session.scalar(
-            select(JournalEntryLine).where(
-                JournalEntryLine.journal_entry_id == entry_id,
-                JournalEntryLine.side == AccountNormalBalance.CREDIT,
+    with pytest.raises(ImmutableJournalError):
+        with entity_context(db_session, books):
+            line = db_session.scalar(
+                select(JournalEntryLine).where(
+                    JournalEntryLine.journal_entry_id == entry_id,
+                    JournalEntryLine.side == AccountNormalBalance.CREDIT,
+                )
             )
-        )
-        line.amount_kurus += 1
-        db_session.commit()
+            line.amount_kurus += 1
+            db_session.flush()
+    db_session.rollback()
 
-    findings = check_unbalanced_entries(db_session, books)
+
+def test_the_unbalanced_arithmetic_finds_a_gap():
+    """The check's judgement, tested directly since the state cannot be built.
+
+    Separating it is not a workaround. It is the only way to prove the check
+    would fire if the two guards above were ever relaxed — which is the whole
+    reason to keep a backstop.
+    """
+    entry = uuid.uuid4()
+    findings = unbalanced_findings({entry: {"debit": 12_000, "credit": 11_999}})
     assert [f.check for f in findings] == ["unbalanced_entry"]
     assert findings[0].severity == "critical"
-    assert "out by -1" in findings[0].detail
+    assert "out by 1" in findings[0].detail
+    assert str(entry) in findings[0].subject
+
+
+def test_the_unbalanced_arithmetic_stays_quiet_when_it_balances():
+    assert unbalanced_findings({uuid.uuid4(): {"debit": 12_000, "credit": 12_000}}) == []
 
 
 # --- 0.6 assumed VAT ----------------------------------------------------
@@ -226,31 +250,22 @@ def test_an_invoice_whose_vat_was_read_is_not_flagged(db_session, books):
 # --- the report ---------------------------------------------------------
 
 
-def test_findings_are_ordered_worst_first(db_session, books):
-    """A long report has to lead with what matters or it will not be read."""
-    entry_id = _post_entry(db_session, books, entry_date=date(2026, 7, 31))
-    _draft(db_session, books, invoice_number="ORDER-1")
-    _draft(
-        db_session,
-        books,
-        invoice_number="ORDER-2",
-        extraction_payload={"raw": {"assumed_vat": True}},
-    )
-    with entity_context(db_session, books):
-        line = db_session.scalar(
-            select(JournalEntryLine).where(
-                JournalEntryLine.journal_entry_id == entry_id,
-                JournalEntryLine.side == AccountNormalBalance.CREDIT,
-            )
-        )
-        line.amount_kurus += 5
-        db_session.commit()
+def test_findings_are_ordered_worst_first():
+    """A long report has to lead with what matters, and be stable between
+    runs — the plan compares a report taken before a refactor with one taken
+    after, and ordering noise would make that comparison worthless."""
+    from app.core.health.books_health import order_findings
 
-    severities = [f.severity for f in run_books_health(db_session, books)]
-    assert severities == sorted(
-        severities, key=lambda s: ("critical", "high", "medium", "low").index(s)
-    )
-    assert severities[0] == "critical"
+    scrambled = [
+        Finding("assumed_vat_posted", "medium", "b", ""),
+        Finding("unbalanced_entry", "critical", "a", ""),
+        Finding("future_dated_entry", "high", "c", ""),
+        Finding("control_account_tie", "critical", "a", ""),
+    ]
+    ordered = order_findings(scrambled)
+    assert [f.severity for f in ordered] == ["critical", "critical", "high", "medium"]
+    # Ties broken by check name, so two runs over the same books agree.
+    assert [f.check for f in ordered][:2] == ["control_account_tie", "unbalanced_entry"]
 
 
 def test_the_checks_write_nothing(db_session, books):

@@ -276,14 +276,45 @@ def check_future_dated_entries(
 # --- 0.5 unbalanced entries ---------------------------------------------
 
 
+def unbalanced_findings(totals: dict[uuid.UUID, dict[str, int]]) -> list[Finding]:
+    """The arithmetic, separated from the query so it can be tested.
+
+    It has to be separated, because **the state this looks for cannot be
+    created through the database.** `journal_entry_lines` carries an
+    immutability trigger — no UPDATE at all — and posting refuses to write an
+    unbalanced entry in the first place. Trying to build the fault in a test
+    raises `ImmutableJournalError`, which is the database doing its job.
+
+    That is an argument for keeping the check, not dropping it. Two guards
+    stand between the books and an unbalanced entry, and both live in code a
+    migration can change. This one is the cheapest, and it is the only one
+    that would notice if the other two were ever relaxed.
+    """
+    findings: list[Finding] = []
+    for entry_id, sides in totals.items():
+        if sides["debit"] != sides["credit"]:
+            findings.append(
+                Finding(
+                    check="unbalanced_entry",
+                    severity="critical",
+                    subject=str(entry_id),
+                    detail=(
+                        f"debits {sides['debit']} vs credits {sides['credit']} "
+                        f"(out by {sides['debit'] - sides['credit']} kuruş)"
+                    ),
+                )
+            )
+    return findings
+
+
 def check_unbalanced_entries(session: Session, entity_id: uuid.UUID) -> list[Finding]:
     """Debits equal credits on every entry.
 
-    The one that must never happen. Posting enforces it, so a finding here
-    means something wrote to the ledger without going through the posting
-    boundary — which is rule 10, and worth stopping everything for.
+    The one that must never happen. Posting enforces it and the line table is
+    immutable, so a finding here means something reached the ledger without
+    going through the posting boundary — rule 10 — and is worth stopping
+    everything for.
     """
-    findings: list[Finding] = []
     # Grouped by (entry, side) and summed in Python rather than a conditional
     # sum in SQL: two short queries' worth of rows, and the arithmetic is
     # readable by anyone checking whether the check itself is right.
@@ -309,20 +340,7 @@ def check_unbalanced_entries(session: Session, entity_id: uuid.UUID) -> list[Fin
         key = "debit" if side == AccountNormalBalance.DEBIT else "credit"
         bucket[key] += int(total or 0)
 
-    for entry_id, sides in totals.items():
-        if sides["debit"] != sides["credit"]:
-            findings.append(
-                Finding(
-                    check="unbalanced_entry",
-                    severity="critical",
-                    subject=str(entry_id),
-                    detail=(
-                        f"debits {sides['debit']} vs credits {sides['credit']} "
-                        f"(out by {sides['debit'] - sides['credit']} kuruş)"
-                    ),
-                )
-            )
-    return findings
+    return unbalanced_findings(totals)
 
 
 # --- 0.6 posted invoices whose VAT was assumed --------------------------
@@ -435,6 +453,17 @@ CHECKS = (
 )
 
 
+def order_findings(findings: list[Finding]) -> list[Finding]:
+    """Worst first, then by check so a report is stable between runs.
+
+    Stability matters more than it looks: the plan calls for taking a report
+    before a refactor and after, and comparing them. Two runs that differ only
+    in ordering would make that comparison useless.
+    """
+    order = {name: i for i, name in enumerate(SEVERITIES)}
+    return sorted(findings, key=lambda f: (order.get(f.severity, 99), f.check))
+
+
 def run_books_health(session: Session, entity_id: uuid.UUID) -> list[Finding]:
     """Every check against one entity's books, worst first.
 
@@ -455,5 +484,4 @@ def run_books_health(session: Session, entity_id: uuid.UUID) -> list[Finding]:
                     detail=f"{type(exc).__name__}: {exc}",
                 )
             )
-    order = {name: i for i, name in enumerate(SEVERITIES)}
-    return sorted(findings, key=lambda f: (order.get(f.severity, 99), f.check))
+    return order_findings(findings)
