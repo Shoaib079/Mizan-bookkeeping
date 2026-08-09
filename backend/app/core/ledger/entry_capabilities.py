@@ -1,0 +1,579 @@
+"""One table saying what can be edited or voided, per journal source.
+
+Phase 2, step 1. **Nothing calls this yet.** It is built beside
+`resolve_ledger_entry_actions` and pinned to it by an equivalence test, so the
+old code is the specification and the test says the new code agrees. Only when
+that is green does the resolver switch over.
+
+Why a table at all: "can this be edited or voided" is currently decided in
+five places that must agree, and they agree by coincidence. Every reported
+void/edit bug over months has been two of those five disagreeing — a registry
+that said void-only against a resolver with no branch, a path built for a
+route that did not exist, an Edit button on a kind the UI could not open.
+There is no second opinion to drift from a single table.
+
+The shape of every answer is the same three steps, which is what makes a
+table possible:
+
+  1. find the subledger row that owns this entry (different model per source)
+  2. build the void path from that row's owner id
+  3. build the edit context from the row's fields
+
+Two sources genuinely cannot be expressed this way, and rather than bend the
+table into a shape the code does not have, they carry a `resolve` function and
+a written reason. `_ESCAPES_WITH_REASONS` keeps them visible so the exception
+does not quietly become the norm.
+"""
+
+from __future__ import annotations
+
+import uuid
+from dataclasses import dataclass
+from typing import Any, Callable
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.core.fx.models import FxLedgerEntry
+from app.core.ledger.models import JournalEntry, JournalEntrySource
+from app.core.partners.models import PartnerLedgerEntry
+from app.core.payables.models import SupplierLedgerEntry
+from app.core.receivables.models import CustomerLedgerEntry
+from app.core.staff.models import StaffLedgerEntry
+from app.features.delivery.models import DeliveryReport, DeliverySettlement
+from app.features.expenses.models import ExpenseEntry
+from app.features.invoices.models import InvoiceDraft as _InvoiceDraft
+from app.features.pos.models import CardSalesBatch, PosSettlement
+
+
+@dataclass(frozen=True, slots=True)
+class Owner:
+    """Where to find the subledger row that owns an entry, and its owner id.
+
+    `id_field` is the column naming who the row belongs to — the partner, the
+    supplier, the employee. It is what fills `{owner_id}` in a void path.
+    Some rows are their own owner (an expense voids at `expenses/{its own id}`),
+    which is `id_field="id"`.
+    """
+
+    model: type
+    id_field: str
+
+
+@dataclass(frozen=True, slots=True)
+class Capability:
+    """What the app may offer for one journal source.
+
+    `void_path` is a template over `{owner_id}` and `{entry_id}`. Written as a
+    template rather than an f-string so a scan can resolve every path against
+    the router without executing anything — the guard that already caught
+    three paths carrying a `payables/` segment no route had.
+    """
+
+    can_edit: bool
+    can_void: bool
+    owner: Owner | None = None
+    void_path: str | None = None
+    edit_kind: str | None = None
+    # (session, entry, row) -> the edit form's fields. Takes the session
+    # because one context (profit allocation) is computed from the entry's
+    # own lines against the chart, not read off a subledger row.
+    context: Callable[[Session, JournalEntry, Any], dict] | None = None
+    # A row that exists but is the wrong kind of thing. A supplier credit note
+    # posts with source INVOICE, and both correct and void reject it outright.
+    precondition: Callable[[Any], bool] | None = None
+    # The escape hatch. Set only for the two sources whose answer depends on
+    # which row is found, not on the source.
+    resolve: Callable[[Session, JournalEntry], Any] | None = None
+
+
+# --- edit contexts -------------------------------------------------------
+# One function per kind, lifted from the branch that used to build it inline.
+
+
+def _expense_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+    return {
+        "id": str(row.id),
+        "expense_date": row.expense_date.isoformat(),
+        "description": row.description,
+        "written_item_description": row.written_item_description,
+        "notes": row.notes,
+        "amount_kurus": row.amount_kurus,
+        "expense_account_id": str(row.expense_account_id),
+        "money_account_id": str(row.money_account_id),
+        "status": row.status.value,
+        "journal_entry_id": str(row.journal_entry_id),
+    }
+
+
+def _partner_ledger_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+    return {
+        "partner_id": str(row.partner_id),
+        "movement_type": row.movement_type.value,
+        "movement_date": row.movement_date.isoformat(),
+        "amount_kurus": row.amount_kurus,
+        "description": row.description,
+    }
+
+
+def _staff_ledger_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+    return {
+        "employee_id": str(row.employee_id),
+        "movement_type": row.movement_type.value,
+        "movement_date": row.movement_date.isoformat(),
+        "amount_minor": row.amount_minor,
+        "description": row.description,
+        "extra_days": row.extra_days,
+    }
+
+
+def _customer_payment_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+    return {
+        "customer_id": str(row.customer_id),
+        "movement_date": row.movement_date.isoformat(),
+        "amount_kurus": row.amount_kurus,
+        "description": row.description,
+        "payment_native_quantity": row.payment_native_quantity,
+        "forex_currency": row.forex_currency,
+    }
+
+
+def _supplier_row_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+    return {
+        "supplier_id": str(row.supplier_id),
+        "movement_date": row.movement_date.isoformat(),
+        "amount_kurus": row.amount_kurus,
+        "description": row.description,
+    }
+
+
+def _fx_purchase_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+    return {
+        "movement_date": row.movement_date.isoformat(),
+        "native_quantity": row.native_quantity,
+        "try_cost_kurus": row.try_cost_kurus,
+        "description": row.description,
+    }
+
+
+def _fx_ledger_context(_session: Session, entry: JournalEntry, row: Any) -> dict:
+    return {
+        "movement_date": row.movement_date.isoformat(),
+        "movement_type": row.movement_type.value,
+        "native_quantity": row.native_quantity,
+        "try_cost_kurus": row.try_cost_kurus,
+        "description": row.description,
+        "journal_source": entry.source.value,
+        "fx_money_account_id": str(row.fx_money_account_id),
+    }
+
+
+def _delivery_commission_context(
+    _session: Session, entry: JournalEntry, row: Any
+) -> dict:
+    return {
+        "draft_id": str(row.id),
+        "invoice_number": row.invoice_number,
+        "movement_date": row.invoice_date.isoformat(),
+        "net_kurus": row.net_kurus,
+        "gross_kurus": row.gross_kurus,
+        "description": entry.description,
+    }
+
+
+def _profit_allocation_context(
+    session: Session, entry: JournalEntry, _row: Any
+) -> dict:
+    """Read off the entry's own lines — there is no subledger row to read.
+
+    The allocated profit is whatever was debited to retained earnings, which
+    is why this one needs the session and the others do not.
+    """
+    from app.core.chart_of_accounts.default_chart import RETAINED_EARNINGS_CODE
+    from app.core.chart_of_accounts.models import Account
+    from app.core.chart_of_accounts.types import AccountNormalBalance
+
+    retained = session.scalar(
+        select(Account).where(Account.code == RETAINED_EARNINGS_CODE)
+    )
+    profit_kurus = 0
+    if retained is not None:
+        profit_kurus = sum(
+            line.amount_kurus
+            for line in entry.lines
+            if line.account_id == retained.id
+            and line.side == AccountNormalBalance.DEBIT
+        )
+    return {
+        "journal_entry_id": str(entry.id),
+        "allocation_date": entry.entry_date.isoformat(),
+        "description": entry.description,
+        "profit_kurus": profit_kurus,
+    }
+
+
+def _is_supplier_invoice(row: Any) -> bool:
+    """A credit note (iade) posts as INVOICE but is not one.
+
+    Both `correct_supplier_invoice` and `void_supplier_invoice` reject it, so
+    offering the invoice paths drew an Edit and a Void that answered "404
+    supplier invoice not found". No correction route exists for one yet, so
+    the honest answer is no buttons rather than two that fail.
+    """
+    from app.core.payables.models import SupplierMovementType
+
+    return row.movement_type == SupplierMovementType.INVOICE
+
+
+# --- the table -----------------------------------------------------------
+
+PARTNER = Owner(PartnerLedgerEntry, "partner_id")
+SUPPLIER = Owner(SupplierLedgerEntry, "supplier_id")
+PARTNER_VOID = "partners/{owner_id}/ledger/{entry_id}/void"
+
+# Two rules run *before* this table and are deliberately not restated in it,
+# because both are already defined as sets elsewhere and copying them here is
+# the exact mistake this whole phase is about:
+#
+#   is_generic_correctable(source)  -> edit + void, ledger/entries/{id}/void,
+#                                      kind `generic_ledger`
+#   _is_generic_void_safe(source)   -> void only, same path
+#
+# That is why TRANSFER, YEAR_END_CLOSE and CASH_DRAWER_CLOSE have no row below:
+# they are answered by the second rule and never reach the table.
+CAPABILITIES: dict[JournalEntrySource, Capability] = {
+    JournalEntrySource.EXPENSE_ENTRY: Capability(
+        can_edit=True,
+        can_void=True,
+        owner=Owner(ExpenseEntry, "id"),
+        void_path="expenses/{owner_id}/void",
+        edit_kind="expense",
+        context=_expense_context,
+    ),
+    # --- partner subledger: same row, same path, different verdicts -------
+    JournalEntrySource.PARTNER_EXPENSE_FRONTED: Capability(
+        can_edit=True, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+        edit_kind="partner_ledger", context=_partner_ledger_context,
+    ),
+    JournalEntrySource.PARTNER_REIMBURSEMENT_PAID: Capability(
+        can_edit=True, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+        edit_kind="partner_ledger", context=_partner_ledger_context,
+    ),
+    JournalEntrySource.PARTNER_DRAWING: Capability(
+        can_edit=True, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+        edit_kind="partner_ledger", context=_partner_ledger_context,
+    ),
+    JournalEntrySource.PARTNER_DRAWING_REPAYMENT: Capability(
+        can_edit=True, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+        edit_kind="partner_ledger", context=_partner_ledger_context,
+    ),
+    JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION: Capability(
+        can_edit=False, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+    ),
+    JournalEntrySource.PARTNER_LOAN_RECEIVED: Capability(
+        can_edit=False, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+    ),
+    JournalEntrySource.PARTNER_LOAN_REPAID: Capability(
+        can_edit=False, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+    ),
+    JournalEntrySource.PARTNER_PROFIT_PAID: Capability(
+        can_edit=False, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+    ),
+    JournalEntrySource.EXPENSE_PERSONAL_SPLIT: Capability(
+        can_edit=False, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+    ),
+    JournalEntrySource.PARTNER_PROFIT_ALLOCATION: Capability(
+        can_edit=True,
+        can_void=True,
+        void_path="partners/profit-allocation/{entry_id}/void",
+        edit_kind="partner_profit_allocation",
+        context=_profit_allocation_context,
+    ),
+    # --- staff -----------------------------------------------------------
+    JournalEntrySource.STAFF_ACCRUAL: Capability(
+        can_edit=True, can_void=True,
+        owner=Owner(StaffLedgerEntry, "employee_id"),
+        void_path="staff/employees/{owner_id}/ledger/{entry_id}/void",
+        edit_kind="staff_ledger", context=_staff_ledger_context,
+    ),
+    JournalEntrySource.STAFF_ADVANCE: Capability(
+        can_edit=True, can_void=True,
+        owner=Owner(StaffLedgerEntry, "employee_id"),
+        void_path="staff/employees/{owner_id}/ledger/{entry_id}/void",
+        edit_kind="staff_ledger", context=_staff_ledger_context,
+    ),
+    JournalEntrySource.STAFF_PAYMENT: Capability(
+        can_edit=True, can_void=True,
+        owner=Owner(StaffLedgerEntry, "employee_id"),
+        void_path="staff/employees/{owner_id}/ledger/{entry_id}/void",
+        edit_kind="staff_ledger", context=_staff_ledger_context,
+    ),
+    # --- customers and suppliers ------------------------------------------
+    JournalEntrySource.CUSTOMER_PAYMENT_RECEIVED: Capability(
+        can_edit=True, can_void=True,
+        owner=Owner(CustomerLedgerEntry, "customer_id"),
+        void_path="customers/{owner_id}/payments/{entry_id}/void",
+        edit_kind="customer_payment", context=_customer_payment_context,
+    ),
+    JournalEntrySource.PAYMENT: Capability(
+        can_edit=True, can_void=True, owner=SUPPLIER,
+        void_path="suppliers/{owner_id}/payments/{entry_id}/void",
+        edit_kind="supplier_payment", context=_supplier_row_context,
+    ),
+    JournalEntrySource.INVOICE: Capability(
+        can_edit=True, can_void=True, owner=SUPPLIER,
+        void_path="suppliers/{owner_id}/invoices/{entry_id}/void",
+        edit_kind="supplier_invoice", context=_supplier_row_context,
+        precondition=_is_supplier_invoice,
+    ),
+    JournalEntrySource.DELIVERY_COMMISSION: Capability(
+        can_edit=True,
+        can_void=True,
+        owner=Owner(_InvoiceDraft, "id"),
+        void_path="invoices/delivery-commission/{entry_id}/void",
+        edit_kind="delivery_commission",
+        context=_delivery_commission_context,
+    ),
+    # --- everything keyed on its own record -------------------------------
+    JournalEntrySource.FX_PURCHASE: Capability(
+        can_edit=True, can_void=True,
+        owner=Owner(FxLedgerEntry, "id"),
+        void_path="fx/purchases/{entry_id}/void",
+        edit_kind="fx_purchase", context=_fx_purchase_context,
+    ),
+    JournalEntrySource.FX_CONVERSION: Capability(
+        can_edit=True, can_void=True,
+        owner=Owner(FxLedgerEntry, "id"),
+        void_path="fx/ledger/{entry_id}/void",
+        edit_kind="fx_ledger", context=_fx_ledger_context,
+    ),
+    JournalEntrySource.FX_EXPENSE_SPEND: Capability(
+        can_edit=True, can_void=True,
+        owner=Owner(FxLedgerEntry, "id"),
+        void_path="fx/ledger/{entry_id}/void",
+        edit_kind="fx_ledger", context=_fx_ledger_context,
+    ),
+    JournalEntrySource.CARD_SALES: Capability(
+        can_edit=False, can_void=True,
+        owner=Owner(CardSalesBatch, "id"),
+        void_path="pos/card-sales/{owner_id}/void",
+    ),
+    JournalEntrySource.POS_SETTLEMENT: Capability(
+        can_edit=False, can_void=True,
+        owner=Owner(PosSettlement, "id"),
+        void_path="pos/settlements/{owner_id}/void",
+    ),
+    JournalEntrySource.DELIVERY_REPORT: Capability(
+        can_edit=False, can_void=True,
+        owner=Owner(DeliveryReport, "id"),
+        void_path="delivery/reports/{owner_id}/void",
+    ),
+    JournalEntrySource.DELIVERY_SETTLEMENT: Capability(
+        can_edit=False, can_void=True,
+        owner=Owner(DeliverySettlement, "id"),
+        void_path="delivery/settlements/{owner_id}/void",
+    ),
+    # --- voided from the ledger, never edited -----------------------------
+    # Only these two of VOID_AND_REENTER_SOURCES get a path. The rest offer
+    # nothing at all — which the first mechanical reading of the resolver got
+    # wrong, because it stopped at the enclosing `if` and never saw the inner
+    # one that singles these two out.
+    JournalEntrySource.RULE_AUTO: Capability(
+        can_edit=False, can_void=True, void_path="ledger/entries/{entry_id}/void",
+    ),
+    JournalEntrySource.SYSTEM: Capability(
+        can_edit=False, can_void=True, void_path="ledger/entries/{entry_id}/void",
+    ),
+    # --- offers nothing from the ledger, on purpose -----------------------
+    # These reach the resolver's final `return` today, 500 lines down, by
+    # exhausting every branch above. Written out here instead: a source that
+    # offers no buttons should say so, because "nothing" and "nobody
+    # classified this yet" look identical on screen and are entirely
+    # different problems.
+    #
+    # Each is corrected through the record that owns it rather than through
+    # the ledger — a cash movement or card tip through its POS daily summary,
+    # a credit card payment through the card, an opening balance through
+    # onboarding. Voiding half of one from the General ledger would leave the
+    # other half standing.
+    JournalEntrySource.CASH_MOVEMENT: Capability(can_edit=False, can_void=False),
+    JournalEntrySource.POS_CARD_TIP: Capability(can_edit=False, can_void=False),
+    JournalEntrySource.CREDIT_CARD_PAYMENT: Capability(can_edit=False, can_void=False),
+    JournalEntrySource.OPENING_BALANCE: Capability(can_edit=False, can_void=False),
+}
+
+
+# --- the two answers a table cannot give ---------------------------------
+
+
+def _group_sale_or_credit_sale(session: Session, entry: JournalEntry):
+    """One source, two answers, decided by whether the row names a group sale."""
+    from app.core.ledger.entry_actions import (
+        LedgerEntryActions,
+        LedgerEntryEditContext,
+    )
+
+    row = session.scalar(
+        select(CustomerLedgerEntry).where(
+            CustomerLedgerEntry.journal_entry_id == entry.id
+        )
+    )
+    if row is None:
+        return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+    if entry.source == JournalEntrySource.GROUP_SALE and row.reference_id is not None:
+        return LedgerEntryActions(
+            can_edit=True,
+            can_void=True,
+            void_path=f"group-sales/{row.reference_id}/void",
+            edit=LedgerEntryEditContext(
+                kind="group_sale",
+                context={"group_sale_id": str(row.reference_id)},
+            ),
+        )
+    return LedgerEntryActions(
+        can_edit=True,
+        can_void=True,
+        void_path=f"customers/{row.customer_id}/credit-sales/{entry.id}/void",
+        edit=LedgerEntryEditContext(
+            kind="customer_credit_sale",
+            context={
+                "customer_id": str(row.customer_id),
+                "movement_date": row.movement_date.isoformat(),
+                "amount_kurus": row.amount_kurus,
+                "description": row.description,
+            },
+        ),
+    )
+
+
+def _partner_supplier_paid(session: Session, entry: JournalEntry):
+    """Voids through the partner, unless there is no partner row to void through.
+
+    A personal-only AP clear has no partner subledger row — the money never
+    went through a partner's account — so it voids through the supplier
+    instead. Two owner models for one source, which is why it cannot be a row.
+    """
+    from app.core.ledger.entry_actions import LedgerEntryActions
+
+    partner_row = session.scalar(
+        select(PartnerLedgerEntry).where(
+            PartnerLedgerEntry.journal_entry_id == entry.id
+        )
+    )
+    if partner_row is not None:
+        return LedgerEntryActions(
+            can_edit=False,
+            can_void=True,
+            void_path=f"partners/{partner_row.partner_id}/ledger/{entry.id}/void",
+        )
+    supplier_row = session.scalar(
+        select(SupplierLedgerEntry).where(
+            SupplierLedgerEntry.journal_entry_id == entry.id
+        )
+    )
+    if supplier_row is None:
+        return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+    return LedgerEntryActions(
+        can_edit=False,
+        can_void=True,
+        void_path=f"suppliers/{supplier_row.supplier_id}/payments/{entry.id}/void",
+    )
+
+
+ESCAPES: dict[JournalEntrySource, Callable[[Session, JournalEntry], Any]] = {
+    JournalEntrySource.CUSTOMER_CREDIT_SALE: _group_sale_or_credit_sale,
+    JournalEntrySource.GROUP_SALE: _group_sale_or_credit_sale,
+    JournalEntrySource.PARTNER_SUPPLIER_PAID: _partner_supplier_paid,
+}
+
+
+def resolve_from_table(session: Session, entry: JournalEntry):
+    """The answer for a posted entry, from the table.
+
+    Deliberately mirrors the order of the resolver it will replace: the two
+    generic rules first, then the escapes, then the table. Order matters —
+    several sources appear in both a generic set and the table, and the first
+    match wins in the original, so it must win here.
+    """
+    from app.core.ledger.entry_actions import (
+        LedgerEntryActions,
+        LedgerEntryEditContext,
+        _generic_void_path,
+        _is_generic_void_safe,
+    )
+    from app.core.ledger.correction import is_generic_correctable
+
+    none_at_all = LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+    source = entry.source
+
+    if is_generic_correctable(source):
+        return LedgerEntryActions(
+            can_edit=True,
+            can_void=True,
+            void_path=_generic_void_path(entry.id),
+            edit=LedgerEntryEditContext(kind="generic_ledger", context={}),
+        )
+    if _is_generic_void_safe(source):
+        return LedgerEntryActions(
+            can_edit=False, can_void=True, void_path=_generic_void_path(entry.id)
+        )
+
+    escape = ESCAPES.get(source)
+    if escape is not None:
+        return escape(session, entry)
+
+    cap = CAPABILITIES.get(source)
+    if cap is None:
+        return none_at_all
+    if not cap.can_edit and not cap.can_void:
+        return none_at_all
+
+    row = None
+    if cap.owner is not None:
+        row = session.scalar(
+            select(cap.owner.model).where(
+                cap.owner.model.journal_entry_id == entry.id
+            )
+        )
+        # No owning record means the entry is not what its source claims, and
+        # every branch in the original agreed: offer nothing rather than a
+        # button that will not find its target.
+        if row is None:
+            return none_at_all
+        if cap.precondition is not None and not cap.precondition(row):
+            return none_at_all
+
+    void_path = None
+    if cap.void_path is not None:
+        owner_id = getattr(row, cap.owner.id_field) if cap.owner else None
+        void_path = cap.void_path.format(owner_id=owner_id, entry_id=entry.id)
+
+    edit = None
+    if cap.edit_kind is not None and cap.context is not None:
+        edit = LedgerEntryEditContext(
+            kind=cap.edit_kind, context=cap.context(session, entry, row)
+        )
+
+    return LedgerEntryActions(
+        can_edit=cap.can_edit,
+        can_void=cap.can_void,
+        void_path=void_path,
+        edit=edit,
+    )
+
+
+_ESCAPES_WITH_REASONS: dict[JournalEntrySource, str] = {
+    JournalEntrySource.CUSTOMER_CREDIT_SALE: (
+        "a group sale carrying a reference_id voids at group-sales/{id}/void "
+        "and edits as `group_sale`; without one — and for every plain credit "
+        "sale — it is customers/{customer_id}/credit-sales/{entry_id}/void "
+        "and `customer_credit_sale`. Two answers from one source, decided by "
+        "the row."
+    ),
+    JournalEntrySource.GROUP_SALE: "same row, same fork — see CUSTOMER_CREDIT_SALE",
+    JournalEntrySource.PARTNER_SUPPLIER_PAID: (
+        "voids through the partner subledger when a partner row exists; a "
+        "personal-only AP clear has none and voids through the supplier "
+        "instead. Two different owner models for one source."
+    ),
+}
