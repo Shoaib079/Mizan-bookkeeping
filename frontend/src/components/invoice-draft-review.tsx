@@ -8,6 +8,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { InvoiceDocumentPreview } from "@/components/invoice-document-preview";
+import { GlEntryActions } from "@/components/ledger/gl-entry-actions";
 import { Combobox } from "@/components/ui/combobox";
 import { Input, Label, Select } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -544,12 +545,31 @@ export function InvoiceDraftReview({
           <p className="text-sm text-muted-foreground">
             This invoice is booked in the general ledger.
           </p>
-          <Link
-            href={journalEntryLedgerHref(draft.journal_entry_id)}
-            className="mt-2 inline-block text-sm text-primary hover:underline"
-          >
-            View journal entry
-          </Link>
+          {/* Edit and Void here, not only in the ledger and on the supplier.
+              This screen was where you came to look at a posted invoice and
+              the one place that could not act on it — a read-only page with a
+              link, so correcting a wrong figure meant finding the same
+              invoice again somewhere else. Same component the ledger uses, so
+              the actions cannot drift apart. */}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <GlEntryActions
+              row={{
+                id: draft.journal_entry_id,
+                entry_date: draft.invoice_date,
+                description: `Invoice ${draft.invoice_number}`,
+                source: isCommission ? "delivery_commission" : "invoice",
+                status: "posted",
+              }}
+              onGenericEdit={() => undefined}
+              onSaved={() => onUpdated?.("updated")}
+            />
+            <Link
+              href={journalEntryLedgerHref(draft.journal_entry_id)}
+              className="text-sm text-primary hover:underline"
+            >
+              View journal entry
+            </Link>
+          </div>
         </div>
       )}
 
