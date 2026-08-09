@@ -560,6 +560,43 @@ def record_profit_paid(
     )
 
 
+def _assert_source_is_correctable(session: Session, journal_entry_id: uuid.UUID) -> None:
+    """Refuse to correct a partner row whose entry has a second leg.
+
+    `_build_partner_correction_lines` decides what to repost from the row's
+    **movement type** alone, and three kinds of row have a movement type that
+    does not describe their entry:
+
+      - a partner-paid supplier invoice writes `expense_fronted` under source
+        `partner_supplier_paid`
+      - a personal expense split writes `drawing` under `expense_personal_split`
+      - so does a personal supplier-payment split
+
+    Each of those entries has another leg — the expense, or the supplier
+    payment — that the correction knows nothing about. Reposting from the
+    movement type alone rebuilt them as a plain drawing or a plain fronted
+    expense and dropped the other half. Nothing failed; the split simply
+    stopped being a split.
+
+    The judgement lives in the capability table, which is where "can this
+    source be edited" is already decided, rather than in a fourth hand-written
+    list that would have to be kept in step with the other three.
+    """
+    from app.core.ledger.entry_capabilities import CAPABILITIES
+    from app.core.ledger.models import JournalEntry
+
+    entry = session.get(JournalEntry, journal_entry_id)
+    if entry is None:
+        raise CorrectionNotFoundError("journal entry not found")
+
+    capability = CAPABILITIES.get(entry.source)
+    if capability is not None and not capability.can_edit:
+        raise CorrectionNotFoundError(
+            f"a {entry.source.value} entry cannot be corrected in place — it "
+            "has another leg this route would drop. Void it and re-enter."
+        )
+
+
 def _build_partner_correction_lines(
     session: Session,
     entity_id: uuid.UUID,
@@ -675,6 +712,7 @@ def correct_partner_journal_entry_http(
         )
         if partner_row is None:
             raise CorrectionNotFoundError("partner ledger entry not found for journal entry")
+        _assert_source_is_correctable(session, journal_entry_id)
         lines, amount_kurus = _build_partner_correction_lines(
             session, entity_id, partner_row, payload
         )

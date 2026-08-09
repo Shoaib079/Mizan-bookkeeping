@@ -104,3 +104,6 @@ class LedgerEntryActionsOut(BaseModel):
     can_void: bool
     void_path: str | None = None
     edit: LedgerEntryEditContextOut | None = None
+    #: Owners sharing this entry — see `LedgerEntryActions.owner_count`.
+    #: A page showing one owner's row of several must not offer to void it.
+    owner_count: int = 1

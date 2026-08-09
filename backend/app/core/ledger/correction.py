@@ -1346,13 +1346,33 @@ def correct_staff_journal_entry(
 ) -> SubledgerCorrectionResult:
     with entity_context(session, entity_id):
         require_entity_context()
-        staff_row = session.scalar(
-            select(StaffLedgerEntry).where(
-                StaffLedgerEntry.journal_entry_id == journal_entry_id
+        staff_rows = list(
+            session.scalars(
+                select(StaffLedgerEntry).where(
+                    StaffLedgerEntry.journal_entry_id == journal_entry_id
+                )
             )
         )
-        if staff_row is None:
+        if not staff_rows:
             raise CorrectionNotFoundError("staff ledger entry not found for journal entry")
+        if len(staff_rows) > 1:
+            # This function reposts exactly one row. A salary payment that
+            # consumed an advance writes two — the payment and the offset —
+            # and a period payment writes three. Correcting one of those kept
+            # whichever row the query happened to return first and dropped the
+            # rest, leaving the employee's advance balance wrong with nothing
+            # on screen to say so. `scalar` did not even promise which row
+            # survived.
+            #
+            # Refusing is the honest answer until this can rebuild every leg.
+            # Voiding still works and is correct: it reverses the whole entry,
+            # and every row of a staff entry belongs to the same employee.
+            raise CorrectionNotFoundError(
+                f"this entry has {len(staff_rows)} staff ledger rows — "
+                "correcting it would rebuild one and drop the others. Void it "
+                "and re-enter."
+            )
+        staff_row = staff_rows[0]
 
         fx_row = session.scalar(
             select(FxLedgerEntry).where(FxLedgerEntry.journal_entry_id == journal_entry_id)

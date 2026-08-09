@@ -27,6 +27,19 @@ class LedgerEntryActions:
     can_void: bool
     void_path: str | None
     edit: LedgerEntryEditContext | None = None
+    #: How many *owners* the entry's subledger rows belong to.
+    #
+    #: One for almost everything. A profit allocation writes a row per partner
+    #: against a single journal entry, so this is the partner count — and a
+    #: screen showing one partner's row must not offer to void it, because
+    #: voiding reverses every partner's share. The General ledger shows the
+    #: entry itself and is free to.
+    #:
+    #: Distinct owners, not row count: a salary payment that consumed an
+    #: advance also writes two rows, but both belong to the same employee, so
+    #: voiding it from that employee's page affects nobody else. Counting rows
+    #: would have hidden a button that works.
+    owner_count: int = 1
 
 
 def _generic_void_path(entry_id: uuid.UUID) -> str:

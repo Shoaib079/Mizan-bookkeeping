@@ -82,6 +82,32 @@ class Capability:
     # A row that exists but is the wrong kind of thing. A supplier credit note
     # posts with source INVOICE, and both correct and void reject it outright.
     precondition: Callable[[Any], bool] | None = None
+    # Correcting this source rewrites a single subledger row, so an entry that
+    # owns several cannot be corrected without losing one.
+    #
+    # `correct_staff_journal_entry` reads one row with `session.scalar` and
+    # reposts one row. A salary payment that consumed an advance writes two —
+    # SALARY_PAYMENT and ADVANCE_APPLIED — and a period payment writes three.
+    # Correcting one of those drops the others, and `scalar` does not promise
+    # which row it hands back, so it might keep the offset and drop the
+    # payment. The employee's advance balance is wrong afterwards and nothing
+    # says so.
+    #
+    # The staff *page* has always refused this. The General ledger offered it,
+    # because the resolver answered from the source alone. Voiding stays
+    # available: it reverses the whole entry, which is right — every row of a
+    # staff payment belongs to the same employee.
+    edit_needs_a_sole_row: bool = False
+    # Where to count owners, when that is not where the row comes from.
+    #
+    # A profit allocation needs no `owner`: its void path is keyed on the
+    # entry and its edit context is read off the entry's own lines. But it is
+    # the one source that spans several owners, which is exactly what a
+    # partner page needs to know. Kept as its own field rather than giving the
+    # capability an `owner` it does not use, because `owner` also decides
+    # "return nothing when the row is missing" — and an allocation should not
+    # start depending on that.
+    counts_owners: Owner | None = None
     # The escape hatch. Set only for the two sources whose answer depends on
     # which row is found, not on the source.
     resolve: Callable[[Session, JournalEntry], Any] | None = None
@@ -288,6 +314,10 @@ CAPABILITIES: dict[JournalEntrySource, Capability] = {
         void_path="partners/profit-allocation/{entry_id}/void",
         edit_kind="partner_profit_allocation",
         context=_profit_allocation_context,
+        # The only source that spans several owners: one row per partner
+        # against a single entry. A partner page showing one of those rows
+        # must not offer to void it — that reverses everyone's share.
+        counts_owners=PARTNER,
     ),
     # --- staff -----------------------------------------------------------
     JournalEntrySource.STAFF_ACCRUAL: Capability(
@@ -295,18 +325,21 @@ CAPABILITIES: dict[JournalEntrySource, Capability] = {
         owner=Owner(StaffLedgerEntry, "employee_id"),
         void_path="staff/employees/{owner_id}/ledger/{entry_id}/void",
         edit_kind="staff_ledger", context=_staff_ledger_context,
+        edit_needs_a_sole_row=True,
     ),
     JournalEntrySource.STAFF_ADVANCE: Capability(
         can_edit=True, can_void=True,
         owner=Owner(StaffLedgerEntry, "employee_id"),
         void_path="staff/employees/{owner_id}/ledger/{entry_id}/void",
         edit_kind="staff_ledger", context=_staff_ledger_context,
+        edit_needs_a_sole_row=True,
     ),
     JournalEntrySource.STAFF_PAYMENT: Capability(
         can_edit=True, can_void=True,
         owner=Owner(StaffLedgerEntry, "employee_id"),
         void_path="staff/employees/{owner_id}/ledger/{entry_id}/void",
         edit_kind="staff_ledger", context=_staff_ledger_context,
+        edit_needs_a_sole_row=True,
     ),
     # --- customers and suppliers ------------------------------------------
     JournalEntrySource.CUSTOMER_PAYMENT_RECEIVED: Capability(
@@ -562,19 +595,47 @@ def resolve_from_table(session: Session, entry: JournalEntry):
         return none_at_all
 
     row = None
+    rows: list[Any] = []
+    owner_count = 1
     if cap.owner is not None:
-        row = session.scalar(
-            select(cap.owner.model).where(
-                cap.owner.model.journal_entry_id == entry.id
+        # All of them, not the first. Two facts come out of this one query and
+        # both were previously invisible: how many rows an entry owns, and how
+        # many *owners* those rows belong to. They are different questions and
+        # the difference decides two separate things.
+        rows = list(
+            session.scalars(
+                select(cap.owner.model).where(
+                    cap.owner.model.journal_entry_id == entry.id
+                )
             )
         )
         # No owning record means the entry is not what its source claims, and
         # every branch in the original agreed: offer nothing rather than a
         # button that will not find its target.
-        if row is None:
+        if not rows:
             return none_at_all
+        row = rows[0]
         if cap.precondition is not None and not cap.precondition(row):
             return none_at_all
+        owner_count = len({getattr(r, cap.owner.id_field) for r in rows})
+
+    if cap.counts_owners is not None:
+        counter = cap.counts_owners
+        owner_count = len(
+            {
+                owner_id
+                for (owner_id,) in session.execute(
+                    select(getattr(counter.model, counter.id_field)).where(
+                        counter.model.journal_entry_id == entry.id
+                    )
+                )
+            }
+        ) or 1
+
+    can_edit = cap.can_edit
+    if cap.edit_needs_a_sole_row and len(rows) > 1:
+        # Correcting would rewrite one row and lose the rest.
+        can_edit = False
 
     void_path = None
     if cap.void_path is not None:
@@ -582,16 +643,17 @@ def resolve_from_table(session: Session, entry: JournalEntry):
         void_path = cap.void_path.format(owner_id=owner_id, entry_id=entry.id)
 
     edit = None
-    if cap.edit_kind is not None and cap.context is not None:
+    if can_edit and cap.edit_kind is not None and cap.context is not None:
         edit = LedgerEntryEditContext(
             kind=cap.edit_kind, context=cap.context(session, entry, row)
         )
 
     return LedgerEntryActions(
-        can_edit=cap.can_edit,
+        can_edit=can_edit,
         can_void=cap.can_void,
         void_path=void_path,
         edit=edit,
+        owner_count=owner_count,
     )
 
 
