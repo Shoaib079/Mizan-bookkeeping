@@ -37,17 +37,43 @@ describe("ExpenseReviewFilter", () => {
 });
 
 describe("buildExpensesReviewListQuery", () => {
-  it("includes date range and pagination", () => {
+  it("does not narrow a list that contains outstanding work", () => {
+    // Reversed from the original assertion, deliberately. "all" includes
+    // expenses still waiting to be reviewed, and the badge that counts them
+    // ignores dates — so a range here means the tab can say 3 while the list
+    // shows none, and the date picker looks like the answer when it never is.
     const query = buildExpensesReviewListQuery({
       from: "2026-07-01",
       to: "2026-07-31",
       offset: 0,
       filter: "all",
     });
-    expect(query).toContain("from=2026-07-01");
-    expect(query).toContain("to=2026-07-31");
+    expect(query).not.toContain("from=");
+    expect(query).not.toContain("to=");
     expect(query).toContain("limit=50");
     expect(query).toContain("offset=0");
+  });
+
+  it("still narrows a settled list, where a period is the whole point", () => {
+    const query = buildExpensesReviewListQuery({
+      from: "2026-07-01",
+      to: "2026-07-31",
+      offset: 0,
+      filter: "posted",
+    });
+    expect(query).toContain("from=2026-07-01");
+    expect(query).toContain("to=2026-07-31");
+  });
+
+  it("does not narrow the review queue itself", () => {
+    const query = buildExpensesReviewListQuery({
+      from: "2026-07-01",
+      to: "2026-07-31",
+      offset: 0,
+      filter: "needs_review",
+    });
+    expect(query).not.toContain("from=");
+    expect(query).toContain("status=needs_review");
   });
 
   it("adds status and expense_item_id when set", () => {

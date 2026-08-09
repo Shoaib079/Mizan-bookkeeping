@@ -10,6 +10,23 @@ export const SALES_PAGE_SIZE = 50;
 
 export type SalesReviewFilter = "all" | "pending" | "posted";
 
+/** Does this view honour the date range in the toolbar?
+ *
+ * Only settled ones. A view that includes work still waiting cannot be
+ * narrowed by date, because the badge that sent you there counts by status
+ * and ignores dates entirely — so the two disagree, the list looks empty,
+ * and the date picker is the first thing anyone reaches for and never the
+ * reason. A daily sales entry dated outside the current month was simply
+ * invisible while the tab said there was one.
+ *
+ * `all` sits with the queues, not with `posted`: it contains outstanding
+ * work, and outstanding work must never be hidden by a date default nobody
+ * chose.
+ */
+export function salesFilterUsesRange(filter: SalesReviewFilter): boolean {
+  return filter === "posted";
+}
+
 export const SALES_REVIEW_FILTERS: { id: SalesReviewFilter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "pending", label: "Needs review" },
@@ -69,11 +86,13 @@ export function useSalesReviewUrl(defaultFilter: SalesReviewFilter = "all") {
 
   const listQuery = useMemo(() => {
     const params = new URLSearchParams({
-      from,
-      to,
       limit: String(SALES_PAGE_SIZE),
       offset: String(offset),
     });
+    if (salesFilterUsesRange(review)) {
+      params.set("from", from);
+      params.set("to", to);
+    }
     if (review !== "all") params.set("review", review);
     return params.toString();
   }, [from, offset, review, to]);

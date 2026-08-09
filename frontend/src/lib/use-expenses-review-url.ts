@@ -38,6 +38,17 @@ export function reviewExpensesFilteredHref(
   return `${REVIEW_EXPENSES_HREF}?${params.toString()}`;
 }
 
+/** Does this view honour the date range in the toolbar?
+ *
+ * Only settled ones — see `salesFilterUsesRange` for the same rule and the
+ * same reason. `needs_review` is the queue the badge counts, and the badge
+ * counts by status across all dates; narrowing the list by a month nobody
+ * chose is how an expense can be outstanding and invisible at once.
+ */
+export function expenseFilterUsesRange(filter: ExpenseReviewFilter): boolean {
+  return filter === "posted" || filter === "voided";
+}
+
 export function buildExpensesReviewListQuery(params: {
   from: string;
   to: string;
@@ -46,11 +57,13 @@ export function buildExpensesReviewListQuery(params: {
   expenseItemId?: string | null;
 }): string {
   const search = new URLSearchParams({
-    from: params.from,
-    to: params.to,
     limit: String(EXPENSE_REVIEW_PAGE_SIZE),
     offset: String(params.offset),
   });
+  if (expenseFilterUsesRange(params.filter)) {
+    search.set("from", params.from);
+    search.set("to", params.to);
+  }
   if (params.filter !== "all") search.set("status", params.filter);
   if (params.expenseItemId) search.set("expense_item_id", params.expenseItemId);
   return search.toString();

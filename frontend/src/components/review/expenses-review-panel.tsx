@@ -37,6 +37,7 @@ import { REVIEW_TAB_HREFS } from "@/lib/review-routes";
 import {
   EXPENSE_REVIEW_FILTERS,
   EXPENSE_REVIEW_VIEWS,
+  expenseFilterUsesRange,
   useExpensesReviewUrl,
 } from "@/lib/use-expenses-review-url";
 import { cn } from "@/lib/utils";
@@ -144,8 +145,11 @@ export function ExpensesReviewPanel() {
   const periodTotalLabel = useMemo(() => {
     if (view === "items") return "Posted total";
     if (expenseItemId) return "Item total";
-    return "Period total";
-  }, [expenseItemId, view]);
+    // "Period total" over a list that spans every date is a wrong label, and
+    // a wrong label on a money figure is worse than a missing one — it tells
+    // you the number means something narrower than it does.
+    return expenseFilterUsesRange(filter) ? "Period total" : "Total";
+  }, [expenseItemId, filter, view]);
 
   if (!entityId) {
     return (
@@ -178,12 +182,19 @@ export function ExpensesReviewPanel() {
 
       <div className="mb-4 space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <ReportDateRange
-            from={from}
-            to={to}
-            disabled={loading && view === "expenses"}
-            onChange={setRange}
-          />
+          {/* Shown only where it applies — see `expenseFilterUsesRange`. The
+              queues ignore the range, and a picker that changes nothing is
+              the first thing reached for when a row seems missing. */}
+          {expenseFilterUsesRange(filter) ? (
+            <ReportDateRange
+              from={from}
+              to={to}
+              disabled={loading && view === "expenses"}
+              onChange={setRange}
+            />
+          ) : (
+            <div />
+          )}
           <div className="text-right">
             <p className="text-xs text-muted-foreground">{periodTotalLabel}</p>
             <p className="text-2xl font-semibold tabular-nums tracking-tight">

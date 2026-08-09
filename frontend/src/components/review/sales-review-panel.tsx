@@ -37,6 +37,7 @@ import { isPendingReviewStatus } from "@/lib/review-status";
 import { createEntitySwitchTracker } from "@/lib/use-entity-reset";
 import {
   SALES_REVIEW_FILTERS,
+  salesFilterUsesRange,
   useSalesReviewUrl,
   type SalesReviewFilter,
 } from "@/lib/use-sales-review-url";
@@ -197,12 +198,17 @@ export function SalesReviewPanel({
         </>
       }
       toolbar={
-        <ReportDateRange
-          from={from}
-          to={to}
-          disabled={loading || exporting}
-          onChange={setRange}
-        />
+        // Shown only where it applies. The queues ignore the range now, and a
+        // date picker that changes nothing is worse than none — it looks like
+        // the answer when a row seems missing, and it is never the reason.
+        salesFilterUsesRange(review) ? (
+          <ReportDateRange
+            from={from}
+            to={to}
+            disabled={loading || exporting}
+            onChange={setRange}
+          />
+        ) : undefined
       }
       filters={
         <FilterChips
