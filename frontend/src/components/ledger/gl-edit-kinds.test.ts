@@ -18,6 +18,11 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+/** The kinds moved out of `entry_actions.py` when its 46 branches became a
+ * table. Two forms live here now: `edit_kind="…"` on a table row, and
+ * `kind="…"` inside the two escape functions whose answer depends on the row.
+ * Both are matched below — reading only one would silently stop covering the
+ * other. */
 const BACKEND = join(
   process.cwd(),
   "..",
@@ -25,7 +30,7 @@ const BACKEND = join(
   "app",
   "core",
   "ledger",
-  "entry_actions.py",
+  "entry_capabilities.py",
 );
 const HANDLER = join(
   process.cwd(),
@@ -51,7 +56,11 @@ const KNOWN_UNWIRED: Record<string, string> = {
 
 function backendKinds(): string[] {
   const source = readFileSync(BACKEND, "utf8");
-  return [...source.matchAll(/kind="([a-z_]+)"/g)].map((m) => m[1]).sort();
+  return [
+    ...new Set(
+      [...source.matchAll(/(?:edit_)?kind="([a-z_]+)"/g)].map((m) => m[1]),
+    ),
+  ].sort();
 }
 
 function handledKinds(): string[] {

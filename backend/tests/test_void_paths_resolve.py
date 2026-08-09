@@ -26,20 +26,31 @@ CLIENT_PREFIX = "/entities/{entity_id}/"
 
 
 def _void_path_templates() -> set[str]:
-    """The literal `void_path=` strings in entry_actions.py.
+    """Every `void_path=` string in the capability table.
 
-    Read from source rather than by calling the resolver: reaching every arm
-    would need a posted entry of all twenty-odd sources, and the failure being
+    Read from source rather than by calling the resolver: reaching every row
+    would need a posted entry of all thirty-odd sources, and the failure being
     guarded against is a typo in a template, which the source shows directly.
+
+    These moved out of `entry_actions.py` when its 46 branches became a table.
+    Both forms are picked up by the same pattern — `void_path="…"` on a table
+    row, and the `void_path=f"…"` inside the two escape functions whose answer
+    depends on which row is found.
     """
     from pathlib import Path
 
     source = Path(__file__).resolve().parents[1].joinpath(
-        "app", "core", "ledger", "entry_actions.py"
+        "app", "core", "ledger", "entry_capabilities.py"
     ).read_text(encoding="utf-8")
     paths = set(re.findall(r'void_path=\(?\s*\n?\s*f?"([^"]+)"', source))
-    # `_generic_void_path` builds its own; include what it returns.
-    paths.update(re.findall(r'return f"([^"]*/void)"', source))
+    # `{owner_id}` needs no special handling: `_normalise` blanks every
+    # placeholder name on both sides, which is why renaming them from
+    # `{row.partner_id}` to `{owner_id}` changed nothing here.
+    # `_generic_void_path` still builds its own in entry_actions.py.
+    actions = Path(__file__).resolve().parents[1].joinpath(
+        "app", "core", "ledger", "entry_actions.py"
+    ).read_text(encoding="utf-8")
+    paths.update(re.findall(r'return f"([^"]*/void)"', actions))
     return paths
 
 
@@ -76,7 +87,7 @@ def test_the_scan_finds_both_sides() -> None:
     templates = _void_path_templates()
     routes = _registered_void_routes()
     assert len(templates) >= 15, (
-        f"only {len(templates)} void_path templates found in entry_actions.py "
+        f"only {len(templates)} void_path templates found in entry_capabilities.py "
         "— the scan is looking in the wrong place or the format changed"
     )
     assert len(routes) >= 15, (
