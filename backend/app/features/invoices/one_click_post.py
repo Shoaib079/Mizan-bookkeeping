@@ -62,9 +62,36 @@ def is_future_dated(invoice_date: date, *, today: date | None = None) -> bool:
     return invoice_date > (today or date.today())
 
 
+def vat_was_assumed(draft: InvoiceDraft) -> bool:
+    """Was the VAT on this invoice read off the document, or worked out?
+
+    When the reader finds no VAT breakdown it invents one: a single 20% line
+    for whatever is left between net and gross. Usually right. On a telecom
+    invoice it is not — part of that gap is ÖİV, which is not reclaimable, and
+    the assumption claims it as input KDV anyway.
+
+    An owner looking at the preview is told this and can decide. Auto-post has
+    no one looking, so it must not take the guess.
+    """
+    payload = draft.extraction_payload or {}
+    raw = payload.get("raw")
+    if not isinstance(raw, dict):
+        return False
+    return bool(raw.get("assumed_vat") or raw.get("net_adjusted"))
+
+
 def _common_gates(draft: InvoiceDraft, classification_confidence: str) -> bool:
     """Shared gates for both supplier and commission one-click post."""
     if _is_vision_extraction(draft):
+        return False
+
+    # Stated directly, though today it is also caught by the confidence gate
+    # below — an assumed VAT sets `classification_confidence` to "low" at
+    # intake. That is an accident of one code path, not a rule: nothing says
+    # confidence must stay low for a guessed tax, and the marker is cleared
+    # the moment anyone confirms. An unattended post of a number that goes on
+    # a KDV return should not rest on a side effect two files away.
+    if vat_was_assumed(draft):
         return False
 
     # Never post a future-dated invoice on its own. It can still be posted by

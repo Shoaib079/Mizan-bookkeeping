@@ -227,7 +227,24 @@ def _set_draft_classification_confidence(
     draft.extraction_payload = payload
 
 
-_PDF_EXTRACTION_MARKERS = ("assumed_vat", "net_adjusted", "fields_missing", "no_text_layer")
+_PDF_EXTRACTION_MARKERS = ("net_adjusted", "fields_missing", "no_text_layer")
+
+# `assumed_vat` is deliberately not in that list any more. The others describe
+# how well the document parsed, and once the owner has looked at the fields and
+# confirmed them the answer is "well enough" — clearing them is right.
+#
+# An assumed VAT is not a parse-quality note. It is a statement about a number
+# that goes on a tax return: this input KDV was not read off the invoice, it
+# was inferred from the gap between net and gross. Confirming means the owner
+# accepted it, not that it stopped being an assumption. Wiping the flag left
+# no way to ever find which posted invoices carried a guessed VAT — which is
+# exactly the question to ask when a KDV return is being checked, and exactly
+# what health check 0.6 exists to answer.
+#
+# Safe to leave on the row: one-click eligibility requires a draft still in
+# DRAFT or NEEDS_REVIEW, so a confirmed draft is out of scope for auto-post
+# regardless, and `classification_confidence` is stored explicitly rather than
+# derived from these markers.
 
 
 def _recompute_confidence_on_confirm(session: Session, draft: InvoiceDraft) -> None:
