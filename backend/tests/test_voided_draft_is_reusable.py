@@ -23,7 +23,15 @@ import pytest
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 BACKEND = pathlib.Path(__file__).resolve().parents[1]
-CORRECTION = BACKEND / "app" / "core" / "ledger" / "correction.py"
+#: The whole package, not one file.
+#:
+#: This read `correction.py` until it became `correction/`, and the scan went
+#: from policing two void routes to raising FileNotFoundError. Reading the
+#: directory survives the rest of the split too: `void_supplier_invoice` and
+#: `void_delivery_commission_invoice` are about to move into `suppliers.py`
+#: and `invoices.py`, and a guard pinned to one filename would quietly find
+#: nothing again — which is worse, because an empty scan passes.
+CORRECTION_PACKAGE = BACKEND / "app" / "core" / "ledger" / "correction"
 
 RELEASE_HOOK = "_release_posted_draft"
 
@@ -39,22 +47,24 @@ def _void_routes_touching_drafts() -> list[tuple[str, set[str]]]:
     in advance goes blind the moment someone adds one, which is the failure
     this whole file is about.
 
-    Parsed rather than grepped so the answer is per function body.
+    Parsed rather than grepped so the answer is per function body, and read
+    across every module in the package so the split cannot hide a route.
     """
-    tree = ast.parse(CORRECTION.read_text())
     routes: list[tuple[str, set[str]]] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        if not node.name.startswith("void_"):
-            continue
-        names = {
-            sub.id for sub in ast.walk(node) if isinstance(sub, ast.Name)
-        } | {
-            sub.attr for sub in ast.walk(node) if isinstance(sub, ast.Attribute)
-        }
-        if any("draft" in name.lower() for name in names):
-            routes.append((node.name, names))
+    for path in sorted(CORRECTION_PACKAGE.rglob("*.py")):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if not node.name.startswith("void_"):
+                continue
+            names = {
+                sub.id for sub in ast.walk(node) if isinstance(sub, ast.Name)
+            } | {
+                sub.attr for sub in ast.walk(node) if isinstance(sub, ast.Attribute)
+            }
+            if any("draft" in name.lower() for name in names):
+                routes.append((node.name, names))
     return routes
 
 
