@@ -39,6 +39,7 @@ Counted on 9 August 2026.
 | Pages that reset on entity switch (rule 16) | ~~16 of 91~~ → all 91, by remount |
 | Weak assertions in frontend tests | 29 |
 | Real faults found by running Phase 0 on the books | 1 (Class 10), plus 2 checks that were themselves wrong |
+| Faults found by building something adjacent, not by looking | 10 — the seven of 9 Aug, plus 204 idempotency, the 403-that-was-a-500, and an RLS-blind inventory (10 Aug) |
 
 ---
 
@@ -200,6 +201,16 @@ or a specific library version. Local green means nothing.
   shown on a phone was invisible. Needs a narrow viewport to see.
 - **`app.routes` is not flat** in the deployed FastAPI version, so a guard
   test found zero routes and reported nineteen false failures.
+- **10 Aug — a 403 that became a 500 for any unknown restaurant id.**
+  `require_entity_membership` denies access by writing a `permission_denied`
+  audit row scoped to the restaurant in the request. When that restaurant is
+  not in `entities`, the foreign key refuses the row and the denial raises
+  instead of returning. Nothing about it needed a deleted restaurant — any
+  unrecognised UUID in a URL did it, and had since the guard was written.
+  Invisible locally because nobody types a wrong id by hand; certain in
+  production the moment a restaurant can be deleted, because a stale tab keeps
+  sending the old one. The denial is now recorded with the id in the detail
+  rather than the foreign-key column.
 
 **The rule.** *Something must exercise the deployed app under production
 settings.*
@@ -250,6 +261,34 @@ than no test: it reports coverage that does not exist.
   distinguish a broken feature from a broken test — twice, the second time
   after I had written a paragraph complaining about the first.
 - 29 weak assertions across the frontend suite (`toBeDefined`, `not.toThrow`).
+- **10 Aug.** "Every trigger came back after the delete" compared trigger
+  *names* before and after. Disabling a trigger does not remove it from
+  `pg_trigger` — it sets `tgenabled = 'D'` — so the test passed over a ledger
+  with every guard switched off. The one assertion written specifically to
+  catch the silent failure was itself the silent failure. Now reads
+  `tgenabled`, and a companion test disables a trigger on purpose to prove the
+  check can see it.
+
+**A ninth, which is the same shape one layer down: a swallowed exception.**
+
+`store_record` in the idempotency middleware ends `except IntegrityError:
+rollback; return find_record(...)` — correct for the genuine race it was
+written for, two requests with one key. But `idempotency_records.response_body`
+is `NOT NULL`, and a 204 has no body, so every 204 route raised
+`IntegrityError` for an entirely different reason and took the same path:
+rolled back, found nothing, returned `None`. The middleware carried on.
+
+No 204 route has ever been idempotent — removing a member, rejecting a
+receipt, rejecting an invoice draft, rejecting a POS summary. Every double
+submit ran twice, for as long as the feature has existed. Nothing failed
+loudly, no test covered it, and the `except` that hid it looks correct in
+isolation.
+
+Found by adding an idempotency key to a new `DELETE`, not by looking. The
+lesson is narrower than "don't swallow exceptions": an `except` clause named
+for one cause will catch every cause, and the ones it was not written for are
+invisible by construction. Catch the specific condition, or assert the
+recovery worked.
 
 **The rule** already exists — Definition of Done 4 — and nothing enforces it.
 
@@ -464,6 +503,7 @@ permanent.
 | ~~D3~~ | ~~Voiding a group-sale discount voids the whole sale~~ | **Fixed 9 Aug.** A discount and a write-off are both `DISCOUNT` rows posting under `GROUP_SALE`; a discount also carries the sale's `reference_id`, which the escape read as "this *is* the sale". Both now route to `customers/{id}/write-offs/{entry}/void`, which accepts any `DISCOUNT` row. The write-off had the mirror bug — no `reference_id`, so it fell through to the credit-sale route, which rejects a `DISCOUNT` row: a dead button. Checking the movement type first is the fix, because what a row *is* beats what its source and reference imply. | — |
 | ~~D4~~ | ~~A write-off cannot be corrected from the General ledger~~ | **Done 9 Aug**, along with both FX kinds. The blocker in all three was the same: a field the form needed that the edit context did not carry. A write-off wants the customer's outstanding balance, because a correction is capped at that plus what the write-off already took off; both FX forms want the wallet's currency, which is one hop off the money account since `FxLedgerEntry` names the account and nothing about what is in it. Thirteen of fourteen edit kinds now open from the ledger. | — |
 | ~~D5~~ | ~~Say on the Expenses page that it lists hand-recorded expenses only~~ | **Done 9 Aug.** The page now says plainly that salaries, supplier invoices and delivery commission are not listed and that this is not total spend, and links to the expense register. The money figure stopped reading "Total" and now reads "Recorded here" — the same wrong-label problem as "Period total". Nothing about the books changed; the register and the P&L always tied. | — |
+| ~~D7~~ | ~~No way to delete a restaurant~~ | **Done 10 Aug.** Spice Corner was a practice entity full of deliberate mistakes with no way to be rid of it. The ledger is undeletable by Postgres, not by application code — `mizan_app` has DML rights and no ownership, so no route can disable a trigger. `delete_entity_cascade()` is a single SECURITY DEFINER function, `EXECUTE` revoked from `PUBLIC` and granted to `mizan_app` alone, that takes an entity id and nothing finer: the new power is "remove an entire restaurant", which is loud, not "delete a journal entry", which is what the schema exists to prevent. Owner-only per restaurant; Settings offers only the restaurant you are in. The script now calls the same function instead of carrying a second copy. **Two silent faults found writing it:** the inventory counted without `app.current_entity_id`, so under `FORCE ROW LEVEL SECURITY` all forty-nine RLS tables returned zero — it would have reported "no data" and deleted a full set of books anyway, since cascades are exempt from RLS even though queries are not; and the trigger list, when written by hand, twice missed triggers declared `UPDATE OR DELETE`, including the append-only audit ones that a `SET NULL` cascade must pass through. Both are why it reads `pg_trigger` at call time rather than trusting a list. | — |
 | D6 | Collapse `gl-entry-actions.tsx`'s ten `useState` pairs into one edit target, and move its twelve dialog render blocks to a sibling | It reached 532 lines wiring the write-off and two FX edit forms, and the file-size ratchet was raised rather than obeyed — the first time today. The reason is specific: splitting it is a behaviour-preserving refactor of a React component, and the project has no component-level tests (no `@testing-library`; vitest runs in `node`). `tsc` catches type errors and `gl-edit-kinds.test.ts` catches a missing case, but nothing catches "the dialog no longer opens". Today's backend split was safe precisely because every move was verifiable byte-for-byte; this one is not. | Wants a component test harness first, or a careful pass with the app open. The shape is clear: one `editTarget` state, one `editTargetFor(kind, ctx, id)` mapping, one `<EditDialogs>` sibling. |
 | ~~D1~~ | ~~Delete the inert `useEntitySwitchReset` call sites~~ | **Done 9 Aug.** 16 of 17 removed. The seventeenth stays: `statement-import-panel` keys on `(entityId, moneyAccountId)`, and a half-finished column mapping belongs to that account's import — changing account within one entity remounts nothing, so the remount covers the entity dimension only. | — |
 
