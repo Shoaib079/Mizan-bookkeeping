@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { sourceDeclaring } from "@/test-support/source";
+
 /** These guard the DESIGN_ARCHETYPES contract by reading the source: the rules
  * that stop pages drifting apart again are structural, so they're checked
  * structurally rather than by rendering. */
@@ -12,13 +14,13 @@ async function read(file: string): Promise<string> {
 
 describe("page archetypes", () => {
   it("ListPage owns the mobile breakpoint, so pages never fork it", async () => {
-    const source = await read("./list-page.tsx");
+    const source = sourceDeclaring("ListPage");
     expect(source).toContain("useIsMobileShell");
     expect(source).toContain("isMobile && mobile ? mobile : table");
   });
 
   it("ListPage always offers a pager — no silent truncation", async () => {
-    const source = await read("./list-page.tsx");
+    const source = sourceDeclaring("ListPage");
     expect(source).toContain("TablePager");
   });
 
@@ -35,7 +37,7 @@ describe("page archetypes", () => {
   });
 
   it("SummaryPanel formats money through the shared formatter", async () => {
-    const source = await read("./summary-panel.tsx");
+    const source = sourceDeclaring("AmountFormatter");
     expect(source).toContain('from "@/lib/money"');
     expect(source).toContain("tabular-nums");
     // Deductions are shown signed regardless of how they are stored.
@@ -120,7 +122,7 @@ describe("page archetypes", () => {
   it("the dashboard uses OverviewPage, not the tile grid", async () => {
     // Slice 4. §4b exists because the dashboard is KPI cards + charts + recent
     // entries; forcing it into HubPage would be the drift the archetypes stop.
-    const dashboard = await read("../../app/page.tsx");
+    const dashboard = sourceDeclaring("HomePage");
     expect(dashboard).toContain("<OverviewPage");
     expect(dashboard).not.toContain("<HubPage");
     expect(dashboard.includes("<h1"), "dashboard draws its own title").toBe(
@@ -148,8 +150,8 @@ describe("page archetypes", () => {
   it("cards on the same row share one shell", async () => {
     // CashBankSnapshotCard sits beside a StatCard and used rounded-xl/p-5
     // against rounded-lg/p-4, so the pair visibly failed to line up.
-    const stat = await read("./stat-card.tsx");
-    const snapshot = await read("../dashboard/cash-bank-snapshot-card.tsx");
+    const stat = sourceDeclaring("StatCard");
+    const snapshot = sourceDeclaring("CashBankSnapshotCard");
     const shell = "rounded-lg border border-border bg-card p-4";
     expect(stat).toContain(shell);
     expect(snapshot).toContain(shell);
@@ -171,7 +173,7 @@ describe("page archetypes", () => {
       expect(source, queue).toContain("<ListPage");
     }
 
-    const doc = await read("./document-review-page.tsx");
+    const doc = sourceDeclaring("DocumentReviewPage");
     expect(doc).toContain("lg:grid-cols-2");
 
     for (const page of [
@@ -251,7 +253,7 @@ describe("page archetypes", () => {
 
     // The hub keeps its own body (period summary, mobile sticky bar, tiles)
     // but must still own its title — same call as /banking/cash and /cards.
-    const hub = await read("../../app/reports/page.tsx");
+    const hub = sourceDeclaring("ReportsPage");
     expect(hub).toContain("<PageHeader");
   });
 
@@ -278,7 +280,7 @@ describe("page archetypes", () => {
     // only the GL accounts, so the column visibly did not add up — off by the
     // whole period result. The KPI had the same gap, and it is the figure that
     // has to balance against assets.
-    const source = await read("../../app/reports/balance-sheet/page.tsx");
+    const source = sourceDeclaring("BalanceSheetPage");
     const withUnclosed = /subtotal_kurus \+\s*report\.equity\.unclosed_net_income_kurus/;
     expect(source).toMatch(withUnclosed);
     expect(source).toMatch(
@@ -304,9 +306,9 @@ describe("page archetypes", () => {
     }
 
     // /split is a workflow, not a settings form — it takes the header only.
-    expect(await read("../../app/split/page.tsx")).toContain("<PageHeader");
+    expect(sourceDeclaring("SplitHubPage")).toContain("<PageHeader");
     // Auth pages live outside the shell entirely; they are Clerk's own.
-    const signIn = await read("../../app/sign-in/[[...sign-in]]/page.tsx");
+    const signIn = sourceDeclaring("SignInPage");
     expect(signIn).not.toContain("FormPage");
   });
 
@@ -314,7 +316,7 @@ describe("page archetypes", () => {
     // Card clearing cannot legitimately go negative; when it does, sales are
     // missing. The fix is to carry on entering them, so the warning must not
     // disable anything — it only tells you what is missing and links to it.
-    const source = await read("../sales/cards-page-content.tsx");
+    const source = sourceDeclaring("CardsPageContent");
     const warning = source.slice(
       source.indexOf("clearing_balance_kurus < 0"),
       source.indexOf("Clearing reconciliation"),
@@ -328,7 +330,7 @@ describe("page archetypes", () => {
     // closed and the account goes negative while equity is unchanged — correct,
     // but it reads like a mistake, and it cost an afternoon to establish that
     // it wasn't one.
-    const source = await read("../../app/reports/balance-sheet/page.tsx");
+    const source = sourceDeclaring("BalanceSheetPage");
     expect(source).toContain("RETAINED_EARNINGS_CODE");
     // Only when both conditions hold — a negative balance alone may be real.
     expect(source).toMatch(/balance_kurus < 0/);
@@ -341,14 +343,14 @@ describe("page archetypes", () => {
     // partners and supplier activity — so their left edge moved with the length
     // of the text beside them and you couldn't scan the column. Edit was also
     // filled-primary, making a long ledger a wall of blue.
-    const source = await read("../ledger/subledger-row-actions.tsx");
+    const source = sourceDeclaring("SubledgerRowActions");
     expect(source).not.toContain("inline");
     expect(source).toContain('variant="ghost"');
     expect(source).not.toMatch(/variant="primary"/);
 
     // The trailing Actions column is LedgerTable's job now for the ledgers
     // that adopted it; the supplier panel still renders its own table.
-    const ledgerTable = await read("./ledger-table.tsx");
+    const ledgerTable = sourceDeclaring("LedgerColumn");
     expect(ledgerTable).toMatch(/<DataTableHeaderCell align="right">\s*Actions/);
 
     for (const page of [
@@ -362,13 +364,13 @@ describe("page archetypes", () => {
       );
     }
 
-    expect(await read("../supplier-activity-panel.tsx")).toMatch(
+    expect(sourceDeclaring("SupplierActivityPanel")).toMatch(
       /<DataTableHeaderCell align="right">\s*Actions/,
     );
   });
 
   it("FilterChips exposes counts for review queues", async () => {
-    const source = await read("./filter-chips.tsx");
+    const source = sourceDeclaring("FilterChip");
     expect(source).toContain("chip.count");
     expect(source).toContain("aria-pressed");
   });
@@ -380,7 +382,7 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     // <main> runs underneath the fixed tab bar — so the save bar came to rest
     // behind it, and lost on z-index too (10 against 30). Save was unreachable
     // on every form in the app.
-    const source = await read("./form-page.tsx");
+    const source = sourceDeclaring("FormPage");
     // The applied conditional, not merely the imported token: an earlier
     // version of this test asserted the name appeared somewhere in the file
     // and passed happily with the offset removed from the className.
@@ -395,9 +397,9 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
   it("everything pinned to the bottom clears the tabs by the same amount", async () => {
     // Two hand-written copies of a number that has to agree is how they stop
     // agreeing. All three now come from one file.
-    const shell = await read("../layout/app-shell.tsx");
-    const form = await read("./form-page.tsx");
-    const toast = await read("../../lib/toast.tsx");
+    const shell = sourceDeclaring("AppShell");
+    const form = sourceDeclaring("FormPage");
+    const toast = sourceDeclaring("ToastProvider");
     expect(shell).toContain("MOBILE_TAB_BAR_PADDING");
     expect(form).toContain("MOBILE_TAB_BAR_OFFSET");
     expect(toast).toContain("MOBILE_TOAST_OFFSET");
@@ -405,7 +407,7 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     expect(form).not.toContain("bottom-[calc(4.75rem");
     expect(toast).not.toContain("bottom-[calc(4.75rem");
 
-    const tokens = await read("../../lib/mobile-shell.ts");
+    const tokens = sourceDeclaring("DESKTOP_CHROME_ONLY");
     const measurements = [
       ...tokens.matchAll(/(?:pb|bottom)-\[calc\(([^)]*rem)\+/g),
     ].map((m) => m[1]);
@@ -421,7 +423,7 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     // every phone — not a misalignment, an invisible toast. Every "Payment
     // recorded" and "Posted to the ledger" this app has shown on mobile went
     // unseen, so the app looked like it had done nothing.
-    const toast = await read("../../lib/toast.tsx");
+    const toast = sourceDeclaring("ToastProvider");
 
     // The token inside the className, not merely imported at the top. The
     // first version of this test checked the file for the name and passed
@@ -436,7 +438,7 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     // Tailwind scans source for complete class strings. A class built by
     // interpolation — pb-[${TOKEN}] — generates no CSS at all, fails silently,
     // and looks exactly like a layout bug.
-    const tokens = await read("../../lib/mobile-shell.ts");
+    const tokens = sourceDeclaring("DESKTOP_CHROME_ONLY");
     expect(tokens).toContain(
       '"pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]"',
     );
@@ -451,7 +453,7 @@ describe("mobile: detail pages", () => {
     // The partner ledger declares five columns and renders six — hasActions
     // adds one. Counting declared columns only is exactly how it slipped past
     // the sweep that marked every other wide table.
-    const source = await read("./ledger-table.tsx");
+    const source = sourceDeclaring("LedgerColumn");
     expect(source).toContain("columns.length + (hasActions ? 1 : 0) > 5");
   });
 
@@ -459,7 +461,7 @@ describe("mobile: detail pages", () => {
     // The panels are flex-1, so in a plain flex-wrap row they shrink to share
     // the width rather than wrapping — a headline and two summary cards came
     // out around 110px each on a 375px screen.
-    const source = await read("./entity-detail-page.tsx");
+    const source = sourceDeclaring("DetailSection");
     expect(source).toContain("flex flex-col gap-3 sm:flex-row sm:flex-wrap");
   });
 });
@@ -468,7 +470,7 @@ describe("filters read as choices", () => {
   it("FilterChips carry colour like the buttons beside them", async () => {
     // Inactive chips were a grey border around grey text, which reads as a
     // row of disabled labels rather than filters you can press.
-    const source = await read("./filter-chips.tsx");
+    const source = sourceDeclaring("FilterChip");
     expect(source).not.toContain("border border-border text-muted-foreground");
     expect(source).toContain("border-primary/40 text-primary");
     // The chosen chip is solidly filled — a tint was repeatedly read as no
@@ -480,7 +482,7 @@ describe("filters read as choices", () => {
   it("ListPage gives filters their own row", async () => {
     // Sharing the toolbar row with the period control left the chips stranded
     // mid-line between the dates and the row count.
-    const source = await read("./list-page.tsx");
+    const source = sourceDeclaring("ListPage");
     expect(source).toContain("filters?: React.ReactNode");
     expect(source).toContain("{filters && (");
   });

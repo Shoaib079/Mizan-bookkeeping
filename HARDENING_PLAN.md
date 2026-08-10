@@ -36,7 +36,7 @@ Counted on 9 August 2026.
 | Files past the ~400-line rule | ~~84~~ → 82 — **ratcheted 9 Aug**: none may grow, none may join. Two left on 10 Aug: `gl-entry-actions.tsx` 532 → 154, `record-desk.tsx` 469 → 359. Two shrank: the customer detail page 467 → 435, `statement-import-panel.tsx` 1,131 → 889 |
 | Component-level tests | ~~none~~ → jsdom + Testing Library, added 10 Aug for D6. The absence of these is what blocked that refactor for a day |
 | Golden rules with an automated guard | ~~6~~ → 7 of 19 — Class 3 closed 10 Aug |
-| Guards that break when code moves | ~~all 50-odd~~ → 44, ratcheted 10 Aug: none may join, and `sourceDeclaring()` makes a move invisible |
+| Guards that break when code moves | ~~all 50-odd~~ → ~~44~~ → 32, ratcheted 10 Aug: none may join, and `sourceDeclaring()` makes a move invisible |
 | Places that decide "can this be edited or voided" | 5, ~165 decision points |
 | Pages that reset on entity switch (rule 16) | ~~16 of 91~~ → all 91, by remount |
 | Weak assertions in frontend tests | 29 |
@@ -67,6 +67,16 @@ drift. Nothing notices, because each copy is internally consistent.
   already posts one. A filter excluding a code nobody uses excludes nothing.
 - **Mobile breakpoint `819`** appears in four frontend files. This one *is*
   guarded by a test — proof the pattern is fixable.
+- **Five duplicate names, all found by migrating guards onto `sourceDeclaring`.**
+  You cannot look code up by symbol until symbols are unique, so the migration
+  had to surface every collision before it could finish. `editTargetFor` meant
+  two different things returning two different types. Three page files named a
+  lazy `dynamic()` wrapper after the panel it loads — `ExpensesReviewPanel`,
+  and `SalesReviewPanel` twice. And `ForexOutstanding` was the *same type
+  written out twice*: exported from `lib/use-balance-map.ts` and declared
+  again in the customer detail page, so the lib gaining a field would have
+  left the page's copy silently disagreeing. None of these were findable by
+  reading either file on its own.
 - **`BANK_STATEMENT_LINE_REF`** was the same string literal written out twice,
   in `statements.py` and `statement_rule_auto.py`. It is the `reference_type`
   a ledger entry carries when it came from a bank line, so the two copies had

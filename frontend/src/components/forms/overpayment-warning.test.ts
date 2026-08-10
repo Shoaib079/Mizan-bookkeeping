@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
+
+import { sourceDeclaring } from "@/test-support/source";
 
 /** Warn about an overpayment; never refuse it.
  *
@@ -18,10 +19,7 @@ import { describe, expect, it } from "vitest";
  * appears, and that it never becomes a barrier.
  */
 
-const SOURCE = readFileSync(
-  new URL("./customer-payment-form.tsx", import.meta.url),
-  "utf8",
-);
+const SOURCE = sourceDeclaring("CustomerPaymentForm");
 
 /** Source with comments removed — the rules below are about behaviour, and
  * the prose explaining them names the very things being forbidden. */

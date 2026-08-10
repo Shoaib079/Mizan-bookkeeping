@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { sourceDeclaring } from "@/test-support/source";
+
 import {
   appRoutes,
   filterRoutesByEntitySettings,
@@ -322,16 +324,12 @@ describe("delivery gating", () => {
   it("sales list links uploads to Record instead of inline modal", async () => {
     // The link lives in the shared panel now that it carries the page header;
     // /sales and /review/sales render the same one.
-    const read = (path: string) =>
-      import("fs/promises").then((fs) =>
-        fs.readFile(new URL(path, import.meta.url), "utf8"),
-      );
 
-    const panel = await read("../components/review/sales-review-panel.tsx");
+    const panel = sourceDeclaring("SalesReviewPanel");
     expect(panel).toContain('href="/record"');
     expect(panel).not.toContain("PosSummaryUploadForm");
 
-    const page = await read("../app/(sales)/sales/page.tsx");
+    const page = sourceDeclaring("SalesPage");
     expect(page).not.toContain("PosSummaryUploadForm");
   });
 });

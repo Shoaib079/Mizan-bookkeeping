@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { sourceDeclaring } from "@/test-support/source";
+
 /** "Edit" sits beside the name it edits, on every entity detail page.
  *
  * It used to live in the "⋯" menu on all four. That menu is for things you
@@ -48,10 +50,7 @@ describe.each(DETAIL_PAGES)("the $name detail page", ({ file }) => {
 });
 
 describe("the shared edit button", () => {
-  const button = readFileSync(
-    new URL("./page-header.tsx", import.meta.url),
-    "utf8",
-  );
+  const button = sourceDeclaring("EditTitleButton");
 
   it("is a ghost, not a filled button", () => {
     // It sits next to a heading; a solid button there competes with the
@@ -67,10 +66,7 @@ describe("the shared edit button", () => {
   it("still carries a colour", () => {
     // `ghost` resolves to text-primary — see clickable-colour.test.ts for why
     // a control with no colour at rest reads as plain text.
-    const variants = readFileSync(
-      new URL("../ui/button.tsx", import.meta.url),
-      "utf8",
-    );
+    const variants = sourceDeclaring("Button");
     expect(variants).toMatch(/variant === "ghost" && "text-primary/);
   });
 });

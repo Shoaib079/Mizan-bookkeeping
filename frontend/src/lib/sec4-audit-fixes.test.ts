@@ -1,20 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-async function readSource(relativePath: string) {
-  return import("fs/promises").then((fs) =>
-    fs.readFile(new URL(relativePath, import.meta.url), "utf8"),
-  );
-}
+import { sourceDeclaring } from "@/test-support/source";
+
 
 describe("SEC-4: M1 — Role gating defaults to least privilege", () => {
   it("DEFAULT_DEV_ROLE is partner_view_only, not owner", async () => {
-    const src = await readSource("./use-entity-access.tsx");
+    const src = sourceDeclaring("DEFAULT_DEV_ROLE");
     expect(src).toContain('"partner_view_only"');
     expect(src).not.toMatch(/DEFAULT_DEV_ROLE.*"owner"/);
   });
 
   it("error fallback also uses the least-privilege constant", async () => {
-    const src = await readSource("./use-entity-access.tsx");
+    const src = sourceDeclaring("DEFAULT_DEV_ROLE");
     expect(src).toContain("DEFAULT_DEV_ROLE");
     expect(src).toContain("setRole(DEFAULT_DEV_ROLE)");
   });
@@ -22,12 +19,12 @@ describe("SEC-4: M1 — Role gating defaults to least privilege", () => {
 
 describe("SEC-4: M2 — FX parser uses parseTryParts (no 100× bug)", () => {
   it("parseTryParts is exported from money.ts", async () => {
-    const src = await readSource("./money.ts");
+    const src = sourceDeclaring("formatKurus");
     expect(src).toMatch(/export function parseTryParts/);
   });
 
   it("parseFxNative imports parseTryParts instead of using parseFloat", async () => {
-    const src = await readSource("./fx-money.ts");
+    const src = sourceDeclaring("formatForexBalanceLine");
     // Match the named import, not the whole import statement — the module also
     // pulls in formatKurus (for formatFxNativeInput), and pinning the exact
     // statement text made an unrelated addition look like a regression.
@@ -58,7 +55,7 @@ describe("SEC-4: M2 — FX parser uses parseTryParts (no 100× bug)", () => {
 
 describe("SEC-4: M3 — Drawer reopen POST sends Idempotency-Key", () => {
   it("cash page imports newIdempotencyKey and attaches it to reopen call", async () => {
-    const src = await readSource("../app/banking/cash/page.tsx");
+    const src = sourceDeclaring("CashDrawerPage");
     expect(src).toContain("newIdempotencyKey");
     expect(src).toMatch(/idempotencyKey:\s*newIdempotencyKey\(\)/);
   });
@@ -66,7 +63,7 @@ describe("SEC-4: M3 — Drawer reopen POST sends Idempotency-Key", () => {
 
 describe("SEC-4: M4 — API_BASE fails loud in production browser", () => {
   it("assertApiBase guard exists and is called in apiFetch and apiDownload", async () => {
-    const src = await readSource("./api.ts");
+    const src = sourceDeclaring("AUTH_401_MAX_ATTEMPTS");
     expect(src).toContain("function assertApiBase()");
     const apiFetchMatch = src.match(
       /export async function apiFetch[\s\S]*?assertApiBase\(\)/,
@@ -79,14 +76,14 @@ describe("SEC-4: M4 — API_BASE fails loud in production browser", () => {
   });
 
   it("assertApiBase throws when localhost + window + production", async () => {
-    const src = await readSource("./api.ts");
+    const src = sourceDeclaring("AUTH_401_MAX_ATTEMPTS");
     expect(src).toContain("NEXT_PUBLIC_API_URL must be set");
     expect(src).toContain('typeof window !== "undefined"');
     expect(src).toContain('process.env.NODE_ENV === "production"');
   });
 
   it("api.ts falls back to same-origin /backend-api in development", async () => {
-    const src = await readSource("./api.ts");
+    const src = sourceDeclaring("AUTH_401_MAX_ATTEMPTS");
     expect(src).toContain('"/backend-api"');
   });
 });

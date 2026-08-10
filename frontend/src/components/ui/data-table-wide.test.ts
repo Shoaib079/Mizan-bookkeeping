@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { sourceDeclaring } from "@/test-support/source";
+
 /** `overflow-auto` around a `w-full` table does not scroll. The table fits
  * itself to the container, compresses every column, wraps each cell into a
  * tall stack, and pushes the trailing columns off the edge where they cannot
@@ -27,10 +29,7 @@ function sourceFiles(dir: string): string[] {
 
 describe("DataTable wide mode", () => {
   it("gives the overflow a minimum width to scroll", () => {
-    const source = readFileSync(
-      new URL("./data-table.tsx", import.meta.url),
-      "utf8",
-    );
+    const source = sourceDeclaring("DataTable");
     expect(source).toContain("min-w-[46rem]");
     // Without a min-width the container has nothing to scroll and the columns
     // compress instead — the bug this mode exists to fix.
@@ -38,10 +37,7 @@ describe("DataTable wide mode", () => {
   });
 
   it("pins the first column so it survives the scroll", () => {
-    const source = readFileSync(
-      new URL("./data-table.tsx", import.meta.url),
-      "utf8",
-    );
+    const source = sourceDeclaring("DataTable");
     expect(source).toContain("[&_td:first-child]:sticky");
     expect(source).toContain("[&_td:first-child]:left-0");
     // A transparent sticky cell shows the scrolling rows through it.

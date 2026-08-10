@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
+
+import { sourceDeclaring } from "@/test-support/source";
 
 import { DESKTOP_CHROME_ONLY, MOBILE_SHELL_MAX_WIDTH_PX } from "@/lib/mobile-shell";
 
@@ -20,11 +21,8 @@ import { DESKTOP_CHROME_ONLY, MOBILE_SHELL_MAX_WIDTH_PX } from "@/lib/mobile-she
  * `mobile-touch-targets.test.ts` guards the same principle for control sizes.
  */
 
-const read = (rel: string) =>
-  readFileSync(new URL(rel, import.meta.url), "utf8");
-
 describe("the desktop shell is hidden below the breakpoint by CSS", () => {
-  const shell = read("./app-shell.tsx");
+  const shell = sourceDeclaring("AppShell");
 
   it("the sidebar carries the media query", () => {
     const aside = shell.match(/<aside[\s\S]*?>/)?.[0];
@@ -51,7 +49,7 @@ describe("the desktop shell is hidden below the breakpoint by CSS", () => {
 
 describe("the mark is reachable on a phone", () => {
   it("the mobile top bar renders the logo", () => {
-    const bar = read("./mobile-top-bar.tsx");
+    const bar = sourceDeclaring("MobileTopBar");
     expect(
       bar,
       "mobile has no logo anywhere — the sidebar is desktop-only",
@@ -59,14 +57,14 @@ describe("the mark is reachable on a phone", () => {
   });
 
   it("it is marked decorative, since the bar already announces the page", () => {
-    const bar = read("./mobile-top-bar.tsx");
+    const bar = sourceDeclaring("MobileTopBar");
     const logo = bar.match(/<Logo\b[^/]*\/>/)?.[0];
     expect(logo, "<Logo> not found in the mobile bar").toBeTruthy();
     expect(logo).toContain("decorative");
   });
 
   it("the sidebar logo stays announced — it is the identity there", () => {
-    const shell = read("./app-shell.tsx");
+    const shell = sourceDeclaring("AppShell");
     const logo = shell.match(/<Logo\b[^/]*\/>/)?.[0];
     expect(logo, "<Logo> not found in the sidebar").toBeTruthy();
     expect(logo).not.toContain("decorative");

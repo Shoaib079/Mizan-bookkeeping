@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { sourceDeclaring } from "@/test-support/source";
+
 /** The brand is not the UI colour, and must not quietly become it again.
  *
  * --primary is a role: "this is the thing to press". The brand is an identity.
@@ -52,7 +54,7 @@ describe("brand tokens exist in both themes", () => {
 
 describe("the brand is not wired to the UI colour", () => {
   it("the logo paints from --brand-*, never --primary", () => {
-    const logo = codeOnly(read("./logo.tsx"));
+    const logo = codeOnly(sourceDeclaring("Logo"));
     expect(logo).toContain("var(--brand-1)");
     expect(logo).toContain("var(--brand-2)");
     expect(logo).toContain("var(--brand-3)");
@@ -62,7 +64,7 @@ describe("the brand is not wired to the UI colour", () => {
   });
 
   it("the sidebar wordmark uses the brand ink", () => {
-    const shell = read("../layout/app-shell.tsx");
+    const shell = sourceDeclaring("AppShell");
     const wordmark = shell.match(/<p className="[^"]*">\s*Mizan\s*<\/p>/)?.[0];
     expect(wordmark, "the sidebar wordmark moved or was renamed").toBeTruthy();
     expect(wordmark).toContain("text-brand-ink");

@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { sourceDeclaring } from "@/test-support/source";
+
 /** Every status the backend can send has a word for it.
  *
  * The group sales list translated "posted" and "voided" and let anything else
@@ -15,10 +17,7 @@ import { describe, expect, it } from "vitest";
  * word was wrong. So the check has to span both.
  */
 
-const STATUS_BADGE = readFileSync(
-  new URL("./status-badge.tsx", import.meta.url),
-  "utf8",
-);
+const STATUS_BADGE = sourceDeclaring("StatusBadge");
 
 const GROUP_SALE_MODELS = new URL(
   "../../../../backend/app/features/group_sales/models.py",

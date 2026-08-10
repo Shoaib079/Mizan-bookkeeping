@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { sourceDeclaring } from "@/test-support/source";
+
 /** The forex field name has to match on both sides of the wire.
  *
  * The frontend reads `outstanding_by_currency` off each receivables row. If
@@ -40,12 +42,12 @@ describe("the receivables forex contract", () => {
   });
 
   it("the frontend reads that exact field", () => {
-    const map = read("./use-balance-map.ts");
+    const map = sourceDeclaring("ForexOutstanding");
     expect(map).toContain("outstanding_by_currency");
   });
 
   it("a row with no forex is treated as lira-only, not as missing data", () => {
-    const map = read("./use-balance-map.ts");
+    const map = sourceDeclaring("ForexOutstanding");
     // Absent from the map means "billed in lira", and the page prints nothing
     // extra. If this became `?? undefined` with no filter, every row would
     // render an empty currency line.

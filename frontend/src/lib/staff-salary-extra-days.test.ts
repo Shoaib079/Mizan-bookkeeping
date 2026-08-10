@@ -1,8 +1,8 @@
 /** Guards for staff pay helpers — net-to-pay + strict extra days. */
 
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+
+import { sourceDeclaring } from "@/test-support/source";
 
 import {
   formatCashPrefill,
@@ -41,10 +41,7 @@ describe("formatCashPrefill", () => {
 
 describe("staff salary dialog — single payment POST", () => {
   it("posts salary + extra days in one /payments call", () => {
-    const src = readFileSync(
-      join(__dirname, "../components/forms/staff-salary-payment-dialog.tsx"),
-      "utf8",
-    );
+    const src = sourceDeclaring("StaffSalaryPaymentDialog");
     expect(src).toContain("/payments");
     expect(src).toContain("extra_days");
     expect(src).toContain("per_day_minor");

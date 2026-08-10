@@ -44,6 +44,9 @@ import {
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+// The same shape was declared in this file as well as exported from
+// use-balance-map. Two copies of a type that must match is one waiting to drift.
+import { type ForexOutstanding } from "@/lib/use-balance-map";
 import { useEntity } from "@/lib/entity-context";
 import { formatForexBalanceSummary, formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -74,7 +77,6 @@ type LedgerEntry = {
   was_corrected?: boolean;
 };
 
-type ForexOutstanding = { currency: string; minor: number };
 
 type LedgerResponse = {
   balance_kurus: number;

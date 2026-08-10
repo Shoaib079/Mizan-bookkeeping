@@ -80,10 +80,7 @@ describe("everything clickable carries a colour", () => {
   });
 
   it("filter chips are visible whether or not they are active", () => {
-    const chips = readFileSync(
-      new URL("../page/filter-chips.tsx", import.meta.url),
-      "utf8",
-    );
+    const chips = sourceDeclaring("FilterChip");
     // The inactive chip was a grey border around grey text, so a filter row
     // read as a row of disabled labels.
     expect(chips).not.toContain("border border-border text-muted-foreground");
@@ -135,10 +132,7 @@ describe("a field is not an action", () => {
    * put it back to <Button variant="secondary">, which looks like a
    * simplification and undoes this. */
   it("the header search reads as a search box, not a filled button", () => {
-    const shell = readFileSync(
-      new URL("../layout/app-shell.tsx", import.meta.url),
-      "utf8",
-    );
+    const shell = sourceDeclaring("AppShell");
     const trigger = shell.match(
       /<button[\s\S]{0,900}?mizan:command-palette[\s\S]{0,400}?<\/button>/,
     )?.[0];
