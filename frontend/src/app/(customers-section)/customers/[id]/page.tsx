@@ -2,7 +2,6 @@
 
 /** Customer detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -27,6 +26,7 @@ import {
 } from "@/components/forms/correct-credit-sale-form";
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
+import { GroupSaleEditLoader } from "@/components/forms/group-sale-edit-loader";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
 import {
   CustomerWriteOffDialog,
@@ -87,9 +87,30 @@ type LedgerResponse = {
  * cannot drift into saying different things about the same row.
  */
 const VOIDABLE_ROWS = {
-  payment: { title: "Void customer payment", segment: "payments" },
-  credit_sale: { title: "Void credit sale", segment: "credit-sales" },
-  write_off: { title: "Void receivable write-off", segment: "write-offs" },
+  payment: {
+    title: "Void customer payment",
+    path: (customerId: string, id: string) =>
+      `customers/${customerId}/payments/${id}/void`,
+  },
+  credit_sale: {
+    title: "Void credit sale",
+    path: (customerId: string, id: string) =>
+      `customers/${customerId}/credit-sales/${id}/void`,
+  },
+  write_off: {
+    title: "Void receivable write-off",
+    path: (customerId: string, id: string) =>
+      `customers/${customerId}/write-offs/${id}/void`,
+  },
+  // A group sale is not voided through the customer at all — it is its own
+  // record, and the route is keyed by the sale rather than the journal entry.
+  // That is why this is a path builder now and not a segment: a shared prefix
+  // held while every row was customer-scoped, and this row is not.
+  group_sale: {
+    title: "Void group sale",
+    path: (_customerId: string, saleId: string) =>
+      `group-sales/${saleId}/void`,
+  },
 } as const;
 
 type VoidableRowKind = keyof typeof VOIDABLE_ROWS;
@@ -155,6 +176,7 @@ export default function CustomerDetailPage() {
     useState<CorrectableCustomerPaymentRow | null>(null);
   const [correctCreditSale, setCorrectCreditSale] =
     useState<CorrectableCreditSaleRow | null>(null);
+  const [groupSaleEditId, setGroupSaleEditId] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
     journal_entry_id: string;
     description: string;
@@ -331,19 +353,29 @@ export default function CustomerDetailPage() {
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell align="right">
-                      {isGroupSale ? (
-                        <div className="flex justify-end">
-                          <Link href={`/customers/group-sales/${entry.reference_id}`}>
-                            <Button type="button" className="h-8 px-2">
-                              Edit / Void
-                            </Button>
-                          </Link>
-                        </div>
-                      ) : actions.canEdit || actions.canVoid ? (
+                      {actions.canEdit || actions.canVoid ? (
+                        // A group sale used to be the exception here: one
+                        // "Edit / Void" button that navigated to the sale's
+                        // own page, where you had to find Edit or Void and
+                        // press it again. It goes through the same component
+                        // as every other row now, differing only in what the
+                        // handlers do — and in that both act on the sale
+                        // (`reference_id`) rather than the journal entry,
+                        // because a group sale is its own record.
+                        //
+                        // Folded into this branch rather than kept beside it
+                        // so `customerLedgerRowActions` stays the only place
+                        // that decides whether a row may be edited. It already
+                        // answers for group sales; the old branch ignored it,
+                        // and drew the button on superseded rows too.
                         <SubledgerRowActions
                           row={entry}
                           showEdit={actions.canEdit}
                           onEdit={() => {
+                            if (isGroupSale) {
+                              setGroupSaleEditId(String(entry.reference_id));
+                              return;
+                            }
                             if (entry.movement_type === "discount") {
                               setCorrectWriteOff({
                                 journal_entry_id: entry.journal_entry_id!,
@@ -372,16 +404,24 @@ export default function CustomerDetailPage() {
                             });
                           }}
                           onVoid={() =>
-                            setVoidTarget({
-                              journal_entry_id: entry.journal_entry_id!,
-                              description: entry.description,
-                              kind:
-                                entry.movement_type === "payment_received"
-                                  ? "payment"
-                                  : entry.movement_type === "discount"
-                                    ? "write_off"
-                                    : "credit_sale",
-                            })
+                            setVoidTarget(
+                              isGroupSale
+                                ? {
+                                    journal_entry_id: String(entry.reference_id),
+                                    description: entry.description,
+                                    kind: "group_sale",
+                                  }
+                                : {
+                                    journal_entry_id: entry.journal_entry_id!,
+                                    description: entry.description,
+                                    kind:
+                                      entry.movement_type === "payment_received"
+                                        ? "payment"
+                                        : entry.movement_type === "discount"
+                                          ? "write_off"
+                                          : "credit_sale",
+                                  },
+                            )
                           }
                         />
                       ) : null}
@@ -446,15 +486,25 @@ export default function CustomerDetailPage() {
             onClose={() => setCorrectCreditSale(null)}
             onSaved={() => void reload()}
           />
+          <GroupSaleEditLoader
+            open={groupSaleEditId !== null}
+            groupSaleId={groupSaleEditId}
+            onClose={() => setGroupSaleEditId(null)}
+            onSaved={() => {
+              setGroupSaleEditId(null);
+              void reload();
+            }}
+          />
           <VoidSubledgerDialog
             open={voidTarget !== null}
             title={voidTarget ? VOIDABLE_ROWS[voidTarget.kind].title : ""}
             description={voidTarget?.description}
             voidPath={
               entityId && voidTarget
-                ? `/entities/${entityId}/customers/${customerId}/${
-                    VOIDABLE_ROWS[voidTarget.kind].segment
-                  }/${voidTarget.journal_entry_id}/void`
+                ? `/entities/${entityId}/${VOIDABLE_ROWS[voidTarget.kind].path(
+                    customerId,
+                    voidTarget.journal_entry_id,
+                  )}`
                 : null
             }
             onClose={() => setVoidTarget(null)}

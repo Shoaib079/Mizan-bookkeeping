@@ -50,6 +50,7 @@ import {
   CorrectSupplierPaymentForm,
   type CorrectableSupplierPaymentRow,
 } from "@/components/forms/correct-supplier-payment-form";
+import { GroupSaleEditLoader } from "@/components/forms/group-sale-edit-loader";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { apiFetch } from "@/lib/api";
@@ -132,6 +133,7 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
   } | null>(null);
   const [commissionEdit, setCommissionEdit] =
     useState<CorrectableDeliveryCommissionRow | null>(null);
+  const [groupSaleEditId, setGroupSaleEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const preview = generalLedgerEntryActions(row.source);
@@ -329,6 +331,12 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
             },
           });
           return;
+        case "group_sale":
+          // Only the id. The form wants the whole sale — lines, pax, rates,
+          // currency — so the loader fetches it rather than the ledger
+          // reassembling a shape the sale's own page already knows.
+          setGroupSaleEditId(String(ctx.group_sale_id));
+          return;
         case "delivery_commission":
           setCommissionEdit({
             journal_entry_id: row.id,
@@ -381,6 +389,15 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
         onSaved={() => {
           setVoidOpen(false);
           setVoidPath(null);
+          onSaved();
+        }}
+      />
+      <GroupSaleEditLoader
+        open={groupSaleEditId !== null}
+        groupSaleId={groupSaleEditId}
+        onClose={() => setGroupSaleEditId(null)}
+        onSaved={() => {
+          setGroupSaleEditId(null);
           onSaved();
         }}
       />

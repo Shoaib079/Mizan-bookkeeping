@@ -46,11 +46,10 @@ const HANDLER = join(
  * so out loud instead of doing nothing — see the toast in `startEdit`.
  */
 const KNOWN_UNWIRED: Record<string, string> = {
-  group_sale:
-    "the form wants the whole sale — lines, customer, totals — not a field or " +
-    "two, and the context carries only group_sale_id. Unlike the FX kinds, " +
-    "this is not fixed by adding a column to the context: the form should " +
-    "fetch the sale from the id",
+  // Empty, and worth keeping rather than deleting: every kind the backend
+  // offers now opens something. `group_sale` was the last, and it was fixed
+  // the way its own entry predicted — a loader that fetches the sale from the
+  // id, instead of widening the edit context to carry a whole document.
 };
 
 function backendKinds(): string[] {
@@ -99,6 +98,18 @@ describe("General ledger edit kinds", () => {
   it("wires the two the owner hit", () => {
     expect(handledKinds()).toContain("supplier_invoice");
     expect(handledKinds()).toContain("supplier_payment");
+  });
+
+  it("handles every kind, with nothing left excused", () => {
+    // The stronger statement, now that it is true. Written separately from
+    // the filtered assertion above so that re-adding an entry to
+    // KNOWN_UNWIRED cannot quietly restore a passing suite — it would keep
+    // that test green and turn this one red.
+    const unhandled = backendKinds().filter(
+      (kind) => !handledKinds().includes(kind),
+    );
+    expect(unhandled, "every edit kind should open a form").toEqual([]);
+    expect(Object.keys(KNOWN_UNWIRED)).toEqual([]);
   });
 
   it("says something when a kind falls through", () => {
