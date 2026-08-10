@@ -104,21 +104,35 @@ describe("other_income payload", () => {
 });
 
 describe("income account list", () => {
+  /** The real chart's codes and names.
+   *
+   * This fixture used to invent its own — 4200 labelled "Interest Income",
+   * 4300 labelled "FX Gain" — and the assertions agreed with the invention
+   * rather than with the app. In the chart, 4200 *is* FX Gain and 4300 is
+   * Group / Agency Sales, so the test asserted that FX Gain should be
+   * offered for hand-picking, which is the opposite of the rule it sits
+   * beside. A fixture that makes up its own facts can only ever test itself.
+   */
   const chart: ChartAccount[] = [
-    { id: "a", code: "4000", name_en: "Sales Revenue", name_tr: "Satış Gelirleri", account_type: "revenue" },
-    { id: "b", code: "4200", name_en: "Interest Income", name_tr: "Faiz Geliri", account_type: "revenue" },
-    { id: "c", code: "4300", name_en: "FX Gain", name_tr: "Kur Farkı Geliri", account_type: "revenue" },
-    { id: "d", code: "5000", name_en: "Rent", name_tr: "Kira", account_type: "expense" },
+    { id: "a", code: "4000", name_en: "Sales Revenue", name_tr: "Satış Geliri", account_type: "revenue" },
+    { id: "b", code: "4100", name_en: "Other Income", name_tr: "Diğer Gelirler", account_type: "revenue" },
+    { id: "c", code: "4200", name_en: "FX Gain", name_tr: "Kur Kazancı", account_type: "revenue" },
+    { id: "d", code: "4300", name_en: "Group / Agency Sales", name_tr: "Grup Satışları", account_type: "revenue" },
+    { id: "e", code: "5200", name_en: "General Expense", name_tr: "Genel Giderler", account_type: "expense" },
   ];
 
   it("offers revenue only — crediting an expense would book a refund", () => {
     const codes = filterRevenueAccounts(chart).map((a) => a.code);
-    expect(codes).toContain("4200");
-    expect(codes).not.toContain("5000");
+    expect(codes).toContain("4100");
+    expect(codes).not.toContain("5200");
   });
 
   it("keeps system-owned revenue accounts out of hand-picking", () => {
-    // 4300 FX Gain is posted by the FX flow; picking it here would double-count.
-    expect(filterRevenueAccounts(chart).map((a) => a.code)).not.toContain("4300");
+    // Both are posted by the flow that owns them. Choosing either by hand
+    // credits it a second time: a currency gain that never happened, or a
+    // group sale counted twice.
+    const codes = filterRevenueAccounts(chart).map((a) => a.code);
+    expect(codes).not.toContain("4200");
+    expect(codes).not.toContain("4300");
   });
 });

@@ -26,7 +26,7 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 
 /** Chart code for retained earnings — mirrors the backend default chart. */
-const RETAINED_EARNINGS_CODE = "3100";
+import { RETAINED_EARNINGS_CODE } from "@/lib/account-codes";
 import type { BalanceSheetRead, ReportSource } from "@/lib/report-types";
 import { SealedPeriodBanner } from "@/components/reports/sealed-period-banner";
 import { useReportAsOfFromUrl } from "@/lib/use-report-url";

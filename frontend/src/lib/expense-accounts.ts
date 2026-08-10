@@ -2,6 +2,15 @@
 
 import { apiFetch } from "@/lib/api";
 
+import {
+  CASH_OVER_SHORT_CODE,
+  DELIVERY_COMMISSION_EXPENSE_CODE,
+  FX_GAIN_CODE,
+  GROUP_SALES_REVENUE_CODE,
+  SALARY_EXPENSE_CODE,
+  SALES_DISCOUNT_CODE,
+} from "@/lib/account-codes";
+
 export type ChartAccount = {
   id: string;
   code: string;
@@ -52,7 +61,12 @@ export const chartAccountComboboxOptions = expenseAccountComboboxOptions;
  *  - 5500 Delivery Commission → posted via the delivery commission flow
  *  - 5800 Sales Discounts → posted only by the group-sale discount write-off
  */
-const NON_MANUAL_EXPENSE_CODES = new Set(["5100", "5400", "5500", "5800"]);
+const NON_MANUAL_EXPENSE_CODES = new Set([
+  SALARY_EXPENSE_CODE,
+  CASH_OVER_SHORT_CODE,
+  DELIVERY_COMMISSION_EXPENSE_CODE,
+  SALES_DISCOUNT_CODE,
+]);
 
 export function filterExpenseAccounts(accounts: ChartAccount[]): ChartAccount[] {
   return accounts.filter(
@@ -61,8 +75,17 @@ export function filterExpenseAccounts(accounts: ChartAccount[]): ChartAccount[] 
 }
 
 /** Revenue accounts the system posts to itself — picking them by hand would
- * double-count against the flow that owns them (group sales, FX gain). */
-const NON_MANUAL_REVENUE_CODES = new Set(["4300", "4400"]);
+ * double-count against the flow that owns them (group sales, FX gain).
+ *
+ * This listed `4400` until 9 Aug 2026, which is not a code in the chart. FX
+ * Gain is 4200, so the account this set exists to hide was on offer, and
+ * choosing it would credit a currency gain by hand against the flow that
+ * already posts one. A filter excluding a code nobody uses excludes nothing,
+ * and the call site cannot show you that. */
+const NON_MANUAL_REVENUE_CODES = new Set([
+  GROUP_SALES_REVENUE_CODE,
+  FX_GAIN_CODE,
+]);
 
 /** Income accounts valid as the offset when cash comes IN to a drawer.
  *
@@ -107,7 +130,7 @@ export async function fetchExpenseAccounts(
 /** Kept in step with `default_chart.DELIVERY_COMMISSION_EXPENSE_CODE`.
  *  The account a platform commission lands in, and so the one a correction
  *  should default to rather than falling back to general supplies. */
-export const DELIVERY_COMMISSION_EXPENSE_CODE = "5500";
+
 
 /** Accounts a delivery commission correction may use.
  *
@@ -126,3 +149,5 @@ export function filterCommissionExpenseAccounts(
         !NON_MANUAL_EXPENSE_CODES.has(a.code)),
   );
 }
+
+export { DELIVERY_COMMISSION_EXPENSE_CODE } from "@/lib/account-codes";

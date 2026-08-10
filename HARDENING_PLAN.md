@@ -55,9 +55,13 @@ drift. Nothing notices, because each copy is internally consistent.
   3. `lib/subledger-actions.ts` — the frontend's own copy of the same sets
   4. `components/ledger/gl-entry-actions.tsx` — a `case` per edit kind (10)
   5. supplier / fx / expenses / partner / staff pages — their own wiring
-- **Chart-of-account codes** are string literals on both sides: `5500`, `5200`,
-  `1500`, `2000` each appear in backend *and* frontend files. A renumbered
-  chart breaks the frontend silently.
+- **Chart-of-account codes** were string literals on both sides. **Fixed
+  9 Aug** — one `lib/account-codes.ts`, guarded against `default_chart.py`.
+  Writing the guard found a live bug first: `NON_MANUAL_REVENUE_CODES`
+  excluded `4400`, which is not in the chart. FX Gain is `4200`, so the
+  account the comment named was on offer in the manual cash-in picker, and
+  choosing it would credit a currency gain by hand against the flow that
+  already posts one. A filter excluding a code nobody uses excludes nothing.
 - **Mobile breakpoint `819`** appears in four frontend files. This one *is*
   guarded by a test — proof the pattern is fixable.
 

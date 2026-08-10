@@ -77,8 +77,14 @@ function tableVerdicts(): Map<string, [boolean, boolean]> {
       /can_void=True/.test(chunk),
     ]);
   }
-  // The two escapes are edit+void and void-only respectively; both are
-  // subledger-backed, and the frontend agrees by its own sets.
+  // The escapes answer per row, so their verdict is not in the table. Stated
+  // here as the answer for the *ordinary* document of each kind, which is
+  // what the frontend's source-keyed sets are describing.
+  //
+  // `invoice` covers a supplier invoice; the same source also carries credit
+  // notes, which are void-only and have no source of their own to disagree
+  // about — the frontend never sees them as a separate kind.
+  verdicts.set("invoice", [true, true]);
   verdicts.set("customer_credit_sale", [true, true]);
   verdicts.set("group_sale", [true, true]);
   verdicts.set("partner_supplier_paid", [false, true]);

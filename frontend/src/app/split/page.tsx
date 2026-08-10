@@ -29,6 +29,9 @@ import {
   type ChartAccount,
 } from "@/lib/expense-accounts";
 import { formatTrDate, formatTry, parseTryToKurus } from "@/lib/money";
+import {
+  GENERAL_EXPENSE_CODE,
+} from "@/lib/account-codes";
 
 type ExpenseCandidate = {
   expense_id: string;
@@ -112,7 +115,7 @@ export default function SplitHubPage() {
       setPartners(partnerList.items.filter((p) => p.is_active !== false));
       const filtered = filterExpenseAccounts(chart.items);
       setExpenseAccounts(filtered);
-      const general = findExpenseAccountByCode(chart.items, "5200");
+      const general = findExpenseAccountByCode(chart.items, GENERAL_EXPENSE_CODE);
       if (general) setExpenseAccountId(general.id);
       else if (filtered[0]) setExpenseAccountId(filtered[0].id);
     } catch (err) {

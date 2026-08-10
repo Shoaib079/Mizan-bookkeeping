@@ -39,6 +39,10 @@ import {
   journalEntryLedgerHref,
 } from "@/lib/invoice-draft-list";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
+import {
+  DELIVERY_COMMISSION_EXPENSE_CODE,
+  GENERAL_EXPENSE_CODE,
+} from "@/lib/account-codes";
 
 type VatLine = {
   rate_percent: number;
@@ -144,7 +148,7 @@ export function InvoiceDraftReview({
     setPlatforms(platformRes.items.filter((p) => p.is_active));
     const isCommission = draftRes.invoice_kind === "delivery_commission";
     const expenses = isCommission
-      ? chartRes.items.filter((a) => a.code === "5500")
+      ? chartRes.items.filter((a) => a.code === DELIVERY_COMMISSION_EXPENSE_CODE)
       : filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(expenses);
     const suggested = draftRes.suggested_expense_account_id;
@@ -153,7 +157,7 @@ export function InvoiceDraftReview({
       : undefined;
     const preferred = isCommission
       ? expenses[0]
-      : suggestedAccount ?? findExpenseAccountByCode(chartRes.items, "5200");
+      : suggestedAccount ?? findExpenseAccountByCode(chartRes.items, GENERAL_EXPENSE_CODE);
     if (preferred) setExpenseAccountId(preferred.id);
     else if (expenses[0]) setExpenseAccountId(expenses[0].id);
     if (draftRes.supplier_id) setSelectedSupplierId(draftRes.supplier_id);

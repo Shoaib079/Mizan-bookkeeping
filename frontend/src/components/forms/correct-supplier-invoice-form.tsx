@@ -17,6 +17,9 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEditFormDirty } from "@/lib/use-form-dirty";
 import {
+  GENERAL_EXPENSE_CODE,
+} from "@/lib/account-codes";
+import {
   filterExpenseAccounts,
   findExpenseAccountByCode,
   formatExpenseAccountLabel,
@@ -128,7 +131,7 @@ export function CorrectSupplierInvoiceForm({
       setExpenseAccountId(fromInvoice.id);
       return;
     }
-    const fallback = findExpenseAccountByCode(accounts, "5200") ?? accounts[0];
+    const fallback = findExpenseAccountByCode(accounts, GENERAL_EXPENSE_CODE) ?? accounts[0];
     if (fallback) setExpenseAccountId(fallback.id);
   }, [open, invoice?.expense_account_id, accounts]);
 
