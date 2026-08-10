@@ -23,6 +23,7 @@ from app.core.chart_of_accounts.seed import seed_default_chart
 from app.db.session import entity_context
 from app.features.banking import service as banking_service
 from app.features.banking import statements as statement_service
+from app.features.banking.statement_classify_core import _finish_classified_line
 from app.features.banking.classification_rule_models import StatementClassificationRule
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
@@ -193,3 +194,66 @@ class TestOtherIncomeLearns:
         rules = _rules(db_session, restaurant_a.id)
         assert rules[0].expense_account_id is None
         assert rules[0].supplier_id is None
+
+
+class TestALinkKeyMustNameAColumn:
+    """`_finish_classified_line` does `setattr(line, key, value)`.
+
+    Extracting the twenty-two branches into posters rewrote twelve of these
+    keys by mistake — supplier and customer payments, three staff kinds, all
+    seven partner kinds. `setattr` took every one of them, the commits
+    succeeded, and eleven of the twelve failed no test at all: the line simply
+    had no counterparty on it afterwards.
+
+    So the check is at the point of the write, not only in a source scan. A
+    source scan cannot see a key that is built rather than written.
+    """
+
+    def test_a_key_that_is_not_a_column_raises(
+        self, db_session, restaurant_a, bank_setup
+    ):
+        line = _outflow_line(bank_setup)
+        result = statement_service.classify_statement_line(
+            db_session,
+            restaurant_a.id,
+            bank_setup["statement"].id,
+            line.id,
+            classification=StatementLineClassification.BANK_FEE,
+            actor_id=ACTOR_ID,
+        )
+        journal_id = result.journal_entry_id
+        assert journal_id is not None
+
+        with pytest.raises(AttributeError, match="not a column"):
+            _finish_classified_line(
+                db_session,
+                restaurant_a.id,
+                line.id,
+                StatementLineClassification.BANK_FEE,
+                journal_id,
+                links={"ctx.employee_id": None},
+            )
+
+    def test_a_real_column_still_goes_through(
+        self, db_session, restaurant_a, bank_setup
+    ):
+        # Otherwise the guard could reject everything and the test above would
+        # still pass.
+        line = _outflow_line(bank_setup)
+        result = statement_service.classify_statement_line(
+            db_session,
+            restaurant_a.id,
+            bank_setup["statement"].id,
+            line.id,
+            classification=StatementLineClassification.BANK_FEE,
+            actor_id=ACTOR_ID,
+        )
+        again = _finish_classified_line(
+            db_session,
+            restaurant_a.id,
+            line.id,
+            StatementLineClassification.BANK_FEE,
+            result.journal_entry_id,
+            links={"employee_id": None},
+        )
+        assert again.line.id == line.id

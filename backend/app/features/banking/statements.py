@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Mapping
 from datetime import date
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -20,24 +19,7 @@ from app.core.banking.expense_statement_link import (
 )
 from app.core.content_fingerprint import file_fingerprint
 from app.core.banking import posting as banking_posting
-from app.core.banking import statement_posting
-from app.core.ledger.posting import InvalidAccountError
-from app.core.chart_of_accounts.default_chart import CARD_COMMISSION_CODE
-from app.core.ledger.models import JournalEntrySource
 from app.core.banking.matching import NEAR_MATCH_DATE_WINDOW_DAYS, near_match_date_bounds
-from app.core.receivables import posting as receivables_posting
-from app.core.payables import posting as payables_posting
-from app.core.pos import posting as pos_posting
-from app.core.delivery import posting as delivery_posting
-from app.core.expenses.posting import InvalidExpensePostingError, post_expense_entry
-from app.core.partners import posting as partner_posting
-from app.core.partners.ledger import OverLoanRepaymentError as PartnerOverLoanRepaymentError
-from app.core.partners.ledger import OverpaymentError as PartnerOverpaymentError
-from app.core.partners.ledger import OverProfitPaymentError as PartnerOverProfitPaymentError
-from app.core.partners.ledger import OverRepaymentError as PartnerOverRepaymentError
-from app.core.staff import posting as staff_posting
-from app.core.staff.ledger import OverpaymentError as StaffOverpaymentError
-from app.core.staff.posting import InvalidStaffPostingError
 from app.features.delivery import platform_service
 from app.features.delivery.platform_service import InactiveDeliveryPlatformError
 from app.features.delivery.settings import (
@@ -49,7 +31,6 @@ from app.core.payables.types import SupplierMovementType
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
 from app.features.banking.schema import (
-    BankStatementLineRead,
     BankStatementRead,
     ClassifyStatementLineResult,
     CreateSupplierFromLineResult,
@@ -60,14 +41,23 @@ from app.features.banking.classification_learning import (
     learn_classification_rule,
     record_rule_correction,
 )
-from app.features.banking.supplier_suggest_service import suggest_line_classification
+from app.features.banking.statement_classify_core import (
+    BANK_STATEMENT_LINE_REF,
+    _PARTNER_LINE_CLASSIFICATIONS,
+    _STAFF_LINE_CLASSIFICATIONS,
+    InvalidClassificationError,
+    _ClassifyContext,
+    _line_read_by_id,
+    _record_classification_learning,
+    _to_line_read,
+)
+from app.features.banking.statement_posters import CLASSIFICATION_POSTERS
 from app.features.banking.statement_rule_auto import apply_import_rule_auto
 from app.features.banking.statement_closing import resolve_import_closing_balance_kurus
 from app.features.banking.statement_models import (
     BankStatement,
     BankStatementLine,
     StatementLineClassification,
-    StatementLineClassificationSource,
     StatementLineStatus,
 )
 from app.features.entities import service as entity_service
@@ -77,96 +67,11 @@ from app.features.banking.transfer_models import AccountTransfer
 from app.features.delivery.models import DeliverySettlement
 from app.features.pos.models import PosSettlement
 from app.features.customers.models import Customer
-from app.core.partners.models import PartnerLedgerEntry
-from app.core.partners.types import PartnerMovementType
-from app.core.staff.models import StaffLedgerEntry
-from app.core.staff.types import StaffMovementType
 from app.features.partners.models import Partner
 from app.features.staff.models import Employee
 from app.features.suppliers.models import Supplier
 from app.features.suppliers.schema import SupplierCreate
-from app.features.suppliers.service import DuplicateSupplierError, create_supplier
-
-BANK_STATEMENT_LINE_REF = "bank_statement_line"
-
-_STAFF_LINE_CLASSIFICATIONS = frozenset(
-    {
-        StatementLineClassification.STAFF_PAYMENT,
-        StatementLineClassification.STAFF_ADVANCE,
-        StatementLineClassification.STAFF_INCENTIVE,
-    }
-)
-
-_PARTNER_LINE_CLASSIFICATIONS = frozenset(
-    {
-        StatementLineClassification.PARTNER_DRAWING,
-        StatementLineClassification.PARTNER_REIMBURSEMENT,
-        StatementLineClassification.PARTNER_DRAWING_REPAYMENT,
-        StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION,
-        StatementLineClassification.PARTNER_PROFIT_PAID,
-        StatementLineClassification.PARTNER_LOAN_RECEIPT,
-        StatementLineClassification.PARTNER_LOAN_PAYMENT,
-    }
-)
-
-
-def _resolve_employee_id_for_line(
-    session: Session,
-    line: BankStatementLine,
-) -> uuid.UUID | None:
-    if line.employee_id is not None:
-        return line.employee_id
-    if line.journal_entry_id is None or line.classification not in _STAFF_LINE_CLASSIFICATIONS:
-        return None
-    preferred = session.scalar(
-        select(StaffLedgerEntry.employee_id)
-        .where(StaffLedgerEntry.journal_entry_id == line.journal_entry_id)
-        .where(
-            StaffLedgerEntry.movement_type.in_(
-                (
-                    StaffMovementType.SALARY_PAYMENT,
-                    StaffMovementType.ADVANCE_PAID,
-                    StaffMovementType.INCENTIVE_PAID,
-                )
-            )
-        )
-        .limit(1)
-    )
-    if preferred is not None:
-        return preferred
-    return session.scalar(
-        select(StaffLedgerEntry.employee_id)
-        .where(StaffLedgerEntry.journal_entry_id == line.journal_entry_id)
-        .limit(1)
-    )
-
-
-def _resolve_partner_id_for_line(
-    session: Session,
-    line: BankStatementLine,
-) -> uuid.UUID | None:
-    if line.partner_id is not None:
-        return line.partner_id
-    if line.journal_entry_id is None or line.classification not in _PARTNER_LINE_CLASSIFICATIONS:
-        return None
-    return session.scalar(
-        select(PartnerLedgerEntry.partner_id)
-        .where(PartnerLedgerEntry.journal_entry_id == line.journal_entry_id)
-        .where(
-            PartnerLedgerEntry.movement_type.in_(
-                (
-                    PartnerMovementType.DRAWING,
-                    PartnerMovementType.REIMBURSEMENT_PAID,
-                    PartnerMovementType.DRAWING_REPAYMENT,
-                    PartnerMovementType.CAPITAL_CONTRIBUTION,
-                    PartnerMovementType.PROFIT_PAID,
-                    PartnerMovementType.PARTNER_LOAN_RECEIVED,
-                    PartnerMovementType.PARTNER_LOAN_REPAID,
-                )
-            )
-        )
-        .limit(1)
-    )
+from app.features.suppliers.service import create_supplier
 
 
 class DuplicateStatementError(Exception):
@@ -183,10 +88,6 @@ class NotBankAccountError(Exception):
 
 class LineAlreadyResolvedError(Exception):
     """Raised when re-classifying a posted or linked line."""
-
-
-class InvalidClassificationError(ValueError):
-    """Raised when classification preconditions fail."""
 
 
 class LineNotCorrectableError(ValueError):
@@ -222,60 +123,6 @@ class StatementNotDiscardableError(Exception):
         )
 
 
-def _to_line_read(
-    line: BankStatementLine,
-    *,
-    session: Session | None = None,
-) -> BankStatementLineRead:
-    suggestion = None
-    if session is not None and line.status in (
-        StatementLineStatus.NEEDS_REVIEW,
-        StatementLineStatus.IMPORTED,
-    ):
-        try:
-            entity_id = require_entity_context()
-            suggestion = suggest_line_classification(
-                session,
-                entity_id,
-                line.description,
-                amount_kurus=line.amount_kurus,
-            )
-        except RuntimeError:
-            suggestion = None
-    employee_id = line.employee_id
-    partner_id = line.partner_id
-    if session is not None:
-        employee_id = _resolve_employee_id_for_line(session, line)
-        partner_id = _resolve_partner_id_for_line(session, line)
-    return BankStatementLineRead(
-        id=line.id,
-        statement_id=line.statement_id,
-        transaction_date=line.transaction_date,
-        amount_kurus=line.amount_kurus,
-        description=line.description,
-        reference=line.reference,
-        classification=line.classification,
-        status=line.status,
-        supplier_id=line.supplier_id,
-        employee_id=employee_id,
-        partner_id=partner_id,
-        journal_entry_id=line.journal_entry_id,
-        supplier_ledger_entry_id=line.supplier_ledger_entry_id,
-        account_transfer_id=line.account_transfer_id,
-        pos_settlement_id=line.pos_settlement_id,
-        delivery_settlement_id=line.delivery_settlement_id,
-        credit_card_payment_id=line.credit_card_payment_id,
-        customer_id=line.customer_id,
-        customer_ledger_entry_id=line.customer_ledger_entry_id,
-        review_reason=line.review_reason,
-        candidate_supplier_ledger_entry_id=line.candidate_supplier_ledger_entry_id,
-        candidate_account_transfer_id=line.candidate_account_transfer_id,
-        expense_entry_id=line.expense_entry_id,
-        classification_source=line.classification_source,
-        suggestion=suggestion,
-    )
-
-
 def _to_statement_read(
     statement: BankStatement,
     lines: list[BankStatementLine],
@@ -296,135 +143,6 @@ def _to_statement_read(
         skipped_duplicate_count=skipped_duplicate_count,
         imported_at=statement.imported_at,
         lines=[_to_line_read(line, session=session) for line in lines],
-    )
-
-
-def _line_read_by_id(
-    session: Session,
-    entity_id: uuid.UUID,
-    line_id: uuid.UUID,
-) -> BankStatementLineRead:
-    with entity_context(session, entity_id):
-        line = session.get(BankStatementLine, line_id)
-        if line is None:
-            raise LookupError("Statement line not found")
-        return _to_line_read(line, session=session)
-
-
-def _record_classification_learning(
-    session: Session,
-    entity_id: uuid.UUID,
-    line: BankStatementLine,
-    classification: StatementLineClassification,
-    *,
-    supplier_id: uuid.UUID | None = None,
-    delivery_platform_id: uuid.UUID | None = None,
-    match_token: str | None = None,
-    expense_account_id: uuid.UUID | None = None,
-) -> None:
-    """Persist a learned rule after successful user classification (never auto-posts)."""
-    description = line.description
-    learned_supplier_id = (
-        supplier_id if supplier_id is not None else line.supplier_id
-    )
-    learned_match_token = match_token.strip() if match_token and match_token.strip() else None
-    counterparty_name: str | None = None
-    with entity_context(session, entity_id):
-        require_entity_context()
-        if learned_supplier_id is not None:
-            supplier = session.get(Supplier, learned_supplier_id)
-            if supplier is not None:
-                counterparty_name = supplier.name
-        elif delivery_platform_id is not None:
-            from app.features.delivery import platform_service as delivery_platform_service
-
-            try:
-                platform = delivery_platform_service.get_delivery_platform_row(
-                    session, entity_id, delivery_platform_id
-                )
-                counterparty_name = platform.name
-            except LookupError:
-                counterparty_name = None
-        learn_classification_rule(
-            session,
-            description=description,
-            classification=classification,
-            supplier_id=learned_supplier_id,
-            delivery_platform_id=delivery_platform_id,
-            expense_account_id=expense_account_id,
-            match_token=learned_match_token,
-            counterparty_name=counterparty_name,
-        )
-        session.commit()
-
-
-def _finish_classified_line(
-    session: Session,
-    entity_id: uuid.UUID,
-    line_id: uuid.UUID,
-    classification: StatementLineClassification,
-    journal_entry_id: uuid.UUID,
-    *,
-    match_token: str | None = None,
-    links: Mapping[str, uuid.UUID | None] | None = None,
-    learn_supplier_id: uuid.UUID | None = None,
-    learn_delivery_platform_id: uuid.UUID | None = None,
-    learn_expense_account_id: uuid.UUID | None = None,
-) -> ClassifyStatementLineResult:
-    """Mark a line posted, learn from it, and answer the caller.
-
-    Twenty-two classifications ended with the same forty lines: reload the
-    line, set classification/status/journal id, commit, record a learned rule,
-    build the result. They were copies, and copies drift — this is what the
-    drift looked like when they were finally read side by side.
-
-    **`classification_source` was set by two of twenty-two.** Every reader
-    compares against `"rule_auto"`, so NULL and `"manual"` behave identically
-    and nothing is wrong today. But the natural thing for the next person to
-    write is `== "manual"`, and twenty classifications would fall silently
-    outside it. All of them set it now.
-
-    **`OTHER_INCOME` recorded no learning at all** — the only one. A learned
-    rule that is not auto-postable still pre-labels the next matching line in
-    the review queue, so this is the difference between the app remembering a
-    recurring rent *payment* and forgetting the rent *receipt* beside it. It
-    learns now, without an account: `apply_import_rule_auto` does not post
-    income automatically, so there is nothing an account would be used for,
-    and storing one in a column named `expense_account_id` would be a lie for
-    no gain.
-
-    `links` carries the per-classification foreign keys — the partner, the
-    employee, the settlement being matched — because that is the whole of what
-    genuinely differed between the twenty-two.
-    """
-    with entity_context(session, entity_id):
-        line = session.get(BankStatementLine, line_id)
-        assert line is not None
-        line.classification = classification
-        line.status = StatementLineStatus.POSTED
-        line.journal_entry_id = journal_entry_id
-        line.classification_source = StatementLineClassificationSource.MANUAL.value
-        for field, value in (links or {}).items():
-            setattr(line, field, value)
-        session.commit()
-        session.refresh(line)
-
-    _record_classification_learning(
-        session,
-        entity_id,
-        line,
-        classification,
-        supplier_id=learn_supplier_id,
-        delivery_platform_id=learn_delivery_platform_id,
-        expense_account_id=learn_expense_account_id,
-        match_token=match_token,
-    )
-    return ClassifyStatementLineResult(
-        line=_line_read_by_id(session, entity_id, line_id),
-        linked_existing_payment=False,
-        linked_existing_transfer=False,
-        routed_to_needs_review=False,
-        journal_entry_id=journal_entry_id,
     )
 
 
@@ -1243,6 +961,17 @@ def list_bank_statements(
         return results, total
 
 
+#: Which poster runs for each classification.
+#:
+#: Was a flat chain of twenty-two `if classification == …` blocks, read top to
+#: bottom to find the one that applied. A table says the same thing in
+#: twenty-two lines and makes the missing entry a `KeyError` at the point of
+#: dispatch rather than a silent fall-through to the transfer branch below.
+#:
+#: TRANSFER is deliberately absent: it is not a posting, it is a pairing of two
+#: statement lines, and it is handled after this.
+
+
 def classify_statement_line(
     session: Session,
     entity_id: uuid.UUID,
@@ -1909,699 +1638,32 @@ def classify_statement_line(
         else:
             raise InvalidClassificationError(f"Unsupported classification: {classification}")
 
-    if classification == StatementLineClassification.SUPPLIER_PAYMENT:
-        payment_amount = abs(line.amount_kurus)
-        result = payables_posting.post_supplier_payment(
-            session,
-            entity_id,
-            supplier_id,
-            payment_date=line.transaction_date,
-            amount_kurus=payment_amount,
-            description=line.description,
-            actor_id=actor_id,
-            payment_account_id=money_account.gl_account_id,
-            reference_type=BANK_STATEMENT_LINE_REF,
-            reference_id=line.id,
-            skip_advance_confirm=True,
-        )
-        journal_id = result.journal_entry.id
-        supplier_ledger_id = result.supplier_ledger_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.SUPPLIER_PAYMENT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "supplier_ledger_entry_id": supplier_ledger_id,
-                "supplier_id": supplier_id,
-            },
-            learn_supplier_id=supplier_id,
-        )
-
-    if classification == StatementLineClassification.CUSTOMER_PAYMENT:
-        payment_amount = line.amount_kurus
-        assert customer_id is not None
-        assert actor_id is not None
-        result = receivables_posting.post_customer_payment(
-            session,
-            entity_id,
-            customer_id,
-            payment_date=line.transaction_date,
-            amount_kurus=payment_amount,
-            description=line.description,
-            actor_id=actor_id,
-            payment_account_id=money_account.gl_account_id,
-            reference_type=BANK_STATEMENT_LINE_REF,
-            reference_id=line.id,
-        )
-        journal_id = result.journal_entry.id
-        customer_ledger_id = result.customer_ledger_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.CUSTOMER_PAYMENT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "customer_id": customer_id,
-                "customer_ledger_entry_id": customer_ledger_id,
-            },
-        )
-
-    if classification == StatementLineClassification.POS_SETTLEMENT:
-        settlement_amount = line.amount_kurus
-        assert actor_id is not None
-        result = pos_posting.post_pos_settlement(
-            session,
-            entity_id,
-            money_account_id=statement.money_account_id,
-            settlement_date=line.transaction_date,
-            amount_kurus=settlement_amount,
-            description=line.description,
-            actor_id=actor_id,
-            reference_type=BANK_STATEMENT_LINE_REF,
-            reference_id=line.id,
-            bank_statement_line_id=line.id,
-        )
-        journal_id = result.journal_entry.id
-        settlement_id = result.pos_settlement.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.POS_SETTLEMENT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "pos_settlement_id": settlement_id,
-            },
-        )
-
-    if classification == StatementLineClassification.DELIVERY_SETTLEMENT:
-        settlement_amount = line.amount_kurus
-        assert actor_id is not None
-        assert delivery_platform_id is not None
-        result = delivery_posting.post_delivery_settlement(
-            session,
-            entity_id,
-            delivery_platform_id=delivery_platform_id,
-            money_account_id=statement.money_account_id,
-            settlement_date=line.transaction_date,
-            amount_kurus=settlement_amount,
-            description=line.description,
-            actor_id=actor_id,
-            reference_type=BANK_STATEMENT_LINE_REF,
-            reference_id=line.id,
-            bank_statement_line_id=line.id,
-        )
-        journal_id = result.journal_entry.id
-        settlement_id = result.delivery_settlement.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.DELIVERY_SETTLEMENT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "delivery_settlement_id": settlement_id,
-            },
-            learn_delivery_platform_id=delivery_platform_id,
-        )
-
-    if classification == StatementLineClassification.BANK_FEE:
-        fee_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        result = statement_posting.post_bank_fee(
-            session,
-            entity_id,
-            bank_money_account_id=statement.money_account_id,
-            fee_date=line.transaction_date,
-            amount_kurus=fee_amount,
-            description=line.description,
-            actor_id=actor_id,
-        )
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.BANK_FEE,
-            journal_id,
-            match_token=match_token,
-        )
-
-    if classification == StatementLineClassification.POS_COMMISSION:
-        commission_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        # Card commission is money the bank took out of the account — Dr 5310 / Cr bank,
-        # exactly like a bank fee but to the dedicated Card Commission account.
-        result = statement_posting.post_bank_fee(
-            session,
-            entity_id,
-            bank_money_account_id=statement.money_account_id,
-            fee_date=line.transaction_date,
-            amount_kurus=commission_amount,
-            description=line.description,
-            actor_id=actor_id,
-            source=JournalEntrySource.POS_COMMISSION_STATEMENT,
-            charges_account_code=CARD_COMMISSION_CODE,
-        )
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.POS_COMMISSION,
-            journal_id,
-            match_token=match_token,
-        )
-
-    if classification == StatementLineClassification.CREDIT_CARD_PAYMENT:
-        payment_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert credit_card_money_account_id is not None
-        result = statement_posting.post_credit_card_payment(
-            session,
-            entity_id,
-            credit_card_money_account_id=credit_card_money_account_id,
-            bank_money_account_id=statement.money_account_id,
-            payment_date=line.transaction_date,
-            amount_kurus=payment_amount,
-            description=line.description,
-            actor_id=actor_id,
-            bank_statement_line_id=line.id,
-        )
-        journal_id = result.journal_entry.id
-        payment_id = result.credit_card_payment.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.CREDIT_CARD_PAYMENT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "credit_card_payment_id": payment_id,
-            },
-        )
-
-    if classification == StatementLineClassification.OTHER_INCOME:
-        assert actor_id is not None
-        assert income_account_id is not None
-        try:
-            result = statement_posting.post_bank_income(
-                session,
-                entity_id,
-                bank_money_account_id=statement.money_account_id,
-                income_date=line.transaction_date,
-                amount_kurus=abs(line.amount_kurus),
+    poster = CLASSIFICATION_POSTERS.get(classification)
+    if poster is not None:
+        return poster(
+            _ClassifyContext(
+                session=session,
+                entity_id=entity_id,
+                statement=statement,
+                line=line,
+                line_id=line_id,
+                money_account=money_account,
+                classification=classification,
+                actor_id=actor_id,
+                match_token=match_token,
+                supplier_id=supplier_id,
+                customer_id=customer_id,
+                partner_id=partner_id,
+                employee_id=employee_id,
+                expense_account_id=expense_account_id,
                 income_account_id=income_account_id,
-                description=line.description,
-                actor_id=actor_id,
-            )
-        except (InvalidAccountError, ValueError) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-
-        journal_id = result.journal_entry.id
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.OTHER_INCOME,
-            journal_id,
-            match_token=match_token,
-        )
-
-    if classification == StatementLineClassification.RENT_UTILITY:
-        expense_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert expense_account_id is not None
-        try:
-            result = post_expense_entry(
-                session,
-                entity_id,
-                expense_date=line.transaction_date,
-                amount_kurus=expense_amount,
-                expense_account_id=expense_account_id,
-                money_account_id=statement.money_account_id,
-                description=line.description,
-                actor_id=actor_id,
-                bank_statement_line_id=line.id,
-            )
-        except (InvalidExpensePostingError, ValueError) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-
-        journal_id = result.journal_entry.id
-        expense_id = result.expense_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.RENT_UTILITY,
-            journal_id,
-            match_token=match_token,
-            links={
-                "expense_entry_id": expense_id,
-            },
-            learn_expense_account_id=expense_account_id,
-        )
-
-    if classification == StatementLineClassification.STORE_PURCHASE:
-        expense_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert expense_account_id is not None
-        try:
-            result = post_expense_entry(
-                session,
-                entity_id,
-                expense_date=line.transaction_date,
-                amount_kurus=expense_amount,
-                expense_account_id=expense_account_id,
-                money_account_id=statement.money_account_id,
-                description=line.description,
-                actor_id=actor_id,
-                bank_statement_line_id=line.id,
-                has_source_document=False,
-            )
-        except (InvalidExpensePostingError, ValueError) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-
-        journal_id = result.journal_entry.id
-        expense_id = result.expense_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.STORE_PURCHASE,
-            journal_id,
-            match_token=match_token,
-            links={
-                "expense_entry_id": expense_id,
-            },
-            learn_expense_account_id=expense_account_id,
-        )
-
-    if classification == StatementLineClassification.STAFF_PAYMENT:
-        payment_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert employee_id is not None
-        assert period_year is not None
-        assert period_month is not None
-        assert period_salary_minor is not None
-        try:
-            result = staff_posting.post_period_salary_payment(
-                session,
-                entity_id,
-                employee_id,
-                payment_date=line.transaction_date,
-                cash_minor=payment_amount,
+                credit_card_money_account_id=credit_card_money_account_id,
+                delivery_platform_id=delivery_platform_id,
+                note=note,
                 period_year=period_year,
                 period_month=period_month,
                 period_salary_minor=period_salary_minor,
-                description=line.description,
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
             )
-        except (InvalidStaffPostingError, StaffOverpaymentError, ValueError) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.STAFF_PAYMENT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "employee_id": employee_id,
-            },
-        )
-
-    if classification == StatementLineClassification.STAFF_INCENTIVE:
-        incentive_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert employee_id is not None
-        try:
-            result = staff_posting.post_incentive_paid(
-                session,
-                entity_id,
-                employee_id,
-                payment_date=line.transaction_date,
-                amount_minor=incentive_amount,
-                description=line.description,
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
-            )
-        except (InvalidStaffPostingError, ValueError) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.STAFF_INCENTIVE,
-            journal_id,
-            match_token=match_token,
-            links={
-                "employee_id": employee_id,
-            },
-        )
-
-    if classification == StatementLineClassification.STAFF_ADVANCE:
-        advance_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert employee_id is not None
-        try:
-            result = staff_posting.post_advance_paid(
-                session,
-                entity_id,
-                employee_id,
-                payment_date=line.transaction_date,
-                amount_minor=advance_amount,
-                description=line.description,
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
-            )
-        except (InvalidStaffPostingError, ValueError) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.STAFF_ADVANCE,
-            journal_id,
-            match_token=match_token,
-            links={
-                "employee_id": employee_id,
-            },
-        )
-
-    if classification == StatementLineClassification.PARTNER_DRAWING:
-        drawing_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert partner_id is not None
-        try:
-            result = partner_posting.post_drawing(
-                session,
-                entity_id,
-                partner_id,
-                drawing_date=line.transaction_date,
-                amount_kurus=drawing_amount,
-                description=line.description,
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
-            )
-        except (partner_posting.InvalidPartnerPostingError, ValueError) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.PARTNER_DRAWING,
-            journal_id,
-            match_token=match_token,
-            links={
-                "partner_id": partner_id,
-            },
-        )
-
-    if classification == StatementLineClassification.PARTNER_REIMBURSEMENT:
-        reimbursement_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert partner_id is not None
-        try:
-            result = partner_posting.post_reimbursement_paid(
-                session,
-                entity_id,
-                partner_id,
-                payment_date=line.transaction_date,
-                amount_kurus=reimbursement_amount,
-                description=line.description,
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
-            )
-        except (
-            partner_posting.InvalidPartnerPostingError,
-            PartnerOverpaymentError,
-            ValueError,
-        ) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.PARTNER_REIMBURSEMENT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "partner_id": partner_id,
-            },
-        )
-
-    if classification == StatementLineClassification.PARTNER_DRAWING_REPAYMENT:
-        repayment_amount = line.amount_kurus
-        assert actor_id is not None
-        assert partner_id is not None
-        try:
-            result = partner_posting.post_drawing_repayment(
-                session,
-                entity_id,
-                partner_id,
-                payment_date=line.transaction_date,
-                amount_kurus=repayment_amount,
-                description=line.description,
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
-            )
-        except (
-            partner_posting.InvalidPartnerPostingError,
-            PartnerOverRepaymentError,
-            ValueError,
-        ) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.PARTNER_DRAWING_REPAYMENT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "partner_id": partner_id,
-            },
-        )
-
-    if classification == StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION:
-        contribution_amount = line.amount_kurus
-        assert actor_id is not None
-        assert partner_id is not None
-        try:
-            result = partner_posting.post_capital_contribution(
-                session,
-                entity_id,
-                partner_id,
-                contribution_date=line.transaction_date,
-                amount_kurus=contribution_amount,
-                description=(note or "").strip(),
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
-            )
-        except (
-            partner_posting.InvalidPartnerPostingError,
-            ValueError,
-        ) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION,
-            journal_id,
-            match_token=match_token,
-            links={
-                "partner_id": partner_id,
-            },
-        )
-
-    if classification == StatementLineClassification.PARTNER_PROFIT_PAID:
-        payment_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert partner_id is not None
-        try:
-            result = partner_posting.post_profit_paid(
-                session,
-                entity_id,
-                partner_id,
-                payment_date=line.transaction_date,
-                amount_kurus=payment_amount,
-                description=line.description,
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
-            )
-        except (
-            partner_posting.InvalidPartnerPostingError,
-            PartnerOverProfitPaymentError,
-            ValueError,
-        ) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.PARTNER_PROFIT_PAID,
-            journal_id,
-            match_token=match_token,
-            links={
-                "partner_id": partner_id,
-            },
-        )
-
-    if classification == StatementLineClassification.PARTNER_LOAN_RECEIPT:
-        loan_amount = line.amount_kurus
-        assert actor_id is not None
-        assert partner_id is not None
-        try:
-            result = partner_posting.post_partner_loan_receipt(
-                session,
-                entity_id,
-                partner_id,
-                receipt_date=line.transaction_date,
-                amount_kurus=loan_amount,
-                description=line.description,
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
-            )
-        except (
-            partner_posting.InvalidPartnerPostingError,
-            ValueError,
-        ) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.PARTNER_LOAN_RECEIPT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "partner_id": partner_id,
-            },
-        )
-
-    if classification == StatementLineClassification.PARTNER_LOAN_PAYMENT:
-        loan_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        assert partner_id is not None
-        try:
-            result = partner_posting.post_partner_loan_payment(
-                session,
-                entity_id,
-                partner_id,
-                payment_date=line.transaction_date,
-                amount_kurus=loan_amount,
-                description=line.description,
-                actor_id=actor_id,
-                payment_account_id=money_account.gl_account_id,
-            )
-        except (
-            partner_posting.InvalidPartnerPostingError,
-            PartnerOverLoanRepaymentError,
-            ValueError,
-        ) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.PARTNER_LOAN_PAYMENT,
-            journal_id,
-            match_token=match_token,
-            links={
-                "partner_id": partner_id,
-            },
-        )
-
-    if classification == StatementLineClassification.LOAN_PAYMENT:
-        loan_amount = abs(line.amount_kurus)
-        assert actor_id is not None
-        try:
-            result = statement_posting.post_loan_payment(
-                session,
-                entity_id,
-                bank_money_account_id=statement.money_account_id,
-                payment_date=line.transaction_date,
-                amount_kurus=loan_amount,
-                description=line.description,
-                actor_id=actor_id,
-            )
-        except (statement_posting.InvalidBankStatementPostError, ValueError) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.LOAN_PAYMENT,
-            journal_id,
-            match_token=match_token,
-        )
-
-    if classification == StatementLineClassification.LOAN_RECEIPT:
-        loan_amount = line.amount_kurus
-        assert actor_id is not None
-        try:
-            result = statement_posting.post_loan_receipt(
-                session,
-                entity_id,
-                bank_money_account_id=statement.money_account_id,
-                receipt_date=line.transaction_date,
-                amount_kurus=loan_amount,
-                description=line.description,
-                actor_id=actor_id,
-            )
-        except (statement_posting.InvalidBankStatementPostError, ValueError) as exc:
-            raise InvalidClassificationError(str(exc)) from exc
-        journal_id = result.journal_entry.id
-
-        return _finish_classified_line(
-            session,
-            entity_id,
-            line_id,
-            StatementLineClassification.LOAN_RECEIPT,
-            journal_id,
-            match_token=match_token,
         )
 
     if classification != StatementLineClassification.TRANSFER:

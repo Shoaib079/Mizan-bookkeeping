@@ -27,9 +27,9 @@ from app.features.banking.statement_models import (
 )
 from app.features.delivery import platform_service
 from app.features.delivery.settings import DeliveryNotEnabledError, require_delivery_enabled
+from app.features.banking.statement_classify_core import BANK_STATEMENT_LINE_REF
 from app.features.pos.models import PosSettlement
 
-BANK_STATEMENT_LINE_REF = "bank_statement_line"
 RULE_AUTO_ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 _AUTO_POST_CLASSIFICATIONS = frozenset(
