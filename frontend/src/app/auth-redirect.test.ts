@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { codeOnly, sourceDeclaring } from "@/test-support/source";
 
 /** Sign-in has to land somewhere inside the app.
  *
@@ -20,11 +20,6 @@ const PAGES = [
   { name: "sign-in", symbol: "SignInPage", tag: "SignIn" },
   { name: "sign-up", symbol: "SignUpPage", tag: "SignUp" },
 ];
-
-/** Source with comments stripped — the rule is about the JSX, and the prose
- * explaining the rule necessarily contains the words it forbids. */
-const codeOnly = (source: string) =>
-  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
 describe.each(PAGES)("$name sends the user into the app", ({ symbol, tag }) => {
   const element = () => {

@@ -143,8 +143,20 @@ export default function StatementDetailPage() {
     );
   }
 
+  /* One scroll area, not two.
+   *
+   * The page used to scroll *and* the line table had its own 65vh scrollbar,
+   * with the classify bar pinned over the seam. Scroll far enough and the
+   * table's sticky header rode up over the bar and covered the classification
+   * pickers and the Post button — both were `sticky top-0 z-10`, so paint
+   * order fell to whichever came later in the DOM, and that is the table.
+   *
+   * Now the page is a fixed column: header, summary, bar, and the table takes
+   * exactly the room left and scrolls inside itself. Nothing is sticky here,
+   * so nothing can be covered, and the table keeps its own column headings
+   * because it no longer moves. */
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
       <PageHeader
         title="Bank statement"
         actions={
@@ -279,6 +291,6 @@ export default function StatementDetailPage() {
           />
         </>
       )}
-    </>
+    </div>
   );
 }

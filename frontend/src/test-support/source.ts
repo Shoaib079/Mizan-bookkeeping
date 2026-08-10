@@ -144,6 +144,20 @@ export function sourceAt(relativePath: string): string {
   }
 }
 
+/** Source with comments removed — for rules about code, not about prose.
+ *
+ * A guard that forbids something must not be tripped by the sentence
+ * explaining why it is forbidden. That has now happened three times: the
+ * path-reading ratchet counted three files as offenders because a docstring
+ * named the file they used to read, `auth-redirect.test.ts` grew a private
+ * copy of this, and a check that nothing on the bank statement page is
+ * `sticky` failed on the comment saying why. Shared so the three cannot drift
+ * into three different notions of what a comment is.
+ */
+export function codeOnly(source: string): string {
+  return source.replace(COMMENTS, "");
+}
+
 /** Does any source file contain this text? For "somewhere, we do X". */
 export function codeContains(needle: string): boolean {
   return sourceFiles().some((file) => file.text.includes(needle));

@@ -495,7 +495,7 @@ export function StatementClassifyBar({
 
   if (!line) {
     return (
-      <div className="sticky top-0 z-10 mb-4 rounded-lg border border-border bg-card p-4 shadow-sm">
+      <div className="mb-4 shrink-0 rounded-lg border border-border bg-card p-4 shadow-sm">
         <p className="text-sm font-medium text-success">Queue complete</p>
         <p className="text-xs text-muted-foreground">
           Every line is posted, linked, or marked decide-later. Use the table
@@ -513,7 +513,7 @@ export function StatementClassifyBar({
         : "";
 
   return (
-    <div className="sticky top-0 z-10 mb-4 space-y-2 rounded-lg border border-primary/30 bg-card p-3 shadow-sm">
+    <div className="mb-4 shrink-0 space-y-2 rounded-lg border border-primary/30 bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>
           {inQueue ? (

@@ -80,7 +80,7 @@ export function StatementLinesLedger({
   }, [lines]);
 
   return (
-    <section className="space-y-3">
+    <section className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold">Statement ledger</h2>
@@ -137,7 +137,12 @@ export function StatementLinesLedger({
         </p>
       )}
 
-      <DataTable className="max-h-[min(65vh,800px)]">
+      {/* `flex-1 min-h-0`: the table is the only thing on this page
+          that scrolls, and it takes exactly the room left over. It was
+          `max-h-[min(65vh,800px)]`, which left the page scrolling as well
+          — two scroll areas stacked, and the classify bar pinned over the
+          seam between them. */}
+      <DataTable className="min-h-0 flex-1">
         <DataTableHead>
           <tr>
             <DataTableHeaderCell>

@@ -1,6 +1,46 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { codeOnly, sourceDeclaring } from "@/test-support/source";
+
+describe("the page has one scroll area", () => {
+  /* Reported: scrolling the line table slid its header up over the
+   * classification pickers and the Post button, hiding where to post.
+   *
+   * The page scrolled *and* the table had its own 65vh scrollbar, with the
+   * classify bar pinned across the seam. Both the bar and the table's header
+   * were `sticky top-0 z-10`, so paint order fell to DOM order — and the table
+   * comes later. Raising the bar's z-index would have hidden the column
+   * headings instead; the fault was two scroll areas, not the number.
+   *
+   * Pinned as structure because the symptom is geometry, which jsdom does not
+   * compute: nothing here may be sticky, and the table takes the room left
+   * rather than a fraction of the viewport. */
+  it("nothing on it is sticky", () => {
+    for (const symbol of [
+      "StatementDetailPage",
+      "StatementClassifyBar",
+      "StatementBulkActionBar",
+      "StatementLinesLedger",
+    ]) {
+      // `codeOnly`: the comment above explains why nothing is sticky, and
+      // says the word. A rule must not be tripped by its own reason.
+      expect(
+        codeOnly(sourceDeclaring(symbol)),
+        `${symbol} pins itself again`,
+      ).not.toMatch(/\bsticky\b/);
+    }
+  });
+
+  it("the table fills the room left instead of a slice of the viewport", () => {
+    const ledger = codeOnly(sourceDeclaring("StatementLinesLedger"));
+    expect(ledger).not.toContain("max-h-[min(65vh,800px)]");
+    expect(ledger).toContain("min-h-0 flex-1");
+    // A flex child only fills if its parent is a column that can shrink.
+    expect(sourceDeclaring("StatementDetailPage")).toContain(
+      "flex h-full min-h-0 flex-col",
+    );
+  });
+});
 
 describe("StatementDetailPage", () => {
   it("defaults ledger to unposted queue via defaultStatementLineFilter", () => {
