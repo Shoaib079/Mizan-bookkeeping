@@ -20,7 +20,7 @@
   "backend/app/features/banking/schema.py": 413,
   "backend/app/features/banking/service.py": 429,
   "backend/app/features/banking/statement_rule_auto.py": 674,
-  "backend/app/features/banking/statements.py": 3098,
+  "backend/app/features/banking/statements.py": 2877,
   "backend/app/features/banking/statements_api.py": 430,
   "backend/app/features/customers/api.py": 477,
   "backend/app/features/customers/service.py": 682,

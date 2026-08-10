@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from datetime import date
 
 from sqlalchemy import and_, select
@@ -355,6 +356,76 @@ def _record_classification_learning(
             counterparty_name=counterparty_name,
         )
         session.commit()
+
+
+def _finish_classified_line(
+    session: Session,
+    entity_id: uuid.UUID,
+    line_id: uuid.UUID,
+    classification: StatementLineClassification,
+    journal_entry_id: uuid.UUID,
+    *,
+    match_token: str | None = None,
+    links: Mapping[str, uuid.UUID | None] | None = None,
+    learn_supplier_id: uuid.UUID | None = None,
+    learn_delivery_platform_id: uuid.UUID | None = None,
+    learn_expense_account_id: uuid.UUID | None = None,
+) -> ClassifyStatementLineResult:
+    """Mark a line posted, learn from it, and answer the caller.
+
+    Twenty-two classifications ended with the same forty lines: reload the
+    line, set classification/status/journal id, commit, record a learned rule,
+    build the result. They were copies, and copies drift — this is what the
+    drift looked like when they were finally read side by side.
+
+    **`classification_source` was set by two of twenty-two.** Every reader
+    compares against `"rule_auto"`, so NULL and `"manual"` behave identically
+    and nothing is wrong today. But the natural thing for the next person to
+    write is `== "manual"`, and twenty classifications would fall silently
+    outside it. All of them set it now.
+
+    **`OTHER_INCOME` recorded no learning at all** — the only one. A learned
+    rule that is not auto-postable still pre-labels the next matching line in
+    the review queue, so this is the difference between the app remembering a
+    recurring rent *payment* and forgetting the rent *receipt* beside it. It
+    learns now, without an account: `apply_import_rule_auto` does not post
+    income automatically, so there is nothing an account would be used for,
+    and storing one in a column named `expense_account_id` would be a lie for
+    no gain.
+
+    `links` carries the per-classification foreign keys — the partner, the
+    employee, the settlement being matched — because that is the whole of what
+    genuinely differed between the twenty-two.
+    """
+    with entity_context(session, entity_id):
+        line = session.get(BankStatementLine, line_id)
+        assert line is not None
+        line.classification = classification
+        line.status = StatementLineStatus.POSTED
+        line.journal_entry_id = journal_entry_id
+        line.classification_source = StatementLineClassificationSource.MANUAL.value
+        for field, value in (links or {}).items():
+            setattr(line, field, value)
+        session.commit()
+        session.refresh(line)
+
+    _record_classification_learning(
+        session,
+        entity_id,
+        line,
+        classification,
+        supplier_id=learn_supplier_id,
+        delivery_platform_id=learn_delivery_platform_id,
+        expense_account_id=learn_expense_account_id,
+        match_token=match_token,
+    )
+    return ClassifyStatementLineResult(
+        line=_line_read_by_id(session, entity_id, line_id),
+        linked_existing_payment=False,
+        linked_existing_transfer=False,
+        routed_to_needs_review=False,
+        journal_entry_id=journal_entry_id,
+    )
 
 
 def _placeholder_supplier_vkn(session: Session) -> str:
@@ -1856,31 +1927,18 @@ def classify_statement_line(
         journal_id = result.journal_entry.id
         supplier_ledger_id = result.supplier_ledger_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.SUPPLIER_PAYMENT
-            line.status = StatementLineStatus.POSTED
-            line.supplier_id = supplier_id
-            line.journal_entry_id = journal_id
-            line.supplier_ledger_entry_id = supplier_ledger_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.SUPPLIER_PAYMENT,
-            supplier_id=supplier_id,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "supplier_ledger_entry_id": supplier_ledger_id,
+                "supplier_id": supplier_id,
+            },
+            learn_supplier_id=supplier_id,
         )
 
     if classification == StatementLineClassification.CUSTOMER_PAYMENT:
@@ -1902,30 +1960,17 @@ def classify_statement_line(
         journal_id = result.journal_entry.id
         customer_ledger_id = result.customer_ledger_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.CUSTOMER_PAYMENT
-            line.status = StatementLineStatus.POSTED
-            line.customer_id = customer_id
-            line.journal_entry_id = journal_id
-            line.customer_ledger_entry_id = customer_ledger_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.CUSTOMER_PAYMENT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "customer_id": customer_id,
+                "customer_ledger_entry_id": customer_ledger_id,
+            },
         )
 
     if classification == StatementLineClassification.POS_SETTLEMENT:
@@ -1946,30 +1991,16 @@ def classify_statement_line(
         journal_id = result.journal_entry.id
         settlement_id = result.pos_settlement.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.POS_SETTLEMENT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.pos_settlement_id = settlement_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.POS_SETTLEMENT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            linked_existing_settlement=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "pos_settlement_id": settlement_id,
+            },
         )
 
     if classification == StatementLineClassification.DELIVERY_SETTLEMENT:
@@ -1992,30 +2023,17 @@ def classify_statement_line(
         journal_id = result.journal_entry.id
         settlement_id = result.delivery_settlement.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.DELIVERY_SETTLEMENT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.delivery_settlement_id = settlement_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.DELIVERY_SETTLEMENT,
-            delivery_platform_id=delivery_platform_id,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "delivery_settlement_id": settlement_id,
+            },
+            learn_delivery_platform_id=delivery_platform_id,
         )
 
     if classification == StatementLineClassification.BANK_FEE:
@@ -2032,29 +2050,13 @@ def classify_statement_line(
         )
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.BANK_FEE
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.classification_source = StatementLineClassificationSource.MANUAL.value
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.BANK_FEE,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
         )
 
     if classification == StatementLineClassification.POS_COMMISSION:
@@ -2075,29 +2077,13 @@ def classify_statement_line(
         )
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.POS_COMMISSION
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.classification_source = StatementLineClassificationSource.MANUAL.value
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.POS_COMMISSION,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
         )
 
     if classification == StatementLineClassification.CREDIT_CARD_PAYMENT:
@@ -2118,29 +2104,16 @@ def classify_statement_line(
         journal_id = result.journal_entry.id
         payment_id = result.credit_card_payment.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.CREDIT_CARD_PAYMENT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.credit_card_payment_id = payment_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.CREDIT_CARD_PAYMENT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "credit_card_payment_id": payment_id,
+            },
         )
 
     if classification == StatementLineClassification.OTHER_INCOME:
@@ -2161,21 +2134,13 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
 
         journal_id = result.journal_entry.id
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.OTHER_INCOME
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            session.commit()
-            session.refresh(line)
-
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+        return _finish_classified_line(
+            session,
+            entity_id,
+            line_id,
+            StatementLineClassification.OTHER_INCOME,
+            journal_id,
+            match_token=match_token,
         )
 
     if classification == StatementLineClassification.RENT_UTILITY:
@@ -2200,30 +2165,17 @@ def classify_statement_line(
         journal_id = result.journal_entry.id
         expense_id = result.expense_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.RENT_UTILITY
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.expense_entry_id = expense_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.RENT_UTILITY,
-            expense_account_id=expense_account_id,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "expense_entry_id": expense_id,
+            },
+            learn_expense_account_id=expense_account_id,
         )
 
     if classification == StatementLineClassification.STORE_PURCHASE:
@@ -2249,30 +2201,17 @@ def classify_statement_line(
         journal_id = result.journal_entry.id
         expense_id = result.expense_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.STORE_PURCHASE
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.expense_entry_id = expense_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.STORE_PURCHASE,
-            expense_account_id=expense_account_id,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "expense_entry_id": expense_id,
+            },
+            learn_expense_account_id=expense_account_id,
         )
 
     if classification == StatementLineClassification.STAFF_PAYMENT:
@@ -2300,29 +2239,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.STAFF_PAYMENT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.employee_id = employee_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.STAFF_PAYMENT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "employee_id": employee_id,
+            },
         )
 
     if classification == StatementLineClassification.STAFF_INCENTIVE:
@@ -2344,29 +2270,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.STAFF_INCENTIVE
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.employee_id = employee_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.STAFF_INCENTIVE,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "employee_id": employee_id,
+            },
         )
 
     if classification == StatementLineClassification.STAFF_ADVANCE:
@@ -2388,29 +2301,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.STAFF_ADVANCE
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.employee_id = employee_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.STAFF_ADVANCE,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "employee_id": employee_id,
+            },
         )
 
     if classification == StatementLineClassification.PARTNER_DRAWING:
@@ -2432,29 +2332,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.PARTNER_DRAWING
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.partner_id = partner_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.PARTNER_DRAWING,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "partner_id": partner_id,
+            },
         )
 
     if classification == StatementLineClassification.PARTNER_REIMBURSEMENT:
@@ -2480,29 +2367,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.PARTNER_REIMBURSEMENT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.partner_id = partner_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.PARTNER_REIMBURSEMENT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "partner_id": partner_id,
+            },
         )
 
     if classification == StatementLineClassification.PARTNER_DRAWING_REPAYMENT:
@@ -2528,29 +2402,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.PARTNER_DRAWING_REPAYMENT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.partner_id = partner_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.PARTNER_DRAWING_REPAYMENT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "partner_id": partner_id,
+            },
         )
 
     if classification == StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION:
@@ -2575,29 +2436,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.partner_id = partner_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.PARTNER_CAPITAL_CONTRIBUTION,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "partner_id": partner_id,
+            },
         )
 
     if classification == StatementLineClassification.PARTNER_PROFIT_PAID:
@@ -2623,29 +2471,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.PARTNER_PROFIT_PAID
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.partner_id = partner_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.PARTNER_PROFIT_PAID,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "partner_id": partner_id,
+            },
         )
 
     if classification == StatementLineClassification.PARTNER_LOAN_RECEIPT:
@@ -2670,29 +2505,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.PARTNER_LOAN_RECEIPT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.partner_id = partner_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.PARTNER_LOAN_RECEIPT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "partner_id": partner_id,
+            },
         )
 
     if classification == StatementLineClassification.PARTNER_LOAN_PAYMENT:
@@ -2718,29 +2540,16 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.PARTNER_LOAN_PAYMENT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            line.partner_id = partner_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.PARTNER_LOAN_PAYMENT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
+            links={
+                "partner_id": partner_id,
+            },
         )
 
     if classification == StatementLineClassification.LOAN_PAYMENT:
@@ -2760,28 +2569,13 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.LOAN_PAYMENT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.LOAN_PAYMENT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
         )
 
     if classification == StatementLineClassification.LOAN_RECEIPT:
@@ -2801,28 +2595,13 @@ def classify_statement_line(
             raise InvalidClassificationError(str(exc)) from exc
         journal_id = result.journal_entry.id
 
-        with entity_context(session, entity_id):
-            line = session.get(BankStatementLine, line_id)
-            assert line is not None
-            line.classification = StatementLineClassification.LOAN_RECEIPT
-            line.status = StatementLineStatus.POSTED
-            line.journal_entry_id = journal_id
-            session.commit()
-            session.refresh(line)
-
-        _record_classification_learning(
+        return _finish_classified_line(
             session,
             entity_id,
-            line,
+            line_id,
             StatementLineClassification.LOAN_RECEIPT,
+            journal_id,
             match_token=match_token,
-        )
-        return ClassifyStatementLineResult(
-            line=_line_read_by_id(session, entity_id, line_id),
-            linked_existing_payment=False,
-            linked_existing_transfer=False,
-            routed_to_needs_review=False,
-            journal_entry_id=journal_id,
         )
 
     if classification != StatementLineClassification.TRANSFER:
