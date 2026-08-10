@@ -4,7 +4,10 @@ import dynamic from "next/dynamic";
 
 import { TableSkeleton } from "@/components/ui/skeleton";
 
-const DeliveryReviewPanel = dynamic(
+/** Named for what it is — a lazy wrapper — not for what it loads. The fourth
+ * of these; sharing the panel's name shadows it, so a symbol lookup finds
+ * two declarations and cannot tell which is meant. */
+const LazyDeliveryReviewPanel = dynamic(
   () =>
     import("@/components/review/delivery-review-panel").then((mod) => ({
       default: mod.DeliveryReviewPanel,
@@ -13,5 +16,5 @@ const DeliveryReviewPanel = dynamic(
 );
 
 export default function ReviewDeliveryPage() {
-  return <DeliveryReviewPanel />;
+  return <LazyDeliveryReviewPanel />;
 }
