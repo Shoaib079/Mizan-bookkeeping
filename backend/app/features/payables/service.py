@@ -327,6 +327,53 @@ def void_supplier_payment_entry(
     )
 
 
+def void_supplier_credit_note_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    supplier_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date=None,
+    period_unlock_reason: str | None = None,
+):
+    """Void an iade. Deliberately its own route, not a flag on the invoice one.
+
+    A credit note and an invoice move the payable in opposite directions, and
+    a caller that thinks it is voiding one when it is voiding the other has
+    made the supplier balance wrong by twice the amount. Two routes cannot be
+    confused; one route with a movement-type branch can.
+    """
+    from app.core.ledger.correction import void_supplier_credit_note
+    from app.features.ledger.schema import SubledgerVoidOut
+
+    with entity_context(session, entity_id):
+        row = session.scalar(
+            select(SupplierLedgerEntry).where(
+                SupplierLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        )
+        if row is None or row.supplier_id != supplier_id:
+            raise CorrectionNotFoundError("supplier credit note not found")
+        if row.movement_type != SupplierMovementType.CREDIT_NOTE:
+            raise CorrectionNotFoundError("journal entry is not a supplier credit note")
+
+    result = void_supplier_credit_note(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+    )
+    return SubledgerVoidOut(
+        original_journal_entry_id=result.original.id,
+        reversal_journal_entry_id=result.reversal.id,
+    )
+
+
 def void_supplier_invoice_entry(
     session: Session,
     entity_id: uuid.UUID,

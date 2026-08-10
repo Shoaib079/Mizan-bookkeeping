@@ -142,9 +142,13 @@ tell a broken button from a working one, so there is nothing to report but
   invoices, supplier payments, group sales, FX purchases, FX conversions.
   *Two wired, three declared,* and the default arm now speaks.
 - Delivery commission offered neither edit nor void; a wrong one was stuck.
-- Supplier credit notes (iade) still have **no correction or void route at
-  all**. The buttons no longer 404 because they no longer appear — the entry
-  is now uncorrectable in-app, which is honest but not finished.
+- Supplier credit notes (iade) had **no correction or void route at all** —
+  honest buttons, and a wrong iade stuck in the books permanently. **Void
+  added 9 Aug** on its own route: an invoice and a credit note move the
+  payable opposite ways, so a caller that confuses them has the supplier
+  balance wrong by twice the amount. The machinery needed nothing new; what
+  was missing was a second caller. Correction is still absent, so Edit stays
+  off — void and re-upload, and the draft release makes that work.
 
 **The rule.** *No silent fallback on a user action. Either it works, or it
 says why, and a test proves the offer matches the capability.*

@@ -1819,6 +1819,51 @@ def void_supplier_invoice(
     )
 
 
+def void_supplier_credit_note(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    reason: str | None = None,
+    void_date: date | None = None,
+    period_unlock_reason: str | None = None,
+) -> SubledgerVoidResult:
+    """Take a credit note (iade) back out of the books.
+
+    A credit note posts under source `INVOICE` with a `CREDIT_NOTE` movement
+    type, and `void_supplier_invoice` refuses it by movement type. Until now
+    nothing else accepted it either, so a wrong iade was in the books
+    permanently — the ledger honestly offered no buttons, which is better than
+    buttons that 404 and still leaves you stuck.
+
+    The machinery needed no changes. `void_gl_with_subledger_rows` reverses
+    the GL and appends the supplier reversal whatever the movement type is,
+    and `_release_posted_draft` hands the draft back so the same file can be
+    uploaded again. Only the guard was in the way, and a guard that says "not
+    an invoice" is right to refuse a caller asking to void an invoice — it was
+    the missing second caller that was the problem.
+    """
+    with entity_context(session, entity_id):
+        require_entity_context()
+        original_row = _get_supplier_ledger_row(session, journal_entry_id)
+        if original_row.movement_type != SupplierMovementType.CREDIT_NOTE:
+            raise CorrectionNotFoundError("journal entry is not a supplier credit note")
+        draft = _draft_for_journal_entry(session, journal_entry_id)
+
+    return void_gl_with_subledger_rows(
+        session,
+        entity_id,
+        journal_entry_id,
+        actor_id=actor_id,
+        reason=reason,
+        void_date=void_date,
+        period_unlock_reason=period_unlock_reason,
+        supplier_row=original_row,
+        after_gl=_release_posted_draft(draft),
+    )
+
+
 def void_customer_payment(
     session: Session,
     entity_id: uuid.UUID,

@@ -79,9 +79,6 @@ class Capability:
     # because one context (profit allocation) is computed from the entry's
     # own lines against the chart, not read off a subledger row.
     context: Callable[[Session, JournalEntry, Any], dict] | None = None
-    # A row that exists but is the wrong kind of thing. A supplier credit note
-    # posts with source INVOICE, and both correct and void reject it outright.
-    precondition: Callable[[Any], bool] | None = None
     # Correcting this source rewrites a single subledger row, so an entry that
     # owns several cannot be corrected without losing one.
     #
@@ -238,19 +235,6 @@ def _profit_allocation_context(
     }
 
 
-def _is_supplier_invoice(row: Any) -> bool:
-    """A credit note (iade) posts as INVOICE but is not one.
-
-    Both `correct_supplier_invoice` and `void_supplier_invoice` reject it, so
-    offering the invoice paths drew an Edit and a Void that answered "404
-    supplier invoice not found". No correction route exists for one yet, so
-    the honest answer is no buttons rather than two that fail.
-    """
-    from app.core.payables.models import SupplierMovementType
-
-    return row.movement_type == SupplierMovementType.INVOICE
-
-
 # --- the table -----------------------------------------------------------
 
 PARTNER = Owner(PartnerLedgerEntry, "partner_id")
@@ -352,12 +336,6 @@ CAPABILITIES: dict[JournalEntrySource, Capability] = {
         can_edit=True, can_void=True, owner=SUPPLIER,
         void_path="suppliers/{owner_id}/payments/{entry_id}/void",
         edit_kind="supplier_payment", context=_supplier_row_context,
-    ),
-    JournalEntrySource.INVOICE: Capability(
-        can_edit=True, can_void=True, owner=SUPPLIER,
-        void_path="suppliers/{owner_id}/invoices/{entry_id}/void",
-        edit_kind="supplier_invoice", context=_supplier_row_context,
-        precondition=_is_supplier_invoice,
     ),
     JournalEntrySource.DELIVERY_COMMISSION: Capability(
         can_edit=True,
@@ -512,6 +490,55 @@ def _group_sale_or_credit_sale(session: Session, entry: JournalEntry):
     )
 
 
+def _supplier_invoice_or_credit_note(session: Session, entry: JournalEntry):
+    """One source, two documents that move the payable opposite ways.
+
+    A supplier credit note (iade) posts under source `INVOICE` with a
+    `CREDIT_NOTE` movement type. It used to be answered with no buttons at
+    all: `void_supplier_invoice` refuses it by movement type and nothing else
+    accepted it, so a wrong iade stayed in the books permanently. Honest, and
+    still stuck.
+
+    It now has its own void route. There is no correction route yet, so Edit
+    stays off — voiding and re-uploading the document is the way through, and
+    the draft is released so the same file is accepted again.
+    """
+    from app.core.ledger.entry_actions import (
+        LedgerEntryActions,
+        LedgerEntryEditContext,
+    )
+    from app.core.payables.models import SupplierMovementType
+
+    row = session.scalar(
+        select(SupplierLedgerEntry).where(
+            SupplierLedgerEntry.journal_entry_id == entry.id
+        )
+    )
+    if row is None:
+        return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+
+    if row.movement_type == SupplierMovementType.CREDIT_NOTE:
+        return LedgerEntryActions(
+            can_edit=False,
+            can_void=True,
+            void_path=(
+                f"suppliers/{row.supplier_id}/credit-notes/{entry.id}/void"
+            ),
+        )
+    if row.movement_type != SupplierMovementType.INVOICE:
+        return LedgerEntryActions(can_edit=False, can_void=False, void_path=None)
+
+    return LedgerEntryActions(
+        can_edit=True,
+        can_void=True,
+        void_path=f"suppliers/{row.supplier_id}/invoices/{entry.id}/void",
+        edit=LedgerEntryEditContext(
+            kind="supplier_invoice",
+            context=_supplier_row_context(session, entry, row),
+        ),
+    )
+
+
 def _partner_supplier_paid(session: Session, entry: JournalEntry):
     """Voids through the partner, unless there is no partner row to void through.
 
@@ -547,6 +574,7 @@ def _partner_supplier_paid(session: Session, entry: JournalEntry):
 
 
 ESCAPES: dict[JournalEntrySource, Callable[[Session, JournalEntry], Any]] = {
+    JournalEntrySource.INVOICE: _supplier_invoice_or_credit_note,
     JournalEntrySource.CUSTOMER_CREDIT_SALE: _group_sale_or_credit_sale,
     JournalEntrySource.GROUP_SALE: _group_sale_or_credit_sale,
     JournalEntrySource.PARTNER_SUPPLIER_PAID: _partner_supplier_paid,
@@ -615,8 +643,6 @@ def resolve_from_table(session: Session, entry: JournalEntry):
         if not rows:
             return none_at_all
         row = rows[0]
-        if cap.precondition is not None and not cap.precondition(row):
-            return none_at_all
         owner_count = len({getattr(r, cap.owner.id_field) for r in rows})
 
     if cap.counts_owners is not None:
@@ -658,6 +684,13 @@ def resolve_from_table(session: Session, entry: JournalEntry):
 
 
 _ESCAPES_WITH_REASONS: dict[JournalEntrySource, str] = {
+    JournalEntrySource.INVOICE: (
+        "a supplier credit note (iade) posts under this source with a "
+        "CREDIT_NOTE movement type and moves the payable the opposite way, so "
+        "it voids through its own route and cannot be corrected in place. An "
+        "ordinary invoice does both. Two documents, one source, decided by the "
+        "row."
+    ),
     JournalEntrySource.CUSTOMER_CREDIT_SALE: (
         "a group sale carrying a reference_id voids at group-sales/{id}/void "
         "and edits as `group_sale`; without one — and for every plain credit "
