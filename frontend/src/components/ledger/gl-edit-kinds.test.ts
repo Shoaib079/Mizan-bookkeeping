@@ -32,13 +32,31 @@ const BACKEND = join(
   "ledger",
   "entry_capabilities.py",
 );
-const HANDLER = join(
+/** Handling a kind now takes two files, and it must appear in both.
+ *
+ * `editTargetFor` decides what to open; `GlEditDialogs` renders it. A kind in
+ * one and not the other is a button that opens nothing — the exact failure
+ * this guard exists for, just split across two switches instead of one.
+ * Requiring it in both is stricter than the single file this used to read.
+ *
+ * It used to read `gl-entry-actions.tsx`, and broke the moment the switch
+ * moved out of it — the eighth time in this project that a guard pinned to a
+ * filename has failed for the wrong reason. Hence `test_it_reads_real_files`
+ * below: a path that stops resolving must fail loudly rather than by finding
+ * nothing.
+ */
+const ACTIONS = join(
   process.cwd(),
   "src",
   "components",
   "ledger",
   "gl-entry-actions.tsx",
 );
+
+const HANDLERS = [
+  join(process.cwd(), "src", "lib", "gl-edit-target.ts"),
+  join(process.cwd(), "src", "components", "ledger", "gl-edit-dialogs.tsx"),
+];
 
 /** Kinds the General ledger cannot open yet, each with the reason.
  *
@@ -61,12 +79,55 @@ function backendKinds(): string[] {
   ].sort();
 }
 
+function casesIn(path: string): Set<string> {
+  const source = readFileSync(path, "utf8");
+  return new Set([...source.matchAll(/case "([a-z_]+)":/g)].map((m) => m[1]));
+}
+
+/** Kinds handled by the component itself rather than by opening a dialog.
+ *
+ * `generic_ledger` is the manual journal: the General ledger page already has
+ * its own editor for one, so `GlEntryActions` calls `onGenericEdit()` and
+ * there is no correction form to route to. Named here rather than quietly
+ * excluded, with a test below that the delegation still exists.
+ */
+const HANDLED_BY_DELEGATION: Record<string, string> = {
+  generic_ledger: "calls onGenericEdit() — the page owns that editor",
+};
+
 function handledKinds(): string[] {
-  const source = readFileSync(HANDLER, "utf8");
-  return [...source.matchAll(/case "([a-z_]+)":/g)].map((m) => m[1]).sort();
+  const [mapper, dialogs] = HANDLERS.map(casesIn);
+  return [
+    ...[...mapper].filter((kind) => dialogs.has(kind)),
+    ...Object.keys(HANDLED_BY_DELEGATION),
+  ].sort();
 }
 
 describe("General ledger edit kinds", () => {
+  it("reads real files", () => {
+    // `readFileSync` throws on a missing path, so a moved file fails here with
+    // its name rather than further down as "every kind is unhandled". Eight
+    // guards in this project have broken by being pinned to a filename; the
+    // cost of that is not the breakage, it is the minute spent believing the
+    // failure was real.
+    for (const path of [BACKEND, ACTIONS, ...HANDLERS]) {
+      expect(() => readFileSync(path, "utf8"), `missing: ${path}`).not.toThrow();
+    }
+  });
+
+  it("needs a kind in the mapper and the dialogs, not just one", () => {
+    // Otherwise `handledKinds` could pass on a kind that maps to a target
+    // nothing renders — a button that opens nothing, which is the failure
+    // this whole file is about.
+    const [mapper, dialogs] = HANDLERS.map(casesIn);
+    const onlyMapper = [...mapper].filter((k) => !dialogs.has(k));
+    const onlyDialogs = [...dialogs].filter((k) => !mapper.has(k));
+    expect(
+      { onlyMapper, onlyDialogs },
+      "a kind handled in one file and not the other",
+    ).toEqual({ onlyMapper: [], onlyDialogs: [] });
+  });
+
   it("finds both lists", () => {
     // Without this, a changed code style makes every assertion below vacuous
     // by comparing two empty arrays.
@@ -114,9 +175,20 @@ describe("General ledger edit kinds", () => {
 
   it("says something when a kind falls through", () => {
     // The bug was `default: return`. Silence is what made a broken button
-    // indistinguishable from a working one.
-    const source = readFileSync(HANDLER, "utf8");
-    const defaultArm = source.slice(source.lastIndexOf("default:"));
-    expect(defaultArm).toContain("toast(");
+    // indistinguishable from a working one. The arm is now `if (!target)` in
+    // the component, since editTargetFor returns null for an unknown kind.
+    const source = readFileSync(ACTIONS, "utf8");
+    expect(source).toContain("if (!target)");
+    expect(source.slice(source.indexOf("if (!target)"))).toContain("toast(");
+  });
+
+  it("still delegates the kinds it claims to delegate", () => {
+    // Otherwise HANDLED_BY_DELEGATION becomes a way to mark a kind handled by
+    // writing its name in a list.
+    const source = readFileSync(ACTIONS, "utf8");
+    for (const kind of Object.keys(HANDLED_BY_DELEGATION)) {
+      expect(source, `${kind} is claimed as delegated`).toContain(kind);
+    }
+    expect(source).toContain("onGenericEdit()");
   });
 });
