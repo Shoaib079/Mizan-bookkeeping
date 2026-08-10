@@ -34,7 +34,7 @@ Counted on 9 August 2026.
 | --- | --- |
 | Source files | 833 |
 | Files past the ~400-line rule | 84 of 840, holding 55,777 lines — **ratcheted 9 Aug**: none may grow, none may join |
-| Golden rules with an automated guard | 6 of 19 |
+| Golden rules with an automated guard | ~~6~~ → 7 of 19 — Class 3 closed 10 Aug |
 | Places that decide "can this be edited or voided" | 5, ~165 decision points |
 | Pages that reset on entity switch (rule 16) | ~~16 of 91~~ → all 91, by remount |
 | Weak assertions in frontend tests | 29 |
@@ -123,15 +123,29 @@ consumed in another. Nothing type-checks across that gap.
 - **Void paths** — three carried a `payables/` segment the router has no
   prefix for. 404 on every attempt. *Now guarded* by
   `test_void_paths_resolve.py`.
-- **Edit routes — not guarded.** The resolver returns 13 edit kinds; nothing
-  checks the correction endpoints they imply exist.
 - **Idempotency keys** — eleven mutations sent none and were rejected in
   production only. *Now guarded* by a source scan.
+- ~~**Edit routes — not guarded.**~~ **Guarded 10 Aug**, and wider than
+  planned: `test_client_paths_resolve.py` checks *every* `/entities/…` URL the
+  frontend builds against the OpenAPI schema, not only the correction
+  endpoints. Scoping it to edits would have left the rest of the client
+  surface exactly as unguarded as the void paths were, and the cost of the
+  wider version was the same scan. 225 client paths against 228 routes; 16 of
+  them corrections. All resolved — the Edit forms were already correct, and
+  the point is that they now cannot stop being.
 
 **The rule.** *If a string must match a route, a test resolves it.*
 
-**How to enforce it.** Extend the void-path guard to cover edit routes and
-every correction endpoint in `DEDICATED_CORRECTION_ROUTES`.
+**Enforced by** `test_void_paths_resolve.py` for the paths the backend hands
+out as data, and `test_client_paths_resolve.py` for every path the client
+assembles itself. Two exemptions, each with a test that fails when it stops
+being needed: `void_path` (covered by the first file) and the partner
+movement ternary (its three branches checked concretely).
+
+**Why a `/entities/` prefix is the whole rule.** The scan needs no list of
+which strings are URLs, because a Next.js page route never carries an entity
+id. A guard that needs a maintained list of what to look at is a guard that
+stops looking.
 
 ---
 
