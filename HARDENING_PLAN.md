@@ -33,7 +33,7 @@ Counted on 9 August 2026.
 | | |
 | --- | --- |
 | Source files | 833 |
-| Files past the ~400-line rule | 82 (9% of files, 40% of all code) |
+| Files past the ~400-line rule | 84 of 840, holding 55,777 lines — **ratcheted 9 Aug**: none may grow, none may join |
 | Golden rules with an automated guard | 6 of 19 |
 | Places that decide "can this be edited or voided" | 5, ~165 decision points |
 | Pages that reset on entity switch (rule 16) | ~~16 of 91~~ → all 91, by remount |
@@ -269,7 +269,7 @@ Six of nineteen golden rules have a guard. These do not:
 | 15. UI cannot weaken a core rule | no guard |
 | 16. Entity-switch hygiene on every page | no guard — 16 of 91 pages |
 | DoD 4. No self-passing tests | no guard |
-| ARCHITECTURE: split past ~400 lines | no guard — 82 files over |
+| ARCHITECTURE: split past ~400 lines | **ratchet guard added 9 Aug** — `FILE_SIZE_BASELINE.json` freezes the 84 current offenders; nothing may grow or join |
 
 The file-size rule is not cosmetic. `correction.py` (2,343 lines) and
 `statements.py` (3,065) are exactly where tonight's bugs lived. Large files are
