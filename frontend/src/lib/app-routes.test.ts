@@ -137,13 +137,8 @@ describe("no New: routes remain after UX-A retirement", () => {
 });
 
 describe("app shell header", () => {
-  it("does not contain New menu or quick-action buttons", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/app-shell.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("does not contain New menu or quick-action buttons", () => {
+    const source = sourceDeclaring("AppShell");
     expect(source).not.toMatch(/<NewMenu/);
     expect(source).not.toContain("new-menu");
     expect(source).not.toMatch(/Daily sales/);
@@ -152,36 +147,21 @@ describe("app shell header", () => {
     expect(source).not.toMatch(/openQuickAction\("expense"\)/);
   });
 
-  it("always renders AccountMenu in the top bar (auth on and dev)", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/app-shell.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("always renders AccountMenu in the top bar (auth on and dev)", () => {
+    const source = sourceDeclaring("AppShell");
     expect(source).toContain("<AccountMenu />");
     expect(source).not.toContain("UserButton");
     expect(source).not.toMatch(/authOn && <AccountMenu/);
   });
 
-  it("keeps restaurant switching in the account menu, not the sidebar", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/app-shell.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("keeps restaurant switching in the account menu, not the sidebar", () => {
+    const source = sourceDeclaring("AppShell");
     expect(source).not.toContain("SidebarEntitySwitcher");
     expect(source).toContain("AccountMenu");
   });
 
-  it("renders six sidebar intents as direct links", async () => {
-    const nav = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/sidebar-nav.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("renders six sidebar intents as direct links", () => {
+    const nav = sourceDeclaring("SidebarNav");
     expect(nav).toContain('item.href !== "/"');
     expect(nav).toContain("NavRowLink");
     expect(nav).not.toContain("aria-expanded");
@@ -189,13 +169,8 @@ describe("app shell header", () => {
 });
 
 describe("account menu", () => {
-  it("fetches signed-in user from entity context", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../lib/entity-context.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("fetches signed-in user from entity context", () => {
+    const source = sourceDeclaring("EntityProvider");
     expect(source).toContain("/users/me");
     expect(source).toContain("userProfile");
     expect(source).toContain("entitiesLoaded");
@@ -203,62 +178,37 @@ describe("account menu", () => {
     expect(source).toContain("fetchEntitiesWithRetry");
   });
 
-  it("requires confirm before switching restaurants", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/account-menu.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("requires confirm before switching restaurants", () => {
+    const source = sourceDeclaring("AccountMenu");
     expect(source).toContain("switchConfirmMessage");
     expect(source).toContain("Switch restaurant?");
     expect(source).toContain("redirectToDashboard: true");
   });
 
-  it("signs out via Clerk and redirects to sign-in", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/account-menu.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("signs out via Clerk and redirects to sign-in", () => {
+    const source = sourceDeclaring("AccountMenu");
     expect(source).toContain("signOut");
     expect(source).toContain("/sign-in");
   });
 
-  it("shows dev mode identity and hides sign-out when Clerk is off", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/account-menu.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("shows dev mode identity and hides sign-out when Clerk is off", () => {
+    const source = sourceDeclaring("AccountMenu");
     expect(source).toContain("devModeIdentityLabel");
     expect(source).toContain("AccountMenuDev");
     expect(source).toContain("Actor ID (dev)");
     expect(source).toMatch(/\{onSignOut &&/);
   });
 
-  it("warns before switch or sign-out when unsaved work is registered", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/account-menu.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("warns before switch or sign-out when unsaved work is registered", () => {
+    const source = sourceDeclaring("AccountMenu");
     expect(source).toContain("hasUnsavedWork");
     expect(source).toContain("discardChangesMessage");
   });
 });
 
 describe("entry dialogs recording context", () => {
-  it("shows Recording for banner on manual expense dialog", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/forms/manual-expense-form.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("shows Recording for banner on manual expense dialog", () => {
+    const source = sourceDeclaring("ManualExpenseForm");
     expect(source).toContain("RecordingForBanner");
   });
 });
@@ -314,14 +264,12 @@ describe("delivery gating", () => {
     expect(routes.some((route) => route.href.startsWith("/delivery"))).toBe(false);
   });
 
-  it("legacy uploads page redirects to Record", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(new URL("../app/uploads/page.tsx", import.meta.url), "utf8"),
-    );
+  it("legacy uploads page redirects to Record", () => {
+    const source = sourceDeclaring("UploadsRedirectPage");
     expect(source).toContain('redirect("/record")');
   });
 
-  it("sales list links uploads to Record instead of inline modal", async () => {
+  it("sales list links uploads to Record instead of inline modal", () => {
     // The link lives in the shared panel now that it carries the page header;
     // /sales and /review/sales render the same one.
 
@@ -335,139 +283,79 @@ describe("delivery gating", () => {
 });
 
 describe("command palette (UX-B data-first search)", () => {
-  it("searches suppliers, expense items, pages, and actions", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("searches suppliers, expense items, pages, and actions", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("searchSuppliers");
     expect(source).toContain("searchExpenseItems");
     expect(source).toContain("appRoutes");
     expect(source).toContain("RECORD_ACTIONS");
   });
 
-  it("has debounce + stale entity guard", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("has debounce + stale entity guard", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("PALETTE_SEARCH_DEBOUNCE_MS");
     expect(source).toContain("nextSearchGeneration");
     expect(source).toContain("isStale");
     expect(source).toContain("prevEntityRef");
   });
 
-  it("gates actions behind canWriteDailyTransactions", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("gates actions behind canWriteDailyTransactions", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("canWriteDailyTransactions(grants)");
     expect(source).toContain("filterRecordActions");
   });
 
-  it("navigates to supplier detail on supplier select", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("navigates to supplier detail on supplier select", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("router.push(`/suppliers/${row.supplier.id}`)");
   });
 
-  it("opens action via openRecordAction on action select", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("opens action via openRecordAction on action select", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("openRecordAction(row.action.id)");
   });
 
-  it("shows spend totals in subtitle slot (SRCH-B)", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("shows spend totals in subtitle slot (SRCH-B)", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("supplierSpend");
     expect(source).toContain("itemSpend");
     expect(source).toContain("formatTry(spend)");
     expect(source).toContain("reports/time-series");
   });
 
-  it("fetches spend data on palette open", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("fetches spend data on palette open", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("spend_by_supplier");
     expect(source).toContain("expenses_by_item");
     expect(source).toContain("currentMonthRange");
   });
 
-  it("builds spend lookup maps from time-series response", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("builds spend lookup maps from time-series response", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("new Map(ts.spend_by_supplier");
     expect(source).toContain("new Map(ts.expenses_by_item");
   });
 
-  it("falls back to type label when no spend data", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("falls back to type label when no spend data", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain('spend ? formatTry(spend) : "Supplier"');
     expect(source).toContain('spend ? formatTry(spend) : "Item"');
   });
 
-  it("filters hidden actions from palette action list", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("filters hidden actions from palette action list", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("!a.hidden");
   });
 
-  it("routes item click to filtered review expenses", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/command-palette.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("routes item click to filtered review expenses", () => {
+    const source = sourceDeclaring("CommandPalette");
     expect(source).toContain("reviewExpensesFilteredHref");
   });
 });
 
 describe("top-bar Record button", () => {
-  it("renders a + Record link to /record gated by shouldShowNewMenu", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/layout/app-shell.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("renders a + Record link to /record gated by shouldShowNewMenu", () => {
+    const source = sourceDeclaring("AppShell");
     expect(source).toContain("shouldShowNewMenu(grants)");
     expect(source).toContain('href="/record"');
     expect(source).toContain("Plus");

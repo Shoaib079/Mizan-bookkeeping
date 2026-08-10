@@ -11,6 +11,7 @@ import {
   filterNavItemsByEntitySettings,
   appRoutes,
 } from "@/lib/app-routes";
+import { sourceDeclaring } from "@/test-support/source";
 
 vi.mock("@/lib/entity-settings", () => ({
   isEntitySettingEnabled: vi.fn(),
@@ -132,13 +133,8 @@ describe("delivery nav visibility", () => {
 });
 
 describe("QuickActionsProvider auth gating", () => {
-  it("waits for isAuthReady before fetching delivery_enabled", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/quick-actions.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("waits for isAuthReady before fetching delivery_enabled", () => {
+    const source = sourceDeclaring("QuickActionsProvider");
     expect(source).toContain("isAuthReady");
     expect(source).toContain("if (!isAuthReady) return");
     expect(source).toContain("enabled !== null");
@@ -146,31 +142,15 @@ describe("QuickActionsProvider auth gating", () => {
 });
 
 describe("entity feature toggles wiring", () => {
-  it("refreshes delivery nav after save on settings page", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL(
-          "../components/settings/entity-feature-toggles.tsx",
-          import.meta.url,
-        ),
-        "utf8",
-      ),
-    );
+  it("refreshes delivery nav after save on settings page", () => {
+    const source = sourceDeclaring("EntityFeatureToggles");
     expect(source).toContain("refreshDeliveryNavAfterSave");
     expect(source).toContain('key === "delivery_enabled"');
     expect(source).toContain("refreshDeliveryEnabled");
   });
 
-  it("enables refreshDeliveryNavAfterSave in restaurant settings", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL(
-          "../components/settings/restaurant-settings-content.tsx",
-          import.meta.url,
-        ),
-        "utf8",
-      ),
-    );
+  it("enables refreshDeliveryNavAfterSave in restaurant settings", () => {
+    const source = sourceDeclaring("RestaurantSettingsContent");
     expect(source).toContain("refreshDeliveryNavAfterSave");
   });
 });

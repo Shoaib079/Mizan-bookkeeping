@@ -26,9 +26,6 @@ const SCHEMA = new URL(
   import.meta.url,
 ).pathname;
 
-const read = (rel: string) =>
-  readFileSync(new URL(rel, import.meta.url), "utf8");
-
 describe("the receivables forex contract", () => {
   it("the backend still sends outstanding_by_currency", () => {
     // Skip rather than fail if the backend is not checked out alongside —
@@ -55,9 +52,7 @@ describe("the receivables forex contract", () => {
   });
 
   it("both the table and the phone cards show it", () => {
-    const page = read(
-      "../app/(customers-section)/customers/page.tsx",
-    );
+    const page = sourceDeclaring("CustomersPage");
     // Two renderers, one list. The mobile card view was added later than the
     // table and is the one that gets forgotten.
     const uses = page.match(/formatForexBalanceSummary\(/g) ?? [];

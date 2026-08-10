@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
-
 import { describe, expect, it } from "vitest";
+
+import { sourceDeclaring } from "@/test-support/source";
 
 /** Sign-in has to land somewhere inside the app.
  *
@@ -16,12 +16,9 @@ import { describe, expect, it } from "vitest";
  * whose dashboard config nobody has looked at.
  */
 
-const read = (rel: string) =>
-  readFileSync(new URL(rel, import.meta.url), "utf8");
-
 const PAGES = [
-  { name: "sign-in", file: "./sign-in/[[...sign-in]]/page.tsx", tag: "SignIn" },
-  { name: "sign-up", file: "./sign-up/[[...sign-up]]/page.tsx", tag: "SignUp" },
+  { name: "sign-in", symbol: "SignInPage", tag: "SignIn" },
+  { name: "sign-up", symbol: "SignUpPage", tag: "SignUp" },
 ];
 
 /** Source with comments stripped — the rule is about the JSX, and the prose
@@ -29,9 +26,9 @@ const PAGES = [
 const codeOnly = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
-describe.each(PAGES)("$name sends the user into the app", ({ file, tag }) => {
+describe.each(PAGES)("$name sends the user into the app", ({ symbol, tag }) => {
   const element = () => {
-    const source = codeOnly(read(file));
+    const source = codeOnly(sourceDeclaring(symbol));
     // (?![A-Za-z]) or this matches <SignInReasonBanner />, which sits on the
     // same page, has no redirect props, and would fail for the wrong reason.
     const match = source.match(new RegExp(`<${tag}(?![A-Za-z])[\\s\\S]*?/>`));

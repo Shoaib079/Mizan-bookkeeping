@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 /** The migration checklist in DESIGN_ARCHETYPES.md is only trustworthy if it
  * genuinely lists every page that renders UI. This walks `app/` for ground
  * truth — so a new page can't be added without listing it, and an existing one
- * can't be quietly skipped or counted twice. */
+ * can't be quietly skipped or counted twice.
+ *
+ * The one frontend guard that still reads by path, and the exception is stated
+ * in `source-reads-are-symbolic.test.ts` rather than left to be inferred: in
+ * Next.js a route *is* a directory path, so the location is the data here, not
+ * an address for something that could live elsewhere. Naming these pages by
+ * symbol would mean writing down the list this exists to discover — and a page
+ * added without being written down is exactly what it catches. */
 
 const APP_DIR = new URL("../app/", import.meta.url);
 

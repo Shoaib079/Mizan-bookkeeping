@@ -20,13 +20,11 @@
  * has to survive.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
-const PROVIDERS = join(process.cwd(), "src/app/providers.tsx");
-const source = readFileSync(PROVIDERS, "utf8");
+import { sourceDeclaring } from "@/test-support/source";
+
+const source = sourceDeclaring("Providers");
 
 const openTag = (name: string) => source.indexOf(`<${name}`);
 const closeTag = (name: string) => source.indexOf(`</${name}>`);
@@ -59,10 +57,7 @@ describe("entity switch resets every page", () => {
   });
 
   it("keys on the entity, not on something that changes for other reasons", () => {
-    const tree = readFileSync(
-      join(process.cwd(), "src/components/layout/entity-scoped-tree.tsx"),
-      "utf8",
-    );
+    const tree = sourceDeclaring("EntityScopedTree");
     expect(tree).toContain("key={entityResetKey(entityId)}");
     // Keyed on a route or a render count would remount constantly and clear
     // forms mid-typing — the opposite failure, and a worse one to live with.

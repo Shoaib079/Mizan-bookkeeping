@@ -1,18 +1,22 @@
-/** No *new* test reads a frontend source file by path.
+/** No test reads a frontend source file by path.
  *
- * D9: nine guards have failed because the code they check moved to another
+ * D9: nine guards had failed because the code they check moved to another
  * file. Every fix was the same patch — point the path somewhere new — which
  * only ever set up the next one. `sourceDeclaring("RecordDesk")` survives a
  * move because it names the thing rather than its address.
  *
- * There are 250 such reads across 50-odd test files. Migrating all of them in
- * one go would be a large, unreviewable diff over the suite that has to stay
- * trustworthy while everything else changes — so this is a ratchet, the same
- * shape as `FILE_SIZE_BASELINE.json`. The listed files may keep their paths;
- * nothing may join them, and a file that leaves cannot come back.
+ * This began as a ratchet over 32 files and 250 reads, because migrating them
+ * in one go would have been a large, unreviewable diff across the suite that
+ * has to stay trustworthy while everything else changes. They were done by
+ * hand, a file at a time. Thirty-one crossed; the list is gone, and what is
+ * left is a rule with one stated exception.
  *
- * Nine have already moved across, including both that broke. The rest are
- * cheap to do whenever one is next opened for another reason.
+ * Two things surfaced on the way across, neither of them findable by reading
+ * any one file: `InvoicesReviewPanel` and `ReceiptsReviewPanel` were each
+ * declared twice, because the `dynamic()` wrapper on the page shadowed the
+ * panel it wrapped. Four of those were renamed to `Lazy*` last time; these two
+ * survived because no guard happened to name them. Naming things is what found
+ * them.
  */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -21,8 +25,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { sourceFiles } from "@/test-support/source";
-
-import baseline from "./path-reading-tests.json";
 
 const SRC = join(__dirname, "..");
 
@@ -33,6 +35,29 @@ const SRC = join(__dirname, "..");
  * so reaching across is the point.
  */
 const ALLOWED = /backend\//;
+
+/** The one frontend test that may still name a file, and why.
+ *
+ * A mapping rather than a list so the reason travels with the name. The same
+ * shape as `NOT_POSTED` and `ALLOWED_OWN_DROPDOWN` — twice now an exclusion
+ * written as a bare list has turned out to be hiding something, because a
+ * deliberate exception and an oversight look identical without the sentence.
+ */
+const MAY_READ_BY_PATH: Record<string, string> = {
+  "lib/archetype-coverage.test.ts":
+    "it walks app/ to discover every route, so the file's location is the " +
+    "data — a route in Next.js *is* its path. Naming the pages by symbol " +
+    "would mean listing the very thing it exists to enumerate, and a page " +
+    "added without being listed is the failure it catches",
+};
+
+/** Comments, which mention filenames without reading them.
+ *
+ * Three files counted as offenders purely because a docstring explained which
+ * file the guard *used* to read. Prose about a move is exactly what should be
+ * written down, so it must not be what keeps a file on this list.
+ */
+const COMMENTS = /\/\*[\s\S]*?\*\/|^[ \t]*\/\/.*$/gm;
 
 function testFiles(): { path: string; text: string }[] {
   const walk = (dir: string): string[] =>
@@ -46,14 +71,6 @@ function testFiles(): { path: string; text: string }[] {
     text: readFileSync(path, "utf8"),
   }));
 }
-
-/** Comments, which mention filenames without reading them.
- *
- * Three files counted as offenders purely because a docstring explained which
- * file the guard *used* to read. Prose about a move is exactly what should be
- * written down, so it must not be what keeps a file on this list.
- */
-const COMMENTS = /\/\*[\s\S]*?\*\/|^[ \t]*\/\/.*$/gm;
 
 /** Test files that still name a `.ts`/`.tsx` source file by path. */
 function readsByPath(): string[] {
@@ -76,29 +93,32 @@ describe("guards locate code by symbol", () => {
     // Over an empty list every assertion below is vacuous.
     expect(testFiles().length).toBeGreaterThan(100);
     expect(sourceFiles().length).toBeGreaterThan(400);
-    expect(baseline.length).toBeGreaterThan(20);
   });
 
-  it("no new test file reads source by path", () => {
-    const joined = readsByPath().filter((path) => !baseline.includes(path));
+  it("no test file reads source by path", () => {
+    const offenders = readsByPath().filter(
+      (path) => !(path in MAY_READ_BY_PATH),
+    );
     expect(
-      joined,
+      offenders,
       "These name a source file by path, so they break when it moves. Use " +
         'sourceDeclaring("TheSymbol") from @/test-support/source, or ' +
         "sourceAt(path) when the file has no unique export:\n  " +
-        joined.join("\n  "),
+        offenders.join("\n  "),
     ).toEqual([]);
   });
 
-  it("a file that stopped reading by path leaves the list", () => {
-    // Otherwise the list only ever grows stale, forgiving files that no
-    // longer need forgiving — and the count stops meaning anything.
+  it("the exception still reads by path", () => {
+    // An exception for a file that no longer needs one forgives nothing and
+    // quietly makes the rule cover less than it claims.
     const current = readsByPath();
-    const stale = baseline.filter((path) => !current.includes(path));
+    const stale = Object.keys(MAY_READ_BY_PATH).filter(
+      (path) => !current.includes(path),
+    );
     expect(
       stale,
       "These no longer read source by path. Remove them from " +
-        "path-reading-tests.json so the ratchet keeps tightening:\n  " +
+        "MAY_READ_BY_PATH so the rule covers everything again:\n  " +
         stale.join("\n  "),
     ).toEqual([]);
   });

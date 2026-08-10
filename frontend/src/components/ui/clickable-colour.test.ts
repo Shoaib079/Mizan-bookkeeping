@@ -1,9 +1,6 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { fileDeclaring, sourceDeclaring, sourceFiles } from "@/test-support/source";
 
 /** Everything you can click has to look like you can click it.
  *
@@ -24,8 +21,6 @@ import { sourceDeclaring } from "@/test-support/source";
  * and mounting every screen to ask it would be slower and no more certain.
  */
 
-const SRC = new URL("../..", import.meta.url).pathname;
-
 /** Tokens that count as "this is visibly interactive". */
 const COLOUR_TOKENS = [
   "text-primary",
@@ -43,20 +38,18 @@ const COLOUR_TOKENS = [
   "text-success",
 ];
 
-/** Clickable, but deliberately not a button to look at. */
-const NOT_A_VISIBLE_BUTTON = [
+/** Clickable, but deliberately not a button to look at.
+ *
+ * Named by the component rather than by its path, so moving the drawer does
+ * not quietly turn its scrim into an offender. */
+const NOT_A_VISIBLE_BUTTON = () => [
   // A full-screen scrim behind a drawer: clicking it closes, but it is a
   // dimmed overlay, not a control.
-  "components/ledger/transaction-drawer.tsx",
+  fileDeclaring("TransactionPeekProvider"),
 ];
 
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir).flatMap((entry) => {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) return sourceFiles(full);
-    return /\.tsx$/.test(entry) && !/\.test\.tsx$/.test(entry) ? [full] : [];
-  });
-}
+/** `.tsx` only — a `.ts` file has no markup to style. */
+const markupFiles = () => sourceFiles().filter((f) => f.path.endsWith(".tsx"));
 
 describe("everything clickable carries a colour", () => {
   it("the shared Button variants are visible at rest", () => {
@@ -90,11 +83,10 @@ describe("everything clickable carries a colour", () => {
   it("no hand-styled button reintroduces a colourless control", () => {
     const offenders: string[] = [];
 
-    for (const file of sourceFiles(SRC)) {
-      const relative = file.replace(SRC, "");
-      if (NOT_A_VISIBLE_BUTTON.includes(relative)) continue;
+    const excused = NOT_A_VISIBLE_BUTTON();
+    for (const { path: relative, text: source } of markupFiles()) {
+      if (excused.includes(relative)) continue;
 
-      const source = readFileSync(file, "utf8");
       for (const match of source.matchAll(
         /<button\b[^>]*?className=(?:"([^"]*)"|\{cn\(\s*([^)]*))/g,
       )) {
@@ -154,10 +146,9 @@ describe("a chosen option looks chosen", () => {
    * the styling without anyone having to remember to give it any. */
   it("segmented rows are not hand-rolled", () => {
     const offenders: string[] = [];
-    for (const file of sourceFiles(SRC)) {
-      const relative = file.replace(SRC, "");
-      if (relative === "components/ui/segmented-control.tsx") continue;
-      const source = readFileSync(file, "utf8");
+    const shared = fileDeclaring("SegmentedControl");
+    for (const { path: relative, text: source } of markupFiles()) {
+      if (relative === shared) continue;
       // The track: a bordered pill row holding the options.
       if (source.includes('rounded-md border border-border bg-muted/40 p-1')) {
         offenders.push(relative);
@@ -175,13 +166,12 @@ describe("a chosen option looks chosen", () => {
    * colour and read as an unselected pill that happened to be lighter. */
   it("no selected state is painted in the page background", () => {
     const offenders: string[] = [];
-    for (const file of sourceFiles(SRC)) {
-      const source = readFileSync(file, "utf8");
+    for (const { path: relative, text: source } of markupFiles()) {
       // The tell: a ternary whose truthy branch is the page background.
       for (const match of source.matchAll(
         /\?\s*"bg-background text-foreground[^"]*"/g,
       )) {
-        offenders.push(`${file.replace(SRC, "")}: ${match[0].slice(0, 60)}`);
+        offenders.push(`${relative}: ${match[0].slice(0, 60)}`);
       }
     }
     expect(

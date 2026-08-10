@@ -1,42 +1,39 @@
 import { describe, expect, it } from "vitest";
 
-async function readAppShell() {
-  return import("fs/promises").then((fs) =>
-    fs.readFile(new URL("./app-shell.tsx", import.meta.url), "utf8"),
-  );
-}
+import { sourceDeclaring } from "@/test-support/source";
+
+/** The whole file, as before — several assertions below slice it up by hand
+ *  to separate the mobile branch from the desktop one. */
+const source = () => sourceDeclaring("AppShell");
 
 describe("AppShell entity-switch reset", () => {
-  it("wraps main content area with key={entityId} so pages remount on switch", async () => {
-    const source = await readAppShell();
-    expect(source).toContain("key={entityId}");
+  it("wraps main content area with key={entityId} so pages remount on switch", () => {
+    expect(source()).toContain("key={entityId}");
   });
 });
 
 describe("AppShell mobile shell (C4)", () => {
-  it("renders MobileTopBar and MobileBottomTabs when isMobile", async () => {
-    const source = await readAppShell();
-    expect(source).toContain("MobileTopBar");
-    expect(source).toContain("MobileBottomTabs");
-    expect(source).toContain("useIsMobileShell");
-    expect(source).toContain("min-h-dvh");
+  it("renders MobileTopBar and MobileBottomTabs when isMobile", () => {
+    expect(source()).toContain("MobileTopBar");
+    expect(source()).toContain("MobileBottomTabs");
+    expect(source()).toContain("useIsMobileShell");
+    expect(source()).toContain("min-h-dvh");
   });
 
-  it("always renders bottom tabs on mobile (including drill-in pages)", async () => {
+  it("always renders bottom tabs on mobile (including drill-in pages)", () => {
     // Tabs must depend on `isMobile` alone. Gating them on "is this a tab
     // root" once stranded users on drill-in pages with no way back.
-    const source = await readAppShell();
-    expect(source).toMatch(/\{isMobile && \(\s*<MobileBottomTabs/);
-    expect(source).not.toContain("onMobileTabRoot");
+    expect(source()).toMatch(/\{isMobile && \(\s*<MobileBottomTabs/);
+    expect(source()).not.toContain("onMobileTabRoot");
   });
 
-  it("the desktop sidebar cannot move — the window does not scroll at all", async () => {
+  it("the desktop sidebar cannot move — the window does not scroll at all", () => {
     // `sticky` was not enough: a sticky element still lives in the document's
     // scroll, so rubber-banding past the top or bottom dragged the sidebar.
     // The shell is one viewport tall with the document overflow hidden, so
     // there is no page scroll left to drag anything.
-    const source = await readAppShell();
-    const desktop = source.slice(source.lastIndexOf("  return ("));
+    const text = source();
+    const desktop = text.slice(text.lastIndexOf("  return ("));
 
     expect(desktop).toContain("h-screen overflow-hidden");
     const aside = desktop.slice(
@@ -53,19 +50,18 @@ describe("AppShell mobile shell (C4)", () => {
     expect(desktop).toMatch(/<main[\s\S]*?overscroll-contain/);
   });
 
-  it("resets the scroll container on navigation", async () => {
+  it("resets the scroll container on navigation", () => {
     // Next scrolls `window` on route change; the window no longer scrolls, so
     // without this a new page opens still scrolled down the previous one.
-    const source = await readAppShell();
-    expect(source).toContain("mainRef.current?.scrollTo({ top: 0 })");
-    expect(source).toMatch(/\}, \[pathname\]\);/);
+    expect(source()).toContain("mainRef.current?.scrollTo({ top: 0 })");
+    expect(source()).toMatch(/\}, \[pathname\]\);/);
   });
 
-  it("hides desktop sidebar on mobile branch", async () => {
-    const source = await readAppShell();
-    const start = source.indexOf("if (isMobile) {");
-    const end = source.indexOf("\n  return (", start + 1);
-    const mobileBranch = source.slice(start, end);
+  it("hides desktop sidebar on mobile branch", () => {
+    const text = source();
+    const start = text.indexOf("if (isMobile) {");
+    const end = text.indexOf("\n  return (", start + 1);
+    const mobileBranch = text.slice(start, end);
     expect(mobileBranch).not.toContain("SidebarNav");
     expect(mobileBranch).toContain("MobileBottomTabs");
   });

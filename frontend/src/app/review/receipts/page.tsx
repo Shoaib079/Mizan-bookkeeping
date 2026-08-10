@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 
 import { TableSkeleton } from "@/components/ui/skeleton";
 
-const ReceiptsReviewPanel = dynamic(
+const LazyReceiptsReviewPanel = dynamic(
   () =>
     import("@/components/review/receipts-review-panel").then((mod) => ({
       default: mod.ReceiptsReviewPanel,
@@ -13,5 +13,5 @@ const ReceiptsReviewPanel = dynamic(
 );
 
 export default function ReviewReceiptsPage() {
-  return <ReceiptsReviewPanel />;
+  return <LazyReceiptsReviewPanel />;
 }

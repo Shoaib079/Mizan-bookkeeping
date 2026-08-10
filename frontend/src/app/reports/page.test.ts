@@ -1,14 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-async function readReportsPageSource() {
-  return import("fs/promises").then((fs) =>
-    fs.readFile(new URL("./page.tsx", import.meta.url), "utf8"),
-  );
-}
+import { sourceDeclaring } from "@/test-support/source";
 
 describe("reports landing (UX4)", () => {
-  it("lists financial statement cards including general ledger", async () => {
-    const source = await readReportsPageSource();
+  it("lists financial statement cards including general ledger", () => {
+    const source = sourceDeclaring("ReportsPage");
     expect(source).toContain("/reports/profit-and-loss");
     expect(source).toContain("/reports/period-comparison");
     expect(source).toContain("/reports/ledger");

@@ -1,42 +1,36 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceFiles } from "@/test-support/source";
 
 /** These guard the DESIGN_ARCHETYPES contract by reading the source: the rules
  * that stop pages drifting apart again are structural, so they're checked
  * structurally rather than by rendering. */
 
-async function read(file: string): Promise<string> {
-  return import("fs/promises").then((fs) =>
-    fs.readFile(new URL(file, import.meta.url), "utf8"),
-  );
-}
-
 describe("page archetypes", () => {
-  it("ListPage owns the mobile breakpoint, so pages never fork it", async () => {
+  it("ListPage owns the mobile breakpoint, so pages never fork it", () => {
     const source = sourceDeclaring("ListPage");
     expect(source).toContain("useIsMobileShell");
     expect(source).toContain("isMobile && mobile ? mobile : table");
   });
 
-  it("ListPage always offers a pager — no silent truncation", async () => {
+  it("ListPage always offers a pager — no silent truncation", () => {
     const source = sourceDeclaring("ListPage");
     expect(source).toContain("TablePager");
   });
 
-  it("every archetype renders exactly one PageHeader", async () => {
+  it("every archetype renders exactly one PageHeader", () => {
     for (const file of [
-      "./entity-detail-page.tsx",
-      "./list-page.tsx",
-      "./hub-page.tsx",
+      "EntityDetailPage",
+      "ListPage",
+      "HubPage",
     ]) {
-      const source = await read(file);
+      const source = sourceDeclaring(file);
       expect(source, file).toContain("<PageHeader");
       expect(source.match(/<PageHeader/g)?.length, file).toBeLessThanOrEqual(2);
     }
   });
 
-  it("SummaryPanel formats money through the shared formatter", async () => {
+  it("SummaryPanel formats money through the shared formatter", () => {
     const source = sourceDeclaring("AmountFormatter");
     expect(source).toContain('from "@/lib/money"');
     expect(source).toContain("tabular-nums");
@@ -44,37 +38,37 @@ describe("page archetypes", () => {
     expect(source).toContain("line.negative");
   });
 
-  it("archetypes use design tokens, never hardcoded colours", async () => {
+  it("archetypes use design tokens, never hardcoded colours", () => {
     for (const file of [
-      "./page-header.tsx",
-      "./entity-detail-page.tsx",
-      "./list-page.tsx",
-      "./hub-page.tsx",
-      "./summary-panel.tsx",
-      "./filter-chips.tsx",
+      "PageHeader",
+      "EntityDetailPage",
+      "ListPage",
+      "HubPage",
+      "SummaryPanel",
+      "FilterChips",
     ]) {
-      const source = await read(file);
+      const source = sourceDeclaring(file);
       expect(source.match(/#[0-9a-fA-F]{6}/), file).toBeNull();
       expect(source.match(/\b(?:bg|text)-(?:red|blue|green|slate|gray)-\d{3}\b/), file).toBeNull();
     }
   });
 
-  it("every entity detail page composes the archetype, never its own layout", async () => {
+  it("every entity detail page composes the archetype, never its own layout", () => {
     // Slice 2. The audit found four different arrangements of the same four
     // ingredients across these pages; the archetype is only worth having if
     // none of them goes back to hand-assembling a header or a balance card.
     const pages = [
-      "../../app/staff/[id]/page.tsx",
-      "../../app/(procurement)/suppliers/[id]/page.tsx",
-      "../../app/(customers-section)/customers/[id]/page.tsx",
-      "../../app/(customers-section)/customers/group-sales/[id]/page.tsx",
-      "../../app/partners/[id]/page.tsx",
-      "../banking/account-detail-page-content.tsx",
-      "../banking/fx-wallet-page-content.tsx",
+      "StaffDetailPage",
+      "SupplierDetailPage",
+      "CustomerDetailPage",
+      "GroupSaleDetailPage",
+      "PartnerDetailPage",
+      "AccountDetailPageContent",
+      "FxWalletPageContent",
     ];
 
     for (const page of pages) {
-      const source = await read(page);
+      const source = sourceDeclaring(page);
       expect(source, page).toContain("<EntityDetailPage");
       // The archetype owns the title and the headline figure.
       expect(source.includes("<h1"), `${page} draws its own title`).toBe(false);
@@ -85,24 +79,24 @@ describe("page archetypes", () => {
     }
   });
 
-  it("every list page composes ListPage and pages its rows", async () => {
+  it("every list page composes ListPage and pages its rows", () => {
     // Slice 3. Rule 5: every list pages — no silent truncation. Staff and
     // partners had no pager at all, and daily sales fetched 200 rows then told
     // the reader "showing 200 — download Excel for the full list".
     const lists = [
-      "../../app/staff/page.tsx",
-      "../../app/(procurement)/suppliers/page.tsx",
-      "../../app/(customers-section)/customers/page.tsx",
-      "../../app/(customers-section)/customers/group-sales/page.tsx",
-      "../../app/banking/transfers/page.tsx",
-      "../../app/partners/page.tsx",
-      "../group-sales/group-menus-panel.tsx",
-      "../delivery/delivery-platforms-panel.tsx",
-      "../review/sales-review-panel.tsx",
+      "StaffPage",
+      "SuppliersPage",
+      "CustomersPage",
+      "GroupSalesPage",
+      "TransfersPage",
+      "PartnersPage",
+      "GroupMenusPanel",
+      "DeliveryPlatformsPanel",
+      "SalesReviewPanel",
     ];
 
     for (const list of lists) {
-      const source = await read(list);
+      const source = sourceDeclaring(list);
       expect(source, list).toContain("<ListPage");
       // ListPage owns the breakpoint; a page forking it is how they drifted.
       expect(source.includes("useIsMobileShell"), `${list} forks mobile`).toBe(
@@ -111,15 +105,23 @@ describe("page archetypes", () => {
       expect(source.includes("<h1"), `${list} draws its own title`).toBe(false);
     }
 
-    // Partners is the one list still capped rather than paged — see the note in
-    // DESIGN_ARCHETYPES. Everything else offers a pager.
-    for (const list of lists.filter((l) => !l.includes("partners"))) {
-      const source = await read(list);
+    /* Partners is the one list still capped rather than paged — see the note
+     * in DESIGN_ARCHETYPES. Everything else offers a pager.
+     *
+     * Named, not matched. This was `!l.includes("partners")` back when the
+     * list held paths; once it held components the substring stopped matching
+     * `"PartnersPage"` on the capital P, and the exception silently stopped
+     * applying. A filter that excludes nothing looks exactly like one that
+     * works — it only surfaced because the assertion it re-enabled happened to
+     * fail. */
+    const CAPPED_NOT_PAGED = ["PartnersPage"];
+    for (const list of lists.filter((l) => !CAPPED_NOT_PAGED.includes(l))) {
+      const source = sourceDeclaring(list);
       expect(source, `${list} has no pager`).toContain("pager={{");
     }
   });
 
-  it("the dashboard uses OverviewPage, not the tile grid", async () => {
+  it("the dashboard uses OverviewPage, not the tile grid", () => {
     // Slice 4. §4b exists because the dashboard is KPI cards + charts + recent
     // entries; forcing it into HubPage would be the drift the archetypes stop.
     const dashboard = sourceDeclaring("HomePage");
@@ -130,15 +132,15 @@ describe("page archetypes", () => {
     );
   });
 
-  it("every hub renders the shared header and one tile component", async () => {
+  it("every hub renders the shared header and one tile component", () => {
     for (const hub of [
-      "../banking/banking-hub-content.tsx",
-      "../banking/banking-branch-list-content.tsx",
-      "../../app/delivery/page.tsx",
-      "../../app/record/page.tsx",
-      "../../app/more/page.tsx",
+      "BankingHubContent",
+      "BankingBranchListContent",
+      "DeliveryPage",
+      "RecordPage",
+      "MorePage",
     ]) {
-      const source = await read(hub);
+      const source = sourceDeclaring(hub);
       expect(source, hub).toMatch(/<HubPage|<PageHeader/);
       expect(source.includes("<h1"), `${hub} draws its own title`).toBe(false);
       // BankingHubTile was a second tile component with its own radius and
@@ -147,7 +149,7 @@ describe("page archetypes", () => {
     }
   });
 
-  it("cards on the same row share one shell", async () => {
+  it("cards on the same row share one shell", () => {
     // CashBankSnapshotCard sits beside a StatCard and used rounded-xl/p-5
     // against rounded-lg/p-4, so the pair visibly failed to line up.
     const stat = sourceDeclaring("StatCard");
@@ -158,18 +160,18 @@ describe("page archetypes", () => {
     expect(snapshot).not.toContain("rounded-xl");
   });
 
-  it("review queues are ListPages, and document review is its own shape", async () => {
+  it("review queues are ListPages, and document review is its own shape", () => {
     // Slice 5. A review queue turned out to be a list with different row
     // actions, so ReviewPage would have been a near-duplicate of ListPage —
     // the fork the rules forbid. ListPage gained a `preview` slot instead.
     // DocumentReviewPage stays: two panes, one document, genuinely not a list.
     for (const queue of [
-      "../review/receipts-review-panel.tsx",
-      "../review/delivery-review-panel.tsx",
-      "../review/invoices-review-panel.tsx",
-      "../review/sales-review-panel.tsx",
+      "ReceiptsReviewPanel",
+      "DeliveryReviewPanel",
+      "InvoicesReviewPanel",
+      "SalesReviewPanel",
     ]) {
-      const source = await read(queue);
+      const source = sourceDeclaring(queue);
       expect(source, queue).toContain("<ListPage");
     }
 
@@ -177,10 +179,10 @@ describe("page archetypes", () => {
     expect(doc).toContain("lg:grid-cols-2");
 
     for (const page of [
-      "../receipt-review.tsx",
-      "../pos-summary-review.tsx",
+      "ReceiptReview",
+      "PosSummaryReview",
     ]) {
-      const source = await read(page);
+      const source = sourceDeclaring(page);
       expect(source, page).toContain("<DocumentReviewPage");
       // The archetype draws the two panes; the page fills them.
       expect(
@@ -190,58 +192,46 @@ describe("page archetypes", () => {
     }
   });
 
-  it("no surface rolls its own filter chips", async () => {
+  it("no surface rolls its own filter chips", () => {
     // Six places drew their own pill row — solid where the shared chip is
     // tinted, some as role="tablist", each with different padding.
-    const { readdir } = await import("fs/promises");
-    const offenders: string[] = [];
-
-    async function scan(dir: string, depth = 0): Promise<void> {
-      if (depth > 3) return;
-      const url = new URL(dir, import.meta.url);
-      for (const entry of await readdir(url, { withFileTypes: true })) {
-        if (entry.isDirectory()) {
-          await scan(`${dir}${entry.name}/`, depth + 1);
-        } else if (entry.name.endsWith(".tsx")) {
-          const source = await read(`${dir}${entry.name}`);
-          // The active-chip treatment, outside the shared component.
-          if (
-            source.includes('role="tablist"') &&
-            !source.includes("FilterChips")
-          ) {
-            offenders.push(`${dir}${entry.name}`);
-          }
-        }
-      }
-    }
-    await scan("../review/");
+    // Scoped to the review screens by where they live — a directory is a
+    // legitimate thing to name, unlike an individual file.
+    const offenders = sourceFiles()
+      .filter((file) => file.path.startsWith("components/review/"))
+      .filter(
+        (file) =>
+          file.text.includes('role="tablist"') &&
+          !file.text.includes("FilterChips"),
+      )
+      .map((file) => file.path);
 
     expect(offenders, `hand-rolled chips in: ${offenders.join(", ")}`).toEqual(
       [],
     );
   });
 
-  it("every report composes ReportPage and shares its states", async () => {
+  it("every report composes ReportPage and shares its states", () => {
     // Slice 6. All twelve repeated the same six lines by hand — period control
     // left, downloads right, then no-entity / forbidden / error / loading —
     // each with its own spacing, so the controls sat at different heights from
     // one report to the next.
     const reports = [
-      "profit-and-loss",
-      "balance-sheet",
-      "cash-flow",
-      "ledger",
-      "kdv-input",
-      "delivery-sales",
-      "period-comparison",
-      "cash-book",
-      "expense-register",
-      "bank-reconciliation",
-      "month-close",
+      "ProfitAndLossPage",
+      "BalanceSheetPage",
+      "CashFlowPage",
+      "GeneralLedgerPage",
+      "KdvInputPage",
+      "DeliverySalesPage",
+      "PeriodComparisonPage",
+      "CashBookPage",
+      "ExpenseRegisterPage",
+      "BankReconciliationPage",
+      "MonthClosePage",
     ];
 
     for (const slug of reports) {
-      const source = await read(`../../app/reports/${slug}/page.tsx`);
+      const source = sourceDeclaring(slug);
       expect(source, slug).toContain("<ReportPage");
       expect(source.includes("<h1"), `${slug} draws its own title`).toBe(false);
       // The archetype renders the forbidden and loading states.
@@ -257,16 +247,16 @@ describe("page archetypes", () => {
     expect(hub).toContain("<PageHeader");
   });
 
-  it("report KPI bands use StatCard, not hand-drawn boxes", async () => {
+  it("report KPI bands use StatCard, not hand-drawn boxes", () => {
     for (const slug of [
-      "profit-and-loss",
-      "balance-sheet",
-      "cash-flow",
-      "kdv-input",
-      "delivery-sales",
-      "expense-register",
+      "ProfitAndLossPage",
+      "BalanceSheetPage",
+      "CashFlowPage",
+      "KdvInputPage",
+      "DeliverySalesPage",
+      "ExpenseRegisterPage",
     ]) {
-      const source = await read(`../../app/reports/${slug}/page.tsx`);
+      const source = sourceDeclaring(slug);
       expect(source, slug).toContain("<StatCard");
       expect(
         source.includes("text-xl font-semibold tabular-nums"),
@@ -275,7 +265,7 @@ describe("page archetypes", () => {
     }
   });
 
-  it("the equity section totals every row it prints", async () => {
+  it("the equity section totals every row it prints", () => {
     // The section prints Unclosed net income as a row but the subtotal summed
     // only the GL accounts, so the column visibly did not add up — off by the
     // whole period result. The KPI had the same gap, and it is the figure that
@@ -288,16 +278,16 @@ describe("page archetypes", () => {
     );
   });
 
-  it("forms and settings compose FormPage", async () => {
+  it("forms and settings compose FormPage", () => {
     // Slice 7. These had each picked their own card padding (p-5 against the
     // p-4 every other card uses) and their own max width.
     for (const page of [
-      "../../app/settings/profile/page.tsx",
-      "../settings/restaurant-settings-content.tsx",
-      "../../app/onboarding/opening-balances/page.tsx",
-      "../../app/banking/accounts/[id]/import/page.tsx",
+      "ProfileSettingsPage",
+      "RestaurantSettingsContent",
+      "OpeningBalancesPage",
+      "StatementImportPage",
     ]) {
-      const source = await read(page);
+      const source = sourceDeclaring(page);
       expect(source, page).toContain("<FormPage");
       expect(
         source.includes("bg-card p-5"),
@@ -312,7 +302,7 @@ describe("page archetypes", () => {
     expect(signIn).not.toContain("FormPage");
   });
 
-  it("the negative-clearing warning never blocks recording", async () => {
+  it("the negative-clearing warning never blocks recording", () => {
     // Card clearing cannot legitimately go negative; when it does, sales are
     // missing. The fix is to carry on entering them, so the warning must not
     // disable anything — it only tells you what is missing and links to it.
@@ -325,7 +315,7 @@ describe("page archetypes", () => {
     expect(warning).not.toContain("disabled");
   });
 
-  it("the balance sheet explains a negative retained earnings", async () => {
+  it("the balance sheet explains a negative retained earnings", () => {
     // Allocating profit debits retained earnings. Do it before the year is
     // closed and the account goes negative while equity is unchanged — correct,
     // but it reads like a mistake, and it cost an afternoon to establish that
@@ -338,7 +328,7 @@ describe("page archetypes", () => {
     expect(source).toContain("It resolves at year-end close.");
   });
 
-  it("row actions sit in a trailing column, weighted like siblings", async () => {
+  it("row actions sit in a trailing column, weighted like siblings", () => {
     // Edit and Void used to render inside the description cell on staff,
     // partners and supplier activity — so their left edge moved with the length
     // of the text beside them and you couldn't scan the column. Edit was also
@@ -354,11 +344,11 @@ describe("page archetypes", () => {
     expect(ledgerTable).toMatch(/<DataTableHeaderCell align="right">\s*Actions/);
 
     for (const page of [
-      "../../app/staff/[id]/page.tsx",
-      "../../app/partners/[id]/page.tsx",
-      "../supplier-activity-panel.tsx",
+      "StaffDetailPage",
+      "PartnerDetailPage",
+      "SupplierActivityPanel",
     ]) {
-      const pageSource = await read(page);
+      const pageSource = sourceDeclaring(page);
       expect(pageSource.includes("inline"), `${page} still inlines actions`).toBe(
         false,
       );
@@ -369,7 +359,7 @@ describe("page archetypes", () => {
     );
   });
 
-  it("FilterChips exposes counts for review queues", async () => {
+  it("FilterChips exposes counts for review queues", () => {
     const source = sourceDeclaring("FilterChip");
     expect(source).toContain("chip.count");
     expect(source).toContain("aria-pressed");
@@ -377,7 +367,7 @@ describe("page archetypes", () => {
 });
 
 describe("mobile: the tab bar must not cover what pages pin to the bottom", () => {
-  it("FormPage lifts its save bar clear of the tabs", async () => {
+  it("FormPage lifts its save bar clear of the tabs", () => {
     // sticky bottom-0 resolves against the scrollport's padding box, and
     // <main> runs underneath the fixed tab bar — so the save bar came to rest
     // behind it, and lost on z-index too (10 against 30). Save was unreachable
@@ -394,7 +384,7 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     expect(source).not.toContain("sticky bottom-0");
   });
 
-  it("everything pinned to the bottom clears the tabs by the same amount", async () => {
+  it("everything pinned to the bottom clears the tabs by the same amount", () => {
     // Two hand-written copies of a number that has to agree is how they stop
     // agreeing. All three now come from one file.
     const shell = sourceDeclaring("AppShell");
@@ -418,7 +408,7 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     expect(new Set(measurements).size).toBe(1);
   });
 
-  it("the toast clears the tab bar", async () => {
+  it("the toast clears the tab bar", () => {
     // It pinned itself to bottom-4 and rendered *underneath* the tabs on
     // every phone — not a misalignment, an invisible toast. Every "Payment
     // recorded" and "Posted to the ledger" this app has shown on mobile went
@@ -434,7 +424,7 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     expect(container).toContain("MOBILE_TOAST_OFFSET");
   });
 
-  it("the clearance tokens are literal classes Tailwind can see", async () => {
+  it("the clearance tokens are literal classes Tailwind can see", () => {
     // Tailwind scans source for complete class strings. A class built by
     // interpolation — pb-[${TOKEN}] — generates no CSS at all, fails silently,
     // and looks exactly like a layout bug.
@@ -449,7 +439,7 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
 });
 
 describe("mobile: detail pages", () => {
-  it("LedgerTable counts its actions column when deciding to scroll", async () => {
+  it("LedgerTable counts its actions column when deciding to scroll", () => {
     // The partner ledger declares five columns and renders six — hasActions
     // adds one. Counting declared columns only is exactly how it slipped past
     // the sweep that marked every other wide table.
@@ -457,7 +447,7 @@ describe("mobile: detail pages", () => {
     expect(source).toContain("columns.length + (hasActions ? 1 : 0) > 5");
   });
 
-  it("EntityDetailPage stacks its headline and panels on a phone", async () => {
+  it("EntityDetailPage stacks its headline and panels on a phone", () => {
     // The panels are flex-1, so in a plain flex-wrap row they shrink to share
     // the width rather than wrapping — a headline and two summary cards came
     // out around 110px each on a 375px screen.
@@ -467,7 +457,7 @@ describe("mobile: detail pages", () => {
 });
 
 describe("filters read as choices", () => {
-  it("FilterChips carry colour like the buttons beside them", async () => {
+  it("FilterChips carry colour like the buttons beside them", () => {
     // Inactive chips were a grey border around grey text, which reads as a
     // row of disabled labels rather than filters you can press.
     const source = sourceDeclaring("FilterChip");
@@ -479,7 +469,7 @@ describe("filters read as choices", () => {
     expect(source).toContain("bg-primary font-medium text-primary-foreground");
   });
 
-  it("ListPage gives filters their own row", async () => {
+  it("ListPage gives filters their own row", () => {
     // Sharing the toolbar row with the period control left the chips stranded
     // mid-line between the dates and the row count.
     const source = sourceDeclaring("ListPage");

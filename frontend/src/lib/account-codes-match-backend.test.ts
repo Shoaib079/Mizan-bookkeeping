@@ -16,12 +16,13 @@
  * fixable rather than a fact of life.
  */
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import * as codes from "@/lib/account-codes";
+import { fileDeclaring, sourceFiles } from "@/test-support/source";
 
 const CHART = join(
   process.cwd(),
@@ -109,26 +110,19 @@ describe("account codes match the backend chart", () => {
     // The codes were scattered across five files before this. One home means
     // one place to be wrong, and one place a guard can watch.
     const offenders: string[] = [];
-    const walk = (dir: string) => {
-      for (const name of readdirSync(dir)) {
-        const path = join(dir, name);
-        if (statSync(path).isDirectory()) {
-          walk(path);
-          continue;
-        }
-        if (!/\.tsx?$/.test(name) || name.includes(".test.")) continue;
-        if (path.endsWith("account-codes.ts")) continue;
-        const source = readFileSync(path, "utf8");
-        for (const line of source.split("\n")) {
-          // Comments explain codes; code should not spell them.
-          if (/^\s*(\*|\/\/)/.test(line)) continue;
-          if (/"(3[1-9]\d\d|4[0-9]\d\d|5[0-9]\d\d)"/.test(line)) {
-            offenders.push(`${path.replace(process.cwd(), "")}: ${line.trim()}`);
-          }
+    // The one file allowed to spell them, found by a code it declares rather
+    // than by its name — renaming it should not silently exempt everything.
+    const home = fileDeclaring("RETAINED_EARNINGS_CODE");
+    for (const file of sourceFiles()) {
+      if (file.path === home) continue;
+      for (const line of file.text.split("\n")) {
+        // Comments explain codes; code should not spell them.
+        if (/^\s*(\*|\/\/)/.test(line)) continue;
+        if (/"(3[1-9]\d\d|4[0-9]\d\d|5[0-9]\d\d)"/.test(line)) {
+          offenders.push(`${file.path}: ${line.trim()}`);
         }
       }
-    };
-    walk(join(process.cwd(), "src"));
+    }
 
     expect(
       offenders,

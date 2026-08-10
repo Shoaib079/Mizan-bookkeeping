@@ -5,7 +5,7 @@ import { Suspense } from "react";
 
 import { TableSkeleton } from "@/components/ui/skeleton";
 
-const InvoicesReviewPanel = dynamic(
+const LazyInvoicesReviewPanel = dynamic(
   () =>
     import("@/components/review/invoices-review-panel").then((mod) => ({
       default: mod.InvoicesReviewPanel,
@@ -16,7 +16,7 @@ const InvoicesReviewPanel = dynamic(
 export default function ReviewInvoicesPage() {
   return (
     <Suspense fallback={<TableSkeleton columns={5} />}>
-      <InvoicesReviewPanel />
+      <LazyInvoicesReviewPanel />
     </Suspense>
   );
 }

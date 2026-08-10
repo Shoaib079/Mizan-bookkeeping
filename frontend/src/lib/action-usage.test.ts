@@ -5,6 +5,7 @@ import {
   clearActionUsage,
   DEFAULT_TOP_ACTIONS,
 } from "@/lib/action-usage";
+import { sourceDeclaring } from "@/test-support/source";
 
 const ENTITY_A = "entity-aaa";
 const ENTITY_B = "entity-bbb";
@@ -80,46 +81,26 @@ describe("action-usage", () => {
 });
 
 describe("RecordDesk integration", () => {
-  it("uses primaryRecordActions for the mode rail", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/record/record-desk.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("uses primaryRecordActions for the mode rail", () => {
+    const source = sourceDeclaring("RecordDesk");
     expect(source).toContain("primaryRecordActions");
     expect(source).toContain("DeskModeButton");
   });
 
-  it("records usage on openRecordAction", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/quick-actions.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("records usage on openRecordAction", () => {
+    const source = sourceDeclaring("QuickActionsProvider");
     expect(source).toContain("recordActionUsage");
     expect(source).toContain("recordActionUsage(entityId, key)");
   });
 
-  it("gates the desk behind entity access", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/record/record-desk.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("gates the desk behind entity access", () => {
+    const source = sourceDeclaring("RecordDesk");
     expect(source).toContain("useEntityAccess");
     expect(source).toContain("shouldShowNewMenu");
   });
 
-  it("filters extra actions through dailyVisibleSections", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../components/record/record-desk.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("filters extra actions through dailyVisibleSections", () => {
+    const source = sourceDeclaring("RecordDesk");
     expect(source).toContain("dailyVisibleSections");
     expect(source).toContain("openRecordAction");
   });

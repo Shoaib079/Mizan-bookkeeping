@@ -51,14 +51,7 @@ describe("StatusBadge covers the group sale statuses", () => {
   });
 
   it("does not invent 'pending' for an unrecognised status", () => {
-    const page = readFileSync(
-      new URL(
-        "../../app/(customers-section)/customers/group-sales/page.tsx",
-        import.meta.url,
-      ).pathname,
-      "utf8",
-    );
-    const code = page
+    const code = sourceDeclaring("GroupSalesPage")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/\/\/.*$/gm, "");
     expect(

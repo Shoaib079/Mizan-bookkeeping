@@ -6,19 +6,12 @@
  * flickers as the pointer crosses each child element.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
-const SOURCE = readFileSync(
-  join(process.cwd(), "src", "components", "drop-anywhere.tsx"),
-  "utf8",
-);
-const PROVIDER = readFileSync(
-  join(process.cwd(), "src", "components", "quick-actions.tsx"),
-  "utf8",
-);
+import { sourceDeclaring } from "@/test-support/source";
+
+const SOURCE = sourceDeclaring("DropAnywhere");
+const PROVIDER = sourceDeclaring("QuickActionsProvider");
 
 describe("DropAnywhere", () => {
   it("cancels the browser's own drop handling", () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { appRoutes, filterRoutesByEntitySettings } from "@/lib/app-routes";
 import { navSectionById } from "@/lib/nav-sections";
+import { sourceDeclaring } from "@/test-support/source";
 
 describe("command palette routes", () => {
   it("still indexes every delivery sub-route", () => {
@@ -25,13 +26,8 @@ describe("delivery tabs", () => {
     ]);
   });
 
-  it("wraps delivery pages in a shared layout with SectionTabs", async () => {
-    const source = await import("fs/promises").then((fs) =>
-      fs.readFile(
-        new URL("../app/delivery/layout.tsx", import.meta.url),
-        "utf8",
-      ),
-    );
+  it("wraps delivery pages in a shared layout with SectionTabs", () => {
+    const source = sourceDeclaring("DeliveryLayout");
     expect(source).toContain("SectionTabs");
     expect(source).toContain('sectionId="delivery"');
     expect(source).toContain("AppShell");

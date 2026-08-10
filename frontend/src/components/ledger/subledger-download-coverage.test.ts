@@ -1,6 +1,6 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
-
 import { describe, expect, it } from "vitest";
+
+import { fileDeclaring, sourceDeclaring, sourceFiles } from "@/test-support/source";
 
 /** Every subledger detail page offers the same download.
  *
@@ -14,33 +14,31 @@ import { describe, expect, it } from "vitest";
  * no type check can see.
  */
 
-const SRC = new URL("../..", import.meta.url).pathname;
-
 const LEDGER_PAGES = [
   {
     name: "partner",
-    file: "app/partners/[id]/page.tsx",
+    symbol: "PartnerDetailPage",
     path: "/entities/${entityId}/partners/${partnerId}/ledger",
   },
   {
     name: "staff",
-    file: "app/staff/[id]/page.tsx",
+    symbol: "StaffDetailPage",
     path: "/entities/${entityId}/staff/employees/${employeeId}/ledger",
   },
   {
     name: "customer",
-    file: "app/(customers-section)/customers/[id]/page.tsx",
+    symbol: "CustomerDetailPage",
     path: "/entities/${entityId}/customers/${customerId}/ledger",
   },
   {
     name: "supplier",
-    file: "app/(procurement)/suppliers/[id]/page.tsx",
+    symbol: "SupplierDetailPage",
     path: "/entities/${entityId}/suppliers/${supplierId}/ledger",
   },
 ];
 
-describe.each(LEDGER_PAGES)("the $name ledger can be downloaded", ({ file, path }) => {
-  const source = () => readFileSync(SRC + file, "utf8");
+describe.each(LEDGER_PAGES)("the $name ledger can be downloaded", ({ symbol, path }) => {
+  const source = () => sourceDeclaring(symbol);
 
   it("renders the shared download menu", () => {
     expect(source()).toContain("<SubledgerDownloadMenu");
@@ -48,7 +46,7 @@ describe.each(LEDGER_PAGES)("the $name ledger can be downloaded", ({ file, path 
 
   it("points at its own ledger endpoint", () => {
     // Backtick-quoted template literal, exactly as written in the page.
-    expect(source(), `${file} has the wrong download path`).toContain(
+    expect(source(), `${symbol} has the wrong download path`).toContain(
       `\`${path}\``,
     );
   });
@@ -71,12 +69,6 @@ describe("the download dropdown is not forked per feature", () => {
    * So the rule is now about the dropdown itself: whatever a menu is called
    * and whatever it downloads, only one file may implement the trigger,
    * the outside-click dismissal and the floating card. */
-  const walk = (dir: string): string[] =>
-    readdirSync(dir).flatMap((entry) => {
-      const full = `${dir}/${entry}`;
-      return statSync(full).isDirectory() ? walk(full) : [full];
-    });
-
   /** Files that build their own Download trigger with a card under it.
    *
    * Three marks together — the icon, an absolutely-positioned block, and the
@@ -84,17 +76,15 @@ describe("the download dropdown is not forked per feature", () => {
    * unrelated popover, is not counted.
    */
   function dropdownImplementations(): string[] {
-    return walk(SRC + "components")
-      .filter((f) => /\.tsx$/.test(f) && !/\.test\.tsx$/.test(f))
-      .filter((f) => {
-        const s = readFileSync(f, "utf8");
-        return (
-          /import \{[^}]*\bDownload\b[^}]*\} from "lucide-react"/.test(s) &&
-          s.includes("absolute") &&
-          s.includes("setOpen")
-        );
-      })
-      .map((f) => f.replace(SRC, ""));
+    return sourceFiles()
+      .filter(
+        (file) =>
+          file.path.endsWith(".tsx") &&
+          /import \{[^}]*\bDownload\b[^}]*\} from "lucide-react"/.test(file.text) &&
+          file.text.includes("absolute") &&
+          file.text.includes("setOpen"),
+      )
+      .map((file) => file.path);
   }
 
   /** Its own dropdown, and why that is allowed.
@@ -104,16 +94,16 @@ describe("the download dropdown is not forked per feature", () => {
    * `report-download-menu.tsx` stayed a third copy for as long as it did.
    */
   const ALLOWED_OWN_DROPDOWN: Record<string, string> = {
-    "components/reports/month-pack-button.tsx":
+    [fileDeclaring("MonthPackButton")]:
       "its rows carry an icon and a description line under a 'Choose format' " +
       "heading, and it has a compact sticky-bar variant for mobile reports — " +
       "folding that in would push three presentational options into the " +
       "shared shell to serve one caller",
   };
 
-  it("finds the components tree", () => {
-    // Over an empty walk every assertion below passes by comparing nothing.
-    expect(walk(SRC + "components").length).toBeGreaterThan(100);
+  it("finds the source tree", () => {
+    // Over an empty list every assertion below passes by comparing nothing.
+    expect(sourceFiles().length).toBeGreaterThan(400);
     expect(dropdownImplementations().length).toBeGreaterThan(0);
   });
 
@@ -127,7 +117,7 @@ describe("the download dropdown is not forked per feature", () => {
         "<DownloadMenu items={…} /> instead, or add a reason to " +
         "ALLOWED_OWN_DROPDOWN:\n" +
         found.join("\n"),
-    ).toEqual(["components/ui/download-menu.tsx"]);
+    ).toEqual([fileDeclaring("DownloadMenu")]);
   });
 
   it("the exceptions still exist", () => {

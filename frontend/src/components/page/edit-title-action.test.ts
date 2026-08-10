@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-
 import { describe, expect, it } from "vitest";
 
 import { sourceDeclaring } from "@/test-support/source";
@@ -16,17 +14,20 @@ import { sourceDeclaring } from "@/test-support/source";
  * would if someone copied an older page as a starting point.
  */
 
-const SRC = new URL("../..", import.meta.url).pathname;
-
+/** Named by their components rather than their routes.
+ *
+ * The route is where a page lives; the guard is about what it renders. Naming
+ * the file meant this broke on a move — the customers page has been through
+ * two route groups — for a reason that had nothing to do with Edit. */
 const DETAIL_PAGES = [
-  { name: "customer", file: "app/(customers-section)/customers/[id]/page.tsx" },
-  { name: "supplier", file: "app/(procurement)/suppliers/[id]/page.tsx" },
-  { name: "staff", file: "app/staff/[id]/page.tsx" },
-  { name: "partner", file: "app/partners/[id]/page.tsx" },
+  { name: "customer", symbol: "CustomerDetailPage" },
+  { name: "supplier", symbol: "SupplierDetailPage" },
+  { name: "staff", symbol: "StaffDetailPage" },
+  { name: "partner", symbol: "PartnerDetailPage" },
 ];
 
-describe.each(DETAIL_PAGES)("the $name detail page", ({ file }) => {
-  const source = () => readFileSync(SRC + file, "utf8");
+describe.each(DETAIL_PAGES)("the $name detail page", ({ symbol }) => {
+  const source = () => sourceDeclaring(symbol);
 
   it("puts Edit beside the title", () => {
     expect(source()).toContain("titleAction={<EditTitleButton");

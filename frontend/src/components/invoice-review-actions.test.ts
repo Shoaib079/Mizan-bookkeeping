@@ -13,15 +13,11 @@
  * offer different things for the same entry.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
-const REVIEW = readFileSync(
-  join(process.cwd(), "src", "components", "invoice-draft-review.tsx"),
-  "utf8",
-);
+import { sourceDeclaring } from "@/test-support/source";
+
+const REVIEW = sourceDeclaring("InvoiceDraftReview");
 
 describe("posted invoice actions in review", () => {
   it("renders the ledger's own actions component", () => {
