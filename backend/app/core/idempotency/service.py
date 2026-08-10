@@ -7,7 +7,7 @@ import uuid
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import JSON, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -131,7 +131,19 @@ def store_record(
         path=path,
         idempotency_key=idempotency_key,
         status_code=status_code,
-        response_body=response_body,
+        # A 204 has no body, and `response_body` is NOT NULL. Passing Python
+        # None writes SQL NULL, which raises IntegrityError — caught below,
+        # rolled back, and `find_record` then finds nothing, so the call
+        # returns None and the middleware carries on as if nothing happened.
+        #
+        # Nothing failed loudly, so nobody noticed that idempotency has never
+        # worked on a single 204 route: removing a member, rejecting a receipt,
+        # rejecting an invoice draft, rejecting a POS summary. Every double
+        # submit on those ran twice.
+        #
+        # `JSON.NULL` stores a JSON null *inside* the column instead of a SQL
+        # NULL, which satisfies the constraint and reads back as None.
+        response_body=JSON.NULL if response_body is None else response_body,
     )
     session.add(record)
     try:
