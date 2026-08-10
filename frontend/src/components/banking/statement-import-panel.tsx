@@ -402,18 +402,21 @@ export function StatementImportPanel({
     setExpectedFileName(saved.fileName);
   }, [storageKey]);
 
-  function restoreFileFromSession(selected: File): boolean {
-    if (!storageKey) return false;
-    const saved = readStatementImportSession(storageKey);
-    if (!saved || !fileMatchesSession(selected, saved)) return false;
-    setFile(selected);
-    setPreview(saved.preview);
-    setMapping(sanitizeStatementMapping(saved.preview, saved.mapping));
-    setStep("map");
-    setAutoDetected(false);
-    setError(null);
-    return true;
-  }
+  const restoreFileFromSession = useCallback(
+    (selected: File): boolean => {
+      if (!storageKey) return false;
+      const saved = readStatementImportSession(storageKey);
+      if (!saved || !fileMatchesSession(selected, saved)) return false;
+      setFile(selected);
+      setPreview(saved.preview);
+      setMapping(sanitizeStatementMapping(saved.preview, saved.mapping));
+      setStep("map");
+      setAutoDetected(false);
+      setError(null);
+      return true;
+    },
+    [storageKey],
+  );
 
   const persistSession = useCallback(
     (
@@ -455,14 +458,15 @@ export function StatementImportPanel({
     [persistSession],
   );
 
-  async function fetchPreviewResult(
-    selected: File,
-  ): Promise<StatementPreviewLoadResult> {
-    if (!entityId) {
-      throw new Error("Select a restaurant in the sidebar first.");
-    }
-    return fetchStatementPreviewResult(entityId, moneyAccountId, selected);
-  }
+  const fetchPreviewResult = useCallback(
+    async (selected: File): Promise<StatementPreviewLoadResult> => {
+      if (!entityId) {
+        throw new Error("Select a restaurant in the sidebar first.");
+      }
+      return fetchStatementPreviewResult(entityId, moneyAccountId, selected);
+    },
+    [entityId, moneyAccountId],
+  );
 
   const awaitPreviewLoad = useCallback(
     async (
@@ -511,6 +515,88 @@ export function StatementImportPanel({
       }
     },
     [storageKey, toast, applyPreviewResult, persistSession],
+  );
+
+  /** Read a chosen file and move to the mapping step.
+   *
+   * Declared here, above the effect that resumes an interrupted import, and
+   * memoised, so that effect can name it as a dependency. It could not before:
+   * a dependency array is evaluated during render, and this was defined below
+   * the effect, so listing it was a reference-before-initialisation error.
+   * The array therefore left it out and the lint rule complained.
+   *
+   * Nothing was wrong. Everything this reads that can change — `entityId`,
+   * `moneyAccountId` — feeds `storageKey`, which the effect already depends
+   * on, so the effect could never have captured a stale one with different
+   * values. But that argument had to be made by hand, by someone who noticed
+   * the derivation. Now the compiler makes it: if this grows a dependency
+   * `storageKey` does not cover, the effect's array stops satisfying the rule
+   * and says so.
+   */
+  const loadPreview = useCallback(
+    async (selected: File) => {
+      if (!entityId) {
+        setError("Select a restaurant in the sidebar first.");
+        return;
+      }
+      setFile(selected);
+      if (restoreFileFromSession(selected)) {
+        return;
+      }
+
+      if (!storageKey) return;
+      const inflightKey = statementPreviewInflightKey(storageKey, selected);
+      const existing = getInflightStatementPreview(inflightKey);
+      const requestId = previewRequestRef.current + 1;
+      previewRequestRef.current = requestId;
+      setLoadingPreview(true);
+      setError(null);
+      writeStatementImportPending(storageKey, {
+        fileName: selected.name,
+        fileSize: selected.size,
+        fileLastModified: selected.lastModified,
+      });
+
+      try {
+        const result = await (existing ??
+          trackInflightStatementPreview(
+            inflightKey,
+            fetchPreviewResult(selected),
+          ));
+
+        if (requestId !== previewRequestRef.current) {
+          toast(
+            "Preview finished but the page refreshed — try the same file again",
+            "error",
+          );
+          return;
+        }
+
+        applyPreviewResult(result, {
+          name: selected.name,
+          size: selected.size,
+          lastModified: selected.lastModified,
+        }, selected);
+      } catch (err) {
+        if (requestId !== previewRequestRef.current) return;
+        const message = apiErrorMessage(err, "Preview failed");
+        setError(message);
+        toast(message, "error");
+      } finally {
+        if (storageKey) clearStatementImportPending(storageKey);
+        if (requestId === previewRequestRef.current) {
+          setLoadingPreview(false);
+        }
+      }
+    },
+    [
+      entityId,
+      storageKey,
+      restoreFileFromSession,
+      fetchPreviewResult,
+      applyPreviewResult,
+      toast,
+    ],
   );
 
   function handleAssignColumn(colIdx: number) {
@@ -566,63 +652,7 @@ export function StatementImportPanel({
     const requestId = previewRequestRef.current + 1;
     previewRequestRef.current = requestId;
     void awaitPreviewLoad(pendingFileMeta(pending), requestId, null);
-  }, [storageKey, preview, applyPreviewResult, awaitPreviewLoad]);
-
-  async function loadPreview(selected: File) {
-    if (!entityId) {
-      setError("Select a restaurant in the sidebar first.");
-      return;
-    }
-    setFile(selected);
-    if (restoreFileFromSession(selected)) {
-      return;
-    }
-
-    if (!storageKey) return;
-    const inflightKey = statementPreviewInflightKey(storageKey, selected);
-    const existing = getInflightStatementPreview(inflightKey);
-    const requestId = previewRequestRef.current + 1;
-    previewRequestRef.current = requestId;
-    setLoadingPreview(true);
-    setError(null);
-    writeStatementImportPending(storageKey, {
-      fileName: selected.name,
-      fileSize: selected.size,
-      fileLastModified: selected.lastModified,
-    });
-
-    try {
-      const result = await (existing ??
-        trackInflightStatementPreview(
-          inflightKey,
-          fetchPreviewResult(selected),
-        ));
-
-      if (requestId !== previewRequestRef.current) {
-        toast(
-          "Preview finished but the page refreshed — try the same file again",
-          "error",
-        );
-        return;
-      }
-
-      applyPreviewResult(result, {
-        name: selected.name,
-        size: selected.size,
-        lastModified: selected.lastModified,
-      }, selected);
-    } catch (err) {
-      if (requestId !== previewRequestRef.current) return;
-      const message = apiErrorMessage(err, "Preview failed");
-      setError(message);
-      toast(message, "error");
-    } finally {
-      if (storageKey) clearStatementImportPending(storageKey);
-      if (requestId === previewRequestRef.current) {
-        setLoadingPreview(false);
-      }
-    }
-  }
+  }, [storageKey, preview, applyPreviewResult, awaitPreviewLoad, loadPreview]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
