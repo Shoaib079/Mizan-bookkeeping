@@ -43,6 +43,7 @@ import {
   postedLineTargetSummary,
   type StatementLineFormTargets,
 } from "@/lib/statement-line-form-state";
+import { useHydrateOnce } from "@/lib/use-hydrate-once";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import {
@@ -152,17 +153,16 @@ export function StatementClassifyBar({
     submitIdempotency.resetSubmit();
   }, [line?.id, submitIdempotency]);
 
-  useEffect(() => {
+  useHydrateOnce(line?.id ?? null, !pickers.loading, () => {
     if (!line) return;
     setLearnAs(line.description);
     setError(null);
     setCorrectOpen(false);
     setCorrectReason("");
-
     if (isQueueLine(line)) {
       applyFormTargets(hydrateStatementLineFormState(line, pickers, "post"));
     }
-  }, [line, pickers]);
+  });
 
   const deliveryPlatformHint =
     line != null && classification === "delivery_settlement"

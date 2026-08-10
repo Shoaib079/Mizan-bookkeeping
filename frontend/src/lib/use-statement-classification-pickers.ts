@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import type { DeliveryPlatform } from "@/lib/pos-delivery-types";
@@ -130,20 +130,45 @@ export function useStatementClassificationPickers(
     setExpenseAccounts((prev) => mergeExpenseAccounts(prev, account));
   }, []);
 
-  return {
-    suppliers,
-    customers,
-    employees,
-    partners,
-    moneyAccounts,
-    creditCards,
-    expenseAccounts,
-    incomeAccounts,
-    deliveryPlatforms,
-    deliveryPlatformsError,
-    loading,
-    error,
-    reload,
-    appendExpenseAccount,
-  };
+  /* Memoised because callers put this object in effect dependencies.
+   *
+   * A fresh literal every render meant the identity changed whenever anything
+   * above re-rendered — a poll finishing, a window refocus, an unrelated bit
+   * of state — and the classify bar re-hydrated its form each time, replacing
+   * whatever had been chosen and not yet posted. The lists had not changed;
+   * only the object holding them had. */
+  return useMemo(
+    () => ({
+      suppliers,
+      customers,
+      employees,
+      partners,
+      moneyAccounts,
+      creditCards,
+      expenseAccounts,
+      incomeAccounts,
+      deliveryPlatforms,
+      deliveryPlatformsError,
+      loading,
+      error,
+      reload,
+      appendExpenseAccount,
+    }),
+    [
+      suppliers,
+      customers,
+      employees,
+      partners,
+      moneyAccounts,
+      creditCards,
+      expenseAccounts,
+      incomeAccounts,
+      deliveryPlatforms,
+      deliveryPlatformsError,
+      loading,
+      error,
+      reload,
+      appendExpenseAccount,
+    ],
+  );
 }

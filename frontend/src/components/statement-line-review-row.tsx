@@ -33,6 +33,7 @@ import {
 import {
   isLineCorrectable,
 } from "@/lib/statement-review";
+import { useHydrateOnce } from "@/lib/use-hydrate-once";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { apiFetch } from "@/lib/api";
@@ -122,21 +123,19 @@ export function StatementLineReviewRow({
     const expenses = filterExpenseAccounts(chartRes.items);
     setExpenseAccounts(expenses);
     setIncomeAccounts(filterRevenueAccounts(chartRes.items));
-    if (!supplierId && supRes.items[0]) setSupplierId(supRes.items[0].id);
-    const suggested =
+    // `prev ||` so a default never replaces a choice; reading through the
+    // updater is what takes `supplierId` out of the deps below, which is what
+    // made picking a supplier re-run this and re-seed the expense account.
+    const sugSupplier =
       line.suggestion?.supplier_id ??
       suggestSupplierId(line.description, supRes.items);
-    if (suggested) setSupplierId(suggested);
-    if (custRes.items[0]) setCustomerId(custRes.items[0].id);
-    if (acctRes.items[0]) setCounterpartId(acctRes.items[0].id);
-    if (ccRes.items[0]) setCreditCardId(ccRes.items[0].id);
-    if (expenses[0] && !line.suggestion?.expense_account_id) {
-      setExpenseAccountId(expenses[0].id);
-    }
-    if (line.suggestion?.expense_account_id) {
-      setExpenseAccountId(line.suggestion.expense_account_id);
-    }
-  }, [entityId, line.description, line.suggestion?.supplier_id, line.suggestion?.expense_account_id, supplierId]);
+    const sugExpense = line.suggestion?.expense_account_id;
+    setSupplierId((prev) => prev || sugSupplier || supRes.items[0]?.id || "");
+    setCustomerId((prev) => prev || custRes.items[0]?.id || "");
+    setCounterpartId((prev) => prev || acctRes.items[0]?.id || "");
+    setCreditCardId((prev) => prev || ccRes.items[0]?.id || "");
+    setExpenseAccountId((prev) => prev || sugExpense || expenses[0]?.id || "");
+  }, [entityId, line.description, line.suggestion?.supplier_id, line.suggestion?.expense_account_id]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -147,7 +146,8 @@ export function StatementLineReviewRow({
     submitIdempotency.resetSubmit();
   }, [line.id, submitIdempotency]);
 
-  useEffect(() => {
+  // `line.suggestion` is an object; a refresh used to put it back over a choice.
+  useHydrateOnce(line.id, true, () => {
     if (line.suggestion) {
       setClassification(line.suggestion.classification);
       if (line.suggestion.supplier_id) setSupplierId(line.suggestion.supplier_id);
@@ -156,7 +156,7 @@ export function StatementLineReviewRow({
       }
     }
     setLearnAs(line.description);
-  }, [line.id, line.suggestion, line.description]);
+  });
 
   function learnMatchTokenPayload(): string | undefined {
     const trimmed = learnAs.trim();
