@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -12,6 +11,7 @@ import { ManualExpenseForm } from "@/components/forms/manual-expense-form";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { ExpenseItemFilterPicker } from "@/components/review/expense-item-filter-picker";
 import { ExpenseItemsReviewPanel } from "@/components/review/expense-items-review-panel";
+import { ExpensesScopeNote } from "@/components/review/expenses-scope-note";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,6 @@ import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { invalidateReviewCounts } from "@/lib/review-counts-types";
 import { isPendingReviewStatus } from "@/lib/review-status";
-import { REVIEW_TAB_HREFS } from "@/lib/review-routes";
 import {
   EXPENSE_REVIEW_FILTERS,
   EXPENSE_REVIEW_VIEWS,
@@ -145,10 +144,12 @@ export function ExpensesReviewPanel() {
   const periodTotalLabel = useMemo(() => {
     if (view === "items") return "Posted total";
     if (expenseItemId) return "Item total";
-    // "Period total" over a list that spans every date is a wrong label, and
-    // a wrong label on a money figure is worse than a missing one — it tells
-    // you the number means something narrower than it does.
-    return expenseFilterUsesRange(filter) ? "Period total" : "Total";
+    // A wrong label on a money figure is worse than a missing one. "Period
+    // total" claimed a period the queues do not have; plain "Total" reads as
+    // everything spent, which this is not — see the note above the list.
+    return expenseFilterUsesRange(filter)
+      ? "Recorded here, this period"
+      : "Recorded here";
   }, [expenseItemId, filter, view]);
 
   if (!entityId) {
@@ -162,19 +163,8 @@ export function ExpensesReviewPanel() {
   return (
     <>
       <PageHeader title="Expenses to review" />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Cash and partner-fronted expenses posted here — correct mistakes below.
-          Bank and card charges are classified on the bank statement (not entered
-          manually). Receipt photos are in{" "}
-          <Link
-            href={REVIEW_TAB_HREFS.receipts}
-            className="text-primary hover:underline"
-          >
-            Receipts
-          </Link>
-          .
-        </p>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <ExpensesScopeNote />
         <Button type="button" onClick={() => setRecordOpen(true)}>
           Record expense
         </Button>

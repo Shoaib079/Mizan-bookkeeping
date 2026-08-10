@@ -59,9 +59,19 @@ describe("daily expense workflow (cash/partner/salary only)", () => {
 
   it("review expenses enables salary toggle and matches workflow copy", () => {
     const panel = read("components/review/expenses-review-panel.tsx");
+    // The explanatory copy moved to its own component when the page gained a
+    // note about what it does *not* list. Read both, so the guard follows the
+    // words rather than the file they happen to sit in.
+    const copy =
+      panel + read("components/review/expenses-scope-note.tsx");
+
     expect(panel).not.toContain("showRecordKindToggle={false}");
-    expect(panel).toMatch(/bank statement/i);
-    expect(panel).not.toMatch(/salary is under Staff/i);
+    expect(copy).toMatch(/bank statement/i);
+    expect(copy).not.toMatch(/salary is under Staff/i);
+    // Added with the note: the page says plainly that it is not the whole
+    // picture, and points at the report that is.
+    expect(copy).toMatch(/not your total spend/i);
+    expect(copy).toMatch(/reports\/expense-register/);
   });
 
   it("partner Record lives on the partner page, not PeopleRecordDialog", () => {

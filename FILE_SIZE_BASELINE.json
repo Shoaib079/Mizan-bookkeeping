@@ -73,7 +73,7 @@
   "frontend/src/components/ledger/gl-entry-actions.tsx": 532,
   "frontend/src/components/record/people-record-dialog.tsx": 414,
   "frontend/src/components/record/record-desk.tsx": 469,
-  "frontend/src/components/review/expenses-review-panel.tsx": 419,
+  "frontend/src/components/review/expenses-review-panel.tsx": 409,
   "frontend/src/components/review/general-ledger-panel.tsx": 656,
   "frontend/src/components/statement-bulk-action-bar.tsx": 430,
   "frontend/src/components/statement-classify-bar.tsx": 770,
