@@ -5,7 +5,10 @@ import { Suspense } from "react";
 
 import { TableSkeleton } from "@/components/ui/skeleton";
 
-const ExpensesReviewPanel = dynamic(
+/** Named for what it is — a lazy wrapper — not for what it loads.
+ * Sharing the panel's name shadowed it, so looking the component up by
+ * symbol found two declarations and could not tell which was meant. */
+const LazyExpensesReviewPanel = dynamic(
   () =>
     import("@/components/review/expenses-review-panel").then((mod) => ({
       default: mod.ExpensesReviewPanel,
@@ -16,7 +19,7 @@ const ExpensesReviewPanel = dynamic(
 export default function ReviewExpensesPage() {
   return (
     <Suspense fallback={<TableSkeleton columns={5} />}>
-      <ExpensesReviewPanel />
+      <LazyExpensesReviewPanel />
     </Suspense>
   );
 }

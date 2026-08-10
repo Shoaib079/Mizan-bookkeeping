@@ -1,17 +1,13 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+
+import { sourceDeclaring } from "@/test-support/source";
 
 import {
   RECORD_ACTIONS,
   recordActionsBySection,
 } from "@/lib/record-actions";
 
-const ROOT = join(__dirname, "..");
 
-function read(relativePath: string): string {
-  return readFileSync(join(ROOT, relativePath), "utf8");
-}
 
 describe("daily expense workflow (cash/partner/salary only)", () => {
   it("does not expose store/card manual purchase on Add hub or palette", () => {
@@ -48,8 +44,8 @@ describe("daily expense workflow (cash/partner/salary only)", () => {
   });
 
   it("manual expense form has no bank/card payment path", () => {
-    const form = read("components/forms/manual-expense-form.tsx");
-    const modals = read("components/record-action-modals.tsx");
+    const form = sourceDeclaring("ManualExpenseForm");
+    const modals = sourceDeclaring("RecordActionModals");
     expect(form).not.toContain("bank_card");
     expect(form).not.toContain("paymentSource");
     expect(form).toMatch(/bank statement/i);
@@ -58,12 +54,12 @@ describe("daily expense workflow (cash/partner/salary only)", () => {
   });
 
   it("review expenses enables salary toggle and matches workflow copy", () => {
-    const panel = read("components/review/expenses-review-panel.tsx");
+    const panel = sourceDeclaring("ExpensesReviewPanel");
     // The explanatory copy moved to its own component when the page gained a
     // note about what it does *not* list. Read both, so the guard follows the
     // words rather than the file they happen to sit in.
     const copy =
-      panel + read("components/review/expenses-scope-note.tsx");
+      panel + sourceDeclaring("ExpensesScopeNote");
 
     expect(panel).not.toContain("showRecordKindToggle={false}");
     expect(copy).toMatch(/bank statement/i);
@@ -75,7 +71,7 @@ describe("daily expense workflow (cash/partner/salary only)", () => {
   });
 
   it("partner Record lives on the partner page, not PeopleRecordDialog", () => {
-    const people = read("components/record/people-record-dialog.tsx");
+    const people = sourceDeclaring("PeopleRecordDialog");
     expect(people).not.toContain("PartnerRecordForm");
     expect(people).not.toContain("partnerReimbursement");
     expect(people).not.toContain("partnerDrawing");

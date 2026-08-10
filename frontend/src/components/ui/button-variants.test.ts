@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
+
+import { sourceDeclaring } from "@/test-support/source";
 import { twMerge } from "tailwind-merge";
 
 /** 75 buttons were `secondary` and 53 were `ghost`, and neither read as a
@@ -9,7 +10,7 @@ import { twMerge } from "tailwind-merge";
  * only on hover, which does not exist on a phone.
  */
 
-const source = readFileSync(new URL("./button.tsx", import.meta.url), "utf8");
+const source = sourceDeclaring("Button");
 
 describe("button variants carry colour", () => {
   it("secondary is not painted in the page background", () => {
@@ -43,10 +44,7 @@ describe("button variants carry colour", () => {
     expect(secondaryLine, "secondary is still a tint, not a fill").not.toMatch(
       /[^:]bg-primary\/\d/,
     );
-    const voidButton = readFileSync(
-      new URL("../ledger/void-confirm-dialog.tsx", import.meta.url),
-      "utf8",
-    );
+    const voidButton = sourceDeclaring("VoidConfirmDialog");
     expect(voidButton).toContain("bg-destructive/5");
   });
 

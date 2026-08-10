@@ -46,8 +46,14 @@ type ManualJournalRow = {
 };
 
 /** The shape CorrectLedgerEntryForm needs. Shared so the phone card and the
- * desktop row cannot describe the same entry differently. */
-function editTargetFor(row: ManualJournalRow): CorrectableLedgerEntry {
+ * desktop row cannot describe the same entry differently.
+ *
+ * Named for manual journals specifically: `lib/gl-edit-target.ts` has an
+ * `editTargetFor` that answers a different question — which correction form
+ * a General ledger row opens — and returns a different type. Two functions
+ * with one name is a trap for a reader long before it is one for a guard
+ * looking a symbol up. */
+function manualJournalEditTarget(row: ManualJournalRow): CorrectableLedgerEntry {
   return {
     id: row.id,
     entry_date: row.entry_date,
@@ -163,7 +169,7 @@ export function ManualJournalsPanel() {
                       type="button"
                       variant="secondary"
                       className="px-2 text-xs"
-                      onClick={() => setEditTarget(editTargetFor(row))}
+                      onClick={() => setEditTarget(manualJournalEditTarget(row))}
                     >
                       Edit
                     </Button>
@@ -214,7 +220,7 @@ export function ManualJournalsPanel() {
                         type="button"
                         variant="ghost"
                         className="h-8 px-2"
-                        onClick={() => setEditTarget(editTargetFor(row))}
+                        onClick={() => setEditTarget(manualJournalEditTarget(row))}
                       >
                         Edit
                       </Button>

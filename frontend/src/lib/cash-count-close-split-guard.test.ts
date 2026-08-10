@@ -1,16 +1,12 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const ROOT = join(__dirname, "..");
+import { sourceDeclaring } from "@/test-support/source";
 
-function read(relativePath: string): string {
-  return readFileSync(join(ROOT, relativePath), "utf8");
-}
+
 
 describe("Count cash vs Close day split", () => {
   it("Count cash form never calls close-day API", () => {
-    const count = read("components/forms/cash-count-form.tsx");
+    const count = sourceDeclaring("CashCountForm");
     expect(count).toContain("data-testid=\"cash-count-form\"");
     expect(count).toContain("not</strong> post");
     expect(count).not.toContain("drawer-sessions/close-day");
@@ -18,9 +14,9 @@ describe("Count cash vs Close day split", () => {
   });
 
   it("Count cash and Close day lock to Main till; home is reference only", () => {
-    const count = read("components/forms/cash-count-form.tsx");
-    const close = read("components/forms/cash-drawer-close-day-form.tsx");
-    const ref = read("components/forms/main-till-reference.tsx");
+    const count = sourceDeclaring("CashCountForm");
+    const close = sourceDeclaring("CashDrawerCloseDayForm");
+    const ref = sourceDeclaring("MainTillReference");
     expect(count).toContain("MainTillReference");
     expect(count).toContain("mainTillAccount");
     expect(count).not.toContain("CashDrawerPicker");
@@ -32,7 +28,7 @@ describe("Count cash vs Close day split", () => {
   });
 
   it("Close day posts then opens send-part-home (float stays in Main)", () => {
-    const close = read("components/forms/cash-drawer-close-day-form.tsx");
+    const close = sourceDeclaring("CashDrawerCloseDayForm");
     expect(close).toContain("data-testid=\"close-day-form\"");
     expect(close).toContain("drawer-sessions/close-day");
     expect(close).toContain('kind: "split"');
@@ -42,10 +38,10 @@ describe("Count cash vs Close day split", () => {
   });
 
   it("Count/Close never create cash drawers — Banking → Cash only", () => {
-    const count = read("components/forms/cash-count-form.tsx");
-    const close = read("components/forms/cash-drawer-close-day-form.tsx");
-    const split = read("components/forms/cash-drawer-split-panel.tsx");
-    const banking = read("app/banking/cash/page.tsx");
+    const count = sourceDeclaring("CashCountForm");
+    const close = sourceDeclaring("CashDrawerCloseDayForm");
+    const split = sourceDeclaring("CashDrawerSplitPanel");
+    const banking = sourceDeclaring("CashDrawerPage");
     for (const src of [count, close, split]) {
       expect(src).not.toMatch(/method:\s*["']POST["'][\s\S]*banking\/accounts/);
       expect(src).not.toContain("Add cash drawer");
@@ -57,7 +53,7 @@ describe("Count cash vs Close day split", () => {
   });
 
   it("Record desk wires both modes", () => {
-    const desk = read("components/record/record-desk.tsx");
+    const desk = sourceDeclaring("RecordDesk");
     expect(desk).toContain('mode === "countCash"');
     expect(desk).toContain('mode === "closeDay"');
     expect(desk).toContain("CashCountForm");

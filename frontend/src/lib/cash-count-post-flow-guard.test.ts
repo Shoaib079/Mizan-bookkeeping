@@ -1,16 +1,12 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const ROOT = join(__dirname, "..");
+import { sourceDeclaring } from "@/test-support/source";
 
-function read(relativePath: string): string {
-  return readFileSync(join(ROOT, relativePath), "utf8");
-}
+
 
 describe("cash count post-close flow", () => {
   it("goes to send-part-home after close, with float-friendly done copy", () => {
-    const form = read("components/forms/cash-drawer-close-day-form.tsx");
+    const form = sourceDeclaring("CashDrawerCloseDayForm");
     expect(form).toContain('kind: "split"');
     expect(form).toContain('kind: "done"');
     expect(form).toContain("counter float");
@@ -21,7 +17,7 @@ describe("cash count post-close flow", () => {
   });
 
   it("split panel prefers sending part home and leaving float", () => {
-    const split = read("components/forms/cash-drawer-split-panel.tsx");
+    const split = sourceDeclaring("CashDrawerSplitPanel");
     expect(split).toContain("onKeepHere");
     expect(split).toContain("preferCashHomeDrawerId");
     expect(split).toContain("Send part home — leave float in counter");

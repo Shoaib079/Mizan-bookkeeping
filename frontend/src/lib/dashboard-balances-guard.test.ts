@@ -1,14 +1,10 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+
+import { sourceDeclaring } from "@/test-support/source";
 
 import { navGroups } from "@/lib/app-routes";
 
-const ROOT = join(__dirname, "..");
 
-function read(relativePath: string): string {
-  return readFileSync(join(ROOT, relativePath), "utf8");
-}
 
 describe("balances on dashboard", () => {
   it("does not list Balances in the Overview sidebar", () => {
@@ -17,9 +13,9 @@ describe("balances on dashboard", () => {
   });
 
   it("shows cash and bank together beside This period", () => {
-    const page = read("app/page.tsx");
-    const overview = read("components/balances/balances-overview.tsx");
-    const snapshot = read("components/dashboard/cash-bank-snapshot-card.tsx");
+    const page = sourceDeclaring("HomePage");
+    const overview = sourceDeclaring("BalancesOverview");
+    const snapshot = sourceDeclaring("CashBankSnapshotCard");
     expect(page).toContain("CashBankSnapshotCard");
     expect(page).toContain("lg:grid-cols-2");
     expect(page).toContain("cash_in_hand_kurus");
@@ -36,16 +32,16 @@ describe("balances on dashboard", () => {
   });
 
   it("redirects /balances to dashboard (same as desktop)", () => {
-    const hub = read("app/balances/page.tsx");
+    const hub = sourceDeclaring("BalancesPage");
     expect(hub).toContain('redirect("/")');
   });
 
   it("redirects legacy balance directory aliases", () => {
-    expect(read("app/balances/suppliers/page.tsx")).toContain('redirect("/suppliers")');
-    expect(read("app/(procurement)/payables/page.tsx")).toContain(
+    expect(sourceDeclaring("BalancesSuppliersRedirect")).toContain('redirect("/suppliers")');
+    expect(sourceDeclaring("PayablesRedirect")).toContain(
       'redirect("/suppliers")',
     );
-    expect(read("app/(customers-section)/receivables/page.tsx")).toContain(
+    expect(sourceDeclaring("ReceivablesRedirect")).toContain(
       'redirect("/customers")',
     );
   });

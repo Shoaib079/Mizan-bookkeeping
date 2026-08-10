@@ -18,6 +18,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { sourceDeclaring } from "@/test-support/source";
+
 /** The kinds moved out of `entry_actions.py` when its 46 branches became a
  * table. Two forms live here now: `edit_kind="…"` on a table row, and
  * `kind="…"` inside the two escape functions whose answer depends on the row.
@@ -32,31 +34,26 @@ const BACKEND = join(
   "ledger",
   "entry_capabilities.py",
 );
-/** Handling a kind now takes two files, and it must appear in both.
+/** Handling a kind takes two switches, and it must appear in both.
  *
  * `editTargetFor` decides what to open; `GlEditDialogs` renders it. A kind in
  * one and not the other is a button that opens nothing — the exact failure
- * this guard exists for, just split across two switches instead of one.
- * Requiring it in both is stricter than the single file this used to read.
+ * this guard exists for, split across two files instead of one.
  *
- * It used to read `gl-entry-actions.tsx`, and broke the moment the switch
- * moved out of it — the eighth time in this project that a guard pinned to a
- * filename has failed for the wrong reason. Hence `test_it_reads_real_files`
- * below: a path that stops resolving must fail loudly rather than by finding
- * nothing.
+ * Both are found by symbol. This file used to name the component file and
+ * broke the moment the switch moved out of it, which is what D9 is about: it
+ * asserted where the code lived when it meant what the code does.
  */
-const ACTIONS = join(
-  process.cwd(),
-  "src",
-  "components",
-  "ledger",
-  "gl-entry-actions.tsx",
-);
+function casesIn(source: string): Set<string> {
+  return new Set([...source.matchAll(/case "([a-z_]+)":/g)].map((m) => m[1]));
+}
 
-const HANDLERS = [
-  join(process.cwd(), "src", "lib", "gl-edit-target.ts"),
-  join(process.cwd(), "src", "components", "ledger", "gl-edit-dialogs.tsx"),
-];
+function handlerSources(): [Set<string>, Set<string>] {
+  return [
+    casesIn(sourceDeclaring("editTargetFor")),
+    casesIn(sourceDeclaring("GlEditDialogs")),
+  ];
+}
 
 /** Kinds the General ledger cannot open yet, each with the reason.
  *
@@ -79,11 +76,6 @@ function backendKinds(): string[] {
   ].sort();
 }
 
-function casesIn(path: string): Set<string> {
-  const source = readFileSync(path, "utf8");
-  return new Set([...source.matchAll(/case "([a-z_]+)":/g)].map((m) => m[1]));
-}
-
 /** Kinds handled by the component itself rather than by opening a dialog.
  *
  * `generic_ledger` is the manual journal: the General ledger page already has
@@ -96,7 +88,7 @@ const HANDLED_BY_DELEGATION: Record<string, string> = {
 };
 
 function handledKinds(): string[] {
-  const [mapper, dialogs] = HANDLERS.map(casesIn);
+  const [mapper, dialogs] = handlerSources();
   return [
     ...[...mapper].filter((kind) => dialogs.has(kind)),
     ...Object.keys(HANDLED_BY_DELEGATION),
@@ -104,22 +96,20 @@ function handledKinds(): string[] {
 }
 
 describe("General ledger edit kinds", () => {
-  it("reads real files", () => {
-    // `readFileSync` throws on a missing path, so a moved file fails here with
-    // its name rather than further down as "every kind is unhandled". Eight
-    // guards in this project have broken by being pinned to a filename; the
-    // cost of that is not the breakage, it is the minute spent believing the
-    // failure was real.
-    for (const path of [BACKEND, ACTIONS, ...HANDLERS]) {
-      expect(() => readFileSync(path, "utf8"), `missing: ${path}`).not.toThrow();
-    }
+  it("finds the code it checks", () => {
+    // A rename fails here naming the symbol, rather than further down as
+    // "every kind is unhandled" — which reads like the app is broken.
+    expect(() => sourceDeclaring("editTargetFor")).not.toThrow();
+    expect(() => sourceDeclaring("GlEditDialogs")).not.toThrow();
+    expect(() => sourceDeclaring("GlEntryActions")).not.toThrow();
+    expect(() => readFileSync(BACKEND, "utf8")).not.toThrow();
   });
 
   it("needs a kind in the mapper and the dialogs, not just one", () => {
     // Otherwise `handledKinds` could pass on a kind that maps to a target
     // nothing renders — a button that opens nothing, which is the failure
     // this whole file is about.
-    const [mapper, dialogs] = HANDLERS.map(casesIn);
+    const [mapper, dialogs] = handlerSources();
     const onlyMapper = [...mapper].filter((k) => !dialogs.has(k));
     const onlyDialogs = [...dialogs].filter((k) => !mapper.has(k));
     expect(
@@ -142,7 +132,7 @@ describe("General ledger edit kinds", () => {
     expect(
       unhandled,
       "These kinds render an Edit button that does nothing. Add a case in " +
-        "gl-entry-actions.tsx, or add it to KNOWN_UNWIRED with the reason:\n" +
+        "editTargetFor, or add it to KNOWN_UNWIRED with the reason:\n" +
         unhandled.join("\n"),
     ).toEqual([]);
   });
@@ -177,7 +167,7 @@ describe("General ledger edit kinds", () => {
     // The bug was `default: return`. Silence is what made a broken button
     // indistinguishable from a working one. The arm is now `if (!target)` in
     // the component, since editTargetFor returns null for an unknown kind.
-    const source = readFileSync(ACTIONS, "utf8");
+    const source = sourceDeclaring("GlEntryActions");
     expect(source).toContain("if (!target)");
     expect(source.slice(source.indexOf("if (!target)"))).toContain("toast(");
   });
@@ -185,7 +175,7 @@ describe("General ledger edit kinds", () => {
   it("still delegates the kinds it claims to delegate", () => {
     // Otherwise HANDLED_BY_DELEGATION becomes a way to mark a kind handled by
     // writing its name in a list.
-    const source = readFileSync(ACTIONS, "utf8");
+    const source = sourceDeclaring("GlEntryActions");
     for (const kind of Object.keys(HANDLED_BY_DELEGATION)) {
       expect(source, `${kind} is claimed as delegated`).toContain(kind);
     }

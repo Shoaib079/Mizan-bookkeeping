@@ -1,6 +1,10 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+
+import {
+  sourceAt,
+  sourceDeclaring,
+  sourceDeclaringAll,
+} from "@/test-support/source";
 
 import {
   dailyVisibleSections,
@@ -11,29 +15,15 @@ import {
   recordActionsBySection,
 } from "@/lib/record-actions";
 
-const ROOT = join(__dirname, "..");
-
-function read(relativePath: string): string {
-  return readFileSync(join(ROOT, relativePath), "utf8");
-}
-
-/** The Record desk, which is two files.
+/** The Record desk, found by what it is rather than where it sits.
  *
- * The four button components moved to `record-desk-buttons.tsx` when the desk
- * was split; `role="tab"` went with them and this guard failed for a reason
- * that had nothing to do with what it guards. That is the ninth time in this
- * project a check pinned to a filename has broken on a move.
- *
- * Reading both is the honest fix — the assertions below are about the desk as
- * a feature, not about which file a line happens to live in. `readFileSync`
- * throws on a missing path, so a further move fails here by name rather than
- * by quietly finding nothing.
+ * `role="tab"` moved to `record-desk-buttons.tsx` when the desk was split,
+ * and this guard failed for a reason unrelated to what it guards — the ninth
+ * such failure in this project, and the reason D9 exists. Naming the two
+ * components means the next split is invisible here.
  */
 function readDesk(): string {
-  return [
-    read("components/record/record-desk.tsx"),
-    read("components/record/record-desk-buttons.tsx"),
-  ].join("\n");
+  return sourceDeclaringAll("RecordDesk", "DeskModeButton");
 }
 
 describe("Add page amount-first desk", () => {
@@ -55,7 +45,7 @@ describe("Add page amount-first desk", () => {
 
   it("uses a left mode rail with icons beside the embedded form panel", () => {
     const desk = readDesk();
-    const page = read("app/record/page.tsx");
+    const page = sourceAt("app/record/page.tsx");
     expect(page).toContain("<RecordDesk");
     expect(desk).toContain("primaryRecordActions");
     expect(desk).toContain("DeskModeButton");
@@ -86,14 +76,14 @@ describe("Add page amount-first desk", () => {
   });
 
   it("opens unified FX dialog for fx and legacy buy/convert/spend keys", () => {
-    const modals = read("components/record-action-modals.tsx");
+    const modals = sourceDeclaring("RecordActionModals");
     expect(modals).toContain("FxUnifiedDialog");
     expect(modals).not.toContain("FxPurchaseQuickAction");
     expect(modals).not.toContain("FxWalletActionDialog");
   });
 
   it("routes staff salary through a dedicated salary-only expense dialog", () => {
-    const modals = read("components/record-action-modals.tsx");
+    const modals = sourceDeclaring("RecordActionModals");
     expect(modals).toContain('effectiveModal === "staffSalary"');
     expect(modals).toContain('defaultRecordKind="salary"');
     expect(modals).toContain('defaultRecordKind="expense"');

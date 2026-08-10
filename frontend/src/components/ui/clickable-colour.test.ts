@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { sourceDeclaring } from "@/test-support/source";
+
 /** Everything you can click has to look like you can click it.
  *
  * This exists because finding the colourless controls meant opening pages one
@@ -58,7 +60,7 @@ function sourceFiles(dir: string): string[] {
 
 describe("everything clickable carries a colour", () => {
   it("the shared Button variants are visible at rest", () => {
-    const button = readFileSync(new URL("./button.tsx", import.meta.url), "utf8");
+    const button = sourceDeclaring("Button");
 
     // `secondary` was bg-background — the page's own colour behind a hairline.
     expect(button).not.toContain("bg-background hover:bg-muted");

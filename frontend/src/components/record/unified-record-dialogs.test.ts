@@ -1,16 +1,12 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const ROOT = join(__dirname, "..");
+import { sourceDeclaring } from "@/test-support/source";
 
-function read(relativePath: string): string {
-  return readFileSync(join(ROOT, relativePath), "utf8");
-}
+
 
 describe("unified record dialogs", () => {
   it("uses one PeopleRecordDialog instead of picker-then-form state", () => {
-    const modals = read("record-action-modals.tsx");
+    const modals = sourceDeclaring("RecordActionModals");
     expect(modals).toContain("PeopleRecordDialog");
     expect(modals).not.toContain("PersonPickerDialog");
     expect(modals).not.toContain("personPickerFor");
@@ -18,8 +14,8 @@ describe("unified record dialogs", () => {
   });
 
   it("routes bank statement import to the full-page mapper with file handoff", () => {
-    const bank = read("record/bank-account-picker-dialog.tsx");
-    const modals = read("record-action-modals.tsx");
+    const bank = sourceDeclaring("BankAccountPickerDialog");
+    const modals = sourceDeclaring("RecordActionModals");
     expect(bank).toContain("/import");
     expect(bank).toContain("Continue to import");
     expect(bank).toContain("beginStatementImportHandoff");
@@ -31,14 +27,14 @@ describe("unified record dialogs", () => {
   it("embeds FX forms inline without a Continue step", () => {
     // fx-wallet-action-dialog was superseded by fx-unified-dialog and deleted
     // in the slice 8 sweep; the rule still applies to whatever renders FX.
-    const fx = read("record/fx-unified-dialog.tsx");
+    const fx = sourceDeclaring("FxUnifiedDialog");
     expect(fx).toContain("embedded");
     expect(fx).not.toContain("formOpen");
     expect(fx).not.toContain("Continue");
   });
 
   it("loads balance when a person is selected in PeopleRecordDialog", () => {
-    const people = read("record/people-record-dialog.tsx");
+    const people = sourceDeclaring("PeopleRecordDialog");
     expect(people).toContain("renderEmbeddedForm");
     expect(people).not.toContain("partnerReimbursement");
     expect(people).not.toContain("partnerCapital");
@@ -47,11 +43,11 @@ describe("unified record dialogs", () => {
   });
 
   it("routes staff salary payment through the rich dialog with a picked employee (hidden from Add hub)", () => {
-    const people = read("record/people-record-dialog.tsx");
-    const salaryDialog = read("forms/staff-salary-payment-dialog.tsx");
-    const cashForm = read("forms/staff-cash-movement-form.tsx");
-    const staffPage = read("../app/staff/[id]/page.tsx");
-    const actions = read("../lib/record-actions.ts");
+    const people = sourceDeclaring("PeopleRecordDialog");
+    const salaryDialog = sourceDeclaring("StaffSalaryPaymentDialog");
+    const cashForm = sourceDeclaring("StaffCashMovementForm");
+    const staffPage = sourceDeclaring("StaffDetailPage");
+    const actions = sourceDeclaring("PERSON_PICKER_ACTIONS");
 
     expect(actions).toContain('id: "staffPayment"');
     expect(actions).toContain("hidden: true");
@@ -73,7 +69,7 @@ describe("unified record dialogs", () => {
     expect(salaryDialog).not.toContain("defaultPeriod.year");
     expect(salaryDialog).not.toContain("defaultPeriod.month");
 
-    const classifyBar = read("statement-classify-bar.tsx");
+    const classifyBar = sourceDeclaring("StatementClassifyBar");
     expect(classifyBar).toContain("selectedEmployee");
     expect(classifyBar).not.toContain('?? "Employee"');
     expect(salaryDialog).toContain("!isStatement &&");
@@ -83,14 +79,14 @@ describe("unified record dialogs", () => {
   });
 
   it("renders dialogs in a portal so sticky headers do not cover modals", () => {
-    const dialog = read("ui/dialog.tsx");
+    const dialog = sourceDeclaring("Dialog");
     expect(dialog).toContain("createPortal");
     expect(dialog).toContain("document.body");
   });
 
   it("manual expense can record salary payments from one daily intake dialog", () => {
-    const form = read("forms/manual-expense-form.tsx");
-    const reviewPanel = read("review/expenses-review-panel.tsx");
+    const form = sourceDeclaring("ManualExpenseForm");
+    const reviewPanel = sourceDeclaring("ExpensesReviewPanel");
     expect(form).toContain("ExpenseRecordKindToggle");
     expect(form).toContain("StaffSalaryPaymentDialog");
     expect(form).toMatch(/bank statement/i);
@@ -100,10 +96,10 @@ describe("unified record dialogs", () => {
   });
 
   it("opens invoice and receipt review in a dialog on the record page", () => {
-    const panel = read("record/record-review-panel.tsx");
-    const efatura = read("forms/efatura-upload-form.tsx");
-    const receipt = read("forms/expense-receipt-upload-form.tsx");
-    const recordPage = read("../app/record/page.tsx");
+    const panel = sourceDeclaring("RecordReviewPanel");
+    const efatura = sourceDeclaring("EfaturaUploadForm");
+    const receipt = sourceDeclaring("ExpenseReceiptUploadForm");
+    const recordPage = sourceDeclaring("RecordPage");
     expect(panel).toContain("<Dialog");
     expect(efatura).toContain("/record?invoice=");
     expect(receipt).toContain("/record?receipt=");
