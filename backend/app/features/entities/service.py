@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.adapters.storage import delete_stored_upload
 from app.core.listing import ListParams, fetch_paginated, text_search_filter
 from app.core.auth.types import EntityRole
-from app.db.session import entity_context, require_entity_context, user_membership_lookup, user_membership_lookup
+from app.db.session import entity_context, require_entity_context, user_membership_lookup
 from app.features.auth.models import EntityMembership
 from app.features.chart_of_accounts import service as chart_service
 from app.features.entities.models import Entity, EntitySetting
@@ -203,6 +203,63 @@ def clear_entity_logo(session: Session, entity_id: uuid.UUID) -> Entity | None:
     if previous:
         delete_stored_upload(previous)
     return entity
+
+
+class EntityNotFoundError(LookupError):
+    """No such restaurant, or it is already gone."""
+
+
+def delete_entity(session: Session, entity_id: uuid.UUID) -> str:
+    """Destroy a restaurant and everything recorded against it. No undo.
+
+    Returns the name, so the caller can say what it deleted after the row that
+    knew is gone.
+
+    The delete itself is `delete_entity_cascade()`, a SECURITY DEFINER function
+    in the database — see `app/db/entity_deletion.py`. It cannot happen here in
+    Python, because the role this session connects as deliberately cannot
+    disable the triggers that make the ledger undeletable, and giving the API
+    that power generally would be a far larger hole than granting it this one
+    function.
+
+    Uploaded invoices, receipts and statements are not removed. They live
+    outside the database under an `{entity_id}/` prefix, their paths buried in
+    JSONB extraction payloads, and nothing points at them once the rows are
+    gone. Orphaned files cost a little storage; a delete loop that walked JSONB
+    looking for paths would be fragile in the one place that must not be.
+    """
+    entity = get_entity(session, entity_id)
+    if entity is None:
+        raise EntityNotFoundError(str(entity_id))
+    name = entity.name
+
+    # Detach just this row before the delete goes around SQLAlchemy's back.
+    # Left in the identity map it would be flushed or refreshed against a row
+    # that no longer exists.
+    #
+    # Not `expunge_all()`, which was the first attempt: that reaches past what
+    # this function owns and detaches everything the caller had loaded — the
+    # signed-in user among it — leaving the session it was handed in a worse
+    # state than it found it.
+    session.expunge(entity)
+
+    removed = session.execute(
+        text("SELECT delete_entity_cascade(:entity_id)"), {"entity_id": str(entity_id)}
+    ).scalar_one()
+    if removed != 1:
+        # The function reports what it deleted. Zero means the row went between
+        # the lookup and the call; anything else means it did not do what its
+        # name says, and committing on that basis would be reckless.
+        session.rollback()
+        raise EntityNotFoundError(str(entity_id))
+
+    session.commit()
+    # `SessionLocal` sets `expire_on_commit=False`, so nothing above refreshes
+    # itself. Everything entity-scoped the caller still holds — memberships,
+    # settings — was carried off by the cascade, so make the session re-read
+    # rather than serve rows that are gone.
+    session.expire_all()
+    return name
 
 
 def create_entity_setting(

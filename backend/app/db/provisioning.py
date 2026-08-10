@@ -29,6 +29,10 @@ from app.db.audit_immutability import (
     audit_immutability_trigger_name,
     audit_immutability_triggers_present,
 )
+from app.db.entity_deletion import (
+    apply_entity_deletion_function,
+    entity_deletion_function_present,
+)
 from app.db.fx_immutability import apply_fx_immutability
 from app.db.ledger_immutability import apply_ledger_immutability
 from app.db.partners_immutability import apply_partners_immutability
@@ -71,6 +75,9 @@ def apply_database_integrity(connection: Connection) -> None:
     apply_staff_immutability(connection)
     apply_partners_immutability(connection)
     apply_receivables_immutability(connection)
+    # Last: it reads pg_trigger at call time, not install time, so it must not
+    # be able to run against a half-installed set of triggers during a migrate.
+    apply_entity_deletion_function(connection, app_role=APP_DB_ROLE)
 
 
 def finalize_migration_grants(migration_url: str) -> None:
@@ -259,6 +266,13 @@ def verify_production_database(database_url: str | None = None) -> None:
             if missing_period:
                 failures.append(
                     f"missing period lock immutability triggers: {sorted(missing_period)}"
+                )
+
+            # Absent, Settings offers a delete button that fails at the moment
+            # it is pressed. Checked here so a bad deploy says so on startup.
+            if not entity_deletion_function_present(conn):
+                failures.append(
+                    "missing delete_entity_cascade() — restaurant deletion is unavailable"
                 )
     finally:
         engine.dispose()

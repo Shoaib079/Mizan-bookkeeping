@@ -17,9 +17,11 @@ from app.core.auth.deps import (
     member_read_guard,
     operations_write_guard,
     require_authenticated_user,
+    require_owner_members,
     resolve_current_user,
 )
 from app.db.session import get_session
+from app.features.auth.audit import AuthAuditAction, record_auth_event
 from app.features.auth.models import User
 from app.features.entities import service
 from app.features.entities.logo import InvalidLogoError, validate_logo
@@ -171,6 +173,42 @@ def delete_entity_logo(
     if entity is None:
         raise HTTPException(status_code=404, detail="Entity not found")
     return EntityRead.from_entity(entity)
+
+
+@router.delete("/{entity_id}", status_code=204)
+def delete_entity(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    user: User | None = Depends(require_owner_members),
+) -> Response:
+    """Destroy this restaurant and everything in it. Irreversible.
+
+    Owner-only, and deliberately not covered by any assignable grant — there is
+    no combination of permissions that lets a member reach this. `Settings`
+    offers it for the restaurant you are currently in and no other, so the id
+    in the path is the one on screen.
+
+    The audit record is written *before* the delete and survives it:
+    `auth_audit_events.entity_id` is `ON DELETE SET NULL`, so the row detaches
+    rather than being carried away with everything else. It is the only trace
+    left afterwards, which is exactly why it is written first — a record
+    written after a delete is a record that is missing whenever the delete is
+    the thing that went wrong.
+    """
+    record_auth_event(
+        session,
+        AuthAuditAction.ENTITY_DELETED,
+        user_id=user.id if user else None,
+        entity_id=entity_id,
+        detail="Restaurant deleted from Settings",
+    )
+    session.commit()
+
+    try:
+        service.delete_entity(session, entity_id)
+    except service.EntityNotFoundError:
+        raise HTTPException(status_code=404, detail="Entity not found") from None
+    return Response(status_code=204)
 
 
 @router.post("/{entity_id}/settings", response_model=EntitySettingRead, status_code=201)

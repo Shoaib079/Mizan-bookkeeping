@@ -2,7 +2,7 @@ import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import { cn } from "@/lib/utils";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "destructive";
 };
 
 export function Button({
@@ -32,6 +32,16 @@ export function Button({
         variant === "secondary" &&
           "bg-primary text-primary-foreground hover:bg-primary/90",
         variant === "ghost" && "text-primary hover:bg-primary/15",
+        // For actions that destroy something and cannot be undone. Filled, for
+        // the same reason secondary is: an outline did not read as a button.
+        //
+        // Deliberately not used for Void. Voiding is recorded, reversible in
+        // effect, and happens many times a week; if it looked like this, this
+        // would stop meaning anything by the time it mattered. Right now the
+        // only caller is deleting a restaurant. The variant exists so the next
+        // irreversible action inherits the treatment instead of inventing one.
+        variant === "destructive" &&
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         className,
       )}
       {...props}

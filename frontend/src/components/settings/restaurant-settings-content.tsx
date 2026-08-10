@@ -6,6 +6,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { BackupsInfoPanel } from "@/components/settings/backups-info-panel";
+import { DeleteRestaurantPanel } from "@/components/settings/delete-restaurant-panel";
 import {
   EntityFeatureToggles,
 } from "@/components/settings/entity-feature-toggles";
@@ -261,6 +262,10 @@ export function RestaurantSettingsContent() {
       </FormSection>
 
       <BackupsInfoPanel />
+
+      {/* Last on the page, and after Backups on purpose — the thing you would
+          want to have read before pressing it sits directly above. */}
+      <DeleteRestaurantPanel />
     </FormPage>
   );
 }

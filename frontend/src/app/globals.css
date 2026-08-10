@@ -19,6 +19,7 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-card: var(--card);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -50,6 +51,7 @@
   --success: #16a34a;
   --warning: #f59e0b;
   --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
   --card: #ffffff;
   --sidebar: #ffffff;
   --sidebar-foreground: #334155;
@@ -105,6 +107,10 @@
   --success: #4ade80;
   --warning: #fbbf24;
   --destructive: #f87171;
+  /* Dark mode inverts this pair. On dark, --destructive is a light red so a
+     filled destructive button needs dark text — white on #f87171 is roughly
+     2.3:1 and fails badly. Matches how --primary-foreground flips here. */
+  --destructive-foreground: #450a0a;
   --card: #111c33;
   --sidebar: #0f172a;
   --sidebar-foreground: #e2e8f0;
