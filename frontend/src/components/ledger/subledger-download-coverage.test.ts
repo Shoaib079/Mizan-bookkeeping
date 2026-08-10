@@ -54,26 +54,92 @@ describe.each(LEDGER_PAGES)("the $name ledger can be downloaded", ({ file, path 
   });
 });
 
-describe("the download menu is not forked per feature", () => {
-  it("only one download menu component exists", () => {
-    // The partner page owned a private copy; three more copies is how the
-    // hover state gets fixed in one and not the others.
-    const walk = (dir: string): string[] =>
-      readdirSync(dir).flatMap((entry) => {
-        const full = `${dir}/${entry}`;
-        return statSync(full).isDirectory() ? walk(full) : [full];
-      });
+describe("the download dropdown is not forked per feature", () => {
+  /* This used to look for files named `*-download-menu.tsx` and forgive any
+   * whose name contained "report". Two things were wrong with that, and the
+   * second is why it is rewritten rather than patched:
+   *
+   * - It classified by filename. Renaming the delivery hub's toolbar to
+   *   `delivery-download-menu.tsx` made it fail, and moving the same code to a
+   *   file called anything else would have made it pass — which is the D9
+   *   lesson in miniature.
+   * - The forgiveness was doing real work. `report-download-menu.tsx` was a
+   *   third copy of the same dropdown all along, sitting behind an exclusion
+   *   that read like a note about scope. Two of the three copies had menu
+   *   items under the 44px a thumb needs.
+   *
+   * So the rule is now about the dropdown itself: whatever a menu is called
+   * and whatever it downloads, only one file may implement the trigger,
+   * the outside-click dismissal and the floating card. */
+  const walk = (dir: string): string[] =>
+    readdirSync(dir).flatMap((entry) => {
+      const full = `${dir}/${entry}`;
+      return statSync(full).isDirectory() ? walk(full) : [full];
+    });
 
-    const menus = walk(SRC + "components").filter((f) =>
-      /download-menu\.tsx$/.test(f),
+  /** Files that build their own Download trigger with a card under it.
+   *
+   * Three marks together — the icon, an absolutely-positioned block, and the
+   * open state — so a file that merely *renders* a shared menu, or opens some
+   * unrelated popover, is not counted.
+   */
+  function dropdownImplementations(): string[] {
+    return walk(SRC + "components")
+      .filter((f) => /\.tsx$/.test(f) && !/\.test\.tsx$/.test(f))
+      .filter((f) => {
+        const s = readFileSync(f, "utf8");
+        return (
+          /import \{[^}]*\bDownload\b[^}]*\} from "lucide-react"/.test(s) &&
+          s.includes("absolute") &&
+          s.includes("setOpen")
+        );
+      })
+      .map((f) => f.replace(SRC, ""));
+  }
+
+  /** Its own dropdown, and why that is allowed.
+   *
+   * A mapping rather than a list, so the reason travels with the name — a bare
+   * exclusion is indistinguishable from an oversight, which is precisely how
+   * `report-download-menu.tsx` stayed a third copy for as long as it did.
+   */
+  const ALLOWED_OWN_DROPDOWN: Record<string, string> = {
+    "components/reports/month-pack-button.tsx":
+      "its rows carry an icon and a description line under a 'Choose format' " +
+      "heading, and it has a compact sticky-bar variant for mobile reports — " +
+      "folding that in would push three presentational options into the " +
+      "shared shell to serve one caller",
+  };
+
+  it("finds the components tree", () => {
+    // Over an empty walk every assertion below passes by comparing nothing.
+    expect(walk(SRC + "components").length).toBeGreaterThan(100);
+    expect(dropdownImplementations().length).toBeGreaterThan(0);
+  });
+
+  it("only one component implements the plain menu", () => {
+    const found = dropdownImplementations().filter(
+      (f) => !(f in ALLOWED_OWN_DROPDOWN),
     );
-    const names = menus.map((f) => f.replace(SRC, ""));
-    // report-download-menu is a different thing: it downloads a report for a
-    // date range, not a subject's ledger.
-    const subledgerMenus = names.filter((n) => !n.includes("report"));
     expect(
-      subledgerMenus,
-      `expected one shared subledger download menu, found:\n${subledgerMenus.join("\n")}`,
-    ).toEqual(["components/ledger/subledger-download-menu.tsx"]);
+      found,
+      "these each build their own Download dropdown; render " +
+        "<DownloadMenu items={…} /> instead, or add a reason to " +
+        "ALLOWED_OWN_DROPDOWN:\n" +
+        found.join("\n"),
+    ).toEqual(["components/ui/download-menu.tsx"]);
+  });
+
+  it("the exceptions still exist", () => {
+    // An exception for a file that has moved or gone forgives nothing and
+    // hides the fact that the rule now covers less than it says.
+    const found = dropdownImplementations();
+    const stale = Object.keys(ALLOWED_OWN_DROPDOWN).filter(
+      (f) => !found.includes(f),
+    );
+    expect(
+      stale,
+      `ALLOWED_OWN_DROPDOWN names files that no longer build one: ${stale.join(", ")}`,
+    ).toEqual([]);
   });
 });

@@ -1,17 +1,15 @@
 "use client";
 
-import { ChevronDown, Download } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+/** Download a report for the period on screen.
+ *
+ * The dropdown lives in `DownloadMenu`, shared with the subledger and delivery
+ * menus. What is specific to a report is the slug, the query string carrying
+ * the period, and whether a PDF exists for it — several reports are Excel only.
+ */
 
-import { Button } from "@/components/ui/button";
-import {
-  apiDownload,
-  triggerBlobDownload,
-} from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { DownloadMenu } from "@/components/ui/download-menu";
+import { apiDownload, triggerBlobDownload } from "@/lib/api";
 import type { ReportSlug } from "@/lib/report-types";
-
-type ExportFormat = "excel" | "pdf";
 
 type Props = {
   entityId: string;
@@ -28,80 +26,19 @@ export function ReportDownloadMenu({
   pdf = false,
   disabled,
 }: Props) {
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState<ExportFormat | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [open]);
-
-  const download = async (format: ExportFormat) => {
+  const fetchTo = async (suffix: string) => {
     if (!entityId) return;
-    setBusy(format);
-    setError(null);
-    setOpen(false);
-    const suffix = format === "pdf" ? "/export/pdf" : "/export";
     const qs = queryString ? `?${queryString}` : "";
-    try {
-      const { blob, filename } = await apiDownload(
-        `/entities/${entityId}/reports/${reportSlug}${suffix}${qs}`,
-      );
-      triggerBlobDownload(blob, filename);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Download failed");
-    } finally {
-      setBusy(null);
-    }
+    const { blob, filename } = await apiDownload(
+      `/entities/${entityId}/reports/${reportSlug}${suffix}${qs}`,
+    );
+    triggerBlobDownload(blob, filename);
   };
 
-  const items: { format: ExportFormat; label: string }[] = [
-    { format: "excel", label: "Excel (.xlsx)" },
+  const items = [
+    { label: "Excel (.xlsx)", run: () => fetchTo("/export") },
   ];
-  if (pdf) items.push({ format: "pdf", label: "PDF" });
+  if (pdf) items.push({ label: "PDF", run: () => fetchTo("/export/pdf") });
 
-  return (
-    <div className="relative" ref={menuRef}>
-      <Button
-        type="button"
-        variant="secondary"
-        disabled={disabled || !entityId || busy !== null}
-        onClick={() => setOpen((value) => !value)}
-        className="gap-1.5"
-      >
-        <Download className="size-4" />
-        {busy ? "Downloading…" : "Download"}
-        <ChevronDown className="size-4 opacity-70" />
-      </Button>
-      {open && (
-        <div
-          className={cn(
-            "absolute left-0 z-20 mt-1 min-w-[10rem] rounded-md border border-border bg-card py-1 shadow-md max-w-[calc(100vw-1.75rem)] sm:left-auto sm:right-0",
-          )}
-        >
-          {items.map((item) => (
-            <button
-              key={item.format}
-              type="button"
-              className="block w-full px-3 py-2 text-left text-sm hover:bg-primary/10"
-              onClick={() => void download(item.format)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {error && (
-        <p className="absolute right-0 top-full mt-1 text-xs text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
+  return <DownloadMenu disabled={disabled || !entityId} items={items} />;
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { DeliveryHubToolbar } from "@/components/delivery/delivery-hub-toolbar";
+import { DeliveryDownloadMenu } from "@/components/delivery/delivery-download-menu";
 import { DeliveryPlatformFilter } from "@/components/delivery/delivery-platform-filter";
 import { DeliverySettlementForm } from "@/components/forms/delivery-settlement-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
@@ -16,6 +16,7 @@ import {
   DataTableHeaderCell,
 } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/page/page-header";
+import { ReportDateRange } from "@/components/reports/report-date-range";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { Truck } from "lucide-react";
@@ -91,19 +92,17 @@ export function DeliverySettlementsPanel() {
 
   return (
     <>
-      <DeliveryHubToolbar
-        entityId={entityId ?? ""}
-        from={from}
-        to={to}
-        exportQuery={exportQuery}
-        platformId={platform}
-        platformName={selectedPlatform?.name}
-        onRangeChange={setRange}
-        disabled={loading}
-      />
-
       <PageHeader
         title="Delivery settlements"
+        actions={
+          <DeliveryDownloadMenu
+            entityId={entityId ?? ""}
+            exportQuery={exportQuery}
+            platformId={platform}
+            platformName={selectedPlatform?.name}
+            disabled={loading}
+          />
+        }
         primaryAction={
           <Button
             type="button"
@@ -114,6 +113,15 @@ export function DeliverySettlementsPanel() {
           </Button>
         }
       />
+
+      <div className="mb-6">
+        <ReportDateRange
+          from={from}
+          to={to}
+          disabled={loading || !entityId}
+          onChange={setRange}
+        />
+      </div>
 
       <div className="mb-4 mt-4 space-y-3">
         <p className="text-sm text-muted-foreground">

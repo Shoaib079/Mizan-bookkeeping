@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { DeliveryHubToolbar } from "@/components/delivery/delivery-hub-toolbar";
+import { DeliveryDownloadMenu } from "@/components/delivery/delivery-download-menu";
 import { DeliveryPlatformFilter } from "@/components/delivery/delivery-platform-filter";
 import { DeliveryReportReview } from "@/components/delivery-report-review";
 import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
@@ -17,6 +17,7 @@ import {
   DataTableHeaderCell,
 } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/page/page-header";
+import { ReportDateRange } from "@/components/reports/report-date-range";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -111,29 +112,46 @@ export function DeliveryReportsPanel() {
 
   return (
     <>
-      <DeliveryHubToolbar
-        entityId={entityId ?? ""}
-        from={from}
-        to={to}
-        exportQuery={exportQuery}
-        platformId={platform}
-        platformName={selectedPlatform?.name}
-        onRangeChange={setRange}
-        disabled={loading}
-      />
-
       <PageHeader
         title="Delivery sales"
+        actions={
+          <DeliveryDownloadMenu
+            entityId={entityId ?? ""}
+            exportQuery={exportQuery}
+            platformId={platform}
+            platformName={selectedPlatform?.name}
+            disabled={loading}
+          />
+        }
         primaryAction={
+          /* Gated on having platforms at all, not on the filter above.
+           *
+           * The filter chooses what the table *shows*; it was also deciding
+           * whether you could record anything, so with no platform picked the
+           * page's one action sat greyed out with nothing saying why. The form
+           * asks which platform — and pre-selects one when the filter has
+           * narrowed it — so there was never anything it needed from here.
+           *
+           * With no platforms the combobox has nothing to offer, so the button
+           * stays down and the empty state below says where to add them. */
           <Button
             type="button"
-            disabled={!entityId || !platform}
+            disabled={!entityId || platforms.length === 0}
             onClick={() => setFormOpen(true)}
           >
             Record sales
           </Button>
         }
       />
+
+      <div className="mb-6">
+        <ReportDateRange
+          from={from}
+          to={to}
+          disabled={loading || !entityId}
+          onChange={setRange}
+        />
+      </div>
 
       {entityId && items.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-3">

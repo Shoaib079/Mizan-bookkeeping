@@ -55,12 +55,12 @@ describe("dropdowns stay on screen", () => {
    * visible only as a sliver, which is how it looked empty. */
   const MENUS = [
     "OverflowMenu",
-    // Was PartnerLedgerDownloadMenu — now shared by all four subledgers, so
-    // fixing it once fixes it everywhere.
-    "SubledgerDownloadMenu",
-    "ReportDownloadMenu",
+    // Was three separate entries — the subledger, report and delivery download
+    // menus each owned a copy of the dropdown. They share `DownloadMenu` now,
+    // so this list shrank because the duplication went, not because the rule
+    // was loosened.
+    "DownloadMenu",
     "MonthPackButton",
-    "DeliveryHubToolbar",
   ];
 
   it("opens rightward on a phone and rightward-anchored above it", () => {
@@ -78,6 +78,21 @@ describe("dropdowns stay on screen", () => {
     // would run off the other edge.
     for (const file of MENUS.filter((f) => f !== "OverflowMenu")) {
       expect(sourceDeclaring(file), file).toContain("max-w-[calc(100vw-1.75rem)]");
+    }
+  });
+
+  it("gives the items in them a thumb-sized row", () => {
+    /* This is the gap that let the defect sit there.
+     *
+     * The two checks above ask where a menu opens. Neither asks how tall its
+     * rows are — so `MOBILE_TOUCH_TARGET` was on the subledger menu's items
+     * and on neither of the other two, and all three passed. A menu that opens
+     * in the right place and cannot be tapped is not a menu that works. */
+    for (const file of MENUS) {
+      const s = sourceDeclaring(file);
+      expect(s, `${file}'s items are not thumb-sized`).toContain(
+        "MOBILE_TOUCH_TARGET",
+      );
     }
   });
 });

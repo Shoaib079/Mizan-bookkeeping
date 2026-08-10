@@ -7,6 +7,7 @@ import { useCallback, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { apiDownload, triggerBlobDownload } from "@/lib/api";
+import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { cn } from "@/lib/utils";
 
@@ -88,7 +89,13 @@ export function MonthPackButton({ entityId, queryString, disabled, compact }: Pr
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-primary/10"
+            className={cn(
+              "flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-primary/10",
+              // These rows are two lines and already clear 44px. Stated
+              // anyway: the guarantee should not depend on the description
+              // text staying there.
+              MOBILE_TOUCH_TARGET,
+            )}
             onClick={() => void download("xlsx")}
           >
             <FileSpreadsheet
@@ -105,7 +112,13 @@ export function MonthPackButton({ entityId, queryString, disabled, compact }: Pr
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-primary/10"
+            className={cn(
+              "flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-primary/10",
+              // These rows are two lines and already clear 44px. Stated
+              // anyway: the guarantee should not depend on the description
+              // text staying there.
+              MOBILE_TOUCH_TARGET,
+            )}
             onClick={() => void download("pdf")}
           >
             <FileText
