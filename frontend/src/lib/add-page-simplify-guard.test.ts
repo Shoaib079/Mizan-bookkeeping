@@ -17,6 +17,25 @@ function read(relativePath: string): string {
   return readFileSync(join(ROOT, relativePath), "utf8");
 }
 
+/** The Record desk, which is two files.
+ *
+ * The four button components moved to `record-desk-buttons.tsx` when the desk
+ * was split; `role="tab"` went with them and this guard failed for a reason
+ * that had nothing to do with what it guards. That is the ninth time in this
+ * project a check pinned to a filename has broken on a move.
+ *
+ * Reading both is the honest fix — the assertions below are about the desk as
+ * a feature, not about which file a line happens to live in. `readFileSync`
+ * throws on a missing path, so a further move fails here by name rather than
+ * by quietly finding nothing.
+ */
+function readDesk(): string {
+  return [
+    read("components/record/record-desk.tsx"),
+    read("components/record/record-desk-buttons.tsx"),
+  ].join("\n");
+}
+
 describe("Add page amount-first desk", () => {
   it("surfaces expenses, salary, sales, forex, upload, count cash, and close day as mode pills", () => {
     const primary = primaryRecordActions({ deliveryEnabled: true }).map(
@@ -35,7 +54,7 @@ describe("Add page amount-first desk", () => {
   });
 
   it("uses a left mode rail with icons beside the embedded form panel", () => {
-    const desk = read("components/record/record-desk.tsx");
+    const desk = readDesk();
     const page = read("app/record/page.tsx");
     expect(page).toContain("<RecordDesk");
     expect(desk).toContain("primaryRecordActions");
@@ -47,7 +66,7 @@ describe("Add page amount-first desk", () => {
   });
 
   it("surfaces Split in Add cash actions (partner Record is on Partners)", () => {
-    const desk = read("components/record/record-desk.tsx");
+    const desk = readDesk();
     expect(desk).toContain("DeskExtraButton");
     expect(desk).toContain("moreActions.length === 1");
     const payments = recordActionsBySection("payments", { deliveryEnabled: true });

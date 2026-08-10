@@ -14,7 +14,6 @@ import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
-import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import {
   CorrectCustomerPaymentForm,
@@ -26,6 +25,12 @@ import {
 } from "@/components/forms/correct-credit-sale-form";
 import { CustomerForm, type CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
+import {
+  CustomerLedgerRowActions,
+  VOIDABLE_ROWS,
+  type CustomerLedgerEditTarget,
+  type VoidableRowKind,
+} from "@/components/customers/customer-ledger-row-actions";
 import { GroupSaleEditLoader } from "@/components/forms/group-sale-edit-loader";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
 import {
@@ -43,7 +48,6 @@ import { useEntity } from "@/lib/entity-context";
 import { formatForexBalanceSummary, formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
-import { customerLedgerRowActions } from "@/lib/subledger-actions";
 import {
   subledgerRowClassName,
   type SubledgerDisplayKind,
@@ -86,34 +90,6 @@ type LedgerResponse = {
  * entry pairs the dialog's wording with the API path segment, so the two
  * cannot drift into saying different things about the same row.
  */
-const VOIDABLE_ROWS = {
-  payment: {
-    title: "Void customer payment",
-    path: (customerId: string, id: string) =>
-      `customers/${customerId}/payments/${id}/void`,
-  },
-  credit_sale: {
-    title: "Void credit sale",
-    path: (customerId: string, id: string) =>
-      `customers/${customerId}/credit-sales/${id}/void`,
-  },
-  write_off: {
-    title: "Void receivable write-off",
-    path: (customerId: string, id: string) =>
-      `customers/${customerId}/write-offs/${id}/void`,
-  },
-  // A group sale is not voided through the customer at all — it is its own
-  // record, and the route is keyed by the sale rather than the journal entry.
-  // That is why this is a path builder now and not a segment: a shared prefix
-  // held while every row was customer-scoped, and this row is not.
-  group_sale: {
-    title: "Void group sale",
-    path: (_customerId: string, saleId: string) =>
-      `group-sales/${saleId}/void`,
-  },
-} as const;
-
-type VoidableRowKind = keyof typeof VOIDABLE_ROWS;
 
 /** "Owed: $94.00 · Paid ahead: €12.00", or null when forex is settled.
  *
@@ -177,6 +153,25 @@ export default function CustomerDetailPage() {
   const [correctCreditSale, setCorrectCreditSale] =
     useState<CorrectableCreditSaleRow | null>(null);
   const [groupSaleEditId, setGroupSaleEditId] = useState<string | null>(null);
+
+  /** One place that turns "Edit was pressed on this row" into an open dialog.
+   *
+   * The decision of *what* to open belongs to the row and lives beside the
+   * button in `customer-ledger-row-actions.tsx`; this is only the wiring from
+   * that answer to the dialog's state.
+   */
+  function openEdit(target: CustomerLedgerEditTarget) {
+    switch (target.kind) {
+      case "group_sale":
+        return setGroupSaleEditId(target.groupSaleId);
+      case "write_off":
+        return setCorrectWriteOff(target);
+      case "payment":
+        return setCorrectPayment(target);
+      case "credit_sale":
+        return setCorrectCreditSale(target);
+    }
+  }
   const [voidTarget, setVoidTarget] = useState<{
     journal_entry_id: string;
     description: string;
@@ -317,16 +312,7 @@ export default function CustomerDetailPage() {
                 onToggle: setShowHistory,
               }}
             >
-                {visibleRows.map((entry) => {
-                  const actions = customerLedgerRowActions({
-                    movementType: entry.movement_type,
-                    referenceType: entry.reference_type,
-                  });
-                  const isGroupSale =
-                    entry.movement_type === "credit_sale" &&
-                    entry.reference_type === "group_sale" &&
-                    entry.reference_id;
-                  return (
+                {visibleRows.map((entry) => (
                   <DataTableRow
                     key={entry.id}
                     className={subledgerRowClassName(entry.display_kind)}
@@ -353,82 +339,14 @@ export default function CustomerDetailPage() {
                       {formatTry(entry.amount_kurus)}
                     </DataTableCell>
                     <DataTableCell align="right">
-                      {actions.canEdit || actions.canVoid ? (
-                        // A group sale used to be the exception here: one
-                        // "Edit / Void" button that navigated to the sale's
-                        // own page, where you had to find Edit or Void and
-                        // press it again. It goes through the same component
-                        // as every other row now, differing only in what the
-                        // handlers do — and in that both act on the sale
-                        // (`reference_id`) rather than the journal entry,
-                        // because a group sale is its own record.
-                        //
-                        // Folded into this branch rather than kept beside it
-                        // so `customerLedgerRowActions` stays the only place
-                        // that decides whether a row may be edited. It already
-                        // answers for group sales; the old branch ignored it,
-                        // and drew the button on superseded rows too.
-                        <SubledgerRowActions
-                          row={entry}
-                          showEdit={actions.canEdit}
-                          onEdit={() => {
-                            if (isGroupSale) {
-                              setGroupSaleEditId(String(entry.reference_id));
-                              return;
-                            }
-                            if (entry.movement_type === "discount") {
-                              setCorrectWriteOff({
-                                journal_entry_id: entry.journal_entry_id!,
-                                amount_kurus: entry.amount_kurus,
-                                description: entry.description,
-                              });
-                              return;
-                            }
-                            if (entry.movement_type === "payment_received") {
-                              setCorrectPayment({
-                                journal_entry_id: entry.journal_entry_id!,
-                                movement_date: entry.movement_date,
-                                amount_kurus: entry.amount_kurus,
-                                description: entry.description,
-                                payment_account_id: entry.payment_account_id,
-                                payment_native_quantity: entry.payment_native_quantity,
-                                forex_currency: entry.forex_currency,
-                              });
-                              return;
-                            }
-                            setCorrectCreditSale({
-                              journal_entry_id: entry.journal_entry_id!,
-                              movement_date: entry.movement_date,
-                              amount_kurus: entry.amount_kurus,
-                              description: entry.description,
-                            });
-                          }}
-                          onVoid={() =>
-                            setVoidTarget(
-                              isGroupSale
-                                ? {
-                                    journal_entry_id: String(entry.reference_id),
-                                    description: entry.description,
-                                    kind: "group_sale",
-                                  }
-                                : {
-                                    journal_entry_id: entry.journal_entry_id!,
-                                    description: entry.description,
-                                    kind:
-                                      entry.movement_type === "payment_received"
-                                        ? "payment"
-                                        : entry.movement_type === "discount"
-                                          ? "write_off"
-                                          : "credit_sale",
-                                  },
-                            )
-                          }
-                        />
-                      ) : null}
+                      <CustomerLedgerRowActions
+                        row={entry}
+                        onEdit={openEdit}
+                        onVoid={setVoidTarget}
+                      />
                     </DataTableCell>
                   </DataTableRow>
-                  );
-                })}
+                ))}
             </LedgerTable>
           </DetailSection>
         )
