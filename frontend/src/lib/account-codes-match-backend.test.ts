@@ -16,7 +16,7 @@
  * fixable rather than a fact of life.
  */
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -108,7 +108,6 @@ describe("account codes match the backend chart", () => {
   it("leaves no bare account-code literals elsewhere in the app", () => {
     // The codes were scattered across five files before this. One home means
     // one place to be wrong, and one place a guard can watch.
-    const { readdirSync, statSync } = require("node:fs") as typeof import("node:fs");
     const offenders: string[] = [];
     const walk = (dir: string) => {
       for (const name of readdirSync(dir)) {
