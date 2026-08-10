@@ -133,8 +133,16 @@ export function AddDocumentDialog({
 
   const handleConfirm = useCallback(() => {
     if (!file || !selectedType) return;
-    onConfirm(selectedType, file);
-    reset();
+    try {
+      onConfirm(selectedType, file);
+    } finally {
+      // In a `finally` because the file has been handed on by then either way.
+      // On the Record desk this panel is embedded and never unmounts, so what
+      // it is left holding is what the next upload starts from — and a panel
+      // still offering Confirm for a document already in the books is an
+      // invitation to record it twice.
+      reset();
+    }
     // Parent switches to the routed modal; do not call handleClose — it clears routed file state.
   }, [file, selectedType, onConfirm, reset]);
 

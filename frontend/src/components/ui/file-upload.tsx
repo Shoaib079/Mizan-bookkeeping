@@ -78,7 +78,25 @@ export function FileUpload({
   }
 
   return (
-    <div className={cn("relative", className)}>
+    /* `data-drop-zone` tells `DropAnywhere` this drop already has an owner.
+     *
+     * The window-wide handler sees every drop that lands here — the event
+     * bubbles, and the drag overlay is `pointer-events-none` so the real target
+     * is this control underneath it. Both acting meant one drop was taken
+     * twice: the control below, and a dialog opening on top with a second copy
+     * of the same file.
+     *
+     * The handlers sit on the wrapper rather than on the empty-state box so
+     * that a control already holding a file is still a drop zone — otherwise
+     * dropping on it would be neither replaced here nor picked up there, which
+     * is the one outcome worse than doing it twice. */
+    <div
+      className={cn("relative", className)}
+      data-drop-zone={disabled ? undefined : ""}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       <input
         ref={inputRef}
         id={inputId}
@@ -132,9 +150,6 @@ export function FileUpload({
               openPicker();
             }
           }}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
           className={cn(
             "flex flex-col items-center justify-center gap-2 rounded-md border border-dashed px-4 py-6 text-center transition-colors",
             "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",

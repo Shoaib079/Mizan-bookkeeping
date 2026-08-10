@@ -36,6 +36,21 @@ function carriesFiles(event: DragEvent): boolean {
   return Array.from(types).includes("Files");
 }
 
+/** Did the file land in a `FileUpload` that has already taken it?
+ *
+ * The window sees every drop, including the ones aimed at a control on the
+ * page: the event bubbles up to here, and the overlay above is
+ * `pointer-events-none` so the real target is whatever sits underneath. Acting
+ * on those as well took one drop twice — the Record desk's Upload panel
+ * detected the file and offered Confirm, while this opened a dialog on top
+ * holding a second copy of it. Confirming in the dialog recorded the document
+ * and left the panel underneath still showing the file, with a live Confirm
+ * button for an invoice that was already in the books.
+ */
+export function landedInADropZone(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest("[data-drop-zone]") !== null;
+}
+
 export function DropAnywhere({ onFile, enabled = true }: Props) {
   const [dragging, setDragging] = useState(false);
   const depth = useRef(0);
@@ -74,7 +89,10 @@ export function DropAnywhere({ onFile, enabled = true }: Props) {
     function onDrop(event: DragEvent) {
       if (!carriesFiles(event)) return;
       event.preventDefault();
+      // Before the ownership check, not after: no `dragleave` follows a drop,
+      // so returning early without this leaves the overlay covering the page.
       reset();
+      if (landedInADropZone(event.target)) return;
       const file = event.dataTransfer?.files?.[0];
       // One file: every flow behind this takes a single document, and
       // silently keeping the first of five would be worse than taking one.
