@@ -1,0 +1,487 @@
+{
+  "CorrectionNotFoundError": {
+    "kind": "class"
+  },
+  "DEDICATED_CORRECTION_ROUTES": {
+    "kind": "value"
+  },
+  "GENERIC_CORRECTABLE_SOURCES": {
+    "kind": "value"
+  },
+  "PosDailySummaryCorrectionError": {
+    "kind": "class"
+  },
+  "SubledgerBackedCorrectionError": {
+    "kind": "class"
+  },
+  "VOID_AND_REENTER_SOURCES": {
+    "kind": "value"
+  },
+  "_append_customer_reversal": {
+    "kind": "function",
+    "params": [
+      "session",
+      "original",
+      "reversal",
+      "*",
+      "actor_id",
+      "void_date"
+    ]
+  },
+  "_append_partner_reversal": {
+    "kind": "function",
+    "params": [
+      "session",
+      "original",
+      "reversal",
+      "*",
+      "actor_id",
+      "void_date"
+    ]
+  },
+  "_release_posted_draft": {
+    "kind": "function",
+    "params": [
+      "draft"
+    ]
+  },
+  "_void_journal_entry_in_transaction": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_credit_sale": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "sale_date",
+      "amount_kurus",
+      "description",
+      "actor_id",
+      "revenue_account_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_customer_payment": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "payment_date",
+      "amount_kurus",
+      "description",
+      "actor_id",
+      "payment_account_id",
+      "payment_native_quantity",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_customer_write_off": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "write_off_date",
+      "amount_kurus",
+      "description",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_delivery_commission_invoice": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "invoice_date",
+      "description",
+      "actor_id",
+      "expense_account_id",
+      "net_kurus",
+      "gross_kurus",
+      "vat_breakdown",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_expense_entry": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "expense_date",
+      "amount_kurus",
+      "expense_account_id",
+      "money_account_id",
+      "description",
+      "actor_id",
+      "written_item_description",
+      "expense_item_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_fx_conversion_or_spend": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "entry_date",
+      "description",
+      "lines",
+      "*",
+      "actor_id",
+      "native_quantity",
+      "try_cost_kurus",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_fx_purchase": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "purchase_date",
+      "native_quantity",
+      "try_cost_kurus",
+      "description",
+      "actor_id",
+      "fx_money_account_id",
+      "try_cash_money_account_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_partner_journal_entry": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "entry_date",
+      "description",
+      "lines",
+      "*",
+      "actor_id",
+      "amount_kurus",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_pos_daily_summary": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "summary",
+      "*",
+      "money_account_id",
+      "cash_kurus",
+      "card_kurus",
+      "summary_date",
+      "actor_id",
+      "description",
+      "z_report_kurus",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_staff_journal_entry": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "entry_date",
+      "description",
+      "lines",
+      "*",
+      "actor_id",
+      "amount_minor",
+      "try_cost_kurus",
+      "extra_days",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_supplier_invoice": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "invoice_date",
+      "description",
+      "actor_id",
+      "expense_account_id",
+      "net_kurus",
+      "gross_kurus",
+      "vat_breakdown",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "correct_supplier_payment": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "payment_date",
+      "amount_kurus",
+      "description",
+      "actor_id",
+      "payment_account_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason",
+      "reference_type",
+      "reference_id",
+      "confirm_advance",
+      "skip_advance_confirm"
+    ]
+  },
+  "is_generic_correctable": {
+    "kind": "function",
+    "params": [
+      "source"
+    ]
+  },
+  "resolve_correction_route": {
+    "kind": "function",
+    "params": [
+      "source"
+    ]
+  },
+  "verify_correction_source_registry_complete": {
+    "kind": "function",
+    "params": []
+  },
+  "void_credit_sale": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_customer_payment": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_customer_write_off": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_delivery_commission_invoice": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_expense_entry": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_fx_conversion_or_spend": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_fx_purchase": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_gl_with_subledger_rows": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason",
+      "supplier_row",
+      "customer_row",
+      "fx_row",
+      "staff_row",
+      "partner_row",
+      "after_gl"
+    ]
+  },
+  "void_partner_journal_entry": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_pos_daily_summary": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "summary",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_staff_journal_entry": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_supplier_credit_note": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_supplier_invoice": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  },
+  "void_supplier_payment": {
+    "kind": "function",
+    "params": [
+      "session",
+      "entity_id",
+      "journal_entry_id",
+      "*",
+      "actor_id",
+      "reason",
+      "void_date",
+      "period_unlock_reason"
+    ]
+  }
+}
