@@ -373,7 +373,6 @@ function DeskModeButton({
       type="button"
       role="tab"
       aria-selected={active}
-      aria-description={showDraftDot ? "Saved count draft" : undefined}
       className={cn(
         "flex shrink-0 items-center gap-2 text-sm font-medium transition-colors",
         mobilePill
@@ -414,6 +413,12 @@ function DeskModeButton({
         )}
       </span>
       <span className="leading-tight">{label}</span>
+      {/* The amber dot is `aria-hidden`, so this sentence is the only way a
+          screen reader learns there is unfinished work behind this tab.
+          It used to be an `aria-description` on the button — an attribute
+          `role="tab"` does not support, so it was announced to nobody. Said
+          in the label instead, where it is read as part of the tab. */}
+      {showDraftDot && <span className="sr-only"> — saved draft</span>}
     </button>
   );
 }
