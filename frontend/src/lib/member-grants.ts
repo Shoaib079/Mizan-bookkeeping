@@ -200,10 +200,19 @@ export function recordActionGrant(actionId: string): Grant | null {
   return map[actionId] ?? null;
 }
 
-export function validateGrantSelection(
-  grants: readonly string[],
-  _role?: EntityRole,
-): string | null {
+/** Why the role is not a parameter.
+ *
+ * It was one, unused, for long enough that both callers pass it. A parameter
+ * a function ignores is a claim it does not honour: it reads as though
+ * validation differs by role, and anyone adding a role-specific rule would
+ * reasonably assume the plumbing was already there.
+ *
+ * These rules are about the grants themselves — that at least one is chosen,
+ * that each exists, and that daily transaction access is paired with a scope
+ * that makes it usable. None of them depend on the role, and a role's default
+ * grants are already applied before this is called.
+ */
+export function validateGrantSelection(grants: readonly string[]): string | null {
   if (grants.length === 0) {
     return "Select at least one access item.";
   }

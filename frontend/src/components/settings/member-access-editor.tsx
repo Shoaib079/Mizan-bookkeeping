@@ -51,8 +51,8 @@ export function MemberAccessEditor({
   const label = membership.user.display_name || membership.user.email;
 
   const validationError = useMemo(
-    () => validateGrantSelection([...selected], role),
-    [selected, role],
+    () => validateGrantSelection([...selected]),
+    [selected],
   );
 
   function applyPreset(nextRole: EntityRole) {
@@ -62,7 +62,7 @@ export function MemberAccessEditor({
   }
 
   async function handleSave() {
-    const message = validateGrantSelection([...selected], role);
+    const message = validateGrantSelection([...selected]);
     if (message) {
       setLocalError(message);
       return;
