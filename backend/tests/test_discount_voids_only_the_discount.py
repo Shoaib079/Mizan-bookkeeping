@@ -77,13 +77,19 @@ def test_a_group_sale_discount_voids_itself_not_the_sale(db_session, customer):
     )
 
 
-def test_a_group_sale_discount_offers_no_edit(db_session, customer):
-    """Void only from the ledger, though a correction route does exist.
+def test_a_group_sale_discount_can_now_be_edited(db_session, customer):
+    """Reverses an assertion written earlier the same day, on purpose.
 
-    `/write-offs/{id}/correct` is real, but the General ledger has no form for
-    it and the fallback it used to take opened a *credit-sale* form — which
-    posts to a route that rejects a DISCOUNT row. Declining is honest;
-    correcting a write-off works on the customer page, which owns the form.
+    This asserted `can_edit is False`, which was honest at the time: the
+    correction route existed but the General ledger had no form for it, and
+    the fallback it used to take opened a *credit-sale* form that posts to a
+    route rejecting a DISCOUNT row. Declining beat offering a form that could
+    not be submitted.
+
+    The form is wired now. `balance_kurus` rides along in the context because
+    the dialog caps a corrected write-off at the customer's outstanding
+    balance plus what this one already took off — a number the customer page
+    has to hand and the ledger does not.
     """
     entity_id, customer_id = customer["entity_id"], customer["customer_id"]
 
@@ -99,8 +105,12 @@ def test_a_group_sale_discount_offers_no_edit(db_session, customer):
     )
 
     actions = _actions_for(db_session, entity_id, entry.id)
-    assert actions.can_edit is False
-    assert actions.edit is None
+    assert actions.can_edit is True
+    assert actions.edit is not None
+    assert actions.edit.kind == "customer_write_off"
+    assert actions.edit.context["customer_id"] == str(customer_id)
+    # The number the dialog cannot work out for itself.
+    assert "balance_kurus" in actions.edit.context
 
 
 def test_a_write_off_gets_a_route_that_accepts_it(db_session, customer):

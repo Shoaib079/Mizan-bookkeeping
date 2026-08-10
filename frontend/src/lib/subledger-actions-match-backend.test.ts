@@ -34,7 +34,8 @@ function read(file: string): string {
 
 /** Sources the backend answers with a generic rule, before the table. */
 function genericSets(): { correctable: Set<string>; voidSafe: Set<string> } {
-  const correction = read("correction.py");
+  // `correction.py` became a package; the source sets live in its registry.
+  const correction = read("correction/registry.py");
   const block = correction.match(
     /GENERIC_CORRECTABLE_SOURCES[\s\S]*?\n\)/,
   )?.[0];

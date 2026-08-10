@@ -44,6 +44,17 @@ from app.features.delivery.models import DeliveryReport, DeliverySettlement
 from app.features.expenses.models import ExpenseEntry
 from app.features.invoices.models import InvoiceDraft as _InvoiceDraft
 from app.features.pos.models import CardSalesBatch, PosSettlement
+from app.core.ledger.entry_contexts import (
+    _expense_context,
+    _partner_ledger_context,
+    _staff_ledger_context,
+    _customer_payment_context,
+    _supplier_row_context,
+    _fx_purchase_context,
+    _fx_ledger_context,
+    _delivery_commission_context,
+    _profit_allocation_context,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,131 +119,6 @@ class Capability:
     # The escape hatch. Set only for the two sources whose answer depends on
     # which row is found, not on the source.
     resolve: Callable[[Session, JournalEntry], Any] | None = None
-
-
-# --- edit contexts -------------------------------------------------------
-# One function per kind, lifted from the branch that used to build it inline.
-
-
-def _expense_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
-    return {
-        "id": str(row.id),
-        "expense_date": row.expense_date.isoformat(),
-        "description": row.description,
-        "written_item_description": row.written_item_description,
-        "notes": row.notes,
-        "amount_kurus": row.amount_kurus,
-        "expense_account_id": str(row.expense_account_id),
-        "money_account_id": str(row.money_account_id),
-        "status": row.status.value,
-        "journal_entry_id": str(row.journal_entry_id),
-    }
-
-
-def _partner_ledger_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
-    return {
-        "partner_id": str(row.partner_id),
-        "movement_type": row.movement_type.value,
-        "movement_date": row.movement_date.isoformat(),
-        "amount_kurus": row.amount_kurus,
-        "description": row.description,
-    }
-
-
-def _staff_ledger_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
-    return {
-        "employee_id": str(row.employee_id),
-        "movement_type": row.movement_type.value,
-        "movement_date": row.movement_date.isoformat(),
-        "amount_minor": row.amount_minor,
-        "description": row.description,
-        "extra_days": row.extra_days,
-    }
-
-
-def _customer_payment_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
-    return {
-        "customer_id": str(row.customer_id),
-        "movement_date": row.movement_date.isoformat(),
-        "amount_kurus": row.amount_kurus,
-        "description": row.description,
-        "payment_native_quantity": row.payment_native_quantity,
-        "forex_currency": row.forex_currency,
-    }
-
-
-def _supplier_row_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
-    return {
-        "supplier_id": str(row.supplier_id),
-        "movement_date": row.movement_date.isoformat(),
-        "amount_kurus": row.amount_kurus,
-        "description": row.description,
-    }
-
-
-def _fx_purchase_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
-    return {
-        "movement_date": row.movement_date.isoformat(),
-        "native_quantity": row.native_quantity,
-        "try_cost_kurus": row.try_cost_kurus,
-        "description": row.description,
-    }
-
-
-def _fx_ledger_context(_session: Session, entry: JournalEntry, row: Any) -> dict:
-    return {
-        "movement_date": row.movement_date.isoformat(),
-        "movement_type": row.movement_type.value,
-        "native_quantity": row.native_quantity,
-        "try_cost_kurus": row.try_cost_kurus,
-        "description": row.description,
-        "journal_source": entry.source.value,
-        "fx_money_account_id": str(row.fx_money_account_id),
-    }
-
-
-def _delivery_commission_context(
-    _session: Session, entry: JournalEntry, row: Any
-) -> dict:
-    return {
-        "draft_id": str(row.id),
-        "invoice_number": row.invoice_number,
-        "movement_date": row.invoice_date.isoformat(),
-        "net_kurus": row.net_kurus,
-        "gross_kurus": row.gross_kurus,
-        "description": entry.description,
-    }
-
-
-def _profit_allocation_context(
-    session: Session, entry: JournalEntry, _row: Any
-) -> dict:
-    """Read off the entry's own lines — there is no subledger row to read.
-
-    The allocated profit is whatever was debited to retained earnings, which
-    is why this one needs the session and the others do not.
-    """
-    from app.core.chart_of_accounts.default_chart import RETAINED_EARNINGS_CODE
-    from app.core.chart_of_accounts.models import Account
-    from app.core.chart_of_accounts.types import AccountNormalBalance
-
-    retained = session.scalar(
-        select(Account).where(Account.code == RETAINED_EARNINGS_CODE)
-    )
-    profit_kurus = 0
-    if retained is not None:
-        profit_kurus = sum(
-            line.amount_kurus
-            for line in entry.lines
-            if line.account_id == retained.id
-            and line.side == AccountNormalBalance.DEBIT
-        )
-    return {
-        "journal_entry_id": str(entry.id),
-        "allocation_date": entry.entry_date.isoformat(),
-        "description": entry.description,
-        "profit_kurus": profit_kurus,
-    }
 
 
 # --- the table -----------------------------------------------------------
@@ -449,19 +335,37 @@ def _group_sale_or_credit_sale(session: Session, entry: JournalEntry):
     # which accepts any DISCOUNT row. Checked first, because it is the narrower
     # question: what the row *is* beats what its source and reference imply.
     #
-    # Void only, though `/write-offs/{id}/correct` does exist. The General
-    # ledger has no form for it — `gl-entry-actions.tsx` has no write-off case
-    # — and the fallback it used to take opened a *credit-sale* form, which
-    # posts to a route that rejects a DISCOUNT row. Correcting a write-off
-    # works on the customer page, which owns the right form.
+    # A write-off and a group-sale discount are both DISCOUNT rows, both void
+    # through `/write-offs/{id}/void`, and both correct through
+    # `/write-offs/{id}/correct`. The ledger declined Edit until the form was
+    # wired, because the fallback it used to take opened a *credit-sale* form
+    # that posts to a route rejecting a DISCOUNT row — a button that opened
+    # something which could not be submitted.
     #
-    # So this is a capability the ledger declines to offer rather than one the
-    # app lacks. Wiring it is a form, not a rule; see HARDENING_PLAN.md D3.
+    # `balance_kurus` is in the context because the dialog needs it and cannot
+    # work it out: correcting a write-off may raise the amount, and what it may
+    # be raised to is the customer's outstanding balance plus whatever this
+    # write-off already took off. The customer page has that number to hand;
+    # the General ledger does not.
     if row.movement_type == CustomerMovementType.DISCOUNT:
+        from app.core.receivables.ledger import current_balance_kurus
+
         return LedgerEntryActions(
-            can_edit=False,
+            can_edit=True,
             can_void=True,
             void_path=f"customers/{row.customer_id}/write-offs/{entry.id}/void",
+            edit=LedgerEntryEditContext(
+                kind="customer_write_off",
+                context={
+                    "customer_id": str(row.customer_id),
+                    "journal_entry_id": str(entry.id),
+                    "amount_kurus": row.amount_kurus,
+                    "description": row.description,
+                    "balance_kurus": current_balance_kurus(
+                        session, entry.entity_id, row.customer_id
+                    ),
+                },
+            ),
         )
 
     if entry.source == JournalEntrySource.GROUP_SALE and row.reference_id is not None:

@@ -47,11 +47,10 @@ const HANDLER = join(
  */
 const KNOWN_UNWIRED: Record<string, string> = {
   group_sale:
-    "context carries only group_sale_id; the form wants the whole sale, so it needs a fetch first",
-  fx_purchase:
-    "CorrectFxPurchaseForm needs fxAccountId and currency, which the edit context does not carry",
-  fx_ledger:
-    "CorrectFxLedgerForm needs the currency, which the edit context does not carry",
+    "the form wants the whole sale — lines, customer, totals — not a field or " +
+    "two, and the context carries only group_sale_id. Unlike the FX kinds, " +
+    "this is not fixed by adding a column to the context: the form should " +
+    "fetch the sale from the id",
 };
 
 function backendKinds(): string[] {

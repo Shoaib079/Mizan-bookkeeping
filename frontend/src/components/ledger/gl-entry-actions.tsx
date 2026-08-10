@@ -27,6 +27,18 @@ import {
   type CorrectableCreditSaleRow,
 } from "@/components/forms/correct-credit-sale-form";
 import {
+  CustomerWriteOffDialog,
+  type CorrectableWriteOffRow,
+} from "@/components/forms/customer-write-off-dialog";
+import {
+  CorrectFxPurchaseForm,
+  type CorrectableFxPurchaseRow,
+} from "@/components/forms/correct-fx-purchase-form";
+import {
+  CorrectFxLedgerForm,
+  type CorrectableFxSpendRow,
+} from "@/components/forms/correct-fx-ledger-form";
+import {
   CorrectDeliveryCommissionForm,
   type CorrectableDeliveryCommissionRow,
 } from "@/components/forms/correct-delivery-commission-form";
@@ -90,6 +102,20 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
   const [creditSaleEdit, setCreditSaleEdit] = useState<{
     customerId: string;
     sale: CorrectableCreditSaleRow;
+  } | null>(null);
+  const [writeOffEdit, setWriteOffEdit] = useState<{
+    customerId: string;
+    balanceKurus: number;
+    writeOff: CorrectableWriteOffRow;
+  } | null>(null);
+  const [fxPurchaseEdit, setFxPurchaseEdit] = useState<{
+    fxAccountId: string;
+    currency: string;
+    purchase: CorrectableFxPurchaseRow;
+  } | null>(null);
+  const [fxLedgerEdit, setFxLedgerEdit] = useState<{
+    currency: string;
+    entry: CorrectableFxSpendRow;
   } | null>(null);
   const [expenseEdit, setExpenseEdit] = useState<CorrectableExpenseRow | null>(
     null,
@@ -225,6 +251,51 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
             },
           });
           return;
+        case "fx_purchase":
+          // `currency` is one hop off the money account and the row does not
+          // carry it, which is the only reason this form was unreachable here.
+          setFxPurchaseEdit({
+            fxAccountId: String(ctx.fx_money_account_id),
+            currency: String(ctx.currency ?? ""),
+            purchase: {
+              journal_entry_id: row.id,
+              movement_date: String(ctx.movement_date),
+              native_quantity: Number(ctx.native_quantity),
+              try_cost_kurus: Number(ctx.try_cost_kurus),
+              description: String(ctx.description),
+            },
+          });
+          return;
+        case "fx_ledger":
+          setFxLedgerEdit({
+            currency: String(ctx.currency ?? ""),
+            entry: {
+              journal_entry_id: row.id,
+              movement_date: String(ctx.movement_date),
+              movement_type: String(ctx.movement_type),
+              native_quantity: Number(ctx.native_quantity),
+              try_cost_kurus: Number(ctx.try_cost_kurus),
+              description: String(ctx.description),
+              journal_source: String(ctx.journal_source),
+              fx_money_account_id: String(ctx.fx_money_account_id),
+            } as CorrectableFxSpendRow,
+          });
+          return;
+        case "customer_write_off":
+          // `balance_kurus` comes from the edit context because the dialog
+          // cannot work it out here: raising a write-off is capped at the
+          // customer's outstanding balance plus what this one already took
+          // off, and the General ledger does not have that number.
+          setWriteOffEdit({
+            customerId: String(ctx.customer_id),
+            balanceKurus: Number(ctx.balance_kurus),
+            writeOff: {
+              journal_entry_id: row.id,
+              amount_kurus: Number(ctx.amount_kurus),
+              description: String(ctx.description),
+            },
+          });
+          return;
         case "customer_credit_sale":
           setCreditSaleEdit({
             customerId: String(ctx.customer_id),
@@ -345,6 +416,44 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
           onClose={() => setCustomerPaymentEdit(null)}
           onSaved={() => {
             setCustomerPaymentEdit(null);
+            onSaved();
+          }}
+        />
+      )}
+      {fxPurchaseEdit && (
+        <CorrectFxPurchaseForm
+          open
+          fxAccountId={fxPurchaseEdit.fxAccountId}
+          currency={fxPurchaseEdit.currency}
+          purchase={fxPurchaseEdit.purchase}
+          onClose={() => setFxPurchaseEdit(null)}
+          onSaved={() => {
+            setFxPurchaseEdit(null);
+            onSaved();
+          }}
+        />
+      )}
+      {fxLedgerEdit && (
+        <CorrectFxLedgerForm
+          open
+          currency={fxLedgerEdit.currency}
+          entry={fxLedgerEdit.entry}
+          onClose={() => setFxLedgerEdit(null)}
+          onSaved={() => {
+            setFxLedgerEdit(null);
+            onSaved();
+          }}
+        />
+      )}
+      {writeOffEdit && (
+        <CustomerWriteOffDialog
+          open
+          customerId={writeOffEdit.customerId}
+          balanceKurus={writeOffEdit.balanceKurus}
+          correcting={writeOffEdit.writeOff}
+          onClose={() => setWriteOffEdit(null)}
+          onSaved={() => {
+            setWriteOffEdit(null);
             onSaved();
           }}
         />
