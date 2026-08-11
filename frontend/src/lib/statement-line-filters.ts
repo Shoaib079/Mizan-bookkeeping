@@ -38,14 +38,28 @@ export function hasLedgerEntry(line: BankStatementLine): boolean {
   return line.journal_entry_id != null;
 }
 
-/** True when every line is still safe to remove with discard import. */
-export function canDiscardStatement(lines: BankStatementLine[]): boolean {
-  return !lines.some(
+/** The lines that stop an import being discarded.
+ *
+ * Mirrors `_line_blocks_statement_discard` in the backend, which answers the
+ * same question with a 409. Returned rather than counted so the screen can say
+ * *how many* and the button can stop being a mystery — a disabled control with
+ * its reason written somewhere else on the page reads as a broken one, which
+ * is exactly how it was reported.
+ */
+export function statementDiscardBlockers(
+  lines: BankStatementLine[],
+): BankStatementLine[] {
+  return lines.filter(
     (line) =>
       line.status === "posted" ||
       line.status === "linked" ||
       hasLedgerEntry(line),
   );
+}
+
+/** True when every line is still safe to remove with discard import. */
+export function canDiscardStatement(lines: BankStatementLine[]): boolean {
+  return statementDiscardBlockers(lines).length === 0;
 }
 
 export function isCorrectableLine(line: BankStatementLine): boolean {

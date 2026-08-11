@@ -42,6 +42,43 @@ describe("the page has one scroll area", () => {
   });
 });
 
+describe("discarding an import says why when it cannot", () => {
+  /* Reported: "I can see the Discard import button but it is not working."
+   *
+   * It was refusing correctly — a statement whose lines are in the ledger
+   * cannot be removed without orphaning those entries, and both the button and
+   * the backend say so. What was missing was the *reason*: a faded button with
+   * its cause written in a separate paragraph elsewhere on the card reads as a
+   * broken button, not a refused one.
+   *
+   * And underneath that, a genuine fault: when the backend refused with a 409,
+   * the message was written to the page-level error, which renders above the
+   * summary card — behind the modal that was still open. Pressing Discard did
+   * nothing visible at all. */
+  it("counts the blocking lines rather than only knowing that there are some", () => {
+    const filters = sourceDeclaring("statementDiscardBlockers");
+    // canDiscardStatement is derived from it, so the two cannot disagree about
+    // what blocks — which is the thing the message is about to claim.
+    expect(filters).toContain("statementDiscardBlockers(lines).length === 0");
+  });
+
+  it("puts the reason on the button, not elsewhere on the page", () => {
+    const page = codeOnly(sourceDeclaring("StatementDetailPage"));
+    expect(page).toContain("discardBlockers.length");
+    // The old free-floating paragraph is gone rather than left beside the new
+    // one — two explanations of the same refusal is how one goes stale.
+    expect(page).not.toContain("Void or correct them in Review first");
+  });
+
+  it("shows a failed discard inside the dialog", () => {
+    const page = codeOnly(sourceDeclaring("StatementDetailPage"));
+    expect(page).toContain("setDiscardError");
+    // The catch must not fall back to the page-level error, which the open
+    // dialog covers.
+    expect(page).not.toMatch(/catch[\s\S]{0,120}setError\([^)]*Discard failed/);
+  });
+});
+
 describe("StatementDetailPage", () => {
   it("defaults ledger to unposted queue via defaultStatementLineFilter", () => {
     const source = sourceDeclaring("StatementDetailPage");

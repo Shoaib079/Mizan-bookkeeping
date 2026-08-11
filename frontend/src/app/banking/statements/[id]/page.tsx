@@ -16,7 +16,12 @@ import { apiFetch } from "@/lib/api";
 import type { BankStatementRead, ClassifyStatementLineResult } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate } from "@/lib/money";
-import { canDiscardStatement, defaultStatementLineFilter, queueLines, replaceStatementLine } from "@/lib/statement-line-filters";
+import {
+  defaultStatementLineFilter,
+  queueLines,
+  replaceStatementLine,
+  statementDiscardBlockers,
+} from "@/lib/statement-line-filters";
 import {
   toggleAllLineIds,
   toggleLineIdSet,
@@ -36,6 +41,7 @@ export default function StatementDetailPage() {
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(() => new Set());
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discarding, setDiscarding] = useState(false);
+  const [discardError, setDiscardError] = useState<string | null>(null);
   const discardKeyRef = useRef<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -102,13 +108,15 @@ export default function StatementDetailPage() {
 
   const showBulkBar = bulkSelectedLines.length > 0;
 
-  const discardAllowed = useMemo(
-    () => (statement ? canDiscardStatement(statement.lines) : false),
+  const discardBlockers = useMemo(
+    () => (statement ? statementDiscardBlockers(statement.lines) : []),
     [statement],
   );
+  const discardAllowed = statement != null && discardBlockers.length === 0;
 
   const openDiscardDialog = useCallback(() => {
     discardKeyRef.current = crypto.randomUUID();
+    setDiscardError(null);
     setDiscardOpen(true);
   }, []);
 
@@ -118,7 +126,7 @@ export default function StatementDetailPage() {
       discardKeyRef.current = crypto.randomUUID();
     }
     setDiscarding(true);
-    setError(null);
+    setDiscardError(null);
     try {
       await apiFetch(
         `/entities/${entityId}/banking/statements/${statementId}`,
@@ -130,7 +138,14 @@ export default function StatementDetailPage() {
       setDiscardOpen(false);
       router.push(`/banking/accounts/${statement.money_account_id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Discard failed");
+      /* Into the dialog, not the page.
+       *
+       * This used to set the page-level `error`, which renders above the
+       * summary card — behind the modal that is still open. The backend
+       * refuses with a 409 when lines are in the ledger, and the whole
+       * explanation landed somewhere nobody could see: you pressed the button
+       * and nothing happened. */
+      setDiscardError(err instanceof Error ? err.message : "Discard failed");
       setDiscarding(false);
     }
   }, [discarding, entityId, router, statement, statementId]);
@@ -191,26 +206,34 @@ export default function StatementDetailPage() {
                   lines
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-destructive hover:text-destructive"
-                disabled={!discardAllowed || discarding}
-                onClick={openDiscardDialog}
-              >
-                Discard import
-              </Button>
+              {/* The reason sits under the button it explains. It used to be a
+                  paragraph further down the card, so a faded button with no
+                  attached cause read as one that had simply stopped working. */}
+              <div className="flex max-w-sm flex-col items-end gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  disabled={!discardAllowed || discarding}
+                  onClick={openDiscardDialog}
+                >
+                  Discard import
+                </Button>
+                {!discardAllowed && (
+                  <p className="text-right text-xs text-muted-foreground">
+                    {discardBlockers.length} of {statement.line_count} lines are
+                    already in the ledger, so removing the file would leave those
+                    entries with nothing behind them. Tick them below and use
+                    Correct → &ldquo;Decide later&rdquo; to void the entries, then
+                    discard.
+                  </p>
+                )}
+              </div>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
               Tick lines next to the date to post or correct a batch. Click a row for
               one-at-a-time classification in the bar below.
             </p>
-            {!discardAllowed && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                This import cannot be discarded while lines are posted or linked to the
-                ledger. Void or correct them in Review first.
-              </p>
-            )}
           </div>
 
           <Dialog
@@ -230,6 +253,11 @@ export default function StatementDetailPage() {
             <p className="text-xs text-muted-foreground">
               {statement.line_count} lines will be removed.
             </p>
+            {discardError && (
+              <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {discardError}
+              </p>
+            )}
             <div className="mt-4 flex justify-end gap-2">
               <Button
                 type="button"
