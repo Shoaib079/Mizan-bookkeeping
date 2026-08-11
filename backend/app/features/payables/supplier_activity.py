@@ -59,6 +59,39 @@ def _has_stored_document(draft: InvoiceDraft) -> bool:
     return Path(stored).expanduser().is_file()
 
 
+def _marker_row(
+    on: date, rank: int, kind: str, detail: str
+) -> tuple[date, int, int, SupplierActivityRow]:
+    """The Opening and Closing rows — a balance and a label, no movement.
+
+    Two near-identical twenty-line constructions before this, which is also
+    what made room for the running-balance fix in a file the size ratchet
+    already watches.
+    """
+    return (
+        on,
+        rank,
+        0,
+        SupplierActivityRow(
+            movement_date=on,
+            movement_kind=kind,
+            movement_label=kind.capitalize(),
+            document_ref="—",
+            detail=detail,
+            net_kurus=None,
+            vat_kurus=None,
+            amount_kurus=None,
+            bank_name=None,
+            dekont_ref=None,
+            balance_kurus=0,
+            affects_balance=True,
+            invoice_draft_id=None,
+            journal_entry_id=None,
+            has_document=False,
+        ),
+    )
+
+
 def _payment_details(
     session: Session,
     entry: SupplierLedgerEntry,
@@ -116,33 +149,11 @@ def get_supplier_activity(
             if e.movement_date < from_date
         )
 
-        raw_rows: list[tuple[date, int, SupplierActivityRow]] = []
+        # (date, group rank, effect on the balance, row).
+        raw_rows: list[tuple[date, int, int, SupplierActivityRow]] = []
 
-        raw_rows.append(
-            (
-                from_date,
-                0,
-                SupplierActivityRow(
-                    movement_date=from_date,
-                    movement_kind="opening",
-                    movement_label="Opening",
-                    document_ref="—",
-                    detail="Balance at start of period",
-                    net_kurus=None,
-                    vat_kurus=None,
-                    amount_kurus=None,
-                    bank_name=None,
-                    dekont_ref=None,
-                    balance_kurus=running_before,
-                    affects_balance=True,
-                    invoice_draft_id=None,
-                    journal_entry_id=None,
-                    has_document=False,
-                ),
-            )
-        )
+        raw_rows.append(_marker_row(from_date, 0, "opening", "Balance at start of period"))
 
-        running = running_before
         for entry in entries:
             if entry.movement_date < from_date or entry.movement_date > to_date:
                 continue
@@ -269,11 +280,14 @@ def get_supplier_activity(
             if display_kind != SubledgerDisplayKind.EFFECTIVE:
                 can_edit = False
 
-            running += entry.amount_kurus
             raw_rows.append(
                 (
                     entry.movement_date,
                     1,
+                    # Every entry moves the balance, including ones
+                    # `affects_balance=False` hides: a superseded invoice and
+                    # its reversal are both in the ledger.
+                    entry.amount_kurus,
                     SupplierActivityRow(
                         movement_date=entry.movement_date,
                         movement_kind=entry.movement_type.value,
@@ -285,7 +299,7 @@ def get_supplier_activity(
                         amount_kurus=amount_kurus,
                         bank_name=bank_name,
                         dekont_ref=dekont_ref,
-                        balance_kurus=running,
+                        balance_kurus=0,
                         affects_balance=affects_balance,
                         invoice_draft_id=invoice_draft_id,
                         journal_entry_id=entry.journal_entry_id,
@@ -336,6 +350,7 @@ def get_supplier_activity(
                 (
                     draft.invoice_date,
                     2,
+                    0,  # not posted, so it shows the balance without changing it
                     SupplierActivityRow(
                         movement_date=draft.invoice_date,
                         movement_kind="unposted_invoice",
@@ -347,7 +362,7 @@ def get_supplier_activity(
                         amount_kurus=-draft.gross_kurus if is_credit else draft.gross_kurus,
                         bank_name=None,
                         dekont_ref=None,
-                        balance_kurus=running,
+                        balance_kurus=0,
                         affects_balance=False,
                         invoice_draft_id=draft.id,
                         journal_entry_id=None,
@@ -356,33 +371,18 @@ def get_supplier_activity(
                 )
             )
 
-        raw_rows.append(
-            (
-                to_date,
-                99,
-                SupplierActivityRow(
-                    movement_date=to_date,
-                    movement_kind="closing",
-                    movement_label="Closing",
-                    document_ref="—",
-                    detail="Balance after posted movements",
-                    net_kurus=None,
-                    vat_kurus=None,
-                    amount_kurus=None,
-                    bank_name=None,
-                    dekont_ref=None,
-                    balance_kurus=running,
-                    affects_balance=True,
-                    invoice_draft_id=None,
-                    journal_entry_id=None,
-                    has_document=False,
-                ),
-            )
-        )
+        raw_rows.append(_marker_row(to_date, 99, "closing", "Balance after posted movements"))
 
-        raw_rows.sort(key=lambda item: (item[0], item[1], item[2].document_ref))
+        raw_rows.sort(key=lambda item: (item[0], item[1], item[3].document_ref))
 
-    rows = [item[2] for item in raw_rows]
+        # Applied over the rows in the order they will be read, not while they
+        # were built — see tests/test_subledger_running_balance.py.
+        running = running_before
+        for _, _, delta, row in raw_rows:
+            running += delta
+            row.balance_kurus = running
+
+    rows = [item[3] for item in raw_rows]
 
     # Restore which money account each payment used so the edit form reopens with
     # the recorded account instead of defaulting to the first in the list.
