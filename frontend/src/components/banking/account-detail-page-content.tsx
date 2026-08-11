@@ -132,7 +132,10 @@ export function AccountDetailPageContent() {
           <MetaFacts
             items={[
               kindLabel,
-              account.bank_name,
+              // Not when it is the title. A bank account's name is its bank,
+              // so repeating it here read as the same fact printed twice —
+              // the accounts list already applies this rule to its subtitle.
+              account.bank_name !== account.name ? account.bank_name : null,
               account.iban,
               account.last_four && `···${account.last_four}`,
             ].filter(Boolean)}

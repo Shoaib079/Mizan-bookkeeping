@@ -69,6 +69,16 @@ export function MoneyAccountForm({
 
   const effectiveKind = fixedKind ?? accountKind;
 
+  /* A bank account's name *is* its bank. Asking twice produced two fields that
+   * were filled with the same words, and then a list that printed those words
+   * once as the title and again underneath as the subtitle.
+   *
+   * Cards keep both on purpose: the issuer is "Garanti" and the account is
+   * "Garanti Bonus ···1234", and you can hold two cards from one issuer. Cash
+   * drawers and FX wallets have no bank at all. */
+  const nameIsTheBank = effectiveKind === "bank";
+  const accountName = nameIsTheBank ? bankName : name;
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!entityId) {
@@ -87,7 +97,7 @@ export function MoneyAccountForm({
           account_kind: effectiveKind,
           currency:
             effectiveKind === "foreign_currency" ? currency.toUpperCase() : null,
-          name,
+          name: accountName,
           bank_name: bankName || null,
           iban: iban || null,
           last_four: lastFour || null,
@@ -148,15 +158,17 @@ export function MoneyAccountForm({
             </Select>
           </div>
         )}
-        <div>
-          <Label htmlFor="acct-name">Name</Label>
-          <Input
-            id="acct-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
+        {!nameIsTheBank && (
+          <div>
+            <Label htmlFor="acct-name">Name</Label>
+            <Input
+              id="acct-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+        )}
         {(effectiveKind === "bank" || effectiveKind === "credit_card") && (
           <div>
             <Label htmlFor="acct-bank">
@@ -166,7 +178,14 @@ export function MoneyAccountForm({
               id="acct-bank"
               value={bankName}
               onChange={(e) => setBankName(e.target.value)}
+              required={nameIsTheBank}
             />
+            {nameIsTheBank && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Two accounts at the same bank need telling apart — add the last
+                four digits, or the branch.
+              </p>
+            )}
           </div>
         )}
         {effectiveKind === "bank" && (
