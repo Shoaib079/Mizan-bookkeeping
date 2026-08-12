@@ -34,6 +34,7 @@ _JOURNAL_SOURCE_LABELS: dict[str, str] = {
     JournalEntrySource.STAFF_ADVANCE.value: "Staff advance",
     JournalEntrySource.STAFF_PAYMENT.value: "Salary payment",
     JournalEntrySource.PARTNER_EXPENSE_FRONTED.value: "Partner paid expense",
+    JournalEntrySource.PARTNER_SALARY_FRONTED.value: "Partner paid salary",
     JournalEntrySource.PARTNER_REIMBURSEMENT_PAID.value: "Partner reimbursement",
     JournalEntrySource.PARTNER_DRAWING.value: "Partner drawing",
     JournalEntrySource.PARTNER_DRAWING_REPAYMENT.value: "Partner drawing repayment",
@@ -71,6 +72,7 @@ _STAFF_MOVEMENT_LABELS: dict[str, str] = {
 _PARTNER_MOVEMENT_LABELS: dict[str, str] = {
     "opening_balance": "Opening balance",
     "expense_fronted": "Expense fronted",
+    "salary_fronted": "Salary paid for staff",
     "reimbursement_paid": "Reimbursement paid",
     "drawing": "Drawing",
     "drawing_repayment": "Drawing repayment",

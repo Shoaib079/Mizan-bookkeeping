@@ -82,6 +82,8 @@ VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
         JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
         JournalEntrySource.PARTNER_LOAN_RECEIVED,
         JournalEntrySource.PARTNER_LOAN_REPAID,
+        # Partner paid salary from pocket — void-and-re-enter only (dual subledger).
+        JournalEntrySource.PARTNER_SALARY_FRONTED,
         # A year-end close is derived entirely from the year's balances, so
         # editing its amounts by hand is meaningless — the next read would
         # disagree with the books. Voiding it reopens the year for re-closing,

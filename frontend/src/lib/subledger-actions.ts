@@ -72,6 +72,7 @@ export const VOID_ONLY_JOURNAL_SOURCES = new Set<string>([
   "partner_loan_received",
   "partner_loan_repaid",
   "year_end_close",
+  "partner_salary_fronted",
 ]);
 
 /** Bank statement classify — void only, never edit in place. */
@@ -92,6 +93,7 @@ export const PARTNER_VOID_ONLY_MOVEMENT_TYPES = new Set<string>([
   "partner_loan_received",
   "partner_loan_repaid",
   "profit_paid",
+  "salary_fronted",
 ]);
 
 export const STAFF_EDITABLE_MOVEMENT_TYPES = new Set<string>([
@@ -211,10 +213,21 @@ export type StaffLedgerActionContext = {
   payCurrency: string;
   isAdvanceOffset: boolean;
   advanceAppliedMinor: number;
+  /** Null when the payment was not from cash/bank (e.g. partner-funded). */
+  paymentAccountId?: string | null;
 };
 
 export function staffLedgerRowActions(ctx: StaffLedgerActionContext): RowActions {
   const isTry = ctx.payCurrency === "TRY";
+  // Partner-funded salary clears payable via 2150 — no money account on the JE.
+  // Void only (void-and-re-enter); Edit would desync the partner leg.
+  const partnerFundedSalary =
+    ctx.movementType === "salary_payment" &&
+    !ctx.paymentAccountId &&
+    !ctx.isAdvanceOffset;
+  if (partnerFundedSalary) {
+    return { canEdit: false, canVoid: true };
+  }
   const canEdit =
     isTry &&
     !ctx.isAdvanceOffset &&

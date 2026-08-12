@@ -8,6 +8,7 @@
  *   drawing             −  cash taken out
  *   drawing_repayment   +  cash returned
  *   expense_fronted     +  partner paid a business cost personally
+ *   salary_fronted      +  partner paid staff salary from pocket
  *   capital_contribution +
  *
  * The partner's total earned share for a period = settlement + allocation
@@ -151,7 +152,8 @@ export function partnerCashSummary(
   const contributions =
     totals.capitalContributionKurus ?? sumByType(live, "capital_contribution");
   const fronted =
-    totals.reimbursementBalanceKurus ?? sumByType(live, "expense_fronted");
+    totals.reimbursementBalanceKurus ??
+    sumByType(live, "expense_fronted") + sumByType(live, "salary_fronted");
   // drawings_net is negative while money is still out.
   const net = totals.drawingsNetKurus ?? 0;
   const outstanding = net < 0 ? magnitude(net) : 0;

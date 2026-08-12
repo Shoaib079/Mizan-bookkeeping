@@ -21,10 +21,10 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Group sale Total box; HEAD also has untagged hardening (Phase 1/3, D10) + partner balance polish |
-| **Last tag** | `v0.14.0-mobile-and-group-sale-total` |
-| **Unpushed** | docs commits ahead of `origin/main` — owner pushes at end |
-| **Next up** | GS-FX forex-only group sales |
+| **Last completed slice** | Partner-funded TRY salary (`v0.partner-funded-salary`) |
+| **Last tag** | `v0.partner-funded-salary` |
+| **Unpushed** | yes — owner pushes when ready (do not push from agent) |
+| **Next up** | GS-FX forex-only group sales · independent review + owner sign-off on partner-funded salary |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

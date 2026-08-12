@@ -8,6 +8,8 @@ import enum
 class PartnerMovementType(str, enum.Enum):
     OPENING_BALANCE = "opening_balance"
     EXPENSE_FRONTED = "expense_fronted"
+    #: Partner paid staff salary from pocket — company owes them (2150).
+    SALARY_FRONTED = "salary_fronted"
     REIMBURSEMENT_PAID = "reimbursement_paid"
     DRAWING = "drawing"
     DRAWING_REPAYMENT = "drawing_repayment"
@@ -23,6 +25,7 @@ REIMBURSEMENT_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
     {
         PartnerMovementType.OPENING_BALANCE,
         PartnerMovementType.EXPENSE_FRONTED,
+        PartnerMovementType.SALARY_FRONTED,
         PartnerMovementType.REIMBURSEMENT_PAID,
     }
 )
@@ -122,6 +125,7 @@ CURRENT_ACCOUNT_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
 WRITABLE_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
     {
         PartnerMovementType.EXPENSE_FRONTED,
+        PartnerMovementType.SALARY_FRONTED,
         PartnerMovementType.REIMBURSEMENT_PAID,
         PartnerMovementType.DRAWING,
         PartnerMovementType.DRAWING_REPAYMENT,

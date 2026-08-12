@@ -42,7 +42,7 @@ export type RecordDeskMode = PrimaryRecordActionId;
 
 const DESK_HINTS: Record<RecordDeskMode, string> = {
   expense: "Cash or partner-fronted — bank and card on the statement.",
-  staffSalary: "Pay from cash or a partner — accruals and advances on Staff.",
+  staffSalary: "Pay from cash or a partner (owe them) — accruals on Staff.",
   sales: "POS totals when you do not have a Z photo.",
   fx: "Buy, sell, or spend USD, EUR, or GBP.",
   addDocument: "Receipts, statements, invoices, Z reports — auto-routed.",

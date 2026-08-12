@@ -114,7 +114,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
   {
     id: "staffSalary",
     label: "Staff salary",
-    description: "Pay salary from cash or a partner. Accruals and advances on Staff.",
+    description: "Pay salary from cash or a partner (owe them). Accruals on Staff.",
     icon: Users,
     section: "today",
   },

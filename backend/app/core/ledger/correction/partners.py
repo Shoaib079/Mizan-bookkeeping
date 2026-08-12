@@ -97,6 +97,22 @@ def void_partner_journal_entry(
 ) -> SubledgerVoidResult:
     with entity_context(session, entity_id):
         require_entity_context()
+        from app.core.ledger.models import JournalEntry, JournalEntrySource
+
+        entry = session.get(JournalEntry, journal_entry_id)
+        if entry is not None and entry.source == JournalEntrySource.PARTNER_SALARY_FRONTED:
+            from app.core.staff.partner_funded_payment import void_partner_funded_salary
+
+            # Dual-subledger void — never reverse partner without staff.
+            return void_partner_funded_salary(
+                session,
+                entity_id,
+                journal_entry_id,
+                actor_id=actor_id,
+                reason=reason,
+                void_date=void_date,
+                period_unlock_reason=period_unlock_reason,
+            )
         partner_row = session.scalar(
             select(PartnerLedgerEntry).where(
                 PartnerLedgerEntry.journal_entry_id == journal_entry_id

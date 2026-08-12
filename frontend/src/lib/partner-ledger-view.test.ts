@@ -23,6 +23,7 @@ describe("partnerLedgerFilterMatches", () => {
     expect(partnerLedgerFilterMatches("cash", "drawing")).toBe(true);
     expect(partnerLedgerFilterMatches("cash", "capital_contribution")).toBe(true);
     expect(partnerLedgerFilterMatches("expenses", "expense_fronted")).toBe(true);
+    expect(partnerLedgerFilterMatches("expenses", "salary_fronted")).toBe(true);
     // No overlap between profit and cash — that's the whole point.
     expect(partnerLedgerFilterMatches("cash", "profit_allocation")).toBe(false);
     expect(partnerLedgerFilterMatches("profit", "drawing")).toBe(false);

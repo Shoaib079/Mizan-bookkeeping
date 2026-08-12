@@ -78,6 +78,7 @@ _NON_CASH_SOURCES = frozenset(
         JournalEntrySource.DELIVERY_COMMISSION,
         JournalEntrySource.STAFF_ACCRUAL,
         JournalEntrySource.PARTNER_EXPENSE_FRONTED,
+        JournalEntrySource.PARTNER_SALARY_FRONTED,
         JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
         JournalEntrySource.PARTNER_SUPPLIER_PAID,
         JournalEntrySource.EXPENSE_PERSONAL_SPLIT,

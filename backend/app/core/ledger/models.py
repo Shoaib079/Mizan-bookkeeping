@@ -63,6 +63,8 @@ class JournalEntrySource(str, enum.Enum):
     STAFF_ADVANCE = "staff_advance"
     STAFF_PAYMENT = "staff_payment"
     PARTNER_EXPENSE_FRONTED = "partner_expense_fronted"
+    #: Partner paid a staff salary from pocket — Dr 2250 / Cr 2150 (+ advance offset).
+    PARTNER_SALARY_FRONTED = "partner_salary_fronted"
     PARTNER_REIMBURSEMENT_PAID = "partner_reimbursement_paid"
     PARTNER_DRAWING = "partner_drawing"
     PARTNER_DRAWING_REPAYMENT = "partner_drawing_repayment"

@@ -209,7 +209,8 @@ Upload/ingestion (+ fingerprint) · AI read · Match & identify · Needs Review 
 - **Each employee has a pay currency** (TRY for most; USD/EUR for forex-paid workers).
 - **Staff ledger per employee runs in that pay currency:** salary accrued, advances (avans) paid, payments made, current balance. Plus a **total of all salaries** over any date range.
 - **Forex-paid workers:** wages **agreed in forex AND paid in forex** (e.g. "$500/month"). Ledger lives **in forex** so it stays stable and doesn't wobble with the rate. If short on FX, the owner **buys FX first** (TRY → FX) then pays in FX. For the **company-wide wage cost in lira**, each forex salary payment is converted to lira **at its value when paid** (owner enters it — no online rates).
-- **No double-counting:** **salary = the expense (cost)**; **advance and final payment = money movements** that settle it.
+- **TRY pay from a partner's pocket:** Record → Salary → Pay salary offers **Paid from: Cash drawer | Partner (owe partner)**. Accrual is unchanged (Dr `5100` / Cr `2250`, once). Partner-funded pay clears payable with **Dr `2250` / Cr `1300` (advance offset, same rule as cash) / Cr `2150`** for the remainder — **no cash/bank lines**, never a second `5100`. One journal writes the staff `salary_payment` row and a partner `salary_fronted` row together. FX-paid workers stay on the existing FX path. Repayment later reuses **Pay partner / partner reimbursement** — no separate repayment flow. Correction for this source is **void-and-re-enter** (UI: Void only).
+- **No double-counting:** **salary = the expense (cost)**; **advance and final payment = money movements** that settle it. Partner-fronted *expense* APIs must **reject account `5100`** — salaries go through Staff → Pay salary only.
 
 ---
 
@@ -217,7 +218,8 @@ Upload/ingestion (+ fingerprint) · AI read · Match & identify · Needs Review 
 
 - **Not capital tracking** — the owner does NOT need "who put in how much."
 - **Light per-partner reimbursement ledger:** when a partner pays a business/daily expense out of pocket → the business **owes him** → repaid → cleared.
-- **No double-counting:** the expense is still recorded once in its normal category; the reimbursement ledger only tracks *who fronted it and whether they're squared up*.
+- **Staff salary fronted** is the same owing idea on **`2150`**: movement type `salary_fronted` (journal source `partner_salary_fronted`). It counts in partner **net / cash-settleable balance** and the **2150 control-account tie**, and is repaid with the existing reimbursement / Pay partner paths — not a second repayment product.
+- **No double-counting:** the expense is still recorded once in its normal category; the reimbursement ledger only tracks *who fronted it and whether they're squared up*. Salaries are **not** booked as a partner-fronted expense against `5100`.
 
 ---
 

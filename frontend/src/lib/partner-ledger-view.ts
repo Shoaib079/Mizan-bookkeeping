@@ -74,7 +74,7 @@ const CASH_TYPES = new Set([
   "reimbursement_paid",
 ]);
 
-const EXPENSE_TYPES = new Set(["expense_fronted"]);
+const EXPENSE_TYPES = new Set(["expense_fronted", "salary_fronted"]);
 
 export function partnerLedgerFilterMatches(
   filter: PartnerLedgerFilter,

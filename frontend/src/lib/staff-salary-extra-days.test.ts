@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 import {
   formatCashPrefill,
@@ -40,8 +40,11 @@ describe("formatCashPrefill", () => {
 });
 
 describe("staff salary dialog — single payment POST", () => {
-  it("posts salary + extra days in one /payments call", () => {
-    const src = sourceDeclaring("StaffSalaryPaymentDialog");
+  it("posts salary + extra days in one payment call", () => {
+    const src = sourceDeclaringAll(
+      "StaffSalaryPaymentDialog",
+      "postStaffSalaryPayment",
+    );
     expect(src).toContain("/payments");
     expect(src).toContain("extra_days");
     expect(src).toContain("per_day_minor");

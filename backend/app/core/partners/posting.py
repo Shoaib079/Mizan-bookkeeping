@@ -21,6 +21,7 @@ from app.core.banking import statement_posting
 from app.core.ledger.models import JournalEntry, JournalEntrySource
 from app.core.ledger.posting import InvalidAccountError, PostingLine, prepare_journal_entry
 from app.core.partners import ledger as partner_ledger
+from app.core.partners.expense_accounts import validate_partner_fronted_expense_account
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import PartnerMovementType
 from app.db.session import entity_context, require_entity_context
@@ -115,16 +116,7 @@ def _chart_account(session: Session, code: str) -> Account:
 def _validate_expense_account(
     session: Session, entity_id: uuid.UUID, account_id: uuid.UUID
 ) -> Account:
-    account = session.get(Account, account_id)
-    if account is None or account.entity_id != entity_id:
-        raise InvalidAccountError("expense account not found for this entity")
-    if not account.is_active:
-        raise InvalidAccountError(f"account {account.code} is not active")
-    if account.account_type != AccountType.EXPENSE:
-        raise InvalidAccountError(
-            f"account {account.code} is not an expense account"
-        )
-    return account
+    return validate_partner_fronted_expense_account(session, entity_id, account_id)
 
 
 def _validate_payment_account(

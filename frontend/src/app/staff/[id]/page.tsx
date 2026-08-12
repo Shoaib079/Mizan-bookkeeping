@@ -313,10 +313,10 @@ export default function StaffDetailPage() {
                 {displayRows.map((group) => {
                   const entry = group.primary;
                   const actions = staffLedgerRowActions({
-                    movementType: entry.movement_type,
-                    payCurrency: employee.pay_currency,
+                    movementType: entry.movement_type, payCurrency: employee.pay_currency,
                     isAdvanceOffset: group.isAdvanceOffset,
                     advanceAppliedMinor: group.advanceAppliedMinor,
+                    paymentAccountId: entry.payment_account_id ?? null,
                   });
                   const canAct = actions.canEdit || actions.canVoid;
                   return (

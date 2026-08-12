@@ -8,6 +8,12 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-12
 
+**Partner-funded TRY salary (`v0.partner-funded-salary`).**
+- Record → Salary → **Paid from: Cash drawer | Partner (owe partner)** (TRY only; FX pay unchanged).
+- Accrual unchanged (Dr `5100` / Cr `2250` once). Partner pay: Dr `2250` / Cr `1300` (advance offset) / Cr `2150` — no cash lines; one journal writes staff + partner (`salary_fronted`).
+- Void-and-re-enter only (dedicated dual void). Repay via existing Pay partner / reimbursement.
+- API rejects booking salaries as partner-fronted expense on `5100`.
+
 **Partner balance — one figure, everywhere it is printed.**
 - A partner's balance **nets the profit they are owed** into the same cash position shown on the page (not a separate story beside it).
 - Profit share is **one figure** in their statement.

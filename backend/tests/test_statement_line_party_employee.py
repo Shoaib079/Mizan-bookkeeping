@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from app.core.chart_of_accounts.default_chart import SALARY_EXPENSE_CODE
 from app.core.onboarding.posting import post_opening_balances
 from app.core.partners import posting as partner_posting
 from app.features.onboarding.opening_balances import OpeningBalanceLineInput
@@ -58,7 +57,7 @@ def test_partner_reimbursement_line_stores_partner_id(db_session, partner_setup)
         amount_kurus=768_500,
         description="Fronted expense",
         actor_id=ACTOR_ID,
-        expense_account_id=accounts[SALARY_EXPENSE_CODE],
+        expense_account_id=accounts["5000"],
     )
 
     csv = (

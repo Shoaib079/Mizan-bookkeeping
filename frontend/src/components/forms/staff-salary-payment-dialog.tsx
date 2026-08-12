@@ -5,13 +5,16 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
+import { StaffSalaryFxPaymentFields } from "@/components/forms/staff-salary-fx-payment-fields";
+import {
+  StaffSalaryFundingFields,
+  type SalaryFundingMode,
+} from "@/components/forms/staff-salary-funding-fields";
 import { apiFetch } from "@/lib/api";
-import { withAcknowledgeDuplicate } from "@/lib/duplicate-record";
 import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
@@ -32,6 +35,10 @@ import {
   payableClearedPreview,
   type SalaryPeriodStatus,
 } from "@/lib/staff-salary";
+import {
+  postStaffSalaryPayment,
+  type PeriodPayload,
+} from "@/lib/staff-salary-payment-submit";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useToast } from "@/lib/toast";
@@ -50,13 +57,6 @@ const MONTHS = [
   { value: "11", label: "November" },
   { value: "12", label: "December" },
 ];
-
-type PeriodPayload = {
-  period_year: number;
-  period_month: number;
-  period_salary_minor: number;
-  amount_minor: number;
-};
 
 type Props = {
   open: boolean;
@@ -112,6 +112,9 @@ export function StaffSalaryPaymentDialog({
   const [description, setDescription] = useState("Salary payment");
   const [tryAccounts, setTryAccounts] = useState<MoneyAccountOption[]>([]);
   const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
+  const [fundingMode, setFundingMode] = useState<SalaryFundingMode>("cash");
+  const [partners, setPartners] = useState<{ id: string; name: string }[]>([]);
+  const [partnerId, setPartnerId] = useState("");
   const [fxAccounts, setFxAccounts] = useState<MoneyAccountOption[]>([]);
   const [fxWalletId, setFxWalletId] = useState("");
   const [tryCostText, setTryCostText] = useState("");
@@ -176,12 +179,18 @@ export function StaffSalaryPaymentDialog({
   const loadAccounts = useCallback(async () => {
     if (!entityId || isStatement) return;
     if (isTry) {
-      const merged = await loadBankAndCashAccounts(entityId);
+      const [merged, partnerPage] = await Promise.all([
+        loadBankAndCashAccounts(entityId),
+        apiFetch<{ items: { id: string; name: string }[] }>(
+          `/entities/${entityId}/partners?limit=50`,
+        ),
+      ]);
       setTryAccounts(merged);
       const cash = merged.find((a) => a.account_kind === "cash");
       setPaymentGlAccountId(
         cash?.gl_account_id ?? merged[0]?.gl_account_id ?? "",
       );
+      setPartners(partnerPage.items ?? []);
     } else {
       const wallets = await loadForeignCurrencyAccounts(entityId, payCurrency);
       setFxAccounts(wallets);
@@ -257,6 +266,8 @@ export function StaffSalaryPaymentDialog({
       setPeriodMonth(String(period.month));
     }
     setDescription("Salary payment");
+    setFundingMode("cash");
+    setPartnerId("");
     setSalaryText("");
     setCashText(
       defaultCashMinor != null && isTry
@@ -370,70 +381,30 @@ export function StaffSalaryPaymentDialog({
     return `${(minor / 100).toFixed(2)} ${payCurrency}`;
   }
 
-  async function postStaffPayment(payload: PeriodPayload & {
-    extra_days?: number;
-    per_day_minor?: number;
-  }) {
-    const paymentDateParsed = parseTrDate(resolvedDateText);
-    if (!paymentDateParsed) {
-      setError("Date must be DD.MM.YYYY.");
-      return false;
-    }
-    if (payload.amount_minor > 0 && isTry && !paymentGlAccountId) {
-      setError("Choose a cash or bank account.");
-      return false;
-    }
-    if (payload.amount_minor > 0 && !isTry && !fxWalletId) {
-      setError(`No ${payCurrency} wallet found.`);
-      return false;
-    }
-
-    const body: Record<string, unknown> = {
-      payment_date: paymentDateParsed,
-      amount_minor: payload.amount_minor,
-      description,
-      actor_id: actorId,
-      period_year: payload.period_year,
-      period_month: payload.period_month,
-      period_salary_minor: payload.period_salary_minor,
-    };
-    if (payload.extra_days != null && payload.per_day_minor != null) {
-      body.extra_days = payload.extra_days;
-      body.per_day_minor = payload.per_day_minor;
-    }
-    if (isTry && payload.amount_minor > 0) {
-      body.payment_account_id = paymentGlAccountId;
-    } else if (payload.amount_minor > 0) {
-      const tryCostKurus = parseTryToKurus(tryCostText);
-      if (tryCostKurus === null || tryCostKurus <= 0) {
-        setError("Enter a valid TRY cost for this payment.");
-        return false;
-      }
-      body.fx_money_account_id = fxWalletId;
-      body.try_cost_kurus = tryCostKurus;
-    }
-
+  async function postStaffPayment(payload: PeriodPayload) {
     setError(null);
-    try {
-      const idempotencyKey = submitIdempotency.beginSubmit();
-      await submitWithDuplicateGuard(async (acknowledgedDuplicate) =>
-        apiFetch(
-          `/entities/${entityId}/staff/employees/${employeeId}/payments`,
-          {
-            method: "POST",
-            idempotencyKey,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(
-              withAcknowledgeDuplicate(body, acknowledgedDuplicate),
-            ),
-          },
-        ),
-      );
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+    const result = await postStaffSalaryPayment({
+      entityId,
+      employeeId,
+      actorId,
+      description,
+      dateText: resolvedDateText,
+      isTry,
+      payCurrency,
+      fundingMode,
+      partnerId,
+      paymentGlAccountId,
+      fxWalletId,
+      tryCostText,
+      payload,
+      beginSubmit: () => submitIdempotency.beginSubmit(),
+      submitWithDuplicateGuard,
+    });
+    if (!result.ok) {
+      setError(result.error);
       return false;
     }
+    return true;
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -464,8 +435,18 @@ export function StaffSalaryPaymentDialog({
       setError("Choose a salary month.");
       return;
     }
-    if (!isStatement && cash > 0 && isTry && !paymentGlAccountId) {
+    if (
+      !isStatement &&
+      cash > 0 &&
+      isTry &&
+      fundingMode === "cash" &&
+      !paymentGlAccountId
+    ) {
       setError("Choose a cash or bank account.");
+      return;
+    }
+    if (!isStatement && cash > 0 && isTry && fundingMode === "partner" && !partnerId) {
+      setError("Choose the partner who paid.");
       return;
     }
     if (!isStatement && cash > 0 && !isTry && !fxWalletId) {
@@ -551,52 +532,26 @@ export function StaffSalaryPaymentDialog({
               />
             </div>
             {isTry ? (
-              <div>
-                <Label htmlFor="pay-account">
-                  Pay from{cashPreview <= 0 ? " (only if paying now)" : ""}
-                </Label>
-                <Combobox
-                  id="pay-account"
-                  value={paymentGlAccountId}
-                  onValueChange={setPaymentGlAccountId}
-                  options={tryAccounts.map((a) => ({
-                    value: a.gl_account_id,
-                    label: `${a.name} (${a.account_kind})`,
-                  }))}
-                  placeholder="Pay from account…"
-                />
-              </div>
+              <StaffSalaryFundingFields
+                fundingMode={fundingMode}
+                onFundingModeChange={setFundingMode}
+                tryAccounts={tryAccounts}
+                paymentGlAccountId={paymentGlAccountId}
+                onPaymentGlAccountIdChange={setPaymentGlAccountId}
+                partners={partners}
+                partnerId={partnerId}
+                onPartnerIdChange={setPartnerId}
+                showAccountRequiredHint={cashPreview <= 0}
+              />
             ) : (
-              <>
-                <div>
-                  <Label htmlFor="pay-fx-wallet">{payCurrency} wallet</Label>
-                  <Combobox
-                    id="pay-fx-wallet"
-                    value={fxWalletId}
-                    onValueChange={setFxWalletId}
-                    options={
-                      fxAccounts.length === 0
-                        ? [{ value: "", label: `No ${payCurrency} wallet` }]
-                        : fxAccounts.map((a) => ({
-                            value: a.id,
-                            label: a.name,
-                          }))
-                    }
-                    placeholder={`${payCurrency} wallet…`}
-                    disabled={fxAccounts.length === 0}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="pay-try-cost">TRY cost</Label>
-                  <MoneyInput
-                    id="pay-try-cost"
-                    placeholder="e.g. 35.000,00"
-                    value={tryCostText}
-                    onChange={setTryCostText}
-                    required
-                  />
-                </div>
-              </>
+              <StaffSalaryFxPaymentFields
+                payCurrency={payCurrency}
+                fxAccounts={fxAccounts}
+                fxWalletId={fxWalletId}
+                onFxWalletIdChange={setFxWalletId}
+                tryCostText={tryCostText}
+                onTryCostTextChange={setTryCostText}
+              />
             )}
           </>
         )}

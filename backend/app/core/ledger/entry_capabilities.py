@@ -127,16 +127,8 @@ PARTNER = Owner(PartnerLedgerEntry, "partner_id")
 SUPPLIER = Owner(SupplierLedgerEntry, "supplier_id")
 PARTNER_VOID = "partners/{owner_id}/ledger/{entry_id}/void"
 
-# Two rules run *before* this table and are deliberately not restated in it,
-# because both are already defined as sets elsewhere and copying them here is
-# the exact mistake this whole phase is about:
-#
-#   is_generic_correctable(source)  -> edit + void, ledger/entries/{id}/void,
-#                                      kind `generic_ledger`
-#   _is_generic_void_safe(source)   -> void only, same path
-#
-# That is why TRANSFER, YEAR_END_CLOSE and CASH_DRAWER_CLOSE have no row below:
-# they are answered by the second rule and never reach the table.
+# Generic correctable / generic-void-safe sources are answered by those
+# registries, not restated here (TRANSFER, YEAR_END_CLOSE, CASH_DRAWER_CLOSE).
 CAPABILITIES: dict[JournalEntrySource, Capability] = {
     JournalEntrySource.EXPENSE_ENTRY: Capability(
         can_edit=True,
@@ -297,6 +289,11 @@ CAPABILITIES: dict[JournalEntrySource, Capability] = {
     JournalEntrySource.POS_CARD_TIP: Capability(can_edit=False, can_void=False),
     JournalEntrySource.CREDIT_CARD_PAYMENT: Capability(can_edit=False, can_void=False),
     JournalEntrySource.OPENING_BALANCE: Capability(can_edit=False, can_void=False),
+    # Dual void (staff+partner); never generic GL / half-void.
+    JournalEntrySource.PARTNER_SALARY_FRONTED: Capability(
+        can_edit=False, can_void=True,
+        void_path="staff/partner-funded-salary/{entry_id}/void",
+    ),
 }
 
 
