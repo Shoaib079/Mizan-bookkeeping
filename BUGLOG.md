@@ -207,7 +207,7 @@ The data was never wrong; `balance_minor` was correct all along, and the staff *
 
 **Guarding tests:** `backend/tests/test_statement_other_income.py` (5: Dr bank / Cr income shape, outflow rejected, missing account rejected, non-revenue account rejected, correction keeps the account) and `frontend/src/lib/statement-other-income.test.ts` (8). ✅ **Backend pytest run green by owner 2026-07-27** (sandbox can't run it — Python 3.11 + Postgres absent). `tsc` + 546 frontend tests + `py_compile` also green.
 
-## 2026-07-13 — Staff advance can't be applied against extra-days owed (OPEN — handed to Cursor)
+## 2026-07-13 — Staff advance can't be applied against extra-days owed (IMPLEMENTED 2026-07-13 — backend pytest re-run owed)
 
 **Symptom:** Outstanding advance grows and can never be netted, even at 0-cash payment. India Gate / "Latif Coşgun": staff balance 170 ₺ but outstanding advance 13.515 ₺ = 75 (23.05 excess) + 13.440 (08.06). Owner owes 13.440 for extra days AND holds a 13.440 advance; they offset on the balance but sit gross with no way to net them.
 
