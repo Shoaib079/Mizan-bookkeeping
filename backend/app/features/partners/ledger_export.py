@@ -26,14 +26,22 @@ def _export(entity_name: str, partner_name: str, ledger: PartnerLedgerRead) -> S
         ledger_label="Partner ledger",
         sheet_name="Partner",
         summary=[
-            ("Net balance", ledger.net_balance_kurus),
+            # Still "Net balance" — the name was always right, the figure was
+            # not. It used to exclude profit already credited to the partner,
+            # which meant announcing a debt of 80.800 on the same sheet that
+            # owed them 68.763,91. Renaming it would have churned the
+            # vocabulary of every reader to describe a corrected number.
+            ("Net balance", ledger.current_account_kurus),
+            ("— of which unpaid profit", ledger.unpaid_profit_kurus),
             ("Fronted expenses", ledger.balance_kurus),
-            ("Capital contributed", ledger.capital_contribution_kurus),
+            # Capital is not part of the balance above and must not be read as
+            # one: money put into the business is not a debt it repays on
+            # demand.
+            ("Capital contributed (separate)", ledger.capital_contribution_kurus),
             ("Profit allocated", ledger.profit_allocated_kurus),
             # The middle term. Without it, allocated 100.000 next to unpaid 0
             # leaves the reader to work out where the rest went.
             ("Settled from drawings", ledger.profit_settled_kurus),
-            ("Unpaid profit", ledger.unpaid_profit_kurus),
             ("Partner loan", ledger.loan_balance_kurus),
         ],
         rows=[

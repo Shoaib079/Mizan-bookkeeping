@@ -77,8 +77,13 @@ _PARTNER_MOVEMENT_LABELS: dict[str, str] = {
     "capital_contribution": "Capital contribution",
     "partner_loan_received": "Partner loan received",
     "partner_loan_repaid": "Partner loan repaid",
-    "profit_allocation": "Profit allocation",
-    "profit_settlement": "Settled from profit",
+    # Both halves say "Profit allocation" so that adding the rows gives the
+    # "Profit allocated" total above them. They used to read "Profit
+    # allocation" and "Settled from profit", so a reader adding the rows
+    # that looked like allocations got 88.763,91 against a header of
+    # 175.000 and no way to see where the rest went.
+    "profit_allocation": "Profit allocation — added to capital",
+    "profit_settlement": "Profit allocation — cleared earlier drawings",
     "profit_paid": "Profit paid",
 }
 

@@ -34,13 +34,13 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
+  partnerBalance,
   partnerBalanceHeading,
   formatPartnerNetBalance,
 } from "@/lib/partner-balance";
 import { partnerMovementLabels } from "@/lib/subledger-labels";
 import {
   subledgerRowClassName,
-  type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
 import {
   PartnerCashCard,
@@ -56,6 +56,7 @@ import {
   groupPartnerLedgerRows,
   partnerLedgerFilterMatches,
   type PartnerLedgerFilter,
+  type PartnerLedgerResponse,
 } from "@/lib/partner-ledger-view";
 import {
   actionsForOneOwnersRow,
@@ -63,41 +64,13 @@ import {
 } from "@/lib/use-entry-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
-type LedgerEntry = {
-  id: string;
-  movement_date: string;
-  movement_type: string;
-  amount_kurus: number;
-  description: string;
-  journal_entry_id: string | null;
-  payment_account_id: string | null;
-  /** Tells a drawing the partner took in cash from one created by a personal
-   * expense split — the two read very differently to an owner. */
-  reference_type?: string | null;
-  display_kind: SubledgerDisplayKind;
-  was_corrected?: boolean;
-  running_balance_kurus?: number | null;
-};
-
-type LedgerResponse = {
-  balance_kurus: number;
-  capital_balance_kurus: number;
-  capital_contribution_kurus: number;
-  profit_allocated_kurus: number;
-  unpaid_profit_kurus?: number;
-  drawings_net_kurus: number;
-  net_balance_kurus: number;
-  loan_balance_kurus?: number;
-  entries: LedgerEntry[];
-};
-
 export default function PartnerDetailPage() {
   const params = useParams<{ id: string }>();
   const partnerId = params.id;
   const { entityId } = useEntity();
 
   const [partner, setPartner] = useState<PartnerRow | null>(null);
-  const [ledger, setLedger] = useState<LedgerResponse | null>(null);
+  const [ledger, setLedger] = useState<PartnerLedgerResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -117,7 +90,7 @@ export default function PartnerDetailPage() {
     try {
       const [part, led] = await Promise.all([
         apiFetch<PartnerRow>(`/entities/${entityId}/partners/${partnerId}`),
-        apiFetch<LedgerResponse>(
+        apiFetch<PartnerLedgerResponse>(
           `/entities/${entityId}/partners/${partnerId}/ledger`,
         ),
       ]);
@@ -242,8 +215,8 @@ export default function PartnerDetailPage() {
         headline={
           ledger && (
             <HeadlineFigure
-              label={partnerBalanceHeading(ledger.net_balance_kurus)}
-              amountKurus={Math.abs(ledger.net_balance_kurus)}
+              label={partnerBalanceHeading(partnerBalance(ledger))}
+              amountKurus={Math.abs(partnerBalance(ledger))}
               caption={
                 (ledger.loan_balance_kurus ?? 0) !== 0
                   ? `Partner loan: ${formatTry(ledger.loan_balance_kurus!)}`

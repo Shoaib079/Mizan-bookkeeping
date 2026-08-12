@@ -76,6 +76,49 @@ NET_BALANCE_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
     | LOAN_MOVEMENT_TYPES
 )
 
+# Profit credited to the partner, less what has been paid out of it.
+UNPAID_PROFIT_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
+    {PartnerMovementType.PROFIT_ALLOCATION, PartnerMovementType.PROFIT_PAID}
+)
+
+# The partner's whole share, both halves of it: the part that cleared drawings
+# on the day it was allocated, and the residual credited to them.
+PROFIT_ALLOCATED_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
+    {PartnerMovementType.PROFIT_ALLOCATION, PartnerMovementType.PROFIT_SETTLEMENT}
+)
+
+# Drawings, net of what has cleared them — repayments in cash, and the profit
+# settlement rows, which clear outstanding drawings exactly as a repayment does.
+DRAWINGS_NET_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
+    {
+        PartnerMovementType.DRAWING,
+        PartnerMovementType.DRAWING_REPAYMENT,
+        PartnerMovementType.PROFIT_SETTLEMENT,
+    }
+)
+
+# What the partner is owed, or owes, today — for reading.
+#
+# NET_BALANCE_MOVEMENT_TYPES plus the profit credited to them and not yet paid.
+# A partner reading their ledger does the subtraction in their head: "you
+# allocated me 68.763,91 and I took 80.800, so I owe 12.036,09". The app held
+# those as two figures and never brought them together, so it announced a debt
+# of 80.800 while separately owing them 68.763,91.
+#
+# Deliberately a second set rather than widening the one above.
+# NET_BALANCE_MOVEMENT_TYPES decides how much of a *new* allocation settles
+# outstanding drawings (`split_profit_by_ownership`). Folding already-allocated
+# profit into that would make a partner look less overdrawn than they are and
+# settle less than it should — a change to what gets posted, not to what is
+# read. The two questions look alike and are not the same one.
+#
+# Capital contributions stay out of both, and that is the point of keeping them
+# apart: money put into the business is not a debt it repays on demand.
+CURRENT_ACCOUNT_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
+    NET_BALANCE_MOVEMENT_TYPES | UNPAID_PROFIT_MOVEMENT_TYPES
+)
+
+
 WRITABLE_MOVEMENT_TYPES: frozenset[PartnerMovementType] = frozenset(
     {
         PartnerMovementType.EXPENSE_FRONTED,

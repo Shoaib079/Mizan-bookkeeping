@@ -13,7 +13,10 @@ from app.core.partners.types import (
     CAPITAL_ACCOUNT_MOVEMENT_TYPES,
     CAPITAL_MOVEMENT_TYPES,
     LOAN_MOVEMENT_TYPES,
+    DRAWINGS_NET_MOVEMENT_TYPES,
     NET_BALANCE_MOVEMENT_TYPES,
+    PROFIT_ALLOCATED_MOVEMENT_TYPES,
+    UNPAID_PROFIT_MOVEMENT_TYPES,
     REIMBURSEMENT_MOVEMENT_TYPES,
     WRITABLE_MOVEMENT_TYPES,
     PartnerMovementType,
@@ -298,12 +301,7 @@ def profit_allocated_kurus(
         session,
         entity_id,
         partner_id,
-        frozenset(
-            {
-                PartnerMovementType.PROFIT_ALLOCATION,
-                PartnerMovementType.PROFIT_SETTLEMENT,
-            }
-        ),
+        PROFIT_ALLOCATED_MOVEMENT_TYPES,
     )
 
 
@@ -333,12 +331,7 @@ def unpaid_profit_kurus(
         session,
         entity_id,
         partner_id,
-        frozenset(
-            {
-                PartnerMovementType.PROFIT_ALLOCATION,
-                PartnerMovementType.PROFIT_PAID,
-            }
-        ),
+        UNPAID_PROFIT_MOVEMENT_TYPES,
     )
 
 
@@ -356,13 +349,7 @@ def drawings_net_kurus(
         session,
         entity_id,
         partner_id,
-        frozenset(
-            {
-                PartnerMovementType.DRAWING,
-                PartnerMovementType.DRAWING_REPAYMENT,
-                PartnerMovementType.PROFIT_SETTLEMENT,
-            }
-        ),
+        DRAWINGS_NET_MOVEMENT_TYPES,
     )
 
 

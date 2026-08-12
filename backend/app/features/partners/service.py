@@ -25,7 +25,7 @@ from app.core.partners.ledger import (
     unpaid_profit_kurus,
 )
 from app.core.partners.models import PartnerLedgerEntry
-from app.core.partners.types import NET_BALANCE_MOVEMENT_TYPES, PartnerMovementType
+from app.core.partners.types import CURRENT_ACCOUNT_MOVEMENT_TYPES, PartnerMovementType
 from app.core.ledger.correction import (
     CorrectionNotFoundError,
     correct_partner_journal_entry,
@@ -253,15 +253,14 @@ def get_partner_ledger(
         net = net_balance_kurus(session, entity_id, partner_id)
         entries = list_ledger_entries(session, entity_id, partner_id)
         reads = _partner_entry_reads(session, entries)
+        # Nets unpaid profit, and its final value is what the header reports.
         running = 0
         for read in reads:
-            if read.display_kind == SubledgerDisplayKind.EFFECTIVE:
-                try:
-                    movement = PartnerMovementType(read.movement_type)
-                except ValueError:
-                    movement = None
-                if movement in NET_BALANCE_MOVEMENT_TYPES:
-                    running += read.amount_kurus
+            if (
+                read.display_kind == SubledgerDisplayKind.EFFECTIVE
+                and read.movement_type in CURRENT_ACCOUNT_MOVEMENT_TYPES
+            ):
+                running += read.amount_kurus
             read.running_balance_kurus = running
     return PartnerLedgerRead(
         partner_id=partner_id,
@@ -273,6 +272,7 @@ def get_partner_ledger(
         unpaid_profit_kurus=unpaid_profit,
         drawings_net_kurus=drawings,
         net_balance_kurus=net,
+        current_account_kurus=running,
         loan_balance_kurus=loan,
         entries=reads,
     )

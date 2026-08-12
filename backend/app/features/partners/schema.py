@@ -90,6 +90,11 @@ class PartnerLedgerRead(BaseModel):
     unpaid_profit_kurus: int = 0
     drawings_net_kurus: int = 0
     net_balance_kurus: int = 0
+    #: What the partner is owed or owes today, profit included — the figure the
+    #: ledger's running column ends on. `net_balance_kurus` above is the
+    #: narrower one that decides how much of a new allocation clears drawings;
+    #: they answer different questions and are not interchangeable.
+    current_account_kurus: int = 0
     loan_balance_kurus: int = 0
     entries: list[PartnerLedgerEntryRead]
 

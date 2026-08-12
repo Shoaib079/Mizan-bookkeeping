@@ -19,8 +19,11 @@ export const partnerMovementLabels: Record<string, string> = {
   capital_contribution: "Capital contribution",
   partner_loan_received: "Partner loan received",
   partner_loan_repaid: "Partner loan repaid",
-  profit_allocation: "Profit allocation",
-  profit_settlement: "Settled from profit",
+  // Both halves say "Profit allocation" so adding the rows gives the "Profit
+  // allocated" total. Kept identical to app/core/excel/labels.py — the same
+  // movement must not read one way on screen and another in the export.
+  profit_allocation: "Profit allocation — added to capital",
+  profit_settlement: "Profit allocation — cleared earlier drawings",
   profit_paid: "Profit paid",
 };
 

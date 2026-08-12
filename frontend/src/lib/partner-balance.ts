@@ -3,6 +3,25 @@
 import { formatTry } from "@/lib/money";
 
 /** Positive = business owes partner; negative = partner owes business. */
+/** The balance a partner reads: profit they are owed, netted against what they
+ *  have taken.
+ *
+ * `net_balance_kurus` leaves out profit already credited and not yet paid,
+ * because that figure has a second job — deciding how much of a *new*
+ * allocation clears outstanding drawings. Reading it as the partner's position
+ * meant the app announced a debt of 80.800 while separately owing them
+ * 68.763,91, and left the subtraction to them.
+ *
+ * Falls back while an older API response is in flight, so the number never
+ * renders as zero mid-deploy.
+ */
+export function partnerBalance(ledger: {
+  current_account_kurus?: number;
+  net_balance_kurus: number;
+}): number {
+  return ledger.current_account_kurus ?? ledger.net_balance_kurus;
+}
+
 export function partnerBalanceHeading(balanceKurus: number): string {
   if (balanceKurus > 0) return "You owe partner";
   if (balanceKurus < 0) return "Partner owes you";

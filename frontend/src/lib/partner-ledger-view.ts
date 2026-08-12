@@ -5,6 +5,43 @@
  * time; period bands keep each profit allocation legible once several months
  * have accumulated. */
 
+import type { SubledgerDisplayKind } from "@/lib/ledger-display";
+
+/* The shapes the partner ledger endpoint returns.
+ *
+ * Declared in the page before this, alongside three other detail pages
+ * each declaring its own `LedgerEntry` and `LedgerResponse` — four
+ * different things sharing two names, which no guard can name by symbol.
+ */
+export type PartnerLedgerEntry = {
+  id: string;
+  movement_date: string;
+  movement_type: string;
+  amount_kurus: number;
+  description: string;
+  journal_entry_id: string | null;
+  payment_account_id: string | null;
+  /** Tells a drawing the partner took in cash from one created by a personal
+   * expense split — the two read very differently to an owner. */
+  reference_type?: string | null;
+  display_kind: SubledgerDisplayKind;
+  was_corrected?: boolean;
+  running_balance_kurus?: number | null;
+};
+
+export type PartnerLedgerResponse = {
+  balance_kurus: number;
+  capital_balance_kurus: number;
+  capital_contribution_kurus: number;
+  profit_allocated_kurus: number;
+  unpaid_profit_kurus?: number;
+  drawings_net_kurus: number;
+  net_balance_kurus: number;
+  current_account_kurus?: number;
+  loan_balance_kurus?: number;
+  entries: PartnerLedgerEntry[];
+};
+
 export type PartnerLedgerFilter = "all" | "profit" | "cash" | "expenses";
 
 export const PARTNER_LEDGER_FILTERS: {
