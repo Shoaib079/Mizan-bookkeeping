@@ -55,7 +55,7 @@ import {
 } from "@/lib/ledger-display";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
-type LedgerEntry = {
+type CustomerLedgerEntry = {
   id: string;
   movement_date: string;
   movement_type: string;
@@ -75,11 +75,11 @@ type LedgerEntry = {
   was_corrected?: boolean;
 };
 
-type LedgerResponse = {
+type CustomerLedgerResponse = {
   balance_kurus: number;
   /** One line per currency still owed. Empty when only ever billed in lira. */
   outstanding_by_currency?: ForexOutstanding[];
-  entries: LedgerEntry[];
+  entries: CustomerLedgerEntry[];
 };
 
 /** The rows on a customer ledger that can be undone, and where to send it.
@@ -101,7 +101,7 @@ function formatForexOutstanding(
   return formatForexBalanceSummary(outstanding);
 }
 
-function formatLedgerGroupMeta(entry: LedgerEntry): string | null {
+function formatLedgerGroupMeta(entry: CustomerLedgerEntry): string | null {
   const parts: string[] = [];
   if (entry.pax != null) {
     if (entry.rate_per_person_kurus != null) {
@@ -138,7 +138,7 @@ export default function CustomerDetailPage() {
   const { entityId } = useEntity();
 
   const [customer, setCustomer] = useState<CustomerRow | null>(null);
-  const [ledger, setLedger] = useState<LedgerResponse | null>(null);
+  const [ledger, setLedger] = useState<CustomerLedgerResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -186,7 +186,7 @@ export default function CustomerDetailPage() {
         apiFetch<CustomerRow>(
           `/entities/${entityId}/customers/${customerId}`,
         ),
-        apiFetch<LedgerResponse>(
+        apiFetch<CustomerLedgerResponse>(
           `/entities/${entityId}/customers/${customerId}/ledger`,
         ),
       ]);

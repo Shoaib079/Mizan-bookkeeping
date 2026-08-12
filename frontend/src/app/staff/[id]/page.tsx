@@ -51,7 +51,7 @@ import {
 import { staffLedgerRowActions } from "@/lib/subledger-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
-type LedgerEntry = {
+type StaffLedgerEntry = {
   id: string;
   movement_date: string;
   movement_type: string;
@@ -82,14 +82,14 @@ const MONTH_NAMES = [
   "Dec",
 ];
 
-type LedgerResponse = {
+type StaffLedgerResponse = {
   balance_minor: number;
   remaining_accrual_minor: number;
   outstanding_advance_minor: number;
-  entries: LedgerEntry[];
+  entries: StaffLedgerEntry[];
 };
 
-function extraDaysLabel(entry: LedgerEntry): string | null {
+function extraDaysLabel(entry: StaffLedgerEntry): string | null {
   if (
     entry.movement_type !== "extra_days_paid" &&
     entry.movement_type !== "extra_days_accrued"
@@ -100,7 +100,7 @@ function extraDaysLabel(entry: LedgerEntry): string | null {
   return `${entry.extra_days} day${entry.extra_days === 1 ? "" : "s"}`;
 }
 
-function salaryPeriodLabel(entry: LedgerEntry): string | null {
+function salaryPeriodLabel(entry: StaffLedgerEntry): string | null {
   if (entry.movement_type !== "salary_accrued") return null;
   if (!entry.period_year || !entry.period_month) return null;
   const month = MONTH_NAMES[entry.period_month] ?? String(entry.period_month);
@@ -113,7 +113,7 @@ export default function StaffDetailPage() {
   const { entityId } = useEntity();
 
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
-  const [ledger, setLedger] = useState<LedgerResponse | null>(null);
+  const [ledger, setLedger] = useState<StaffLedgerResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -138,7 +138,7 @@ export default function StaffDetailPage() {
         apiFetch<EmployeeRow>(
           `/entities/${entityId}/staff/employees/${employeeId}`,
         ),
-        apiFetch<LedgerResponse>(
+        apiFetch<StaffLedgerResponse>(
           `/entities/${entityId}/staff/employees/${employeeId}/ledger`,
         ),
       ]);

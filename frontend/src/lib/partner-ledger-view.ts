@@ -9,9 +9,14 @@ import type { SubledgerDisplayKind } from "@/lib/ledger-display";
 
 /* The shapes the partner ledger endpoint returns.
  *
- * Declared in the page before this, alongside three other detail pages
- * each declaring its own `LedgerEntry` and `LedgerResponse` — four
- * different things sharing two names, which no guard can name by symbol.
+ * Declared in the page before this, alongside three other detail pages each
+ * declaring its own `LedgerEntry` and `LedgerResponse` — four different shapes
+ * sharing two names, so neither could be located by symbol and a guard naming
+ * one got an ambiguity error instead of a file. All four are prefixed now.
+ *
+ * The other three stayed in their pages on purpose: each is the subset of the
+ * response *that page* reads, not a shared contract. These moved only because
+ * the partner page needed the room.
  */
 export type PartnerLedgerEntry = {
   id: string;

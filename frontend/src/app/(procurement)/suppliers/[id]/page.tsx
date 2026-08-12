@@ -37,7 +37,7 @@ import {
   isReadyToPostInvoiceStatus,
 } from "@/lib/review-status";
 
-type LedgerEntry = {
+type SupplierLedgerEntry = {
   id: string;
   movement_date: string;
   movement_type: string;
@@ -46,9 +46,9 @@ type LedgerEntry = {
   journal_entry_id: string | null;
 };
 
-type LedgerResponse = {
+type SupplierLedgerResponse = {
   balance_kurus: number;
-  entries: LedgerEntry[];
+  entries: SupplierLedgerEntry[];
 };
 
 type DraftRow = {
@@ -70,7 +70,7 @@ export default function SupplierDetailPage() {
 
   const { entityId } = useEntity();
   const [supplier, setSupplier] = useState<SupplierRow | null>(null);
-  const [ledger, setLedger] = useState<LedgerResponse | null>(null);
+  const [ledger, setLedger] = useState<SupplierLedgerResponse | null>(null);
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +93,7 @@ export default function SupplierDetailPage() {
         apiFetch<SupplierRow>(
           `/entities/${entityId}/suppliers/${supplierId}`,
         ),
-        apiFetch<LedgerResponse>(
+        apiFetch<SupplierLedgerResponse>(
           `/entities/${entityId}/suppliers/${supplierId}/ledger`,
         ),
         apiFetch<{ items: DraftRow[] }>(
