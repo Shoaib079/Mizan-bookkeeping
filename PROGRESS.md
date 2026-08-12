@@ -3,6 +3,7 @@
 **Handoff:** Read the **Current** table below only for active work. Older sections are history. **Git + last tag win** over uncommitted doc edits. **One agent per active slice.**
 
 **Full queue:** `POST_LAUNCH_PLAN.md` **Master build order** + **§ IC** (invoice classification). **ROADMAP.md** **Current status** + **Next plan**.
+**Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `CHANGELOG.md` (every change, dated) · `HARDENING_PLAN.md` (bug classes + owed items) · `BUGLOG.md` (bug history) · `FINANCIAL_AUDIT.md` (engine review, F2 still open)
 
 ### Companion files
 
@@ -91,7 +92,7 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 **Prior partner milestone:** **`v0.partner-record`** (settle-then-withdraw + profit/capital/return) and same-day **`v0.partner-splits`** — shipped; do not rebuild.
 
-**Deploy:** Railway auto-deploys from `main` with `alembic upgrade head` pre-deploy. Migration head in repo is **`095_delete_entity_function`** (includes `088_membership_grants`, `089_ledger_repairs`, …).
+**Deploy:** `alembic upgrade head` through **089** (`088_membership_grants` 2026-08-03 + `089` ledger repairs / `profit_allocation_v3` 2026-08-04) — see `ROADMAP.md` Deploy reality.
 
 **Next build:** **GS-FX** forex-only group sales (design locked) — see `ROADMAP.md` / `POST_LAUNCH_PLAN.md`. Phase 11 known gap remains: staff salary + advance correction (`BUGLOG.md` 2026-07-13).
 
