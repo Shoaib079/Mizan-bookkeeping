@@ -4,15 +4,25 @@
 
 **Full queue:** `POST_LAUNCH_PLAN.md` **Master build order** + **§ IC** (invoice classification). **ROADMAP.md** **Current status** + **Next plan**.
 
+### Companion files
+
+| File | Role |
+|------|------|
+| `ROADMAP.md` | Phase / slice status, do-not-rebuild, slice log |
+| `CHANGELOG.md` | Every change, dated |
+| `HARDENING_PLAN.md` | Bug classes and fixes (Phases 1–4, owed items) |
+| `POST_LAUNCH_PLAN.md` | What's next after launch |
+| `FINANCIAL_AUDIT.md` | Accounting engine review |
+
 ## Current
 
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Partner Record (settle-then-withdraw + profit/capital/return) |
-| **Last tag** | `v0.partner-record` |
-| **Unpushed** | *(none after push)* |
+| **Last completed slice** | Group sale Total box; HEAD also has untagged hardening (Phase 1/3, D10) + partner balance polish |
+| **Last tag** | `v0.14.0-mobile-and-group-sale-total` |
+| **Unpushed** | docs commits ahead of `origin/main` — owner pushes at end |
 | **Next up** | GS-FX forex-only group sales |
 
 
@@ -22,10 +32,10 @@
 |---------|-------|
 | F1 — Turkish thousands-dot parser | ✅ resolved |
 | F2 — no output VAT (P&L not tax-credible) | ⛔ **open, deliberate deferral** — the only substantive one left |
-| F3 — voids rewrite historical reports | ✅ resolved (close-time snapshot) |
-| F4 — no year-end close | ✅ resolved |
-| F5 — coarse cash-flow classification | ✅ resolved (override; picker has no UI home yet — deliberate) |
-| F6 — UTC dates near midnight | ✅ mitigated (hint, no behaviour change) |
+| F3 — voids rewrite historical reports | ✅ closed (close-time snapshot) |
+| F4 — no year-end close | ✅ closed (year-end close) |
+| F5 — coarse cash-flow classification | ✅ closed (override; picker has no UI home yet — deliberate) |
+| F6 — UTC dates near midnight | ✅ mitigated (hint) |
 
 Fixed assets / depreciation are **knowingly absent** — owner decision 2026-07-27, see DECISIONS.md. A capital purchase is expensed, so the month of a big purchase understates profit. Cash figures stay correct.
 
@@ -77,11 +87,13 @@ Owner must run against their staging/prod hosts (not automatable in CI):
 
 ## Resume point
 
-**`v0.73.25-settings-reorg`** — dissolve Set up sidebar; workspace settings in profile menu (Your profile, Restaurant settings, Add restaurant); Team nested under Restaurant settings; domain config moved to mother sections (opening balances, expense items, delivery platforms, manual journals). Prior: **`v0.73.24`** salary period + advance UX (FS).
+**Current (git):** last tag **`v0.14.0-mobile-and-group-sale-total`**. HEAD is further ahead with untagged work — hardening Phase 1 (statement-line release, review date filter, assumed-VAT block), Phase 3 (production smoke, entity-switch remount, file-size ratchet), D10 `classify_statement_line` split (`fa18c03`), and partner balance/UI polish. See `HARDENING_PLAN.md` + `CHANGELOG.md` + `ROADMAP.md` slice log.
 
-**Deploy:** `alembic upgrade head` through **`084`** on Railway (pre-deploy step; auto-deploys from `main`).
+**Prior partner milestone:** **`v0.partner-record`** (settle-then-withdraw + profit/capital/return) and same-day **`v0.partner-splits`** — shipped; do not rebuild.
 
-**Next build:** **`POST_LAUNCH_PLAN.md` § P3** (upload backup). **IC-D** deferred until stable.
+**Deploy:** Railway auto-deploys from `main` with `alembic upgrade head` pre-deploy. Migration head in repo is **`095_delete_entity_function`** (includes `088_membership_grants`, `089_ledger_repairs`, …).
+
+**Next build:** **GS-FX** forex-only group sales (design locked) — see `ROADMAP.md` / `POST_LAUNCH_PLAN.md`. Phase 11 known gap remains: staff salary + advance correction (`BUGLOG.md` 2026-07-13).
 
 **Owner sign-off ✓ (2026-06-28)** — clearance auto-pick (`v0.72.0-clearance-auto-pick`). Phase 12.5 statement-learning arc closed.
 
