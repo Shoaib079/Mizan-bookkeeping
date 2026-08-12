@@ -1,3 +1,5 @@
+STATUS (updated 2026-08-13): Most findings below are RESOLVED — this file is kept as a record, do NOT re-fix. Resolved by ROADMAP Do-not-rebuild: C1+C2 → SEC-1 v0.75.0 · H1 → SEC-2 v0.75.1 · H2 → SEC-3 v0.75.2 · M1/M2/M3/M4 → SEC-4 v0.75.3 · M5 partially (sign-out storage clear in SEC-2). Moot: H3 render.yaml disk — stack moved off Render to Neon + Railway + Vercel + Cloudflare R2 (see ROADMAP Deploy reality). M6 needs no action (launch.py enforces). Verify anything still marked open before relying on it.
+
 # Multi-Tenancy Audit — Mizan
 
 **Date:** 2026-07-03
