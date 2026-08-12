@@ -2,6 +2,120 @@
 
 Every change in plain English, dated (see CURSOR_RULES.md §8).
 
+**Note:** entries are dated; newest work is at the top. See `HARDENING_PLAN.md` for the bug-class scoreboard behind the 9–10 Aug entries.
+
+**Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
+
+## 2026-08-12
+
+**Partner balance — one figure, everywhere it is printed.**
+- A partner's balance **nets the profit they are owed** into the same cash position shown on the page (not a separate story beside it).
+- Profit share is **one figure** in their statement.
+- Partner summary cards end where the page heading does (layout no longer fights the header).
+- **One partner balance** wherever it is printed — directory, detail, balances — same number.
+
+**Docs (alignment):** `ROADMAP.md` / `PROGRESS.md` brought in line with git tags and companion files (owner pushes).
+
+## 2026-08-11
+
+**Bank account naming.**
+- A bank account is **named after its bank**, and asked for once (no duplicate naming prompts).
+
+**Supplier balance column.**
+- The supplier balance column **follows the rows it is printed beside** (aligned with the list, not orphaned).
+
+**Discard import message.**
+- When Discard import refuses, the UI **says why** instead of failing silently.
+
+## 2026-08-10
+
+**Hardening — `classify_statement_line` split (D10) (`fa18c03`).**
+- Twenty-two classification branches become named posters in `statement_posters/`, dispatched from a table guarded against the enum.
+- `statements.py` **3,098 → 1,939** lines; thin dispatcher + `statement_classify_core.py` for post-success line handling. Tail collapse (`28fa6d6`) came first so the move was byte-identical.
+
+**Hardening Phase 3 (file-size ratchet) (`8e79249`).**
+- `FILE_SIZE_BASELINE.json` freezes oversized files — none may grow or join without an explicit split.
+- Frontend account codes get **one home** + guard; correction registry / correct-void machinery split into packages; draft-release guard points at the package.
+
+**Edit/void capability table + owed items (D2–D9 arc).**
+- Edit/void answer for every journal source lives in **one table** (not forty-six branches); UI stops drawing Void buttons that do nothing.
+- Void a **discount**, not the whole sale; refuse a correction that would drop the other leg; partner page asks which buttons it may draw (D2).
+- Credit-note void path; write-off + both FX forms open from the General ledger (D4); Expenses page says it lists hand-recorded expenses only (D5).
+- Delete a restaurant from Settings (D7) — SECURITY DEFINER cascade; 403 (not 500) for unknown restaurant; 204 routes cache correctly.
+- Group sale opens from the ledger; customer page acts in place (D8).
+- D6: one edit target instead of twelve `useState` pairs; component test harness (jsdom).
+- D9: locate guards by **symbol** so a move does not break them; migrate path-reading tests; ratchet the rest.
+
+**Bank statement / download UX.**
+- One scroll area on the bank statement page; a chosen classification **survives** what refreshes underneath it.
+- One drop / one handler for uploads; one **Download** dropdown (not three).
+- Customer page kept inside the file-size ratchet; lazy wrappers named for what they load.
+
+## 2026-08-09
+
+**Hardening Phase 1 — stop the bleeding (`b421f30` / `c916458` / `c618a8a`).**
+- **Statement-line release** moved into the shared void machinery (`b421f30`): voiding a journal retargets/releases linked bank lines from one place (not scattered call sites). Corrections re-point the line; voids release it.
+- **Review-queue date filter** no longer hides outstanding work (`c916458` / `61b0a09`): unsettled tabs are not date-scoped; settled views still use the range.
+- **Assumed VAT** blocks unattended auto-post and **survives confirm** (`c618a8a`) — confirming no longer erases the flag that the KDV was guessed.
+
+**Hardening Phase 3 — smoke + entity remount (`6985414` / `79715a3`).**
+- `smoke_production.py` checks the deployment enforces idempotency (400 without a key, not 401) — first real run against Railway confirmed production is enforcing.
+- **`EntityScopedTree` remount** on restaurant switch (`79715a3`); per-page `useEntitySwitchReset` call sites removed as inert (`2cda2a4`).
+
+**Hardening plan + Phase 0 health.**
+- `HARDENING_PLAN.md` opened: stop the same bug arriving twice; Phase 4 file-size measurement; Phase 0 read-only health checks over the real books; clearer control-account / migration-behind-code errors; partner capital tie to movements that reach 3300.
+
+**Invoice / ledger voids and dates.**
+- Future-dated invoices never auto-post; Review opens in a dialog; TT Mobil invoice date + KDV read correctly.
+- Edit/void posted invoice from the screen you found it on; supplier invoice void from ledger without 404; voiding unposts its draft; released draft keeps its file link for re-upload; every invoice kind shares the same duplicate rule.
+- Ledger can reach an entry dated in the future; route table read the way FastAPI answers it.
+
+## 2026-08-08
+
+**Review queues + invoice auto-post honesty.**
+- Review queues no longer hide invoices dated outside this month (`c916458` started here / completed with Phase 1).
+- Say when an invoice auto-posted, and stop opening review for it; auto-posted invoices are supplier invoices and reversals say so; receipt for an auto-posted invoice; drop-anywhere upload on the window.
+- Voided invoice can be uploaded again; Edit in the General ledger opened nothing for five kinds — wired.
+- Delivery commission points at where it can be fixed; can be corrected and voided; correction measured with the app's own balance function.
+- Toasts no longer render underneath the mobile tab bar.
+
+## 2026-08-07
+
+**Menus + idempotency.**
+- Restaurant carries the details its menu prints; menu PDF; each menu drawn as a bordered box.
+- Pre-fill a group sale's rate from the menu.
+- Every mutation sends an **Idempotency-Key**; drafting needs none (`8cca196`).
+- Missing-setting errors name **which** setting is missing.
+
+## 2026-08-06
+
+**Dishes & menus (Slices 1–2).**
+- Dishes — reusable list menus are built from; a dish can go on more than one kind of menu; Turkish descriptions with app-drafted text; copy a dish list from another restaurant.
+- Menus get a price, a category, and an ordered dish list; menu response built explicitly (not ORM validation shortcuts).
+
+**Customers / FX / write-offs.**
+- Show what a customer owes in the currency they agreed; paid-ahead instead of a negative amount owed; receivables in agreed currency.
+- Write-off can be undone (stranded currency repair); Edit beside the name on every detail page (shared button); write-offs editable.
+- Warn when a receipt takes a customer past settled (without refusing); stop counting voided payments; name amended sales; forex over-payment reported from the API.
+- Every subledger downloadable from one shared exporter.
+
+**Brand / auth / ops.**
+- Brand colour tokens separate from the UI palette; header search styled as a field; sign-in sends users into the app (not stranded at Clerk); desktop sidebar no longer flashes on mobile.
+- Disarmed production guard made audible + go-live runbook; profit allocation preview fits all five columns.
+
+## 2026-08-05
+
+**Group sale Total (`v0.14.0-mobile-and-group-sale-total`).**
+- Group sale: the **Total** box; price a line by its total and post that total exactly.
+
+**Mobile slices 1–5 + colour/clickables.**
+- Form save bar clear of the tab bar; thumb-sized hit areas; ListPage mobile gap; phone view for every list (allowlist empty); wide tables scroll instead of clipping.
+- Secondary/ghost/filter chips/FX toggles get visible colour; "everything clickable has a colour" held in a test; dropdowns open rightward on phone; numeric placeholders read as examples; money fields say why a number was rejected.
+
+**Manual journal + reports polish (`v0.13.0`–`v0.13.4`).**
+- Write a journal entry by hand; cash-flow category + path through a closed month; fix posting/amend/partner export.
+- Partner ledger PDF/Excel restyle (dates as dates, wrap descriptions, dd.mm.yyyy); month pack tints; downloads named after the restaurant; gross profit allocated on reports; English month names; expense accounts in English; opening-balance preview names accounts; API chart limit 200 (not 500); explain negative retained earnings.
+
 ## 2026-07-14 — Frontend rebuild on page archetypes
 
 **Slice 0 + 1 — the contract and the shells (`v0.archetypes-1`):** the app had 21 shared UI *atoms* but no shared **page shapes**, so every page hand-assembled its own layout — four entity detail pages ended up with four arrangements of the same four ingredients, and `rounded-lg border border-border bg-card` was pasted inline across 40+ files. That is the root cause of "it feels like different people made it"; atoms alone never buy consistency.
