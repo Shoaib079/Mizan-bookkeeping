@@ -4,7 +4,7 @@
 
 This file governs HOW the app is built. WHAT the app must do lives in `Restaurant_Bookkeeping_App_Decisions.md` — that document is the single source of truth for requirements. If these two ever disagree, STOP and ask the owner; do not guess.
 
-**Companion files:** `ARCHITECTURE.md` = how the code is *structured* (feature modules, single posting boundary, adapters — follow it to avoid a monolith); `DESIGN_SYSTEM.md` = how it *looks and behaves* (including the modern-UX rules: Enter submits, type-or-pick dates, type-to-filter pickers, autosave); `ROADMAP.md` = where we are in the build (phase, slice, status — updated after every slice).
+**Companion files:** `ARCHITECTURE.md` = how the code is *structured* (feature modules, single posting boundary, adapters — follow it to avoid a monolith); `DESIGN_SYSTEM.md` = how it *looks and behaves* (including the modern-UX rules: Enter submits, type-or-pick dates, type-to-filter pickers, autosave); `ROADMAP.md` = where we are in the build (phase, slice, status — updated after every slice). `HARDENING_PLAN.md` = the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4) — read it before fixing any bug.
 
 ---
 
@@ -214,9 +214,10 @@ non-negotiable correctness lives in tests and the owner's gate.
 3. **Read `PROGRESS.md`** → resume point (branch, slice name, step in the completion gate, blockers).
 4. **Read `CHANGELOG.md`** → last entry (what changed recently).
 5. **Read `BUGLOG.md`** if fixing bugs or investigating failures — check for recurring issues before re-patching.
-6. **Search the codebase** for the slice area — grep/read existing code and tests. NEVER write a new version of something that already exists; continue or fix the existing one.
-7. **State aloud before editing:** *"Resuming slice [X] at step [Y] of the completion gate."* Wait for owner confirmation if anything is ambiguous.
-8. **Run tests** to confirm existing work is healthy before adding to it.
+6. **Read `HARDENING_PLAN.md`** — the 12 bug classes, the scoreboard, and the owed items. Check whether your task touches a known class or an owed item before you start.
+7. **Search the codebase** for the slice area — grep/read existing code and tests. NEVER write a new version of something that already exists; continue or fix the existing one.
+8. **State aloud before editing:** *"Resuming slice [X] at step [Y] of the completion gate."* Wait for owner confirmation if anything is ambiguous.
+9. **Run tests** to confirm existing work is healthy before adding to it.
 
 Only after these steps may new work begin.
 
@@ -235,6 +236,7 @@ Only after these steps may new work begin.
 [ ] Read PROGRESS.md → resume point
 [ ] Read CHANGELOG.md → last entry
 [ ] Read BUGLOG.md (if bug work)
+[ ] Read HARDENING_PLAN.md (bug classes + owed items)
 [ ] Search codebase for slice area
 [ ] State: "Resuming slice X at step Y"
 [ ] Run pytest (baseline health check)
@@ -295,6 +297,7 @@ Maintain these files and update them as part of every slice — they are how wor
 - **`BUGLOG.md`** — every bug: symptom, root cause, fix, guarding test.
 - **`DECISIONS.md`** — any significant technical choice and why (so nothing gets silently undone later).
 - **`TESTS.md`** — the test register and status.
+- **`HARDENING_PLAN.md`** — the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4). Update it when a bug class is closed or a new instance is found.
 
 ---
 
