@@ -372,7 +372,7 @@ export default function PartnerDetailPage() {
             <PartnerRecordForm
               open={recordOpen}
               partnerId={partnerId}
-              netBalanceKurus={ledger.net_balance_kurus}
+              netBalanceKurus={partnerBalance(ledger)}
               frontedBalanceKurus={ledger.balance_kurus}
               drawingsNetKurus={ledger.drawings_net_kurus}
               onClose={() => setRecordOpen(false)}

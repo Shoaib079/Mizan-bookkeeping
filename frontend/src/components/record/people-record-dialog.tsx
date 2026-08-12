@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
+import { extractPartnerBalanceKurus } from "@/lib/partner-balance";
 import { parseTrDate } from "@/lib/money";
 import type { PersonPickerKind, RecordActionKey } from "@/lib/record-actions";
 
@@ -43,7 +44,6 @@ type Props = {
 type LedgerBalance = {
   balance_kurus: number;
   capital_balance_kurus?: number;
-  net_balance_kurus?: number;
   unpaid_profit_kurus?: number;
 };
 
@@ -185,7 +185,7 @@ export function PeopleRecordDialog({
       .then((ledger) => {
         if (cancelled) return;
         setBalanceKurus(ledger.balance_kurus);
-        setNetBalanceKurus(ledger.net_balance_kurus ?? ledger.balance_kurus);
+        setNetBalanceKurus(extractPartnerBalanceKurus(ledger));
         setCapitalBalanceKurus(ledger.capital_balance_kurus ?? 0);
         setUnpaidProfitKurus(ledger.unpaid_profit_kurus ?? 0);
       })

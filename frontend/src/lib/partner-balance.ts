@@ -39,18 +39,30 @@ export function formatPartnerNetBalance(balanceKurus: number): string {
   return formatTry(balanceKurus);
 }
 
-export function extractPartnerNetBalanceKurus(res: unknown): number {
+/** A partner's balance out of a raw ledger response, for the list and the
+ *  balances hub.
+ *
+ * Same precedence as `partnerBalance` above and for the same reason: the
+ * netted figure first, `net_balance_kurus` only as a fallback while an older
+ * response is in flight. It read the narrow one, so the Partners list showed
+ * −80.800,00 against a detail page that said 12.036,09 — one figure fixed on
+ * the page it was reported on, and three others left behind it.
+ */
+export function extractPartnerBalanceKurus(res: unknown): number {
   const body = res as {
+    current_account_kurus?: unknown;
     net_balance_kurus?: unknown;
     balance_kurus?: unknown;
   };
   const raw =
-    body.net_balance_kurus !== undefined
-      ? body.net_balance_kurus
-      : body.balance_kurus;
+    body.current_account_kurus !== undefined
+      ? body.current_account_kurus
+      : body.net_balance_kurus !== undefined
+        ? body.net_balance_kurus
+        : body.balance_kurus;
   const n = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isFinite(n)) {
-    throw new Error("partner ledger missing net_balance_kurus");
+    throw new Error("partner ledger has no balance figure");
   }
   return n;
 }

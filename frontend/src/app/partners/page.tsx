@@ -28,7 +28,7 @@ import {
 } from "@/lib/directory-list";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
-import { extractPartnerNetBalanceKurus } from "@/lib/partner-balance";
+import { extractPartnerBalanceKurus } from "@/lib/partner-balance";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
 
 type PartnerListResponse = {
@@ -181,7 +181,7 @@ export default function PartnersPage() {
     entityId,
     partnerIds,
     (id) => `/partners/${id}/ledger`,
-    (res) => extractPartnerNetBalanceKurus(res),
+    (res) => extractPartnerBalanceKurus(res),
     balanceRefresh,
   );
 
