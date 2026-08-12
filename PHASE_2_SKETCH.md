@@ -1,6 +1,6 @@
 # Phase 2 — one answer to "can this be edited or voided"
 
-Read this before any code is written. Nothing here is built yet.
+STATUS (updated 2026-08-13): Steps 1-2 (backend capability table + resolver collapse) LANDED — see 'How it actually ended' below. Steps 3-4 (re-point the five frontend surfaces, delete subledger-actions.ts) were ABANDONED on evidence and replaced by a drift-guard. This file is now a design record, not a to-do. Cross-ref: HARDENING_PLAN.md (Phase 2 + Class 1).
 
 ---
 
