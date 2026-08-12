@@ -56,19 +56,28 @@ function NavHistoryTracker() {
 export function AppShell({
   children,
   title = "Overview",
+  /** Section layouts already show tabs — skip the repeating trail above them. */
+  hideTrail = false,
 }: {
   children: React.ReactNode;
   title?: string;
+  hideTrail?: boolean;
 }) {
-  return <AppShellInner title={title}>{children}</AppShellInner>;
+  return (
+    <AppShellInner title={title} hideTrail={hideTrail}>
+      {children}
+    </AppShellInner>
+  );
 }
 
 function AppShellInner({
   children,
   title,
+  hideTrail,
 }: {
   children: React.ReactNode;
   title: string;
+  hideTrail: boolean;
 }) {
   const pathname = usePathname();
   const isMobile = useIsMobileShell();
@@ -106,7 +115,7 @@ function AppShellInner({
         <NavHistoryTracker />
       </Suspense>
       {!isMobile && <PageBackLink />}
-      {!isMobile && trail && (
+      {!isMobile && !hideTrail && trail && (
         <p className="mb-1 text-xs text-muted-foreground">{trail}</p>
       )}
       <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>

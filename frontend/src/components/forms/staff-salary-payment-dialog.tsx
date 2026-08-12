@@ -521,40 +521,40 @@ export function StaffSalaryPaymentDialog({
         </p>
 
         {!isStatement && !hidePaymentDate && (
-          <>
-            <div>
-              <Label htmlFor="pay-desc">Description</Label>
-              <Input
-                id="pay-desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                required
-              />
-            </div>
-            {isTry ? (
-              <StaffSalaryFundingFields
-                fundingMode={fundingMode}
-                onFundingModeChange={setFundingMode}
-                tryAccounts={tryAccounts}
-                paymentGlAccountId={paymentGlAccountId}
-                onPaymentGlAccountIdChange={setPaymentGlAccountId}
-                partners={partners}
-                partnerId={partnerId}
-                onPartnerIdChange={setPartnerId}
-                showAccountRequiredHint={cashPreview <= 0}
-              />
-            ) : (
-              <StaffSalaryFxPaymentFields
-                payCurrency={payCurrency}
-                fxAccounts={fxAccounts}
-                fxWalletId={fxWalletId}
-                onFxWalletIdChange={setFxWalletId}
-                tryCostText={tryCostText}
-                onTryCostTextChange={setTryCostText}
-              />
-            )}
-          </>
+          <div>
+            <Label htmlFor="pay-desc">Description</Label>
+            <Input
+              id="pay-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+          </div>
         )}
+
+        {!isStatement &&
+          (isTry ? (
+            <StaffSalaryFundingFields
+              fundingMode={fundingMode}
+              onFundingModeChange={setFundingMode}
+              tryAccounts={tryAccounts}
+              paymentGlAccountId={paymentGlAccountId}
+              onPaymentGlAccountIdChange={setPaymentGlAccountId}
+              partners={partners}
+              partnerId={partnerId}
+              onPartnerIdChange={setPartnerId}
+              showAccountRequiredHint={cashPreview <= 0}
+            />
+          ) : (
+            <StaffSalaryFxPaymentFields
+              payCurrency={payCurrency}
+              fxAccounts={fxAccounts}
+              fxWalletId={fxWalletId}
+              onFxWalletIdChange={setFxWalletId}
+              tryCostText={tryCostText}
+              onTryCostTextChange={setTryCostText}
+            />
+          ))}
 
         {isStatement && cashPreview > 0 && (
           <p className="text-xs text-muted-foreground">

@@ -1,18 +1,28 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { Children } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { SectionTabs } from "@/components/layout/section-tabs";
 import type { NavSectionId } from "@/lib/nav-sections";
-import { pageTitleForPathname } from "@/lib/nav-sections";
+
+/** Shell title = section name. Tab labels live in SectionTabs only (no duplicate trail). */
+const SECTION_SHELL_TITLE: Record<NavSectionId, string> = {
+  sales: "Sales",
+  banking: "Banking",
+  suppliers: "Suppliers",
+  customers: "Customers",
+  staff: "Staff",
+  partners: "Partners",
+  review: "Review",
+  delivery: "Delivery",
+};
 
 type SectionShellProps = {
   sectionId: NavSectionId;
   ariaLabel: string;
   children: React.ReactNode;
-  /** When set, overrides pathname-derived title (e.g. account detail pages). */
+  /** When set, overrides the section name (e.g. account detail pages). */
   title?: string;
 };
 
@@ -22,9 +32,11 @@ export function SectionShell({
   children,
   title,
 }: SectionShellProps) {
-  const pathname = usePathname();
   return (
-    <AppShell title={title ?? pageTitleForPathname(pathname)}>
+    <AppShell
+      title={title ?? SECTION_SHELL_TITLE[sectionId]}
+      hideTrail
+    >
       <div>
         <SectionTabs sectionId={sectionId} ariaLabel={ariaLabel} />
         <div>{Children.toArray(children)}</div>

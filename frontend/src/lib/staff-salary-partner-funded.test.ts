@@ -20,6 +20,10 @@ describe("StaffSalaryPaymentDialog — partner-funded path", () => {
     const dialog = sourceDeclaring("StaffSalaryPaymentDialog");
     expect(dialog).toContain("StaffSalaryFundingFields");
     expect(dialog).toContain("postStaffSalaryPayment");
+    // Record desk passes hidePaymentDate — Paid from must still render.
+    expect(dialog).toMatch(
+      /\{\s*!isStatement &&\s*\(isTry \? \(\s*<StaffSalaryFundingFields/,
+    );
     const submit = sourceDeclaring("postStaffSalaryPayment");
     expect(submit).toContain("partner-funded-payments");
     expect(submit).toContain("/payments");
