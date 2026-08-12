@@ -151,4 +151,58 @@ describe("partnerCashSummary", () => {
     expect(summary.capitalInBusinessKurus).toBe(5_170_000);
     expect(summary.expensesFrontedKurus).toBe(450_000);
   });
+
+  /* Three figures on one screen, and no way to tell which was the answer.
+   *
+   * The heading said the partner owed 12.036,09, this card said 80.800,00 in
+   * red, and the card beside it said they were owed 68.763,91 of profit. All
+   * three were computed correctly; only the heading had been taught to net.
+   */
+  describe("the card ends where the page heading does", () => {
+    const REPORTED = {
+      drawingsNetKurus: -8_080_000,
+      currentAccountKurus: -1_203_609,
+    };
+
+    it("takes the net from the balance rather than recomputing it", () => {
+      // Re-adding the card's own lines is how a total starts disagreeing with
+      // the one above it — the supplier ledger did exactly that.
+      const summary = partnerCashSummary([], REPORTED);
+      expect(summary.netOwedByPartnerKurus).toBe(1_203_609);
+    });
+
+    it("the three lines add up", () => {
+      const summary = partnerCashSummary([], REPORTED);
+      expect(
+        summary.drawingsOutstandingKurus - summary.offsetByBalancesKurus,
+      ).toBe(summary.netOwedByPartnerKurus);
+    });
+
+    it("the offset is the gap, not the unpaid profit", () => {
+      /* They are the same figure only while fronted expenses and partner
+       * loans are zero. Printing the unpaid profit would leave the column
+       * short for anyone carrying either. */
+      const summary = partnerCashSummary([], {
+        drawingsNetKurus: -8_080_000,
+        // 68.763,91 of profit and 100.000 fronted, so the partner is owed more
+        // than they took: nothing is outstanding on balance.
+        currentAccountKurus: 6_876_391 + 10_000_000 - 8_080_000,
+      });
+      expect(summary.netOwedByPartnerKurus).toBe(0);
+      expect(summary.offsetByBalancesKurus).toBe(
+        summary.drawingsOutstandingKurus,
+      );
+    });
+
+    it("says nothing about an offset when there is none", () => {
+      // Guard the guard: a partner with drawings and no profit must still see
+      // the plain outstanding figure, not a zeroed net.
+      const summary = partnerCashSummary([], {
+        drawingsNetKurus: -8_080_000,
+        currentAccountKurus: -8_080_000,
+      });
+      expect(summary.offsetByBalancesKurus).toBe(0);
+      expect(summary.netOwedByPartnerKurus).toBe(8_080_000);
+    });
+  });
 });

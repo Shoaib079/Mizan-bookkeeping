@@ -146,6 +146,7 @@ export default function PartnerDetailPage() {
         capitalContributionKurus: ledger?.capital_contribution_kurus,
         capitalBalanceKurus: ledger?.capital_balance_kurus,
         reimbursementBalanceKurus: ledger?.balance_kurus,
+        currentAccountKurus: ledger ? partnerBalance(ledger) : undefined,
       }),
     [rows, ledger],
   );

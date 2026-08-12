@@ -63,8 +63,17 @@ export type PartnerCashSummary = {
   cashTakenKurus: number;
   /** Personal share of business expenses, peeled off via /split. */
   personalCostsKurus: number;
-  /** Positive when the partner still owes money taken out. */
+  /** Drawings no settlement posting has cleared yet. Gross: it takes no
+   *  account of profit the partner is owed. */
   drawingsOutstandingKurus: number;
+  /** How much of that is met by what the business owes them — unpaid profit,
+   *  and any fronted expenses or loans. Zero when nothing offsets it. */
+  offsetByBalancesKurus: number;
+  /** What the partner actually owes once that offset is applied. Taken from
+   *  the ledger's own balance rather than recomputed here, so the card cannot
+   *  end on a different figure from the one at the top of the page — the two
+   *  were saying 80.800 and 12.036,09 on the same screen. */
+  netOwedByPartnerKurus: number;
   expensesFrontedKurus: number;
   capitalContributedKurus: number;
   capitalInBusinessKurus: number;
@@ -125,6 +134,8 @@ export function partnerCashSummary(
     capitalContributionKurus?: number;
     capitalBalanceKurus?: number;
     reimbursementBalanceKurus?: number;
+    /** The netted position the page's headline shows. */
+    currentAccountKurus?: number;
   } = {},
 ): PartnerCashSummary {
   const live = effectiveRows(rows);
@@ -143,12 +154,21 @@ export function partnerCashSummary(
     totals.reimbursementBalanceKurus ?? sumByType(live, "expense_fronted");
   // drawings_net is negative while money is still out.
   const net = totals.drawingsNetKurus ?? 0;
+  const outstanding = net < 0 ? magnitude(net) : 0;
+  // current account is negative while the partner owes, after profit.
+  const current = totals.currentAccountKurus ?? 0;
+  const owed = current < 0 ? magnitude(current) : 0;
 
   return {
     drawingsTakenKurus: drawingsTaken,
     cashTakenKurus: cashTaken,
     personalCostsKurus: personalCosts,
-    drawingsOutstandingKurus: net < 0 ? magnitude(net) : 0,
+    drawingsOutstandingKurus: outstanding,
+    // The difference, not the unpaid profit itself, so the three lines always
+    // add up. Fronted expenses and partner loans sit in the same balance and
+    // would otherwise leave the column short.
+    offsetByBalancesKurus: Math.max(0, outstanding - owed),
+    netOwedByPartnerKurus: owed,
     expensesFrontedKurus: fronted,
     capitalContributedKurus: contributions,
     capitalInBusinessKurus: totals.capitalBalanceKurus ?? 0,

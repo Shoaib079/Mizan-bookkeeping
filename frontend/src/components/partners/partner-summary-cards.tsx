@@ -108,7 +108,8 @@ export function PartnerProfitCard({
       accent
       footnote={
         profit.unpaidKurus > 0
-          ? "Held in the business as capital until paid out."
+          ? "Held in the business until paid out — and set against anything " +
+            "the partner still owes on drawings, so it is not free to spend twice."
           : undefined
       }
     >
@@ -176,15 +177,36 @@ export function PartnerCashCard({ cash }: { cash: PartnerCashSummary }) {
           value={formatTry(cash.drawingsTakenKurus)}
         />
       )}
+      {/* Gross, then what meets it, then what is actually owed.
+        *
+        * This line alone used to sit here in red saying 80.800,00 while the
+        * heading of the page said the partner owed 12.036,09 and the card
+        * beside it said they were owed 68.763,91 of profit. Three figures,
+        * one screen, no way to tell which was the answer. The last of these
+        * comes from the same balance as the heading, so they cannot part. */}
       <Line
         label="Drawings outstanding"
         value={formatTry(cash.drawingsOutstandingKurus)}
         valueClassName={
-          cash.drawingsOutstandingKurus > 0
-            ? "text-destructive"
-            : "text-success"
+          cash.offsetByBalancesKurus > 0 ? undefined : "text-destructive"
         }
       />
+      {cash.offsetByBalancesKurus > 0 && (
+        <>
+          <Line
+            label="Offset by profit owed to you"
+            value={`−${formatTry(cash.offsetByBalancesKurus)}`}
+          />
+          <Line
+            total
+            label="Partner owes"
+            value={formatTry(cash.netOwedByPartnerKurus)}
+            valueClassName={
+              cash.netOwedByPartnerKurus > 0 ? "text-destructive" : "text-success"
+            }
+          />
+        </>
+      )}
       <Line
         label="Expenses fronted"
         value={formatTry(cash.expensesFrontedKurus)}
