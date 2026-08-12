@@ -4,6 +4,16 @@
 
 **Rule:** Nothing advances to the next slice until the current slice passes the completion gate (characterized → audited → tested → fixed → API verified → self-audited → ROADMAP updated → commit/tag) and the owner signs off.
 
+### Companion files
+
+| File | Role |
+|------|------|
+| `PROGRESS.md` | Exact resume point (phase, last tag, next up) |
+| `CHANGELOG.md` | Every change, dated |
+| `HARDENING_PLAN.md` | Bug classes and fixes (Phases 1–4, owed items) |
+| `POST_LAUNCH_PLAN.md` | What's next after launch |
+| `FINANCIAL_AUDIT.md` | Accounting engine review |
+
 ---
 
 ## Current status
@@ -16,11 +26,11 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | **GS-FX** forex-only group sales (design locked) |
-| **Last completed slice** | Partner returned cash gates on drawings net (not capital) |
-| **Last commit/tag**      | `v0.partner-return-drawings-net` |
+| **Last completed slice** | Partner Record (settle-then-withdraw + profit/capital/return) |
+| **Last commit/tag**      | `v0.partner-record` |
 
 
-**FINANCIAL_AUDIT is now closed except F2.** F1, F3, F4 resolved; F5 closed as-is; F6 mitigated. **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
+**FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
 **Still deferred, unchanged:** **GS-FX forex-only group sales** (design locked, NOT built — the biggest deferred item, money-critical, ship with tests); per-menu period report for group/agency sales; A6 ⌘K palette gaps (staff/partners/transaction search); A7 Agency/Customers naming; TR localization; a create-manual-journal form (deliberately absent — see FINANCIAL_AUDIT F5).
 
@@ -45,13 +55,19 @@
 
 **2b — Unified statement review hub (frontend) — DONE (`v0.71.16`).** `/banking/review`: status tabs (needs review · auto-posted · posted · linked), inline confirm/classify/correct/create-supplier, suggestion display, token trim, `rule_auto` highlighting.
 
-**The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete** (`v0.69.13-ui-gaps`). **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
+**The whole journey:** Phases 0–10 = backend + frontend v1 + §10 UX (`v0.67.x`). **Phase 11** = owner-visible product fixes surfaced by code audit (onboarding, corrections, UX) — **complete except known gap (staff salary + advance correction — see BUGLOG 2026-07-13)**. **Phase 12** = deployment & go-live. **Phase 13** = post-launch parking lot. Build strictly in order, one slice at a time, never skipping the completion gate or the golden rules below.
 
 ### Do not rebuild (already done — git is source of truth)
 
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Hardening Phase 1 (statement-line release, date filter, assumed-VAT block)       | `b421f30` / `c916458` / `c618a8a` (9 Aug)         | done           | Re-add per-void-site statement reset; re-hide needs-review behind date defaults; strip `assumed_vat` on confirm            |
+| Hardening Phase 3 (production smoke, entity-switch remount, file-size ratchet)   | `6985414` / `79715a3` / `8e79249` (9–10 Aug)      | done           | Re-add per-page `useEntitySwitchReset`; drop `smoke_production.py`; loosen `FILE_SIZE_BASELINE.json`                       |
+| `classify_statement_line` split (D10)                                            | `fa18c03` (10 Aug)                                | done           | Re-inline twenty-two classify branches into `statements.py`; bypass `statement_posters/` table                             |
+| Custom member access / grants                                                    | `v0.custom-member-access`                         | done           | Re-hardcode nav/API by role name; drop `entity_memberships.grants` / migration `088`                                       |
+| Partner pack Summary                                                             | `v0.partner-pack-summary-roll-forward`            | done           | Re-build Summary cash roll-forward; replace opening/closing chain with ad-hoc profit→cash walk                             |
+| Bank reconciliation closing balance fix                                          | `v0.bank-reconciliation-closing-fix`              | done           | Re-walk Bakiye out of file order; ignore statement chain closing when stating period-end book balance                      |
 | P8 — Store / grocery card spend (store_purchase)                                 | `v0.p8-store-purchase`                            | done           | Re-build store_purchase classify/detect; duplicate migration `074`                                                         |
 | Expense picker unified (manual + bank one source)                                | `v0.expense-picker-unify`                         | done           | Re-add `code.startsWith("5")` filter on bank side; both pickers must use `filterExpenseAccounts` (single source)           |
 | Self-service expense categories                                                  | `v0.expense-categories`                           | done           | Re-hardcode chart to defaults only; accept client `account_type`/`code` on create; categories are EXPENSE-only, band 5900–5999, entity-scoped |
@@ -885,7 +901,7 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ## Phase 11 — Pre-go-live product fixes (owner 2026-06-25, audit-driven)
 
-**Status: COMPLETE** (`v0.69.13-ui-gaps`) — all slices 11.1–11.22 done. **Next:** Phase 12 (deployment).
+**Status:** Phase 11 complete except known gap (staff salary + advance correction — see BUGLOG 2026-07-13).
 
 **Purpose:** Close gaps found by adversarial code audit vs `DECISIONS.md` / owner daily workflow — onboarding traps (empty cash picker), post-post corrections, entity setup, and UX bugs — **without** re-litigating Phase 10 or core posting rules.
 
@@ -1558,6 +1574,8 @@ Then proceed to **Phase 11 — Pre-go-live product fixes**.
 
 ## Phase 12 — Deployment & go-live
 
+> **Phase 12 was written for Render; actual deploy is Railway — see Deploy reality section above.**
+
 Take the tested app to a real, secure production environment and put real data in it.
 
 
@@ -1887,6 +1905,9 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-10 | `classify_statement_line` split (D10)            | `fa18c03`                                              | Twenty-two classify branches → named posters in `statement_posters/`; thin dispatcher + `statement_classify_core.py`; `statements.py` 3,098 → 1,939; poster table guarded vs enum |
+| 2026-08-09 | Hardening Phase 3 — smoke, remount, file-size    | `6985414` / `79715a3` / `8e79249`                      | Production smoke (`smoke_production.py` — idempotency enforced on Railway); `EntityScopedTree` remount on entity switch; `FILE_SIZE_BASELINE.json` ratchet |
+| 2026-08-09 | Hardening Phase 1 — stop the bleeding            | `b421f30` / `c916458` / `c618a8a`                      | Statement-line release inside shared void machinery; review queues date filter only on settled tabs; assumed-VAT blocks auto-post and survives confirm |
 | 2026-08-03 | Expense notes in UI                          | `v0.expense-notes`                                     | Optional notes on manual/correct expense · Review list column · search includes notes · fix expense list q= sum query |
 | 2026-08-03 | DateInput desktop calendar readability       | `v0.date-input-desktop-calendar`                       | Fixed 280px desktop popover + larger day cells; mobile portal sizing unchanged |
 | 2026-08-03 | Mobile date input stability                  | `v0.mobile-date-input`                                 | 16px inputs on mobile (no iOS zoom) · DateInput calendar portal + viewport clamp · responsive ReportDateRange · period picker sheet on mobile |
@@ -1907,9 +1928,9 @@ Take the tested app to a real, secure production environment and put real data i
 | 2026-08-01 | e-Fatura PDF soft-hyphen dates + 1% KDV | `v0.efatura-soft-hyphen-date`                          | Parse invoice dates with Unicode dash variants (soft hyphen U+00AD); BBD mango supply fixture; single-rate VAT base uses net matrah; pytest |
 | 2026-08-01 | Bank activity — opening balance rows           | `v0.bank-activity-opening-balance`                     | Account activity timeline includes **Opening balance** GL lines on the bank sub-account (go-live date in range); posted in/out + running book align with closing; panel copy updated; pytest |
 | 2026-08-01 | Statement Bakiye column not in description     | `v0.statement-bakiye-column-fix`                       | Exclude Bakiye/Güncel Bakiye from description merge; Bakiye maps to closing balance only; remove Extra description on import UI; sanitize saved mappings; 15 pytest + vitest |
-| 2026-08-04 | Split hub (bank expense → partner)             | *(uncommitted — await owner)*                          | `/split` + Record → Split; personal peel → Dr 3200 / Cr expense + partner drawing; `expense_personal_split`; 3 pytest |
-| 2026-08-04 | Partner split buy (amount split)               | *(uncommitted — await owner)*                          | Total + personal → auto restaurant; note + optional invoice #; pocket fronted / AP-clear `partner_supplier_paid`; `POST .../split-buys`; 8 pytest |
-| 2026-08-04 | Partner pay profit (cash / bank)               | *(uncommitted — await owner)*                          | Allocate books-only; cash Pay profit; bank via statement **Partner profit paid**; period-scoped netting; unpaid cap |
+| 2026-08-04 | Split hub (bank expense → partner)             | `v0.partner-splits`                                    | `/split` + Record → Split; personal peel → Dr 3200 / Cr expense + partner drawing; `expense_personal_split`; 3 pytest |
+| 2026-08-04 | Partner split buy (amount split)               | `v0.partner-splits`                                    | Total + personal → auto restaurant; note + optional invoice #; pocket fronted / AP-clear `partner_supplier_paid`; `POST .../split-buys`; 8 pytest |
+| 2026-08-04 | Partner pay profit (cash / bank)               | `v0.partner-splits` / `v0.partner-record`              | Allocate books-only; cash Pay profit; bank via statement **Partner profit paid**; period-scoped netting; unpaid cap; Record desk unified same day |
 | 2026-08-01 | Partner unified net ledger + profit netting    | `v0.partner-unified-ledger`                            | `net_balance_kurus` for cash-settleable movements only; contribution/profit/drawings breakdown; running balance; profit `net_against_drawings`; UI on detail/directory/balances; 1337 pytest + build green |
 | 2026-08-01 | Searchable statement classification picker     | `v0.statement-classify-search`                         | `ClassificationPicker` + combobox keywords (supplier, POS, tax/SGK, etc.) on classify bar, bulk bar, review rows; 16 vitest |
 | 2026-08-01 | Suppliers total payables summary               | `v0.suppliers-payables-summary`                        | Total payables card at top of supplier directory (matches Balances payables styling); removed easy-to-miss footnote at bottom |
