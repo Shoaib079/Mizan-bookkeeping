@@ -2,6 +2,14 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-08-13 — Partner-funded TRY salary (owe partner on 2150)
+
+**Choice:** A partner may pay a staff salary **from their pocket**. The company **owes the partner** on reimbursement payable (`2150`). The salary stays in the **staff flow** so expense account `5100` posts **once** (normal accrual Dr `5100` / Cr `2250`). Partner-funded pay is Dr `2250` / Cr `1300` (advance offset, same rule as cash, including excess parked as advance) / Cr `2150` for the remainder — no cash or bank lines. **TRY only** (FX-paid workers keep the existing FX salary path). Correction is **void-and-re-enter** — UI offers **Void only**, no in-place Edit. One journal writes staff + partner (`salary_fronted` / source `partner_salary_fronted`); dual void reverses GL + both subledgers. Repayment reuses existing Pay partner / reimbursement. Partner-fronted *expense* APIs reject `5100`.
+
+**Why:** Booking salary as a partner-fronted expense would double-count `5100` and skip the staff ledger. Paying through staff keeps accruals, advances, and employee balances correct while still owing the partner on `2150`.
+
+**Product mirror:** Restaurant_Bookkeeping_App_Decisions.md §16 / §17.
+
 ## 2026-08-04 — Profit allocation: typed amount wins; Edit on GL
 
 **Choice:** When allocating profit, a typed TRY amount is what gets distributed. Optional period from/to only sets the drawings netting cutoff (`netting_as_of`). Leave amount blank to distribute that period’s full net P&L. Owners can **Edit** a posted partner profit share on the general ledger (void+repost) so capital / unpaid figures update without a separate void campaign.

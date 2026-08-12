@@ -24,7 +24,7 @@
 | **Last completed slice** | Partner-funded TRY salary (`v0.partner-funded-salary`) |
 | **Last tag** | `v0.partner-funded-salary` |
 | **Unpushed** | yes — owner pushes when ready (do not push from agent) |
-| **Next up** | GS-FX forex-only group sales · independent review + owner sign-off on partner-funded salary |
+| **Next up** | GS-FX forex-only group sales |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

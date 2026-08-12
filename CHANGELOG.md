@@ -6,9 +6,17 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
-## 2026-08-12
+## 2026-08-13
 
 **Partner-funded TRY salary (`v0.partner-funded-salary`).**
+- A partner can **pay a staff salary from their pocket**; the company **owes that partner** on `2150`.
+- Salary stays in the **staff flow** so expense `5100` posts **once** (accrual). Partner pay: Dr `2250` / Cr `1300` (advance offset or excess-as-advance) / Cr `2150` — no cash lines.
+- **TRY only**; FX pay unchanged. Correction is **void-and-re-enter** (Void only — no Edit).
+- Repay later with existing Pay partner / reimbursement. Expense-fronted APIs reject `5100`.
+
+## 2026-08-12
+
+**Partner-funded TRY salary (code landed; tracking finalized 2026-08-13).**
 - Record → Salary → **Paid from: Cash drawer | Partner (owe partner)** (TRY only; FX pay unchanged).
 - Accrual unchanged (Dr `5100` / Cr `2250` once). Partner pay: Dr `2250` / Cr `1300` (advance offset) / Cr `2150` — no cash lines; one journal writes staff + partner (`salary_fronted`).
 - Void-and-re-enter only (dedicated dual void). Repay via existing Pay partner / reimbursement.

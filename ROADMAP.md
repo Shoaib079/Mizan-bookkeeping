@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | **GS-FX** forex-only group sales (design locked) |
-| **Last completed slice** | Partner Record (settle-then-withdraw + profit/capital/return) |
-| **Last commit/tag**      | `v0.partner-record` |
+| **Last completed slice** | Partner-funded TRY salary (`v0.partner-funded-salary`) |
+| **Last commit/tag**      | `v0.partner-funded-salary` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1906,7 +1906,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-12 | Partner-funded TRY salary                        | `v0.partner-funded-salary`                             | Pay salary from partner pocket: Dr 2250 / Cr 1300+2150; `salary_fronted` + `partner_salary_fronted`; dual void; void-only UI; API rejects 5100 on expense-fronted; repay via existing Pay partner |
+| 2026-08-13 | Partner-funded TRY salary                        | `v0.partner-funded-salary`                             | Partner funds a salary from pocket; Dr 2250 / Cr 2150; advance offset + excess-as-advance; void-and-reenter; TRY-only; void-only, no Edit |
 | 2026-08-10 | `classify_statement_line` split (D10)            | `fa18c03`                                              | Twenty-two classify branches → named posters in `statement_posters/`; thin dispatcher + `statement_classify_core.py`; `statements.py` 3,098 → 1,939; poster table guarded vs enum |
 | 2026-08-09 | Hardening Phase 3 — smoke, remount, file-size    | `6985414` / `79715a3` / `8e79249`                      | Production smoke (`smoke_production.py` — idempotency enforced on Railway); `EntityScopedTree` remount on entity switch; `FILE_SIZE_BASELINE.json` ratchet |
 | 2026-08-09 | Hardening Phase 1 — stop the bleeding            | `b421f30` / `c916458` / `c618a8a`                      | Statement-line release inside shared void machinery; review queues date filter only on settled tabs; assumed-VAT blocks auto-post and survives confirm |
