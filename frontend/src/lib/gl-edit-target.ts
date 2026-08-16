@@ -44,6 +44,18 @@ export function editTargetFor(
           journal_entry_id: text(ctx.journal_entry_id),
         },
       };
+    case "partner_funded_salary":
+      // No period and no extra days on purpose — the accrual is a separate
+      // entry this payment settles, and the backend refuses to move it.
+      return {
+        kind: "partner_funded_salary",
+        entry: {
+          journal_entry_id: journalEntryId,
+          movement_date: text(ctx.movement_date),
+          description: text(ctx.description),
+          amount_kurus: num(ctx.amount_kurus),
+        },
+      };
     case "partner_profit_allocation":
       return {
         kind: "partner_profit_allocation",
@@ -64,6 +76,9 @@ export function editTargetFor(
           movement_type: text(ctx.movement_type),
           amount_kurus: num(ctx.amount_kurus),
           description: text(ctx.description),
+          // So the form reopens on the account the money actually moved
+          // through, rather than an empty picker.
+          payment_account_id: maybeText(ctx.payment_account_id),
         },
       };
     case "staff_ledger":

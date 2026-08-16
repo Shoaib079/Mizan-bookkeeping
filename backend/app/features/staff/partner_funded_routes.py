@@ -17,6 +17,8 @@ from app.features.auth.models import User
 from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.features.staff import partner_funded_http
 from app.features.staff.partner_funded_schema import (
+    PartnerFundedSalaryCorrect,
+    PartnerFundedSalaryCorrectOut,
     PartnerFundedSalaryCreate,
     PartnerFundedSalaryResponse,
 )
@@ -83,4 +85,35 @@ def void_partner_funded_salary_route(
     except CorrectionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/partner-funded-salary/{journal_entry_id}/correct",
+    response_model=PartnerFundedSalaryCorrectOut,
+)
+def correct_partner_funded_salary_route(
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: PartnerFundedSalaryCorrect,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> PartnerFundedSalaryCorrectOut:
+    """One correction for both staff and partner pages — never one leg alone."""
+    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return partner_funded_http.correct_partner_funded_payment_http(
+            session, entity_id, journal_entry_id, payload
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CorrectionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (
+        ZeroMovementError,
+        InvalidPartnerFundedSalaryError,
+        InvalidAccountError,
+        PostingError,
+        ValueError,
+    ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

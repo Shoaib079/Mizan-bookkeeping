@@ -21,13 +21,9 @@ import { LedgerBandHeading } from "@/components/ledger/ledger-band-heading";
 import { SubledgerActionsCell } from "@/components/ledger/subledger-actions-cell";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import {
-  CorrectPartnerLedgerForm,
-  type CorrectablePartnerLedgerRow,
-} from "@/components/forms/correct-partner-ledger-form";
-import {
-  CorrectPartnerProfitAllocationForm,
-  type CorrectableProfitAllocationRow,
-} from "@/components/forms/correct-partner-profit-allocation-form";
+  GlEditDialogs,
+  type GlEditTarget,
+} from "@/components/ledger/gl-edit-dialogs";
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -46,13 +42,13 @@ import { partnerMovementLabels } from "@/lib/subledger-labels";
 import { subledgerRowClassName } from "@/lib/ledger-display";
 import {
   PARTNER_LEDGER_FILTERS,
-  allocationRowFrom,
   allocationRowLabel,
   groupPartnerLedgerRows,
   partnerLedgerFilterMatches,
   type PartnerLedgerFilter,
   type PartnerLedgerResponse,
 } from "@/lib/partner-ledger-view";
+import { editTargetFor } from "@/lib/gl-edit-target";
 import { useEntryActions } from "@/lib/use-entry-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
@@ -62,7 +58,11 @@ import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
  * An allocation is only ever offered here when it covers a single partner —
  * `owner_count` decides that, upstream of this list. Editing one that covers
  * several from one partner's row would change everybody's share. */
-const PAGE_EDIT_KINDS = ["partner_ledger", "partner_profit_allocation"] as const;
+const PAGE_EDIT_KINDS = [
+  "partner_ledger",
+  "partner_profit_allocation",
+  "partner_funded_salary",
+] as const;
 
 export default function PartnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -76,10 +76,10 @@ export default function PartnerDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
   const [payProfitOpen, setPayProfitOpen] = useState(false);
-  const [correctEntry, setCorrectEntry] =
-    useState<CorrectablePartnerLedgerRow | null>(null);
-  const [correctAllocation, setCorrectAllocation] =
-    useState<CorrectableProfitAllocationRow | null>(null);
+  // One target for every kind, translated by `editTargetFor` — the same
+  // translation the General ledger uses, rather than a second copy here that
+  // opened its own form regardless of what the backend named.
+  const [editTarget, setEditTarget] = useState<GlEditTarget | null>(null);
   // The path comes from the backend rather than being rebuilt here. A profit
   // allocation voids at `partners/profit-allocation/{entry}/void`, not at the
   // partner-ledger route this page used to assume for every row.
@@ -308,21 +308,13 @@ export default function PartnerDetailPage() {
                               opensEditKinds={PAGE_EDIT_KINDS}
                               ownerNoun="partners"
                               onEdit={(edit) =>
-                                edit.kind === "partner_profit_allocation"
-                                  ? setCorrectAllocation(
-                                      allocationRowFrom(
-                                        entry.journal_entry_id!,
-                                        edit.context,
-                                      ),
-                                    )
-                                  : setCorrectEntry({
-                                      journal_entry_id: entry.journal_entry_id!,
-                                      movement_date: entry.movement_date,
-                                      movement_type: entry.movement_type,
-                                      amount_kurus: entry.amount_kurus,
-                                      description: entry.description,
-                                      payment_account_id: entry.payment_account_id,
-                                    })
+                                setEditTarget(
+                                  editTargetFor(
+                                    edit.kind,
+                                    edit.context,
+                                    entry.journal_entry_id!,
+                                  ),
+                                )
                               }
                               onVoid={(voidPath) =>
                                 setVoidTarget({
@@ -368,18 +360,13 @@ export default function PartnerDetailPage() {
               onClose={() => setPayProfitOpen(false)}
               onSaved={() => void reload()}
             />
-            <CorrectPartnerProfitAllocationForm
-              open={correctAllocation !== null}
-              entry={correctAllocation}
-              onClose={() => setCorrectAllocation(null)}
-              onSaved={() => void reload()}
-            />
-            <CorrectPartnerLedgerForm
-              open={correctEntry !== null}
-              partnerId={partnerId}
-              entry={correctEntry}
-              onClose={() => setCorrectEntry(null)}
-              onSaved={() => void reload()}
+            <GlEditDialogs
+              target={editTarget}
+              onClose={() => setEditTarget(null)}
+              onSaved={() => {
+                setEditTarget(null);
+                void reload();
+              }}
             />
             <VoidSubledgerDialog
               open={voidTarget !== null}

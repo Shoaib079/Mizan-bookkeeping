@@ -39,10 +39,41 @@ def _expense_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
     }
 
 
-def _partner_ledger_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+def _partner_ledger_context(session: Session, entry: JournalEntry, row: Any) -> dict:
+    """The row, plus the account the money moved through.
+
+    The account is on the journal entry's lines, not on the subledger row, so
+    a form built from the row alone reopened with an empty picker and saved a
+    correction against whatever the user then chose. The partner page worked
+    around it by passing the account itself; the General ledger had no such
+    workaround and quietly lost it. Read once here, so both are right.
+    """
+    from app.features.banking.journal_money_account import (
+        money_account_gl_by_journal_entry,
+    )
+
+    account = money_account_gl_by_journal_entry(session, [entry.id]).get(entry.id)
     return {
         "partner_id": str(row.partner_id),
         "movement_type": row.movement_type.value,
+        "movement_date": row.movement_date.isoformat(),
+        "amount_kurus": row.amount_kurus,
+        "description": row.description,
+        "payment_account_id": str(account) if account else None,
+    }
+
+
+def _partner_funded_salary_context(
+    _session: Session, _entry: JournalEntry, row: Any
+) -> dict:
+    """What the correction form needs: the payment, not the accrual.
+
+    Deliberately no period and no extra days. Correcting what a partner paid
+    must not offer to change what the employee earned — that is a separate
+    entry this one only settles.
+    """
+    return {
+        "partner_id": str(row.partner_id),
         "movement_date": row.movement_date.isoformat(),
         "amount_kurus": row.amount_kurus,
         "description": row.description,

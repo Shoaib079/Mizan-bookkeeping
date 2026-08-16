@@ -53,7 +53,7 @@ from app.core.ledger.entry_contexts import (
     _fx_purchase_context,
     _fx_ledger_context,
     _delivery_commission_context,
-    _profit_allocation_context,
+    _profit_allocation_context, _partner_funded_salary_context,
 )
 
 
@@ -164,8 +164,7 @@ CAPABILITIES: dict[JournalEntrySource, Capability] = {
     JournalEntrySource.PARTNER_LOAN_REPAID: Capability(
         can_edit=False, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
     ),
-    # Two lines and one subledger row, like a drawing. The amount it may be
-    # corrected to is bounded by profit allocated — see `correction_lines.py`.
+    # Like a drawing; bounded by profit allocated — see correction_lines.py.
     JournalEntrySource.PARTNER_PROFIT_PAID: Capability(
         can_edit=True, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
         edit_kind="partner_ledger", context=_partner_ledger_context,
@@ -292,10 +291,11 @@ CAPABILITIES: dict[JournalEntrySource, Capability] = {
     JournalEntrySource.POS_CARD_TIP: Capability(can_edit=False, can_void=False),
     JournalEntrySource.CREDIT_CARD_PAYMENT: Capability(can_edit=False, can_void=False),
     JournalEntrySource.OPENING_BALANCE: Capability(can_edit=False, can_void=False),
-    # Dual void (staff+partner); never generic GL / half-void.
+    # Dual subledger — both routes move the staff and partner legs together.
     JournalEntrySource.PARTNER_SALARY_FRONTED: Capability(
-        can_edit=False, can_void=True,
+        can_edit=True, can_void=True, owner=PARTNER,
         void_path="staff/partner-funded-salary/{entry_id}/void",
+        edit_kind="partner_funded_salary", context=_partner_funded_salary_context,
     ),
 }
 

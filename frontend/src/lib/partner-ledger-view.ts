@@ -108,25 +108,6 @@ export function allocationRowLabel(movementType: string): string | null {
   return null;
 }
 
-/** The allocation edit form's row, out of the context the backend sent.
- *
- * `edit.context` is `Record<string, unknown>` because it genuinely is — its
- * shape is decided per kind by the backend. Coerced here, once, so the form
- * downstream has real types. Same job `editTargetFor` does for the General
- * ledger; this is the partner page's one kind rather than its fourteen.
- */
-export function allocationRowFrom(
-  journalEntryId: string,
-  context: Record<string, unknown>,
-) {
-  return {
-    journal_entry_id: journalEntryId,
-    allocation_date: String(context.allocation_date),
-    description: String(context.description),
-    profit_kurus: Number(context.profit_kurus),
-  };
-}
-
 type BandableRow = {
   movement_type: string;
   movement_date: string;

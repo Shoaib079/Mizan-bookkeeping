@@ -42,6 +42,9 @@ export const DEDICATED_CORRECTION_JOURNAL_SOURCES = new Set<string>([
   // the owner asked why: nothing about it needed void-and-re-enter, only a
   // bound on the amount, which the backend now checks against profit allocated.
   "partner_profit_paid",
+  // Dual subledger, so it has its own correct route rather than the generic
+  // one — both legs move together or neither does.
+  "partner_salary_fronted",
   "expense_entry",
   "partner_profit_allocation",
   // A commission invoice is an invoice. It sat in the void-only set and
@@ -75,7 +78,6 @@ export const VOID_ONLY_JOURNAL_SOURCES = new Set<string>([
   "partner_loan_received",
   "partner_loan_repaid",
   "year_end_close",
-  "partner_salary_fronted",
 ]);
 
 /** Bank statement classify — void only, never edit in place. */
@@ -92,13 +94,14 @@ export const PARTNER_EDITABLE_MOVEMENT_TYPES = new Set<string>([
   // Two lines and one subledger row, like a drawing. The amount it may be
   // corrected to is bounded by profit allocated, which the backend checks.
   "profit_paid",
+  // Corrected through its own route, which moves the staff rows with it.
+  "salary_fronted",
 ]);
 
 export const PARTNER_VOID_ONLY_MOVEMENT_TYPES = new Set<string>([
   "capital_contribution",
   "partner_loan_received",
   "partner_loan_repaid",
-  "salary_fronted",
 ]);
 
 export const STAFF_EDITABLE_MOVEMENT_TYPES = new Set<string>([

@@ -11,6 +11,7 @@ from app.core.duplicate_guard import (
     ensure_not_duplicate,
     find_duplicate_staff_movement,
 )
+from app.core.staff.partner_funded_correction import correct_partner_funded_salary
 from app.core.staff.partner_funded_payment import (
     InvalidPartnerFundedSalaryError,
     post_partner_funded_period_salary,
@@ -21,6 +22,8 @@ from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.ledger.schema import SubledgerVoidOut
 from app.features.staff.partner_funded_schema import (
+    PartnerFundedSalaryCorrect,
+    PartnerFundedSalaryCorrectOut,
     PartnerFundedSalaryCreate,
     PartnerFundedSalaryResponse,
 )
@@ -101,4 +104,41 @@ def void_partner_funded_payment_http(
     return SubledgerVoidOut(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
+    )
+
+
+def correct_partner_funded_payment_http(
+    session: Session,
+    entity_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: PartnerFundedSalaryCorrect,
+) -> PartnerFundedSalaryCorrectOut:
+    """One correction for both pages — never rewrite one leg alone."""
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    result = correct_partner_funded_salary(
+        session,
+        entity_id,
+        journal_entry_id,
+        payment_date=payload.payment_date,
+        amount_minor=payload.amount_minor,
+        description=payload.description.strip(),
+        actor_id=payload.actor_id,
+        reason=payload.reason,
+        void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
+    )
+    posted = result.corrected
+    return PartnerFundedSalaryCorrectOut(
+        original_journal_entry_id=result.original_journal_entry.id,
+        reversal_journal_entry_id=result.reversal_journal_entry.id,
+        corrected_journal_entry_id=posted.journal_entry.id,
+        staff_ledger_entry=staff_service._staff_entry_read(
+            session, posted.staff_ledger_entry, entity_id=entity_id
+        ),
+        partner_ledger_entry_id=posted.partner_ledger_entry.id,
+        balance_minor=posted.balance_minor,
+        partner_balance_kurus=posted.partner_balance_kurus,
+        advance_applied_minor=posted.advance_applied_minor,
     )

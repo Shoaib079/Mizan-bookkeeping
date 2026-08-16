@@ -77,6 +77,9 @@ vi.mock("@/components/forms/void-subledger-dialog", () => ({
 vi.mock("@/components/forms/correct-partner-profit-allocation-form", () => ({
   CorrectPartnerProfitAllocationForm: marker("allocation-form", "entry"),
 }));
+vi.mock("@/components/forms/correct-partner-funded-salary-form", () => ({
+  CorrectPartnerFundedSalaryForm: marker("salary-form", "entry"),
+}));
 
 import PartnerDetailPage from "./page";
 
@@ -383,5 +386,65 @@ describe("editing a profit allocation that covers one partner", () => {
     const entry = JSON.parse(form.dataset.value!);
     expect(entry.profit_kurus).toBe(7_500_000);
     expect(entry.journal_entry_id).toBe("je-alloc");
+  });
+});
+
+describe("editing a salary the partner paid from pocket", () => {
+  it("opens the form that moves both subledgers, not the partner-ledger one", async () => {
+    // One journal entry writes the staff rows and the partner row. Correcting
+    // it through the partner-ledger route would rewrite the partner leg and
+    // leave the staff rows describing a payment that no longer exists — which
+    // is why this was void-only until a real correction was built for it.
+    respond({
+      "je-salary": {
+        can_edit: true,
+        can_void: true,
+        void_path: "staff/partner-funded-salary/je-salary/void",
+        edit: {
+          kind: "partner_funded_salary",
+          context: {
+            partner_id: "p1",
+            movement_date: "2026-08-05",
+            description: "Temmuz maaşı",
+            amount_kurus: 3_250_000,
+          },
+        },
+        owner_count: 1,
+      },
+    });
+    render(<PartnerDetailPage />);
+
+    const row = await settledRow("Temmuz maaşı");
+    fireEvent.click(
+      [...row.querySelectorAll("button")].find(
+        (b) => (b.textContent ?? "").trim() === "Edit",
+      )!,
+    );
+
+    const form = await screen.findByTestId("salary-form");
+    expect(screen.queryByTestId("correct-form")).toBeNull();
+    expect(JSON.parse(form.dataset.value!).amount_kurus).toBe(3_250_000);
+  });
+
+  it("voids through the dual-subledger route", async () => {
+    // Never the partner-ledger void: reversing one leg alone is the fault the
+    // dual void exists to prevent.
+    respond({
+      "je-salary": {
+        can_edit: true,
+        can_void: true,
+        void_path: "staff/partner-funded-salary/je-salary/void",
+        edit: { kind: "partner_funded_salary", context: {} },
+        owner_count: 1,
+      },
+    });
+    render(<PartnerDetailPage />);
+
+    await pressVoid(await settledRow("Temmuz maaşı"));
+
+    await waitFor(() => expect(screen.getByTestId("void-dialog")).toBeTruthy());
+    expect(screen.getByTestId("void-dialog").dataset.value).toBe(
+      "/entities/ent-1/staff/partner-funded-salary/je-salary/void",
+    );
   });
 });

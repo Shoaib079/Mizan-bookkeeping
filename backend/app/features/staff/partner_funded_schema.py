@@ -45,3 +45,31 @@ class PartnerFundedSalaryResponse(BaseModel):
     balance_minor: int
     partner_balance_kurus: int
     advance_applied_minor: int = 0
+
+
+class PartnerFundedSalaryCorrect(BaseModel):
+    """Change what a partner paid — never what the employee earned.
+
+    No period, no extra days, no partner: the accrual is a separate entry this
+    payment settles, and moving the payment to a different partner or period
+    is a different record, not a correction of this one.
+    """
+
+    payment_date: date
+    amount_minor: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=512)
+    actor_id: OptionalActorId = None
+    reason: str | None = Field(default=None, max_length=512)
+    void_date: date | None = None
+    period_unlock_reason: str | None = Field(default=None, max_length=512)
+
+
+class PartnerFundedSalaryCorrectOut(BaseModel):
+    original_journal_entry_id: uuid.UUID
+    reversal_journal_entry_id: uuid.UUID
+    corrected_journal_entry_id: uuid.UUID
+    staff_ledger_entry: StaffLedgerEntryRead
+    partner_ledger_entry_id: uuid.UUID
+    balance_minor: int
+    partner_balance_kurus: int
+    advance_applied_minor: int = 0

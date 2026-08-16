@@ -13,6 +13,10 @@ import {
   type CorrectableProfitAllocationRow,
 } from "@/components/forms/correct-partner-profit-allocation-form";
 import {
+  CorrectPartnerFundedSalaryForm,
+  type CorrectablePartnerFundedSalaryRow,
+} from "@/components/forms/correct-partner-funded-salary-form";
+import {
   CorrectStaffLedgerForm,
   type CorrectableStaffLedgerRow,
 } from "@/components/forms/correct-staff-ledger-form";
@@ -66,6 +70,10 @@ import { GroupSaleEditLoader } from "@/components/forms/group-sale-edit-loader";
 export type GlEditTarget =
   | { kind: "expense"; expense: CorrectableExpenseRow }
   | { kind: "partner_profit_allocation"; entry: CorrectableProfitAllocationRow }
+  | {
+      kind: "partner_funded_salary";
+      entry: CorrectablePartnerFundedSalaryRow;
+    }
   | {
       kind: "partner_ledger";
       partnerId: string;
@@ -137,6 +145,15 @@ export function GlEditDialogs({
         <CorrectExpenseForm
           open
           expense={target.expense}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      );
+    case "partner_funded_salary":
+      return (
+        <CorrectPartnerFundedSalaryForm
+          open
+          entry={target.entry}
           onClose={onClose}
           onSaved={onSaved}
         />
