@@ -42,12 +42,17 @@ vi.mock("@/components/layout/app-shell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-/** Every dialog becomes a marker carrying the prop that identifies it. */
+/** Every dialog becomes a marker carrying the prop that identifies it.
+ *
+ * A named function expression, not an arrow: the build lints test files too,
+ * and `react/display-name` fails an anonymous component. Same shape as
+ * `gl-entry-actions.render.test.tsx`, which had this settled already.
+ */
 function marker(name: string, prop: string) {
-  return (props: Record<string, unknown>) =>
-    props.open ? (
-      <div data-testid={name} data-value={String(props[prop] ?? "")} />
-    ) : null;
+  return function Marker(props: Record<string, unknown>) {
+    if (!props.open) return null;
+    return <div data-testid={name} data-value={String(props[prop] ?? "")} />;
+  };
 }
 vi.mock("@/components/forms/partner-form", () => ({
   PartnerForm: marker("partner-form", "open"),
