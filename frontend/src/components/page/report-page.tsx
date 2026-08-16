@@ -15,6 +15,7 @@ import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { PageHeader } from "@/components/page/page-header";
 import type { OverflowMenuItem } from "@/components/ui/overflow-menu";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { useShowsSkeleton } from "@/lib/use-shows-skeleton";
 
 type Props = {
   title: string;
@@ -62,6 +63,8 @@ export function ReportPage({
   hasReport = true,
   className,
 }: Props) {
+  const showsSkeleton = useShowsSkeleton(loading);
+
   return (
     <div className={className}>
       <PageHeader
@@ -81,9 +84,9 @@ export function ReportPage({
       {forbidden && <ForbiddenMessage context={forbiddenContext} />}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
-      {loading && <PageSkeleton />}
+      {showsSkeleton && <PageSkeleton />}
 
-      {!loading && !forbidden && hasReport && (
+      {!showsSkeleton && !forbidden && hasReport && (
         <>
           {banner}
           {kpis && <div className="mb-6">{kpis}</div>}

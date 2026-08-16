@@ -9,6 +9,7 @@
 import { PageHeader } from "@/components/page/page-header";
 import type { OverflowMenuItem } from "@/components/ui/overflow-menu";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { useShowsSkeleton } from "@/lib/use-shows-skeleton";
 
 type Props = {
   title: string;
@@ -51,6 +52,8 @@ export function EntityDetailPage({
   children,
   className,
 }: Props) {
+  const showsSkeleton = useShowsSkeleton(loading);
+
   if (forbidden) {
     return (
       <>
@@ -73,7 +76,7 @@ export function EntityDetailPage({
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
-      {loading ? (
+      {showsSkeleton ? (
         <PageSkeleton />
       ) : (
         <>

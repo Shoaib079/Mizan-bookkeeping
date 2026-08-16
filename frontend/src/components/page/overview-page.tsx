@@ -13,6 +13,7 @@
 import { PageHeader } from "@/components/page/page-header";
 import type { OverflowMenuItem } from "@/components/ui/overflow-menu";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { useShowsSkeleton } from "@/lib/use-shows-skeleton";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -50,6 +51,8 @@ export function OverviewPage({
   error,
   className,
 }: Props) {
+  const showsSkeleton = useShowsSkeleton(loading);
+
   return (
     <div className={className}>
       <PageHeader
@@ -66,7 +69,7 @@ export function OverviewPage({
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
-      {loading ? (
+      {showsSkeleton ? (
         <PageSkeleton />
       ) : (
         <>

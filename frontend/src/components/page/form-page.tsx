@@ -14,6 +14,7 @@
 import { PageHeader } from "@/components/page/page-header";
 import type { OverflowMenuItem } from "@/components/ui/overflow-menu";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { useShowsSkeleton } from "@/lib/use-shows-skeleton";
 import { MOBILE_TAB_BAR_OFFSET } from "@/lib/mobile-shell";
 import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,8 @@ export function FormPage({
   error,
   className,
 }: Props) {
+  const showsSkeleton = useShowsSkeleton(loading);
+
   const isMobile = useIsMobileShell();
   return (
     <div className={className}>
@@ -66,7 +69,7 @@ export function FormPage({
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
-      {loading ? (
+      {showsSkeleton ? (
         <PageSkeleton />
       ) : (
         <div className={cn("space-y-6", WIDTHS[width])}>{children}</div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring, sourceFiles } from "@/test-support/source";
+import { sourceAt, sourceDeclaring, sourceFiles } from "@/test-support/source";
 
 /** These guard the DESIGN_ARCHETYPES contract by reading the source: the rules
  * that stop pages drifting apart again are structural, so they're checked
@@ -477,3 +477,43 @@ describe("filters read as choices", () => {
     expect(source).toContain("{filters && (");
   });
 });
+
+/** A background refresh must not blank the page it is refreshing.
+ *
+ * Every archetype used to render `<PageSkeleton />` whenever `loading` was
+ * true, and pages set `loading` on every fetch including the background ones.
+ * The result was a page that collapsed to grey blocks and sprang back each
+ * time the window regained focus or anything was posted.
+ *
+ * Read structurally, and per file rather than as one sweep: a skeleton gated
+ * on raw `loading` in *any* archetype brings the flash back for every page
+ * built on it, and a sweep that stopped matching would pass over all five.
+ */
+describe("the loading skeleton", () => {
+  const ARCHETYPES = [
+    "entity-detail-page.tsx",
+    "overview-page.tsx",
+    "form-page.tsx",
+    "document-review-page.tsx",
+    "report-page.tsx",
+  ];
+
+  it("is drawn by every archetype that has one", () => {
+    // Guard the guard: if these files stopped containing a skeleton at all,
+    // the assertions below would pass over nothing.
+    for (const file of ARCHETYPES) {
+      const source = sourceAt(`components/page/${file}`);
+      expect(source, file).toContain("<PageSkeleton />");
+    }
+  });
+
+  it("is never gated on the raw loading flag", () => {
+    for (const file of ARCHETYPES) {
+      const source = sourceAt(`components/page/${file}`);
+      expect(source, file).toContain("useShowsSkeleton(loading)");
+      expect(source, file).not.toMatch(/\{loading \?[\s\S]{0,40}PageSkeleton/);
+      expect(source, file).not.toMatch(/\{loading && <PageSkeleton/);
+    }
+  });
+});
+
