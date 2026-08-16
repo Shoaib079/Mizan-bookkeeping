@@ -29,6 +29,9 @@ export type PartnerLedgerEntry = {
   /** Tells a drawing the partner took in cash from one created by a personal
    * expense split — the two read very differently to an owner. */
   reference_type?: string | null;
+  /** The employee, supplier or expense the reference points at, by name.
+   * Null where the row points at nothing. */
+  subject_name?: string | null;
   display_kind: SubledgerDisplayKind;
   was_corrected?: boolean;
   running_balance_kurus?: number | null;

@@ -72,6 +72,12 @@ class PartnerLedgerEntryRead(BaseModel):
     # withdrew cash carries none. Without this the UI cannot tell them apart
     # and reports both as money taken out.
     reference_type: str | None = None
+    # Who or what the reference points at, by name — the employee whose salary
+    # a partner fronted, the supplier a personal split paid, what an expense
+    # split bought. The row has always recorded the reference; nothing read it
+    # back, so three salaries fronted in one week read alike. See
+    # `core/partners/row_subjects.py`. None where there is nothing to name.
+    subject_name: str | None = None
     running_balance_kurus: int | None = None
     created_at: datetime
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE

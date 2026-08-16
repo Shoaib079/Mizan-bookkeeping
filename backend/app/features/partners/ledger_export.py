@@ -37,6 +37,18 @@ _ALLOCATION_PART = {
 }
 
 
+def _described(entry) -> str:
+    """The note, and who or what it was for.
+
+    The page shows the subject beside the description; a statement has one
+    column, so it joins them. Without this a partner who fronted three
+    salaries in a week has three rows reading "Temmuz maaşı" and no way to
+    tell whose — which is the whole reason the name was surfaced.
+    """
+    subject = getattr(entry, "subject_name", None)
+    return f"{entry.description} — {subject}" if subject else entry.description
+
+
 def _rows(entries: list) -> list[SubledgerRow]:
     """Movements, with each profit allocation headed by its own total.
 
@@ -60,7 +72,7 @@ def _rows(entries: list) -> list[SubledgerRow]:
                 SubledgerRow(
                     movement_date=entry.movement_date,
                     movement=format_partner_movement(entry.movement_type),
-                    description=entry.description,
+                    description=_described(entry),
                     amount_minor=entry.amount_kurus,
                     running_minor=entry.running_balance_kurus,
                     status=row_status(entry),
@@ -95,7 +107,7 @@ def _rows(entries: list) -> list[SubledgerRow]:
                 SubledgerRow(
                     movement_date=part.movement_date,
                     movement=_ALLOCATION_PART[part.movement_type],
-                    description=part.description,
+                    description=_described(part),
                     amount_minor=part.amount_kurus,
                     running_minor=part.running_balance_kurus,
                     status=row_status(part),

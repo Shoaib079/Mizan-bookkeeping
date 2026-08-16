@@ -96,19 +96,11 @@ def _partner_entry_reads(
         journal_entry_id=lambda entry: entry.journal_entry_id,
         description=lambda entry: entry.description,
     )
-    # Restore the money account a reimbursement was paid from so the edit form
-    # reopens with the recorded account. The helper only returns entries with a
-    # single money line, so equity-only movements are naturally skipped.
-    from app.features.banking.journal_money_account import (
-        money_account_gl_by_journal_entry,
-    )
+    # Everything a read model carries beyond its own columns lives together —
+    # see `ledger_enrichment.py`.
+    from app.features.partners.ledger_enrichment import enrich_partner_reads
 
-    je_ids = [r.journal_entry_id for r in reads if r.journal_entry_id is not None]
-    if je_ids:
-        account_by_je = money_account_gl_by_journal_entry(session, je_ids)
-        for r in reads:
-            if r.journal_entry_id in account_by_je:
-                r.payment_account_id = account_by_je[r.journal_entry_id]
+    enrich_partner_reads(session, entries, reads)
     return reads
 
 
