@@ -16,7 +16,8 @@ import { HeadlineFigure } from "@/components/page/summary-panel";
 import { PartnerRecordForm } from "@/components/forms/partner-record-form";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
-import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
+import { ActionsUnavailableNotice } from "@/components/ledger/actions-unavailable-notice";
+import { SubledgerActionsCell } from "@/components/ledger/subledger-actions-cell";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import {
   CorrectPartnerLedgerForm,
@@ -30,12 +31,13 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, entityPath } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
   partnerBalance,
   partnerBalanceHeading,
+  partnerHeadlineCaption,
   formatPartnerNetBalance,
 } from "@/lib/partner-balance";
 import { partnerMovementLabels } from "@/lib/subledger-labels";
@@ -50,11 +52,12 @@ import {
   type PartnerLedgerFilter,
   type PartnerLedgerResponse,
 } from "@/lib/partner-ledger-view";
-import {
-  actionsForOneOwnersRow,
-  useEntryActions,
-} from "@/lib/use-entry-actions";
+import { useEntryActions } from "@/lib/use-entry-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
+
+/** The correction form this page has. Anything else the backend offers is
+ * opened from the General ledger, which has the rest. */
+const PAGE_EDIT_KINDS = ["partner_ledger"] as const;
 
 export default function PartnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -70,8 +73,11 @@ export default function PartnerDetailPage() {
   const [payProfitOpen, setPayProfitOpen] = useState(false);
   const [correctEntry, setCorrectEntry] =
     useState<CorrectablePartnerLedgerRow | null>(null);
+  // The path comes from the backend rather than being rebuilt here. A profit
+  // allocation voids at `partners/profit-allocation/{entry}/void`, not at the
+  // partner-ledger route this page used to assume for every row.
   const [voidTarget, setVoidTarget] = useState<{
-    journal_entry_id: string;
+    path: string;
     description: string;
   } | null>(null);
 
@@ -116,7 +122,7 @@ export default function PartnerDetailPage() {
   );
   // One request for the rows on screen, rather than a rule kept here that has
   // to agree with the backend's.
-  const { rowActions } = useEntryActions(
+  const { rowActions, failed: actionsFailed, retry: retryActions } = useEntryActions(
     entityId,
     useMemo(
       () =>
@@ -194,21 +200,7 @@ export default function PartnerDetailPage() {
             <HeadlineFigure
               label={partnerBalanceHeading(partnerBalance(ledger))}
               amountKurus={Math.abs(partnerBalance(ledger))}
-              /* Capital beside the balance, not inside it.
-               *
-               * The two summary cards were the only place it appeared, and
-               * removing them took it off the page entirely. It is not part of
-               * the balance above — money put into the business is not a debt
-               * it repays on demand — so it reads as a separate fact here
-               * rather than as another line in the figure. */
-              caption={[
-                `Capital in business: ${formatTry(ledger.capital_balance_kurus)}`,
-                (ledger.loan_balance_kurus ?? 0) !== 0
-                  ? `Partner loan: ${formatTry(ledger.loan_balance_kurus!)}`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+              caption={partnerHeadlineCaption(ledger)}
             />
           )
         }
@@ -227,6 +219,11 @@ export default function PartnerDetailPage() {
                 isEmpty={ledger.entries.length === 0}
                 isFiltered={visibleRows.length === 0}
                 history={{ hiddenCount, showHistory, onToggle: setShowHistory }}
+                notice={
+                  actionsFailed && (
+                    <ActionsUnavailableNotice onRetry={retryActions} />
+                  )
+                }
                 controls={
                   <FilterChips
                     chips={PARTNER_LEDGER_FILTERS}
@@ -265,10 +262,7 @@ export default function PartnerDetailPage() {
                       // movement type, which does not always describe the
                       // entry: a personal expense split writes a `drawing`
                       // whose other leg this page knows nothing about.
-                      const actions = actionsForOneOwnersRow(
-                        rowActions(entry.journal_entry_id),
-                      );
-                      const canAct = actions.can_edit || actions.can_void;
+                      const asked = rowActions(entry.journal_entry_id);
                       return (
                         <DataTableRow
                           key={entry.id}
@@ -287,6 +281,14 @@ export default function PartnerDetailPage() {
                           </DataTableCell>
                           <DataTableCell>
                             <span>{entry.description}</span>
+                            {/* Who or what it was for. The row has always
+                             * recorded the reference; three salaries fronted
+                             * in one week read alike until it was shown. */}
+                            {entry.subject_name && (
+                              <span className="ml-2 text-muted-foreground">
+                                · {entry.subject_name}
+                              </span>
+                            )}
                             {entry.was_corrected && (
                               <span className="ml-2">
                                 <EditedBadge />
@@ -304,29 +306,28 @@ export default function PartnerDetailPage() {
                               : "—"}
                           </DataTableCell>
                           <DataTableCell>
-                            {canAct && (
-                              <SubledgerRowActions
-                                row={entry}
-                                showEdit={actions.can_edit}
-                                onEdit={() =>
-                                  setCorrectEntry({
-                                    journal_entry_id: entry.journal_entry_id!,
-                                    movement_date: entry.movement_date,
-                                    movement_type: entry.movement_type,
-                                    amount_kurus: entry.amount_kurus,
-                                    description: entry.description,
-                                    payment_account_id:
-                                      entry.payment_account_id,
-                                  })
-                                }
-                                onVoid={() =>
-                                  setVoidTarget({
-                                    journal_entry_id: entry.journal_entry_id!,
-                                    description: entry.description,
-                                  })
-                                }
-                              />
-                            )}
+                            <SubledgerActionsCell
+                              row={entry}
+                              actions={asked}
+                              opensEditKinds={PAGE_EDIT_KINDS}
+                              ownerNoun="partners"
+                              onEdit={() =>
+                                setCorrectEntry({
+                                  journal_entry_id: entry.journal_entry_id!,
+                                  movement_date: entry.movement_date,
+                                  movement_type: entry.movement_type,
+                                  amount_kurus: entry.amount_kurus,
+                                  description: entry.description,
+                                  payment_account_id: entry.payment_account_id,
+                                })
+                              }
+                              onVoid={(voidPath) =>
+                                setVoidTarget({
+                                  path: entityPath(entityId, voidPath),
+                                  description: entry.description,
+                                })
+                              }
+                            />
                           </DataTableCell>
                         </DataTableRow>
                       );
@@ -375,11 +376,7 @@ export default function PartnerDetailPage() {
               open={voidTarget !== null}
               title="Void partner movement"
               description={voidTarget?.description}
-              voidPath={
-                entityId && voidTarget
-                  ? `/entities/${entityId}/partners/${partnerId}/ledger/${voidTarget.journal_entry_id}/void`
-                  : null
-              }
+              voidPath={voidTarget?.path ?? null}
               onClose={() => setVoidTarget(null)}
               onSaved={() => void reload()}
             />

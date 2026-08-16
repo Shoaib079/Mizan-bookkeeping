@@ -67,6 +67,28 @@ export function extractPartnerBalanceKurus(res: unknown): number {
   return n;
 }
 
+/** What sits beside the headline figure: capital, and a loan if there is one.
+ *
+ * Capital is deliberately *not* part of the balance above it — money put into
+ * the business is not a debt it repays on demand — but it still has to appear
+ * somewhere. The two summary cards were the only place it did, and removing
+ * them took it off the page entirely, so it reads as a separate fact here.
+ *
+ * Capital shows even at zero, because "none in" is an answer. A loan appears
+ * only when there is one; most partners have never made one and a permanent
+ * "Partner loan: 0,00 ₺" is the kind of line the owner asked to be rid of.
+ */
+export function partnerHeadlineCaption(ledger: {
+  capital_balance_kurus: number;
+  loan_balance_kurus?: number;
+}): string {
+  const lines = [`Capital in business: ${formatTry(ledger.capital_balance_kurus)}`];
+  if ((ledger.loan_balance_kurus ?? 0) !== 0) {
+    lines.push(`Partner loan: ${formatTry(ledger.loan_balance_kurus!)}`);
+  }
+  return lines.join(" · ");
+}
+
 /** True when partner has outstanding drawings (negative drawings net). */
 export function partnerDrawingRepaymentAllowed(drawingsNetKurus: number): boolean {
   return drawingsNetKurus < 0;

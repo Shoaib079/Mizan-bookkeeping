@@ -27,7 +27,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const apiFetch = vi.fn();
 const toast = vi.fn();
 
-vi.mock("@/lib/api", () => ({ apiFetch: (...args: unknown[]) => apiFetch(...args) }));
+vi.mock("@/lib/api", () => ({
+  apiFetch: (...args: unknown[]) => apiFetch(...args),
+  entityPath: (entityId: string, backendPath: string) =>
+    `/entities/${entityId}/${backendPath}`,
+}));
 vi.mock("@/lib/entity-context", () => ({
   useEntity: () => ({ entityId: "ent-1", actorId: "act-1" }),
 }));

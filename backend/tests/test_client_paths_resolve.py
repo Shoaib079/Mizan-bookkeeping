@@ -44,14 +44,20 @@ _ASSEMBLED_AT_RUNTIME = re.compile(r"\}\$\{")
 #: Literals where the last segment is a variable holding a whole path, so the
 #: `}${` rule above does not see it — there is a `/` in between.
 #:
-#: Only two, and both are checked, not waved through: the reason is recorded
-#: here and `test_the_exemptions_are_still_needed` fails if one of them starts
-#: resolving on its own, so this cannot quietly become a list of free passes.
+#: Both are checked, not waved through: the reason is recorded here and
+#: `test_the_exemptions_are_still_needed` fails if one of them starts resolving
+#: on its own, so this cannot quietly become a list of free passes.
+#:
+#: There were three call sites writing the first template inline — the General
+#: ledger, the customer page and the partner page — which is three literals to
+#: exempt and three chances to miss one. They now share `entityPath()`, so the
+#: template exists once and this list names one place rather than three.
 _CHECKED_ELSEWHERE = {
-    "/entities/${entityId}/${actions.void_path}": (
-        "void_path is a whole path handed over by the backend; every value it "
-        "can take is checked against the routing table by "
-        "test_void_paths_resolve.py, which is where that family belongs"
+    "/entities/${entityId}/${backendPath}": (
+        "`entityPath()` in lib/api.ts, which every caller of a backend-supplied "
+        "path goes through. The paths themselves — void_path and its kin — are "
+        "checked against the routing table by test_void_paths_resolve.py, "
+        "which is where that family belongs"
     ),
     "/entities/${entityId}/partners/${partnerId}/${path}": (
         "path is one of three literals assigned immediately above the call; "

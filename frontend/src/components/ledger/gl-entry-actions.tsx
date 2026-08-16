@@ -8,7 +8,7 @@ import {
   type GlEditTarget,
 } from "@/components/ledger/gl-edit-dialogs";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, entityPath } from "@/lib/api";
 import { editTargetFor } from "@/lib/gl-edit-target";
 import { useEntity } from "@/lib/entity-context";
 import { useToast } from "@/lib/toast";
@@ -74,7 +74,7 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
     try {
       const actions = await loadActions();
       if (!actions.can_void || !actions.void_path || !entityId) return;
-      setVoidPath(`/entities/${entityId}/${actions.void_path}`);
+      setVoidPath(entityPath(entityId, actions.void_path));
       setVoidOpen(true);
     } finally {
       setBusy(false);

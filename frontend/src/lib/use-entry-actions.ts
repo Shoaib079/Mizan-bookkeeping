@@ -12,9 +12,28 @@
  * same "did I imagine that" problem as one that does nothing.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+
+/** The backend's own cap, mirrored so the hook can stay under it.
+ *
+ * `MAX_ACTIONS_BATCH` in `features/ledger/schema.py`. The route does not
+ * reject a longer list, it answers for the first 200 and drops the rest — so
+ * a page with 250 rows silently lost its buttons from row 201 down, looking
+ * exactly like a backend that had refused them. The hook asks in chunks
+ * instead, which puts the cap where it belongs: on one request, not on what a
+ * page may show.
+ */
+export const ACTIONS_CHUNK_SIZE = 200;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size));
+  }
+  return out;
+}
 
 export type EntryActions = {
   can_edit: boolean;
@@ -46,6 +65,10 @@ export const NO_ACTIONS: EntryActions = {
 export function useEntryActions(entityId: string, entryIds: string[]) {
   const [actions, setActions] = useState<Record<string, EntryActions>>({});
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Bumped by `retry()`. Part of the effect's dependencies so asking again is
+  // the same code path as asking the first time.
+  const [attempt, setAttempt] = useState(0);
 
   // Joined rather than passed as an array: a new array with the same contents
   // is a new dependency every render, and this would fetch forever.
@@ -55,36 +78,53 @@ export function useEntryActions(entityId: string, entryIds: string[]) {
     const ids = key ? key.split(",") : [];
     if (!entityId || ids.length === 0) {
       setActions({});
+      setFailed(false);
       setLoaded(true);
       return;
     }
     let cancelled = false;
     setLoaded(false);
-    void apiFetch<BatchResponse>(`/entities/${entityId}/ledger/entries/actions`, {
-      method: "POST",
-      body: JSON.stringify({ entry_ids: ids }),
-    })
-      .then((res) => {
-        if (!cancelled) {
-          setActions(res.actions ?? {});
-          setLoaded(true);
-        }
+    setFailed(false);
+    Promise.all(
+      chunk(ids, ACTIONS_CHUNK_SIZE).map((batch) =>
+        apiFetch<BatchResponse>(`/entities/${entityId}/ledger/entries/actions`, {
+          method: "POST",
+          body: JSON.stringify({ entry_ids: batch }),
+        }),
+      ),
+    )
+      .then((responses) => {
+        if (cancelled) return;
+        setActions(
+          Object.assign({}, ...responses.map((res) => res.actions ?? {})),
+        );
+        setLoaded(true);
       })
       .catch(() => {
-        // A failed lookup means no buttons, which is the safe direction: it
-        // withholds an action rather than offering one that may not work.
+        // Still no buttons — withholding an action is safer than offering one
+        // that may not work. But `failed` says so out loud, because a lookup
+        // that never arrived and a backend that refused used to render
+        // identically, and a page with no buttons anywhere reads as broken
+        // either way. All-or-nothing on purpose: a half-answered page would
+        // show buttons on some rows and not others with nothing to explain it.
         if (!cancelled) {
           setActions({});
+          setFailed(true);
           setLoaded(true);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [entityId, key]);
+  }, [entityId, key, attempt]);
+
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   return {
     loaded,
+    /** True when the lookup did not arrive — not when it came back empty. */
+    failed,
+    retry,
     /** The verdict for one row, honest while still loading. */
     rowActions(entryId: string | null | undefined): EntryActions {
       if (!entryId) return NO_ACTIONS;

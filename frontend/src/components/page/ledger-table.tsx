@@ -50,6 +50,13 @@ type Props = {
   controls?: React.ReactNode;
   /** Whether any row can be edited or voided — adds the trailing column. */
   hasActions?: boolean;
+  /** Something the reader has to know before trusting the rows.
+   *
+   * Sits above the table rather than in `controls`, which is for things that
+   * narrow the rows. The one case so far is an actions lookup that failed:
+   * the ledger is correct but every Edit and Void is missing, and without a
+   * word the page just looks broken. */
+  notice?: React.ReactNode;
 };
 
 export function LedgerTable({
@@ -62,9 +69,11 @@ export function LedgerTable({
   history,
   controls,
   hasActions = false,
+  notice,
 }: Props) {
   return (
     <>
+      {notice}
       {(controls || history) && (
         <div className="mb-3 flex flex-wrap items-center gap-3">
           {controls}

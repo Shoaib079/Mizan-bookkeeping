@@ -43,7 +43,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, entityPath } from "@/lib/api";
 import { type ForexOutstanding } from "@/lib/use-balance-map";
 import { useEntity } from "@/lib/entity-context";
 import { formatForexBalanceSummary, formatFxNative } from "@/lib/fx-money";
@@ -418,10 +418,10 @@ export default function CustomerDetailPage() {
             description={voidTarget?.description}
             voidPath={
               entityId && voidTarget
-                ? `/entities/${entityId}/${VOIDABLE_ROWS[voidTarget.kind].path(
-                    customerId,
-                    voidTarget.journal_entry_id,
-                  )}`
+                ? entityPath(
+                    entityId,
+                    VOIDABLE_ROWS[voidTarget.kind].path(customerId, voidTarget.journal_entry_id),
+                  )
                 : null
             }
             onClose={() => setVoidTarget(null)}

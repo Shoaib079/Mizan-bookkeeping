@@ -211,4 +211,17 @@ export function triggerBlobDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+/** A path the backend handed us, made absolute for `apiFetch`.
+ *
+ * `void_path` and its kin arrive as entity-relative strings — the routing
+ * table owns them, so the client must not rebuild them from ids it happens to
+ * hold. Three call sites wrote this same template inline, which meant three
+ * literals that `test_client_paths_resolve.py` cannot resolve (the last
+ * segment only exists at runtime) and therefore three exemptions to keep in
+ * step. One helper, one exemption.
+ */
+export function entityPath(entityId: string, backendPath: string): string {
+  return `/entities/${entityId}/${backendPath}`;
+}
+
 export { API_BASE };
