@@ -5,7 +5,7 @@ one. Neither failed. Both quietly turned a two-legged transaction into a
 one-legged one, and the books went on balancing afterwards — which is why
 neither was ever reported.
 
-**Partners.** `_build_partner_correction_lines` reads the row's movement type
+**Partners.** `build_partner_correction_lines` reads the row's movement type
 and nothing else. Three kinds of row have a movement type that does not
 describe their entry: a partner-paid supplier invoice writes `expense_fronted`
 under `partner_supplier_paid`, and a personal expense or supplier-payment
@@ -188,7 +188,7 @@ def test_the_guard_reads_the_capability_table(db_session):
     """
     import inspect
 
-    from app.features.partners import service as partner_service
+    from app.features.partners import correction_lines
 
-    source = inspect.getsource(partner_service._assert_source_is_correctable)
+    source = inspect.getsource(correction_lines.assert_source_is_correctable)
     assert "CAPABILITIES" in source

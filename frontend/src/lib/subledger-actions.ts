@@ -38,6 +38,10 @@ export const DEDICATED_CORRECTION_JOURNAL_SOURCES = new Set<string>([
   "partner_reimbursement_paid",
   "partner_drawing",
   "partner_drawing_repayment",
+  // Two lines and one subledger row, like a drawing. It was void-only until
+  // the owner asked why: nothing about it needed void-and-re-enter, only a
+  // bound on the amount, which the backend now checks against profit allocated.
+  "partner_profit_paid",
   "expense_entry",
   "partner_profit_allocation",
   // A commission invoice is an invoice. It sat in the void-only set and
@@ -65,7 +69,6 @@ export const VOID_ONLY_JOURNAL_SOURCES = new Set<string>([
   "cash_drawer_close",
   "rule_auto",
   "system",
-  "partner_profit_paid",
   "partner_supplier_paid",
   "expense_personal_split",
   "partner_capital_contribution",
@@ -86,13 +89,15 @@ export const PARTNER_EDITABLE_MOVEMENT_TYPES = new Set<string>([
   "reimbursement_paid",
   "drawing",
   "drawing_repayment",
+  // Two lines and one subledger row, like a drawing. The amount it may be
+  // corrected to is bounded by profit allocated, which the backend checks.
+  "profit_paid",
 ]);
 
 export const PARTNER_VOID_ONLY_MOVEMENT_TYPES = new Set<string>([
   "capital_contribution",
   "partner_loan_received",
   "partner_loan_repaid",
-  "profit_paid",
   "salary_fronted",
 ]);
 

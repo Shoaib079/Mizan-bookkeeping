@@ -35,6 +35,7 @@ from app.core.ledger.posting import PostingLine
 from app.core.ledger.subledger_display import enrich_entry_models, SubledgerDisplayKind
 from app.core.chart_of_accounts.default_chart import (
     OWNER_DRAWINGS_CODE,
+    PARTNER_CAPITAL_CODE,
     PARTNER_REIMBURSEMENT_PAYABLE_CODE,
 )
 from app.core.duplicate_guard import (
@@ -43,6 +44,10 @@ from app.core.duplicate_guard import (
 )
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
+from app.features.partners.correction_lines import (
+    assert_source_is_correctable,
+    build_partner_correction_lines,
+)
 from app.features.partners.ledger_enrichment import partner_entry_actions
 from app.features.partners.models import Partner
 from app.features.partners.schema import (
@@ -557,138 +562,6 @@ def record_profit_paid(
     )
 
 
-def _assert_source_is_correctable(session: Session, journal_entry_id: uuid.UUID) -> None:
-    """Refuse to correct a partner row whose entry has a second leg.
-
-    `_build_partner_correction_lines` decides what to repost from the row's
-    **movement type** alone, and three kinds of row have a movement type that
-    does not describe their entry:
-
-      - a partner-paid supplier invoice writes `expense_fronted` under source
-        `partner_supplier_paid`
-      - a personal expense split writes `drawing` under `expense_personal_split`
-      - so does a personal supplier-payment split
-
-    Each of those entries has another leg — the expense, or the supplier
-    payment — that the correction knows nothing about. Reposting from the
-    movement type alone rebuilt them as a plain drawing or a plain fronted
-    expense and dropped the other half. Nothing failed; the split simply
-    stopped being a split.
-
-    The judgement lives in the capability table, which is where "can this
-    source be edited" is already decided, rather than in a fourth hand-written
-    list that would have to be kept in step with the other three.
-    """
-    from app.core.ledger.entry_capabilities import CAPABILITIES
-    from app.core.ledger.models import JournalEntry
-
-    entry = session.get(JournalEntry, journal_entry_id)
-    if entry is None:
-        raise CorrectionNotFoundError("journal entry not found")
-
-    capability = CAPABILITIES.get(entry.source)
-    if capability is not None and not capability.can_edit:
-        raise CorrectionNotFoundError(
-            f"a {entry.source.value} entry cannot be corrected in place — it "
-            "has another leg this route would drop. Void it and re-enter."
-        )
-
-
-def _build_partner_correction_lines(
-    session: Session,
-    entity_id: uuid.UUID,
-    partner_row: PartnerLedgerEntry,
-    payload: PartnerJournalEntryCorrect,
-) -> tuple[list[PostingLine], int]:
-    amount_kurus = (
-        payload.amount_kurus if payload.amount_kurus is not None else partner_row.amount_kurus
-    )
-    movement_type = partner_row.movement_type
-
-    if movement_type == PartnerMovementType.EXPENSE_FRONTED:
-        if payload.expense_account_id is None:
-            raise ValueError("expense_account_id required for expense fronted correction")
-        expense = partner_posting._validate_expense_account(
-            session, entity_id, payload.expense_account_id
-        )
-        payable = partner_posting._chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
-        lines = partner_posting.build_expense_fronted_lines(
-            expense_account_id=expense.id,
-            partner_payable_id=payable.id,
-            amount_kurus=amount_kurus,
-        )
-        return lines, amount_kurus
-
-    if movement_type == PartnerMovementType.REIMBURSEMENT_PAID:
-        if payload.payment_account_id is None:
-            raise ValueError("payment_account_id required for reimbursement correction")
-        payment = partner_posting._validate_payment_account(
-            session, entity_id, payload.payment_account_id
-        )
-        payable = partner_posting._chart_account(session, PARTNER_REIMBURSEMENT_PAYABLE_CODE)
-        lines = partner_posting.build_reimbursement_paid_lines(
-            partner_payable_id=payable.id,
-            payment_account_id=payment.id,
-            amount_kurus=amount_kurus,
-        )
-        return lines, amount_kurus
-
-    if movement_type == PartnerMovementType.DRAWING:
-        if payload.payment_account_id is None:
-            raise ValueError("payment_account_id required for drawing correction")
-        gl_amount = (
-            payload.amount_kurus
-            if payload.amount_kurus is not None
-            else abs(partner_row.amount_kurus)
-        )
-        payment = partner_posting._validate_payment_account(
-            session, entity_id, payload.payment_account_id
-        )
-        drawings = partner_posting._chart_account(session, OWNER_DRAWINGS_CODE)
-        lines = partner_posting.build_drawing_lines(
-            drawings_account_id=drawings.id,
-            payment_account_id=payment.id,
-            amount_kurus=gl_amount,
-        )
-        return lines, -gl_amount
-
-    if movement_type == PartnerMovementType.DRAWING_REPAYMENT:
-        if payload.payment_account_id is None:
-            raise ValueError("payment_account_id required for drawing repayment correction")
-        gl_amount = (
-            payload.amount_kurus
-            if payload.amount_kurus is not None
-            else abs(partner_row.amount_kurus)
-        )
-        payment = partner_posting._validate_payment_account(
-            session, entity_id, payload.payment_account_id
-        )
-        drawings = partner_posting._chart_account(session, OWNER_DRAWINGS_CODE)
-        lines = partner_posting.build_drawing_repayment_lines(
-            drawings_account_id=drawings.id,
-            payment_account_id=payment.id,
-            amount_kurus=gl_amount,
-        )
-        return lines, gl_amount
-
-    if movement_type == PartnerMovementType.PROFIT_ALLOCATION:
-        raise CorrectionNotFoundError(
-            "profit allocation must be voided at entity level, not per-partner correct"
-        )
-
-    if movement_type == PartnerMovementType.PROFIT_SETTLEMENT:
-        raise CorrectionNotFoundError(
-            "profit allocation must be voided at entity level, not per-partner correct"
-        )
-
-    if movement_type == PartnerMovementType.PROFIT_PAID:
-        raise CorrectionNotFoundError(
-            "profit payment must be voided, not corrected in place"
-        )
-
-    raise CorrectionNotFoundError("partner movement type is not correctable")
-
-
 def correct_partner_journal_entry_http(
     session: Session,
     entity_id: uuid.UUID,
@@ -709,8 +582,8 @@ def correct_partner_journal_entry_http(
         )
         if partner_row is None:
             raise CorrectionNotFoundError("partner ledger entry not found for journal entry")
-        _assert_source_is_correctable(session, journal_entry_id)
-        lines, amount_kurus = _build_partner_correction_lines(
+        assert_source_is_correctable(session, journal_entry_id)
+        lines, amount_kurus = build_partner_correction_lines(
             session, entity_id, partner_row, payload
         )
 

@@ -164,8 +164,11 @@ CAPABILITIES: dict[JournalEntrySource, Capability] = {
     JournalEntrySource.PARTNER_LOAN_REPAID: Capability(
         can_edit=False, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
     ),
+    # Two lines and one subledger row, like a drawing. The amount it may be
+    # corrected to is bounded by profit allocated — see `correction_lines.py`.
     JournalEntrySource.PARTNER_PROFIT_PAID: Capability(
-        can_edit=False, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+        can_edit=True, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
+        edit_kind="partner_ledger", context=_partner_ledger_context,
     ),
     JournalEntrySource.EXPENSE_PERSONAL_SPLIT: Capability(
         can_edit=False, can_void=True, owner=PARTNER, void_path=PARTNER_VOID,
