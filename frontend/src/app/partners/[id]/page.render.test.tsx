@@ -51,7 +51,15 @@ vi.mock("@/components/layout/app-shell", () => ({
 function marker(name: string, prop: string) {
   return function Marker(props: Record<string, unknown>) {
     if (!props.open) return null;
-    return <div data-testid={name} data-value={String(props[prop] ?? "")} />;
+    const value = props[prop];
+    return (
+      <div
+        data-testid={name}
+        data-value={
+          value && typeof value === "object" ? JSON.stringify(value) : String(value ?? "")
+        }
+      />
+    );
   };
 }
 vi.mock("@/components/forms/partner-form", () => ({
@@ -65,6 +73,9 @@ vi.mock("@/components/forms/correct-partner-ledger-form", () => ({
 }));
 vi.mock("@/components/forms/void-subledger-dialog", () => ({
   VoidSubledgerDialog: marker("void-dialog", "voidPath"),
+}));
+vi.mock("@/components/forms/correct-partner-profit-allocation-form", () => ({
+  CorrectPartnerProfitAllocationForm: marker("allocation-form", "entry"),
 }));
 
 import PartnerDetailPage from "./page";
@@ -225,14 +236,26 @@ describe("a row this page can correct", () => {
 });
 
 describe("an allocation on a single-partner book", () => {
-  it("does not offer an Edit this page cannot open", async () => {
-    // The bug: owner_count is 1 here, so nothing hid the button, and pressing
-    // it reached a route that answers "must be voided at entity level".
-    respond({ "je-alloc": ALLOCATION_ALONE });
+  // Not shared, so nothing upstream hides it. What it may offer is decided
+  // entirely by the kind the backend names.
+  it("does not offer an Edit for a kind this page has no form for", async () => {
+    // The rule, with the allocation no longer standing for it: the page draws
+    // Edit only where it can open what the backend named. It used to open its
+    // own form regardless, which is how an allocation came to fail on submit
+    // rather than on sight. A kind belonging to another subledger stands in
+    // here because it is the one case that can never be wired away.
+    respond({
+      "je-alloc": {
+        ...ALLOCATION_ALONE,
+        edit: { kind: "staff_ledger", context: {} },
+      },
+    });
     render(<PartnerDetailPage />);
 
     const row = await settledRow("Partner profit allocation");
     expect(row.textContent).not.toContain("Edit");
+    // Void is unaffected — withholding one must not withhold the other.
+    expect(voidButton(row)).toBeTruthy();
   });
 
   it("still offers Void, at the allocation's own route", async () => {
@@ -285,5 +308,80 @@ describe("a salary the partner fronted", () => {
     await waitFor(() => expect(screen.getByText("Temmuz maaşı")).toBeTruthy());
     const row = rowNamed("Temmuz maaşı");
     expect(row.textContent).toContain("Ahmet Yılmaz");
+  });
+});
+
+describe("when the ledger already carries the verdicts", () => {
+  it("draws the buttons without a second request", async () => {
+    // The owner: "the action buttons load after the page loads". They did,
+    // because the page asked separately for work the ledger had already done.
+    apiFetch.mockImplementation((path: string) => {
+      if (path.endsWith("/ledger")) {
+        return Promise.resolve({
+          ...LEDGER,
+          entry_actions: { "je-drawing": DRAWING_ALLOWED },
+        });
+      }
+      return Promise.resolve(PARTNER);
+    });
+
+    render(<PartnerDetailPage />);
+
+    await waitFor(() =>
+      expect(rowNamed("Cashier sent it").textContent).toContain("Edit"),
+    );
+    expect(
+      apiFetch.mock.calls.some((c) => String(c[0]).endsWith("/entries/actions")),
+    ).toBe(false);
+  });
+});
+
+describe("editing a profit allocation that covers one partner", () => {
+  it("opens the allocation form, not the partner-ledger one", async () => {
+    // The two forms post to different routes. Opening the wrong one is how
+    // this Edit used to fail on submit rather than on sight.
+    respond({ "je-alloc": ALLOCATION_ALONE });
+    render(<PartnerDetailPage />);
+
+    const row = await settledRow("Partner profit allocation");
+    fireEvent.click(
+      [...row.querySelectorAll("button")].find(
+        (b) => (b.textContent ?? "").trim() === "Edit",
+      )!,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("allocation-form")).toBeTruthy());
+    expect(screen.queryByTestId("correct-form")).toBeNull();
+  });
+
+  it("hands it the figures the backend sent, not the row's own", async () => {
+    // An allocation row carries this partner's slice; the form edits the whole
+    // allocation. Filling it from the row would quietly shrink the total.
+    respond({
+      "je-alloc": {
+        ...ALLOCATION_ALONE,
+        edit: {
+          kind: "partner_profit_allocation",
+          context: {
+            allocation_date: "2026-08-03",
+            description: "Partner profit allocation",
+            profit_kurus: 7_500_000,
+          },
+        },
+      },
+    });
+    render(<PartnerDetailPage />);
+
+    const row = await settledRow("Partner profit allocation");
+    fireEvent.click(
+      [...row.querySelectorAll("button")].find(
+        (b) => (b.textContent ?? "").trim() === "Edit",
+      )!,
+    );
+
+    const form = await screen.findByTestId("allocation-form");
+    const entry = JSON.parse(form.dataset.value!);
+    expect(entry.profit_kurus).toBe(7_500_000);
+    expect(entry.journal_entry_id).toBe("je-alloc");
   });
 });

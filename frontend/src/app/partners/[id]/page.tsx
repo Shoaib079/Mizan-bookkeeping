@@ -17,19 +17,21 @@ import { PartnerRecordForm } from "@/components/forms/partner-record-form";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { ActionsUnavailableNotice } from "@/components/ledger/actions-unavailable-notice";
+import { LedgerBandHeading } from "@/components/ledger/ledger-band-heading";
 import { SubledgerActionsCell } from "@/components/ledger/subledger-actions-cell";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import {
   CorrectPartnerLedgerForm,
   type CorrectablePartnerLedgerRow,
 } from "@/components/forms/correct-partner-ledger-form";
+import {
+  CorrectPartnerProfitAllocationForm,
+  type CorrectableProfitAllocationRow,
+} from "@/components/forms/correct-partner-profit-allocation-form";
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import {
-  DataTableCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
+import { DataTableCell, DataTableRow } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch, entityPath } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
@@ -41,11 +43,10 @@ import {
   formatPartnerNetBalance,
 } from "@/lib/partner-balance";
 import { partnerMovementLabels } from "@/lib/subledger-labels";
-import {
-  subledgerRowClassName,
-} from "@/lib/ledger-display";
+import { subledgerRowClassName } from "@/lib/ledger-display";
 import {
   PARTNER_LEDGER_FILTERS,
+  allocationRowFrom,
   allocationRowLabel,
   groupPartnerLedgerRows,
   partnerLedgerFilterMatches,
@@ -55,9 +56,13 @@ import {
 import { useEntryActions } from "@/lib/use-entry-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
-/** The correction form this page has. Anything else the backend offers is
- * opened from the General ledger, which has the rest. */
-const PAGE_EDIT_KINDS = ["partner_ledger"] as const;
+/** The correction forms this page has. Anything else the backend offers is
+ * opened from the General ledger, which has the rest.
+ *
+ * An allocation is only ever offered here when it covers a single partner —
+ * `owner_count` decides that, upstream of this list. Editing one that covers
+ * several from one partner's row would change everybody's share. */
+const PAGE_EDIT_KINDS = ["partner_ledger", "partner_profit_allocation"] as const;
 
 export default function PartnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -73,6 +78,8 @@ export default function PartnerDetailPage() {
   const [payProfitOpen, setPayProfitOpen] = useState(false);
   const [correctEntry, setCorrectEntry] =
     useState<CorrectablePartnerLedgerRow | null>(null);
+  const [correctAllocation, setCorrectAllocation] =
+    useState<CorrectableProfitAllocationRow | null>(null);
   // The path comes from the backend rather than being rebuilt here. A profit
   // allocation voids at `partners/profit-allocation/{entry}/void`, not at the
   // partner-ledger route this page used to assume for every row.
@@ -120,8 +127,9 @@ export default function PartnerDetailPage() {
     () => groupPartnerLedgerRows(filteredRows),
     [filteredRows],
   );
-  // One request for the rows on screen, rather than a rule kept here that has
-  // to agree with the backend's.
+  // Asked of the backend, never decided here. The ledger sends the verdicts
+  // with its rows, so nothing is fetched and no button arrives late; the ids
+  // are still passed for the fallback path against an older backend.
   const { rowActions, failed: actionsFailed, retry: retryActions } = useEntryActions(
     entityId,
     useMemo(
@@ -131,6 +139,7 @@ export default function PartnerDetailPage() {
           .filter((id): id is string => Boolean(id)),
       [filteredRows],
     ),
+    ledger?.entry_actions,
   );
 
   if (!entityId) {
@@ -236,26 +245,13 @@ export default function PartnerDetailPage() {
                 {bands.map((band) => (
                   <Fragment key={band.key}>
                     {band.title && (
-                      // The gross share the partner earned. The rows beneath
-                      // are how it was applied, so they read as its breakdown
-                      // rather than as two unrelated amounts.
-                      <tr className="bg-muted/40">
-                        <td
-                          colSpan={3}
-                          className="px-4 py-1.5 text-xs font-medium uppercase tracking-wider text-primary"
-                        >
-                          {band.title}
-                          {band.rows.length > 1 && (
-                            <span className="ml-2 normal-case tracking-normal text-muted-foreground">
-                              — share applied as follows
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-1.5 text-right text-sm font-semibold tabular-nums text-primary">
-                          {band.grossKurus != null && formatTry(band.grossKurus)}
-                        </td>
-                        <td colSpan={2} />
-                      </tr>
+                      <LedgerBandHeading
+                        title={band.title}
+                        grossKurus={band.grossKurus}
+                        hasParts={band.rows.length > 1}
+                        leadingColumns={3}
+                        trailingColumns={2}
+                      />
                     )}
                     {band.rows.map((entry) => {
                       // Asked, not decided here. The page used to key on
@@ -311,15 +307,22 @@ export default function PartnerDetailPage() {
                               actions={asked}
                               opensEditKinds={PAGE_EDIT_KINDS}
                               ownerNoun="partners"
-                              onEdit={() =>
-                                setCorrectEntry({
-                                  journal_entry_id: entry.journal_entry_id!,
-                                  movement_date: entry.movement_date,
-                                  movement_type: entry.movement_type,
-                                  amount_kurus: entry.amount_kurus,
-                                  description: entry.description,
-                                  payment_account_id: entry.payment_account_id,
-                                })
+                              onEdit={(edit) =>
+                                edit.kind === "partner_profit_allocation"
+                                  ? setCorrectAllocation(
+                                      allocationRowFrom(
+                                        entry.journal_entry_id!,
+                                        edit.context,
+                                      ),
+                                    )
+                                  : setCorrectEntry({
+                                      journal_entry_id: entry.journal_entry_id!,
+                                      movement_date: entry.movement_date,
+                                      movement_type: entry.movement_type,
+                                      amount_kurus: entry.amount_kurus,
+                                      description: entry.description,
+                                      payment_account_id: entry.payment_account_id,
+                                    })
                               }
                               onVoid={(voidPath) =>
                                 setVoidTarget({
@@ -363,6 +366,12 @@ export default function PartnerDetailPage() {
               lockedKind="profit_paid"
               unpaidProfitKurus={ledger.unpaid_profit_kurus ?? 0}
               onClose={() => setPayProfitOpen(false)}
+              onSaved={() => void reload()}
+            />
+            <CorrectPartnerProfitAllocationForm
+              open={correctAllocation !== null}
+              entry={correctAllocation}
+              onClose={() => setCorrectAllocation(null)}
               onSaved={() => void reload()}
             />
             <CorrectPartnerLedgerForm

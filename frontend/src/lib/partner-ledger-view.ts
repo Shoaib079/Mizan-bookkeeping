@@ -6,6 +6,7 @@
  * have accumulated. */
 
 import type { SubledgerDisplayKind } from "@/lib/ledger-display";
+import type { EntryActions } from "@/lib/use-entry-actions";
 
 /* The shapes the partner ledger endpoint returns.
  *
@@ -38,6 +39,9 @@ export type PartnerLedgerEntry = {
 };
 
 export type PartnerLedgerResponse = {
+  /** Verdicts for the rows below, sent with them so the buttons are not late.
+   * Absent from an older backend, in which case the page asks separately. */
+  entry_actions?: Record<string, EntryActions>;
   balance_kurus: number;
   capital_balance_kurus: number;
   capital_contribution_kurus: number;
@@ -102,6 +106,25 @@ export function allocationRowLabel(movementType: string): string | null {
   if (movementType === "profit_settlement") return "Cleared earlier drawings";
   if (movementType === "profit_allocation") return "Added to capital";
   return null;
+}
+
+/** The allocation edit form's row, out of the context the backend sent.
+ *
+ * `edit.context` is `Record<string, unknown>` because it genuinely is — its
+ * shape is decided per kind by the backend. Coerced here, once, so the form
+ * downstream has real types. Same job `editTargetFor` does for the General
+ * ledger; this is the partner page's one kind rather than its fourteen.
+ */
+export function allocationRowFrom(
+  journalEntryId: string,
+  context: Record<string, unknown>,
+) {
+  return {
+    journal_entry_id: journalEntryId,
+    allocation_date: String(context.allocation_date),
+    description: String(context.description),
+    profit_kurus: Number(context.profit_kurus),
+  };
 }
 
 type BandableRow = {

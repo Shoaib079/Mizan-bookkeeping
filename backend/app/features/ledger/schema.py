@@ -108,6 +108,29 @@ class LedgerEntryActionsOut(BaseModel):
     #: A page showing one owner's row of several must not offer to void it.
     owner_count: int = 1
 
+    @classmethod
+    def of(cls, actions) -> LedgerEntryActionsOut:
+        """From the core dataclass.
+
+        Here rather than in the route because three callers now need it: the
+        single route, the batch route, and the partner ledger, which sends
+        these with its rows so the buttons do not arrive late. A second copy
+        of this mapping is how two endpoints come to disagree about the same
+        entry, which is the fault this whole area was built to end.
+        """
+        edit = None
+        if actions.edit is not None:
+            edit = LedgerEntryEditContextOut(
+                kind=actions.edit.kind, context=actions.edit.context
+            )
+        return cls(
+            can_edit=actions.can_edit,
+            can_void=actions.can_void,
+            void_path=actions.void_path,
+            edit=edit,
+            owner_count=actions.owner_count,
+        )
+
 
 #: One page of rows. Capped so a caller cannot ask about the whole ledger in
 #: one request — each id costs a subledger lookup.

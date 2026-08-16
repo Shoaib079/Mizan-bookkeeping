@@ -65,8 +65,13 @@ describe("when the lookup fails", () => {
     apiFetch.mockResolvedValue({ actions: { e1: ALLOWED } });
     act(() => result.current.retry());
 
-    await waitFor(() => expect(result.current.failed).toBe(false));
-    expect(result.current.rowActions("e1").can_void).toBe(true);
+    // Waited on the answer, not on `failed`. The flag clears when the retry
+    // *starts*, so waiting for that races the request it is meant to outlast —
+    // which passed by luck until another test made the run slower.
+    await waitFor(() =>
+      expect(result.current.rowActions("e1").can_void).toBe(true),
+    );
+    expect(result.current.failed).toBe(false);
   });
 
   it("does not cry failure when the answer is simply empty", async () => {
@@ -120,6 +125,49 @@ describe("when there are more rows than one request may carry", () => {
     const { result } = renderHook(() => useEntryActions("ent-1", ["e1", "e2"]));
 
     await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("when the verdicts arrived with the rows", () => {
+  it("asks for nothing", async () => {
+    // The whole point: no second round trip, so no button arrives late.
+    const { result } = renderHook(() =>
+      useEntryActions("ent-1", ["e1"], { e1: ALLOWED }),
+    );
+
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(apiFetch).not.toHaveBeenCalled();
+    expect(result.current.rowActions("e1").can_void).toBe(true);
+  });
+
+  it("is ready on the first render, not after one", () => {
+    // `loaded` false for a tick would be enough to blank the column again.
+    const { result } = renderHook(() =>
+      useEntryActions("ent-1", ["e1"], { e1: ALLOWED }),
+    );
+    expect(result.current.loaded).toBe(true);
+    expect(result.current.failed).toBe(false);
+  });
+
+  it("still fetches when the backend sent none", async () => {
+    // An older backend has no `entry_actions` field. The page must keep
+    // working against it rather than silently losing every button.
+    apiFetch.mockResolvedValue({ actions: { e1: ALLOWED } });
+    const { result } = renderHook(() => useEntryActions("ent-1", ["e1"], undefined));
+
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats an empty map as nothing sent, not as nothing allowed", async () => {
+    // A ledger with rows but an empty map means the field is absent or the
+    // backend is old. Reading it as "no buttons anywhere" is the failure this
+    // whole thread has been about.
+    apiFetch.mockResolvedValue({ actions: { e1: ALLOWED } });
+    const { result } = renderHook(() => useEntryActions("ent-1", ["e1"], {}));
+
+    await waitFor(() => expect(result.current.rowActions("e1").can_void).toBe(true));
     expect(apiFetch).toHaveBeenCalledTimes(1);
   });
 });

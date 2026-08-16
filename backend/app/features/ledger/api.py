@@ -25,7 +25,6 @@ from app.features.ledger.schema import (
     LedgerEntryActionsBatchIn,
     LedgerEntryActionsBatchOut,
     LedgerEntryActionsOut,
-    LedgerEntryEditContextOut,
     VoidJournalEntryOut,
     VoidJournalEntryRequest,
 )
@@ -85,28 +84,7 @@ def get_entry_actions(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except EntryNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    edit = None
-    if actions.edit is not None:
-        edit = LedgerEntryEditContextOut(
-            kind=actions.edit.kind,
-            context=actions.edit.context,
-        )
-    return _actions_out(actions)
-
-
-def _actions_out(actions) -> LedgerEntryActionsOut:
-    edit = None
-    if actions.edit is not None:
-        edit = LedgerEntryEditContextOut(
-            kind=actions.edit.kind, context=actions.edit.context
-        )
-    return LedgerEntryActionsOut(
-        can_edit=actions.can_edit,
-        can_void=actions.can_void,
-        void_path=actions.void_path,
-        edit=edit,
-        owner_count=actions.owner_count,
-    )
+    return LedgerEntryActionsOut.of(actions)
 
 
 @router.post("/entries/actions", response_model=LedgerEntryActionsBatchOut)
@@ -131,15 +109,21 @@ def get_entry_actions_batch(
     about the rows it is showing; if one has gone, the honest answer is
     nothing rather than an error that hides the other forty-nine.
     """
-    out: dict[str, LedgerEntryActionsOut] = {}
-    for entry_id in payload.entry_ids[:MAX_ACTIONS_BATCH]:
-        try:
-            out[str(entry_id)] = _actions_out(
-                service.get_entry_actions(session, entity_id, entry_id)
-            )
-        except (LookupError, EntryNotFoundError):
-            continue
-    return LedgerEntryActionsBatchOut(actions=out)
+    from app.core.ledger.entry_actions import resolve_entry_actions_for_ids
+
+    try:
+        resolved = resolve_entry_actions_for_ids(
+            session, entity_id, payload.entry_ids[:MAX_ACTIONS_BATCH]
+        )
+    except LookupError:
+        # No such restaurant. One answer for the request, not one per id.
+        return LedgerEntryActionsBatchOut(actions={})
+    return LedgerEntryActionsBatchOut(
+        actions={
+            str(entry_id): LedgerEntryActionsOut.of(actions)
+            for entry_id, actions in resolved.items()
+        }
+    )
 
 
 @router.post("/entries/{entry_id}/void", response_model=VoidJournalEntryOut)

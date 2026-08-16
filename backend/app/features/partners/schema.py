@@ -11,6 +11,7 @@ from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.partners.types import PartnerMovementType
+from app.features.ledger.schema import LedgerEntryActionsOut
 
 
 class PartnerCreate(BaseModel):
@@ -103,6 +104,14 @@ class PartnerLedgerRead(BaseModel):
     current_account_kurus: int = 0
     loan_balance_kurus: int = 0
     entries: list[PartnerLedgerEntryRead]
+    #: What may be edited or voided, keyed by journal entry id as a string.
+    #:
+    #: Sent with the rows rather than fetched after them. The page used to ask
+    #: separately, so every button appeared a moment late — visibly, and for no
+    #: reason, since the work is the same either way. Same resolver as
+    #: `POST /ledger/entries/actions`, which stays for callers that need to ask
+    #: about rows they did not get from here.
+    entry_actions: dict[str, LedgerEntryActionsOut] = Field(default_factory=dict)
 
 
 class ExpenseFrontedCreate(AcknowledgeDuplicateMixin):

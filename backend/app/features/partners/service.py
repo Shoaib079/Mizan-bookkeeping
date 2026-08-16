@@ -43,6 +43,7 @@ from app.core.duplicate_guard import (
 )
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
+from app.features.partners.ledger_enrichment import partner_entry_actions
 from app.features.partners.models import Partner
 from app.features.partners.schema import (
     ExpenseFrontedCreate,
@@ -254,6 +255,9 @@ def get_partner_ledger(
             ):
                 running += read.amount_kurus
             read.running_balance_kurus = running
+    # Outside the context above: the resolver opens its own, and it needs the
+    # whole page of ids at once rather than one per row.
+    entry_actions = partner_entry_actions(session, entity_id, reads)
     return PartnerLedgerRead(
         partner_id=partner_id,
         balance_kurus=reimbursement,
@@ -267,6 +271,7 @@ def get_partner_ledger(
         current_account_kurus=running,
         loan_balance_kurus=loan,
         entries=reads,
+        entry_actions=entry_actions,
     )
 
 

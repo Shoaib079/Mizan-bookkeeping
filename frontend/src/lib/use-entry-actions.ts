@@ -62,7 +62,25 @@ export const NO_ACTIONS: EntryActions = {
  * Pass the ids currently rendered. The hook refetches when that set changes,
  * which includes after a void — the answer is meant to be different then.
  */
-export function useEntryActions(entityId: string, entryIds: string[]) {
+/**
+ * `rowActions(entryId)` for every row on the page.
+ *
+ * Pass the ids currently rendered. The hook refetches when that set changes,
+ * which includes after a void — the answer is meant to be different then.
+ *
+ * `seed` is the answer a list endpoint already sent with its rows. Given one,
+ * nothing is fetched and the buttons are there the moment the rows are; the
+ * work is identical either way, and asking separately only meant the actions
+ * column filled in a beat after the table drew. Without a seed it fetches as
+ * before, which is what keeps a page working against a backend that has not
+ * been redeployed yet.
+ */
+export function useEntryActions(
+  entityId: string,
+  entryIds: string[],
+  seed?: Record<string, EntryActions>,
+) {
+  const seeded = seed !== undefined && Object.keys(seed).length > 0;
   const [actions, setActions] = useState<Record<string, EntryActions>>({});
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -76,6 +94,11 @@ export function useEntryActions(entityId: string, entryIds: string[]) {
 
   useEffect(() => {
     const ids = key ? key.split(",") : [];
+    if (seeded) {
+      // Already answered. Not merged with a fetch: two sources for one row is
+      // how a page and the ledger came to disagree in the first place.
+      return;
+    }
     if (!entityId || ids.length === 0) {
       setActions({});
       setFailed(false);
@@ -116,19 +139,20 @@ export function useEntryActions(entityId: string, entryIds: string[]) {
     return () => {
       cancelled = true;
     };
-  }, [entityId, key, attempt]);
+  }, [entityId, key, attempt, seeded]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  const answers = seeded ? seed! : actions;
 
   return {
-    loaded,
+    loaded: seeded || loaded,
     /** True when the lookup did not arrive — not when it came back empty. */
-    failed,
+    failed: seeded ? false : failed,
     retry,
     /** The verdict for one row, honest while still loading. */
     rowActions(entryId: string | null | undefined): EntryActions {
       if (!entryId) return NO_ACTIONS;
-      return actions[entryId] ?? NO_ACTIONS;
+      return answers[entryId] ?? NO_ACTIONS;
     },
   };
 }

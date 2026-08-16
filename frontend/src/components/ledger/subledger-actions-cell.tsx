@@ -36,7 +36,9 @@ type Props = {
   opensEditKinds: readonly string[];
   /** Plural, lowercase — "partners", "employees". Whose rows these are. */
   ownerNoun?: string;
-  onEdit: () => void;
+  /** Handed the backend's own `edit`, so the page opens the form it names
+   * rather than the one it happens to have. */
+  onEdit: (edit: NonNullable<EntryActions["edit"]>) => void;
   /** Given the backend's own `void_path`, relative to the entity. */
   onVoid: (voidPath: string) => void;
 };
@@ -59,7 +61,7 @@ export function SubledgerActionsCell({
       <SubledgerRowActions
         row={row}
         showEdit={canEdit}
-        onEdit={onEdit}
+        onEdit={() => allowed.edit && onEdit(allowed.edit)}
         onVoid={() => allowed.void_path && onVoid(allowed.void_path)}
       />
     );
