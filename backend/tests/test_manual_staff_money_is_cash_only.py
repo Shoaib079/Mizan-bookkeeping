@@ -143,12 +143,15 @@ def test_the_statement_classifier_may_still_use_a_bank(
     """
     from app.core.staff import posting as staff_posting
 
+    # Same keywords `statement_posters/staff.py` uses, `cash_minor` included —
+    # the first version of this test invented `amount_minor` from the service
+    # signature next door and failed on the call rather than on the rule.
     result = staff_posting.post_period_salary_payment(
         db_session,
         staff_setup["entity_id"],
         staff_setup["employee_id"],
         payment_date=date(2026, 8, 6),
-        amount_minor=3_500_000,
+        cash_minor=3_500_000,
         period_year=2026,
         period_month=7,
         period_salary_minor=3_500_000,
