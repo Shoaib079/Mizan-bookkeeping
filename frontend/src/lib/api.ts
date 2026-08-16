@@ -66,6 +66,41 @@ export type ApiFetchInit = RequestInit & {
   idempotencyKey?: string;
 };
 
+function hasContentType(headers: RequestInit["headers"]): boolean {
+  if (!headers) return false;
+  if (headers instanceof Headers) return headers.has("Content-Type");
+  if (Array.isArray(headers)) {
+    return headers.some(([name]) => name.toLowerCase() === "content-type");
+  }
+  return Object.keys(headers).some(
+    (name) => name.toLowerCase() === "content-type",
+  );
+}
+
+/**
+ * `Content-Type: application/json` for a JSON body, unless the caller set one.
+ *
+ * Thirty-odd call sites were passing this header by hand and one was not.
+ * `fetch` with a string body defaults to `text/plain`, FastAPI refuses to read
+ * the body as JSON, and the reply is a 422 that names a field the caller did
+ * send. That is how `POST /ledger/entries/actions` had been failing in
+ * production since the day it shipped — every Edit and Void button on the
+ * partner page missing, for a week, with nothing on screen saying so.
+ *
+ * Neither test layer could see it: the frontend mocks `apiFetch`, and the
+ * backend's TestClient uses `json=`, which sets the header itself. The seam
+ * between them was the one place nothing looked.
+ *
+ * Set here rather than in each caller so the next one cannot forget. A
+ * `FormData` body is left alone on purpose — the browser has to set that
+ * header itself, because only it knows the multipart boundary.
+ */
+function resolveContentType(init?: ApiFetchInit): Record<string, string> {
+  if (!init?.body || typeof init.body !== "string") return {};
+  if (hasContentType(init.headers)) return {};
+  return { "Content-Type": "application/json" };
+}
+
 function resolveIdempotencyKey(
   init?: ApiFetchInit,
 ): Record<string, string> {
@@ -118,6 +153,7 @@ export async function apiFetch<T>(
         ...fetchInit,
         headers: {
           ...authHeaders,
+          ...resolveContentType(init),
           ...resolveIdempotencyKey(init),
           ...(fetchInit.headers ?? {}),
         },
