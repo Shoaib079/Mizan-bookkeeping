@@ -55,7 +55,6 @@
   "frontend/src/app/(customers-section)/customers/[id]/page.tsx": 434,
   "frontend/src/app/banking/cash/page.tsx": 527,
   "frontend/src/app/onboarding/opening-balances/page.tsx": 775,
-  "frontend/src/app/partners/[id]/page.tsx": 440,
   "frontend/src/app/split/page.tsx": 498,
   "frontend/src/app/staff/[id]/page.tsx": 486,
   "frontend/src/components/banking/fx-hub-page-content.tsx": 427,
