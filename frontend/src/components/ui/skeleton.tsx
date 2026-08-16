@@ -1,3 +1,11 @@
+"use client";
+
+/* Client, because `PageSkeleton` decides whether to draw itself and that
+ * decision needs a hook. Seventeen server components render a skeleton —
+ * every route-level `loading.tsx`, and `not-found` — and a server component
+ * may render a client one, but a module without this line calls its hooks on
+ * the server and the build fails at prerender. */
+
 import { cn } from "@/lib/utils";
 import { useShowsSkeleton } from "@/lib/use-shows-skeleton";
 import { useIsMobileShell } from "@/lib/use-mobile-shell";

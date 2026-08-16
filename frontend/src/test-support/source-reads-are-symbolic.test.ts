@@ -49,6 +49,12 @@ const MAY_READ_BY_PATH: Record<string, string> = {
     "data — a route in Next.js *is* its path. Naming the pages by symbol " +
     "would mean listing the very thing it exists to enumerate, and a page " +
     "added without being listed is the failure it catches",
+  "lib/server-components-avoid-hooks.test.ts":
+    "same reason, one level deeper. It walks app/ for the server routes and " +
+    "then follows their imports, so the module graph is the data. There is " +
+    "no symbol to name: what it checks is which files a server component can " +
+    "reach, and the answer changes when an import changes rather than when a " +
+    "symbol is renamed",
 };
 
 /** Comments, which mention filenames without reading them.
