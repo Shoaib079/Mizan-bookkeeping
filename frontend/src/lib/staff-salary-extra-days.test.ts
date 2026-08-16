@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
+import { sourceDeclaringAll } from "@/test-support/source";
 
 import {
   formatCashPrefill,

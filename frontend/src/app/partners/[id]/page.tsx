@@ -43,14 +43,6 @@ import {
   subledgerRowClassName,
 } from "@/lib/ledger-display";
 import {
-  PartnerCashCard,
-  PartnerProfitCard,
-} from "@/components/partners/partner-summary-cards";
-import {
-  partnerCashSummary,
-  partnerProfitSummary,
-} from "@/lib/partner-summary";
-import {
   PARTNER_LEDGER_FILTERS,
   allocationRowLabel,
   groupPartnerLedgerRows,
@@ -110,11 +102,6 @@ export default function PartnerDetailPage() {
   const { showHistory, setShowHistory, hiddenCount, visibleRows } =
     useLedgerHistoryView(ledger?.entries ?? []);
 
-  const rows = useMemo(() => ledger?.entries ?? [], [ledger]);
-  const profitSummary = useMemo(
-    () => partnerProfitSummary(rows, ledger?.unpaid_profit_kurus),
-    [rows, ledger?.unpaid_profit_kurus],
-  );
   const [ledgerFilter, setLedgerFilter] = useState<PartnerLedgerFilter>("all");
   const filteredRows = useMemo(
     () =>
@@ -138,17 +125,6 @@ export default function PartnerDetailPage() {
           .filter((id): id is string => Boolean(id)),
       [filteredRows],
     ),
-  );
-  const cashSummary = useMemo(
-    () =>
-      partnerCashSummary(rows, {
-        drawingsNetKurus: ledger?.drawings_net_kurus,
-        capitalContributionKurus: ledger?.capital_contribution_kurus,
-        capitalBalanceKurus: ledger?.capital_balance_kurus,
-        reimbursementBalanceKurus: ledger?.balance_kurus,
-        currentAccountKurus: ledger ? partnerBalance(ledger) : undefined,
-      }),
-    [rows, ledger],
   );
 
   if (!entityId) {
@@ -218,21 +194,22 @@ export default function PartnerDetailPage() {
             <HeadlineFigure
               label={partnerBalanceHeading(partnerBalance(ledger))}
               amountKurus={Math.abs(partnerBalance(ledger))}
-              caption={
+              /* Capital beside the balance, not inside it.
+               *
+               * The two summary cards were the only place it appeared, and
+               * removing them took it off the page entirely. It is not part of
+               * the balance above — money put into the business is not a debt
+               * it repays on demand — so it reads as a separate fact here
+               * rather than as another line in the figure. */
+              caption={[
+                `Capital in business: ${formatTry(ledger.capital_balance_kurus)}`,
                 (ledger.loan_balance_kurus ?? 0) !== 0
                   ? `Partner loan: ${formatTry(ledger.loan_balance_kurus!)}`
-                  : undefined
-              }
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             />
-          )
-        }
-        /* Profit and cash reported separately — one sticker each. */
-        panels={
-          ledger && (
-            <>
-              <PartnerProfitCard profit={profitSummary} />
-              <PartnerCashCard cash={cashSummary} />
-            </>
           )
         }
         activity={

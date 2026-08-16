@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 
 
@@ -45,6 +45,14 @@ describe("unified record dialogs", () => {
   it("routes staff salary payment through the rich dialog with a picked employee (hidden from Add hub)", () => {
     const people = sourceDeclaring("PeopleRecordDialog");
     const salaryDialog = sourceDeclaring("StaffSalaryPaymentDialog");
+    /* The endpoint left the dialog when partner-funded salary was added — it
+     * lives in `postStaffSalaryPayment` now. This guard is about the feature,
+     * not about which of its two files the fetch happens to sit in, so it
+     * reads both. Naming one file was what broke it. */
+    const salaryPosting = sourceDeclaringAll(
+      "StaffSalaryPaymentDialog",
+      "postStaffSalaryPayment",
+    );
     const cashForm = sourceDeclaring("StaffCashMovementForm");
     const staffPage = sourceDeclaring("StaffDetailPage");
     const actions = sourceDeclaring("PERSON_PICKER_ACTIONS");
@@ -63,8 +71,17 @@ describe("unified record dialogs", () => {
     expect(cashForm).not.toContain('employeeName = "Employee"');
     expect(staffPage).toContain("StaffSalaryPaymentDialog");
     expect(staffPage).toContain("employeeName={employee.name}");
-    expect(salaryDialog).toContain(
-      "/staff/employees/${employeeId}/payments",
+    /* Matched, not quoted. The endpoint used to be written with
+     * `${employeeId}`; moving it into the submit helper made it
+     * `${args.employeeId}`, so the exact string this asserted existed in
+     * neither file. What the guard means is the route, not the name of the
+     * variable interpolated into it. The partner-funded branch is here too —
+     * it is the reason the code moved, and nothing was watching it. */
+    expect(salaryPosting).toMatch(
+      /staff\/employees\/\$\{[\w.]+\}\/payments/,
+    );
+    expect(salaryPosting).toMatch(
+      /staff\/employees\/\$\{[\w.]+\}\/partner-funded-payments/,
     );
     expect(salaryDialog).not.toContain("defaultPeriod.year");
     expect(salaryDialog).not.toContain("defaultPeriod.month");
