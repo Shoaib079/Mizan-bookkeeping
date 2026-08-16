@@ -55,6 +55,8 @@ DEDICATED_CORRECTION_ROUTES: dict[JournalEntrySource, str] = {
     JournalEntrySource.PARTNER_REIMBURSEMENT_PAID: "partner reimbursement correction",
     JournalEntrySource.PARTNER_DRAWING: "partner drawing correction",
     JournalEntrySource.PARTNER_DRAWING_REPAYMENT: "partner drawing repayment correction",
+    JournalEntrySource.PARTNER_PROFIT_PAID: "partner profit payment correction",
+    JournalEntrySource.PARTNER_SALARY_FRONTED: "partner-funded salary correction",
     JournalEntrySource.EXPENSE_ENTRY: "expense entry correction",
     JournalEntrySource.PARTNER_PROFIT_ALLOCATION: "partner profit allocation correction",
     JournalEntrySource.DELIVERY_COMMISSION: "delivery commission invoice correction",
