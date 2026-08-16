@@ -168,16 +168,20 @@ def test_the_bound_adds_back_the_row_being_corrected(db_session, profit_paid):
     assert after.unpaid_profit_kurus == ALLOCATED - (PAID + 1)
 
 
-def test_a_partner_funded_salary_is_still_refused(db_session, restaurant_a):
-    """The neighbouring exclusion, which is not being relaxed.
+def test_a_partner_funded_salary_is_not_corrected_through_this_route():
+    """The neighbour has its own route, and must not fall back to this one.
 
-    Guard the guard: opening profit paid by widening something shared would
+    Guard the guard: opening profit paid by widening something generic would
     have opened this too, and a correction driven from the partner row would
-    rewrite the partner leg and drop the staff ones.
+    rewrite the partner leg and drop the staff ones. It is correctable — see
+    `test_partner_funded_salary_correction.py` — but only through
+    `staff/partner-funded-salary/{id}/correct`, which moves both.
     """
+    from app.core.ledger.correction.registry import GENERIC_CORRECTABLE_SOURCES
+
     assert (
-        JournalEntrySource.PARTNER_SALARY_FRONTED in VOID_AND_REENTER_SOURCES
-    )
+        JournalEntrySource.PARTNER_SALARY_FRONTED not in GENERIC_CORRECTABLE_SOURCES
+    ), "a generic correct would rewrite the partner leg and orphan the staff rows"
 
 
 def test_capital_contribution_is_still_refused(db_session, profit_paid):

@@ -35,10 +35,8 @@ from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import PartnerMovementType
 from app.core.staff import ledger as staff_ledger
 from app.core.staff.models import StaffLedgerEntry
-from app.core.staff.partner_funded_payment import (
-    correct_partner_funded_salary,
-    post_partner_funded_period_salary,
-)
+from app.core.staff.partner_funded_correction import correct_partner_funded_salary
+from app.core.staff.partner_funded_payment import post_partner_funded_period_salary
 from app.core.staff.types import StaffMovementType
 from app.core.subledger.control_account_tie import assert_entity_control_accounts_tied
 from app.db.session import entity_context
