@@ -11,6 +11,7 @@ import { CashBankSnapshotCard } from "@/components/dashboard/cash-bank-snapshot-
 
 import {
   WeeklyChart,
+  chartStatusForRefresh,
   type WeeklyChartStatus,
 } from "@/components/dashboard/weekly-chart";
 import { ReportDateRange } from "@/components/reports/report-date-range";
@@ -65,7 +66,7 @@ function DashboardBody() {
       return;
     }
     setLoading(true);
-    setTimeSeriesStatus("loading");
+    setTimeSeriesStatus(chartStatusForRefresh);
     setError(null);
 
     const tsFetch = (async () => {
@@ -90,8 +91,10 @@ function DashboardBody() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
       setData(null);
-      setTimeSeries(null);
-      setTimeSeriesStatus("loading");
+      // The chart is a separate request and owns its own state. Blanking it
+      // here ran *after* that request had already resolved, so a dashboard
+      // failure left a chart that had loaded fine stuck as a skeleton until
+      // the next reload. Awaited only so the promise is not left dangling.
       await tsFetch;
     } finally {
       setLoading(false);

@@ -34,7 +34,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { Input, Label, Select } from "@/components/ui/input";
-import { PageSkeleton } from "@/components/ui/skeleton";
+import { AfterFirstLoad, PageSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatChartAccountLabel } from "@/lib/chart-accounts";
 import { apiFetch } from "@/lib/api";
@@ -494,9 +494,9 @@ function LedgerPanelContent() {
 
       {forbidden && <ForbiddenMessage />}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
+      <PageSkeleton when={loading} />
 
-      {!loading && !forbidden && (
+      <AfterFirstLoad when={loading}>{!forbidden && (
         <>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">
@@ -635,7 +635,7 @@ function LedgerPanelContent() {
             </DataTable>
           )}
         </>
-      )}
+      )}</AfterFirstLoad>
 
       <CorrectLedgerEntryForm
         open={correctTarget !== null}

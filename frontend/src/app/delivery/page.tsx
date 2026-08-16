@@ -82,7 +82,7 @@ export default function DeliveryPage() {
         </p>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
+      <PageSkeleton when={loading} />
 
       {recon && recon.platforms.length === 0 && (
         <p className="text-sm text-muted-foreground">

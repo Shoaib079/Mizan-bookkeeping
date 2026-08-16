@@ -90,7 +90,7 @@ export function BankingBranchListContent({
         </p>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
+      <PageSkeleton when={loading} />
 
       {branch && (
         <section className="rounded-lg border border-border bg-card">

@@ -123,7 +123,7 @@ export function CardsPageContent() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
+      <PageSkeleton when={loading} />
 
       {/* Card clearing is an asset — it cannot legitimately go negative. When
        * it does, deposits have been recorded but the card sales behind them

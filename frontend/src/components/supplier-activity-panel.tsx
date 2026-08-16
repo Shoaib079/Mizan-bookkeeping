@@ -183,7 +183,7 @@ export function SupplierActivityPanel({
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
+      <PageSkeleton when={loading} />
 
       {data && (
         <>

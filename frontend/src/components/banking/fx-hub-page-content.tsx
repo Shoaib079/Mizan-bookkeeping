@@ -217,9 +217,9 @@ export function FxHubPageContent() {
         </p>
       )}
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <PageSkeleton />}
+      <PageSkeleton when={loading} />
 
-      {!loading && tree && (
+      {tree && (
         <>
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <Button

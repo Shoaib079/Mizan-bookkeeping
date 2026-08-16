@@ -113,7 +113,7 @@ export function BankingHubContent() {
           Select a restaurant in the sidebar.
         </p>
       )}
-      {loading && <PageSkeleton />}
+      <PageSkeleton when={loading} />
 
       {tree && tree.cash.accounts.length === 0 && (
         <p className="mt-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">

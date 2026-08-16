@@ -100,6 +100,23 @@ export function buildWeeklyChartData(
   });
 }
 
+/** The status a refresh should move to, given where the chart already is.
+ *
+ * A chart with bars on it refreshes underneath them. Resetting to "loading" on
+ * every reload swapped it for a skeleton each time the window regained focus
+ * or anything was recorded — the dashboard half of "i can literally see the
+ * app to kinda move and come back".
+ *
+ * "error" deliberately goes back to "loading": there is nothing on screen to
+ * preserve, and a retry that kept showing the old failure would be a lie.
+ */
+export function chartStatusForRefresh(
+  current: WeeklyChartStatus,
+): WeeklyChartStatus {
+  return current === "loaded" ? "loaded" : "loading";
+}
+
+
 export function WeeklyChart({ status, daily }: Props) {
   const data = buildWeeklyChartData(daily);
 
