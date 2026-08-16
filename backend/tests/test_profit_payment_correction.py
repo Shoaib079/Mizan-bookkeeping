@@ -30,6 +30,7 @@ from sqlalchemy import select
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import ChartAlreadySeededError, seed_default_chart
 from app.core.ledger.correction import CorrectionNotFoundError
+from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.ledger.models import JournalEntrySource
 from app.core.ledger.correction.registry import VOID_AND_REENTER_SOURCES
 from app.core.partners import posting as partner_posting
@@ -119,14 +120,17 @@ def test_a_payment_can_be_corrected_down(db_session, profit_paid):
     entity_id, partner_id, entry_id, cash = profit_paid
     _correct(db_session, entity_id, partner_id, entry_id, cash, 400_000)
 
+    # Keyed on `display_kind`, not on having a running balance: every row gets
+    # one, including the superseded original and the reversal. Filtering on it
+    # selected nothing and this read the original back at its old amount.
     ledger = partner_service.get_partner_ledger(db_session, entity_id, partner_id)
-    row = next(
+    rows = [
         e
         for e in ledger.entries
         if e.movement_type == PartnerMovementType.PROFIT_PAID
-        and e.running_balance_kurus is not None
-    )
-    assert row.amount_kurus == -400_000
+        and e.display_kind == SubledgerDisplayKind.EFFECTIVE
+    ]
+    assert [r.amount_kurus for r in rows] == [-400_000]
     assert ledger.unpaid_profit_kurus == ALLOCATED - 400_000
 
 

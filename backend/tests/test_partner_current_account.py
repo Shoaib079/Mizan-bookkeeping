@@ -38,6 +38,7 @@ from app.db.session import entity_context
 from app.core.partners import posting as partner_posting
 from app.core.partners.profit_allocation import post_profit_allocation
 from app.features.partners import service as partner_service
+from app.features.reports.subledger_export import effective_entries
 from app.features.partners.schema import PartnerCreate
 from tests.delivery_helpers import ACTOR_ID
 
@@ -164,7 +165,10 @@ def test_the_ledger_column_ends_on_the_figure_it_reports(
     """
     entity_id, partner_id = owed_profit_then_overdrawn
     ledger = partner_service.get_partner_ledger(db_session, entity_id, partner_id)
-    effective = [e for e in ledger.entries if e.running_balance_kurus is not None]
+    # `effective_entries`, not "has a running balance" — every row carries
+    # one, including the superseded original and its reversal, so that filter
+    # excluded nothing and only looked right on a fixture with no corrections.
+    effective = effective_entries(ledger.entries)
     assert effective[-1].running_balance_kurus == ledger.current_account_kurus
     assert ledger.current_account_kurus == PROFIT - DRAWING
 

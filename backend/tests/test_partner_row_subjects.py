@@ -32,6 +32,7 @@ from app.core.staff.partner_funded_payment import post_partner_funded_period_sal
 from app.db.session import entity_context
 from app.features.partners import ledger_export
 from app.features.partners import service as partner_service
+from app.features.reports.subledger_export import effective_entries
 from app.features.partners.models import Partner
 from tests.test_staff import ACTOR_ID, staff_setup  # noqa: F401
 
@@ -116,9 +117,7 @@ def test_the_statement_carries_the_name_too(db_session, partner_fronted_a_salary
     """
     entity_id, partner_id = partner_fronted_a_salary
     ledger = partner_service.get_partner_ledger(db_session, entity_id, partner_id)
-    rows = ledger_export._rows(
-        [e for e in ledger.entries if e.running_balance_kurus is not None]
-    )
+    rows = ledger_export._rows(effective_entries(ledger.entries))
     salary = next(r for r in rows if r.description.startswith("Temmuz maaşı"))
     assert salary.description == f"Temmuz maaşı — {EMPLOYEE_NAME}"
 

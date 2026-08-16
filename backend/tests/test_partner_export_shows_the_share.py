@@ -31,6 +31,7 @@ from app.core.partners.profit_allocation import post_profit_allocation
 from app.db.session import entity_context
 from app.features.partners import ledger_export
 from app.features.partners import service as partner_service
+from app.features.reports.subledger_export import effective_entries
 from app.features.partners.schema import PartnerCreate
 from tests.delivery_helpers import ACTOR_ID
 
@@ -85,9 +86,7 @@ def allocation_split_in_two(db_session, restaurant_a):
         netting_as_of=date(2026, 8, 3),
     )
     ledger = partner_service.get_partner_ledger(db_session, entity_id, partner_id)
-    return ledger, ledger_export._rows(
-        [e for e in ledger.entries if e.running_balance_kurus is not None]
-    )
+    return ledger, ledger_export._rows(effective_entries(ledger.entries))
 
 
 def test_the_share_appears_as_one_figure(allocation_split_in_two) -> None:

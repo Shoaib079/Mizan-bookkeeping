@@ -29,7 +29,11 @@ import pytest
 from sqlalchemy import select
 
 from app.core.ledger.correction import CorrectionNotFoundError
-from app.core.ledger.models import JournalEntry, JournalEntryStatus
+from app.core.ledger.models import (
+    JournalEntry,
+    JournalEntrySource,
+    JournalEntryStatus,
+)
 from app.core.partners import ledger as partner_ledger
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import PartnerMovementType
@@ -269,14 +273,26 @@ def test_a_zero_or_negative_amount_is_refused(db_session, partner_paid_a_salary)
         _correct(db_session, ctx, amount=0)
 
 
-def test_correcting_something_that_is_not_one_is_refused(db_session, staff_setup):  # noqa: F811
-    """Guard the guard: the route must not accept any journal entry at all."""
-    entity_id = staff_setup["entity_id"]
+def test_correcting_something_that_is_not_one_is_refused(
+    db_session, partner_paid_a_salary
+):
+    """Guard the guard: the route must not accept any journal entry at all.
+
+    The accrual sitting beside the payment is the honest thing to try it on —
+    a real entry, for the same employee and period, that this route must still
+    refuse. `staff_setup` alone posts nothing, which is what the first version
+    of this test asserted against and why it failed rather than passing
+    vacuously.
+    """
+    entity_id = partner_paid_a_salary["entity_id"]
     with entity_context(db_session, entity_id):
         other = db_session.scalar(
-            select(JournalEntry).where(JournalEntry.entity_id == entity_id)
+            select(JournalEntry).where(
+                JournalEntry.entity_id == entity_id,
+                JournalEntry.source != JournalEntrySource.PARTNER_SALARY_FRONTED,
+            )
         )
-    assert other is not None, "the fixture posted no journal entries"
+    assert other is not None, "no other journal entry to try this on"
     with pytest.raises(CorrectionNotFoundError):
         correct_partner_funded_salary(
             db_session,
