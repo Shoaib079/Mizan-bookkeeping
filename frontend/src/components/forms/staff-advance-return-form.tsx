@@ -13,7 +13,8 @@ import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import {
-  loadBankAndCashAccounts,
+  loadCashAccounts,
+  mainTillAccount,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -52,10 +53,11 @@ export function StaffAdvanceReturnForm({
 
   const load = useCallback(async () => {
     if (!entityId) return;
-    const list = await loadBankAndCashAccounts(entityId);
-    setAccounts(list);
-    const cash = list.find((a) => a.account_kind === "cash") ?? list[0];
-    if (cash) setGlAccountId(cash.gl_account_id);
+    const cash = await loadCashAccounts(entityId);
+    setAccounts(cash);
+    // Main Drawer, not whichever cash account the API listed first.
+    const till = mainTillAccount(cash) ?? cash[0];
+    if (till) setGlAccountId(till.gl_account_id);
   }, [entityId]);
 
   useEffect(() => {

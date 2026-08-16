@@ -17,7 +17,7 @@ import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import {
-  loadBankAndCashAccounts,
+  loadCashAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -72,8 +72,7 @@ export function StaffExtraDaysForm({
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
-    const merged = await loadBankAndCashAccounts(entityId);
-    setTryAccounts(merged);
+    setTryAccounts(await loadCashAccounts(entityId));
     // Default accrue — do not auto-select a cash account.
     setPaymentGlAccountId(ACCRUE_VALUE);
   }, [entityId]);

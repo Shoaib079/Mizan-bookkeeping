@@ -42,6 +42,7 @@ from app.core.duplicate_guard import (
     ensure_not_duplicate,
     find_duplicate_partner_expense_fronted,
 )
+from app.core.banking.manual_cash import require_manual_cash_payment_account
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.partners.correction_lines import (
@@ -349,39 +350,13 @@ def record_split_buy(
     )
 
 
-def _require_manual_cash_payment_account(
-    session: Session,
-    entity_id: uuid.UUID,
-    payment_account_id: uuid.UUID,
-) -> None:
-    """Manual partner money APIs are cash-only; bank uses statement classify."""
-    from app.core.ledger.posting import InvalidAccountError
-    from app.features.banking.models import MoneyAccount, MoneyAccountKind
-
-    with entity_context(session, entity_id):
-        require_entity_context()
-        money = session.scalar(
-            select(MoneyAccount).where(
-                MoneyAccount.entity_id == entity_id,
-                MoneyAccount.gl_account_id == payment_account_id,
-            )
-        )
-        if money is None:
-            raise InvalidAccountError("payment account not found for this entity")
-        if money.account_kind != MoneyAccountKind.CASH:
-            raise InvalidAccountError(
-                "Manual partner money is cash-only — classify bank lines on the "
-                "bank statement"
-            )
-
-
 def record_reimbursement_paid(
     session: Session,
     entity_id: uuid.UUID,
     partner_id: uuid.UUID,
     payload: ReimbursementPaidCreate,
 ) -> ReimbursementPaidResponse:
-    _require_manual_cash_payment_account(
+    require_manual_cash_payment_account(
         session, entity_id, payload.payment_account_id
     )
     result = partner_posting.post_reimbursement_paid(
@@ -410,7 +385,7 @@ def record_pay_partner(
     payload: PayPartnerCreate,
 ) -> PayPartnerResponse:
     """Cash Pay partner — settle fronted owe first, excess as drawing."""
-    _require_manual_cash_payment_account(
+    require_manual_cash_payment_account(
         session, entity_id, payload.payment_account_id
     )
     result = partner_posting.post_pay_partner(
@@ -451,7 +426,7 @@ def record_drawing(
     partner_id: uuid.UUID,
     payload: DrawingCreate,
 ) -> DrawingResponse:
-    _require_manual_cash_payment_account(
+    require_manual_cash_payment_account(
         session, entity_id, payload.payment_account_id
     )
     result = partner_posting.post_drawing(
@@ -479,7 +454,7 @@ def record_drawing_repayment(
     partner_id: uuid.UUID,
     payload: DrawingRepaymentCreate,
 ) -> DrawingRepaymentResponse:
-    _require_manual_cash_payment_account(
+    require_manual_cash_payment_account(
         session, entity_id, payload.payment_account_id
     )
     result = partner_posting.post_drawing_repayment(
@@ -510,7 +485,7 @@ def record_capital_contribution(
     note = payload.description.strip()
     if not note:
         raise ValueError("Note is required — why did this partner invest?")
-    _require_manual_cash_payment_account(
+    require_manual_cash_payment_account(
         session, entity_id, payload.payment_account_id
     )
     result = partner_posting.post_capital_contribution(
@@ -539,7 +514,7 @@ def record_profit_paid(
     payload: ProfitPaidCreate,
 ) -> ProfitPaidResponse:
     """Manual Pay profit — cash drawer only. Bank payouts classify on the statement."""
-    _require_manual_cash_payment_account(
+    require_manual_cash_payment_account(
         session, entity_id, payload.payment_account_id
     )
     result = partner_posting.post_profit_paid(

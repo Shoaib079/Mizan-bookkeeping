@@ -19,7 +19,8 @@ import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import {
-  loadBankAndCashAccounts,
+  loadCashAccounts,
+  mainTillAccount,
   loadForeignCurrencyAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
@@ -179,17 +180,18 @@ export function StaffSalaryPaymentDialog({
   const loadAccounts = useCallback(async () => {
     if (!entityId || isStatement) return;
     if (isTry) {
-      const [merged, partnerPage] = await Promise.all([
-        loadBankAndCashAccounts(entityId),
+      const [cash, partnerPage] = await Promise.all([
+        loadCashAccounts(entityId),
         apiFetch<{ items: { id: string; name: string }[] }>(
           `/entities/${entityId}/partners?limit=50`,
         ),
       ]);
-      setTryAccounts(merged);
-      const cash = merged.find((a) => a.account_kind === "cash");
-      setPaymentGlAccountId(
-        cash?.gl_account_id ?? merged[0]?.gl_account_id ?? "",
-      );
+      setTryAccounts(cash);
+      // Main Drawer, not whichever cash account the API listed first — that
+      // was "Home". `mainTillAccount` is the counter till by name, never the
+      // home/safe drawer, which is the same rule Count cash and Close day use.
+      const till = mainTillAccount(cash) ?? cash[0];
+      setPaymentGlAccountId(till?.gl_account_id ?? "");
       setPartners(partnerPage.items ?? []);
     } else {
       const wallets = await loadForeignCurrencyAccounts(entityId, payCurrency);

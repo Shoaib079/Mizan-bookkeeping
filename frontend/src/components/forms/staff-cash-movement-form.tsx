@@ -16,7 +16,8 @@ import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
 import {
-  loadBankAndCashAccounts,
+  loadCashAccounts,
+  mainTillAccount,
   loadForeignCurrencyAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
@@ -113,12 +114,13 @@ function StaffAdvanceForm({
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
     if (isTry) {
-      const merged = await loadBankAndCashAccounts(entityId);
-      setTryAccounts(merged);
-      const cash = merged.find((a) => a.account_kind === "cash");
-      setPaymentGlAccountId(
-        cash?.gl_account_id ?? merged[0]?.gl_account_id ?? "",
-      );
+      const cash = await loadCashAccounts(entityId);
+      setTryAccounts(cash);
+      // Main Drawer, not whichever cash account the API listed first — that
+      // was "Home". `mainTillAccount` is the counter till by name, never the
+      // home/safe drawer, which is the same rule Count cash and Close day use.
+      const till = mainTillAccount(cash) ?? cash[0];
+      setPaymentGlAccountId(till?.gl_account_id ?? "");
     } else {
       const wallets = await loadForeignCurrencyAccounts(entityId, payCurrency);
       setFxAccounts(wallets);
