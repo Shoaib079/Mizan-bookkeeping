@@ -104,31 +104,44 @@ def _rows(entries: list) -> list[SubledgerRow]:
     return rows
 
 
+def _summary(ledger: PartnerLedgerRead) -> list[tuple[str, int]]:
+    """What is true of this partner, not the whole vocabulary.
+
+    Seven lines before this, four of them zero for most partners — fronted
+    expenses, partner loan, and the two halves of a profit split that had
+    already settled. A statement that always prints every term it knows makes
+    the reader find the two figures that moved.
+
+    The balance is unconditional: zero is an answer, and "settled" is worth
+    saying. Everything else earns its line by being non-zero.
+    """
+    lines: list[tuple[str, int]] = [
+        # Profit included — what the partner is owed, or owes, today. Matches
+        # the figure at the top of their page.
+        ("Net balance", ledger.current_account_kurus),
+    ]
+    # Not part of the balance above and never added to it: money put into the
+    # business is not a debt it repays on demand. Shown beside it, as the page
+    # shows it beside the heading.
+    if ledger.capital_balance_kurus:
+        lines.append(("Capital in business", ledger.capital_balance_kurus))
+    # The allocation headings in the rows below sum to this.
+    if ledger.profit_allocated_kurus:
+        lines.append(("Profit allocated", ledger.profit_allocated_kurus))
+    if ledger.balance_kurus:
+        lines.append(("Fronted expenses", ledger.balance_kurus))
+    if ledger.loan_balance_kurus:
+        lines.append(("Partner loan", ledger.loan_balance_kurus))
+    return lines
+
+
 def _export(entity_name: str, partner_name: str, ledger: PartnerLedgerRead) -> SubledgerExport:
     return SubledgerExport(
         entity_name=entity_name,
         subject_name=partner_name,
         ledger_label="Partner ledger",
         sheet_name="Partner",
-        summary=[
-            # Still "Net balance" — the name was always right, the figure was
-            # not. It used to exclude profit already credited to the partner,
-            # which meant announcing a debt of 80.800 on the same sheet that
-            # owed them 68.763,91. Renaming it would have churned the
-            # vocabulary of every reader to describe a corrected number.
-            ("Net balance", ledger.current_account_kurus),
-            ("— of which unpaid profit", ledger.unpaid_profit_kurus),
-            ("Fronted expenses", ledger.balance_kurus),
-            # Capital is not part of the balance above and must not be read as
-            # one: money put into the business is not a debt it repays on
-            # demand.
-            ("Capital contributed (separate)", ledger.capital_contribution_kurus),
-            ("Profit allocated", ledger.profit_allocated_kurus),
-            # The middle term. Without it, allocated 100.000 next to unpaid 0
-            # leaves the reader to work out where the rest went.
-            ("Settled from drawings", ledger.profit_settled_kurus),
-            ("Partner loan", ledger.loan_balance_kurus),
-        ],
+        summary=_summary(ledger),
         rows=_rows(effective_entries(ledger.entries)),
     )
 

@@ -62,6 +62,21 @@ def test_partner_ledger_export_xlsx_and_pdf(
     assert pdf.content[:4] == b"%PDF"
 
 
+def _movement_rows(ws):
+    """Rows below the header, found by the header rather than by counting.
+
+    This read from a hard-coded `min_row=12`, which was the header's position
+    when the summary carried seven figures. Trimming it to three moved every
+    row up four and the test read past the end of the sheet — a failure about
+    the summary's height, reported as "no movements". The sheet says where its
+    own table starts.
+    """
+    header = next(
+        row[0].row for row in ws.iter_rows(min_col=1, max_col=1) if row[0].value == "Date"
+    )
+    return list(ws.iter_rows(min_row=header + 1))
+
+
 def test_partner_ledger_download_shows_the_ledger_as_it_now_stands(
     db_session, restaurant_a, client: TestClient
 ) -> None:
@@ -106,9 +121,7 @@ def test_partner_ledger_download_shows_the_ledger_as_it_now_stands(
     assert resp.status_code == 200, resp.text
     ws = load_workbook(io.BytesIO(resp.content)).active
     descriptions = [
-        str(row[2].value)
-        for row in ws.iter_rows(min_row=12)
-        if row[2].value is not None
+        str(row[2].value) for row in _movement_rows(ws) if row[2].value is not None
     ]
 
     assert descriptions, "expected at least the surviving allocation row"
@@ -118,7 +131,7 @@ def test_partner_ledger_download_shows_the_ledger_as_it_now_stands(
 
     # Dates are real date cells, not text. Written as a string, Excel sorts
     # them alphabetically and cannot filter by month.
-    dates = [row[0].value for row in ws.iter_rows(min_row=12) if row[0].value]
+    dates = [row[0].value for row in _movement_rows(ws) if row[0].value]
     assert dates, "expected a date on the surviving row"
     assert all(isinstance(value, (date, datetime)) for value in dates), dates
 
@@ -172,9 +185,14 @@ def test_partner_ledger_pdf_uses_the_shared_report_furniture(
     assert "Partner ledger" in text
     assert partner_name in text
     assert "As at" in text
-    # KPI strip, in the partner page's order.
-    for label in ("NET BALANCE", "CAPITAL CONTRIBUTED", "UNPAID PROFIT"):
+    # KPI strip, in the partner page's order. Three lines now, not seven: the
+    # statement prints a figure only when the partner has one. "Unpaid profit"
+    # and "settled from drawings" went with the summary cards — the balance
+    # already nets the profit, and the allocation rows show the split.
+    for label in ("NET BALANCE", "CAPITAL IN BUSINESS", "PROFIT ALLOCATED"):
         assert label in text, f"missing KPI {label!r}"
+    for gone in ("UNPAID PROFIT", "SETTLED FROM DRAWINGS"):
+        assert gone not in text, f"{gone!r} is still on the statement"
     # Footer stamp that every other report PDF carries.
     assert "Mizan" in text
     # Dates read the way the app shows them everywhere else, not ISO.
@@ -238,3 +256,59 @@ def test_partner_ledger_export_missing_partner_404(
         f"/entities/{entity_id}/partners/{missing}/ledger/export"
     )
     assert resp.status_code == 404
+
+
+class TestTheSummaryPrintsOnlyWhatIsTrue:
+    """Seven lines, four of them zero for most partners.
+
+    "The stickers are explaining too much" was said of the page; the statement
+    had the same fault. A document that prints every term it knows makes the
+    reader find the two figures that moved.
+    """
+
+    def _summary(self, **figures):
+        from app.features.partners import ledger_export
+        from app.features.partners.schema import PartnerLedgerRead
+
+        # `entries` has no default; the summary never reads it.
+        return ledger_export._summary(
+            PartnerLedgerRead(partner_id=uuid.uuid4(), entries=[], **figures)
+        )
+
+    def test_the_balance_prints_even_at_zero(self) -> None:
+        # Zero is an answer. "Settled" is worth saying out loud.
+        labels = [label for label, _ in self._summary(balance_kurus=0)]
+        assert labels == ["Net balance"]
+
+    def test_a_figure_the_partner_does_not_have_is_left_out(self) -> None:
+        labels = [
+            label
+            for label, _ in self._summary(
+                balance_kurus=0,
+                current_account_kurus=-1_203_609,
+                capital_balance_kurus=53_246_391,
+                profit_allocated_kurus=17_500_000,
+            )
+        ]
+        assert labels == ["Net balance", "Capital in business", "Profit allocated"]
+
+    def test_a_loan_or_fronted_expense_earns_its_line(self) -> None:
+        # Guard the guard: if the conditions were inverted, the test above
+        # would still pass while these two never appeared at all.
+        labels = [
+            label
+            for label, _ in self._summary(
+                balance_kurus=45_000,
+                loan_balance_kurus=900_000,
+            )
+        ]
+        assert "Fronted expenses" in labels
+        assert "Partner loan" in labels
+
+    def test_the_balance_is_the_netted_one(self) -> None:
+        # Not `net_balance_kurus`, which excludes profit already credited and
+        # exists to decide settlement rather than to be read.
+        summary = dict(
+            self._summary(balance_kurus=0, current_account_kurus=-1_203_609)
+        )
+        assert summary["Net balance"] == -1_203_609
