@@ -50,30 +50,3 @@ def enrich_partner_reads(
     """Both enrichments, in one call, over one page of rows."""
     _attach_payment_accounts(session, reads)
     attach_subject_names(session, rows, reads)
-
-
-def partner_entry_actions(session: Session, entity_id: uuid.UUID, reads: list) -> dict:
-    """What may be edited or voided, for the rows about to be returned.
-
-    Sent with the ledger so the buttons arrive with the rows. Asking
-    separately was one extra round trip for work that had to happen anyway,
-    and it showed: the table drew, then the actions column filled in.
-
-    Capped at the same number the standalone route caps at — each id costs a
-    subledger lookup, and a partner with a thousand movements should not be
-    able to make one page request answer a thousand of them.
-    """
-    from app.core.ledger.entry_actions import resolve_entry_actions_for_ids
-    from app.features.ledger.schema import MAX_ACTIONS_BATCH, LedgerEntryActionsOut
-
-    ids = list(
-        dict.fromkeys(
-            read.journal_entry_id
-            for read in reads
-            if read.journal_entry_id is not None
-        )
-    )[:MAX_ACTIONS_BATCH]
-    resolved = resolve_entry_actions_for_ids(session, entity_id, ids)
-    return {
-        str(entry_id): LedgerEntryActionsOut.of(a) for entry_id, a in resolved.items()
-    }

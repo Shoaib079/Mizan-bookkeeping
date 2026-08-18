@@ -33,6 +33,7 @@ from app.core.ledger.posting import PostingLine
 from app.core.ledger.subledger_display import enrich_entry_models
 from app.core.staff.ledger_effective import collapse_accrual_entry_reads
 from app.core.banking.manual_cash import require_manual_cash_payment_account
+from app.features.ledger.entry_actions_for_rows import entry_actions_for_rows
 from app.db.session import entity_context, require_entity_context
 from app.features.entities import service as entity_service
 from app.features.staff.correction_lines import build_staff_correction_lines
@@ -195,12 +196,18 @@ def get_staff_ledger(
         remaining = remaining_accrual_minor(session, employee_id)
         advance = outstanding_advance_minor(session, employee_id)
         reads = _staff_entry_reads(session, entries)
+    # Sent with the rows so the page never decides this for itself. It used to,
+    # and drifted twice: it withheld Edit from any payment that consumed an
+    # advance, and kept calling a partner-funded salary void-only after that
+    # became correctable.
+    entry_actions = entry_actions_for_rows(session, entity_id, reads)
     return StaffLedgerRead(
         employee_id=employee_id,
         balance_minor=balance,
         remaining_accrual_minor=remaining,
         outstanding_advance_minor=advance,
         entries=reads,
+        entry_actions=entry_actions,
     )
 
 

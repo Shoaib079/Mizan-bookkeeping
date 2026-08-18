@@ -3,7 +3,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { sourceDeclaring } from "@/test-support/source";
-import { staffLedgerRowActions } from "@/lib/subledger-actions";
 import { postStaffSalaryPayment } from "@/lib/staff-salary-payment-submit";
 
 describe("StaffSalaryFundingFields", () => {
@@ -66,31 +65,5 @@ describe("postStaffSalaryPayment double-submit", () => {
       "stable-key-1",
     ]);
     expect(submitWithDuplicateGuard).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("staffLedgerRowActions partner-funded", () => {
-  it("is void-only when salary_payment has no payment account", () => {
-    const actions = staffLedgerRowActions({
-      movementType: "salary_payment",
-      payCurrency: "TRY",
-      isAdvanceOffset: false,
-      advanceAppliedMinor: 0,
-      paymentAccountId: null,
-    });
-    expect(actions.canEdit).toBe(false);
-    expect(actions.canVoid).toBe(true);
-  });
-
-  it("still allows edit for cash salary_payment", () => {
-    const actions = staffLedgerRowActions({
-      movementType: "salary_payment",
-      payCurrency: "TRY",
-      isAdvanceOffset: false,
-      advanceAppliedMinor: 0,
-      paymentAccountId: "acct-cash",
-    });
-    expect(actions.canEdit).toBe(true);
-    expect(actions.canVoid).toBe(true);
   });
 });

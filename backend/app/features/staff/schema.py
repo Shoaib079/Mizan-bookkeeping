@@ -10,6 +10,7 @@ from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 
 from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.staff.types import PayCurrency, StaffMovementType
+from app.features.ledger.schema import LedgerEntryActionsOut
 
 
 class EmployeeCreate(BaseModel):
@@ -64,6 +65,9 @@ class StaffLedgerRead(BaseModel):
     remaining_accrual_minor: int
     outstanding_advance_minor: int
     entries: list[StaffLedgerEntryRead]
+    #: What may be edited or voided, keyed by journal entry id as a string.
+    #: The page used to decide this itself and drifted from the backend twice.
+    entry_actions: dict[str, LedgerEntryActionsOut] = Field(default_factory=dict)
 
 
 class StaffAccrualCreate(AcknowledgeDuplicateMixin):

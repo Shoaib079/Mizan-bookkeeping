@@ -104,19 +104,6 @@ export const PARTNER_VOID_ONLY_MOVEMENT_TYPES = new Set<string>([
   "partner_loan_repaid",
 ]);
 
-export const STAFF_EDITABLE_MOVEMENT_TYPES = new Set<string>([
-  "salary_accrued",
-  "advance_paid",
-  "salary_payment",
-  "extra_days_accrued",
-  "extra_days_paid",
-]);
-
-export const STAFF_VOID_ONLY_MOVEMENT_TYPES = new Set<string>([
-  "advance_applied",
-  "advance_returned",
-]);
-
 export type JournalActionOptions = {
   grants?: readonly string[];
   entryDate?: string;
@@ -214,40 +201,6 @@ export function partnerLedgerRowActions(movementType: string): RowActions {
     return { canEdit: false, canVoid: false };
   }
   return { canEdit: false, canVoid: false };
-}
-
-export type StaffLedgerActionContext = {
-  movementType: string;
-  payCurrency: string;
-  isAdvanceOffset: boolean;
-  advanceAppliedMinor: number;
-  /** Null when the payment was not from cash/bank (e.g. partner-funded). */
-  paymentAccountId?: string | null;
-};
-
-export function staffLedgerRowActions(ctx: StaffLedgerActionContext): RowActions {
-  const isTry = ctx.payCurrency === "TRY";
-  // Partner-funded salary clears payable via 2150 — no money account on the JE.
-  // Void only (void-and-re-enter); Edit would desync the partner leg.
-  const partnerFundedSalary =
-    ctx.movementType === "salary_payment" &&
-    !ctx.paymentAccountId &&
-    !ctx.isAdvanceOffset;
-  if (partnerFundedSalary) {
-    return { canEdit: false, canVoid: true };
-  }
-  const canEdit =
-    isTry &&
-    !ctx.isAdvanceOffset &&
-    ctx.advanceAppliedMinor <= 0 &&
-    STAFF_EDITABLE_MOVEMENT_TYPES.has(ctx.movementType);
-  const canVoid =
-    canEdit ||
-    ctx.isAdvanceOffset ||
-    ctx.advanceAppliedMinor > 0 ||
-    STAFF_VOID_ONLY_MOVEMENT_TYPES.has(ctx.movementType) ||
-    STAFF_EDITABLE_MOVEMENT_TYPES.has(ctx.movementType);
-  return { canEdit, canVoid };
 }
 
 export type CustomerLedgerActionContext = {

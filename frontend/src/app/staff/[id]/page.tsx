@@ -14,12 +14,15 @@ import { staffDisplayRows } from "@/lib/staff-ledger-display";
 import { StaffExtraDaysForm } from "@/components/forms/staff-extra-days-form";
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
 import {
-  CorrectStaffLedgerForm,
-  type CorrectableStaffLedgerRow,
-} from "@/components/forms/correct-staff-ledger-form";
+  GlEditDialogs,
+  type GlEditTarget,
+} from "@/components/ledger/gl-edit-dialogs";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
-import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { ActionsUnavailableNotice } from "@/components/ledger/actions-unavailable-notice";
+import { SubledgerActionsCell } from "@/components/ledger/subledger-actions-cell";
+import { editTargetFor } from "@/lib/gl-edit-target";
+import { useEntryActions, type EntryActions } from "@/lib/use-entry-actions";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { AppShell } from "@/components/layout/app-shell";
 import {
@@ -35,7 +38,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, entityPath } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
@@ -48,8 +51,8 @@ import {
   subledgerRowClassName,
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
-import { staffLedgerRowActions } from "@/lib/subledger-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
+import { extraDaysLabel, salaryPeriodLabel } from "@/lib/staff-ledger-labels";
 
 type StaffLedgerEntry = {
   id: string;
@@ -66,46 +69,20 @@ type StaffLedgerEntry = {
   was_corrected?: boolean;
 };
 
-const MONTH_NAMES = [
-  "",
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
+/** The correction forms reachable from here. A partner-funded salary appears
+ * on this page too, and is opened by the same translation the General ledger
+ * uses rather than a rule kept here. */
+const PAGE_EDIT_KINDS = ["staff_ledger", "partner_funded_salary"] as const;
 
 type StaffLedgerResponse = {
   balance_minor: number;
   remaining_accrual_minor: number;
   outstanding_advance_minor: number;
   entries: StaffLedgerEntry[];
+  /** Verdicts for the rows below. Absent from an older backend, in which case
+   * the page asks separately rather than deciding for itself. */
+  entry_actions?: Record<string, EntryActions>;
 };
-
-function extraDaysLabel(entry: StaffLedgerEntry): string | null {
-  if (
-    entry.movement_type !== "extra_days_paid" &&
-    entry.movement_type !== "extra_days_accrued"
-  ) {
-    return null;
-  }
-  if (!entry.extra_days) return null;
-  return `${entry.extra_days} day${entry.extra_days === 1 ? "" : "s"}`;
-}
-
-function salaryPeriodLabel(entry: StaffLedgerEntry): string | null {
-  if (entry.movement_type !== "salary_accrued") return null;
-  if (!entry.period_year || !entry.period_month) return null;
-  const month = MONTH_NAMES[entry.period_month] ?? String(entry.period_month);
-  return `${month} ${entry.period_year}`;
-}
 
 export default function StaffDetailPage() {
   const params = useParams<{ id: string }>();
@@ -123,9 +100,11 @@ export default function StaffDetailPage() {
   const [applyAdvanceOpen, setApplyAdvanceOpen] = useState(false);
   const [extraDaysOpen, setExtraDaysOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [correctEntry, setCorrectEntry] = useState<CorrectableStaffLedgerRow | null>(null);
+  const [editTarget, setEditTarget] = useState<GlEditTarget | null>(null);
+  // The path comes from the backend: a partner-funded salary voids at its own
+  // dual-subledger route, not at the staff one this page used to assume.
   const [voidTarget, setVoidTarget] = useState<{
-    journal_entry_id: string;
+    path: string;
     description: string;
   } | null>(null);
 
@@ -166,6 +145,20 @@ export default function StaffDetailPage() {
   // (salary payment + advance applied) collapse into a single net line, so an
   // advance offset no longer masquerades as a second "Salary payment".
   const displayRows = useMemo(() => staffDisplayRows(visibleRows), [visibleRows]);
+  // Asked of the backend, never decided here. The ledger sends the verdicts
+  // with its rows; the ids are still passed for the fallback against a backend
+  // that has not been redeployed.
+  const { rowActions, failed: actionsFailed, retry: retryActions } = useEntryActions(
+    entityId,
+    useMemo(
+      () =>
+        displayRows
+          .map((group) => group.primary.journal_entry_id)
+          .filter((id): id is string => Boolean(id)),
+      [displayRows],
+    ),
+    ledger?.entry_actions,
+  );
 
   const formatMinorAmount = useCallback(
     (minor: number) =>
@@ -307,18 +300,17 @@ export default function StaffDetailPage() {
                 hasActions
                 isEmpty={ledger.entries.length === 0}
                 isFiltered={visibleRows.length === 0}
+                notice={
+                  actionsFailed && (
+                    <ActionsUnavailableNotice onRetry={retryActions} />
+                  )
+                }
                 history={{ hiddenCount, showHistory, onToggle: setShowHistory }}
                 filteredMessage="No current entries in this period — show correction history to see voided rows."
               >
                 {displayRows.map((group) => {
                   const entry = group.primary;
-                  const actions = staffLedgerRowActions({
-                    movementType: entry.movement_type, payCurrency: employee.pay_currency,
-                    isAdvanceOffset: group.isAdvanceOffset,
-                    advanceAppliedMinor: group.advanceAppliedMinor,
-                    paymentAccountId: entry.payment_account_id ?? null,
-                  });
-                  const canAct = actions.canEdit || actions.canVoid;
+                  const asked = rowActions(entry.journal_entry_id);
                   return (
                     <DataTableRow
                       key={entry.id}
@@ -375,29 +367,27 @@ export default function StaffDetailPage() {
                           : formatMinorAmount(group.balanceMinor)}
                       </DataTableCell>
                       <DataTableCell>
-                        {canAct && (
-                          <SubledgerRowActions
-                            row={entry}
-                            showEdit={actions.canEdit}
-                            onEdit={() =>
-                              setCorrectEntry({
-                                journal_entry_id: entry.journal_entry_id!,
-                                movement_date: entry.movement_date,
-                                movement_type: entry.movement_type,
-                                amount_minor: entry.amount_minor,
-                                description: entry.description,
-                                payment_account_id: entry.payment_account_id,
-                                extra_days: entry.extra_days,
-                              })
-                            }
-                            onVoid={() =>
-                              setVoidTarget({
-                                journal_entry_id: entry.journal_entry_id!,
-                                description: entry.description,
-                              })
-                            }
-                          />
-                        )}
+                        <SubledgerActionsCell
+                          row={entry}
+                          actions={asked}
+                          opensEditKinds={PAGE_EDIT_KINDS}
+                          ownerNoun="employees"
+                          onEdit={(edit) =>
+                            setEditTarget(
+                              editTargetFor(
+                                edit.kind,
+                                edit.context,
+                                entry.journal_entry_id!,
+                              ),
+                            )
+                          }
+                          onVoid={(voidPath) =>
+                            setVoidTarget({
+                              path: entityPath(entityId, voidPath),
+                              description: entry.description,
+                            })
+                          }
+                        />
                       </DataTableCell>
                     </DataTableRow>
                   );
@@ -459,22 +449,19 @@ export default function StaffDetailPage() {
             source="staff"
             onSaved={() => void reload()}
           />
-          <CorrectStaffLedgerForm
-            open={correctEntry !== null}
-            employeeId={employeeId}
-            entry={correctEntry}
-            onClose={() => setCorrectEntry(null)}
-            onSaved={() => void reload()}
+          <GlEditDialogs
+            target={editTarget}
+            onClose={() => setEditTarget(null)}
+            onSaved={() => {
+              setEditTarget(null);
+              void reload();
+            }}
           />
           <VoidSubledgerDialog
             open={voidTarget !== null}
             title="Void staff movement"
             description={voidTarget?.description}
-            voidPath={
-              entityId && voidTarget
-                ? `/entities/${entityId}/staff/employees/${employeeId}/ledger/${voidTarget.journal_entry_id}/void`
-                : null
-            }
+            voidPath={voidTarget?.path ?? null}
             onClose={() => setVoidTarget(null)}
             onSaved={() => void reload()}
           />

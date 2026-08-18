@@ -49,7 +49,7 @@ from app.features.partners.correction_lines import (
     assert_source_is_correctable,
     build_partner_correction_lines,
 )
-from app.features.partners.ledger_enrichment import partner_entry_actions
+from app.features.ledger.entry_actions_for_rows import entry_actions_for_rows
 from app.features.partners.models import Partner
 from app.features.partners.schema import (
     ExpenseFrontedCreate,
@@ -263,7 +263,7 @@ def get_partner_ledger(
             read.running_balance_kurus = running
     # Outside the context above: the resolver opens its own, and it needs the
     # whole page of ids at once rather than one per row.
-    entry_actions = partner_entry_actions(session, entity_id, reads)
+    entry_actions = entry_actions_for_rows(session, entity_id, reads)
     return PartnerLedgerRead(
         partner_id=partner_id,
         balance_kurus=reimbursement,

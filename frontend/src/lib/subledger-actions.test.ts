@@ -6,7 +6,6 @@ import {
   generalLedgerEntryActions,
   journalEntryRowActions,
   partnerLedgerRowActions,
-  staffLedgerRowActions,
   transactionPeekActions,
 } from "@/lib/subledger-actions";
 
@@ -56,17 +55,6 @@ describe("subledger-actions", () => {
       canEdit: false,
       canVoid: false,
     });
-  });
-
-  it("staff advance offset rows are void-only", () => {
-    expect(
-      staffLedgerRowActions({
-        movementType: "salary_payment",
-        payCurrency: "TRY",
-        isAdvanceOffset: true,
-        advanceAppliedMinor: 0,
-      }),
-    ).toEqual({ canEdit: false, canVoid: true });
   });
 
   it("customer credit sale and payment are editable", () => {
