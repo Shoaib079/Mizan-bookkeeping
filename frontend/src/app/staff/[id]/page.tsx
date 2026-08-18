@@ -9,7 +9,6 @@ import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
 import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
 import { StaffAdvanceReturnForm } from "@/components/forms/staff-advance-return-form";
-import { StaffApplyAdvanceForm } from "@/components/forms/staff-apply-advance-form";
 import { staffDisplayRows } from "@/lib/staff-ledger-display";
 import { StaffExtraDaysForm } from "@/components/forms/staff-extra-days-form";
 import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
@@ -44,6 +43,8 @@ import { formatTrDate, formatTry } from "@/lib/money";
 import {
   netPositionCaption,
   netPositionReconciles,
+  netsOutVisibly,
+  staffBalanceHeading,
   staffNetPosition,
 } from "@/lib/staff-net-position";
 import { staffMovementLabels } from "@/lib/subledger-labels";
@@ -97,7 +98,6 @@ export default function StaffDetailPage() {
   const [accrualOpen, setAccrualOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
-  const [applyAdvanceOpen, setApplyAdvanceOpen] = useState(false);
   const [extraDaysOpen, setExtraDaysOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<GlEditTarget | null>(null);
@@ -242,38 +242,40 @@ export default function StaffDetailPage() {
             show: isTry && hasAdvance,
             onSelect: () => setReturnOpen(true),
           },
-          {
-            label: "Apply advance (no cash)",
-            title:
-              "Net advance against unpaid salary without paying cash — normally automatic at Pay salary",
-            show:
-              isTry && hasAdvance && (ledger?.remaining_accrual_minor ?? 0) > 0,
-            onSelect: () => setApplyAdvanceOpen(true),
-          },
           { label: "Adjust accrual", onSelect: () => setAccrualOpen(true) },
         ]}
         titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
         headline={
           ledger && (
             <HeadlineFigure
-              label="Net to pay"
-              amountKurus={position.netToPayMinor}
+              label={staffBalanceHeading(position)}
+              amountKurus={Math.abs(position.balanceMinor)}
               caption={netPositionCaption(position)}
               format={formatMinorAmount}
             />
           )
         }
         panels={
-          ledger && (
+          // Only when there is a subtraction to show. For a TRY employee the
+          // backend settles the overlap on every write, so this is an FX
+          // employee — whose advance carries its own lira rate and cannot be
+          // applied automatically — or a settlement a locked period blocked.
+          ledger &&
+          (netsOutVisibly(position) || !netPositionReconciles(position)) && (
             <SummaryPanel
               title="How that nets out"
               format={formatMinorAmount}
               lines={[
-                { label: "Salary owed", amountKurus: position.salaryOwedMinor },
+                {
+                  label: "Salary owed",
+                  amountKurus: position.salaryOwedMinor,
+                  hideWhenZero: true,
+                },
                 {
                   label: "Advance held",
                   amountKurus: position.advanceHeldMinor,
                   negative: position.advanceHeldMinor > 0,
+                  hideWhenZero: true,
                 },
                 {
                   label: "Other movements",
@@ -281,7 +283,10 @@ export default function StaffDetailPage() {
                   hideWhenZero: netPositionReconciles(position),
                 },
               ]}
-              total={{ label: "Net to pay", amountKurus: position.netToPayMinor }}
+              total={{
+                label: staffBalanceHeading(position),
+                amountKurus: Math.abs(position.balanceMinor),
+              }}
             />
           )
         }
@@ -424,13 +429,6 @@ export default function StaffDetailPage() {
             open={returnOpen}
             employeeId={employeeId}
             onClose={() => setReturnOpen(false)}
-            onSaved={() => void reload()}
-          />
-          <StaffApplyAdvanceForm
-            open={applyAdvanceOpen}
-            employeeId={employeeId}
-            outstandingAdvanceMinor={ledger?.outstanding_advance_minor ?? 0}
-            onClose={() => setApplyAdvanceOpen(false)}
             onSaved={() => void reload()}
           />
           <StaffExtraDaysForm

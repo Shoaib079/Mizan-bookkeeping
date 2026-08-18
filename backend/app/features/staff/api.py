@@ -26,7 +26,6 @@ from app.features.staff.schema import (
     StaffAdvanceCreate,
     StaffAdvanceReturnCreate,
     StaffAdvanceResponse,
-    StaffApplyAdvanceCreate,
     StaffExtraDaysPaidCreate,
     StaffExtraDaysPaidResponse,
     StaffLedgerRead,
@@ -286,29 +285,6 @@ def post_staff_advance_return(
     except (ZeroMovementError, ValueError, InvalidStaffPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except InvalidAccountError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except PostingError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@router.post(
-    "/employees/{employee_id}/apply-advance",
-    response_model=StaffPaymentResponse,
-    status_code=201,
-)
-def post_staff_apply_advance(
-    entity_id: uuid.UUID,
-    employee_id: uuid.UUID,
-    payload: StaffApplyAdvanceCreate,
-    session: Session = Depends(get_session),
-    _guard: User | None = Depends(operations_write_guard),
-) -> StaffPaymentResponse:
-    payload.actor_id = resolve_actor_id(_guard, payload.actor_id)
-    try:
-        return service.record_apply_advance(session, entity_id, employee_id, payload)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except (ZeroMovementError, ValueError, InvalidStaffPostingError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

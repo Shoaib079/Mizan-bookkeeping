@@ -1,6 +1,7 @@
 /** Partner subledger balance copy (FP — bidirectional). */
 
 import { formatTry } from "@/lib/money";
+import { balanceHeading } from "@/lib/subledger-balance";
 
 /** Positive = business owes partner; negative = partner owes business. */
 /** The balance a partner reads: profit they are owed, netted against what they
@@ -22,10 +23,13 @@ export function partnerBalance(ledger: {
   return ledger.current_account_kurus ?? ledger.net_balance_kurus;
 }
 
+/** The sign rule lives in `subledger-balance`; this only names the party.
+ *
+ * Staff needed the same wording and would otherwise have grown a second copy
+ * of it — which is precisely how the edit and void rules drifted twice.
+ */
 export function partnerBalanceHeading(balanceKurus: number): string {
-  if (balanceKurus > 0) return "You owe partner";
-  if (balanceKurus < 0) return "Partner owes you";
-  return "Settled";
+  return balanceHeading(balanceKurus, "partner");
 }
 
 export function partnerBalanceAmount(balanceKurus: number): string {

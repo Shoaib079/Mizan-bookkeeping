@@ -302,19 +302,39 @@ def test_the_enumeration_names_real_functions():
     assert source.count("_settle_advance(") >= 9
 
 
-def test_apply_advance_by_hand_still_works(db_session, staff_setup):  # noqa: F811
-    """The manual route stays — it is the way through when a locked period
-    stopped the automatic one."""
+def test_the_poster_refuses_a_second_empty_apply(db_session, staff_setup):  # noqa: F811
+    """The poster stays; the button and its route are gone.
+
+    The owner, on the button: *"when we will have a plus and minus addition
+    and subtraction will we really need that no i do not think so"*. Right —
+    once the overlap is settled on every write there is never anything for a
+    person to apply, so the menu item only offered a way to be confused.
+
+    `post_apply_advance` itself is not dead code: it is what the invariant
+    posts through, and what `payment_correction` reposts an apply-advance
+    with. This holds down that it still refuses when there is nothing left,
+    which is the guard against a settle firing twice.
+    """
     from app.core.staff.posting import InvalidStaffPostingError, post_apply_advance
 
     _accrue(db_session, staff_setup, 3_000_000)
     _advance(db_session, staff_setup, 1_000_000)
 
-    # Already settled, so there is nothing left to apply — and it says so
-    # rather than posting a second, empty entry.
     with pytest.raises(InvalidStaffPostingError, match="Nothing to apply"):
         post_apply_advance(
             db_session, staff_setup["entity_id"], staff_setup["employee_id"],
             applied_date=date(2026, 8, 7), description="By hand",
             actor_id=ACTOR_ID,
         )
+
+
+def test_the_manual_route_is_gone(client):
+    """No orphan endpoint behind the removed button.
+
+    A route left registered with nothing calling it is the shape the owner
+    asked to be rid of: it would still accept a hand-rolled request and post
+    an entry the app can no longer produce or explain.
+    """
+    paths = client.app.openapi()["paths"]
+    offenders = [p for p in paths if p.endswith("/apply-advance")]
+    assert offenders == [], offenders

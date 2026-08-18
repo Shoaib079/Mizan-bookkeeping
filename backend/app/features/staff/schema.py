@@ -104,16 +104,6 @@ class StaffAdvanceReturnCreate(AcknowledgeDuplicateMixin):
     payment_account_id: uuid.UUID
 
 
-class StaffApplyAdvanceCreate(AcknowledgeDuplicateMixin):
-    applied_date: date
-    description: str = Field(
-        default="Advance applied to salary", min_length=1, max_length=512
-    )
-    actor_id: OptionalActorId = None
-    # Optional partial apply; defaults to min(outstanding advance, salary owed).
-    amount_minor: int | None = Field(default=None, gt=0)
-
-
 class StaffExtraDaysPaidCreate(AcknowledgeDuplicateMixin):
     payment_date: date
     extra_days: int = Field(gt=0, le=31)

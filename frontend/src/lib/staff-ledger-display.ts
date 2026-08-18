@@ -2,8 +2,12 @@
  *
  * A single staff action can write several subledger rows under ONE journal
  * entry: a salary payment that also consumes an advance writes SALARY_PAYMENT
- * (cash + advance) plus ADVANCE_APPLIED; the explicit apply-advance action
- * writes SALARY_PAYMENT (−X) plus ADVANCE_APPLIED (+X) with no cash at all.
+ * (cash + advance) plus ADVANCE_APPLIED. So does the settlement the backend
+ * posts when salary owed and an advance would otherwise both stand —
+ * SALARY_PAYMENT (−X) plus ADVANCE_APPLIED (+X), with no cash at all. That
+ * used to be a button an owner pressed; it is now automatic, and this grouping
+ * is why the automatic one reads as a single line rather than a phantom
+ * payment.
  * Showing those raw is misleading — a "Salary payment" line appears for money
  * that never moved. We group by journal entry and show the NET effect, so the
  * Amount column always reconciles with the running Balance.

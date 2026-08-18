@@ -320,33 +320,6 @@ def record_advance(
     )
 
 
-def record_apply_advance(
-    session: Session,
-    entity_id: uuid.UUID,
-    employee_id: uuid.UUID,
-    payload,
-) -> StaffPaymentResponse:
-    """Explicit apply-advance — nets outstanding advance against salary owed."""
-    result = staff_posting.post_apply_advance(
-        session,
-        entity_id,
-        employee_id,
-        applied_date=payload.applied_date,
-        description=payload.description,
-        actor_id=payload.actor_id,
-        amount_minor=payload.amount_minor,
-    )
-    return StaffPaymentResponse(
-        journal_entry_id=result.journal_entry.id,
-        staff_ledger_entry=_staff_entry_read(
-            session, result.staff_ledger_entry, entity_id=entity_id
-        ),
-        balance_minor=result.balance_minor,
-        advance_applied_minor=result.advance_applied_minor,
-        fx_ledger_entry_id=None,
-    )
-
-
 def record_advance_return(
     session: Session,
     entity_id: uuid.UUID,

@@ -1,9 +1,15 @@
-"""Explicit apply-advance + cash-only salary payments (BUGLOG 2026-07-13).
+"""The apply-advance poster + cash-only salary payments (BUGLOG 2026-07-13).
 
-Guards the decoupling: TRY salary payments never silently apply advances; the
-explicit apply-advance action nets an outstanding advance against ALL unpaid
-salary — regular accruals AND extra-days (previously invisible to advance
-application, which made advances impossible to clear against extra-days owed).
+Applying nets an outstanding advance against ALL unpaid salary — regular
+accruals AND extra-days, which were previously invisible to it and so made
+advances impossible to clear against extra-days owed.
+
+There is no longer a button or a route for this. `post_apply_advance` is now
+reached only from `advance_settlement`, which runs it after every staff write
+so the two sides can never both stand, and from `payment_correction` when it
+reposts one. The tests here are of the poster, which is why they call it
+directly; `test_advance_never_stands_beside_owed.py` covers the invariant, and
+holds down that no orphan endpoint was left behind.
 """
 
 from __future__ import annotations
@@ -364,34 +370,3 @@ def test_extra_days_accrual_is_correctable_and_keeps_day_count(
     with entity_context(db_session, entity_id):
         # Owed follows the corrected figure, not the original 380_000.
         assert staff_ledger.remaining_accrual_minor(db_session, employee_id) == 475_000
-
-
-def test_apply_advance_api_endpoint(client, db_session, staff_setup) -> None:
-    entity_id = staff_setup["entity_id"]
-    employee_id = staff_setup["employee_id"]
-    drawer = staff_setup["drawer"]
-
-    _accrue(db_session, entity_id, employee_id, 400_000, 2026, 6)
-    _advance(db_session, entity_id, employee_id, drawer, 400_000, date(2026, 6, 5))
-
-    resp = client.post(
-        f"/entities/{entity_id}/staff/employees/{employee_id}/apply-advance",
-        json={
-            "applied_date": "2026-06-30",
-            "description": "Apply advance",
-            "actor_id": str(ACTOR_ID),
-        },
-    )
-    assert resp.status_code == 201
-    assert resp.json()["advance_applied_minor"] == 400_000
-
-    # Second apply: nothing left → 422.
-    resp2 = client.post(
-        f"/entities/{entity_id}/staff/employees/{employee_id}/apply-advance",
-        json={
-            "applied_date": "2026-06-30",
-            "description": "Apply advance",
-            "actor_id": str(ACTOR_ID),
-        },
-    )
-    assert resp2.status_code == 422
