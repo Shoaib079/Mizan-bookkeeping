@@ -227,6 +227,18 @@ def _settle_advance(
 
     Called after the write rather than before, because it is the write that
     creates the overlap. It never raises: see the module it calls into.
+
+    **It commits, and a commit expires every instance in the session.** So the
+    caller's own posting result — the journal entry and subledger row it is
+    about to build a response from — is expired by the time this returns.
+    Touching one then refreshes it, and a refresh outside an entity context
+    reads through RLS with no entity set, finds nothing, and raises
+    `ObjectDeletedError` on a row that is perfectly well there.
+
+    That is why every caller wraps its response in `entity_context`. It is the
+    same trap as ARCHITECTURE.md's "read fields before the context closes",
+    reached from the other end: here the fields are read late, so the context
+    has to be reopened around them rather than the read moved earlier.
     """
     from app.core.staff.advance_settlement import settle_advance_against_owed
 
@@ -267,13 +279,14 @@ def record_accrual(
         period_month=payload.period_month,
     )
     _settle_advance(session, entity_id, employee_id, payload.accrual_date, payload.actor_id)
-    return StaffAccrualResponse(
-        journal_entry_id=result.journal_entry.id if result.journal_entry else None,
-        staff_ledger_entry=_staff_entry_read(
-            session, result.staff_ledger_entry, entity_id=entity_id
-        ),
-        balance_minor=result.balance_minor,
-    )
+    with entity_context(session, entity_id):
+        return StaffAccrualResponse(
+            journal_entry_id=result.journal_entry.id if result.journal_entry else None,
+            staff_ledger_entry=_staff_entry_read(
+                session, result.staff_ledger_entry, entity_id=entity_id
+            ),
+            balance_minor=result.balance_minor,
+        )
 
 
 def record_advance(
@@ -308,16 +321,17 @@ def record_advance(
         try_cost_kurus=payload.try_cost_kurus,
     )
     _settle_advance(session, entity_id, employee_id, payload.payment_date, payload.actor_id)
-    return StaffAdvanceResponse(
-        journal_entry_id=result.journal_entry.id,
-        staff_ledger_entry=_staff_entry_read(
-            session, result.staff_ledger_entry, entity_id=entity_id
-        ),
-        balance_minor=result.balance_minor,
-        fx_ledger_entry_id=(
-            result.fx_ledger_entry.id if result.fx_ledger_entry else None
-        ),
-    )
+    with entity_context(session, entity_id):
+        return StaffAdvanceResponse(
+            journal_entry_id=result.journal_entry.id,
+            staff_ledger_entry=_staff_entry_read(
+                session, result.staff_ledger_entry, entity_id=entity_id
+            ),
+            balance_minor=result.balance_minor,
+            fx_ledger_entry_id=(
+                result.fx_ledger_entry.id if result.fx_ledger_entry else None
+            ),
+        )
 
 
 def record_advance_return(
@@ -350,13 +364,14 @@ def record_advance_return(
         payment_account_id=payload.payment_account_id,
     )
     _settle_advance(session, entity_id, employee_id, payload.payment_date, payload.actor_id)
-    return StaffAdvanceResponse(
-        journal_entry_id=result.journal_entry.id,
-        staff_ledger_entry=_staff_entry_read(
-            session, result.staff_ledger_entry, entity_id=entity_id
-        ),
-        balance_minor=result.balance_minor,
-        fx_ledger_entry_id=None,
+    with entity_context(session, entity_id):
+        return StaffAdvanceResponse(
+            journal_entry_id=result.journal_entry.id,
+            staff_ledger_entry=_staff_entry_read(
+                session, result.staff_ledger_entry, entity_id=entity_id
+            ),
+            balance_minor=result.balance_minor,
+            fx_ledger_entry_id=None,
     )
 
 
@@ -463,14 +478,15 @@ def record_extra_days_paid(
     if journal_id is None:
         raise ValueError("Extra days record did not produce a journal entry")
     _settle_advance(session, entity_id, employee_id, payload.payment_date, payload.actor_id)
-    return StaffExtraDaysPaidResponse(
-        journal_entry_id=journal_id,
-        staff_ledger_entry=_staff_entry_read(
-            session, result.staff_ledger_entry, entity_id=entity_id
-        ),
-        balance_minor=result.balance_minor,
-        total_minor=total_minor,
-    )
+    with entity_context(session, entity_id):
+        return StaffExtraDaysPaidResponse(
+            journal_entry_id=journal_id,
+            staff_ledger_entry=_staff_entry_read(
+                session, result.staff_ledger_entry, entity_id=entity_id
+            ),
+            balance_minor=result.balance_minor,
+            total_minor=total_minor,
+        )
 
 
 def record_payment(
@@ -527,17 +543,18 @@ def record_payment(
         per_day_minor=payload.per_day_minor,
     )
     _settle_advance(session, entity_id, employee_id, payload.payment_date, payload.actor_id)
-    return StaffPaymentResponse(
-        journal_entry_id=result.journal_entry.id,
-        staff_ledger_entry=_staff_entry_read(
-            session, result.staff_ledger_entry, entity_id=entity_id
-        ),
-        balance_minor=result.balance_minor,
-        advance_applied_minor=result.advance_applied_minor,
-        fx_ledger_entry_id=(
-            result.fx_ledger_entry.id if result.fx_ledger_entry else None
-        ),
-    )
+    with entity_context(session, entity_id):
+        return StaffPaymentResponse(
+            journal_entry_id=result.journal_entry.id,
+            staff_ledger_entry=_staff_entry_read(
+                session, result.staff_ledger_entry, entity_id=entity_id
+            ),
+            balance_minor=result.balance_minor,
+            advance_applied_minor=result.advance_applied_minor,
+            fx_ledger_entry_id=(
+                result.fx_ledger_entry.id if result.fx_ledger_entry else None
+            ),
+        )
 
 
 def _staff_row_for_correction(
@@ -613,15 +630,16 @@ def _correct_staff_payment_http(
     )
     posted = result.corrected
     _settle_advance(session, entity_id, employee_id, payload.entry_date, payload.actor_id)
-    return StaffJournalEntryCorrectOut(
-        original_journal_entry_id=result.original_journal_entry.id,
-        reversal_journal_entry_id=result.reversal_journal_entry.id,
-        corrected_journal_entry_id=posted.journal_entry.id,
-        staff_ledger_entry=_staff_entry_read(
-            session, posted.staff_ledger_entry, entity_id=entity_id
-        ),
-        balance_minor=current_balance_minor(session, entity_id, employee_id),
-    )
+    with entity_context(session, entity_id):
+        return StaffJournalEntryCorrectOut(
+            original_journal_entry_id=result.original_journal_entry.id,
+            reversal_journal_entry_id=result.reversal_journal_entry.id,
+            corrected_journal_entry_id=posted.journal_entry.id,
+            staff_ledger_entry=_staff_entry_read(
+                session, posted.staff_ledger_entry, entity_id=entity_id
+            ),
+            balance_minor=current_balance_minor(session, entity_id, employee_id),
+        )
 
 
 def correct_staff_journal_entry_http(
@@ -680,14 +698,15 @@ def correct_staff_journal_entry_http(
     # route that strands an advance without any payment being involved, and
     # it is how Yasir Khan's 2.730 arose on both sides.
     _settle_advance(session, entity_id, employee_id, payload.entry_date, payload.actor_id)
-    balance = current_balance_minor(session, entity_id, employee_id)
-    return StaffJournalEntryCorrectOut(
-        original_journal_entry_id=result.original.id,
-        reversal_journal_entry_id=result.reversal.id,
-        corrected_journal_entry_id=result.corrected.id,
-        staff_ledger_entry=_staff_entry_read(session, new_row, entity_id=entity_id),
-        balance_minor=balance,
-    )
+    with entity_context(session, entity_id):
+        balance = current_balance_minor(session, entity_id, employee_id)
+        return StaffJournalEntryCorrectOut(
+            original_journal_entry_id=result.original.id,
+            reversal_journal_entry_id=result.reversal.id,
+            corrected_journal_entry_id=result.corrected.id,
+            staff_ledger_entry=_staff_entry_read(session, new_row, entity_id=entity_id),
+            balance_minor=balance,
+        )
 
 
 def _assert_staff_journal_for_employee(

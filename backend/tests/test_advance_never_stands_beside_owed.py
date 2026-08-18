@@ -289,6 +289,46 @@ def test_every_staff_write_holds_the_invariant():
     )
 
 
+def test_nothing_reads_a_posting_result_after_settling_without_a_context():
+    """The trap that broke ten tests at once, kept shut.
+
+    `_settle_advance` commits, and a commit expires every instance in the
+    session — including the posting result the caller is about to build its
+    response from. Touching one then triggers a refresh, and a refresh outside
+    an entity context reads through RLS with no entity set, finds nothing, and
+    raises `ObjectDeletedError` about a row that is sitting right there.
+
+    Reading the fields earlier also works, and the void path does exactly that.
+    So the rule is the disjunction: after settling, either touch nothing, or
+    hold a context while you do.
+    """
+    import inspect
+    import re
+
+    from app.features.staff import service
+
+    offenders = []
+    for name in dir(service):
+        fn = getattr(service, name)
+        if not callable(fn) or not hasattr(fn, "__code__"):
+            continue
+        try:
+            source = inspect.getsource(fn)
+        except (OSError, TypeError):
+            continue
+        if "_settle_advance(" not in source or name == "_settle_advance":
+            continue
+        tail = source.split("_settle_advance(", 1)[1]
+        touches = re.search(r"\b(result|posted|new_row)\b\s*\.", tail)
+        if touches and "with entity_context(" not in tail:
+            offenders.append(name)
+
+    assert offenders == [], (
+        "these read an expired posting result with no entity context, which "
+        f"reads as a deleted row: {offenders}"
+    )
+
+
 def test_the_enumeration_names_real_functions():
     """Guard the guard: a typo in the list above would exempt a live path."""
     import inspect
