@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -211,6 +212,29 @@ def get_staff_ledger(
     )
 
 
+def _settle_advance(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    on_date: date,
+    actor_id: uuid.UUID,
+) -> None:
+    """Hold the invariant after a write: owed and advance held cannot overlap.
+
+    On the service, beside `require_manual_cash_payment_account`, and for the
+    same reason — the statement classifier drives the posters directly and must
+    not have a tidy-up entry posted underneath it.
+
+    Called after the write rather than before, because it is the write that
+    creates the overlap. It never raises: see the module it calls into.
+    """
+    from app.core.staff.advance_settlement import settle_advance_against_owed
+
+    settle_advance_against_owed(
+        session, entity_id, employee_id, on_date=on_date, actor_id=actor_id
+    )
+
+
 def record_accrual(
     session: Session,
     entity_id: uuid.UUID,
@@ -242,6 +266,7 @@ def record_accrual(
         period_year=payload.period_year,
         period_month=payload.period_month,
     )
+    _settle_advance(session, entity_id, employee_id, payload.accrual_date, payload.actor_id)
     return StaffAccrualResponse(
         journal_entry_id=result.journal_entry.id if result.journal_entry else None,
         staff_ledger_entry=_staff_entry_read(
@@ -282,6 +307,7 @@ def record_advance(
         fx_money_account_id=payload.fx_money_account_id,
         try_cost_kurus=payload.try_cost_kurus,
     )
+    _settle_advance(session, entity_id, employee_id, payload.payment_date, payload.actor_id)
     return StaffAdvanceResponse(
         journal_entry_id=result.journal_entry.id,
         staff_ledger_entry=_staff_entry_read(
@@ -350,6 +376,7 @@ def record_advance_return(
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
     )
+    _settle_advance(session, entity_id, employee_id, payload.payment_date, payload.actor_id)
     return StaffAdvanceResponse(
         journal_entry_id=result.journal_entry.id,
         staff_ledger_entry=_staff_entry_read(
@@ -462,6 +489,7 @@ def record_extra_days_paid(
     journal_id = result.journal_entry.id if result.journal_entry else None
     if journal_id is None:
         raise ValueError("Extra days record did not produce a journal entry")
+    _settle_advance(session, entity_id, employee_id, payload.payment_date, payload.actor_id)
     return StaffExtraDaysPaidResponse(
         journal_entry_id=journal_id,
         staff_ledger_entry=_staff_entry_read(
@@ -525,6 +553,7 @@ def record_payment(
         extra_days=payload.extra_days,
         per_day_minor=payload.per_day_minor,
     )
+    _settle_advance(session, entity_id, employee_id, payload.payment_date, payload.actor_id)
     return StaffPaymentResponse(
         journal_entry_id=result.journal_entry.id,
         staff_ledger_entry=_staff_entry_read(
@@ -610,6 +639,7 @@ def _correct_staff_payment_http(
         period_unlock_reason=payload.period_unlock_reason,
     )
     posted = result.corrected
+    _settle_advance(session, entity_id, employee_id, payload.entry_date, payload.actor_id)
     return StaffJournalEntryCorrectOut(
         original_journal_entry_id=result.original_journal_entry.id,
         reversal_journal_entry_id=result.reversal_journal_entry.id,
@@ -673,6 +703,11 @@ def correct_staff_journal_entry_http(
     if new_row is None:
         raise CorrectionNotFoundError("corrected staff ledger entry not found")
 
+    # Read after the settle, not before — editing an accrual upward is the
+    # route that strands an advance without any payment being involved, and
+    # it is how Yasir Khan's 2.730 arose on both sides.
+    _settle_advance(session, entity_id, employee_id, payload.entry_date, payload.actor_id)
+    balance = current_balance_minor(session, entity_id, employee_id)
     return StaffJournalEntryCorrectOut(
         original_journal_entry_id=result.original.id,
         reversal_journal_entry_id=result.reversal.id,
@@ -731,6 +766,11 @@ def void_staff_journal_entry_http(
     # six that remembered — and this no longer has to.
     original_id = result.original.id
     reversal_id = result.reversal.id
+    # Voiding a payment puts back whatever it had settled, which can leave the
+    # two sides overlapping again.
+    _settle_advance(
+        session, entity_id, employee_id, void_date or date.today(), actor_id
+    )
     return SubledgerVoidOut(
         original_journal_entry_id=original_id,
         reversal_journal_entry_id=reversal_id,
