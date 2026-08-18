@@ -203,7 +203,6 @@ CAPABILITIES: dict[JournalEntrySource, Capability] = {
         owner=Owner(StaffLedgerEntry, "employee_id"),
         void_path="staff/employees/{owner_id}/ledger/{entry_id}/void",
         edit_kind="staff_ledger", context=_staff_ledger_context,
-        edit_needs_a_sole_row=True,
     ),
     # --- customers and suppliers ------------------------------------------
     JournalEntrySource.CUSTOMER_PAYMENT_RECEIVED: Capability(

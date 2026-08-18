@@ -554,6 +554,66 @@ def _staff_row_for_correction(
     return rows[0]
 
 
+def _is_multi_row_staff_payment(
+    session: Session, entity_id: uuid.UUID, journal_entry_id: uuid.UUID
+) -> bool:
+    """A staff payment entry owning more than one subledger row.
+
+    The single-row correction below rebuilds one row and would drop the others,
+    which is why it used to refuse these outright.
+    """
+    from app.core.ledger.models import JournalEntry, JournalEntrySource
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        entry = session.get(JournalEntry, journal_entry_id)
+        if entry is None or entry.source != JournalEntrySource.STAFF_PAYMENT:
+            return False
+        rows = session.scalars(
+            select(StaffLedgerEntry).where(
+                StaffLedgerEntry.journal_entry_id == journal_entry_id
+            )
+        ).all()
+        return len(rows) > 1
+
+
+def _correct_staff_payment_http(
+    session: Session,
+    entity_id: uuid.UUID,
+    employee_id: uuid.UUID,
+    journal_entry_id: uuid.UUID,
+    payload: StaffJournalEntryCorrect,
+) -> StaffJournalEntryCorrectOut:
+    from app.core.staff.payment_correction import correct_staff_payment
+
+    if payload.amount_minor is None:
+        raise ValueError("amount_minor is required when correcting a staff payment")
+
+    result = correct_staff_payment(
+        session,
+        entity_id,
+        journal_entry_id,
+        payment_date=payload.entry_date,
+        amount_minor=payload.amount_minor,
+        description=payload.description,
+        actor_id=payload.actor_id,
+        payment_account_id=payload.payment_account_id,
+        reason=payload.reason,
+        void_date=payload.void_date,
+        period_unlock_reason=payload.period_unlock_reason,
+    )
+    posted = result.corrected
+    return StaffJournalEntryCorrectOut(
+        original_journal_entry_id=result.original_journal_entry.id,
+        reversal_journal_entry_id=result.reversal_journal_entry.id,
+        corrected_journal_entry_id=posted.journal_entry.id,
+        staff_ledger_entry=_staff_entry_read(
+            session, posted.staff_ledger_entry, entity_id=entity_id
+        ),
+        balance_minor=current_balance_minor(session, entity_id, employee_id),
+    )
+
+
 def correct_staff_journal_entry_http(
     session: Session,
     entity_id: uuid.UUID,
@@ -563,6 +623,15 @@ def correct_staff_journal_entry_http(
 ) -> StaffJournalEntryCorrectOut:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
+
+    if _is_multi_row_staff_payment(session, entity_id, journal_entry_id):
+        # A payment that consumed an advance, or parked a surplus as one, owns
+        # two or three rows. Rebuilding a single row would drop the rest, so
+        # this reverses the entry whole and reposts through the poster that
+        # wrote it — see `core/staff/payment_correction.py`.
+        return _correct_staff_payment_http(
+            session, entity_id, employee_id, journal_entry_id, payload
+        )
 
     with entity_context(session, entity_id):
         require_entity_context()
