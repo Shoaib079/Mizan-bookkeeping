@@ -148,11 +148,22 @@ def test_only_the_allocation_counts_owners_separately():
 
 
 def test_the_capability_that_needs_a_sole_row_is_declared_where_it_is_true():
-    """Only staff, and all three staff sources.
+    """The two staff sources whose correction still rewrites a single row.
 
     A source that rewrites one subledger row on correction must say so. Left
     off, the General ledger offers an Edit that drops rows; put on a source
     whose correction handles many, it hides a working button.
+
+    `staff_payment` was here and is not any more. It is the one shape that
+    routinely owns several rows — a payment consuming an advance writes two,
+    one parking a surplus writes three — so it was the reason the flag existed
+    and the reason an owner could not fix a payment without voiding it.
+    `core/staff/payment_correction.py` now reverses the entry whole and
+    re-runs the poster, which rebuilds every leg from the same split maths
+    that wrote them. The flag would now hide a button that works.
+
+    Accrual and advance still go through `correct_staff_journal_entry`, which
+    reads one row with `session.scalar` and reposts one row.
     """
     from app.core.ledger.entry_capabilities import CAPABILITIES
     from app.core.ledger.models import JournalEntrySource
@@ -162,7 +173,7 @@ def test_the_capability_that_needs_a_sole_row_is_declared_where_it_is_true():
         for source, cap in CAPABILITIES.items()
         if cap.edit_needs_a_sole_row
     }
-    assert flagged == {"staff_accrual", "staff_advance", "staff_payment"}, (
+    assert flagged == {"staff_accrual", "staff_advance"}, (
         "the flag marks sources whose correction rewrites a single row; "
         f"currently {sorted(flagged)}"
     )
@@ -175,3 +186,22 @@ def test_the_capability_that_needs_a_sole_row_is_declared_where_it_is_true():
             "voiding stays available — every row of a staff entry belongs to "
             "the same employee, so the reversal harms nobody else"
         )
+
+
+def test_a_source_may_drop_the_flag_only_once_it_can_rebuild_every_leg():
+    """Guard the guard.
+
+    The assertion above is a list, and the cheapest way past a failing list is
+    to delete the entry that failed — which is exactly how a real refusal
+    becomes a silent row-dropping Edit. So the unflagged staff source has to
+    show the multi-row route that earned it.
+    """
+    from app.features.staff import service as staff_service
+
+    assert hasattr(staff_service, "_is_multi_row_staff_payment"), (
+        "staff_payment is unflagged, so correcting one must be routed by row "
+        "count — without this the General ledger Edit drops rows again"
+    )
+    from app.core.staff.payment_correction import correct_staff_payment
+
+    assert callable(correct_staff_payment)

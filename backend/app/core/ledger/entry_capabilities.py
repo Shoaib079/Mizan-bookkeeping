@@ -94,17 +94,18 @@ class Capability:
     # owns several cannot be corrected without losing one.
     #
     # `correct_staff_journal_entry` reads one row with `session.scalar` and
-    # reposts one row. A salary payment that consumed an advance writes two —
-    # SALARY_PAYMENT and ADVANCE_APPLIED — and a period payment writes three.
-    # Correcting one of those drops the others, and `scalar` does not promise
-    # which row it hands back, so it might keep the offset and drop the
-    # payment. The employee's advance balance is wrong afterwards and nothing
-    # says so.
+    # reposts one row. `scalar` does not promise which row it hands back, so it
+    # might keep an offset and drop the payment, leaving the balance wrong.
     #
-    # The staff *page* has always refused this. The General ledger offered it,
-    # because the resolver answered from the source alone. Voiding stays
-    # available: it reverses the whole entry, which is right — every row of a
-    # staff payment belongs to the same employee.
+    # STAFF_PAYMENT was the reason this flag exists and no longer carries it:
+    # a payment consuming an advance owns two rows, one parking a surplus
+    # three, and `core/staff/payment_correction.py` reverses the entry whole
+    # and re-runs the poster instead of rebuilding rows by hand, so the split
+    # is computed once by the code that owns it. Accrual and advance still take
+    # the single-row path.
+    #
+    # Voiding stays available either way: every row of a staff entry belongs
+    # to the same employee, so reversing the whole entry harms nobody else.
     edit_needs_a_sole_row: bool = False
     # Where to count owners, when that is not where the row comes from.
     #
