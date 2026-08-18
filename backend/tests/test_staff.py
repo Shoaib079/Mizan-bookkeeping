@@ -583,6 +583,13 @@ def test_api_staff_flow(client: TestClient, staff_setup, db_session) -> None:
         },
     )
     assert advance.status_code == 201
+    # The advance is taken against salary already accrued, so it is settled on
+    # the spot — see `advance_settlement`. Nothing is left standing on both
+    # sides, which is the whole point, and it means the payment below has no
+    # advance left to consume.
+    after_advance = client.get(f"{base}/employees/{employee_id}/ledger").json()
+    assert after_advance["outstanding_advance_minor"] == 0
+    assert after_advance["remaining_accrual_minor"] == 300000
 
     payment = client.post(
         f"{base}/employees/{employee_id}/payments",
@@ -599,14 +606,18 @@ def test_api_staff_flow(client: TestClient, staff_setup, db_session) -> None:
     )
     assert payment.status_code == 201
     assert payment.json()["balance_minor"] == 0
-    assert payment.json()["advance_applied_minor"] == 150000
+    # Was 150000, when the payment was the first thing to touch the advance.
+    assert payment.json()["advance_applied_minor"] == 0
 
     ledger = client.get(f"{base}/employees/{employee_id}/ledger")
     assert ledger.status_code == 200
     assert ledger.json()["balance_minor"] == 0
     assert ledger.json()["remaining_accrual_minor"] == 0
     assert ledger.json()["outstanding_advance_minor"] == 0
-    assert len(ledger.json()["entries"]) == 4
+    # Five rows, not four: the settlement writes its own pair (a salary payment
+    # for the applied amount and the advance-applied offset) on one journal.
+    # Only accruals are collapsed for display, so both are visible.
+    assert len(ledger.json()["entries"]) == 5
     types = {e["movement_type"] for e in ledger.json()["entries"]}
     assert types == {
         "salary_accrued",
