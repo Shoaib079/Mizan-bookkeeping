@@ -92,6 +92,10 @@ export function editTargetFor(
           amount_minor: num(ctx.amount_minor),
           description: text(ctx.description),
           extra_days: ctx.extra_days == null ? undefined : num(ctx.extra_days),
+          // Dropped, this does not reopen empty — the form falls back to the
+          // first wallet, so the picker looks answered and the correction
+          // moves the money to a drawer it never came from.
+          payment_account_id: maybeText(ctx.payment_account_id),
         },
       };
     case "customer_payment":
@@ -108,6 +112,7 @@ export function editTargetFor(
               ? null
               : num(ctx.payment_native_quantity),
           forex_currency: maybeText(ctx.forex_currency),
+          payment_account_id: maybeText(ctx.payment_account_id),
         },
       };
     case "fx_purchase":
@@ -186,6 +191,7 @@ export function editTargetFor(
           movement_date: text(ctx.movement_date),
           amount_kurus: num(ctx.amount_kurus),
           description: text(ctx.description),
+          payment_account_id: maybeText(ctx.payment_account_id),
         },
       };
     case "delivery_commission":

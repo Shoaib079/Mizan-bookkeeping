@@ -39,27 +39,35 @@ def _expense_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
     }
 
 
-def _partner_ledger_context(session: Session, entry: JournalEntry, row: Any) -> dict:
-    """The row, plus the account the money moved through.
+def _money_account_id(session: Session, entry: JournalEntry) -> str | None:
+    """The account the money moved through, for a form that must reopen on it.
 
-    The account is on the journal entry's lines, not on the subledger row, so
-    a form built from the row alone reopened with an empty picker and saved a
-    correction against whatever the user then chose. The partner page worked
-    around it by passing the account itself; the General ledger had no such
-    workaround and quietly lost it. Read once here, so both are right.
+    It lives on the journal entry's lines, not on the subledger row, so any
+    context built from the row alone loses it — and no form shows that it has.
+    All four correction forms fall back to the *first* wallet in the list, so a
+    dropped account does not look like a dropped account: the picker is filled
+    in, with the wrong drawer, and saving moves the money there.
+
+    Every correction form with an account picker must be handed this. There is
+    a test enumerating them, because this was written for the partner form and
+    the other three were left behind for months.
     """
     from app.features.banking.journal_money_account import (
         money_account_gl_by_journal_entry,
     )
 
     account = money_account_gl_by_journal_entry(session, [entry.id]).get(entry.id)
+    return str(account) if account else None
+
+
+def _partner_ledger_context(session: Session, entry: JournalEntry, row: Any) -> dict:
     return {
         "partner_id": str(row.partner_id),
         "movement_type": row.movement_type.value,
         "movement_date": row.movement_date.isoformat(),
         "amount_kurus": row.amount_kurus,
         "description": row.description,
-        "payment_account_id": str(account) if account else None,
+        "payment_account_id": _money_account_id(session, entry),
     }
 
 
@@ -80,7 +88,7 @@ def _partner_funded_salary_context(
     }
 
 
-def _staff_ledger_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+def _staff_ledger_context(session: Session, entry: JournalEntry, row: Any) -> dict:
     return {
         "employee_id": str(row.employee_id),
         "movement_type": row.movement_type.value,
@@ -88,10 +96,11 @@ def _staff_ledger_context(_session: Session, _entry: JournalEntry, row: Any) -> 
         "amount_minor": row.amount_minor,
         "description": row.description,
         "extra_days": row.extra_days,
+        "payment_account_id": _money_account_id(session, entry),
     }
 
 
-def _customer_payment_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+def _customer_payment_context(session: Session, entry: JournalEntry, row: Any) -> dict:
     return {
         "customer_id": str(row.customer_id),
         "movement_date": row.movement_date.isoformat(),
@@ -99,15 +108,23 @@ def _customer_payment_context(_session: Session, _entry: JournalEntry, row: Any)
         "description": row.description,
         "payment_native_quantity": row.payment_native_quantity,
         "forex_currency": row.forex_currency,
+        "payment_account_id": _money_account_id(session, entry),
     }
 
 
-def _supplier_row_context(_session: Session, _entry: JournalEntry, row: Any) -> dict:
+def _supplier_row_context(session: Session, entry: JournalEntry, row: Any) -> dict:
+    """Also used for a supplier *invoice*, which has no money line.
+
+    `_money_account_id` returns None there, and the invoice form has no picker
+    to fill — so the key is harmless where it is unused and correct where the
+    same context serves a payment.
+    """
     return {
         "supplier_id": str(row.supplier_id),
         "movement_date": row.movement_date.isoformat(),
         "amount_kurus": row.amount_kurus,
         "description": row.description,
+        "payment_account_id": _money_account_id(session, entry),
     }
 
 
