@@ -28,7 +28,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Wallet } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiDownload, apiFetch, triggerBlobDownload } from "@/lib/api";
+import { DownloadMenu } from "@/components/ui/download-menu";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { invalidateReviewCounts } from "@/lib/review-counts-types";
@@ -185,14 +186,32 @@ export function ExpensesReviewPanel() {
           ) : (
             <div />
           )}
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">{periodTotalLabel}</p>
-            <p className="text-2xl font-semibold tabular-nums tracking-tight">
-              {(view === "expenses" && loading) ||
-              (view === "items" && itemsLoading)
-                ? "…"
-                : formatTry(periodTotalKurus)}
-            </p>
+          <div className="flex flex-wrap items-end gap-3">
+            {view === "expenses" && expenseFilterUsesRange(filter) && (
+              <DownloadMenu
+                disabled={loading}
+                items={[
+                  {
+                    label: "Excel (.xlsx)",
+                    run: async () => {
+                      const { blob, filename } = await apiDownload(
+                        `/entities/${entityId}/expenses/export?${listQuery}`,
+                      );
+                      triggerBlobDownload(blob, filename);
+                    },
+                  },
+                ]}
+              />
+            )}
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">{periodTotalLabel}</p>
+              <p className="text-2xl font-semibold tabular-nums tracking-tight">
+                {(view === "expenses" && loading) ||
+                (view === "items" && itemsLoading)
+                  ? "…"
+                  : formatTry(periodTotalKurus)}
+              </p>
+            </div>
           </div>
         </div>
 
