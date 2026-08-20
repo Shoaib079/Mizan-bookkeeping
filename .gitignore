@@ -20,3 +20,8 @@ backend/data/
 /backups/
 backend/data/backups/
 frontend/.next/
+
+# Captured test output. Useful to keep on disk while chasing a failure, never
+# worth committing — it is a snapshot of one run on one machine.
+pytest-out.txt
+pytest-out-*.txt
