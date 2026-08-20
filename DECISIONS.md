@@ -2,6 +2,12 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-08-21 — Partner page: one live net figure; dated ledger for detail
+
+**Choice:** Partner page shows **ONE live net figure** (who owes whom) as the answer; the dated ledger below is the only detail view. Owner removed the 2026-07-14 summary stickers because they showed gross drawings/fronted without netting, had no dates, and could lag posted entries. The books keep drawings (`3200`) and fronted expenses (`2150`) as separate legs; every display nets them, and settlement order (fronted first, then drawings) does the settling when money moves. Any future breakdown must be derived live at read time from the same posted ledger rows, be dated or period-labelled, and show the net — never cached gross figures.
+
+**Why:** Gross, undated, or lagging panels answered a different question than the books and confused recording. One live net plus the dated ledger is enough.
+
 ## 2026-08-13 — Partner-funded TRY salary (owe partner on 2150)
 
 **Choice:** A partner may pay a staff salary **from their pocket**. The company **owes the partner** on reimbursement payable (`2150`). The salary stays in the **staff flow** so expense account `5100` posts **once** (normal accrual Dr `5100` / Cr `2250`). Partner-funded pay is Dr `2250` / Cr `1300` (advance offset, same rule as cash, including excess parked as advance) / Cr `2150` for the remainder — no cash or bank lines. **TRY only** (FX-paid workers keep the existing FX salary path). Correction is **void-and-re-enter** — UI offers **Void only**, no in-place Edit. One journal writes staff + partner (`salary_fronted` / source `partner_salary_fronted`); dual void reverses GL + both subledgers. Repayment reuses existing Pay partner / reimbursement. Partner-fronted *expense* APIs reject `5100`.
