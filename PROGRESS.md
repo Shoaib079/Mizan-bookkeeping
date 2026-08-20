@@ -20,11 +20,11 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none)* |
+| **Active slice** | **S1** — staff sticker = ledger net |
 | **Last completed slice** | Entity balance sticker (`v0.entity-balance-sticker`) |
 | **Last tag** | `v0.entity-balance-sticker` |
-| **Unpushed** | yes — owner pushes when ready (do not push from agent) |
-| **Next up** | GS-FX forex-only group sales |
+| **Unpushed** | no — `origin/main` at `v0.entity-balance-sticker` (as of plan commit; S1 will be local until owner pushes) |
+| **Next up** | S1 in progress → then S2 (supplier sticker refresh) |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

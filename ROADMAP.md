@@ -24,8 +24,8 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none)* |
-| **Next up**              | **GS-FX** forex-only group sales (design locked) |
+| **Active slice**         | **S1** — staff sticker = ledger net (money-critical) |
+| **Next up**              | After S1 sign-off: **S2** supplier sticker refresh after void (then S3…) |
 | **Last completed slice** | Entity balance sticker (`v0.entity-balance-sticker`) |
 | **Last commit/tag**      | `v0.entity-balance-sticker` |
 
@@ -1899,6 +1899,29 @@ Take the tested app to a real, secure production environment and put real data i
 - **Phase 8.7 + Phase 9 core DONE (`v0.52.0`–`v0.56.0`) ✓ signed off.** Frontend gaps → Phase 9 Slice 2d + 8.
 - **Z match-or-review DONE (`v0.57.0`) ✓ signed off.** Ops copy + integration test → Phase 8.8 H4 **done** (`v0.58.3`).
 - **Bank deposit exceeds card sale (no Z entered):** still rejected at settlement (`test_inferred_commission_rejects_net_exceeding_batch_gross`). With Z tracking off, owner records deposits manually; with Z on, mismatch routes to Needs Review — not auto-resolved.
+
+### Audit remediation — Partner / Staff / Supplier + exports (2026-08-20)
+
+Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). **One slice at a time; owner go between slices.** Do not start the next until the current is committed, tagged, and signed off. GS-FX remains deferred until this queue (or owner re-prioritises).
+
+| # | Slice | Impact | Scope |
+|---|-------|--------|-------|
+| **S1** | Staff money-figure correctness | high | Sticker hero + heading from ledger `balance_minor` / `netMinor`; residual never “Settled”; hub colour sign TRY-only; fix locking tests; cheap sticker mobile width |
+| **S2** | Supplier sticker freshness after activity void | high | Parent ledger reload when activity voids/corrects |
+| **S3** | Detail write chrome grant-gated | high | Partner/Staff/Supplier Record·Pay·Edit use `shouldShowWriteChrome` / `canWriteOperations` |
+| **S4** | Supplier payment Edit/Void via capabilities | high | Activity payments through `useEntryActions` / backend `can_edit` (no always-on Edit) |
+| **S5** | Ledger-changed freshness (directories + detail) | high | Emit on money-form success and/or listen so list maps + stickers refresh |
+| **S6** | P&L / BS export `view` (live vs sealed) | high | Download + export API pass `view`; stamp sealed/live in file + filename |
+| **S7** | Balance sheet Excel `finish_data_table` | high | Real header row + `money_cols` (accounting red negatives) |
+| **S8** | Shared Excel finish for subledger / activity / delivery / POS | high | `write_header_row` + `finish_data_table` (no autosize-only bypass) |
+| **S9** | Cash book / expense register / GL standalone export | high | Screen/file rule — download same range as on-screen |
+| **S10** | Export screen==file amount parity tests | high | Assert key totals for same params/`view` |
+| **S11** | Excel money_cols gaps (cash flow, KDV, delivery-sales, period-comparison) | med | Pass `money_cols` into `finish_data_table` |
+| **S12** | Month pack Summary (+ card-clearing) shared finish | med | Accounting format / print / freeze where a header exists |
+| **S13** | Delivery/POS/activity masthead + delivery filename | med | Entity name, TR dates, English sheet title; `export_filename` |
+| **S14** | Salaries / FX holdings headers + PDF Amount (₺) / sealed banner | med | `money_header` / `quantity_header`; PDF headers + sealed line |
+| **S15** | Directory / hub direction labels + payables “Total owed” copy | med | Match sticker wording; net payables naming |
+| **S16** | Supplier sticker vs activity range closing label | med | “Closing in range” or sync when range selected |
 
 ---
 
