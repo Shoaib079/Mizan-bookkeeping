@@ -17,6 +17,7 @@
 
 ## Current
 
+- **File-size ratchet slice (export splits):** supplier activity export button split (panel 398 lines, off baseline); expenses/api 464, reports/api 512, GL panel 539; expenses-review already under 400. Baseline lowered/deleted downward-only; `check_file_sizes` + pytest + vitest + build green.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |

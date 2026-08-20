@@ -1,3 +1,4 @@
+- File-size ratchet after export splits: `backend/scripts/check_file_sizes.py` (6/6) and `tests/test_file_sizes_do_not_grow.py`; full backend pytest; frontend `vitest run` + `npm run build`. Baseline: expenses/api 464, reports/api 512, GL panel 539; supplier-activity-panel and expenses-review-panel absent (<400).
 # TESTS
 
 Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULES.md §8).
