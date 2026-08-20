@@ -17,6 +17,7 @@ Everything we worked out, in one place. Read in this order.
 - **`HARDENING_PLAN.md`** — the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4). Read before fixing any bug.
 - **`PROGRESS.md`** — the exact resume point (phase, last tag, next up); the primary handoff file for a new session.
 - **`CHANGELOG.md`** — every change, plain English, dated.
+- **`STAFF_ONE_ACCOUNT_PLAN.md`** — parked (owner 2026-08-18): Part 1 shipped; 1300→2250 merge deferred — re-decide before building.
 
 ## Where the reasoning lives (read before changing accounting behaviour)
 - **`FINANCIAL_AUDIT.md`** — an outside review of the accounting engine, finding by finding, each marked resolved / mitigated / deliberately open. **F2 (no output VAT) is the only substantive one still open**, and it's a knowing choice: these books are a management view, not a tax basis.
