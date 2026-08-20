@@ -21,8 +21,8 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of money-safety sweep guards)* |
-| **Last completed slice** | Money-safety sweep guards (`v0.money-safety-sweep-guards`) |
+| **Active slice** | *(none — await owner review of file-size ratchet slice)* |
+| **Last completed slice** | File-size ratchet export splits (`ff493f8` / `ab64050`) — after money-safety guards |
 | **Last tag** | `v0.money-safety-sweep-guards` |
 | **Unpushed** | yes — do not push until owner says |
 | **Next up** | S3 detail write chrome grant-gated (after sign-off) |
