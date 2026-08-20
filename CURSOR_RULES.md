@@ -4,7 +4,7 @@
 
 This file governs HOW the app is built. WHAT the app must do lives in `Restaurant_Bookkeeping_App_Decisions.md` — that document is the single source of truth for requirements. If these two ever disagree, STOP and ask the owner; do not guess.
 
-**Companion files:** `ARCHITECTURE.md` = how the code is *structured* (feature modules, single posting boundary, adapters — follow it to avoid a monolith); `DESIGN_SYSTEM.md` = how it *looks and behaves* (including the modern-UX rules: Enter submits, type-or-pick dates, type-to-filter pickers, autosave); `ROADMAP.md` = where we are in the build (phase, slice, status — updated after every slice). `HARDENING_PLAN.md` = the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4) — read it before fixing any bug. `AGENT_GUARDRAILS.md` = what catches you if you don't: the full green-light commands, the file-size ratchet, the expensive lessons. Read it with this file.
+**Companion files:** `ARCHITECTURE.md` = how the code is *structured* (feature modules, single posting boundary, adapters — follow it to avoid a monolith); `DESIGN_SYSTEM.md` = how it *looks and behaves* (including the modern-UX rules: Enter submits, type-or-pick dates, type-to-filter pickers, autosave); `ROADMAP.md` = where we are in the build (phase, slice, status — updated after every slice). `HARDENING_PLAN.md` = the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4) — read it before fixing any bug. `AGENT_GUARDRAILS.md` = what catches you if you don't: the full green-light commands, the file-size ratchet, the expensive lessons. Read it with this file. `DEV.md` = the local machine: **Homebrew PostgreSQL 17 on `localhost:5432`, never Docker**, and the venv pytest command — read it before running anything.
 
 ---
 
@@ -279,6 +279,30 @@ See Section 8 for what each log file is for. Update `PROGRESS.md` before ending 
 ---
 
 ## 7. Testing rules
+
+### How to run them on this machine (do not guess — see `DEV.md`)
+
+**PostgreSQL 17 is installed and running via Homebrew on `localhost:5432`.**
+
+- **Never start Docker to run tests.** Docker Compose is optional here and is not
+  used for pytest. If the database will not connect, fix the URL or the role —
+  do not reach for a container.
+- **Always use the venv binary.** A bare `python3 -m pytest` picks up Homebrew or
+  python.org Python, lacks the project packages, and `tests/conftest.py` rejects it.
+- **One pytest run at a time** — the suite shares one test database (`mizan_test`)
+  and two concurrent runs cross-contaminate.
+
+```bash
+cd backend
+export DATABASE_ADMIN_URL='postgresql+psycopg://shoaib@localhost:5432/postgres'
+.venv/bin/pytest -q
+```
+
+The full green light — including `npx eslint .` over the whole tree and a real
+`next build`, both of which catch what vitest and tsc miss — is in
+`AGENT_GUARDRAILS.md §1`.
+
+### The rules themselves
 
 - **Every money rule has an automated test:** no duplicates, payment reduces payable, salary vs advance no double-count, transfers are not income/expense, entity isolation (no cross-entity leak), KDV math (net + VAT = gross), Turkish number parsing, kuruş integer storage, locked-period protection.
 - **Tests must pass before a slice is considered done** and before moving on. Both focused slice tests AND full `pytest` must pass (see Definition of Done, Section 2).

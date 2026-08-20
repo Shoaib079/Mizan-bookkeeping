@@ -12,6 +12,33 @@ Key references:
 - WHERE (progress): `ROADMAP.md`
 - STRUCTURE: `ARCHITECTURE.md`
 - LOOK: `DESIGN_SYSTEM.md` (§0 copy-paste theme rules)
+- ENVIRONMENT: `DEV.md` — read before running anything
+- GUARDS: `AGENT_GUARDRAILS.md` — what will catch you, and why each rule exists
+- BUG CLASSES: `HARDENING_PLAN.md` — read before fixing any bug
+
+## Local environment — do not guess this
+
+This Mac runs **PostgreSQL 17 via Homebrew on `localhost:5432`**. It is already
+installed and running.
+
+- **Never start Docker for pytest.** Docker Compose is optional here and is not
+  used for tests. If a DB connection fails, fix the URL or the role — do not
+  reach for a container.
+- **Always run pytest through the venv binary**: `.venv/bin/pytest -q`. A bare
+  `python3 -m pytest` picks up the wrong interpreter and fails on missing
+  packages; `tests/conftest.py` will reject it.
+- The suite shares one test database. **One pytest run at a time** — never start
+  a second while one is going.
+
+```bash
+cd backend
+export DATABASE_ADMIN_URL='postgresql+psycopg://shoaib@localhost:5432/postgres'
+.venv/bin/pytest -q
+```
+
+Full green light (all of it, before claiming done) is in `AGENT_GUARDRAILS.md §1`
+— it includes `npx eslint .` over the whole tree and a real `next build`, both of
+which catch things vitest and tsc do not.
 
 Slice gate: Characterize → Audit → Test → Fix → API → Verify → ROADMAP → Commit/tag.
 
