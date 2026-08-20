@@ -27,7 +27,7 @@ export function ExpensesScopeNote() {
   return (
     <div className="max-w-3xl space-y-2">
       <p className="text-sm text-muted-foreground">
-        Cash and partner-fronted expenses posted here — correct mistakes below.
+        Cash and partner-paid expenses posted here — correct mistakes below.
         Bank and card charges are classified on the bank statement (not entered
         manually). Receipt photos are in{" "}
         <Link

@@ -71,7 +71,7 @@ _STAFF_MOVEMENT_LABELS: dict[str, str] = {
 
 _PARTNER_MOVEMENT_LABELS: dict[str, str] = {
     "opening_balance": "Opening balance",
-    "expense_fronted": "Expense fronted",
+    "expense_fronted": "Partner paid expense",
     "salary_fronted": "Salary paid for staff",
     "reimbursement_paid": "Reimbursement paid",
     "drawing": "Drawing",

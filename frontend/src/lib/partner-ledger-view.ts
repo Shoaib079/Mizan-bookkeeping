@@ -1,7 +1,7 @@
 /** Partner ledger grouping + filtering (2026-07-14).
  *
  * A partner ledger mixes three unrelated concerns — profit/equity, cash in and
- * out, and expenses they fronted. Filter chips let the reader look at one at a
+ * out, and expenses a partner paid. Filter chips let the reader look at one at a
  * time; period bands keep each profit allocation legible once several months
  * have accumulated. */
 

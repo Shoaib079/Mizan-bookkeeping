@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-20
 
+**Partner paid wording + cash Record copy (`v0.partner-paid-labels`).** User-facing "fronted" → "partner paid" (ledger labels, Record/review/classify copy). Cash taken still shows one net headline + plain settle sentence (no Fronted/Net book breakdown). Code keys `expense_fronted` / `expenses-fronted` unchanged. Partner page stickers stay removed.
+
 **Partner Record cash copy (`v0.partner-cash-copy-one-figure`).** Cash taken / withdrawn shows only the headline net figure ("You owe partner: X") plus a short settle-first sentence — no "Fronted still owed / Net book" breakdown.
 
 ## 2026-08-13

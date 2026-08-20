@@ -21,8 +21,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Partner Record cash copy (`v0.partner-cash-copy-one-figure`) |
-| **Last tag** | `v0.partner-cash-copy-one-figure` |
+| **Last completed slice** | Partner paid labels (`v0.partner-paid-labels`) |
+| **Last tag** | `v0.partner-paid-labels` |
 | **Unpushed** | yes — owner pushes when ready (do not push from agent) |
 | **Next up** | GS-FX forex-only group sales |
 

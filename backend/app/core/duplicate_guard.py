@@ -140,7 +140,7 @@ def find_duplicate_partner_expense_fronted(
         record_kind="partner_expense",
         existing_id=row_id,
         message=(
-            f"A partner-fronted expense for {_format_try(amount_kurus)} on "
+            f"A partner-paid expense for {_format_try(amount_kurus)} on "
             f"{_format_tr_date(expense_date)} already exists."
         ),
     )

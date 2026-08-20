@@ -107,7 +107,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
   {
     id: "expense",
     label: "Daily expenses",
-    description: "Cash or partner-fronted — groceries, supplies, petty cash. Bank/card on the statement.",
+    description: "Cash or partner paid — groceries, supplies, petty cash. Bank/card on the statement.",
     icon: Wallet,
     section: "today",
   },

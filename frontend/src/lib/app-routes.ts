@@ -96,7 +96,7 @@ export const appRoutes: AppRoute[] = [
   {
     href: "/partners",
     label: "Partners",
-    keywords: "owners reimbursements fronted expenses",
+    keywords: "owners reimbursements partner paid expenses",
     icon: Handshake,
     group: "Money out",
   },

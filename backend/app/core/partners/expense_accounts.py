@@ -32,6 +32,6 @@ def validate_partner_fronted_expense_account(
     if account.code == SALARY_EXPENSE_CODE:
         raise InvalidAccountError(
             "Salaries (5100) must be recorded via Staff → Pay salary "
-            "(cash or partner-funded), not as a partner-fronted expense"
+            "(cash or partner-funded), not as a partner-paid expense"
         )
     return account

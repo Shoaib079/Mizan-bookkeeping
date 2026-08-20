@@ -284,7 +284,7 @@ export default function PartnersPage() {
           <EmptyState
             icon={Handshake}
             title="No partners yet"
-            hint="Track expenses fronted by owners and reimbursements."
+            hint="Track expenses partners paid and reimbursements."
           />
         }
         table={<PartnerTable {...listProps} />}

@@ -41,7 +41,7 @@ import { cn } from "@/lib/utils";
 export type RecordDeskMode = PrimaryRecordActionId;
 
 const DESK_HINTS: Record<RecordDeskMode, string> = {
-  expense: "Cash or partner-fronted — bank and card on the statement.",
+  expense: "Cash or partner paid — bank and card on the statement.",
   staffSalary: "Pay from cash or a partner (owe them) — accruals on Staff.",
   sales: "POS totals when you do not have a Z photo.",
   fx: "Buy, sell, or spend USD, EUR, or GBP.",

@@ -304,7 +304,7 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
           />
           <span>
             Net against amount already taken — settle each partner&apos;s share of
-            profit against their net balance (drawings, fronted expenses, loans) on
+            profit against their net balance (drawings, partner-paid expenses, loans) on
             or before the profit period end, or the allocation date when using a
             fixed amount. Movements after that date are ignored so later drawings
             stay separate.

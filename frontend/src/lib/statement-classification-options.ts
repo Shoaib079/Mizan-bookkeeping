@@ -136,7 +136,7 @@ export const STATEMENT_CLASSIFICATION_OPTIONS: ClassificationOption[] = [
   },
   {
     value: "partner_reimbursement",
-    label: "Repay partner (fronted expenses)",
+    label: "Repay partner (partner-paid expenses)",
     hint: "Pay back what you owe the partner — not an expense",
     direction: "outflow",
     target: "partner",

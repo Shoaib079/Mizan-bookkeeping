@@ -498,7 +498,7 @@ export function ManualExpenseForm({
       {!embedded && <RecordingForBanner />}
       {recordKind === "expense" && !embedded && (
         <p className="mb-4 text-xs text-muted-foreground">
-          Cash and partner-fronted only — bank and card charges are classified
+          Cash and partner paid only — bank and card charges are classified
           when the bank statement arrives (never record them here).
         </p>
       )}
