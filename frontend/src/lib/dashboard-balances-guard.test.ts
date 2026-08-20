@@ -45,4 +45,13 @@ describe("balances on dashboard", () => {
       'redirect("/customers")',
     );
   });
+
+  it("payables card headline is Payables (not Total owed / You owe)", () => {
+    const overview = sourceDeclaring("BalancesOverview");
+    expect(overview).toMatch(/title=["']Payables["']/);
+    expect(overview).not.toMatch(/title=["']Total owed["']/);
+    expect(overview).not.toMatch(/title=["']You owe/);
+    // Direction subtitle stays — wording for who is owed.
+    expect(overview).toContain("Total owed to suppliers");
+  });
 });
