@@ -19,7 +19,6 @@ import {
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
 import {
-  formatPartnerNetBalance,
   partnerBalanceAmount,
   partnerBalanceHeading,
   partnerDrawingRepaymentAllowed,
@@ -38,6 +37,7 @@ type Props = {
   onClose: () => void;
   partnerId: string;
   netBalanceKurus?: number;
+  /** Kept for call-site compatibility; cash Record shows net only (no fronted breakdown). */
   frontedBalanceKurus?: number;
   unpaidProfitKurus?: number;
   /** Outstanding drawings net — negative means repayable. */
@@ -60,7 +60,6 @@ export function PartnerRecordForm({
   onClose,
   partnerId,
   netBalanceKurus,
-  frontedBalanceKurus,
   unpaidProfitKurus = 0,
   drawingsNetKurus = 0,
   lockedKind,
@@ -291,7 +290,6 @@ export function PartnerRecordForm({
     }
   }
 
-  const fronted = Math.max(0, frontedBalanceKurus ?? 0);
   const dialogTitle =
     lockedKind === "profit_paid" ? "Pay profit" : "Record";
   const submitLabel =
@@ -325,13 +323,9 @@ export function PartnerRecordForm({
             {partnerBalanceAmount(netBalanceKurus)}
           </p>
         )}
-        {kind === "cash" && fronted > 0 && (
+        {kind === "cash" && (
           <p className="text-xs text-muted-foreground">
-            Fronted still owed: {formatTry(fronted)}
-            {netBalanceKurus !== undefined && netBalanceKurus !== fronted
-              ? ` · Net book: ${formatPartnerNetBalance(netBalanceKurus)}`
-              : null}
-            . Cash taken / withdrawn settles fronted first; extra is a withdrawal.
+            This payment settles what you owe first; any extra is a withdrawal.
           </p>
         )}
         {kind === "profit_paid" && (

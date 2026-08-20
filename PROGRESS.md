@@ -21,8 +21,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Partner-funded TRY salary (`v0.partner-funded-salary`) |
-| **Last tag** | `v0.partner-funded-salary` |
+| **Last completed slice** | Partner Record cash copy (`v0.partner-cash-copy-one-figure`) |
+| **Last tag** | `v0.partner-cash-copy-one-figure` |
 | **Unpushed** | yes — owner pushes when ready (do not push from agent) |
 | **Next up** | GS-FX forex-only group sales |
 

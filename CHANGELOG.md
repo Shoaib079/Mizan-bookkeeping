@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-08-20
+
+**Partner Record cash copy (`v0.partner-cash-copy-one-figure`).** Cash taken / withdrawn shows only the headline net figure ("You owe partner: X") plus a short settle-first sentence — no "Fronted still owed / Net book" breakdown.
+
 ## 2026-08-13
 
 **Partner-funded TRY salary (`v0.partner-funded-salary`).**
