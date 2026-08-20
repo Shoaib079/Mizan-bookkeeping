@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner sign-off on S2)* |
-| **Next up**              | **S3** detail write chrome grant-gated (after S2 sign-off) |
-| **Last completed slice** | S2 ledger freshness funnel (`v0.ledger-freshness-funnel`) |
-| **Last commit/tag**      | `v0.ledger-freshness-funnel` |
+| **Active slice**         | *(none — await owner sign-off on S9 book exports)* |
+| **Next up**              | **S3** detail write chrome grant-gated (after S9 sign-off) |
+| **Last completed slice** | S9 cash / expenses / GL standalone Excel (`v0.standalone-book-exports`) |
+| **Last commit/tag**      | `v0.standalone-book-exports` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1914,13 +1914,13 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | **S6** | P&L / BS export `view` (live vs sealed) | high | Download + export API pass `view`; stamp sealed/live in file + filename |
 | **S7** | Balance sheet Excel `finish_data_table` | high | Real header row + `money_cols` (accounting red negatives) |
 | **S8** | Shared Excel finish for subledger / activity / delivery / POS | high | `write_header_row` + `finish_data_table` (no autosize-only bypass) |
-| **S9** | Cash book / expense register / GL standalone export | high | Screen/file rule — download same range as on-screen |
+| **S9** | Cash book / expense register / GL standalone export | high | **DONE** `v0.standalone-book-exports` — cash-bank multi-sheet xlsx; hand-recorded expenses xlsx; GL By account + All entries; payables hub headline lock (S15 partial) |
 | **S10** | Export screen==file amount parity tests | high | Assert key totals for same params/`view` |
 | **S11** | Excel money_cols gaps (cash flow, KDV, delivery-sales, period-comparison) | med | Pass `money_cols` into `finish_data_table` |
 | **S12** | Month pack Summary (+ card-clearing) shared finish | med | Accounting format / print / freeze where a header exists |
 | **S13** | Delivery/POS/activity masthead + delivery filename | med | Entity name, TR dates, English sheet title; `export_filename` |
 | **S14** | Salaries / FX holdings headers + PDF Amount (₺) / sealed banner | med | `money_header` / `quantity_header`; PDF headers + sealed line |
-| **S15** | Directory / hub direction labels + payables “Total owed” copy | med | Match sticker wording; net payables naming |
+| **S15** | Directory / hub direction labels + payables “Total owed” copy | med | **PARTIAL via S9** — hub payables headline = Payables + guard; rest of directory direction labels deferred |
 | **S16** | Supplier sticker vs activity range closing label | med | “Closing in range” or sync when range selected |
 
 ---
@@ -1930,6 +1930,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-20 | S9 Cash / expenses / GL standalone Excel         | `v0.standalone-book-exports`                           | Multi-sheet cash-bank book; hand-recorded expenses xlsx; GL By account + All entries; hub Payables headline guard |
 | 2026-08-20 | S2 Ledger freshness funnel                       | `v0.ledger-freshness-funnel`                           | completeSubmit emits mizan:ledger-changed; partner/staff/supplier detail + activity + directory balances on RQ; absorbs S5 |
 | 2026-08-20 | S1 Staff sticker = ledger net                    | `v0.staff-sticker-ledger-net`                          | Hero/heading from balance_minor; residual ≠ Settled; hub colour TRY-only; sticker mobile width; locking tests fixed |
 | 2026-08-20 | Entity balance sticker (P/S/Supplier detail)     | `v0.entity-balance-sticker`                            | Compact right-header balance sticker; colour by direction; shared component; keep capital/staff/invoice sub-lines; no customer change |

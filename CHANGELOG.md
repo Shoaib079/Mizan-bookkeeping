@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-20
 
+**S9 — Standalone cash book / expenses / GL Excel (`v0.standalone-book-exports`).** Cash & bank book download: one sheet per active cash/bank account (reuses month-pack writers); filename `mizan-cash-bank-book-{period}-{live|as-closed}.xlsx`. `/expenses` download: hand-recorded expense lines for the on-screen range with “Hand-recorded expenses” header + total footer. General ledger download: sheets “By account” (opening/debits/credits/closing with tie) and “All entries” (freeze + autofilter); honors from/to and source/status filters; sealed months get `-as-closed`. Balances hub payables headline locked as “Payables” (direction subtitle kept).
+
 **S2 — Ledger freshness funnel (`v0.ledger-freshness-funnel`).** After any successful money submit, `completeSubmit` broadcasts `mizan:ledger-changed` so React Query invalidates everywhere. Partner / Staff / Supplier detail stickers and ledgers, supplier activity, and staff/partner directory Balance columns are query-backed so that invalidation reaches them. No per-form emit list. (Absorbs former S5.)
 
 **S1 — Staff sticker = ledger net (`v0.staff-sticker-ledger-net`).** Staff detail hero and heading use `balance_minor` / `netMinor` (same as directory/hub). Salary owed / advance held stay as detail lines. Residual never labels “Settled”. Balances hub staff colour sign is TRY-only (no FX cents mixed in). Sticker wider on mobile (`max-w-full` / `sm:max-w-[16rem]`).

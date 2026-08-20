@@ -25,6 +25,7 @@ import {
 } from "@/components/reports/forbidden-message";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
+import { DownloadMenu } from "@/components/ui/download-menu";
 import {
   DataTable,
   DataTableBody,
@@ -37,7 +38,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { AfterFirstLoad, PageSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatChartAccountLabel } from "@/lib/chart-accounts";
-import { apiFetch } from "@/lib/api";
+import { apiDownload, apiFetch, triggerBlobDownload } from "@/lib/api";
 import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -294,6 +295,21 @@ function LedgerPanelContent() {
     return params.toString();
   }, [from, to, offset, q, source, status, showHistory]);
 
+  const exportQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (q.trim()) params.set("q", q.trim());
+    if (source) params.set("source", source);
+    if (showHistory) {
+      if (status) params.set("status", status);
+      params.set("effective_only", "false");
+    } else {
+      params.set("effective_only", "true");
+    }
+    return params.toString();
+  }, [from, to, q, source, status, showHistory]);
+
   const reload = useCallback(async () => {
     if (!entityId) {
       setItems([]);
@@ -401,13 +417,31 @@ function LedgerPanelContent() {
       </p>
 
       <div className="mb-6 space-y-4">
-        <ReportDateRange
-          allowFuture
-          from={from}
-          to={to}
-          disabled={loading}
-          onChange={setRange}
-        />
+        <div className="flex flex-wrap items-end gap-3">
+          <ReportDateRange
+            allowFuture
+            from={from}
+            to={to}
+            disabled={loading}
+            onChange={setRange}
+          />
+          {from && to && (
+            <DownloadMenu
+              disabled={loading}
+              items={[
+                {
+                  label: "Excel (.xlsx)",
+                  run: async () => {
+                    const { blob, filename } = await apiDownload(
+                      `/entities/${entityId}/ledger/entries/export?${exportQuery}`,
+                    );
+                    triggerBlobDownload(blob, filename);
+                  },
+                },
+              ]}
+            />
+          )}
+        </div>
 
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1">
