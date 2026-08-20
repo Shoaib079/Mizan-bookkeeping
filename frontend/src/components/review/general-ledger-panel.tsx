@@ -2,7 +2,6 @@
 
 /** General ledger — all journal entries (Reports → Financial statements). */
 
-import Link from "next/link";
 import {
   Fragment,
   Suspense,
@@ -24,8 +23,13 @@ import {
   isForbiddenError,
 } from "@/components/reports/forbidden-message";
 import { ReportDateRange } from "@/components/reports/report-date-range";
+import {
+  EntryDetailPanel,
+  type JournalEntryLine,
+  type JournalEntryRow,
+} from "@/components/review/general-ledger-entry-detail";
+import { GeneralLedgerExportMenu } from "@/components/review/general-ledger-export-menu";
 import { Button } from "@/components/ui/button";
-import { DownloadMenu } from "@/components/ui/download-menu";
 import {
   DataTable,
   DataTableBody,
@@ -38,42 +42,19 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { AfterFirstLoad, PageSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatChartAccountLabel } from "@/lib/chart-accounts";
-import { apiDownload, apiFetch, triggerBlobDownload } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { journalEntryRowClassName } from "@/lib/ledger-display";
-import { generalLedgerEntryActions } from "@/lib/subledger-actions";
 import {
   JOURNAL_SOURCES,
-  sourceFlow,
   ledgerRowSourceLabel,
   sourceLabel,
 } from "@/lib/transaction-registry";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 50;
-
-type JournalEntryLine = {
-  id: string;
-  account_id: string;
-  amount_kurus: number;
-  side: "debit" | "credit";
-  line_number: number;
-};
-
-type JournalEntryRow = {
-  id: string;
-  entry_date: string;
-  description: string;
-  status: string;
-  source: string;
-  reverses_entry_id: string | null;
-  reversed_by_entry_id: string | null;
-  amends_entry_id: string | null;
-  amended_by_entry_id: string | null;
-  lines: JournalEntryLine[];
-};
 
 type ChartAccount = { id: string; code: string; name_en: string };
 
@@ -86,117 +67,6 @@ function entryTotalKurus(lines: JournalEntryLine[]): number {
   return lines.reduce(
     (sum, line) => sum + (line.side === "debit" ? line.amount_kurus : 0),
     0,
-  );
-}
-
-function ChainLink({
-  label,
-  entryId,
-  onNavigate,
-}: {
-  label: string;
-  entryId: string;
-  onNavigate: (id: string) => void;
-}) {
-  return (
-    <button
-      type="button"
-      className="font-mono text-xs text-primary hover:underline"
-      onClick={() => onNavigate(entryId)}
-    >
-      {label}: {entryId.slice(0, 8)}…
-    </button>
-  );
-}
-
-function EntryDetailPanel({
-  row,
-  accountLabel,
-  onNavigateEntry,
-}: {
-  row: JournalEntryRow;
-  accountLabel: (id: string) => string;
-  onNavigateEntry: (id: string) => void;
-}) {
-  const chainLinks = [
-    row.reverses_entry_id && {
-      label: "Reverses",
-      id: row.reverses_entry_id,
-    },
-    row.reversed_by_entry_id && {
-      label: "Reversed by",
-      id: row.reversed_by_entry_id,
-    },
-    row.amends_entry_id && {
-      label: "Amends",
-      id: row.amends_entry_id,
-    },
-    row.amended_by_entry_id && {
-      label: "Amended by",
-      id: row.amended_by_entry_id,
-    },
-  ].filter(Boolean) as { label: string; id: string }[];
-
-  return (
-    <div className="space-y-4 border-t border-border bg-muted/20 px-4 py-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span>
-          Entry ID: <span className="font-mono">{row.id}</span>
-        </span>
-        <span>
-          Source: {ledgerRowSourceLabel(row.source, row.reverses_entry_id)}
-        </span>
-      </div>
-
-      {chainLinks.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {chainLinks.map((link) => (
-            <ChainLink
-              key={`${link.label}-${link.id}`}
-              label={link.label}
-              entryId={link.id}
-              onNavigate={onNavigateEntry}
-            />
-          ))}
-        </div>
-      )}
-
-      <DataTable wide>
-        <DataTableHead>
-          <tr>
-            <DataTableHeaderCell>Account</DataTableHeaderCell>
-            <DataTableHeaderCell>Side</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-          </tr>
-        </DataTableHead>
-        <DataTableBody>
-          {row.lines.map((line) => (
-            <DataTableRow key={line.id}>
-              <DataTableCell>{accountLabel(line.account_id)}</DataTableCell>
-              <DataTableCell className="capitalize">{line.side}</DataTableCell>
-              <DataTableCell align="right" className="tabular-nums">
-                {formatTry(line.amount_kurus)}
-              </DataTableCell>
-            </DataTableRow>
-          ))}
-        </DataTableBody>
-      </DataTable>
-
-      {(() => {
-        const flow = sourceFlow(row.source);
-        const glActions = generalLedgerEntryActions(row.source);
-        if (!flow || glActions.useGenericEndpoints) return null;
-        return (
-          <p className="text-xs text-muted-foreground">
-            This entry is managed by its own flow — edit or void it in{" "}
-            <Link href={flow.href} className="text-primary hover:underline">
-              {flow.label}
-            </Link>
-            .
-          </p>
-        );
-      })()}
-    </div>
   );
 }
 
@@ -294,21 +164,6 @@ function LedgerPanelContent() {
     }
     return params.toString();
   }, [from, to, offset, q, source, status, showHistory]);
-
-  const exportQuery = useMemo(() => {
-    const params = new URLSearchParams();
-    if (from) params.set("from", from);
-    if (to) params.set("to", to);
-    if (q.trim()) params.set("q", q.trim());
-    if (source) params.set("source", source);
-    if (showHistory) {
-      if (status) params.set("status", status);
-      params.set("effective_only", "false");
-    } else {
-      params.set("effective_only", "true");
-    }
-    return params.toString();
-  }, [from, to, q, source, status, showHistory]);
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -425,22 +280,16 @@ function LedgerPanelContent() {
             disabled={loading}
             onChange={setRange}
           />
-          {from && to && (
-            <DownloadMenu
-              disabled={loading}
-              items={[
-                {
-                  label: "Excel (.xlsx)",
-                  run: async () => {
-                    const { blob, filename } = await apiDownload(
-                      `/entities/${entityId}/ledger/entries/export?${exportQuery}`,
-                    );
-                    triggerBlobDownload(blob, filename);
-                  },
-                },
-              ]}
-            />
-          )}
+          <GeneralLedgerExportMenu
+            entityId={entityId}
+            from={from}
+            to={to}
+            q={q}
+            source={source}
+            status={status}
+            showHistory={showHistory}
+            disabled={loading}
+          />
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
