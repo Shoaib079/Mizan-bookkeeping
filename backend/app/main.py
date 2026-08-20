@@ -53,6 +53,10 @@ from app.features.expenses.api import router as expenses_router
 from app.features.expenses.export_api import router as expenses_export_router
 from app.features.operations.api import router as operations_router
 from app.features.reports.api import router as reports_router
+from app.features.reports.book_exports_api import (
+    ledger_router as book_ledger_exports_router,
+    reports_router as book_reports_exports_router,
+)
 from app.features.dashboard.api import router as dashboard_router
 from app.features.review_counts.api import router as review_counts_router
 from app.features.auth.api import members_router as auth_members_router
@@ -132,6 +136,7 @@ app.add_middleware(
 app.include_router(entities_router)
 app.include_router(chart_of_accounts_router)
 app.include_router(ledger_router)
+app.include_router(book_ledger_exports_router)
 app.include_router(manual_journals_router)
 app.include_router(period_locks_router)
 app.include_router(invoices_router)
@@ -168,6 +173,7 @@ app.include_router(expenses_router)
 app.include_router(expenses_export_router)
 app.include_router(operations_router)
 app.include_router(reports_router)
+app.include_router(book_reports_exports_router)
 app.include_router(dashboard_router)
 app.include_router(review_counts_router)
 app.include_router(auth_users_router)

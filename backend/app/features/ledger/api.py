@@ -6,7 +6,6 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.ledger.models import JournalEntrySource, JournalEntryStatus
@@ -70,45 +69,6 @@ def list_journal_entries(
         limit=list_params.limit,
         offset=list_params.offset,
     )
-
-
-@router.get("/entries/export")
-def export_general_ledger(
-    entity_id: uuid.UUID,
-    session: Session = Depends(get_session),
-    _: None = Depends(member_read_guard),
-    status: JournalEntryStatus | None = Query(default=None),
-    source: JournalEntrySource | None = Query(default=None),
-    entry_date_from: date | None = Query(default=None, alias="from"),
-    entry_date_to: date | None = Query(default=None, alias="to"),
-    q: str | None = Query(default=None, max_length=256),
-    effective_only: bool = Query(default=True),
-) -> StreamingResponse:
-    """Excel: By account summary + All entries detail for the on-screen filters."""
-    from app.features.reports import excel_export, general_ledger_export
-
-    if entry_date_from is None or entry_date_to is None:
-        raise HTTPException(
-            status_code=422, detail="from and to are required for export"
-        )
-    try:
-        data, filename, _lines = general_ledger_export.build_general_ledger_xlsx(
-            session,
-            entity_id,
-            entry_date_from,
-            entry_date_to,
-            status=status,
-            source=source,
-            q=q,
-            effective_only=effective_only,
-        )
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except AssertionError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return excel_export.xlsx_response(data, filename)
 
 
 @router.get("/entries/{entry_id}/actions", response_model=LedgerEntryActionsOut)
