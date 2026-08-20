@@ -14,6 +14,7 @@ import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import { InvoiceDraftReview } from "@/components/invoice-draft-review";
 import { InvoiceDocumentPreview } from "@/components/invoice-document-preview";
 import { ReportDateRange } from "@/components/reports/report-date-range";
+import { SupplierActivityExportButton } from "@/components/supplier-activity-export-button";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -24,11 +25,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import {
-  apiDownload,
-  apiFetch,
-  triggerBlobDownload,
-} from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -95,8 +92,6 @@ export function SupplierActivityPanel({
 }: Props) {
   const { entityId } = useEntity();
   const [range, setRange] = useState(currentMonthRange);
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
   const [previewDraftId, setPreviewDraftId] = useState<string | null>(null);
   const [reviewDraftId, setReviewDraftId] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
@@ -150,22 +145,6 @@ export function SupplierActivityPanel({
     await activityQuery.refetch();
   }, [activityQuery.refetch]);
 
-  async function onExport() {
-    if (!entityId) return;
-    setExporting(true);
-    setExportError(null);
-    try {
-      const { blob, filename } = await apiDownload(
-        `/entities/${entityId}/suppliers/${supplierId}/activity/export?from_date=${range.from}&to_date=${range.to}`,
-      );
-      triggerBlobDownload(blob, filename);
-    } catch (err) {
-      setExportError(err instanceof Error ? err.message : "Export failed");
-    } finally {
-      setExporting(false);
-    }
-  }
-
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -175,23 +154,16 @@ export function SupplierActivityPanel({
           disabled={!entityId || loading}
           onChange={(from, to) => setRange({ from, to })}
         />
-        {/* Secondary, matching ReportDownloadMenu on the report screens.
-            Exporting supports the task; choosing the period is the task, and
-            two filled buttons side by side say neither is the main one. */}
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={!entityId || exporting || loading}
-          onClick={() => void onExport()}
-        >
-          {exporting ? "Exporting…" : "Export Excel"}
-        </Button>
+        <SupplierActivityExportButton
+          entityId={entityId}
+          supplierId={supplierId}
+          from={range.from}
+          to={range.to}
+          disabled={loading}
+        />
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
-      {exportError && (
-        <p className="text-sm text-destructive">{exportError}</p>
-      )}
       <PageSkeleton when={loading} />
 
       {data && (
