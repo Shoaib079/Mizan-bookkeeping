@@ -149,6 +149,28 @@ def get_cash_book(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/cash-book/export")
+def export_cash_bank_book(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    session: Session = Depends(get_session),
+    _: None = Depends(financial_reports_guard),
+) -> StreamingResponse:
+    """One .xlsx with a sheet per active cash/bank account (month-pack writers)."""
+    from app.features.reports import cash_bank_book_export
+
+    try:
+        data, filename = cash_bank_book_export.build_cash_bank_book_xlsx(
+            session, entity_id, from_date, to_date
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidDateRangeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return excel_export.xlsx_response(data, filename)
+
+
 @router.get("/expense-register", response_model=ExpenseRegisterRead)
 def get_expense_register(
     entity_id: uuid.UUID,

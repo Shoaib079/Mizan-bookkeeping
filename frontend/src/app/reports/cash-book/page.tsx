@@ -15,6 +15,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ReportPage } from "@/components/page/report-page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
+import { DownloadMenu } from "@/components/ui/download-menu";
 import {
   DataTable,
   DataTableBody,
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Wallet } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiDownload, apiFetch, triggerBlobDownload } from "@/lib/api";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -155,6 +156,22 @@ function CashBookContent() {
             onValueChange={setAccountId}
             options={accounts.map((a) => ({ value: a.id, label: a.name }))}
             placeholder="Account…"
+          />
+        )}
+        {entityId && (
+          <DownloadMenu
+            disabled={loading || accounts.length === 0}
+            items={[
+              {
+                label: "Excel (.xlsx) — all cash & bank",
+                run: async () => {
+                  const { blob, filename } = await apiDownload(
+                    `/entities/${entityId}/reports/cash-book/export?${queryString}`,
+                  );
+                  triggerBlobDownload(blob, filename);
+                },
+              },
+            ]}
           />
         )}
       </div>
