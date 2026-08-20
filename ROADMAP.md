@@ -1906,7 +1906,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | # | Slice | Impact | Scope |
 |---|-------|--------|-------|
-| **S1** | Staff money-figure correctness | high | Sticker hero + heading from ledger `balance_minor` / `netMinor`; residual never “Settled”; hub colour sign TRY-only; fix locking tests; cheap sticker mobile width |
+| **S1** | Staff money-figure correctness | high | **DONE** `v0.staff-sticker-ledger-net` — sticker hero + heading from ledger net; residual ≠ Settled; hub colour TRY-only; mobile sticker width |
 | **S2** | Supplier sticker freshness after activity void | high | Parent ledger reload when activity voids/corrects |
 | **S3** | Detail write chrome grant-gated | high | Partner/Staff/Supplier Record·Pay·Edit use `shouldShowWriteChrome` / `canWriteOperations` |
 | **S4** | Supplier payment Edit/Void via capabilities | high | Activity payments through `useEntryActions` / backend `can_edit` (no always-on Edit) |
