@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner sign-off on S1)* |
-| **Next up**              | **S2** supplier sticker refresh after void (after S1 sign-off) |
-| **Last completed slice** | S1 staff sticker = ledger net (`v0.staff-sticker-ledger-net`) |
-| **Last commit/tag**      | `v0.staff-sticker-ledger-net` |
+| **Active slice**         | *(none — await owner sign-off on S2)* |
+| **Next up**              | **S3** detail write chrome grant-gated (after S2 sign-off) |
+| **Last completed slice** | S2 ledger freshness funnel (`v0.ledger-freshness-funnel`) |
+| **Last commit/tag**      | `v0.ledger-freshness-funnel` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1907,10 +1907,10 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | # | Slice | Impact | Scope |
 |---|-------|--------|-------|
 | **S1** | Staff money-figure correctness | high | **DONE** `v0.staff-sticker-ledger-net` — sticker hero + heading from ledger net; residual ≠ Settled; hub colour TRY-only; mobile sticker width |
-| **S2** | Supplier sticker freshness after activity void | high | Parent ledger reload when activity voids/corrects |
+| **S2** | Ledger freshness funnel | high | **DONE** `v0.ledger-freshness-funnel` — `completeSubmit` emits `mizan:ledger-changed`; partner/staff/supplier detail + activity + directory balance maps on React Query (absorbs former S5) |
 | **S3** | Detail write chrome grant-gated | high | Partner/Staff/Supplier Record·Pay·Edit use `shouldShowWriteChrome` / `canWriteOperations` |
 | **S4** | Supplier payment Edit/Void via capabilities | high | Activity payments through `useEntryActions` / backend `can_edit` (no always-on Edit) |
-| **S5** | Ledger-changed freshness (directories + detail) | high | Emit on money-form success and/or listen so list maps + stickers refresh |
+| **S5** | Ledger-changed freshness (directories + detail) | high | **DONE via S2** — emit + query-backed fetchers shipped in `v0.ledger-freshness-funnel` |
 | **S6** | P&L / BS export `view` (live vs sealed) | high | Download + export API pass `view`; stamp sealed/live in file + filename |
 | **S7** | Balance sheet Excel `finish_data_table` | high | Real header row + `money_cols` (accounting red negatives) |
 | **S8** | Shared Excel finish for subledger / activity / delivery / POS | high | `write_header_row` + `finish_data_table` (no autosize-only bypass) |
@@ -1930,6 +1930,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-20 | S2 Ledger freshness funnel                       | `v0.ledger-freshness-funnel`                           | completeSubmit emits mizan:ledger-changed; partner/staff/supplier detail + activity + directory balances on RQ; absorbs S5 |
 | 2026-08-20 | S1 Staff sticker = ledger net                    | `v0.staff-sticker-ledger-net`                          | Hero/heading from balance_minor; residual ≠ Settled; hub colour TRY-only; sticker mobile width; locking tests fixed |
 | 2026-08-20 | Entity balance sticker (P/S/Supplier detail)     | `v0.entity-balance-sticker`                            | Compact right-header balance sticker; colour by direction; shared component; keep capital/staff/invoice sub-lines; no customer change |
 | 2026-08-20 | Partner paid labels (no user-facing fronted)     | `v0.partner-paid-labels`                               | Rename display "fronted" → "partner paid"; cash Record one net figure (already tagged); keys/API paths unchanged; no sticker rebuild |

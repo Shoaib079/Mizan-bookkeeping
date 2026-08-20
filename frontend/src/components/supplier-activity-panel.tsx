@@ -2,7 +2,8 @@
 
 /** Supplier chronological activity — one timeline + Excel export. */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
@@ -94,10 +95,8 @@ export function SupplierActivityPanel({
 }: Props) {
   const { entityId } = useEntity();
   const [range, setRange] = useState(currentMonthRange);
-  const [data, setData] = useState<SupplierActivity | null>(null);
-  const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [previewDraftId, setPreviewDraftId] = useState<string | null>(null);
   const [reviewDraftId, setReviewDraftId] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
@@ -117,6 +116,29 @@ export function SupplierActivityPanel({
     () => ({ alwaysShow: alwaysShowActivityRow }),
     [alwaysShowActivityRow],
   );
+
+  const activityEnabled = Boolean(entityId && supplierId);
+  const activityQuery = useQuery({
+    queryKey: [
+      "suppliers",
+      entityId,
+      supplierId,
+      "activity",
+      range.from,
+      range.to,
+    ],
+    enabled: activityEnabled,
+    queryFn: () =>
+      apiFetch<SupplierActivity>(
+        `/entities/${entityId}/suppliers/${supplierId}/activity?from_date=${range.from}&to_date=${range.to}`,
+      ),
+  });
+
+  const data = activityQuery.data ?? null;
+  const loading = activityQuery.isPending;
+  const error =
+    activityQuery.error instanceof Error ? activityQuery.error.message : null;
+
   const {
     showHistory,
     setShowHistory,
@@ -125,36 +147,20 @@ export function SupplierActivityPanel({
   } = useLedgerHistoryView(data?.rows ?? [], historyOptions);
 
   const reload = useCallback(async () => {
-    if (!entityId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch<SupplierActivity>(
-        `/entities/${entityId}/suppliers/${supplierId}/activity?from_date=${range.from}&to_date=${range.to}`,
-      );
-      setData(res);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Load failed");
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [entityId, supplierId, range.from, range.to]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+    await activityQuery.refetch();
+  }, [activityQuery.refetch]);
 
   async function onExport() {
     if (!entityId) return;
     setExporting(true);
+    setExportError(null);
     try {
       const { blob, filename } = await apiDownload(
         `/entities/${entityId}/suppliers/${supplierId}/activity/export?from_date=${range.from}&to_date=${range.to}`,
       );
       triggerBlobDownload(blob, filename);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
+      setExportError(err instanceof Error ? err.message : "Export failed");
     } finally {
       setExporting(false);
     }
@@ -183,6 +189,9 @@ export function SupplierActivityPanel({
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+      {exportError && (
+        <p className="text-sm text-destructive">{exportError}</p>
+      )}
       <PageSkeleton when={loading} />
 
       {data && (

@@ -1,8 +1,16 @@
 "use client";
 
-/** Stable Idempotency-Key per submit intent — CURSOR_RULES §1 rule 15, Slice 11.19. */
+/** Stable Idempotency-Key per submit intent — CURSOR_RULES §1 rule 15, Slice 11.19.
+ *
+ * Successful submits also broadcast `mizan:ledger-changed` so every money
+ * figure (detail stickers, directory columns, hub cards) refetches. One place
+ * — not an allowlist of forms. Extra invalidation is harmless; a missed emit
+ * leaves a stale book.
+ */
 
 import { useCallback, useMemo, useRef } from "react";
+
+import { emitLedgerChanged } from "@/lib/ledger-events";
 
 export function newIdempotencyKey(): string {
   return crypto.randomUUID();
@@ -25,6 +33,7 @@ export function createSubmitIdempotencyStore(): SubmitIdempotencyStore {
     },
     completeSubmit() {
       key = null;
+      emitLedgerChanged();
     },
     resetSubmit() {
       key = null;
@@ -44,7 +53,10 @@ export function useSubmitIdempotency(): SubmitIdempotency {
   }
 
   const beginSubmit = useCallback(() => storeRef.current!.beginSubmit(), []);
-  const completeSubmit = useCallback(() => storeRef.current!.completeSubmit(), []);
+  const completeSubmit = useCallback(
+    () => storeRef.current!.completeSubmit(),
+    [],
+  );
   const resetSubmit = useCallback(() => storeRef.current!.resetSubmit(), []);
   const peekKey = useCallback(() => storeRef.current!.peekKey(), []);
 

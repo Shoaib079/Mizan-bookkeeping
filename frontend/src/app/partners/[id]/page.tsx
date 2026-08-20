@@ -3,7 +3,8 @@
 /** Partner detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
 import { useParams } from "next/navigation";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   DetailSection,
@@ -69,10 +70,6 @@ export default function PartnerDetailPage() {
   const partnerId = params.id;
   const { entityId } = useEntity();
 
-  const [partner, setPartner] = useState<PartnerRow | null>(null);
-  const [ledger, setLedger] = useState<PartnerLedgerResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
   const [payProfitOpen, setPayProfitOpen] = useState(false);
@@ -88,29 +85,36 @@ export default function PartnerDetailPage() {
     description: string;
   } | null>(null);
 
-  const reload = useCallback(async () => {
-    if (!entityId || !partnerId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [part, led] = await Promise.all([
-        apiFetch<PartnerRow>(`/entities/${entityId}/partners/${partnerId}`),
-        apiFetch<PartnerLedgerResponse>(
-          `/entities/${entityId}/partners/${partnerId}/ledger`,
-        ),
-      ]);
-      setPartner(part);
-      setLedger(led);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Load failed");
-    } finally {
-      setLoading(false);
-    }
-  }, [entityId, partnerId]);
+  const detailEnabled = Boolean(entityId && partnerId);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const partnerQuery = useQuery({
+    queryKey: ["partners", entityId, partnerId],
+    enabled: detailEnabled,
+    queryFn: () =>
+      apiFetch<PartnerRow>(`/entities/${entityId}/partners/${partnerId}`),
+  });
+  const ledgerQuery = useQuery({
+    queryKey: ["partners", entityId, partnerId, "ledger"],
+    enabled: detailEnabled,
+    queryFn: () =>
+      apiFetch<PartnerLedgerResponse>(
+        `/entities/${entityId}/partners/${partnerId}/ledger`,
+      ),
+  });
+
+  const partner = partnerQuery.data ?? null;
+  const ledger = ledgerQuery.data ?? null;
+  const loading = partnerQuery.isPending || ledgerQuery.isPending;
+  const error =
+    partnerQuery.error instanceof Error
+      ? partnerQuery.error.message
+      : ledgerQuery.error instanceof Error
+        ? ledgerQuery.error.message
+        : null;
+
+  const reload = useCallback(async () => {
+    await Promise.all([partnerQuery.refetch(), ledgerQuery.refetch()]);
+  }, [partnerQuery.refetch, ledgerQuery.refetch]);
 
   const { showHistory, setShowHistory, hiddenCount, visibleRows } =
     useLedgerHistoryView(ledger?.entries ?? []);

@@ -20,11 +20,11 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner sign-off on S1)* |
-| **Last completed slice** | S1 staff sticker = ledger net (`v0.staff-sticker-ledger-net`) |
-| **Last tag** | `v0.staff-sticker-ledger-net` |
-| **Unpushed** | yes — docs plan + S1 local; owner pushes when ready |
-| **Next up** | S2 supplier sticker refresh after void (after S1 sign-off) |
+| **Active slice** | *(none — await owner sign-off on S2)* |
+| **Last completed slice** | S2 ledger freshness funnel (`v0.ledger-freshness-funnel`) |
+| **Last tag** | `v0.ledger-freshness-funnel` |
+| **Unpushed** | yes — S2 local; do not push until owner says |
+| **Next up** | S3 detail write chrome grant-gated (after S2 sign-off) |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

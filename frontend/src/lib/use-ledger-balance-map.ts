@@ -3,11 +3,12 @@
 /** Per-row ledger balance lookup for directory pages (audit A2 / M4 step 2).
  *
  * Staff and partners have no bulk balances endpoint — each balance comes from
- * that entity's ledger. This hook fans out one ledger fetch per id (the same
- * pattern the Balances tables use) and returns a lookup map, so the Staff and
- * Partners directories can show a Balance column and become self-sufficient. */
+ * that entity's ledger. Backed by React Query so `mizan:ledger-changed`
+ * invalidation refreshes the Balance column without a hand-rolled listener.
+ */
 
-import { useEffect, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { apiFetch } from "@/lib/api";
 
@@ -25,47 +26,38 @@ export function useLedgerBalanceMap(
   extract: (res: unknown) => number,
   refreshKey = 0,
 ): Result {
-  const [balances, setBalances] = useState<Map<string, number>>(EMPTY);
-  const [loading, setLoading] = useState(false);
-  const key = ids.join(",");
+  const queries = useQueries({
+    queries: ids.map((id) => {
+      const path = buildPath(id);
+      return {
+        queryKey: ["ledger-balance", entityId, path, refreshKey] as const,
+        enabled: Boolean(entityId),
+        queryFn: async (): Promise<number> => {
+          const res = await apiFetch<unknown>(
+            `/entities/${entityId}${path}`,
+          );
+          return extract(res);
+        },
+      };
+    }),
+  });
 
-  useEffect(() => {
-    if (!entityId || ids.length === 0) {
-      setBalances(EMPTY);
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    void (async () => {
-      const entries = await Promise.all(
-        ids.map(async (id) => {
-          try {
-            const res = await apiFetch<unknown>(
-              `/entities/${entityId}${buildPath(id)}`,
-            );
-            return [id, extract(res)] as const;
-          } catch {
-            // Never invent ₺0 on failure — omit so the UI can show "—".
-            return null;
-          }
-        }),
-      );
-      if (cancelled) return;
-      setBalances(
-        new Map(
-          entries.filter((row): row is readonly [string, number] => row !== null),
-        ),
-      );
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // buildPath/extract are stable by construction; re-run only when the set of
-    // ids (key) or the entity changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityId, key, refreshKey]);
+  const balances = useMemo(() => {
+    if (!entityId || ids.length === 0) return EMPTY;
+    const map = new Map<string, number>();
+    ids.forEach((id, index) => {
+      const q = queries[index];
+      if (q?.isSuccess && typeof q.data === "number" && Number.isFinite(q.data)) {
+        map.set(id, q.data);
+      }
+    });
+    return map;
+  }, [entityId, ids, queries]);
+
+  const loading =
+    Boolean(entityId) &&
+    ids.length > 0 &&
+    queries.some((q) => q.isPending);
 
   return { balances, loading };
 }

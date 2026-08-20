@@ -3,7 +3,8 @@
 /** Staff detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { EmployeeForm, type EmployeeRow } from "@/components/forms/employee-form";
 import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
@@ -90,10 +91,6 @@ export default function StaffDetailPage() {
   const employeeId = params.id;
   const { entityId } = useEntity();
 
-  const [employee, setEmployee] = useState<EmployeeRow | null>(null);
-  const [ledger, setLedger] = useState<StaffLedgerResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [accrualOpen, setAccrualOpen] = useState(false);
   const [advanceOpen, setAdvanceOpen] = useState(false);
@@ -108,31 +105,38 @@ export default function StaffDetailPage() {
     description: string;
   } | null>(null);
 
-  const reload = useCallback(async () => {
-    if (!entityId || !employeeId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [emp, led] = await Promise.all([
-        apiFetch<EmployeeRow>(
-          `/entities/${entityId}/staff/employees/${employeeId}`,
-        ),
-        apiFetch<StaffLedgerResponse>(
-          `/entities/${entityId}/staff/employees/${employeeId}/ledger`,
-        ),
-      ]);
-      setEmployee(emp);
-      setLedger(led);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Load failed");
-    } finally {
-      setLoading(false);
-    }
-  }, [entityId, employeeId]);
+  const detailEnabled = Boolean(entityId && employeeId);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const employeeQuery = useQuery({
+    queryKey: ["staff", entityId, employeeId],
+    enabled: detailEnabled,
+    queryFn: () =>
+      apiFetch<EmployeeRow>(
+        `/entities/${entityId}/staff/employees/${employeeId}`,
+      ),
+  });
+  const ledgerQuery = useQuery({
+    queryKey: ["staff", entityId, employeeId, "ledger"],
+    enabled: detailEnabled,
+    queryFn: () =>
+      apiFetch<StaffLedgerResponse>(
+        `/entities/${entityId}/staff/employees/${employeeId}/ledger`,
+      ),
+  });
+
+  const employee = employeeQuery.data ?? null;
+  const ledger = ledgerQuery.data ?? null;
+  const loading = employeeQuery.isPending || ledgerQuery.isPending;
+  const error =
+    employeeQuery.error instanceof Error
+      ? employeeQuery.error.message
+      : ledgerQuery.error instanceof Error
+        ? ledgerQuery.error.message
+        : null;
+
+  const reload = useCallback(async () => {
+    await Promise.all([employeeQuery.refetch(), ledgerQuery.refetch()]);
+  }, [employeeQuery.refetch, ledgerQuery.refetch]);
 
   const {
     showHistory,

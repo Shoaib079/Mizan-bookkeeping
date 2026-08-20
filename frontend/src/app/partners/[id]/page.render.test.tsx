@@ -19,8 +19,10 @@
  * path — the forms' own behaviour is theirs and is tested where they live.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { renderWithQuery } from "@/test-support/render-with-query";
 
 const apiFetch = vi.fn();
 
@@ -214,7 +216,7 @@ async function pressVoid(row: HTMLElement): Promise<void> {
 describe("a row this page can correct", () => {
   it("offers both buttons", async () => {
     respond({ "je-drawing": DRAWING_ALLOWED });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     const row = await settledRow("Cashier sent it");
     expect(row.textContent).toContain("Edit");
@@ -227,7 +229,7 @@ describe("a row this page can correct", () => {
   // allocation case below is the one that discriminates.
   it("opens the void dialog at the path it reports", async () => {
     respond({ "je-drawing": DRAWING_ALLOWED });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     await pressVoid(await settledRow("Cashier sent it"));
 
@@ -253,7 +255,7 @@ describe("an allocation on a single-partner book", () => {
         edit: { kind: "staff_ledger", context: {} },
       },
     });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     const row = await settledRow("Partner profit allocation");
     expect(row.textContent).not.toContain("Edit");
@@ -263,7 +265,7 @@ describe("an allocation on a single-partner book", () => {
 
   it("still offers Void, at the allocation's own route", async () => {
     respond({ "je-alloc": ALLOCATION_ALONE });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     await pressVoid(await settledRow("Partner profit allocation"));
 
@@ -277,7 +279,7 @@ describe("an allocation on a single-partner book", () => {
 describe("a row shared by several partners", () => {
   it("says so instead of leaving the cell blank", async () => {
     respond({ "je-alloc": { ...ALLOCATION_ALONE, owner_count: 3 } });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     const row = await settledRow("Partner profit allocation");
     expect(row.textContent).toContain("Shared");
@@ -292,7 +294,7 @@ describe("when the actions lookup fails", () => {
       if (path.endsWith("/ledger")) return Promise.resolve(LEDGER);
       return Promise.resolve(PARTNER);
     });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(screen.getByRole("alert").textContent).toContain("Edit and Void are");
@@ -306,7 +308,7 @@ describe("a salary the partner fronted", () => {
     // Three salaries in a week all read "Temmuz maaşı" until the reference the
     // row has always carried was read back.
     respond({});
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     await waitFor(() => expect(screen.getByText("Temmuz maaşı")).toBeTruthy());
     const row = rowNamed("Temmuz maaşı");
@@ -328,7 +330,7 @@ describe("when the ledger already carries the verdicts", () => {
       return Promise.resolve(PARTNER);
     });
 
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     await waitFor(() =>
       expect(rowNamed("Cashier sent it").textContent).toContain("Edit"),
@@ -344,7 +346,7 @@ describe("editing a profit allocation that covers one partner", () => {
     // The two forms post to different routes. Opening the wrong one is how
     // this Edit used to fail on submit rather than on sight.
     respond({ "je-alloc": ALLOCATION_ALONE });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     const row = await settledRow("Partner profit allocation");
     fireEvent.click(
@@ -373,7 +375,7 @@ describe("editing a profit allocation that covers one partner", () => {
         },
       },
     });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     const row = await settledRow("Partner profit allocation");
     fireEvent.click(
@@ -412,7 +414,7 @@ describe("editing a salary the partner paid from pocket", () => {
         owner_count: 1,
       },
     });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     const row = await settledRow("Temmuz maaşı");
     fireEvent.click(
@@ -438,7 +440,7 @@ describe("editing a salary the partner paid from pocket", () => {
         owner_count: 1,
       },
     });
-    render(<PartnerDetailPage />);
+    renderWithQuery(<PartnerDetailPage />);
 
     await pressVoid(await settledRow("Temmuz maaşı"));
 

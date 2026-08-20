@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-20
 
+**S2 — Ledger freshness funnel (`v0.ledger-freshness-funnel`).** After any successful money submit, `completeSubmit` broadcasts `mizan:ledger-changed` so React Query invalidates everywhere. Partner / Staff / Supplier detail stickers and ledgers, supplier activity, and staff/partner directory Balance columns are query-backed so that invalidation reaches them. No per-form emit list. (Absorbs former S5.)
+
 **S1 — Staff sticker = ledger net (`v0.staff-sticker-ledger-net`).** Staff detail hero and heading use `balance_minor` / `netMinor` (same as directory/hub). Salary owed / advance held stay as detail lines. Residual never labels “Settled”. Balances hub staff colour sign is TRY-only (no FX cents mixed in). Sticker wider on mobile (`max-w-full` / `sm:max-w-[16rem]`).
 
 **Balance sticker on Partner / Staff / Supplier detail (`v0.entity-balance-sticker`).** The full-width balance card moves into a compact right-header sticker (under actions on desktop; under the name on mobile). Green = company owes them; red = they owe the company; muted = settled. One shared `EntityBalanceSticker`; sub-lines kept (capital, staff breakdown, supplier invoice counts). Customers untouched.

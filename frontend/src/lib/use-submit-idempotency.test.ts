@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 /** Stable idempotency key per submit intent — Slice 11.19. */
 
 import { describe, expect, it, vi } from "vitest";

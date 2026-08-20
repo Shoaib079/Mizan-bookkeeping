@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   CorrectSupplierPaymentForm,
@@ -71,11 +72,6 @@ export default function SupplierDetailPage() {
   const highlightDraftId = searchParams.get("draft");
 
   const { entityId } = useEntity();
-  const [supplier, setSupplier] = useState<SupplierRow | null>(null);
-  const [ledger, setLedger] = useState<SupplierLedgerResponse | null>(null);
-  const [drafts, setDrafts] = useState<DraftRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [correctPayment, setCorrectPayment] =
@@ -86,45 +82,64 @@ export default function SupplierDetailPage() {
     highlightDraftId,
   );
 
+  const detailEnabled = Boolean(entityId && supplierId);
+
+  const supplierQuery = useQuery({
+    queryKey: ["suppliers", entityId, supplierId],
+    enabled: detailEnabled,
+    queryFn: () =>
+      apiFetch<SupplierRow>(`/entities/${entityId}/suppliers/${supplierId}`),
+  });
+  const ledgerQuery = useQuery({
+    queryKey: ["suppliers", entityId, supplierId, "ledger"],
+    enabled: detailEnabled,
+    queryFn: () =>
+      apiFetch<SupplierLedgerResponse>(
+        `/entities/${entityId}/suppliers/${supplierId}/ledger`,
+      ),
+  });
+  const draftsQuery = useQuery({
+    queryKey: ["suppliers", entityId, supplierId, "drafts"],
+    enabled: detailEnabled,
+    queryFn: () =>
+      apiFetch<{ items: DraftRow[] }>(
+        `/entities/${entityId}/invoices/drafts?limit=200`,
+      ),
+  });
+
+  const supplier = supplierQuery.data ?? null;
+  const ledger = ledgerQuery.data ?? null;
+  const drafts = (draftsQuery.data?.items ?? [])
+    .filter((d) => isInvoiceWorkbenchStatus(d.status))
+    .filter(
+      (d) =>
+        d.supplier_id === supplierId ||
+        (!d.supplier_id &&
+          Boolean(supplier?.vkn) &&
+          d.supplier_vkn === supplier?.vkn),
+    );
+  const loading =
+    supplierQuery.isPending || ledgerQuery.isPending || draftsQuery.isPending;
+  const error =
+    supplierQuery.error instanceof Error
+      ? supplierQuery.error.message
+      : ledgerQuery.error instanceof Error
+        ? ledgerQuery.error.message
+        : draftsQuery.error instanceof Error
+          ? draftsQuery.error.message
+          : null;
+
   const reload = useCallback(async () => {
-    if (!entityId || !supplierId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [sup, led, draftRes] = await Promise.all([
-        apiFetch<SupplierRow>(
-          `/entities/${entityId}/suppliers/${supplierId}`,
-        ),
-        apiFetch<SupplierLedgerResponse>(
-          `/entities/${entityId}/suppliers/${supplierId}/ledger`,
-        ),
-        apiFetch<{ items: DraftRow[] }>(
-          `/entities/${entityId}/invoices/drafts?limit=200`,
-        ),
-      ]);
-      setSupplier(sup);
-      setLedger(led);
-      const forSupplier = draftRes.items
-        .filter((d) => isInvoiceWorkbenchStatus(d.status))
-        .filter(
-          (d) =>
-            d.supplier_id === supplierId ||
-            (!d.supplier_id &&
-              d.supplier_vkn &&
-              d.supplier_vkn === sup.vkn),
-        );
-      setDrafts(forSupplier);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Load failed");
-    } finally {
-      setLoading(false);
-    }
-  }, [entityId, supplierId]);
+    await Promise.all([
+      supplierQuery.refetch(),
+      ledgerQuery.refetch(),
+      draftsQuery.refetch(),
+    ]);
+  }, [supplierQuery.refetch, ledgerQuery.refetch, draftsQuery.refetch]);
 
   useEffect(() => {
     setCorrectPayment(null);
-    void reload();
-  }, [reload]);
+  }, [supplierId]);
 
   function handleDraftUpdated(outcome?: "removed" | "updated") {
     void reload();

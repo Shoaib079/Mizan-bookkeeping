@@ -17,8 +17,10 @@
  * page asks, and these press the buttons rather than reading the source.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { renderWithQuery } from "@/test-support/render-with-query";
 
 const apiFetch = vi.fn();
 
@@ -125,7 +127,7 @@ async function paymentRow(): Promise<HTMLElement> {
 describe("a payment that consumed an advance", () => {
   it("offers Edit when the backend allows it", async () => {
     respond({ "je-pay": EDITABLE_PAYMENT });
-    render(<StaffDetailPage />);
+    renderWithQuery(<StaffDetailPage />);
 
     expect((await paymentRow()).textContent).toContain("Edit");
   });
@@ -136,7 +138,7 @@ describe("a payment that consumed an advance", () => {
     respond({
       "je-pay": { ...EDITABLE_PAYMENT, can_edit: false, edit: null },
     });
-    render(<StaffDetailPage />);
+    renderWithQuery(<StaffDetailPage />);
 
     const row = await paymentRow();
     expect(row.textContent).not.toContain("Edit");
@@ -152,7 +154,7 @@ describe("a payment that consumed an advance", () => {
         void_path: "staff/partner-funded-salary/je-pay/void",
       },
     });
-    render(<StaffDetailPage />);
+    renderWithQuery(<StaffDetailPage />);
 
     const row = await paymentRow();
     fireEvent.click(
@@ -174,7 +176,7 @@ describe("a payment that consumed an advance", () => {
 describe("when the ledger carries the verdicts", () => {
   it("asks for nothing more", async () => {
     respond({ "je-pay": EDITABLE_PAYMENT });
-    render(<StaffDetailPage />);
+    renderWithQuery(<StaffDetailPage />);
 
     await paymentRow();
     expect(
