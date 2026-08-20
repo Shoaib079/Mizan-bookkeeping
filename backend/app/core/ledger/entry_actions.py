@@ -10,7 +10,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.ledger.correction import GENERIC_CORRECTABLE_SOURCES
+from app.core.ledger.correction.registry import is_generic_void_safe
 from app.core.ledger.models import JournalEntry, JournalEntrySource, JournalEntryStatus
 from app.core.ledger.posting import EntryNotFoundError
 from app.db.session import entity_context, require_entity_context
@@ -49,13 +49,8 @@ def _generic_void_path(entry_id: uuid.UUID) -> str:
 
 
 def _is_generic_void_safe(source: JournalEntrySource) -> bool:
-    if source in GENERIC_CORRECTABLE_SOURCES:
-        return True
-    return source in {
-        JournalEntrySource.TRANSFER,
-        JournalEntrySource.YEAR_END_CLOSE,
-        JournalEntrySource.CASH_DRAWER_CLOSE,
-    }
+    """Thin wrapper — policy lives in correction.registry.GENERIC_VOID_SAFE_SOURCES."""
+    return is_generic_void_safe(source)
 
 
 def resolve_ledger_entry_actions(

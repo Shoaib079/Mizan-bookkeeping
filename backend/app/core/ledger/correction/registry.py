@@ -114,8 +114,107 @@ def verify_correction_source_registry_complete() -> None:
         raise AssertionError("source cannot be both dedicated and void-and-reenter")
 
 
+# ---------------------------------------------------------------------------
+# Void routing — generic ledger void vs subledger-backed vs parent-record only
+# ---------------------------------------------------------------------------
+#
+# The generic `POST .../ledger/entries/{id}/void` path reverses GL lines only.
+# Anything that owns feature/subledger rows must go through
+# `void_gl_with_subledger_rows` (or a dedicated wrapper such as
+# `void_profit_allocation`). Sources with no GL void button at all void only
+# via the parent record (POS daily summary, credit card, opening balances).
+
+GENERIC_VOID_SAFE_SOURCES: frozenset[JournalEntrySource] = frozenset(
+    {
+        *GENERIC_CORRECTABLE_SOURCES,
+        JournalEntrySource.TRANSFER,
+        JournalEntrySource.YEAR_END_CLOSE,
+        JournalEntrySource.CASH_DRAWER_CLOSE,
+        JournalEntrySource.RULE_AUTO,
+        JournalEntrySource.SYSTEM,
+    }
+)
+
+#: Own subledger / feature rows — never raw-void from the generic ledger route.
+SUBLEDGER_BACKED_VOID_SOURCES: frozenset[JournalEntrySource] = frozenset(
+    {
+        JournalEntrySource.INVOICE,
+        JournalEntrySource.PAYMENT,
+        JournalEntrySource.POS_SETTLEMENT,
+        JournalEntrySource.CARD_SALES,
+        JournalEntrySource.DELIVERY_REPORT,
+        JournalEntrySource.DELIVERY_SETTLEMENT,
+        JournalEntrySource.DELIVERY_COMMISSION,
+        JournalEntrySource.FX_PURCHASE,
+        JournalEntrySource.STAFF_ACCRUAL,
+        JournalEntrySource.STAFF_ADVANCE,
+        JournalEntrySource.STAFF_PAYMENT,
+        JournalEntrySource.PARTNER_EXPENSE_FRONTED,
+        JournalEntrySource.PARTNER_SALARY_FRONTED,
+        JournalEntrySource.PARTNER_REIMBURSEMENT_PAID,
+        JournalEntrySource.PARTNER_DRAWING,
+        JournalEntrySource.PARTNER_DRAWING_REPAYMENT,
+        JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
+        JournalEntrySource.PARTNER_LOAN_RECEIVED,
+        JournalEntrySource.PARTNER_LOAN_REPAID,
+        JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
+        JournalEntrySource.PARTNER_PROFIT_PAID,
+        JournalEntrySource.PARTNER_SUPPLIER_PAID,
+        JournalEntrySource.EXPENSE_PERSONAL_SPLIT,
+        JournalEntrySource.CUSTOMER_CREDIT_SALE,
+        JournalEntrySource.GROUP_SALE,
+        JournalEntrySource.CUSTOMER_PAYMENT_RECEIVED,
+        JournalEntrySource.FX_CONVERSION,
+        JournalEntrySource.FX_EXPENSE_SPEND,
+        JournalEntrySource.EXPENSE_ENTRY,
+    }
+)
+
+#: No buttons on the General ledger — void only via the owning parent record.
+LEDGER_VOID_FORBIDDEN_SOURCES: frozenset[JournalEntrySource] = frozenset(
+    {
+        JournalEntrySource.OPENING_BALANCE,
+        JournalEntrySource.CASH_MOVEMENT,
+        JournalEntrySource.POS_CARD_TIP,
+        JournalEntrySource.CREDIT_CARD_PAYMENT,
+    }
+)
+
+
+def verify_void_source_registry_complete() -> None:
+    """Every source is exactly one of: generic-void-safe, subledger-backed, forbidden."""
+    all_sources = set(JournalEntrySource)
+    classified = (
+        set(GENERIC_VOID_SAFE_SOURCES)
+        | set(SUBLEDGER_BACKED_VOID_SOURCES)
+        | set(LEDGER_VOID_FORBIDDEN_SOURCES)
+    )
+    if classified != all_sources:
+        missing = sorted(s.value for s in all_sources - classified)
+        extra = sorted(s.value for s in classified - all_sources)
+        raise AssertionError(
+            f"void registry incomplete: missing={missing!r} extra={extra!r}"
+        )
+    if GENERIC_VOID_SAFE_SOURCES & SUBLEDGER_BACKED_VOID_SOURCES:
+        raise AssertionError(
+            "source cannot be both generic-void-safe and subledger-backed"
+        )
+    if GENERIC_VOID_SAFE_SOURCES & LEDGER_VOID_FORBIDDEN_SOURCES:
+        raise AssertionError(
+            "source cannot be both generic-void-safe and ledger-void-forbidden"
+        )
+    if SUBLEDGER_BACKED_VOID_SOURCES & LEDGER_VOID_FORBIDDEN_SOURCES:
+        raise AssertionError(
+            "source cannot be both subledger-backed and ledger-void-forbidden"
+        )
+
+
 def is_generic_correctable(source: JournalEntrySource) -> bool:
     return source in GENERIC_CORRECTABLE_SOURCES
+
+
+def is_generic_void_safe(source: JournalEntrySource) -> bool:
+    return source in GENERIC_VOID_SAFE_SOURCES
 
 
 def resolve_correction_route(source: JournalEntrySource) -> str:

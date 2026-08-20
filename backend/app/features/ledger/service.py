@@ -14,9 +14,9 @@ from app.core.ledger.correction import (
     is_generic_correctable,
     resolve_correction_route,
 )
+from app.core.ledger.correction.registry import is_generic_void_safe
 from app.core.ledger.entry_actions import resolve_ledger_entry_actions
 from app.core.ledger.posting import PostingLine, correct_journal_entry, void_journal_entry
-from app.db.session import entity_context
 from app.core.listing import (
     ListParams,
     amount_range_filters,
@@ -125,6 +125,14 @@ def void_entry(
 ) -> tuple[JournalEntry, JournalEntry]:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        original = session.get(JournalEntry, entry_id)
+        if original is None:
+            raise LookupError("Journal entry not found")
+        if not is_generic_void_safe(original.source):
+            raise SubledgerBackedCorrectionError(resolve_correction_route(original.source))
+
     return void_journal_entry(
         session,
         entity_id,

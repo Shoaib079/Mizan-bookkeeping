@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner sign-off on S9 book exports)* |
-| **Next up**              | **S3** detail write chrome grant-gated (after S9 sign-off) |
-| **Last completed slice** | S9 cash / expenses / GL standalone Excel (`v0.standalone-book-exports`) |
-| **Last commit/tag**      | `v0.standalone-book-exports` |
+| **Active slice**         | *(none — await owner review of money-safety sweep guards)* |
+| **Next up**              | **S3** detail write chrome grant-gated (after sign-off) |
+| **Last completed slice** | Money-safety sweep guards (`v0.money-safety-sweep-guards`) |
+| **Last commit/tag**      | `v0.money-safety-sweep-guards` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1930,6 +1930,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-20 | Money-safety sweep guards                    | `v0.money-safety-sweep-guards`                         | Guard 1 every-leg void/correct; Guard 2 voided rows never move totals; Guard 3 subledger sources refuse generic void; mutation-checked |
 | 2026-08-20 | S9 Cash / expenses / GL standalone Excel         | `v0.standalone-book-exports`                           | Multi-sheet cash-bank book; hand-recorded expenses xlsx; GL By account + All entries; hub Payables headline guard |
 | 2026-08-20 | S2 Ledger freshness funnel                       | `v0.ledger-freshness-funnel`                           | completeSubmit emits mizan:ledger-changed; partner/staff/supplier detail + activity + directory balances on RQ; absorbs S5 |
 | 2026-08-20 | S1 Staff sticker = ledger net                    | `v0.staff-sticker-ledger-net`                          | Hero/heading from balance_minor; residual ≠ Settled; hub colour TRY-only; sticker mobile width; locking tests fixed |

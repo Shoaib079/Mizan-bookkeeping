@@ -7,7 +7,11 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 | `backend/tests/test_health.py` | API liveness (`/health`) + readiness (`/health/ready` DB ping, 503 when down) | pass |
 | `backend/tests/test_observability.py` | Sentry optional init, production JSON logging, rate limit 429 + health exempt (Slice 12.4) | pass |
 | `backend/tests/test_launch_settings.py` | Production boot guards — CORS, Clerk live keys (Slice 12.2) | pass |
-| `backend/tests/test_security_invariants.py` | **Pre-go-live gate** — route auth guards, single posting boundary, RLS registry parity, immutability registry, PDF/font packaging guards; run via `security_production_pytest.sh` (Slice 12.5) | pass |
+| `backend/tests/test_security_invariants.py` | **Pre-go-live gate** — route auth guards, single posting boundary, RLS registry parity, immutability registry, PDF/font packaging guards; **money-safety Guard 1 case index + Guard 3 void-source registry** (generic-void-safe ∩ subledger-backed = ∅); run via `security_production_pytest.sh` (Slice 12.5) | pass |
+| `backend/tests/test_subledger_void.py` | **Money-safety Guard 1** — multi-row void/correct reverse every leg (staff salary + advance_applied); control accounts tie; zero EFFECTIVE rows; reversal balances (AGENT_GUARDRAILS §3.7) | pass |
+| `backend/tests/test_partner_profit_allocation.py` | **Money-safety Guard 1** — profit allocation void/correct reverses every partner leg; zero EFFECTIVE rows; control accounts tie | pass |
+| `backend/tests/test_staff_void_balance.py` | **Money-safety Guard 2** — sweep of public balance/total helpers: voided rows never move published figures; opposite-direction LIVE row does move (AGENT_GUARDRAILS §3.6) | pass |
+| `backend/tests/test_ledger_correct_subledger.py` | **Money-safety Guard 3** — generic ledger void refuses subledger-backed sources (409); MANUAL still voids; generic correct already refused | pass |
 | `backend/tests/test_cors_config.py` | `CORS_ORIGINS` parse + localhost preflight (Slice 12.1) | pass |
 | `backend/tests/test_money.py` | Integer kuruş, Turkish format, loose parse (Decisions §5) | pass |
 | `frontend/src/lib/money.test.ts` | Strict TRY parse — garbage rejection, Turkish comma/dot rules (CURSOR_RULES §1 rule 15) | pass |

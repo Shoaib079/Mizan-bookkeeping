@@ -137,6 +137,15 @@ def test_shares_not_100_rejected(db_session, three_partner_setup) -> None:
 
 
 def test_void_reverses_cleanly(db_session, three_partner_setup) -> None:
+    """Guard 1 — profit allocation owns one row per partner; void reverses every leg."""
+    from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntryStatus
+    from app.core.ledger.subledger_display import (
+        SubledgerDisplayKind,
+        subledger_display_for_row,
+    )
+    from app.core.subledger.control_account_tie import assert_entity_control_accounts_tied
+    from sqlalchemy import func
+
     entity_id = three_partner_setup["entity_id"]
     accounts = three_partner_setup["accounts"]
 
@@ -149,24 +158,64 @@ def test_void_reverses_cleanly(db_session, three_partner_setup) -> None:
         actor_id=ACTOR_ID,
         netting_as_of=date(2026, 6, 30),
     )
-    pa.void_profit_allocation(
+    journal_id = posted.journal_entry.id
+    assert len(posted.partner_ledger_entries) >= 2, (
+        "vacuous if allocation only wrote one partner row"
+    )
+
+    original, reversal = pa.void_profit_allocation(
         db_session,
         entity_id,
-        posted.journal_entry.id,
+        journal_id,
         actor_id=ACTOR_ID,
         reason="Owner correction",
     )
+
+    assert original.status == JournalEntryStatus.VOIDED
+    with entity_context(db_session, entity_id):
+        rows = list(
+            db_session.scalars(
+                select(PartnerLedgerEntry).where(
+                    PartnerLedgerEntry.journal_entry_id == journal_id
+                )
+            )
+        )
+        assert len(rows) >= 2
+        for row in rows:
+            kind, _ = subledger_display_for_row(
+                session=db_session,
+                journal_entry_id=row.journal_entry_id,
+                description=row.description,
+            )
+            assert kind != SubledgerDisplayKind.EFFECTIVE
+        side_totals = db_session.execute(
+            select(JournalEntryLine.side, func.sum(JournalEntryLine.amount_kurus))
+            .where(JournalEntryLine.journal_entry_id == reversal.id)
+            .group_by(JournalEntryLine.side)
+        ).all()
+        amounts = [int(total or 0) for _side, total in side_totals]
+        assert len(amounts) == 2 and amounts[0] == amounts[1] and amounts[0] > 0
 
     assert _gl_balance(
         db_session, entity_id, accounts[PARTNER_CAPITAL_CODE], AccountNormalBalance.CREDIT
     ) == 0
     assert partner_ledger.entity_capital_total_kurus(db_session, entity_id) == 0
+    assert_entity_control_accounts_tied(db_session, entity_id)
 
 
 def test_correct_profit_allocation_updates_partner_totals(
     db_session, three_partner_setup
 ) -> None:
-    """Edit total voids+reposts — unpaid / allocated follow the new amount."""
+    """Edit total voids+reposts — unpaid / allocated follow the new amount.
+
+    Guard 1 also: zero EFFECTIVE rows remain on the superseded journal.
+    """
+    from app.core.ledger.subledger_display import (
+        SubledgerDisplayKind,
+        subledger_display_for_row,
+    )
+    from app.core.subledger.control_account_tie import assert_entity_control_accounts_tied
+
     entity_id = three_partner_setup["entity_id"]
     partner_id = three_partner_setup["partner_ids"][0]
     accounts = three_partner_setup["accounts"]
@@ -182,6 +231,7 @@ def test_correct_profit_allocation_updates_partner_totals(
         netting_as_of=date(2026, 6, 30),
     )
     old_id = posted.journal_entry.id
+    assert len(posted.partner_ledger_entries) >= 2
     corrected = pa.correct_profit_allocation(
         db_session,
         entity_id,
@@ -196,13 +246,25 @@ def test_correct_profit_allocation_updates_partner_totals(
     )
 
     assert corrected.journal_entry.id != old_id
+    with entity_context(db_session, entity_id):
+        for row in db_session.scalars(
+            select(PartnerLedgerEntry).where(
+                PartnerLedgerEntry.journal_entry_id == old_id
+            )
+        ):
+            kind, _ = subledger_display_for_row(
+                session=db_session,
+                journal_entry_id=row.journal_entry_id,
+                description=row.description,
+            )
+            assert kind != SubledgerDisplayKind.EFFECTIVE
     assert _gl_balance(
         db_session, entity_id, accounts[RETAINED_EARNINGS_CODE], AccountNormalBalance.CREDIT
     ) == -40_000_000
     # Ali 50% of 400.000,00 ₺
     assert partner_ledger.profit_allocated_kurus(db_session, entity_id, partner_id) == 20_000_000
     assert partner_ledger.unpaid_profit_kurus(db_session, entity_id, partner_id) == 20_000_000
-
+    assert_entity_control_accounts_tied(db_session, entity_id)
 
 def test_entity_a_allocation_invisible_to_entity_b(
     db_session, restaurant_a, restaurant_b, three_partner_setup

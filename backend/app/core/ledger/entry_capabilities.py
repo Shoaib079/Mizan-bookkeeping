@@ -129,7 +129,8 @@ SUPPLIER = Owner(SupplierLedgerEntry, "supplier_id")
 PARTNER_VOID = "partners/{owner_id}/ledger/{entry_id}/void"
 
 # Generic correctable / generic-void-safe sources are answered by those
-# registries, not restated here (TRANSFER, YEAR_END_CLOSE, CASH_DRAWER_CLOSE).
+# registries, not restated here (TRANSFER, YEAR_END_CLOSE, CASH_DRAWER_CLOSE,
+# RULE_AUTO, SYSTEM, MANUAL, BANK_FEE, POS_COMMISSION_*).
 CAPABILITIES: dict[JournalEntrySource, Capability] = {
     JournalEntrySource.EXPENSE_ENTRY: Capability(
         can_edit=True,
@@ -263,17 +264,6 @@ CAPABILITIES: dict[JournalEntrySource, Capability] = {
         can_edit=False, can_void=True,
         owner=Owner(DeliverySettlement, "id"),
         void_path="delivery/settlements/{owner_id}/void",
-    ),
-    # --- voided from the ledger, never edited -----------------------------
-    # Only these two of VOID_AND_REENTER_SOURCES get a path. The rest offer
-    # nothing at all — which the first mechanical reading of the resolver got
-    # wrong, because it stopped at the enclosing `if` and never saw the inner
-    # one that singles these two out.
-    JournalEntrySource.RULE_AUTO: Capability(
-        can_edit=False, can_void=True, void_path="ledger/entries/{entry_id}/void",
-    ),
-    JournalEntrySource.SYSTEM: Capability(
-        can_edit=False, can_void=True, void_path="ledger/entries/{entry_id}/void",
     ),
     # --- offers nothing from the ledger, on purpose -----------------------
     # These reach the resolver's final `return` today, 500 lines down, by

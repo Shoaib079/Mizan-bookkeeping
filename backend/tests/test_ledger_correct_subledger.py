@@ -388,6 +388,71 @@ def test_generic_correct_rejects_subledger_backed_entry(
     assert "supplier payment correction" in response.json()["detail"]
 
 
+def test_generic_void_rejects_subledger_backed_entry(
+    client: TestClient, db_session, restaurant_a, seeded_accounts
+) -> None:
+    """Guard 3 — raw ledger void must refuse sources that own subledger rows."""
+    supplier_id = _supplier_id(db_session, restaurant_a)
+    draft = _confirmed_draft(db_session, restaurant_a, supplier_id)
+    bank_id = seeded_accounts["1100"]
+
+    post_confirmed_draft(
+        db_session,
+        restaurant_a.id,
+        draft.id,
+        expense_account_id=seeded_accounts["5200"],
+        actor_id=ACTOR_ID,
+    )
+
+    payment = payables_posting.post_supplier_payment(
+        db_session,
+        restaurant_a.id,
+        supplier_id,
+        payment_date=date(2026, 2, 1),
+        amount_kurus=1_000_000,
+        description="Pay",
+        actor_id=ACTOR_ID,
+        payment_account_id=bank_id,
+    )
+
+    response = client.post(
+        f"/entities/{restaurant_a.id}/ledger/entries/{payment.journal_entry.id}/void",
+        json={"actor_id": str(ACTOR_ID), "reason": "Should fail"},
+    )
+    assert response.status_code == 409
+    assert "supplier payment" in response.json()["detail"].lower()
+
+
+def test_generic_void_still_allows_manual_entry(
+    client: TestClient, restaurant_a, seeded_accounts
+) -> None:
+    """Opposite direction for Guard 3 — generic-void-safe sources still void."""
+    bank_id = seeded_accounts["1100"]
+    ap_id = seeded_accounts[ACCOUNTS_PAYABLE_CODE]
+
+    post_response = client.post(
+        f"/entities/{restaurant_a.id}/manual-journals",
+        json={
+            "entry_date": "2026-01-01",
+            "description": "Manual for void guard",
+            "actor_id": str(ACTOR_ID),
+            "lines": [
+                {"account_id": str(bank_id), "amount_kurus": 5000, "side": "debit"},
+                {"account_id": str(ap_id), "amount_kurus": 5000, "side": "credit"},
+            ],
+        },
+    )
+    assert post_response.status_code == 201
+    entry_id = post_response.json()["id"]
+
+    void_response = client.post(
+        f"/entities/{restaurant_a.id}/ledger/entries/{entry_id}/void",
+        json={"actor_id": str(ACTOR_ID), "reason": "Undo"},
+    )
+    assert void_response.status_code == 200
+    assert void_response.json()["original"]["status"] == "voided"
+
+
 def test_manual_entry_still_correctable_via_generic_endpoint(
     client: TestClient, restaurant_a, seeded_accounts
 ) -> None:

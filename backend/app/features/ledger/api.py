@@ -179,6 +179,8 @@ def void_entry(
         original, reversal = service.void_entry(session, entity_id, entry_id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SubledgerBackedCorrectionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except PostingError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return VoidJournalEntryOut(

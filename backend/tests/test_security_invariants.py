@@ -272,3 +272,70 @@ def test_control_accounts_tied_on_empty_seeded_entity(db_session, restaurant_a) 
 
     seed_default_chart(db_session, restaurant_a.id)
     assert_entity_control_accounts_tied(db_session, restaurant_a.id)
+
+
+# ---------------------------------------------------------------------------
+# Money-safety sweep guards (AGENT_GUARDRAILS §3.1 / §3.6 / §3.7)
+# ---------------------------------------------------------------------------
+
+
+#: Multi-row journals that must reverse every leg on correct/void.
+#: Behavioural coverage lives in test_subledger_void / test_partner_profit_allocation
+#: / test_staff_payment_correction — this list is the sweep index (non-vacuous).
+MULTI_ROW_EVERY_LEG_CASES: tuple[tuple[str, str], ...] = (
+    ("partner_profit_allocation", "void"),
+    ("partner_profit_allocation", "correct"),
+    ("staff_salary_payment_with_advance_applied", "void"),
+    ("staff_salary_payment_with_advance_applied", "correct"),
+)
+
+
+def test_multi_row_every_leg_cases_are_not_empty() -> None:
+    """Guard the guard — an empty sweep would silently prove nothing (§3.1 / §3.7)."""
+    assert len(MULTI_ROW_EVERY_LEG_CASES) >= 4
+    kinds = {kind for kind, _action in MULTI_ROW_EVERY_LEG_CASES}
+    assert "partner_profit_allocation" in kinds
+    assert "staff_salary_payment_with_advance_applied" in kinds
+    actions = {action for _kind, action in MULTI_ROW_EVERY_LEG_CASES}
+    assert actions >= {"void", "correct"}
+
+
+def test_every_journal_entry_source_has_void_classification() -> None:
+    """Generic void-safe and subledger-backed sets are disjoint and cover all sources."""
+    from app.core.ledger.correction.registry import (
+        GENERIC_VOID_SAFE_SOURCES,
+        LEDGER_VOID_FORBIDDEN_SOURCES,
+        SUBLEDGER_BACKED_VOID_SOURCES,
+        verify_void_source_registry_complete,
+    )
+    from app.core.ledger.models import JournalEntrySource
+
+    verify_void_source_registry_complete()
+
+    assert GENERIC_VOID_SAFE_SOURCES & SUBLEDGER_BACKED_VOID_SOURCES == frozenset()
+    assert len(GENERIC_VOID_SAFE_SOURCES) >= 5
+    assert len(SUBLEDGER_BACKED_VOID_SOURCES) >= 20
+    assert len(LEDGER_VOID_FORBIDDEN_SOURCES) >= 3
+    assert (
+        set(GENERIC_VOID_SAFE_SOURCES)
+        | set(SUBLEDGER_BACKED_VOID_SOURCES)
+        | set(LEDGER_VOID_FORBIDDEN_SOURCES)
+    ) == set(JournalEntrySource)
+
+
+def test_void_safe_and_subledger_backed_sets_are_disjoint_and_non_empty() -> None:
+    """Opposite / vacuous check for the void registry (AGENT_GUARDRAILS §3.1)."""
+    from app.core.ledger.correction.registry import (
+        GENERIC_VOID_SAFE_SOURCES,
+        SUBLEDGER_BACKED_VOID_SOURCES,
+        is_generic_void_safe,
+    )
+    from app.core.ledger.models import JournalEntrySource
+
+    assert GENERIC_VOID_SAFE_SOURCES
+    assert SUBLEDGER_BACKED_VOID_SOURCES
+    assert not (GENERIC_VOID_SAFE_SOURCES & SUBLEDGER_BACKED_VOID_SOURCES)
+    # Opposite direction: a known subledger source must NOT be generic-void-safe.
+    assert not is_generic_void_safe(JournalEntrySource.PAYMENT)
+    assert not is_generic_void_safe(JournalEntrySource.STAFF_PAYMENT)
+    assert is_generic_void_safe(JournalEntrySource.MANUAL)

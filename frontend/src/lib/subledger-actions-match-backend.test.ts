@@ -36,24 +36,32 @@ function read(file: string): string {
 function genericSets(): { correctable: Set<string>; voidSafe: Set<string> } {
   // `correction.py` became a package; the source sets live in its registry.
   const correction = read("correction/registry.py");
-  const block = correction.match(
+  const correctableBlock = correction.match(
     /GENERIC_CORRECTABLE_SOURCES[\s\S]*?\n\)/,
   )?.[0];
-  if (!block) throw new Error("GENERIC_CORRECTABLE_SOURCES not found");
+  if (!correctableBlock) throw new Error("GENERIC_CORRECTABLE_SOURCES not found");
   const correctable = new Set(
-    [...block.matchAll(/JournalEntrySource\.([A-Z_]+)/g)].map((m) =>
+    [...correctableBlock.matchAll(/JournalEntrySource\.([A-Z_]+)/g)].map((m) =>
       m[1].toLowerCase(),
     ),
   );
-  // `_is_generic_void_safe` adds three by hand; read them rather than repeat.
-  const helper = read("entry_actions.py").match(
-    /def _is_generic_void_safe[\s\S]*?\n\n/,
+  // Void-safe policy lives beside it — do not scrape the thin wrapper in
+  // entry_actions.py (it no longer lists JournalEntrySource literals).
+  const voidSafeBlock = correction.match(
+    /GENERIC_VOID_SAFE_SOURCES[\s\S]*?\n\)/,
   )?.[0];
-  if (!helper) throw new Error("_is_generic_void_safe not found");
-  const extra = [...helper.matchAll(/JournalEntrySource\.([A-Z_]+)/g)].map((m) =>
-    m[1].toLowerCase(),
+  if (!voidSafeBlock) throw new Error("GENERIC_VOID_SAFE_SOURCES not found");
+  const voidSafe = new Set(
+    [...voidSafeBlock.matchAll(/JournalEntrySource\.([A-Z_]+)/g)].map((m) =>
+      m[1].toLowerCase(),
+    ),
   );
-  return { correctable, voidSafe: new Set([...correctable, ...extra]) };
+  // Spread correctable into voidSafe for the same reason the registry does
+  // (`GENERIC_VOID_SAFE_SOURCES` already includes them via `*GENERIC_CORRECTABLE`).
+  return {
+    correctable,
+    voidSafe: new Set([...correctable, ...voidSafe]),
+  };
 }
 
 /** Each source's row in the capability table, as `[can_edit, can_void]`. */
@@ -105,6 +113,13 @@ describe("source-keyed verdicts match the backend", () => {
     expect(JOURNAL_SOURCES.length).toBeGreaterThan(20);
     expect(tableVerdicts().size).toBeGreaterThan(20);
     expect(genericSets().correctable.size).toBeGreaterThan(2);
+    // Guard the guard — void-safe must include more than the correctable set
+    // (transfer / year_end_close / rule_auto / …) or the scrape is vacuous.
+    expect(genericSets().voidSafe.size).toBeGreaterThan(
+      genericSets().correctable.size,
+    );
+    expect(genericSets().voidSafe.has("transfer")).toBe(true);
+    expect(genericSets().voidSafe.has("rule_auto")).toBe(true);
   });
 
   it("agrees on every journal source", () => {

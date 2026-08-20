@@ -12,7 +12,8 @@ were wrong before these tests existed:
   - taking "the last answer in a branch" as the branch's answer, which would
     have sent every customer credit sale to a group-sale URL
   - reading `VOID_AND_REENTER_SOURCES` as "void via the generic path", when
-    only RULE_AUTO and SYSTEM get a path and the rest get no buttons at all
+    only RULE_AUTO and SYSTEM (and other GENERIC_VOID_SAFE_SOURCES) get a
+    ledger void path; the rest of VOID_AND_REENTER get no buttons at all
 
 Neither would have thrown. Both would have shipped.
 """

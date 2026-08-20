@@ -20,11 +20,11 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner sign-off on S9)* |
-| **Last completed slice** | S9 cash / expenses / GL standalone Excel (`v0.standalone-book-exports`) |
-| **Last tag** | `v0.standalone-book-exports` |
-| **Unpushed** | yes — S9 local; do not push until owner says |
-| **Next up** | S3 detail write chrome grant-gated (after S9 sign-off) |
+| **Active slice** | *(none — await owner review of money-safety sweep guards)* |
+| **Last completed slice** | Money-safety sweep guards (`v0.money-safety-sweep-guards`) |
+| **Last tag** | `v0.money-safety-sweep-guards` |
+| **Unpushed** | yes — do not push until owner says |
+| **Next up** | S3 detail write chrome grant-gated (after sign-off) |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)
