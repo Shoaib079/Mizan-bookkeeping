@@ -12,9 +12,8 @@ import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { ExpenseItemFilterPicker } from "@/components/review/expense-item-filter-picker";
 import { ExpenseItemsReviewPanel } from "@/components/review/expense-items-review-panel";
 import { ExpensesScopeNote } from "@/components/review/expenses-scope-note";
-import { ReportDateRange } from "@/components/reports/report-date-range";
-import { Button } from "@/components/ui/button";
-import {
+import { ExpensesReviewRangeBar } from "@/components/review/expenses-review-range-bar";
+import { Button } from "@/components/ui/button";import {
   DataTable,
   DataTableBody,
   DataTableCell,
@@ -28,8 +27,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Wallet } from "lucide-react";
-import { apiDownload, apiFetch, triggerBlobDownload } from "@/lib/api";
-import { DownloadMenu } from "@/components/ui/download-menu";
+import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { invalidateReviewCounts } from "@/lib/review-counts-types";
@@ -172,48 +170,19 @@ export function ExpensesReviewPanel() {
       </div>
 
       <div className="mb-4 space-y-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          {/* Shown only where it applies — see `expenseFilterUsesRange`. The
-              queues ignore the range, and a picker that changes nothing is
-              the first thing reached for when a row seems missing. */}
-          {expenseFilterUsesRange(filter) ? (
-            <ReportDateRange
-              from={from}
-              to={to}
-              disabled={loading && view === "expenses"}
-              onChange={setRange}
-            />
-          ) : (
-            <div />
-          )}
-          <div className="flex flex-wrap items-end gap-3">
-            {view === "expenses" && expenseFilterUsesRange(filter) && (
-              <DownloadMenu
-                disabled={loading}
-                items={[
-                  {
-                    label: "Excel (.xlsx)",
-                    run: async () => {
-                      const { blob, filename } = await apiDownload(
-                        `/entities/${entityId}/expenses/export?${listQuery}`,
-                      );
-                      triggerBlobDownload(blob, filename);
-                    },
-                  },
-                ]}
-              />
-            )}
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">{periodTotalLabel}</p>
-              <p className="text-2xl font-semibold tabular-nums tracking-tight">
-                {(view === "expenses" && loading) ||
-                (view === "items" && itemsLoading)
-                  ? "…"
-                  : formatTry(periodTotalKurus)}
-              </p>
-            </div>
-          </div>
-        </div>
+        <ExpensesReviewRangeBar
+          entityId={entityId}
+          from={from}
+          to={to}
+          filter={filter}
+          view={view}
+          listQuery={listQuery}
+          loading={loading}
+          itemsLoading={itemsLoading}
+          periodTotalLabel={periodTotalLabel}
+          periodTotalKurus={periodTotalKurus}
+          onRangeChange={setRange}
+        />
 
         <FilterChips
           chips={EXPENSE_REVIEW_VIEWS}

@@ -70,7 +70,6 @@
   "frontend/src/components/invoice-draft-review.tsx": 883,
   "frontend/src/components/layout/account-menu.tsx": 455,
   "frontend/src/components/record/people-record-dialog.tsx": 414,
-  "frontend/src/components/review/expenses-review-panel.tsx": 428,
   "frontend/src/components/review/general-ledger-panel.tsx": 690,
   "frontend/src/components/statement-bulk-action-bar.tsx": 430,
   "frontend/src/components/statement-classify-bar.tsx": 770,
