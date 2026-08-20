@@ -12,12 +12,17 @@ Everything we worked out, in one place. Read in this order.
 7. **`DESIGN_SYSTEM.md`** — **HOW it looks.** The locked visual system: white background, **blue** accent, Inter type, Lucide icons, components, the app shell, and the page archetypes (including the Reports card-library layout). **§0** has copy-paste Cursor prompts: standing theme rule (structure first) and theme-refinement-only.
 8. **`app_preview.html`** — **a live, openable preview.** Double-click to open in a browser and click through the pages (dashboard, list, supplier ledger, review, reports, settings, login) in the real look.
 
+## Enforcement & memory
+- **`AGENT_GUARDRAILS.md`** — what catches you if you don't follow the rules: full green-light commands, file-size ratchet, expensive lessons. Read with `CURSOR_RULES.md`.
+- **`HARDENING_PLAN.md`** — the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4). Read before fixing any bug.
+- **`PROGRESS.md`** — the exact resume point (phase, last tag, next up); the primary handoff file for a new session.
+- **`CHANGELOG.md`** — every change, plain English, dated.
+
 ## Where the reasoning lives (read before changing accounting behaviour)
 - **`FINANCIAL_AUDIT.md`** — an outside review of the accounting engine, finding by finding, each marked resolved / mitigated / deliberately open. **F2 (no output VAT) is the only substantive one still open**, and it's a knowing choice: these books are a management view, not a tax basis.
 - **`DECISIONS.md`** — the significant technical choices and *why*, including the things deliberately **not** built (forex-only group sales, fixed assets and depreciation, a create-manual-journal form). Read it before "fixing" something that looks missing — it may be missing on purpose.
 - **`BUGLOG.md`** — every real bug: symptom, root cause, fix, guarding test. Several of these are subtle and were expensive to find once.
 - **`TESTS.md`** — what each test file guards, and the registry-completeness rules that will fail the suite if a new `JournalEntrySource` isn't classified everywhere.
-- **`HARDENING_PLAN.md`** — the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4). Read before fixing any bug.
 - **`AUDIT_MULTITENANCY.md`** — the multi-tenant isolation audit; most findings resolved by SEC-1 to SEC-4 (see its status banner).
 - **`PHASE_2_SKETCH.md`** — design record for collapsing edit/void into one capability table (steps 1-2 landed, 3-4 abandoned).
 - **`POST_LAUNCH_PLAN.md`** — what's next after launch (master build order + invoice classification spec).

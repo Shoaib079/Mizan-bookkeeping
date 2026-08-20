@@ -4,7 +4,7 @@
 
 This file governs HOW the app is built. WHAT the app must do lives in `Restaurant_Bookkeeping_App_Decisions.md` — that document is the single source of truth for requirements. If these two ever disagree, STOP and ask the owner; do not guess.
 
-**Companion files:** `ARCHITECTURE.md` = how the code is *structured* (feature modules, single posting boundary, adapters — follow it to avoid a monolith); `DESIGN_SYSTEM.md` = how it *looks and behaves* (including the modern-UX rules: Enter submits, type-or-pick dates, type-to-filter pickers, autosave); `ROADMAP.md` = where we are in the build (phase, slice, status — updated after every slice). `HARDENING_PLAN.md` = the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4) — read it before fixing any bug.
+**Companion files:** `ARCHITECTURE.md` = how the code is *structured* (feature modules, single posting boundary, adapters — follow it to avoid a monolith); `DESIGN_SYSTEM.md` = how it *looks and behaves* (including the modern-UX rules: Enter submits, type-or-pick dates, type-to-filter pickers, autosave); `ROADMAP.md` = where we are in the build (phase, slice, status — updated after every slice). `HARDENING_PLAN.md` = the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4) — read it before fixing any bug. `AGENT_GUARDRAILS.md` = what catches you if you don't: the full green-light commands, the file-size ratchet, the expensive lessons. Read it with this file.
 
 ---
 
@@ -215,9 +215,10 @@ non-negotiable correctness lives in tests and the owner's gate.
 4. **Read `CHANGELOG.md`** → last entry (what changed recently).
 5. **Read `BUGLOG.md`** if fixing bugs or investigating failures — check for recurring issues before re-patching.
 6. **Read `HARDENING_PLAN.md`** — the 12 bug classes, the scoreboard, and the owed items. Check whether your task touches a known class or an owed item before you start.
-7. **Search the codebase** for the slice area — grep/read existing code and tests. NEVER write a new version of something that already exists; continue or fix the existing one.
-8. **State aloud before editing:** *"Resuming slice [X] at step [Y] of the completion gate."* Wait for owner confirmation if anything is ambiguous.
-9. **Run tests** to confirm existing work is healthy before adding to it.
+7. **Read `AGENT_GUARDRAILS.md`** — the full green-light commands, the file-size ratchet, and the expensive lessons that became rules. Read it with this file.
+8. **Search the codebase** for the slice area — grep/read existing code and tests. NEVER write a new version of something that already exists; continue or fix the existing one.
+9. **State aloud before editing:** *"Resuming slice [X] at step [Y] of the completion gate."* Wait for owner confirmation if anything is ambiguous.
+10. **Run tests** to confirm existing work is healthy before adding to it.
 
 Only after these steps may new work begin.
 
@@ -237,6 +238,7 @@ Only after these steps may new work begin.
 [ ] Read CHANGELOG.md → last entry
 [ ] Read BUGLOG.md (if bug work)
 [ ] Read HARDENING_PLAN.md (bug classes + owed items)
+[ ] Read AGENT_GUARDRAILS.md (green light + ratchet + lessons)
 [ ] Search codebase for slice area
 [ ] State: "Resuming slice X at step Y"
 [ ] Run pytest (baseline health check)
@@ -298,6 +300,7 @@ Maintain these files and update them as part of every slice — they are how wor
 - **`DECISIONS.md`** — any significant technical choice and why (so nothing gets silently undone later).
 - **`TESTS.md`** — the test register and status.
 - **`HARDENING_PLAN.md`** — the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4). Update it when a bug class is closed or a new instance is found.
+- **`AGENT_GUARDRAILS.md`** — what catches you if you don't follow the rules: full green-light commands, file-size ratchet, expensive lessons. Keep it current when a new guard or ratchet check is added.
 
 ---
 
