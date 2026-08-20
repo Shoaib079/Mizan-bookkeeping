@@ -46,6 +46,7 @@ describe("page archetypes", () => {
       "HubPage",
       "SummaryPanel",
       "FilterChips",
+      "EntityBalanceSticker",
     ]) {
       const source = sourceDeclaring(file);
       expect(source.match(/#[0-9a-fA-F]{6}/), file).toBeNull();

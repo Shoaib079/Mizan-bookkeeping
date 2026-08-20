@@ -12,7 +12,7 @@ import {
 import { FilterChips } from "@/components/page/filter-chips";
 import { LedgerTable } from "@/components/page/ledger-table";
 import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
-import { HeadlineFigure } from "@/components/page/summary-panel";
+import { EntityBalanceSticker } from "@/components/entity-balance-sticker";
 import { PartnerRecordForm } from "@/components/forms/partner-record-form";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
@@ -204,12 +204,14 @@ export default function PartnerDetailPage() {
           </>
         }
         titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
-        headline={
+        balance={
           ledger && (
-            <HeadlineFigure
+            <EntityBalanceSticker
               label={partnerBalanceHeading(partnerBalance(ledger))}
-              amountKurus={Math.abs(partnerBalance(ledger))}
-              caption={partnerHeadlineCaption(ledger)}
+              signedBalanceMinor={partnerBalance(ledger)}
+              details={
+                <p>{partnerHeadlineCaption(ledger)}</p>
+              }
             />
           )
         }

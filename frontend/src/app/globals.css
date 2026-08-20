@@ -17,9 +17,11 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
   --color-card: var(--card);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -49,9 +51,12 @@
   --muted-foreground: #64748b;
   --border: #e2e8f0;
   --success: #16a34a;
+  /* Soft tints for balance stickers — derived from the semantic colour. */
+  --success-soft: color-mix(in srgb, var(--success) 14%, transparent);
   --warning: #f59e0b;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
+  --destructive-soft: color-mix(in srgb, var(--destructive) 12%, transparent);
   --card: #ffffff;
   --sidebar: #ffffff;
   --sidebar-foreground: #334155;
@@ -105,12 +110,14 @@
   --muted-foreground: #94a3b8;
   --border: #1e293b;
   --success: #4ade80;
+  --success-soft: color-mix(in srgb, var(--success) 18%, transparent);
   --warning: #fbbf24;
   --destructive: #f87171;
   /* Dark mode inverts this pair. On dark, --destructive is a light red so a
      filled destructive button needs dark text — white on #f87171 is roughly
      2.3:1 and fails badly. Matches how --primary-foreground flips here. */
   --destructive-foreground: #450a0a;
+  --destructive-soft: color-mix(in srgb, var(--destructive) 16%, transparent);
   --card: #111c33;
   --sidebar: #0f172a;
   --sidebar-foreground: #e2e8f0;

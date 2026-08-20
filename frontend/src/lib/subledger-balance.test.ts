@@ -47,7 +47,9 @@ describe("both subledgers", () => {
       remaining_accrual_minor: 0,
       outstanding_advance_minor: 5_000,
     });
-    expect(staffBalanceHeading(heldByEmployee)).toBe("Employee owes you");
+    expect(staffBalanceHeading(heldByEmployee)).toBe(
+      "Employee holds your money",
+    );
     expect(partnerBalanceHeading(-5_000)).toBe("Partner owes you");
 
     // And the other way, so a rule that always said "owes you" would fail.
@@ -60,18 +62,15 @@ describe("both subledgers", () => {
     expect(partnerBalanceHeading(5_000)).toBe("You owe partner");
   });
 
-  it("keep no second copy of the wording", () => {
-    // The behavioural tests above pass just as happily against two identical
-    // copies, and would keep passing as they drifted apart. This is the half
-    // that catches that.
-    for (const symbol of ["partnerBalanceHeading", "staffBalanceHeading"]) {
-      const source = sourceDeclaring(symbol);
-      expect(source, `${symbol} should delegate to balanceHeading`).toContain(
-        "balanceHeading(",
-      );
-      expect(source, `${symbol} spells the wording out itself`).not.toContain(
-        "owes you\"",
-      );
-    }
+  it("keep no second copy of the partner/settled wording", () => {
+    // Staff owns the advance-held negative label; positive/settled still
+    // delegate so they cannot drift from partners.
+    const partnerSrc = sourceDeclaring("partnerBalanceHeading");
+    expect(partnerSrc).toContain("balanceHeading(");
+    expect(partnerSrc).not.toContain("owes you\"");
+
+    const staffSrc = sourceDeclaring("staffBalanceHeading");
+    expect(staffSrc).toContain("balanceHeading(");
+    expect(staffSrc).toContain("Employee holds your money");
   });
 });

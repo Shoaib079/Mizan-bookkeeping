@@ -30,7 +30,7 @@ import {
 } from "@/components/page/entity-detail-page";
 import { LedgerTable } from "@/components/page/ledger-table";
 import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
-import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
+import { EntityBalanceSticker } from "@/components/entity-balance-sticker";
 import { Button } from "@/components/ui/button";
 import {
   DataTableCell,
@@ -245,48 +245,35 @@ export default function StaffDetailPage() {
           { label: "Adjust accrual", onSelect: () => setAccrualOpen(true) },
         ]}
         titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
-        headline={
+        balance={
           ledger && (
-            <HeadlineFigure
+            <EntityBalanceSticker
               label={staffBalanceHeading(position)}
-              amountKurus={Math.abs(position.balanceMinor)}
-              caption={netPositionCaption(position)}
+              signedBalanceMinor={position.balanceMinor}
               format={formatMinorAmount}
-            />
-          )
-        }
-        panels={
-          // Only when there is a subtraction to show. For a TRY employee the
-          // backend settles the overlap on every write, so this is an FX
-          // employee — whose advance carries its own lira rate and cannot be
-          // applied automatically — or a settlement a locked period blocked.
-          ledger &&
-          (netsOutVisibly(position) || !netPositionReconciles(position)) && (
-            <SummaryPanel
-              title="How that nets out"
-              format={formatMinorAmount}
-              lines={[
-                {
-                  label: "Salary owed",
-                  amountKurus: position.salaryOwedMinor,
-                  hideWhenZero: true,
-                },
-                {
-                  label: "Advance held",
-                  amountKurus: position.advanceHeldMinor,
-                  negative: position.advanceHeldMinor > 0,
-                  hideWhenZero: true,
-                },
-                {
-                  label: "Other movements",
-                  amountKurus: position.otherMinor,
-                  hideWhenZero: netPositionReconciles(position),
-                },
-              ]}
-              total={{
-                label: staffBalanceHeading(position),
-                amountKurus: Math.abs(position.balanceMinor),
-              }}
+              details={
+                (netsOutVisibly(position) ||
+                  !netPositionReconciles(position)) && (
+                  <div className="space-y-0.5">
+                    {position.salaryOwedMinor > 0 && (
+                      <p>Salary owed: {formatMinorAmount(position.salaryOwedMinor)}</p>
+                    )}
+                    {position.advanceHeldMinor > 0 && (
+                      <p>
+                        Advance held: −
+                        {formatMinorAmount(position.advanceHeldMinor)}
+                      </p>
+                    )}
+                    {!netPositionReconciles(position) && (
+                      <p>
+                        Other movements:{" "}
+                        {formatMinorAmount(position.otherMinor)}
+                      </p>
+                    )}
+                    <p className="pt-0.5">{netPositionCaption(position)}</p>
+                  </div>
+                )
+              }
             />
           )
         }

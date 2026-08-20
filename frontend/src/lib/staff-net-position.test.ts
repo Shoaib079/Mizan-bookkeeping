@@ -37,7 +37,7 @@ describe("staffNetPosition", () => {
       outstanding_advance_minor: 273_000,
     });
     expect(position.balanceMinor).toBe(-273_000);
-    expect(staffBalanceHeading(position)).toBe("Employee owes you");
+    expect(staffBalanceHeading(position)).toBe("Employee holds your money");
   });
 
   it("is positive when the business owes the employee", () => {

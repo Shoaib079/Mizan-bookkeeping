@@ -21,8 +21,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Partner paid labels (`v0.partner-paid-labels`) |
-| **Last tag** | `v0.partner-paid-labels` |
+| **Last completed slice** | Entity balance sticker (`v0.entity-balance-sticker`) |
+| **Last tag** | `v0.entity-balance-sticker` |
 | **Unpushed** | yes — owner pushes when ready (do not push from agent) |
 | **Next up** | GS-FX forex-only group sales |
 

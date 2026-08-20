@@ -1,6 +1,7 @@
 /** Supplier payable balance display — BSF-2 advances. */
 
 import { formatTry } from "@/lib/money";
+import { balanceHeading } from "@/lib/subledger-balance";
 
 /** Matches backend DEFAULT_SUPPLIER_ADVANCE_CONFIRM_THRESHOLD_KURUS (₺1,000). */
 export const SUPPLIER_ADVANCE_CONFIRM_THRESHOLD_KURUS = 100_000;
@@ -25,4 +26,9 @@ export function formatSupplierPayableBalance(kurus: number): string {
 
 export function isSupplierAdvanceBalance(kurus: number): boolean {
   return kurus < 0;
+}
+
+/** Same sign rule as partner: positive = you owe them; negative = they owe you. */
+export function supplierBalanceHeading(balanceKurus: number): string {
+  return balanceHeading(balanceKurus, "supplier");
 }

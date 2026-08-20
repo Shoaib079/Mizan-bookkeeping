@@ -31,6 +31,8 @@ type Props = {
   actions?: React.ReactNode;
   /** Collapsed behind "⋯" — rare or destructive things. */
   overflowActions?: OverflowMenuItem[];
+  /** Compact balance sticker — right of actions on desktop; under the name on mobile. */
+  aside?: React.ReactNode;
   className?: string;
 };
 
@@ -41,6 +43,7 @@ export function PageHeader({
   primaryAction,
   actions,
   overflowActions,
+  aside,
   className,
 }: Props) {
   const hasActions =
@@ -51,31 +54,39 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-border pb-4",
+        "mb-5 border-b border-border pb-4",
         className,
       )}
     >
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <h1 className="truncate text-xl font-semibold">{title}</h1>
-          {titleAction}
-        </div>
-        {meta && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-            {meta}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="truncate text-xl font-semibold">{title}</h1>
+            {titleAction}
           </div>
-        )}
-      </div>
-
-      {hasActions && (
-        <div className="flex flex-wrap items-center gap-2">
-          {actions}
-          {primaryAction}
-          {overflowActions && overflowActions.length > 0 && (
-            <OverflowMenu items={overflowActions} />
+          {meta && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              {meta}
+            </div>
           )}
+          {/* Mobile: sticker stacks under the name. */}
+          {aside ? <div className="mt-3 sm:hidden">{aside}</div> : null}
         </div>
-      )}
+
+        <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+          {hasActions && (
+            <div className="flex flex-wrap items-center gap-2">
+              {actions}
+              {primaryAction}
+              {overflowActions && overflowActions.length > 0 && (
+                <OverflowMenu items={overflowActions} />
+              )}
+            </div>
+          )}
+          {/* Desktop: sticker sits under the action row, right-aligned. */}
+          {aside ? <div className="hidden sm:block">{aside}</div> : null}
+        </div>
+      </div>
     </header>
   );
 }

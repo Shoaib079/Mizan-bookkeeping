@@ -22,7 +22,7 @@ import {
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
 import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
-import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
+import { EntityBalanceSticker } from "@/components/entity-balance-sticker";
 import { SupplierActivityPanel } from "@/components/supplier-activity-panel";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
-import { isSupplierAdvanceBalance } from "@/lib/supplier-balance";
+import {
+  supplierBalanceHeading,
+} from "@/lib/supplier-balance";
 import {
   isInvoiceWorkbenchStatus,
   isPendingReviewStatus,
@@ -142,11 +144,20 @@ export default function SupplierDetailPage() {
     );
   }
 
-  const isAdvance = isSupplierAdvanceBalance(ledger?.balance_kurus ?? 0);
   const awaiting = drafts.filter((d) => isPendingReviewStatus(d.status));
   const readyToPost = drafts.filter((d) => isReadyToPostInvoiceStatus(d.status));
-  const sumGross = (rows: DraftRow[]) =>
-    rows.reduce((total, row) => total + row.gross_kurus, 0);
+
+  const invoiceCountParts: string[] = [];
+  if (awaiting.length > 0) {
+    invoiceCountParts.push(
+      `${awaiting.length} awaiting review`,
+    );
+  }
+  if (readyToPost.length > 0) {
+    invoiceCountParts.push(
+      `${readyToPost.length} confirmed, not yet posted`,
+    );
+  }
 
   return (
     <EntityDetailPage
@@ -189,41 +200,15 @@ export default function SupplierDetailPage() {
         </>
       }
       titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
-      headline={
+      balance={
         ledger && (
-          <HeadlineFigure
-            label={isAdvance ? "Supplier advance" : "Payable balance"}
-            amountKurus={Math.abs(ledger.balance_kurus)}
-            caption={
-              isAdvance
-                ? "Paid ahead — invoice still pending"
-                : "Owed to this supplier"
-            }
-          />
-        )
-      }
-      panels={
-        drafts.length > 0 && (
-          <SummaryPanel
-            title="Uploaded invoices"
-            lines={[
-              {
-                label: "Awaiting review",
-                hint: `${awaiting.length}`,
-                amountKurus: sumGross(awaiting),
-                hideWhenZero: true,
-              },
-              {
-                label: "Confirmed, not yet posted",
-                hint: `${readyToPost.length}`,
-                amountKurus: sumGross(readyToPost),
-                hideWhenZero: true,
-              },
-            ]}
-            footnote={
-              readyToPost.length > 0
-                ? "Confirmed invoices only join the payable balance once posted to the ledger."
-                : undefined
+          <EntityBalanceSticker
+            label={supplierBalanceHeading(ledger.balance_kurus)}
+            signedBalanceMinor={ledger.balance_kurus}
+            details={
+              invoiceCountParts.length > 0 ? (
+                <p>{invoiceCountParts.join(" · ")}</p>
+              ) : undefined
             }
           />
         )

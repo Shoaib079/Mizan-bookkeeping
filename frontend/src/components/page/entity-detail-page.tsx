@@ -20,7 +20,9 @@ type Props = {
   actions?: React.ReactNode;
   overflowActions?: OverflowMenuItem[];
 
-  /** `HeadlineFigure` — the one number this page answers. */
+  /** Compact balance sticker in the header (partner / staff / supplier). */
+  balance?: React.ReactNode;
+  /** `HeadlineFigure` — legacy full-width slot; prefer `balance` for people pages. */
   headline?: React.ReactNode;
   /** 0–3 `SummaryPanel`s explaining that number. */
   panels?: React.ReactNode;
@@ -43,6 +45,7 @@ export function EntityDetailPage({
   primaryAction,
   actions,
   overflowActions,
+  balance,
   headline,
   panels,
   activity,
@@ -72,6 +75,7 @@ export function EntityDetailPage({
         primaryAction={primaryAction}
         actions={actions}
         overflowActions={overflowActions}
+        aside={balance}
       />
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}

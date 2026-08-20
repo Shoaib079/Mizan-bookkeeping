@@ -73,8 +73,13 @@ export function netsOutVisibly(position: StaffNetPosition): boolean {
   return position.salaryOwedMinor > 0 && position.advanceHeldMinor > 0;
 }
 
-/** Which way the balance points, in the same words the partner page uses. */
+/** Which way the balance points.
+ *
+ * Positive / settled reuse the shared partner wording. Negative is
+ * employee-specific: they hold an advance, so "holds your money" not "owes you".
+ */
 export function staffBalanceHeading(position: StaffNetPosition): string {
+  if (position.balanceMinor < 0) return "Employee holds your money";
   return balanceHeading(position.balanceMinor, "employee");
 }
 
