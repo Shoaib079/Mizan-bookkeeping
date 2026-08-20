@@ -50,6 +50,7 @@ from app.features.delivery.api import (
     settlements_router as delivery_settlements_router,
 )
 from app.features.expenses.api import router as expenses_router
+from app.features.expenses.export_api import router as expenses_export_router
 from app.features.operations.api import router as operations_router
 from app.features.reports.api import router as reports_router
 from app.features.dashboard.api import router as dashboard_router
@@ -164,6 +165,7 @@ app.include_router(delivery_settlements_router)
 app.include_router(delivery_reconciliation_router)
 app.include_router(delivery_activity_router)
 app.include_router(expenses_router)
+app.include_router(expenses_export_router)
 app.include_router(operations_router)
 app.include_router(reports_router)
 app.include_router(dashboard_router)
