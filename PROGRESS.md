@@ -20,11 +20,11 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | **S1** — staff sticker = ledger net |
-| **Last completed slice** | Entity balance sticker (`v0.entity-balance-sticker`) |
-| **Last tag** | `v0.entity-balance-sticker` |
-| **Unpushed** | no — `origin/main` at `v0.entity-balance-sticker` (as of plan commit; S1 will be local until owner pushes) |
-| **Next up** | S1 in progress → then S2 (supplier sticker refresh) |
+| **Active slice** | *(none — await owner sign-off on S1)* |
+| **Last completed slice** | S1 staff sticker = ledger net (`v0.staff-sticker-ledger-net`) |
+| **Last tag** | `v0.staff-sticker-ledger-net` |
+| **Unpushed** | yes — docs plan + S1 local; owner pushes when ready |
+| **Next up** | S2 supplier sticker refresh after void (after S1 sign-off) |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

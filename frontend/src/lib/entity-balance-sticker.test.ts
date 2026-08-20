@@ -19,7 +19,8 @@ describe("balanceStickerDirection", () => {
 describe("EntityBalanceSticker", () => {
   it("is compact, right-biased, and uses soft direction tokens", () => {
     const src = sourceDeclaring("EntityBalanceSticker");
-    expect(src).toContain("max-w-[13rem]");
+    expect(src).toContain("max-w-full");
+    expect(src).toContain("sm:max-w-[16rem]");
     expect(src).toContain("sm:ml-auto");
     expect(src).toContain("bg-success-soft");
     expect(src).toContain("bg-destructive-soft");

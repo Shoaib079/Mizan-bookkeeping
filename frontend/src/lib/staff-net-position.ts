@@ -29,15 +29,18 @@ export type StaffLedgerTotals = {
 };
 
 export type StaffNetPosition = {
-  /** Ledger running balance (every row). Used for residual / other movements. */
+  /** Ledger running balance (every effective row). Hero figure — matches directory/hub. */
   netMinor: number;
   /** Accrued salary not yet paid. Advances are not part of this. */
   salaryOwedMinor: number;
   /** Advance in the employee's hands, not yet worked off. Always ≥ 0. */
   advanceHeldMinor: number;
-  /** Signed: positive you owe them, negative they owe you. The hero figure. */
+  /**
+   * Signed ledger net (= `netMinor` / `balance_minor`).
+   * Hero figure for sticker + heading — never salary−advance alone.
+   */
   balanceMinor: number;
-  /** Anything in the balance the two figures above don't explain. Usually 0. */
+  /** Ledger net minus (salary owed − advance held). Non-zero = residual / other movements. */
   otherMinor: number;
 };
 
@@ -47,13 +50,13 @@ export function staffNetPosition(
   const netMinor = ledger?.balance_minor ?? 0;
   const salaryOwedMinor = ledger?.remaining_accrual_minor ?? 0;
   const advanceHeldMinor = ledger?.outstanding_advance_minor ?? 0;
-  const balanceMinor = salaryOwedMinor - advanceHeldMinor;
+  const compositionMinor = salaryOwedMinor - advanceHeldMinor;
   return {
     netMinor,
     salaryOwedMinor,
     advanceHeldMinor,
-    balanceMinor,
-    otherMinor: netMinor - balanceMinor,
+    balanceMinor: netMinor,
+    otherMinor: netMinor - compositionMinor,
   };
 }
 
@@ -73,14 +76,18 @@ export function netsOutVisibly(position: StaffNetPosition): boolean {
   return position.salaryOwedMinor > 0 && position.advanceHeldMinor > 0;
 }
 
-/** Which way the balance points.
+/** Which way the balance points — from the ledger net, never salary−advance alone.
  *
- * Positive / settled reuse the shared partner wording. Negative is
- * employee-specific: they hold an advance, so "holds your money" not "owes you".
+ * Negative: employee-specific "holds your money". Positive/settled: shared wording.
+ * Residual (other movements): never say Settled even if the net happens to be zero.
  */
 export function staffBalanceHeading(position: StaffNetPosition): string {
   if (position.balanceMinor < 0) return "Employee holds your money";
-  return balanceHeading(position.balanceMinor, "employee");
+  if (position.balanceMinor > 0) {
+    return balanceHeading(position.balanceMinor, "employee");
+  }
+  if (!netPositionReconciles(position)) return "See other movements";
+  return "Settled";
 }
 
 /** Plain-language reading of the settlement card. */

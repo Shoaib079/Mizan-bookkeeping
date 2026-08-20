@@ -69,12 +69,14 @@ export function formatStaffHubAmount(
   return parts.join(" · ");
 }
 
-/** Direction for colouring — positive means money owed to staff overall. */
+/** Direction for colouring the hub card — TRY total only.
+ *
+ * FX balances are shown on the same card as separate figures, but their
+ * minor units must never be added into the TRY sign (cents ≠ kuruş).
+ */
 export function staffHubNetSign(
   tryTotalKurus: number,
-  fxByCurrency: Map<string, number>,
+  _fxByCurrency?: Map<string, number>,
 ): number {
-  let sign = tryTotalKurus;
-  for (const minor of fxByCurrency.values()) sign += minor;
-  return sign;
+  return tryTotalKurus;
 }

@@ -249,7 +249,8 @@ export default function StaffDetailPage() {
           ledger && (
             <EntityBalanceSticker
               label={staffBalanceHeading(position)}
-              signedBalanceMinor={position.balanceMinor}
+              // Ledger net (= directory/hub balance_minor), not salary−advance.
+              signedBalanceMinor={position.netMinor}
               format={formatMinorAmount}
               details={
                 (netsOutVisibly(position) ||

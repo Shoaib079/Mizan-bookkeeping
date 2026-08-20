@@ -49,7 +49,7 @@ export function EntityBalanceSticker({
       data-testid="entity-balance-sticker"
       data-direction={direction}
       className={cn(
-        "w-full max-w-[13rem] shrink-0 rounded-md border px-3 py-2 sm:ml-auto",
+        "w-full max-w-full shrink-0 rounded-md border px-3 py-2 sm:ml-auto sm:max-w-[16rem]",
         direction === "company_owes" &&
           "border-success/25 bg-success-soft text-success",
         direction === "they_owe" &&

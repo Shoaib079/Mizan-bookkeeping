@@ -14,6 +14,7 @@ import {
   staffBalanceHeading,
   staffNetPosition,
 } from "@/lib/staff-net-position";
+import { sourceDeclaring } from "@/test-support/source";
 
 describe("staffNetPosition", () => {
   it("does not count the advance twice (BUGLOG 2026-07-29)", () => {
@@ -68,8 +69,27 @@ describe("staffNetPosition", () => {
       remaining_accrual_minor: 0,
       outstanding_advance_minor: 0,
     });
+    // Hero = ledger net (matches directory/hub), not salary−advance (= 0).
+    expect(position.balanceMinor).toBe(100_000);
+    expect(position.netMinor).toBe(100_000);
     expect(position.otherMinor).toBe(100_000);
     expect(netPositionReconciles(position)).toBe(false);
+    expect(staffBalanceHeading(position)).toBe("You owe employee");
+    expect(staffBalanceHeading(position)).not.toBe("Settled");
+  });
+
+  it("never says Settled when other movements explain a zero net", () => {
+    // Net is zero but salary−advance does not match — residual non-zero.
+    const position = staffNetPosition({
+      balance_minor: 0,
+      remaining_accrual_minor: 50_000,
+      outstanding_advance_minor: 0,
+    });
+    expect(position.balanceMinor).toBe(0);
+    expect(position.otherMinor).toBe(-50_000);
+    expect(netPositionReconciles(position)).toBe(false);
+    expect(staffBalanceHeading(position)).not.toBe("Settled");
+    expect(staffBalanceHeading(position)).toBe("See other movements");
   });
 
   it("is all zeroes while the ledger is still loading", () => {
@@ -157,5 +177,15 @@ describe("netPositionCaption", () => {
         }),
       ),
     ).toMatch(/other movements/);
+  });
+});
+
+describe("staffNetPosition — ledger net is the hero", () => {
+  it("sets balanceMinor from balance_minor, not salary−advance alone", () => {
+    const src = sourceDeclaring("staffNetPosition");
+    expect(src).toContain("balanceMinor: netMinor");
+    expect(src).not.toMatch(
+      /const balanceMinor = salaryOwedMinor - advanceHeldMinor/,
+    );
   });
 });

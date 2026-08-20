@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | **S1** — staff sticker = ledger net (money-critical) |
-| **Next up**              | After S1 sign-off: **S2** supplier sticker refresh after void (then S3…) |
-| **Last completed slice** | Entity balance sticker (`v0.entity-balance-sticker`) |
-| **Last commit/tag**      | `v0.entity-balance-sticker` |
+| **Active slice**         | *(none — await owner sign-off on S1)* |
+| **Next up**              | **S2** supplier sticker refresh after void (after S1 sign-off) |
+| **Last completed slice** | S1 staff sticker = ledger net (`v0.staff-sticker-ledger-net`) |
+| **Last commit/tag**      | `v0.staff-sticker-ledger-net` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1930,6 +1930,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-20 | S1 Staff sticker = ledger net                    | `v0.staff-sticker-ledger-net`                          | Hero/heading from balance_minor; residual ≠ Settled; hub colour TRY-only; sticker mobile width; locking tests fixed |
 | 2026-08-20 | Entity balance sticker (P/S/Supplier detail)     | `v0.entity-balance-sticker`                            | Compact right-header balance sticker; colour by direction; shared component; keep capital/staff/invoice sub-lines; no customer change |
 | 2026-08-20 | Partner paid labels (no user-facing fronted)     | `v0.partner-paid-labels`                               | Rename display "fronted" → "partner paid"; cash Record one net figure (already tagged); keys/API paths unchanged; no sticker rebuild |
 | 2026-08-20 | Partner Record cash copy (one figure)            | `v0.partner-cash-copy-one-figure`                      | Cash taken shows headline net only + plain settle-first sentence; drop Fronted still owed / Net book figures |
