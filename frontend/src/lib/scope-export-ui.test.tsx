@@ -10,7 +10,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DownloadMenu } from "@/components/ui/download-menu";
 import { canExportFiles } from "@/lib/entity-access";
 import { grantsForRole } from "@/lib/member-grants";
-import { sourceDeclaring } from "@/test-support/source";
+import {
+  fileDeclaring,
+  sourceDeclaring,
+  sourceFiles,
+} from "@/test-support/source";
 
 const accessState = {
   grants: grantsForRole("owner") as string[],
@@ -67,5 +71,61 @@ describe("DownloadMenu grant gate", () => {
     const broken = source.replace("canExportFiles(grants)", "true");
     expect(source).toContain("canExportFiles(grants)");
     expect(broken).not.toContain("canExportFiles(grants)");
+  });
+});
+
+/** Paths that fetch a generated Excel/PDF (not raw attachments like logo). */
+const GENERATED_EXPORT_URL =
+  /\/export(?:\/|\.|\?|"|`|'|$)|month-pack|export\.pdf/;
+
+function generatedExportTriggerFiles() {
+  return sourceFiles().filter(
+    (file) =>
+      file.path.endsWith(".tsx") &&
+      file.text.includes("apiDownload") &&
+      GENERATED_EXPORT_URL.test(file.text),
+  );
+}
+
+function referencesExportGrant(text: string): boolean {
+  // Shared shell: DownloadMenu itself checks canExportFiles. Wrappers that
+  // only render it are gated transitively. Standalones must name the helper.
+  return (
+    text.includes("canExportFiles") ||
+    text.includes('from "@/components/ui/download-menu"') ||
+    text.includes("<DownloadMenu")
+  );
+}
+
+describe("generated-export triggers reference canExportFiles", () => {
+  it("finds the known export surfaces", () => {
+    const paths = generatedExportTriggerFiles().map((f) => f.path).sort();
+    expect(paths.length).toBeGreaterThanOrEqual(8);
+    expect(paths.some((p) => p.includes("month-pack-button"))).toBe(true);
+    expect(paths.some((p) => p.includes("sales-review-panel"))).toBe(true);
+    expect(paths.some((p) => p.includes("supplier-activity-export"))).toBe(
+      true,
+    );
+  });
+
+  it("every trigger file gates via canExportFiles or DownloadMenu", () => {
+    const ungated = generatedExportTriggerFiles()
+      .filter((f) => !referencesExportGrant(f.text))
+      .map((f) => f.path);
+    expect(ungated).toEqual([]);
+  });
+
+  it("mutation: standalone export button without canExportFiles goes red", () => {
+    const path = fileDeclaring("MonthPackButton");
+    const standalone = sourceDeclaring("MonthPackButton");
+    expect(standalone).toContain("canExportFiles");
+    const broken = standalone.replaceAll("canExportFiles", "ALWAYS_TRUE");
+    expect(referencesExportGrant(broken)).toBe(false);
+
+    const ungated = generatedExportTriggerFiles()
+      .map((f) => (f.path === path ? { ...f, text: broken } : f))
+      .filter((f) => !referencesExportGrant(f.text))
+      .map((f) => f.path);
+    expect(ungated).toContain(path);
   });
 });

@@ -161,23 +161,43 @@ def test_view_only_can_fetch_logo_attachment_not_report_export(
     assert "scope:export" in export.json()["detail"]
 
 
-def test_every_generated_export_route_depends_on_export_scope_guard() -> None:
-    """Completeness: route handlers that call xlsx_response/pdf_response must
-    Depends(export_scope_guard). Mutation: drop one Depends → count falls."""
+def _api_defs_calling_export_helpers(text: str) -> list[tuple[str, str, str]]:
+    """Any def whose body calls xlsx_response( / pdf_response( — name-agnostic."""
     import re
 
+    hits: list[tuple[str, str, str]] = []
+    for m in re.finditer(
+        r"def\s+(\w+)\s*\(([\s\S]*?)\)\s*(?:->|:)([\s\S]*?)(?=\ndef\s|\Z)",
+        text,
+    ):
+        name, sig, body = m.group(1), m.group(2), m.group(3)
+        chunk = sig + body[:2000]
+        if "xlsx_response(" not in chunk and "pdf_response(" not in chunk:
+            continue
+        hits.append((name, sig, body))
+    return hits
+
+
+def _imports_openpyxl_or_reportlab(text: str) -> bool:
+    import re
+
+    return bool(
+        re.search(
+            r"^(?:\s*)(?:from|import)\s+(?:openpyxl|reportlab)\b",
+            text,
+            flags=re.MULTILINE,
+        )
+    )
+
+
+def test_every_generated_export_route_depends_on_export_scope_guard() -> None:
+    """Completeness: any *api*.py def that builds xlsx/pdf via helpers must
+    Depends(export_scope_guard). Mutation: drop one Depends → count falls."""
     missing: list[str] = []
     found = 0
     for path in APP_ROOT.rglob("*api*.py"):
         text = path.read_text(encoding="utf-8")
-        for m in re.finditer(
-            r"def\s+(export_\w+|download_month_pack(?:_pdf)?)\s*\(([\s\S]*?)\)\s*(?:->|:)([\s\S]*?)(?=\ndef\s|\Z)",
-            text,
-        ):
-            name, sig, body = m.group(1), m.group(2), m.group(3)
-            chunk = sig + body[:2000]
-            if "xlsx_response" not in chunk and "pdf_response" not in chunk:
-                continue
+        for name, sig, _body in _api_defs_calling_export_helpers(text):
             found += 1
             if "export_scope_guard" not in sig:
                 missing.append(f"{path.name}::{name}")
@@ -194,6 +214,35 @@ def test_every_generated_export_route_depends_on_export_scope_guard() -> None:
     )
     assert before >= 1
     assert broken.count("Depends(export_scope_guard)") == before - 1
+
+
+def test_api_modules_must_not_bypass_helpers_without_export_guard() -> None:
+    """*api*.py must not import openpyxl/reportlab directly without the guard.
+
+    Builders live in excel_export / pdf_export / workbook helpers — not in
+    route modules. If an *api*.py pulls those libs in, it must still declare
+    export_scope_guard (same bar as helper callers). Mutation: inject a bare
+    import into an api without the guard → red.
+    """
+    offenders: list[str] = []
+    for path in sorted(APP_ROOT.rglob("*api*.py")):
+        text = path.read_text(encoding="utf-8")
+        if not _imports_openpyxl_or_reportlab(text):
+            continue
+        if "export_scope_guard" not in text:
+            offenders.append(str(path.relative_to(APP_ROOT)))
+
+    assert offenders == [], (
+        f"*api*.py imports openpyxl/reportlab without export_scope_guard: "
+        f"{offenders}"
+    )
+
+    innocent = (APP_ROOT / "features/auth/api.py").read_text(encoding="utf-8")
+    assert "export_scope_guard" not in innocent
+    assert not _imports_openpyxl_or_reportlab(innocent)
+    mutated = "import openpyxl\n" + innocent
+    assert _imports_openpyxl_or_reportlab(mutated)
+    assert "export_scope_guard" not in mutated
 
 
 def test_scope_export_backfill_add_and_strip(db_session: Session, restaurant_a) -> None:
