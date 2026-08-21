@@ -42,6 +42,11 @@ export const DEDICATED_CORRECTION_JOURNAL_SOURCES = new Set<string>([
   // the owner asked why: nothing about it needed void-and-re-enter, only a
   // bound on the amount, which the backend now checks against profit allocated.
   "partner_profit_paid",
+  // Same class as profit paid (2026-08-21): mistyped capital/loan amounts need
+  // Edit via the dedicated partner ledger correct route — not void-and-reenter.
+  "partner_capital_contribution",
+  "partner_loan_received",
+  "partner_loan_repaid",
   // Dual subledger, so it has its own correct route rather than the generic
   // one — both legs move together or neither does.
   "partner_salary_fronted",
@@ -74,9 +79,6 @@ export const VOID_ONLY_JOURNAL_SOURCES = new Set<string>([
   "system",
   "partner_supplier_paid",
   "expense_personal_split",
-  "partner_capital_contribution",
-  "partner_loan_received",
-  "partner_loan_repaid",
   "year_end_close",
 ]);
 
@@ -96,13 +98,13 @@ export const PARTNER_EDITABLE_MOVEMENT_TYPES = new Set<string>([
   "profit_paid",
   // Corrected through its own route, which moves the staff rows with it.
   "salary_fronted",
-]);
-
-export const PARTNER_VOID_ONLY_MOVEMENT_TYPES = new Set<string>([
+  // 2026-08-21 — owner mistypes capital amounts; loans same class.
   "capital_contribution",
   "partner_loan_received",
   "partner_loan_repaid",
 ]);
+
+export const PARTNER_VOID_ONLY_MOVEMENT_TYPES = new Set<string>([]);
 
 export type JournalActionOptions = {
   grants?: readonly string[];

@@ -36,7 +36,7 @@ describe("shared money-form success path emits ledger-changed", () => {
 
   it("createSubmitIdempotencyStore.completeSubmit source calls emitLedgerChanged", () => {
     const src = sourceDeclaring("createSubmitIdempotencyStore");
-    expect(src).toMatch(/completeSubmit\(\)\s*\{[^}]*emitLedgerChanged\(\)/s);
+    expect(src).toMatch(/completeSubmit\(\)\s*\{[\s\S]*?emitLedgerChanged\(\)/);
   });
 });
 

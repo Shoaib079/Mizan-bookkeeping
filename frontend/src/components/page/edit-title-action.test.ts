@@ -33,7 +33,7 @@ describe.each(DETAIL_PAGES)("the $name detail page", ({ symbol }) => {
     // S3: titleAction is grant-gated — still EditTitleButton, not overflow.
     const src = source();
     expect(src).toMatch(
-      /titleAction=\{\s*\n?\s*showWrite\s*\?|customerDetailWriteChrome|EditTitleButton/s,
+      /titleAction=\{\s*\n?\s*showWrite\s*\?|customerDetailWriteChrome|EditTitleButton/,
     );
     expect(src).toMatch(/EditTitleButton|customerDetailWriteChrome/);
   });

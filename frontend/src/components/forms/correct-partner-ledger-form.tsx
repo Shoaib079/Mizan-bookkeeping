@@ -87,7 +87,7 @@ export function CorrectPartnerLedgerForm({
       }
 
       const cashRes = await apiFetch<{ items: MoneyAccountOption[] }>(
-        `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
+        `/entities/${entityId}/banking/accounts?limit=100`,
       );
       const accounts = cashRes.items;
       setCashAccounts(accounts);
@@ -179,7 +179,7 @@ export function CorrectPartnerLedgerForm({
     }
     const paymentAccount = cashAccounts.find((a) => a.id === cashAccountId);
     if (!isExpenseFronted && !paymentAccount) {
-      setError("Choose a cash drawer.");
+      setError("Choose a money account.");
       return;
     }
     setSubmitting(true);
@@ -255,7 +255,7 @@ export function CorrectPartnerLedgerForm({
               accounts={cashAccounts}
               value={cashAccountId}
               onValueChange={setCashAccountId}
-              label="Cash drawer"
+              label="Money account"
             />
           )}
           <div>

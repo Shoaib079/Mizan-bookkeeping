@@ -17,13 +17,13 @@
 
 ## Current
 
-- **S4 supplier payment capabilities:** activity Edit/Void follow entry_actions. Tag `v0.s4-supplier-payment-capabilities`. Do not push until owner says.
+- **Partner capital + loans correctable:** Edit via dedicated partner route. Tag `v0.partner-capital-loan-correctable`. Do not push until owner says. Money-critical — independent review + owner sign-off before push.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of S4)* |
-| **Last completed slice** | S4 supplier payment Edit/Void via capabilities (`v0.s4-supplier-payment-capabilities`) |
-| **Last tag** | `v0.s4-supplier-payment-capabilities` |
+| **Active slice** | *(none — await owner review of capital/loan Edit)* |
+| **Last completed slice** | Partner capital + loans correctable (`v0.partner-capital-loan-correctable`) |
+| **Last tag** | `v0.partner-capital-loan-correctable` |
 | **Unpushed** | yes — do not push until owner says |
 | **Next up** | S6 P&L / BS export `view` (live vs sealed) |
 

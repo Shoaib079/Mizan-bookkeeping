@@ -48,7 +48,11 @@ describe("subledger-actions", () => {
       canVoid: true,
     });
     expect(partnerLedgerRowActions("capital_contribution")).toEqual({
-      canEdit: false,
+      canEdit: true,
+      canVoid: true,
+    });
+    expect(partnerLedgerRowActions("partner_loan_received")).toEqual({
+      canEdit: true,
       canVoid: true,
     });
     expect(partnerLedgerRowActions("profit_allocation")).toEqual({

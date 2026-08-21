@@ -56,6 +56,9 @@ DEDICATED_CORRECTION_ROUTES: dict[JournalEntrySource, str] = {
     JournalEntrySource.PARTNER_DRAWING: "partner drawing correction",
     JournalEntrySource.PARTNER_DRAWING_REPAYMENT: "partner drawing repayment correction",
     JournalEntrySource.PARTNER_PROFIT_PAID: "partner profit payment correction",
+    JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION: "partner capital contribution correction",
+    JournalEntrySource.PARTNER_LOAN_RECEIVED: "partner loan received correction",
+    JournalEntrySource.PARTNER_LOAN_REPAID: "partner loan repaid correction",
     JournalEntrySource.PARTNER_SALARY_FRONTED: "partner-funded salary correction",
     JournalEntrySource.EXPENSE_ENTRY: "expense entry correction",
     JournalEntrySource.PARTNER_PROFIT_ALLOCATION: "partner profit allocation correction",
@@ -80,9 +83,6 @@ VOID_AND_REENTER_SOURCES: frozenset[JournalEntrySource] = frozenset(
         JournalEntrySource.SYSTEM,
         JournalEntrySource.PARTNER_SUPPLIER_PAID,
         JournalEntrySource.EXPENSE_PERSONAL_SPLIT,
-        JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION,
-        JournalEntrySource.PARTNER_LOAN_RECEIVED,
-        JournalEntrySource.PARTNER_LOAN_REPAID,
         # A year-end close is derived entirely from the year's balances, so
         # editing its amounts by hand is meaningless — the next read would
         # disagree with the books. Voiding it reopens the year for re-closing,

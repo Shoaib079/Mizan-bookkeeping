@@ -37,13 +37,16 @@ vi.mock("next/navigation", () => ({
   // `DataTableRow` reaches for it to make a row clickable when given an href.
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
-const accessState = {
-  role: "owner" as const,
+const accessState: {
+  role: "owner" | "partner_view_only";
+  grants: string[];
+} = {
+  role: "owner",
   grants: [
     "operations:write",
     "daily_transactions:write",
     "nav:partners",
-  ] as string[],
+  ],
 };
 
 vi.mock("@/lib/entity-context", () => ({

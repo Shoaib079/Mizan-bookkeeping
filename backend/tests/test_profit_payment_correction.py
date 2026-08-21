@@ -29,7 +29,6 @@ from sqlalchemy import select
 
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import ChartAlreadySeededError, seed_default_chart
-from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.subledger_display import SubledgerDisplayKind
 from app.core.ledger.models import JournalEntrySource
 from app.core.ledger.correction.registry import VOID_AND_REENTER_SOURCES
@@ -188,10 +187,21 @@ def test_a_partner_funded_salary_is_not_corrected_through_this_route():
     ), "a generic correct would rewrite the partner leg and orphan the staff rows"
 
 
-def test_capital_contribution_is_still_refused(db_session, profit_paid):
-    """The other neighbour. It has no correction branch at all, and asking for
-    one should say so rather than post something wrong."""
+def test_capital_contribution_moved_to_dedicated_correctable(
+    db_session, profit_paid
+):
+    """Behaviour flip 2026-08-21 — was void-only / CorrectionNotFoundError.
+
+    Capital is now correctable on the partner ledger route (same class as
+    profit paid). Full cases live in test_partner_capital_loan_correction.py;
+    this keeps the neighbour assertion visible next to profit-paid tests.
+    """
+    from app.core.ledger.correction.registry import DEDICATED_CORRECTION_ROUTES
+
     entity_id, partner_id, _entry_id, cash = profit_paid
+    assert (
+        JournalEntrySource.PARTNER_CAPITAL_CONTRIBUTION in DEDICATED_CORRECTION_ROUTES
+    )
     contribution = partner_posting.post_capital_contribution(
         db_session,
         entity_id,
@@ -202,12 +212,12 @@ def test_capital_contribution_is_still_refused(db_session, profit_paid):
         actor_id=ACTOR_ID,
         payment_account_id=cash,
     )
-    with pytest.raises(CorrectionNotFoundError):
-        _correct(
-            db_session,
-            entity_id,
-            partner_id,
-            contribution.journal_entry.id,
-            cash,
-            600_000,
-        )
+    out = _correct(
+        db_session,
+        entity_id,
+        partner_id,
+        contribution.journal_entry.id,
+        cash,
+        600_000,
+    )
+    assert out.partner_ledger_entry.amount_kurus == 600_000

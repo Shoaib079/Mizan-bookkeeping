@@ -18,14 +18,16 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.default_chart import (
+    LOANS_PAYABLE_CODE,
     OWNER_DRAWINGS_CODE,
     PARTNER_CAPITAL_CODE,
     PARTNER_REIMBURSEMENT_PAYABLE_CODE,
 )
+from app.core.banking import statement_posting
 from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import PostingLine
 from app.core.partners import posting as partner_posting
-from app.core.partners.ledger import unpaid_profit_kurus
+from app.core.partners.ledger import loan_balance_kurus, unpaid_profit_kurus
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import PartnerMovementType
 from app.features.partners.schema import PartnerJournalEntryCorrect
@@ -200,4 +202,86 @@ def build_partner_correction_lines(
         )
         return lines, -gl_amount
 
+    if movement_type == PartnerMovementType.CAPITAL_CONTRIBUTION:
+        if payload.payment_account_id is None:
+            raise ValueError(
+                "payment_account_id required for capital contribution correction"
+            )
+        gl_amount = (
+            payload.amount_kurus
+            if payload.amount_kurus is not None
+            else abs(partner_row.amount_kurus)
+        )
+        payment = partner_posting._validate_payment_account(
+            session, entity_id, payload.payment_account_id
+        )
+        capital = partner_posting._chart_account(session, PARTNER_CAPITAL_CODE)
+        lines = partner_posting.build_capital_contribution_lines(
+            payment_account_id=payment.id,
+            partner_capital_id=capital.id,
+            amount_kurus=gl_amount,
+        )
+        return lines, gl_amount
+
+    if movement_type == PartnerMovementType.PARTNER_LOAN_RECEIVED:
+        if payload.payment_account_id is None:
+            raise ValueError("payment_account_id required for partner loan correction")
+        gl_amount = (
+            payload.amount_kurus
+            if payload.amount_kurus is not None
+            else abs(partner_row.amount_kurus)
+        )
+        payment = partner_posting._validate_payment_account(
+            session, entity_id, payload.payment_account_id
+        )
+        loans = partner_posting._chart_account(session, LOANS_PAYABLE_CODE)
+        lines = statement_posting.build_loan_receipt_lines(
+            bank_gl_account_id=payment.id,
+            loans_payable_account_id=loans.id,
+            amount_kurus=gl_amount,
+        )
+        return lines, gl_amount
+
+    if movement_type == PartnerMovementType.PARTNER_LOAN_REPAID:
+        if payload.payment_account_id is None:
+            raise ValueError(
+                "payment_account_id required for partner loan repayment correction"
+            )
+        gl_amount = (
+            payload.amount_kurus
+            if payload.amount_kurus is not None
+            else abs(partner_row.amount_kurus)
+        )
+        _assert_within_loan_balance(session, entity_id, partner_row, gl_amount)
+        payment = partner_posting._validate_payment_account(
+            session, entity_id, payload.payment_account_id
+        )
+        loans = partner_posting._chart_account(session, LOANS_PAYABLE_CODE)
+        lines = statement_posting.build_loan_payment_lines(
+            loans_payable_account_id=loans.id,
+            bank_gl_account_id=payment.id,
+            amount_kurus=gl_amount,
+        )
+        return lines, -gl_amount
+
     raise CorrectionNotFoundError("partner movement type is not correctable")
+
+
+def _assert_within_loan_balance(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_row: PartnerLedgerEntry,
+    new_amount_kurus: int,
+) -> None:
+    """Corrected repayment may not exceed outstanding loan (+ this row).
+
+    The row being corrected still reduces the balance while lines are built,
+    so its own amount is added back before comparing — same pattern as unpaid
+    profit on a profit payment correction.
+    """
+    outstanding = loan_balance_kurus(session, entity_id, partner_row.partner_id)
+    allowance = outstanding + abs(partner_row.amount_kurus)
+    if new_amount_kurus > allowance:
+        raise ValueError(
+            f"Repayment of {new_amount_kurus} exceeds partner loan balance of {allowance}"
+        )

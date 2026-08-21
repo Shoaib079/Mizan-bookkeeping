@@ -2,6 +2,14 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-08-21 — Partner capital + loans: Edit (correctable), not void-only
+
+**Choice:** `partner_capital_contribution`, `partner_loan_received`, and `partner_loan_repaid` are **correctable** through the dedicated partner ledger correct route (void + repost GL + partner subledger). They left `VOID_AND_REENTER_SOURCES`. Generic `.../ledger/entries/{id}/correct` still refuses them.
+
+**Why (owner):** Mistyped capital amounts need Edit; void-and-reenter was too heavy. Partner loans are the same two-line / one-subledger class, so all three flipped together.
+
+**Was:** Deliberate void-only (cited as the pattern for profit paid on 2026-08-04). Profit paid already flipped earlier; capital/loans catch up here.
+
 ## 2026-08-21 — Partner page: one live net figure; dated ledger for detail
 
 **Choice:** Partner page shows **ONE live net figure** (who owes whom) as the answer; the dated ledger below is the only detail view. Owner removed the 2026-07-14 summary stickers because they showed gross drawings/fronted without netting, had no dates, and could lag posted entries. The books keep drawings (`3200`) and fronted expenses (`2150`) as separate legs; every display nets them, and settlement order (fronted first, then drawings) does the settling when money moves. Any future breakdown must be derived live at read time from the same posted ledger rows, be dated or period-labelled, and show the net — never cached gross figures.
@@ -77,7 +85,7 @@ Significant technical choices and rationale (see CURSOR_RULES.md §8). Product d
    - **Cash:** Partners → Pay profit (drawer only). Manual HTTP API rejects bank accounts so you cannot double-post.
    - **Bank:** classify the statement outflow as **Partner profit paid** (`partner_profit_paid`) — Dr `3300` / Cr bank. Do **not** also use Pay profit for the same transfer.
 
-Amount capped at **unpaid allocated profit**. Void-only (same pattern as capital contribution).
+Amount capped at **unpaid allocated profit**. Correctable via the dedicated partner ledger route (same class as drawings); was void-only until profit-paid Edit shipped.
 
 **Why:** Owners hand partners cash or bank transfers after the books say how much each is owed. Mixing bank payout into a manual form double-counts when the statement lands. Netting ignores drawings after the profit period.
 

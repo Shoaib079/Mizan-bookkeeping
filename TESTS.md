@@ -2,10 +2,13 @@
 
 Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULES.md §8).
 
+**2026-08-21 — Partner capital + loans correctable:** `test_partner_capital_loan_correction.py` (amount correct → void+repost, GL 3300/2200 + subledger ties, chain linked; generic refuse; wrong-partner 404; loan repayment bound); replaced `test_capital_contribution_is_still_refused` → `test_capital_contribution_moved_to_dedicated_correctable` (deliberate behaviour flip); FE `subledger-actions` + match-backend + gl-edit-kinds.
+
 **2026-08-21 — File-size ratchet (export splits):** `scripts/check_file_sizes.py` 6/6; `tests/test_file_sizes_do_not_grow.py`; full backend pytest; frontend vitest + build. Baseline lowered: expenses/api 464, reports/api 512, GL panel 539; supplier-activity-panel + expenses-review-panel off list (<400).
 
 | Test file | What it guards | Status |
 |-----------|----------------|--------|
+| `backend/tests/test_partner_capital_loan_correction.py` | **Money-critical** — capital/loan Edit via dedicated route; generic refuse; 3300/2200 ties; wrong-partner; repayment bound (behaviour flip from void-only) | pass |
 | `backend/tests/test_health.py` | API liveness (`/health`) + readiness (`/health/ready` DB ping, 503 when down) | pass |
 | `backend/tests/test_observability.py` | Sentry optional init, production JSON logging, rate limit 429 + health exempt (Slice 12.4) | pass |
 | `backend/tests/test_launch_settings.py` | Production boot guards — CORS, Clerk live keys (Slice 12.2) | pass |
