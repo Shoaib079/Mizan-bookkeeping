@@ -3,7 +3,8 @@
 Same parameters and the same ``view``. Load the workbook with openpyxl and
 compare cell values to the screen response — never grep builders.
 S9 already pins cash-book closing, expenses page total, and GL line count;
-this module covers the remaining statement surfaces plus one S8 ledger.
+this module covers statement surfaces plus subledger / activity / POS /
+delivery-activity pins.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,12 +25,18 @@ from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
+from app.core.invoices.posting import post_confirmed_draft
 from app.core.ledger.models import JournalEntrySource
 from app.core.ledger.posting import PostingLine, post_journal_entry, void_journal_entry
 from app.core.partners import profit_allocation as pa
+from app.core.payables import posting as payables_posting
 from app.core.period_locks.models import PeriodLockKind
 from app.core.period_locks.service import close_period
 from app.core.pos import posting as pos_posting
+from app.core.receivables.ledger import persist_customer_ledger_entry
+from app.core.receivables.types import CustomerMovementType
+from app.core.staff import posting as staff_posting
+from app.core.staff.types import PayCurrency
 from app.db.session import entity_context
 from app.features.auth import service as auth_service
 from app.features.auth.schema import MembershipCreate, UserCreate
@@ -36,9 +44,15 @@ from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
 from app.features.cash.models import CashMovementDirection
+from app.features.customers.models import Customer
+from app.features.invoices import service as invoice_service
 from app.features.partners.models import Partner
 from app.features.reports import financial_statements
+from app.features.staff.models import Employee
+from app.features.suppliers import service as supplier_service
+from app.features.suppliers.schema import SupplierCreate
 from tests.delivery_helpers import ACTOR_ID
+from tests.delivery_helpers import delivery_setup as build_delivery_setup
 from tests.test_delivery_sales_report import _create_and_post
 from tests.test_financial_statements import (
     PERIOD_END,
@@ -51,7 +65,9 @@ from tests.test_kdv_input_report import (
     _supplier,
     _supplier_draft,
 )
-from tests.delivery_helpers import delivery_setup as build_delivery_setup
+
+POS_SAMPLE = Path(__file__).resolve().parent / "fixtures" / "pos" / "sample_summary.txt"
+EFATURA_SAMPLE = Path(__file__).resolve().parent / "fixtures" / "efatura" / "sample.xml"
 
 CASH_CODE = "1000"
 JUNE_START = date(2026, 6, 1)
@@ -502,4 +518,241 @@ def test_partner_ledger_running_balance_screen_matches_export(
     assert any(
         abs(v - _lira(current)) < 0.01 or abs(v - _lira(capital)) < 0.01
         for v in summary_amounts
+    )
+
+
+# ---------------------------------------------------------------------------
+# S10 follow-up — remaining subledger / activity / POS / delivery pins
+# ---------------------------------------------------------------------------
+
+
+def test_staff_ledger_balance_screen_matches_export(
+    db_session, client: TestClient, restaurant_a
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    with entity_context(db_session, restaurant_a.id):
+        employee = Employee(name="Ayşe Demir", pay_currency=PayCurrency.TRY)
+        db_session.add(employee)
+        db_session.commit()
+        db_session.refresh(employee)
+    entity_id = restaurant_a.id
+    employee_id = employee.id
+    staff_posting.post_salary_accrual(
+        db_session,
+        entity_id,
+        employee_id,
+        accrual_date=date(2026, 6, 1),
+        amount_minor=500_000,
+        description="June salary",
+        actor_id=ACTOR_ID,
+        period_year=2026,
+        period_month=6,
+    )
+
+    base = f"/entities/{entity_id}/staff/employees/{employee_id}/ledger"
+    screen = client.get(base)
+    assert screen.status_code == 200
+    balance = screen.json()["balance_minor"]
+    assert balance == 500_000
+
+    export = client.get(f"{base}/export")
+    assert export.status_code == 200
+    _assert_lira(_money_beside_label(_load(export.content), "Balance", 2), balance)
+
+
+def test_customer_ledger_balance_screen_matches_export(
+    db_session, client: TestClient, restaurant_a
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    with entity_context(db_session, restaurant_a.id):
+        customer = Customer(entity_id=restaurant_a.id, name="Blue Tours")
+        db_session.add(customer)
+        db_session.flush()
+        persist_customer_ledger_entry(
+            db_session,
+            customer.id,
+            movement_date=date(2026, 6, 30),
+            movement_type=CustomerMovementType.CREDIT_SALE,
+            amount_kurus=413_600,
+            description="Dinner for 6",
+            actor_id=ACTOR_ID,
+        )
+        db_session.commit()
+        db_session.refresh(customer)
+    entity_id = restaurant_a.id
+    customer_id = customer.id
+
+    base = f"/entities/{entity_id}/customers/{customer_id}/ledger"
+    screen = client.get(base)
+    assert screen.status_code == 200
+    balance = screen.json()["balance_kurus"]
+    assert balance == 413_600
+
+    export = client.get(f"{base}/export")
+    assert export.status_code == 200
+    _assert_lira(_money_beside_label(_load(export.content), "Balance", 2), balance)
+
+
+def test_supplier_ledger_owed_screen_matches_export(
+    db_session, client: TestClient, restaurant_a
+) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    create = client.post(
+        f"/entities/{restaurant_a.id}/suppliers",
+        json={"name": "Parity Vendor", "vkn": "3333333334"},
+    )
+    assert create.status_code == 201
+    supplier_id = create.json()["id"]
+    for amount, mtype, desc in (
+        (75_000, "opening_balance", "OB"),
+        (25_000, "adjustment", "Extra"),
+    ):
+        movement = client.post(
+            f"/entities/{restaurant_a.id}/suppliers/{supplier_id}/ledger/movements",
+            json={
+                "movement_date": "2026-01-01",
+                "movement_type": mtype,
+                "amount_kurus": amount,
+                "description": desc,
+                "actor_id": str(ACTOR_ID),
+            },
+        )
+        assert movement.status_code == 201
+
+    base = f"/entities/{restaurant_a.id}/suppliers/{supplier_id}/ledger"
+    screen = client.get(base)
+    assert screen.status_code == 200
+    owed = screen.json()["balance_kurus"]
+    assert owed == 100_000
+
+    export = client.get(f"{base}/export")
+    assert export.status_code == 200
+    _assert_lira(
+        _money_beside_label(_load(export.content), "Owed to supplier", 2), owed
+    )
+
+
+def test_supplier_activity_closing_screen_matches_export(
+    db_session, client: TestClient, restaurant_a
+) -> None:
+    entity_id = restaurant_a.id
+    seed_default_chart(db_session, entity_id)
+    supplier = supplier_service.create_supplier(
+        db_session,
+        entity_id,
+        SupplierCreate(name="Metro Parity", vkn="1234567891", actor_id=ACTOR_ID),
+    )
+    supplier_id = supplier.id
+    with entity_context(db_session, entity_id):
+        accounts = {a.code: a.id for a in db_session.scalars(select(Account))}
+
+    draft = invoice_service.create_efatura_draft_from_upload(
+        db_session,
+        entity_id,
+        EFATURA_SAMPLE.read_bytes(),
+        filename="sample.xml",
+    )
+    invoice_service.link_supplier_to_draft(
+        db_session, entity_id, draft.id, supplier_id=supplier_id
+    )
+    confirmed = invoice_service.confirm_invoice_draft(
+        db_session, entity_id, draft.id, actor_id=ACTOR_ID
+    )
+    post_confirmed_draft(
+        db_session,
+        entity_id,
+        confirmed.id,
+        expense_account_id=accounts["5200"],
+        actor_id=ACTOR_ID,
+    )
+    payables_posting.post_supplier_payment(
+        db_session,
+        entity_id,
+        supplier_id,
+        payment_date=date(2026, 3, 20),
+        amount_kurus=5_000_000,
+        description="Metro payment",
+        actor_id=ACTOR_ID,
+        payment_account_id=accounts["1000"],
+        reference_type="DKT-PARITY",
+    )
+    params = {"from_date": "2026-03-01", "to_date": "2026-03-31"}
+
+    screen = client.get(
+        f"/entities/{entity_id}/suppliers/{supplier_id}/activity", params=params
+    )
+    assert screen.status_code == 200
+    closing = screen.json()["closing_balance_kurus"]
+
+    export = client.get(
+        f"/entities/{entity_id}/suppliers/{supplier_id}/activity/export",
+        params=params,
+    )
+    assert export.status_code == 200
+    _assert_lira(
+        _money_beside_label(_load(export.content), "Closing balance", 2), closing
+    )
+
+
+def test_pos_daily_summaries_total_screen_matches_export(
+    client: TestClient, restaurant_a, parity_setup
+) -> None:
+    create = client.post(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries",
+        files={"file": ("summary.txt", POS_SAMPLE.read_bytes(), "text/plain")},
+    )
+    assert create.status_code == 201
+    summary_date = create.json()["summary_date"]
+    params = {"from": summary_date, "to": summary_date, "review": "pending"}
+
+    screen = client.get(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries", params=params
+    )
+    assert screen.status_code == 200
+    items = screen.json()["items"]
+    assert items
+    list_total = sum(row["total_kurus"] for row in items)
+
+    export = client.get(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries/export", params=params
+    )
+    assert export.status_code == 200
+    _assert_lira(
+        _money_beside_label(_load(export.content), "TOTAL", 5), list_total
+    )
+
+
+def test_delivery_activity_posted_total_matches_reports_list(
+    db_session, client: TestClient, restaurant_a
+) -> None:
+    setup = build_delivery_setup(
+        db_session, restaurant_a.id, platform_names=("Getir",)
+    )
+    entity_id = setup["entity_id"]
+    _create_and_post(
+        db_session,
+        entity_id,
+        setup["platforms"]["Getir"].id,
+        date(2026, 1, 15),
+        180_000,
+    )
+    params = {"from": "2026-01-01", "to": "2026-01-31"}
+
+    # No /delivery/activity list JSON — the sales panel list is what the owner sees.
+    screen = client.get(f"/entities/{entity_id}/delivery/reports", params=params)
+    assert screen.status_code == 200
+    posted = sum(
+        r["gross_kurus"]
+        for r in screen.json()["items"]
+        if r["status"] == "posted"
+    )
+    assert posted == 180_000
+
+    export = client.get(
+        f"/entities/{entity_id}/delivery/activity/export", params=params
+    )
+    assert export.status_code == 200
+    wb = load_workbook(BytesIO(export.content))
+    _assert_lira(
+        _money_beside_label(wb["Sales"], "Posted total", 4), posted
     )

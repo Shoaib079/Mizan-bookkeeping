@@ -2,6 +2,8 @@
 
 Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULES.md §8).
 
+**2026-08-21 — S10 follow-up parity gaps:** `test_export_screen_file_parity.py` adds staff/customer/supplier ledger, supplier activity closing, POS TOTAL vs list sum, delivery Posted total vs reports list. Mutation: double activity closing → red.
+
 **2026-08-21 — S10 export screen==file parity:** `test_export_screen_file_parity.py` — screen JSON key totals == openpyxl cells (P&L/BS/CF/KDV/delivery/period); sealed/live P&L stamp+filename; partner Running == `current_account_kurus`. Mutation: double P&L export net → red. S9 cash-book/expenses/GL coverage unchanged.
 
 **2026-08-21 — S11 Excel money_cols:** `test_s11_excel_money_cols.py` loads CF / KDV / delivery-sales / period-comparison workbooks — freeze on real header, autofilter, fitToWidth, `MONEY_FORMAT_ACCOUNTING` on money cols. Mutation: wrong `header_row` / dropped `money_cols` on KDV → red.
