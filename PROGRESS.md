@@ -17,15 +17,15 @@
 
 ## Current
 
-- **S11 Excel money_cols:** cash flow / KDV / delivery-sales / period-comparison pass `money_cols` into shared finish. Tag `v0.s11-excel-money-cols`. Do not push until owner says. S10 still next in queue (not started).
+- **S10 export screen==file parity:** key totals match for same params/`view`. Tag `v0.s10-export-screen-file-parity`. Do not push until owner says. S12 not started.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of S11)* |
-| **Last completed slice** | S11 Excel money_cols gaps (`v0.s11-excel-money-cols`) |
-| **Last tag** | `v0.s11-excel-money-cols` |
+| **Active slice** | *(none — await owner review of S10)* |
+| **Last completed slice** | S10 Export screen==file amount parity (`v0.s10-export-screen-file-parity`) |
+| **Last tag** | `v0.s10-export-screen-file-parity` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S10 Export screen==file amount parity tests |
+| **Next up** | S12 Month pack Summary (+ card-clearing) shared finish |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)
